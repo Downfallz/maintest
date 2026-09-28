@@ -710,126 +710,91 @@ body:has(#table) { padding-bottom: 24px; }
   #decision[data-kind="Speed"] #choices > button::before { display: none; }
 }
 
-/* The battlefield is one tap away below the laptop layout: the button rides in the round bar, and the board
-   opens over the page under it, so the spellbook keeps its place. On a laptop the board is beside the desk. */
+/* The battlefield below the laptop layout. The round bar carries it at a glance, a chip per creature, and a
+   Battlefield button that opens the whole of it over the page, under the bar, so the spellbook keeps its
+   place; it is no longer a section at the bottom of the page. On a laptop the board is beside the desk and
+   neither is drawn. The bar's one column is allowed to be narrower than what it holds, so a long phase name
+   or a crowded chip is cut inside the bar rather than widening the page. */
 .board-toggle { margin-left: auto; align-self: center; min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: #f1dab0; background: #2b3a2e; border: 1px solid #c5ac6c; border-radius: 8px; }
 .board-toggle[aria-pressed="true"] { background: #c5ac6c; color: #17251f; }
+.mini-board, .atlas-back { display: none; }
 @media (min-width: 1100px) {
   .board-toggle { display: none; }
 }
 @media (max-width: 1099px) {
-  #phase-dock { background: #17251f; }
-  .phase-primary { align-items: center; }
+  #phase-dock { grid-template-columns: minmax(0, 1fr); background: #17251f; }
+  #phase-reminder { grid-column: 1 / -1; }
+  .phase-primary { min-width: 0; align-items: center; }
   #tab-board { display: none; }
   body.board-open { overflow: hidden; }
-  body.board-open #board { position: fixed; z-index: 23; inset: var(--board-top, 0px) 0 0; margin: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 14px max(24px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid #64735a; }
-}
-
-/* On a phone the prerequisite graph reads top to bottom: one family per block, each upgrade beside the
-   package it grows from, and nothing to pan sideways. The turn order wraps for the same reason. */
-@media (max-width: 760px) {
-  .talent-window .talent-toolbar { position: static; box-shadow: none; }
-  .talent-window #mat { scroll-padding-top: 0; }
-  .tree-map { max-height: none; overflow: visible; padding: 4px 0 12px; }
-  .tree-map ul { display: grid; gap: 6px; padding: 0; }
-  .tree-map .tree-roots { gap: 14px; }
-  .tree-map li { min-width: 0; padding: 0; text-align: left; }
-  .tree-map li::before, .tree-map li::after, .tree-map ul ul::before { display: none; }
-  .tree-roots > li > ul { margin: 6px 0 0 10px; padding-left: 10px; border-left: 1px solid #7b8d80; }
-  .tree-roots > li > ul > li { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .tree-node { max-width: none; min-height: 0; height: auto; padding: 8px 10px; text-align: left; border-top-width: 1px; border-left-width: 4px; }
-  .tree-title { font-size: 15px; overflow-wrap: normal; }
-  .tree-progress { margin-top: 3px; }
-  .tree-node:not(.unlockable, .known) .tree-offer { display: none; }
-  .initiative-section .strip { display: grid; gap: 8px; overflow: visible; }
-  .initiative-section .band { display: block; min-width: 0; }
-  .initiative-section .band-name { margin-bottom: 4px; }
-  .initiative-section .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .initiative-section .slot { min-width: 0; padding: 5px; }
-}
-.atlas-back { display: none; }
-@media (max-width: 760px) {
-  .atlas-back { display: block; margin: 0 0 10px auto; }
-}
-
-/* A phone's hand is a list to choose from, not a spread of printed cards: one compact row per spell with
-   its name, cost, cues and effects. The rules reminder and the "select" label come back on the chosen card. */
-@media (max-width: 760px) {
-  .board-toggle { min-height: 34px; padding: 5px 10px; font-size: 12px; }
-  :is(#own-hand, .enemy-books) .held-cards { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  :is(#own-hand, .enemy-books) .held { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 11px; border-radius: 10px; }
-  :is(#own-hand, .enemy-books) .held > .card-head { display: contents; }
-  :is(#own-hand, .enemy-books) .held .card-title { order: 1; min-width: 0; font-size: 16px; }
-  :is(#own-hand, .enemy-books) .held .class-accent .card-title { padding-left: 7px; border-left: 3px solid var(--class-color); }
-  :is(#own-hand, .enemy-books) .held > .card-cues { order: 2; }
-  :is(#own-hand, .enemy-books) .held > .card-stats { order: 3; }
-  :is(#own-hand, .enemy-books) .held .card-cost { order: 4; margin-left: auto; }
-  :is(#own-hand, .enemy-books) .held > .card-body { order: 5; }
-  :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; }
-  :is(#own-hand, .enemy-books) .held .card-meta { display: none; }
-  :is(#own-hand, .enemy-books) .held .card-cost { flex: none; flex-direction: row; width: auto; height: 26px; padding: 0 8px; border-radius: 6px; font-size: 13px; }
-  :is(#own-hand, .enemy-books) .held .card-cost small { display: none; }
-  :is(#own-hand, .enemy-books) .held .card-cues { margin: 0; }
-  :is(#own-hand, .enemy-books) .held .card-cue[data-tone="critical"] { display: none; }
-  :is(#own-hand, .enemy-books) .held .card-stats { margin: 0; }
-  :is(#own-hand, .enemy-books) .held .card-stat { display: flex; gap: 4px; padding: 3px 6px; border-radius: 5px; }
-  :is(#own-hand, .enemy-books) .held .card-stat > span { font-size: 0; }
-  :is(#own-hand, .enemy-books) .held .card-stat > span::before { content: '✦ Crit'; font-size: 10px; }
-  :is(#own-hand, .enemy-books) .held .card-stat > strong { font-size: 12px; }
-  :is(#own-hand, .enemy-books) .held .card-stat > small { display: none; }
-  :is(#own-hand, .enemy-books) .held > .card-body { flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
-  :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
-  :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
-  :is(#own-hand, .enemy-books) .held:not(.chosen) .card-critical-note { display: none; }
-  :is(#own-hand, .enemy-books) .held > .card-advice { flex: 1 0 100%; padding: 0; font-size: 11px; }
-  :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
-  :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
-}
-
-/* The battlefield at a glance, in the round bar below the laptop layout. With it there, the full battlefield
-   is no longer a section at the bottom of the page: it opens from the Battlefield button, over the page. */
-.mini-board { display: none; }
-@media (max-width: 1099px) {
   body:not(.board-open) #board { display: none; }
-  .mini-board { grid-column: 1 / -1; display: grid; gap: 4px; }
+  body.board-open #board { position: fixed; z-index: 23; inset: var(--board-top, 0px) 0 0; margin: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 14px max(24px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid #64735a; }
+  body.board-open #board:focus { outline: none; }
+  .mini-board { grid-column: 1 / -1; min-width: 0; display: grid; gap: 4px; }
   body.board-open .mini-board { display: none; }
-  .mini-row { display: flex; gap: 4px; }
-  .mini-creature { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 5px; min-height: 30px; margin: 0; padding: 3px 6px; border: 1px solid #3c4b43; border-radius: 7px; background: #1d2b25; color: var(--ink); font-size: 11px; text-align: left; }
+  .mini-row { display: flex; min-width: 0; gap: 4px; }
+  .mini-creature { position: relative; flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 5px; min-height: 30px; margin: 0; padding: 3px 6px; overflow: hidden; border: 1px solid #3c4b43; border-radius: 7px; background: #1d2b25; color: var(--ink); font-size: 11px; text-align: left; }
   .mini-creature.enemy { border-color: #6b4843; }
   .mini-creature.ally { border-color: #3f6a55; }
   .mini-id { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: 750; color: #17231d; }
   .mini-creature.enemy .mini-id { background: var(--enemy); }
   .mini-creature.ally .mini-id { background: var(--ally); }
-  .mini-health { position: relative; flex: 1 1 auto; min-width: 18px; height: 14px; overflow: hidden; border-radius: 4px; background: #0d1512; }
+  .mini-health { position: relative; flex: 1 1 auto; min-width: 0; height: 14px; overflow: hidden; border-radius: 4px; background: #0d1512; }
   .mini-bar { position: absolute; inset: 0 auto 0 0; background: #4f7f61; }
   .mini-creature.enemy .mini-bar { background: #93564d; }
   .mini-hp { position: relative; display: block; font-size: 10px; font-weight: 750; line-height: 14px; text-align: center; color: #f6f2e6; text-shadow: 0 1px 1px #000c; }
   .mini-energy { flex: none; font-size: 10px; font-weight: 650; color: var(--gold); }
-  .mini-flag { flex: none; font-size: 11px; color: #f0b2a8; }
-  .mini-creature.active { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+  .mini-defense { flex: none; font-size: 10px; font-weight: 650; color: #8bc6ed; }
+  .mini-delta { flex: none; padding: 0 3px; border-radius: 3px; font-size: 10px; font-weight: 750; }
+  .mini-delta.harm { color: #ffbbb4; background: #472a29; }
+  .mini-delta.recovery { color: #b0edc2; background: #23452e; }
+  .mini-flag { position: absolute; top: 1px; left: 2px; font-size: 9px; line-height: 1; color: #ffb3a7; text-shadow: 0 0 2px #000; }
+  .mini-creature.stunned .mini-id { box-shadow: 0 0 0 2px #ffb3a7; }
+  .mini-creature:is(.active, .turn) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
   .mini-creature.dead { opacity: .45; }
   .mini-creature.dead .mini-id { text-decoration: line-through; }
   .mini-board.targeting .mini-creature:not(.legal) { opacity: .4; }
   .mini-creature.legal { border: 1px dashed var(--gold); background: #2a3223; }
   .mini-creature.picked { border-style: solid; background: #544520; box-shadow: inset 0 0 0 1px var(--gold); }
   .mini-creature.picked .mini-energy::after { content: ' ✓'; }
+  .mini-creature.confirm .mini-energy::after { content: ' ⏎'; }
   .mini-creature.replay-caster { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
   .mini-creature.replay-target { box-shadow: inset 0 0 0 2px #8ad4de; }
-}
-@media (min-width: 761px) and (max-width: 1099px) {
-  .mini-board { grid-row: 4; }
-}
-@media (max-width: 760px) {
-  .mini-board { grid-row: 3; }
+  .mini-creature:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 }
 
-/* Less to scroll past on a phone: a tighter round bar (the turn is in the decision heading and on the acting
-   creature's chip), a decision that states itself in one line, and a spellbook heading on one row. */
+/* A tablet has room for both sides of the bar on one line, and no board in the page to keep a decision above:
+   the decision scrolls with the page again. */
+@media (min-width: 761px) and (max-width: 1099px) {
+  .mini-board { grid-row: 4; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .play-area:has(#decision[data-kind="Target"]) .action-area { position: static; }
+}
+
+/* A phone: less to scroll and nothing to pan sideways.
+   - The round bar keeps one line (the turn is in the decision heading and on the acting creature's chip), its
+     tools one line (the Round guide at the top of the page already lists the round's steps), and the atlas is
+     reached from the spellbook rather than from a tab row of its own.
+   - The decision states itself in one line and the spellbook heading is one row.
+   - The hand is a list to choose from, not a spread of printed cards: one compact row per spell. The rules
+     reminder and the "select" label come back on the chosen card.
+   - Each package is a two-line row, and the atlas and pass sit side by side.
+   - The opened battlefield draws each creature on a few lines, its stats as the symbols the cards already use
+     (the word stays for a screen reader), and the turn order wraps.
+   - The atlas's prerequisite graph reads top to bottom: one family per block, each upgrade beside the package
+     it grows from. */
 @media (max-width: 760px) {
   #phase-dock { padding: 8px; gap: 5px; }
+  .phase-primary { flex-wrap: nowrap; }
+  #phase-round, .board-toggle { flex: none; }
+  #phase-current { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #phase-turn { display: none; }
-  .board-toggle { min-height: 30px; padding: 4px 10px; }
-  .phase-tools > details > summary { min-height: 26px; padding: 3px 7px; }
+  .board-toggle { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+  .tabs, #phase-progress { display: none; }
+  .phase-tools { flex-wrap: nowrap; }
+  .phase-tools > details > summary { min-height: 26px; padding: 3px 6px; font-size: 9px; }
+  #recap-title { font-size: 9px; }
+  .mini-board { grid-row: 3; }
+
   #decision { padding: 12px; gap: 6px; }
   #decision .decision-heading { margin-bottom: 2px; }
   #decision #asking, #decision[data-kind="Speed"] #asking, #decision[data-kind="Target"] #asking { font-size: 22px; margin: 2px 0; }
@@ -846,35 +811,31 @@ body:has(#table) { padding-bottom: 24px; }
   .hand-section > .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
   #hand-heading { font-size: 14px; margin: 0; }
   .hand-actions .reference-link { min-height: 32px; padding: 4px 0; border: 0; font-size: 11px; }
-}
 
-/* The opened battlefield on a phone: each creature in about half the height it had, its role said by its
-   section, its stats on one line and its round's choice on one line. */
-@media (max-width: 760px) {
-  #board .creature { gap: 4px 10px; padding: 9px 10px; }
-  #board .creature.legal, #board .creature.picked { padding: 8px 9px; }
-  #board .creature:not(.legal, .picked, .active, .dead) .creature-label { display: none; }
-  #board .creature-id { min-width: 24px; height: 24px; }
-  #board .health { height: 17px; }
-  #board .stats { gap: 6px; }
-  #board .stat { flex-direction: row; align-items: baseline; gap: 3px; }
-  #board .stat strong { font-size: 15px; }
-  #board .round-choice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 2px; padding-top: 5px; }
-  #board .round-choice .choice-spell { margin: 0; font-size: 13px; }
-  #board .round-choice .choice-targets, #board .round-choice .choice-previous { margin: 0; font-size: 11px; }
-  #board .team-section .section-heading { margin-bottom: 6px; }
-  #board .team-grid { gap: 6px; }
-}
+  :is(#own-hand, .enemy-books) .held-cards { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  :is(#own-hand, .enemy-books) .held { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 11px; border-radius: 10px; }
+  :is(#own-hand, .enemy-books) .held > .card-head { display: contents; }
+  :is(#own-hand, .enemy-books) .held .card-title { order: 1; min-width: 0; font-size: 16px; }
+  :is(#own-hand, .enemy-books) .held .class-accent .card-title { padding-left: 7px; border-left: 3px solid var(--class-color); }
+  :is(#own-hand, .enemy-books) .held > .card-cues { order: 2; margin: 0; }
+  :is(#own-hand, .enemy-books) .held > .card-stats { order: 3; margin: 0; }
+  :is(#own-hand, .enemy-books) .held .card-cost { order: 4; flex: none; flex-direction: row; width: auto; height: 26px; margin-left: auto; padding: 0 8px; border-radius: 6px; font-size: 13px; }
+  :is(#own-hand, .enemy-books) .held .card-cost small { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-meta { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-cue[data-tone="critical"] { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-stat { display: flex; gap: 4px; padding: 3px 6px; border-radius: 5px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > span { font-size: 0; }
+  :is(#own-hand, .enemy-books) .held .card-stat > span::before { content: '✦ Crit'; font-size: 10px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > strong { font-size: 12px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > small { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-body { order: 5; flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
+  :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
+  :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
+  :is(#own-hand, .enemy-books) .held:not(.chosen) .card-critical-note { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; flex: 1 0 100%; padding: 0; font-size: 11px; }
+  :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
 
-/* Evolution on a phone: each package a two-line row (name, tier and initiative; its spells and what it
-   requires), the budget on two lines, and the atlas and pass side by side. The round's tools keep one line:
-   the Round guide at the top of the page already lists the round's steps, so Round flow is not repeated, and
-   the atlas is reached from the spellbook rather than from a tab row of its own. */
-@media (max-width: 760px) {
-  .tabs, #phase-progress { display: none; }
-  .phase-tools { flex-wrap: nowrap; }
-  .phase-tools > details > summary { padding: 3px 6px; font-size: 9px; }
-  #recap-title { font-size: 9px; }
   #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr 1fr; gap: 8px; }
   #decision[data-kind="Evolution"] #choices > :is(.creature-picker, .choice-help, .choice-cards) { grid-column: 1 / -1; }
   #decision[data-kind="Evolution"] #choices > button { min-height: 40px; padding: 6px; font-size: 12px; }
@@ -887,35 +848,57 @@ body:has(#table) { padding-bottom: 24px; }
   #decision .package-card .package-requires { margin: 1px 0 0; font-size: 10px; }
   #evolution-budget .pick-budget { padding: 7px 10px; margin-bottom: 4px; }
   #evolution-budget .pick-budget > strong { font-size: 13px; }
-  #evolution-budget .pick-tokens { margin: 4px 0 0; }
-  #evolution-budget .pick-note { display: none; }
-}
-@media (max-width: 1099px) {
-  .mini-delta { flex: none; padding: 0 3px; border-radius: 3px; font-size: 10px; font-weight: 750; }
-  .mini-delta.harm { color: #ffbbb4; background: #472a29; }
-  .mini-delta.recovery { color: #b0edc2; background: #23452e; }
-}
+  #evolution-budget .pick-tokens { margin: 4px 0 2px; }
 
-/* A phone's opened battlefield prints each stat as its symbol and number, the ones the cards and packages
-   already use; the word stays for a screen reader. A narrow phone keeps the round and the button on one line. */
-@media (max-width: 760px) {
-  #board .creature { grid-template-columns: minmax(0, 1fr) auto; }
+  #board .creature { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 10px; }
+  #board .creature.legal, #board .creature.picked { padding: 8px 9px; }
+  #board .creature:not(.legal, .picked, .active, .dead) .creature-label { display: none; }
+  #board .creature-id { min-width: 24px; height: 24px; }
+  #board .health { grid-column: 1 / -1; height: 17px; }
   #board .stats { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 8px; }
-  #board .health { grid-column: 1 / -1; }
-  #board .stat span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #board .stat { flex-direction: row; align-items: baseline; gap: 3px; }
+  #board .stat strong { font-size: 15px; }
   #board .stat strong::before { margin-right: 1px; font-size: 12px; }
   #board .stat-energy strong::before { content: 'ϟ'; }
   #board .stat-defense strong::before { content: '◇'; }
   #board .stat-initiative strong::before { content: '↟'; }
+  #board .stat span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #board .round-choice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 2px; padding-top: 5px; }
+  #board .round-choice .choice-spell { margin: 0; font-size: 13px; }
+  #board .round-choice .choice-targets, #board .round-choice .choice-previous { margin: 0; font-size: 11px; }
+  #board .team-section .section-heading { margin-bottom: 6px; }
+  #board .team-grid { gap: 6px; }
+  .initiative-section .strip { display: grid; gap: 8px; overflow: visible; }
+  .initiative-section .band { display: block; min-width: 0; }
+  .initiative-section .band-name { margin-bottom: 4px; }
+  .initiative-section .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .initiative-section .slot { min-width: 0; padding: 5px; }
+
+  .talent-window .talent-toolbar { position: static; box-shadow: none; }
+  .talent-window #mat { scroll-padding-top: 0; }
+  .tree-map { max-height: none; overflow: visible; padding: 4px 0 12px; }
+  .tree-map ul { display: grid; gap: 6px; padding: 0; }
+  .tree-map .tree-roots { gap: 14px; }
+  .tree-map li { min-width: 0; padding: 0; text-align: left; }
+  .tree-map li::before, .tree-map li::after, .tree-map ul ul::before { display: none; }
+  .tree-roots > li > ul { margin: 6px 0 0 10px; padding-left: 10px; border-left: 1px solid #7b8d80; }
+  .tree-roots > li > ul > li { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .tree-node { max-width: none; min-height: 0; height: auto; padding: 8px 10px; text-align: left; border-top-width: 1px; border-left-width: 4px; }
+  .tree-title { font-size: 15px; overflow-wrap: normal; }
+  .tree-progress { margin-top: 3px; }
+  .tree-node:not(.unlockable, .known) .tree-offer { display: none; }
+  .atlas-back { display: block; margin: 0 0 10px auto; }
 }
+
+/* The narrowest phones: the round's line keeps its button, and a chip showing what an action just did to
+   health leaves its energy out rather than squeeze the bar away. */
 @media (max-width: 360px) {
   .phase-primary { gap: 4px 8px; }
   #phase-round { font-size: 14px; }
   #phase-current { font-size: 13px; }
   .board-toggle { padding: 4px 8px; font-size: 11px; }
-}
-@media (max-width: 760px) {
-  .phase-primary { flex-wrap: nowrap; }
-  #phase-round, .board-toggle { flex: none; }
-  #phase-current { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-creature { gap: 3px; padding: 3px 4px; }
+  .mini-creature:has(.mini-delta) .mini-energy { display: none; }
+  .mini-energy, .mini-defense { font-size: 9px; }
+  .phase-tools { flex-wrap: wrap; }
 }

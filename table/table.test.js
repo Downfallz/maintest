@@ -138,8 +138,16 @@ test('the round bar carries every creature at a glance: number, health, energy a
   assert.match(ally.className, /mini-creature ally/);
   assert.equal(ally.textContent, '120ϟ4');
   assert.equal(enemy.textContent, '210ϟ0⊘');
-  assert.equal(enemy.attributes['aria-label'], 'Creature 2, opponent, 10/20 health, 0 energy, stunned');
+  assert.equal(enemy.attributes['aria-label'], 'Creature 2, opponent, 10/20 health, 0 energy, 0 defense, stunned');
   assert.doesNotMatch(p.nodes['mini-board'].className, /targeting/);
+});
+
+test("a chip shows a creature's defense when it has some", () => {
+  const p = page(); p.view.board.allies[0].totalDefense = 3; p.draw();
+  const [ally] = p.nodes['mini-allies'].children;
+  assert.equal(ally.textContent, '120ϟ4◇3');
+  assert.match(ally.attributes['aria-label'], /, 4 energy, 3 defense(,|$)/);
+  assert.equal(p.nodes['mini-enemies'].children[0].children.some(child => child.className === 'mini-defense'), false);
 });
 
 test('a spell aimed at an ally is aimed from the round bar, and any other chip opens the battlefield', () => {
@@ -148,15 +156,56 @@ test('a spell aimed at an ally is aimed from the round bar, and any other chip o
   assert.match(p.nodes['mini-board'].className, /targeting/);
   const [ally] = p.nodes['mini-allies'].children;
   assert.match(ally.className, /legal/);
-  assert.equal(ally.attributes['aria-pressed'], 'false');
+  assert.equal(ally.dataset.focus, 'mini-target-1');
+  assert.match(ally.attributes['aria-label'], /, legal target$/);
   ally.click();
   assert.deepEqual([...p.state.picked], [1]);
-  assert.match(p.nodes['mini-allies'].children[0].className, /picked/);
-  assert.equal(p.nodes['mini-allies'].children[0].attributes['aria-pressed'], 'true');
+  const picked = p.nodes['mini-allies'].children[0];
+  assert.match(picked.className, /picked confirm/);
+  assert.match(picked.attributes['aria-label'], /, selected target, tap again to cast$/);
+  assert.equal(picked.title, 'Tap again to cast');
+  assert.equal(p.nodes.choices.children[0].textContent, 'Tap a selected target again, or Cast, to confirm.');
   assert.ok(!p.state.boardOpen);
   p.nodes['mini-enemies'].children[0].click();
   assert.equal(p.state.boardOpen, true);
   assert.deepEqual([...p.state.picked], [1]);
+});
+
+test('the creature the round is on is marked on its chip whoever is being asked', () => {
+  const p = page(); p.view.waitingFor = null; p.view.waitingCreature = null;
+  p.view.board.subPhase = 'ActionResolution'; p.view.board.resolveCursor = 1;
+  p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }];
+  p.draw();
+  assert.match(p.nodes['mini-enemies'].children[0].className, /\bturn\b/);
+  assert.match(p.nodes['mini-enemies'].children[0].attributes['aria-label'], /, acting now$/);
+  assert.doesNotMatch(p.nodes['mini-allies'].children[0].className, /\bturn\b/);
+});
+
+test('with the battlefield shut, arrows and numbers pick targets from the chips, and focus stays on them', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  for (const row of [...p.nodes.enemies.children, ...p.nodes.allies.children]) row.checkVisibility = () => false;
+  const chip = p.nodes['mini-allies'].children[0];
+  chip.closest = selector => (['#phase-dock', '#mini-board'].includes(selector) ? chip : null);
+  let prevented = false;
+  p.context.keyboardDecision(p.state, { key: 'ArrowRight', target: chip, preventDefault: () => { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.match(p.document.activeElement.dataset.focus, /^mini-target-/);
+  p.context.keyboardDecision(p.state, { key: '2', target: chip, preventDefault() {} });
+  assert.deepEqual([...p.state.picked], [2]);
+  const again = p.nodes['mini-enemies'].children[0];
+  again.focus(); p.state.rendered = null; p.draw();
+  assert.equal(p.document.activeElement.dataset.focus, 'mini-target-2');
+});
+
+test('closing the battlefield hands focus back to its button, and a chip opening it gives the battlefield focus', () => {
+  const p = page(); p.draw();
+  p.nodes['mini-enemies'].children[0].click();
+  assert.equal(p.document.activeElement, p.nodes.board);
+  p.nodes.board.children = [p.nodes.enemies];
+  p.nodes.enemies.children[0].focus();
+  p.context.showBoard(p.state, false);
+  assert.equal(p.document.activeElement, p.nodes['board-toggle']);
 });
 
 test('opened while a target is asked for, the battlefield starts at the first creature the spell may take', () => {

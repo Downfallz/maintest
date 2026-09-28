@@ -1,5 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+// What a test expects follows the layout's own widths (table.css: 760 and 1100), not a project's name.
+const widthOf = page => page.viewportSize().width;
+const isPhone = page => widthOf(page) <= 760;
+const isLaptop = page => widthOf(page) >= 1100;
+
+// The document against the viewport the test set: in mobile emulation `innerWidth` grows with the content, so
+// comparing with it passes however far the page spills.
+async function expectNoSidewaysScroll(page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+}
+
 // Host-shaped responses keep layout regressions independent of simulation progress.
 const cards = ['Basic Attack', 'Full Plate', 'Guard', 'Heavy Strike', 'Pummel', 'Wait'].map((name, index) => ({
   id: `spell-${index}`, name, cost: index === 5 ? 0 : 2, critical: index === 4 ? '77%' : '0%',
@@ -35,7 +46,7 @@ test.beforeEach(async ({ page }) => {
 
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {
   await page.evaluate(() => scrollTo(0, 0));
-  if (info.project.name !== 'desktop') {
+  if (isPhone(page)) {
     expect((await page.locator('.masthead').boundingBox()).height).toBeLessThanOrEqual(50);
     await expect(page.locator('.brand')).toBeHidden();
     await expect(page.locator('#phase')).toBeHidden();
@@ -51,7 +62,7 @@ test('mobile header saves space and the guide stays above the sticky round bar',
     return y >= g.top && y <= g.bottom && guide.contains(document.elementFromPoint(x, y));
   });
   expect(aboveDock).toBe(true);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectNoSidewaysScroll(page);
   await page.screenshot({ path: info.outputPath('round-guide.png'), animations: 'disabled' });
 });
 
@@ -87,7 +98,7 @@ test('the battlefield opens from the round bar over the page and closes back to 
   await expect(page.locator('#hand-board')).toHaveCount(0);
   await expect(page.locator('#board-move')).toHaveCount(0);
   const toggle = page.locator('#board-toggle');
-  if (info.project.name === 'desktop') {
+  if (isLaptop(page)) {
     await expect(toggle).toBeHidden();
     await expect(page.locator('#board')).toBeInViewport();
     return;
@@ -101,7 +112,7 @@ test('the battlefield opens from the round bar over the page and closes back to 
   const [dock, board] = await Promise.all([page.locator('#phase-dock').boundingBox(), page.locator('#board').boundingBox()]);
   expect(Math.abs(board.y - (dock.y + dock.height))).toBeLessThanOrEqual(1);
   await expect(page.locator('#allies')).toContainText('Creature 1');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectNoSidewaysScroll(page);
   await page.screenshot({ path: info.outputPath('battlefield-open.png'), animations: 'disabled' });
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -119,7 +130,7 @@ test('the talent atlas lays its families out without overlap or sideways panning
       expect(overlap).toBe(false);
     }
   }
-  if (info.project.name !== 'desktop') {
+  if (!isLaptop(page)) {
     expect(await page.locator('#mat').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
   }
   await page.screenshot({ path: info.outputPath('talent-atlas.png'), animations: 'disabled' });
@@ -134,8 +145,8 @@ test('a phone lists the castable spells as compact rows, the chosen one with its
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: intent }));
   await expect(page.locator('#own-hand .held.offered')).toHaveCount(cards.length);
   const heights = await page.locator('#own-hand .held.offered').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
-  if (info.project.name !== 'desktop') expect(Math.max(...heights)).toBeLessThan(140);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (isPhone(page)) expect(Math.max(...heights)).toBeLessThan(140);
+  await expectNoSidewaysScroll(page);
   const pummel = page.locator('#own-hand .held.offered').filter({ hasText: 'Pummel' });
   await pummel.click();
   await expect(pummel).toContainText('Tap again to declare');
@@ -143,8 +154,8 @@ test('a phone lists the castable spells as compact rows, the chosen one with its
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
 });
 
-test('a phone keeps the battlefield in the round bar at a glance, not at the bottom of the page', async ({ page }, info) => {
-  if (info.project.name === 'desktop') {
+test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {
+  if (isLaptop(page)) {
     await expect(page.locator('#mini-board')).toBeHidden();
     await expect(page.locator('#board')).toBeVisible();
     return;
@@ -152,8 +163,9 @@ test('a phone keeps the battlefield in the round bar at a glance, not at the bot
   await expect(page.locator('#board')).toBeHidden();
   await expect(page.locator('#mini-board .mini-creature')).toHaveCount(2);
   await expect(page.locator('#mini-enemies .mini-creature')).toHaveAttribute('aria-label', /^Creature 2, opponent, 20\/30 health/);
-  const [dock, mini] = await Promise.all([page.locator('#phase-dock').boundingBox(), page.locator('#mini-board').boundingBox()]);
-  expect(mini.y + mini.height).toBeLessThanOrEqual(dock.y + dock.height);
+  const mini = await page.locator('#mini-board').boundingBox();
+  expect(mini.x + mini.width).toBeLessThanOrEqual(widthOf(page));
+  await expectNoSidewaysScroll(page);
   await page.locator('#phase-notice-close').click();
   await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
   await expect(page.locator('#mini-board')).toBeInViewport();
@@ -167,14 +179,17 @@ test('a spell aimed at an ally is aimed from the round bar, and the battlefield 
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: target }));
   await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
   await page.locator('#phase-notice-close').click();
-  if (info.project.name === 'desktop') {
+  if (isLaptop(page)) {
     await page.locator('[data-focus="target-5"]').click();
     await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
     return;
   }
   await expect(page.locator('#mini-enemies .mini-creature.legal')).toHaveCount(0);
   await page.locator('#mini-allies [aria-label^="Creature 5,"]').click();
-  await expect(page.locator('#mini-allies [aria-label^="Creature 5,"]')).toHaveAttribute('aria-pressed', 'true');
+  // Picked, the chip says what its second tap does, and so does the sheet.
+  await expect(page.locator('#mini-allies [aria-label^="Creature 5,"]')).toHaveAttribute('aria-label', /selected target, tap again to cast$/);
+  await expect(page.locator('#mini-allies .mini-creature.picked')).toHaveCount(1);
+  await expect(page.locator('#choices')).toContainText('Tap a selected target again, or Cast, to confirm.');
   await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
   await page.screenshot({ path: info.outputPath('ally-target.png'), animations: 'disabled' });
   await page.locator('#board-toggle').click();
