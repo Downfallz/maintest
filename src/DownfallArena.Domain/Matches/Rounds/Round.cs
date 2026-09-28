@@ -247,6 +247,13 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
         }
 
+        // A slot is bound once and activated at once (ADR 0083): a second binding before the cursor moves
+        // would replace an action that already resolved, or is resolving.
+        if (_actions.ContainsKey(action.Actor))
+        {
+            throw new InvalidOperationException($"Creature {action.Actor} is bound twice in one slot.");
+        }
+
         _actions[action.Actor] = action;
         return Result.Success();
     }

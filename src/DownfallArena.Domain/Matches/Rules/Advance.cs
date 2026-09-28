@@ -76,16 +76,19 @@ public static class Advance
 
     /// <summary>
     /// How the match would end on this board if a team is wiped, or <c>null</c> while both stand: the check the
-    /// match makes after every action and every upkeep, and ends on at once (ADR 0083).
+    /// match makes after every action and every upkeep, and ends on at once (ADR 0083). Read off the snapshots
+    /// rather than restored creatures: a rollout asks it after every slot, and a team is defeated exactly when
+    /// none of its creatures is alive, which a snapshot says as it is.
     /// </summary>
-    public static MatchOutcome? Elimination(IReadOnlyList<CreatureSnapshot> board, IGameResources resources)
+    public static MatchOutcome? Elimination(IReadOnlyList<CreatureSnapshot> board)
     {
         ArgumentNullException.ThrowIfNull(board);
-        ArgumentNullException.ThrowIfNull(resources);
 
-        var creatures = Restore(board, resources);
-        return WinCondition.Elimination(TeamOf(PlayerSlot.Player1, creatures), TeamOf(PlayerSlot.Player2, creatures));
+        return WinCondition.Elimination(Defeated(board, PlayerSlot.Player1), Defeated(board, PlayerSlot.Player2));
     }
+
+    private static bool Defeated(IReadOnlyList<CreatureSnapshot> board, PlayerSlot owner) =>
+        !board.Any(creature => creature.Owner == owner && creature.IsAlive);
 
     /// <summary>
     /// The board after the automatic steps that start a round: the energy gain, then the ongoing effects in

@@ -2,7 +2,8 @@
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
-2026-09-25). Phase 4 of [plan.md](plan.md).
+2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28). Phase 4 of
+[plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -13,7 +14,10 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 > ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
 > nothing at the table. A tie on the Combat timeline is settled by a Roll-off on a d20 and then by its owners'
 > Tie orders (ADR 0063). A Stun always ends, and the Creature it ends on is immune to Stun for the next Round
-> ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). This book names the
+> ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). Combat walks the timeline
+> once: at each slot the Intent is revealed, its targets are chosen on the board as it stands, and the action
+> resolves at once; a Team wiped ends the Match on the spot
+> ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). This book names the
 > **package card** by what it must show; its size, its count and where it sits are
 > [components.md](components.md)'s to specify.
 
@@ -44,23 +48,23 @@ rule, it comes from [components.md](components.md) and is named there.
 ## Part 1. What you are trying to do
 
 Two Players. Each commands a Team of Creatures. You win when the other Team is defeated: every one of its
-Creatures at zero Health.
+Creatures at zero Health. The Match ends the moment that happens, even in the middle of a Round.
 
 A Match is a sequence of Rounds. In the Rounds the Rule set's schedule offers, you buy Tiers for your
 Creatures. In every Round you choose how fast each of your Creatures moves, then declare one hidden Intent per
-Creature. The Intents are revealed in order along the Combat timeline, targets are chosen as each one is
-revealed, and only then does anything resolve.
+Creature. Then the Combat timeline is walked once. When a Creature's turn comes, its Intent is revealed, its
+owner chooses its targets on the board as it stands, and it resolves at once, before the next Creature acts.
 
 Three things make the game:
 
 - **You commit before you see.** Your Speed choices, your Tie orders and your Intents are made face down, at
-  the same time as your opponent's. You choose targets later, when the card flips, knowing what has already
-  been revealed.
+  the same time as your opponent's. You choose targets later, when your Creature's turn comes, knowing
+  everything that has already happened this Round.
 - **You grow in packages.** Evolution buys a Tier: a named package of Spells, every one of them at once. The
   Tier also raises that Creature's Base initiative by its bonus, for the rest of the Match. Buying is how a
   Creature gets stronger, and it is also how it gets faster.
-- **Nothing is a reservation.** Energy is spent at Resolution, not when you declare. A Creature can be killed,
-  stunned or drained between the reveal and the resolution, and its cast then does nothing at all.
+- **Nothing is a reservation.** Energy is spent when the action resolves, not when you declare. A Creature can
+  be killed, stunned or drained before its turn comes, and its cast then does nothing at all.
 
 A Match runs 10 to 15 Rounds, which is 15 to 30 minutes once you know the book.
 
@@ -74,21 +78,22 @@ wins. Equal totals are a draw.
 Every piece, its count and the rule that fixes the count are in [components.md](components.md). Read it once
 while you punch the tokens out; this book does not repeat it.
 
-The five pieces this book names constantly, and where they are specified:
+The four pieces this book names constantly, and where they are specified:
 
 | Piece | What it is for | Specified in |
 | --- | --- | --- |
-| The Creature board | One per Creature: the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock, the `Targeted by` row | [components.md 3.1](components.md#31-the-creature-board) |
+| The Creature board | One per Creature: its number, the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition, and an Immune token for the Round after a Stun ends | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
 | The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md 4.1](components.md#41-the-package-card) |
-| The `Targeted by` row | One box per caster number on every Creature board; a target marker sits in it from the reveal until the Resolution | [components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits) |
 
-Four components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
-stunned Creature cannot be given a Speed card. A box in the `Targeted by` row holds one marker,
-so one cast cannot name the same target twice. A Creature board turned to its `Defeated` back has no slots at
+Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
+stunned Creature cannot be given a Speed card. A Creature board turned to its `Defeated` back has no slots at
 all, so a dead Creature cannot be given Energy, a Condition or an Intent. A pick token lies on the board of a
 Creature that bought a Tier this Round, so it cannot be picked twice ([5.3](#53-evolution)).
+
+There are no target markers. A cast resolves the moment its targets are named
+([5.7](#57-activation)), so nothing on the table ever points at a Creature for longer than it takes to resolve.
 
 ---
 
@@ -172,9 +177,10 @@ Creature, an empty initiative track, and the Round marker on 1.
 
 ## Part 4. The shape of a Round
 
-A Round is four Phases and eleven Sub-phases, always in this order, never backwards. This page is the whole
-game; Part 5 is the same ten steps with their details. Step 5 holds two Sub-phases, Turn order resolution and
-Tie order, because the second only ever finishes what the first began.
+A Round is four Phases and ten Sub-phases, always in this order, never backwards. This page is the whole
+game; Part 5 is the same nine steps with their details. Step 5 holds two Sub-phases, Turn order resolution and
+Tie order, because the second only ever finishes what the first began. Step 7 takes two sections of Part 5:
+[5.7](#57-activation) for the turn itself, and [5.8](#58-resolving-an-action) for how an action resolves.
 
 ```
 START OF ROUND
@@ -191,25 +197,26 @@ PLANNING
 
 COMBAT
   6  Intent selection ..... one hidden Intent per Creature on the timeline
-  7  Reveal and target .... walk the timeline: flip each card, place its targets. All six, before any resolve
-  8  Action resolution .... walk the timeline again: resolve each Combat action in turn
+  7  Activation ........... walk the timeline once: at each slot, flip the card, choose its targets,
+                            resolve it at once
 
 END OF ROUND
-  9  Cleanup .............. every Condition counts one Round down; a Stun that ends leaves its Creature
+  8  Cleanup .............. every Condition counts one Round down; a Stun that ends leaves its Creature
                             immune to Stun for the next Round
- 10  Finalization ......... check the Win condition; end the Match or start the next Round
+  9  Finalization ......... check the Round cap; end the Match or start the next Round
 ```
 
 Four things about this shape are worth holding in your head from the start.
 
-- **Steps 1, 2, 9 and 10 are automatic.** Nobody decides anything. Do them and move on. Steps 1, 2 and 9
+- **Steps 1, 2, 8 and 9 are automatic.** Nobody decides anything. Do them and move on. Steps 1, 2 and 8
   are the Upkeep: Energy gain, the ticks, and the Condition countdown. Step 5 is automatic too, except for a
   Player who holds two Places in one tie. Step 3 asks nothing in a Round that offers no opportunity.
-- **Nothing changes between step 5 and step 8.** You choose all six target sets on a board that has not
-  happened yet. The first Creature to die in a Round dies in step 8, after every target has been placed.
+- **The board changes between two slots.** Each action resolves before the next card is flipped, so you
+  always choose targets on the board as it is. A Creature killed before its turn never acts.
 - **Of the decisions, only Evolution is open.** A package card goes face up the moment it is bought. Speed,
   Tie order and Intent are face down, and each is turned over by both Players together.
-- **A Round is walked twice.** Once to reveal and target, once to resolve. Same order both times.
+- **The Match can end in the middle of a Round.** The moment a Team has no living Creature, on an action or
+  on a Bleed at the start of a Round, the Match is over. Nothing after it is played.
 
 ---
 
@@ -248,6 +255,9 @@ A Creature carrying two Conditions of the same kind takes both: add them up and 
 
 Healing goes before bleeding on purpose: a Regeneration can carry a Creature through a Bleed that would
 otherwise have killed it. Doing it the other way round kills Creatures the rules keep alive.
+
+**A Bleed can end the Match.** When the Bleed pass leaves a Team with no living Creature, the Match ends
+there, before Evolution ([7.2](#72-the-end-of-a-match)). Both Teams wiped by the same pass is a draw.
 
 > **Example.** Creature 5 is at 1 Health, carries a Regeneration 3 a Round from **Healing Screech**, and a
 > Bleed 1 a Round from **Toxic Waves**. Its Defense rails read buffs 3, debuffs 0.
@@ -347,7 +357,7 @@ Player.
 Speed slot. Keep the other in your hand, out of sight. Every such Creature gets exactly one card. When both
 Players are done, turn all the cards over together.
 
-The turned cards stay face up in their slots for the rest of the Round: Action resolution reads them, because a
+The turned cards stay face up in their slots for the rest of the Round: Activation reads them, because a
 Quick Creature does not roll. At Cleanup, take your Speed cards back into your hand.
 
 **What you are trading.** Quick acts before every Standard Creature — and **a Quick Creature cannot crit this
@@ -417,8 +427,9 @@ legal when that Creature knows the Spell — it is a starting Spell, or one of t
 teaches it — and its Energy rail is at or above the Spell's printed cost. Every Creature on the timeline gets
 exactly one.
 
-**Declaring is not reserving.** The Energy is not spent now. It is checked again and spent at Resolution, and
-by then it may be gone.
+**Declaring is not reserving.** The Energy is not spent now. It is checked again when the Creature's slot
+comes up and spent when its action resolves, and by then it may be gone. **Nor can you change your mind:** at
+your slot you choose targets, never another Spell.
 
 Your opponent can count the cost against your public Energy rail without seeing your card. That is why the
 Energy rails stay face up.
@@ -427,17 +438,30 @@ Energy rails stay face up.
 > Crushing Stomp (cost 4). It may declare Meteor. It may not declare Crushing Stomp: 3 is less than 4.
 > Player 2 can see the 3 on the rail, so they know Crushing Stomp is not under that card. They do not know
 > whether Meteor is.
-> Later this Round, Creature 5 resolves **Soul Devourer** on Creature 1 first: `Damage 6` and **`Energy -3`**.
-> Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Meteor's 3 and the cast
-> Fizzles. See [6.1](#61-the-fizzle-and-every-cause-of-it).
+> Later this Round, Creature 5 acts before Creature 1 and casts **Soul Devourer** on it: `Damage 6` and
+> **`Energy -3`**. Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Meteor's 3:
+> its card is flipped with no targets and Fizzles. See [6.1](#61-the-fizzle-and-every-cause-of-it).
 
-### 5.7 Reveal and target
+### 5.7 Activation
 
-**Trigger.** Every Creature on the timeline has an Intent.
+**Trigger.** Every Creature on the timeline has an Intent; after that, each time an action has resolved.
 **Actor.** The Player who owns the next Activation slot on the timeline.
-**Result.** Choose that Creature's targets, then reveal its Intent card and confirmed targets together
-(ADR 0070). Later slots' cards stay face down. Walk the whole timeline this way.
-**Nothing resolves yet, and nothing on any board changes.**
+**Result.** That Creature's card is revealed with the targets its owner chooses on the board as it stands, and
+the action resolves at once ([5.8](#58-resolving-an-action)). Then the next slot comes up. The timeline is
+walked once, and each slot has its turn exactly once.
+
+At each slot, do this, in this order:
+
+1. **Can the Creature act?** It cannot if it is dead, stunned, no longer able to pay for its Spell, or left
+   with no legal target. Then flip its card with no targets. It **Fizzles** at no cost, and its owner chooses
+   nothing ([6.1](#61-the-fizzle-and-every-cause-of-it)). Go to the next slot.
+2. **Choose the targets.** The owner reads their own face-down card and chooses its targets among the
+   Creatures as they stand now.
+3. **Reveal.** Flip the card and name its targets, together: point at each target's board and say its
+   number. The Spell and its targets become public at the same moment, never one before the other. Later
+   slots' cards stay face down.
+4. **Resolve it now**, as [5.8](#58-resolving-an-action) says. If a Team has no living Creature afterwards,
+   the Match ends here ([7.2](#72-the-end-of-a-match)). Otherwise the next slot comes up.
 
 Choose targets to satisfy the card's targeting line:
 
@@ -446,45 +470,44 @@ Choose targets to satisfy the card's targeting line:
 - **Count.** A single-target Spell takes exactly one target. A Spell with a maximum above one may take **fewer
   than its maximum**, and never more. It must always take at least one.
 - **Alive.** A dead Creature cannot be chosen.
-- **Once.** A target cannot be chosen twice by one cast. The `Targeted by` boxes make that impossible.
+- **Once.** A target cannot be named twice by one cast.
 
-Place one target marker of the caster's colour and number in each chosen target's `Targeted by` row. The
-markers stay there until that cast resolves.
+> **Example.** Round 9. The timeline is 4, 1, 6, 3, 5, 2. Creature 4's action has resolved. Creature 5 is at
+> 3 Health, with no Defense.
+> **Slot 2, Creature 1.** It can act. Player 1 reads its card, **Heavy Strike** (`One enemy`, `Damage 3`),
+> chooses Creature 5, flips the card and says "5". It resolves now: Creature 5 goes to 0 Health, and its board
+> turns to `Defeated`.
+> **Slot 3, Creature 6.** Its card is **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2
+> rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
+> and cannot be named.
+> **Slot 4, Creature 3.** Player 1 declared **Meteor** (`Up to 3 enemies`, `Damage 2`) when three enemies
+> stood. Two stand now, so Meteor may name Creature 4, Creature 6, or both. Creature 3 may not switch to
+> another Spell.
+> **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
+> chooses nothing.
+> **Slot 6, Creature 2** acts the same way. Every slot has had its turn, and the Round goes on to Cleanup.
 
-**A Spell with no legal target at all is revealed with no target markers.** It fizzles later. The timeline
-always moves on.
+### 5.8 Resolving an action
 
-> **Example.** Creature 3 reveals **Meteor**: `Up to 3 enemies`, `Damage 2`. All three enemies are alive.
-> Creature 3 may place one, two or three markers. Placing one is legal and sometimes right: Meteor's damage is
-> small, and a target already carrying a Defense buff will take nothing from it.
-> Creature 6 then reveals **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2 rounds`. Ally
-> includes the caster, so Creature 6 puts its own target marker in its own `Targeted by` row.
-> Both markers stay on the table. Neither cast has done anything yet.
-
-### 5.8 Action resolution
-
-**Trigger.** Every Activation slot on the timeline has been revealed and targeted.
-**Actor.** The Player who owns the next unresolved Activation slot, in the same timeline order as the reveal.
-**Result.** Resolve that Combat action completely, then move to the next slot. One cast at a time, and the
+**Trigger.** A Creature's card is face up and its targets are named ([5.7](#57-activation), step 3).
+**Actor.** That Creature's owner.
+**Result.** Resolve that Combat action completely before the next slot comes up. One cast at a time, and the
 board changes between them.
 
-Resolve one Combat action in this order, and do not reorder it:
+Nothing is checked again here. The Creature could act and its targets were legal a moment ago, and nothing
+has happened since. Resolve the action in this order, and do not reorder it:
 
-1. **Can the actor still act?** Dead, stunned, no longer able to afford the cost — the action **Fizzles**.
-   See [6.1](#61-the-fizzle-and-every-cause-of-it).
-2. **Are the targets still legal?** Check every marker again. A target that is now dead is **dropped**: take
-   its marker back and carry on with the rest. If **no** target is left, the action Fizzles.
-3. **Roll for a critical**, once for the whole cast. See [6.7](#67-the-critical-roll).
-4. **Pay.** Move the caster's Energy marker down by the printed cost.
-5. **Apply each effect line to each remaining target.** Damage is reduced by that target's total Defense and
-   never goes below zero. A Heal is capped by the Health that target is missing. An Energy drain takes at most
-   what the target has. A lasting Effect becomes a Condition; see [5.9](#59-cleanup) and
+1. **Pay.** Move the caster's Energy marker down by the printed cost.
+2. **Roll for a critical**, once for the whole cast. A Quick Creature does not roll. See
+   [6.7](#67-the-critical-roll).
+3. **Apply each effect line to each target.** Damage is reduced by that target's total Defense and never goes
+   below zero. A Heal is capped by the Health that target is missing. An Energy drain takes at most what the
+   target has. A lasting Effect becomes a Condition; see [5.9](#59-cleanup) and
    [Part 7](#part-7-reference-every-condition-and-the-end-of-a-match). A Stun on a target that is already
    stunned, or immune to Stun, is ignored ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
-6. **Apply the `Caster:` line, if the card has one.** Once for the whole cast, however many targets it
+4. **Apply the `Caster:` line, if the card has one.** Once for the whole cast, however many targets it
    reached. A `Caster:` Damage is reduced by the **caster's own** total Defense. A `Caster:` line is never
    multiplied by a critical.
-7. **Take the target markers back.**
 
 A Creature's **total Defense** is its base Defense plus its Defense buffs, **counted up to 10 and no
 further**, less its Defense debuffs, and the floor at zero is applied to that total, not to anything on the
@@ -492,20 +515,20 @@ way. The buff rail can read more than 10: every buff is still there and still co
 nothing past 10 until another one expires. The two Defense rails hold the two sums
 side by side so this is one subtraction, done when a Condition lands, not once per incoming cast.
 
-> **Example.** Creature 2 casts **Engulfing Flames** on Creature 5: cost 3, `One enemy`, `Damage 10`,
-> `Critical 33%`. Creature 5 cast **Full Plate** in an earlier Round, so its Defense buff rail reads 3 and its
-> debuff rail 0: total Defense 3.
-> Creature 2 is alive and unstunned, and its Energy rail reads 4. Creature 5 is alive. The action does not
-> Fizzle.
+> **Example.** Creature 2 is Standard, and its slot comes up. Its card is **Engulfing Flames**: cost 3,
+> `One enemy`, `Damage 10`, `Critical 33%`. Creature 5 cast **Full Plate** in an earlier Round, so its Defense
+> buff rail reads 3 and its debuff rail 0: total Defense 3.
+> Creature 2 is alive and unstunned, its Energy rail reads 4, and Creature 5 is alive. Player 1 flips the card
+> and names Creature 5.
+> Pay: Creature 2's Energy marker goes from 4 to 1.
 > Roll for a critical. **It is a critical.** Multiply the damage by the critical multiplier, 2: 10 becomes 20.
 > **Then** subtract Defense: 20 - 3 = 17. Creature 5 goes from 30 Health to 13.
-> Creature 2's Energy marker goes from 4 to 1.
 > Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
 > (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
 
 ### 5.9 Cleanup
 
-**Trigger.** The last Activation slot on the timeline has resolved.
+**Trigger.** The last Activation slot on the timeline has had its turn, and both Teams still stand.
 **Actor.** Both Players, together. Nothing is decided here.
 **Result.** Every Condition counts one Round down, and a Condition that reaches zero expires and is removed.
 A living Creature whose Stun expires here is immune to Stun until the next Cleanup.
@@ -540,7 +563,7 @@ rail stays where it is.
 > Round 7: stunned again, the whole Round. Cleanup of Round 7: the Stun token leaves lane `1`. Creature 4 is
 > alive, so an Immune token takes its place in lane `1`, and the Stun token comes out of the Speed slot.
 > Round 8: Creature 4 takes a Speed card again. **A two-Round Stun costs two whole Rounds**, and it also cost
-> Creature 4 its activation in Round 5 if its slot had not yet resolved.
+> Creature 4 its activation in Round 5 if its slot had not yet come up.
 > Also in Round 8, Creature 2 casts **Tranquilizer Dart** on Creature 4: `Damage 2` and `Stun, 2 rounds`. The
 > Damage lands. The Stun is ignored, because Creature 4 is immune: no token goes anywhere, and if Creature 4's
 > slot comes later in the Round, its action does not Fizzle. Cleanup of Round 8: the Immune token leaves lane
@@ -550,13 +573,14 @@ rail stays where it is.
 
 **Trigger.** Cleanup is done.
 **Actor.** Both Players, together. Nothing is decided here.
-**Result.** Check the Win condition.
+**Result.** Check the Round cap.
 
-- If **either** Team has no living Creature, the Match ends now. The Team that still has one wins. If neither
-  does, the Match is a draw.
-- Otherwise, if the Round marker is on the Round cap marker's space, the Match ends now. The Team with the
-  **highest total remaining Health** wins; equal totals are a draw.
+- If the Round marker is on the Round cap marker's space, the Match ends now. The Team with the **highest
+  total remaining Health** wins; equal totals are a draw.
 - Otherwise, advance the Round marker one space and start the next Round at [5.1](#51-energy-gain).
+
+A defeated Team is not checked here, because it never gets here: the Match ended the moment it was wiped
+([7.2](#72-the-end-of-a-match)).
 
 > **Example.** The Round cap marker is on space 20. At the end of Round 20 both Teams are still standing.
 > Player 1's Creatures are at 11, 0 and 6 Health: total 17. Player 2's are at 4, 9 and 5: total 18. **Player 2
@@ -571,46 +595,50 @@ These are the rules that get played wrong. Each one is a rule, not an exception.
 ### 6.1 The Fizzle, and every cause of it
 
 A **Fizzle** is a Combat action that resolves and does nothing. **A Fizzle costs nothing**: no Energy is
-spent, no Effect lands, no `Caster:` line resolves, no Condition is applied. Take the target markers back and
-move to the next Activation slot.
+spent, no Effect lands, no `Caster:` line resolves, no Condition is applied. Its card is flipped with no
+targets, its owner chooses nothing, and the next Activation slot comes up.
 
-Check the causes in this order at step 1 and step 2 of [5.8](#58-action-resolution). The first one that
-applies ends the action.
+Check the causes in this order at step 1 of [5.7](#57-activation), when the Creature's slot comes up. The
+first one that applies ends the action.
 
 | # | Cause | How it happens at a table |
 | --- | --- | --- |
-| 1 | **The actor is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
-| 2 | **The actor is stunned.** | A **Crushing Stomp** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
-| 3 | **The actor no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
-| 4 | **The actor cannot afford the cost now.** | A **Soul Devourer** in an earlier slot drained its Energy below the cost. It is the only Spell in the catalogue that takes Energy. |
-| 5 | **No targets were bound.** | The Spell had no legal target when its card was flipped: every enemy dead, for an Enemy Spell. It was revealed with no markers and fizzles here. |
-| 6 | **Too many targets, a duplicate target, or a Self Spell pointed elsewhere.** | The components make all three impossible: one marker per box, `maxTargets` markers in a set, and a Self Spell's marker goes in its own row. Listed because the engine checks them. |
-| 7 | **Every bound target is invalid now.** | Each one is dead. This is cause 5's twin, one step later. |
+| 1 | **The Creature is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
+| 2 | **The Creature is stunned.** | A **Crushing Stomp** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
+| 3 | **The Creature no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
+| 4 | **The Creature cannot afford the cost now.** | A **Soul Devourer** in an earlier slot drained its Energy below the cost. It is the only Spell in the catalogue that takes Energy. |
+| 5 | **The Spell has no legal target.** | Nothing on the board is a target its card allows. With today's cards this cannot happen: an `Ally` or `Self` Spell always has its living caster, and an `Enemy` Spell runs out of targets only when the other Team is wiped, which has already ended the Match ([7.2](#72-the-end-of-a-match)). |
 
-Causes 1, 2, 4, 5 and 7 are the ones you will see. Causes 3 and 6 exist in the rules and cannot be reached
-with this content and these components.
+Causes 1, 2 and 4 are the ones you will see. Causes 3 and 5 exist in the rules and cannot be reached with
+this content.
 
-### 6.2 A per-target failure drops one target, not the action
+A target you choose is never dropped later, and an action never Fizzles after its targets are named: it
+resolves at once, and nothing happens in between. A choice that breaks the targeting line — too many targets,
+one named twice, a `Self` Spell pointed elsewhere, a dead Creature — is not a Fizzle either. It is not a legal
+choice: choose again.
 
-**Trigger.** At step 2 of [5.8](#58-action-resolution), one of the bound targets is dead.
-**Actor.** The Player resolving the action.
-**Result.** Take that target's marker back and resolve the action against the ones that remain. The cost is
-still paid. The action Fizzles only when **no** target remains.
+### 6.2 You choose targets, not your Spell
 
-> **Example.** Creature 2 revealed **Toxic Waves** on Creatures 4, 5 and 6: cost 3, `Damage 3` and
-> `Bleed 1 a round, 1 round` on each. Before its slot resolves, Creature 1 kills Creature 6.
-> At resolution, Creature 6's marker comes off. Creature 2 still pays 3 Energy, and Creatures 4 and 5 each
-> take the damage and each get a Bleed token in their `new` lane.
-> If Creatures 4 and 5 had also died first, the action would have Fizzled and Creature 2 would have paid
-> nothing.
+**Trigger.** Your Creature's slot comes up and the board is not the one you declared its Intent on.
+**Actor.** You, the Creature's owner.
+**Result.** You keep the Spell you declared and choose its targets among the Creatures standing now. You
+cannot swap the card for another.
 
-### 6.3 A target that died between the reveal and the resolution
+> **Example.** Player 1 declared **Toxic Waves** for Creature 2: cost 3, up to three enemies, `Damage 3` and
+> `Bleed 1 a round, 1 round` on each. Before Creature 2's slot comes up, Creature 1 kills Creature 6.
+> Creature 2 may name Creatures 4 and 5, or either of them. It pays 3 Energy, and each Creature it names takes
+> the damage and gets a Bleed token in its `new` lane.
+> Player 1 would rather cast **Guard** now. They cannot: the card in the intent slot is the Spell.
 
-This is the normal case, not a corner. Every Intent in the Round is revealed and targeted before any of them
-resolves, so **you always choose your targets on a board that has not happened yet.**
+### 6.3 Nothing happens between the reveal and the resolution
 
-A target that dies before your slot comes up is dropped ([6.2](#62-a-per-target-failure-drops-one-target-not-the-action)).
-That is the cost of acting late, and it is the whole reason the Quick Speed card exists.
+A card is flipped, its targets are named, and it resolves, as one turn. No other Creature acts in between. So
+**a target cannot die between the reveal and the resolution**, and **you always choose your targets on the
+board as it is.**
+
+What a late slot risks is different: the board may change before your turn comes. A target you meant to hit
+may already be dead, and your own Creature may be dead, stunned or drained. That is the cost of acting late,
+and it is the whole reason the Quick Speed card exists.
 
 Nothing overspills. A Creature at 3 Health hit for 10 takes 3, not 10: damage is capped by the Health left, a
 Heal by the Health missing, and a dead Creature takes neither. A cast that changes nothing on a target — 0
@@ -629,7 +657,7 @@ before Speed and never asks whether a Creature is stunned. It can still be targe
 simply never acts.
 
 A Stun that lands **during** Combat also fizzles that Creature's own action if its Activation slot has not
-resolved yet ([6.1](#61-the-fizzle-and-every-cause-of-it), cause 2). So a two-Round Stun can cost three
+come up yet ([6.1](#61-the-fizzle-and-every-cause-of-it), cause 2). So a two-Round Stun can cost three
 activations: this Round's, and the two following. It cannot cost more, because of the two rules below.
 
 **Stun immunity.**
@@ -640,12 +668,12 @@ is swapped for an Immune token, and the Stun token comes out of its Speed slot (
 
 **A Stun that cannot land.**
 **Trigger.** A resolving cast's Stun line reaches a target that is stunned or immune to Stun.
-**Actor.** The Player resolving the action.
+**Actor.** The caster's owner, who is resolving the action.
 **Result.** Ignore that Stun line for that target: place no token, and leave the Stun it carries as it is.
 Every other line of the cast still lands on it, and the cast is not a Fizzle.
 
 So every Stun ends, and after it the Creature has a Round no Stun can take: no Creature can be kept stunned.
-A stunned or immune Creature is still a legal target when you reveal and target, because the rule refuses the
+A stunned or immune Creature is still a legal target when you choose targets, because the rule refuses the
 Stun line, not the Spell. It can still be damaged, healed and killed; an immune Creature that dies loses its
 Immune token with the rest of its dock ([7.1](#71-the-eight-conditions-and-their-timing)).
 
@@ -709,8 +737,9 @@ does not reshuffle the Round it landed in.
 
 > **This is the only place in this book where the critical rule is written.** Everything else points here.
 
-**Trigger.** A Combat action has not Fizzled, and its card prints a Critical chance above zero.
-**Actor.** The Player resolving the action.
+**Trigger.** A Standard Creature's Combat action resolves, and its card prints a Critical chance above zero.
+A Quick Creature never rolls ([5.4](#54-speed)), and a Fizzle never reaches the roll.
+**Actor.** The caster's owner, who is resolving the action.
 **Result.** Roll a d20, **once for the whole cast**, and compare it to the threshold the card prints:
 `d20: 11+` means 11 or more. On a hit, the cast is critical.
 
@@ -736,7 +765,7 @@ nothing else.
 
 **A critical is applied before Defense is subtracted.** Multiply the printed Damage, then subtract the
 target's total Defense, then floor at zero. Doing it the other way round gives a different, wrong number; see
-the example in [5.8](#58-action-resolution).
+the example in [5.8](#58-resolving-an-action).
 
 > **Example, a Heal.** Creature 2 casts **Restorative Gush** on Creature 3: `One ally`, `Heal 7`,
 > `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
@@ -775,7 +804,7 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Bleed** | Damage equal to its amount, **ignoring Defense** | Start of Round, third pass, after Regeneration | Stacks: both tick, add them | Condition dock |
 | **Regeneration** | Heals its amount, capped by the Health missing | Start of Round, second pass, **before** Bleed | Stacks | Condition dock |
 | **Energy regeneration** | Gives its amount of Energy. No Spell in the current catalogue applies it | Start of Round, first pass | Stacks | Condition dock |
-| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles an action already revealed | Speed Sub-phase, and Action resolution | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
+| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative | Read once, at Turn order resolution | Stacks | Condition dock |
@@ -799,20 +828,27 @@ board over: nothing on a `Defeated` board is ever read again.
 
 ### 7.2 The end of a Match
 
-Checked at Finalization, at the end of every Round, in this order:
+Two ways to end, each checked at its own moment:
 
-1. **A Team with no living Creature is defeated.** The other Team wins. The reason is `Elimination`.
-2. **Both Teams defeated in the same Round is a draw.** It is reachable: a `Caster:` Damage line can kill its
-   own caster.
-3. **The Round cap.** When the Round marker reaches the Round cap marker with both Teams standing, the Match
-   ends. Add up each Team's remaining Health. The higher total wins; the reason is `RoundCap`.
+1. **A Team with no living Creature is defeated, and the Match ends at once.** Check after every action that
+   resolves ([5.7](#57-activation)) and after the Bleed pass at the start of a Round
+   ([5.2](#52-ongoing-effects)). The other Team wins. The reason is `Elimination`.
+2. **Both Teams defeated at once is a draw.** It is reachable: a `Caster:` Damage line can kill its own
+   caster, and one Bleed pass can empty both Teams.
+3. **The Round cap**, checked at Finalization only. When the Round marker is on the Round cap marker at the
+   end of a Round, with both Teams standing, the Match ends. Add up each Team's remaining Health. The higher
+   total wins; the reason is `RoundCap`.
 4. **Equal totals at the cap are a draw.**
 
-A Team is defeated the moment its last Creature dies, but the Match does not end until **Finalization**: the
-Round finishes first, every remaining Activation slot resolves, and Cleanup runs. Both Teams can go down in
-the same Round, and even to the same cast — **Hateful Sacrifice** deals `Damage 10` to its target and then
-`Caster: Damage 4` to itself, so a Creature at 4 Health or less that kills the last enemy with it wipes both
-Teams. That is a draw.
+**An elimination does not wait for the end of the Round.** The action that kills a Team's last Creature is the
+last thing that happens: no further slot comes up, and Cleanup does not run. So one cast can wipe both Teams
+at once — **Hateful Sacrifice** deals `Damage 10` to its target and then `Caster: Damage 4` to itself, so a
+Creature at 4 Health or less that kills the last enemy with it wipes its own Team too. That is a draw.
+
+> **Example.** Round 11. Player 2 has only Creature 4 left, at 3 Health, and Player 1 has Creatures 1 and 2.
+> The timeline is 2, 4, 1. In slot 1, Creature 2 casts **Heavy Strike** on Creature 4: `Damage 3`, and
+> Creature 4 has no Defense. Creature 4 goes to 0. Player 2 has no living Creature, and **Player 1 wins now**.
+> Creatures 4 and 1 never act, and nothing counts down.
 
 ---
 
@@ -821,17 +857,19 @@ Teams. That is a draw.
 Four rules could not be stated in three sentences. That is reported here as a design reading, not fixed by
 writing around it. Each one is faithful to the engine; each one is longer than a rule should be.
 
-1. **The Fizzle.** Seven causes, checked in a fixed order, two of which cannot happen with today's content and
-   components ([6.1](#61-the-fizzle-and-every-cause-of-it)). "A Combat action that does nothing and costs
-   nothing" is one sentence; the list of what makes one is a table. Two of its seven rows — a Creature that no
-   longer knows its Spell, and the row bundling the three targeting failures the components physically
-   prevent — exist in the rules and are unreachable at a table. A rule with unreachable clauses is a rule that
-   will be read twice.
+1. **The Fizzle.** Five causes, checked in a fixed order, two of which cannot happen with today's content
+   ([6.1](#61-the-fizzle-and-every-cause-of-it)). "A Combat action that does nothing and costs nothing" is one
+   sentence; the list of what makes one is a table. Two of its five rows — a Creature that no longer knows its
+   Spell, and a Spell with no legal target, which only a wiped Team could cause and a wiped Team has already
+   ended the Match — exist in the rules and are unreachable at a table. A rule with unreachable clauses is a
+   rule that will be read twice. It was seven rows until ADR 0083: the two it retired, a targeting failure
+   and every chosen target dead by the time the action resolved, no longer happen, since a target is chosen
+   on the board as it stands and resolves at once. The engine keeps both as guards no command reaches.
 2. **The critical roll** ([6.7](#67-the-critical-roll)). Trigger, one roll per cast, a chance that is the
    card's alone, a table of what is multiplied and what is not, and an ordering against Defense that changes
    the answer. Five statements for one die roll. The ordering against Defense is the part that will be played
    wrong, and it is the part that cannot be moved onto the card.
-3. **Target binding** ([5.7](#57-reveal-and-target)). Origin, count, a minimum of one, a maximum that may be
+3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
    may take fewer) are deliberately not printed on any of the 36 cards because they are true of all of them.
    The card is missing the two rules a new player most needs.
@@ -860,7 +898,11 @@ The Evolution rows, the setup table's schedule and every worked example were re-
 0056, ADR 0057 and ADR 0059, `data/Tiers/`, `data/Spells/`, and the engine's `EvolutionRules`,
 `TierEligibility` and `Creature.BuyTier`, and again the same day against ADR 0066, which moved the §5.3 and
 §5.9 examples, and against ADR 0072, which retired the Stun's restart, added the Immune token to §5.9 and
-added the §6.4 example. Every row below names the specification or a declared tabletop
+added the §6.4 example. On 2026-09-28 Part 1, Part 2, Part 4, §5.2 and §5.4 to §5.10, Part 6 but §6.5
+and §6.6, §7.1's Stun row, §7.2, Part 8 and this table were re-run against ADR 0083 and the rewritten "Round
+sequence" of `game-rules.md`: one `Activation` Sub-phase in place of Reveal and target and Action resolution,
+the resolution order of the specification (pay, then roll), and an elimination that ends the Match on the
+spot. Every row below names the specification or a declared tabletop
 entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every rule
 traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
 checks out.** The one row that did not, a purchase being public the moment it happens, was what the engine
@@ -868,26 +910,28 @@ did and `game-rules.md` did not say; the specification says it now.
 
 | This book | The specification |
 | --- | --- |
-| [Part 1](#part-1-what-you-are-trying-to-do), the Win condition | "Match lifecycle", ADR 0011 |
+| [Part 1](#part-1-what-you-are-trying-to-do), the Win condition | "Match lifecycle", ADR 0011, ADR 0083 |
 | [3.1](#31-the-setup-table), the setup table, and its three schedule rows | "Planning rules (phase 5)": the `RuleSet` value object, ADR 0056 |
-| [4](#part-4-the-shape-of-a-round), the eleven Sub-phases in ten steps | "Round sequence (ADR 0010)", amended by ADR 0063 |
+| [4](#part-4-the-shape-of-a-round), the ten Sub-phases in nine steps | "Round sequence (ADR 0010)", amended by ADR 0063 and ADR 0083 |
 | [5.1](#51-energy-gain) | "Start of round", 1: `EnergyGain` |
 | [5.2](#52-ongoing-effects), the three passes and their order | "Start of round", 2: `OngoingEffects`, ADR 0019, ADR 0020 |
+| [5.2](#52-ongoing-effects), a Bleed that wipes a Team | "End of round", 2: `Finalization`, "a Team wiped at upkeep ends the Match before `Evolution`"; "Match lifecycle"; ADR 0083 |
 | [5.3](#53-evolution), the schedule, availability, the purchase, the initiative bonus, the pass | "Planning", 1: `Evolution`; "Planning rules (phase 5)"; ADR 0056, ADR 0057, ADR 0059 |
 | [5.3](#53-evolution), one Tier a Creature an opportunity, a Player down to one living Creature, the end of the Sub-phase | "Planning", 1: `Evolution`, "a Creature buys at most one package an opportunity"; "Planning rules (phase 5)", the effective picks; ADR 0066. The engine refuses the pick with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.HasEvolved`); the pick token on the board is the table's record of that check |
 | [5.3](#53-evolution), a purchase is public the moment it happens | "Planning", 1: `Evolution`, "a purchase is public the moment it is made". The engine applies it at once (`Match.SubmitEvolutionChoice`) and both Players see `CreatureSnapshot.AcquiredTiers` |
 | [5.4](#54-speed), and the stunned Creature | "Planning", 2: `Speed` |
 | [5.5](#55-turn-order-resolution), and [6.6](#66-the-combat-timeline-and-its-tiebreaks) | "Planning", 3: `TurnOrderResolution`, and 4: `TieOrder`; ADR 0036, ADR 0063 |
-| [5.6](#56-intent-selection) | "Combat", 1: `IntentSelection` |
-| [5.7](#57-reveal-and-target), and [6.8](#68-two-more-things-every-card-assumes) | "Combat", 2: `RevealAndTarget` |
-| [5.8](#58-action-resolution), [6.1](#61-the-fizzle-and-every-cause-of-it), [6.2](#62-a-per-target-failure-drops-one-target-not-the-action) | "Combat", 3: `ActionResolution`, ADR 0035, ADR 0038 |
-| [6.7](#67-the-critical-roll) | "Combat", 3, the critical bullet; ADR 0033, ADR 0031 |
-| [5.8](#58-action-resolution) step 6, the `Caster:` line, and its Damage against the **caster's own** total Defense | ADR 0031. `game-rules.md` states the once-per-cast and the never-multiplied halves but is silent on the Defense; ADR 0031's "the outcome goes through the same rules as any other" is where that comes from |
+| [5.6](#56-intent-selection), and "nor can you change your mind" in it and [6.2](#62-you-choose-targets-not-your-spell) | "Combat", 1: `IntentSelection`; "Combat", 2: `Activation`, which reveals the Intent and binds targets, and nothing else |
+| [5.7](#57-activation), and [6.8](#68-two-more-things-every-card-assumes) | "Combat", 2: `Activation`; ADR 0070 (the Spell and its targets public together), ADR 0083 |
+| [5.7](#57-activation) step 1, [6.1](#61-the-fizzle-and-every-cause-of-it) | "Combat", 2: `Activation`, "a Creature that cannot act when its slot comes up ... fizzles at no cost: its owner is not asked"; "Combat rules (phase 6)"; ADR 0038, ADR 0083. The engine: `ActionRules.CanTakeItsSlot`, and `IntentRules.CanAct` for the order of causes 1 to 4 |
+| [5.8](#58-resolving-an-action), [6.3](#63-nothing-happens-between-the-reveal-and-the-resolution) | "Combat", 2: `Activation`, "an action resolves in this order"; ADR 0035, ADR 0083 |
+| [6.7](#67-the-critical-roll) | "Combat", 2, the critical bullet ("zero for a `Quick` Creature"); ADR 0033, ADR 0031 |
+| [5.8](#58-resolving-an-action) step 4, the `Caster:` line, and its Damage against the **caster's own** total Defense | ADR 0031. `game-rules.md` states the once-per-cast and the never-multiplied halves but is silent on the Defense; ADR 0031's "the outcome goes through the same rules as any other" is where that comes from |
 | [5.9](#59-cleanup), [6.5](#65-the-first-countdown-after-an-application-does-not-count) | "End of round", 1: `Cleanup` |
-| [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`, ADR 0011 |
-| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 3: `ActionResolution`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
-| [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 3: `ActionResolution`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
-| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 3 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
+| [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`; "Match lifecycle"; "Combat", 2: "a Team wiped by an action ends the Match there"; ADR 0011, ADR 0083 |
+| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
+| [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
+| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 
 Five presentation rules are the table's and are declared as such, per
 [plan.md](plan.md)'s "one engine, one truth":

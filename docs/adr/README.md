@@ -15,8 +15,8 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0007](0007-shared-kernel-project.md) | A dependency-free SharedKernel project below Domain | Accepted |
 | [0008](0008-messaging-without-a-mediator.md) | Use cases and domain events without a mediator library | Accepted |
 | [0009](0009-game-data-pipeline.md) | Keep the data builder: one consolidated, hashed game schema | Accepted |
-| [0010](0010-round-phases-and-sub-phases.md) | Rounds are driven by a phase and sub-phase state machine | Accepted |
-| [0011](0011-win-condition-and-round-cap.md) | Win condition: last team standing, with a round cap | Accepted |
+| [0010](0010-round-phases-and-sub-phases.md) | Rounds are driven by a phase and sub-phase state machine | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
+| [0011](0011-win-condition-and-round-cap.md) | Win condition: last team standing, with a round cap | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
 | [0012](0012-effect-taxonomy.md) | A closed taxonomy of spell effects | Accepted |
 | [0013](0013-learning-stack.md) | Learning stack: Python trains, the engine records and hosts policies, a static viewer | Accepted |
 | [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
@@ -75,7 +75,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
 | [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) |
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
-| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |
+| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
 | [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
 | [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
 | [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |

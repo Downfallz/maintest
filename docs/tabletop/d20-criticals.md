@@ -152,7 +152,8 @@ This is what lets the card be read literally. The engine still sums the Creature
 until now every document had to carry the nuance — *the card's number is the whole chance because this
 content's Creature is at zero*. It is a rule now rather than a property of one Creature definition, and three
 documents can drop the clause when this is built: the rulebook's §6.7 and Part 9, the player aid's critical
-paragraph, and the audit's `ActionResolution` row.
+paragraph, and the audit's `ActionResolution` row (translation.md 1.9; that sub-phase is half of `Activation`
+since ADR 0083, and the audit keeps its old name).
 
 ## Still open
 

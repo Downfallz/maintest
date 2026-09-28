@@ -48,6 +48,34 @@ public sealed class MatchInvariantTests(PlayedMatches played) : IClassFixture<Pl
         violations.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// ADR 0083: a wiped team ends the match on the event that wiped it -- an action or the upkeep -- with the
+    /// round ended in the same breath and nothing after it: no further slot, no cleanup.
+    /// </summary>
+    [Fact]
+    public void An_elimination_ends_the_match_on_the_event_that_wipes_the_team()
+    {
+        var violations = played.Matches
+            .Where(match => match.Result.Outcome.Reason == MatchEndReason.Elimination)
+            .Where(match => !EndsOnTheWipe(match.Events))
+            .Select(match => $"{match}: ends on {string.Join(", ", match.Events.TakeLast(3).Select(raised => raised.GetType().Name))}");
+
+        violations.ShouldBeEmpty();
+    }
+
+    /// <summary>ADR 0083: every reveal is resolved at once, before any other slot is revealed.</summary>
+    [Fact]
+    public void Every_revealed_action_resolves_before_the_next_is_revealed()
+    {
+        var violations = played.Matches
+            .SelectMany(match => match.Events.Select((raised, index) => (match, raised, index))
+                .Where(entry => entry.raised is ActionRevealed revealed
+                    && (entry.index + 1 >= match.Events.Count || match.Events[entry.index + 1] is not CombatActionResolved resolved || resolved.Resolution.Action.Actor != revealed.Action.Actor))
+                .Select(entry => $"{entry.match}: event {entry.index} is not resolved at once"));
+
+        violations.ShouldBeEmpty();
+    }
+
     [Fact]
     public void Quick_acts_before_standard_and_initiative_falls_within_a_band()
     {
@@ -173,6 +201,12 @@ public sealed class MatchInvariantTests(PlayedMatches played) : IClassFixture<Pl
         var total = played.Resources.GetCreature(creature.DefinitionId).BaseStats.Defense.Value + Math.Min(Creature.DefenseBuffCeiling, buffs) - debuffs;
         return Math.Max(0, total);
     }
+
+    private static bool EndsOnTheWipe(IReadOnlyList<IMatchEvent> events) =>
+        events.Count >= 3
+            && events[^1] is MatchEnded ended
+            && events[^2] is RoundEnded round && round.RoundId == ended.RoundId
+            && events[^3] is CombatActionResolved or OngoingEffectsApplied;
 
     private static PlayerSlot? Healthier(PlayedMatch match) =>
         match.Result.Player1RemainingHealth.CompareTo(match.Result.Player2RemainingHealth) switch

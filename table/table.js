@@ -4,7 +4,7 @@ import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
 import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -1343,10 +1343,16 @@ function renderDecision(state, current) {
   const turn = activeTurn(view.board);
   element('decision-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
   element('decision-turn').hidden = !turn;
-  const live = lastResolvedText(lastResolved(view.roundEvents, view.board, state.cards));
-  element('live-action').textContent = live;
-  element('live-action').title = live;
-  element('live-action').hidden = live === '';
+  // What resolved since this seat last decided, live (ADR 0083): the last few, so a bot's two slots in a row
+  // or the last slot of a round are read as well as the action just before this one.
+  const fresh = resolvedSince(view.roundEvents, state.liveSeen?.get(current.seat), view.board, state.cards).slice(-4);
+  element('live-action').replaceChildren(...fresh.map(action => {
+    const item = document.createElement('li');
+    item.textContent = lastResolvedText(action);
+    item.title = item.textContent;
+    return item;
+  }));
+  element('live-action').hidden = fresh.length === 0;
 
   if (view.over) {
     asking.textContent = 'The match is over.';
@@ -2016,6 +2022,8 @@ async function submit(state, current, decision) {
     state.chosen = null;
     state.ordered = [];
     state.error = '';
+    state.liveSeen ??= new Map();
+    state.liveSeen.set(current.seat, latestResolution(current.view.roundEvents) ?? -1);
   } catch {
     state.error = 'Could not reach the host. Check your connection before trying again.';
   } finally {

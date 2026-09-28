@@ -1,6 +1,8 @@
 # The playtest app
 
-Status: **Specification** (2026-09-14; citations re-verified 2026-09-17). Phase 5 of [plan.md](plan.md). It
+Status: **Specification** (2026-09-14; citations re-verified 2026-09-17; combat brought to
+[ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md), one `Activation` sub-phase and
+each action shown as it resolves, 2026-09-28). Phase 5 of [plan.md](plan.md). It
 names the host, the transport, the client's shape, what a session records, and what is not in the first
 version. The build plan that follows from it is [app-roadmap.md](app-roadmap.md).
 
@@ -41,7 +43,7 @@ The client renders. It does not decide. Concretely, the client must never:
 | Order the timeline, or break a tie | `Round.Timeline.Slots`, carried on `PlayerBoardState.Timeline` (`PlayerBoardState.cs:43`) |
 | Compute total Defense from the Condition chips | `CreatureSnapshot.TotalDefense` (`CreatureSnapshot.cs:27`); the floor applies to the total, not to an intermediate (`Creature.cs:58-60`, ADR 0035) |
 | Compute Current initiative from the Condition chips | `CreatureSnapshot.CurrentInitiative` (`CreatureSnapshot.cs:33`) |
-| Decide whether a cast fizzles | `IntentRules.CanAct` (`IntentRules.cs:50-69`) and the resolution rules behind it |
+| Decide whether a cast fizzles | `ActionRules.CanTakeItsSlot` (`ActionRules.cs:53`), which reads `IntentRules.CanAct` (`IntentRules.cs:50-69`) and the legal targets; the match reveals and fizzles such a slot itself (`Match.ActivateUnavailableSlot`, ADR 0083) |
 | Count down a Condition | `Condition.Tick` (`Condition.cs:53-65`); the client reads `RemainingRounds` |
 
 The client's whole job is layout, formatting and input. Anything it computes, it computes about pixels.
@@ -61,13 +63,20 @@ accepted" (`PlayerOptions.cs:5-8`).
 | `Speed` | `Speed` | `SpeedOptions(Missing)` (`SpeedOptions.cs:8`) | `SpeedRules.Evaluate(...).MissingOf(slot)` (`PlayerOptionsProjection.cs:70`) |
 | `TieOrder` | `TieOrder` | `TieOrderOptions(Ties)` (`TieOrderOptions.cs`), the seat's creatures in each tie it holds two places in, as rolled | `TieOrderRules.Evaluate(round).Waiting` (ADR 0063) |
 | `IntentSelection` | `Intent` | `IntentOptions(Creatures)` (`IntentOptions.cs:6`), each `IntentOption(Creature, CastableSpells)` (`IntentOption.cs:5`) | `IntentRules.Evaluate(round).Missing` (`PlayerOptionsProjection.cs:79`) |
-| `RevealAndTarget` | `Target` | `TargetOptions(Actor, Spell, LegalTargets)` (`TargetOptions.cs:10`), with `MinTargets`, `MaxTargets`, `Candidates`, `IsCastable` (`LegalTargets.cs:8-10`) | `round.NextSlotToReveal` and `TargetingRules.LegalTargets` (`PlayerOptionsProjection.cs:89-107`) |
-| `ActionResolution` | `Resolution` | none | "A combat action waits for resolution; any host may drive it" (`PlayerOptionsKind.cs:20-21`) |
+| `Activation` | `Target` | `TargetOptions(Actor, Spell, LegalTargets)` (`TargetOptions.cs:10`), with `MinTargets`, `MaxTargets`, `Candidates`, `IsCastable` (`LegalTargets.cs:8-10`) | `round.NextSlot` and `TargetingRules.LegalTargets` (`PlayerOptionsProjection.cs:92-104`). The action resolves when the targets are confirmed (ADR 0083) |
 | anything else | `Waiting` / `Ended` | none | `PlayerOptionsProjection.cs:22-31,44` |
 
+There is no `Resolution` kind any more. Until ADR 0083 a second sub-phase, `ActionResolution`, answered one
+that "any host may drive"; now the confirmation that binds the targets is the one that resolves the action,
+and a slot whose Creature cannot act is revealed and fizzled by the match without asking anyone
+(`Match.ActivateUnavailableSlot`). So a seat is asked `Target` only for a Creature that can act and has a
+legal target, and `IsCastable` is always true there.
+
 What a seat sees of the board is `PlayerBoardStateProjection.Build(match, slot)`: both teams as snapshots, the
-round position, the timeline, the actions revealed so far — "public to both players" (`PlayerBoardState.cs:45-46`)
-— and the seat's **own** hidden choices only (`PlayerBoardState.cs:32-41`).
+round position, the timeline, the actions revealed so far, each of them already resolved — "public to both
+players" (`PlayerBoardState.cs:54-58`) — the `ActivationCursor`, how many slots have been activated this round
+(`PlayerBoardState.cs:61`; it replaced the reveal and resolve cursors), and the seat's **own** hidden choices
+only (`PlayerBoardState.cs:32-41`).
 
 A Condition chip has everything it needs: `ConditionSnapshot(Effect, RemainingRounds, Source)`
 (`ConditionSnapshot.cs:6`), so a chip prints its kind, its amount, how many Rounds are left, and which cast put
@@ -128,7 +137,9 @@ Three things come free with it, and each is a thing a hand-rolled REST loop woul
 
 - **ADR 0039.** The driver re-reads the board between two intents of the same player, because the second
   Creature declares knowing what the first declared (`MatchDriver.cs:71-87`).
-- **The resolution sub-phase** is driven without a client button (`MatchDriver.cs:91-93`).
+- **No resolution to drive.** Since ADR 0083 an action resolves inside the command that confirms its targets,
+  and a slot whose Creature cannot act resolves as a Fizzle inside the match, so neither the driver nor the
+  client has a resolution step to push (it had one, `ResolveNextAction`, until then).
 - **The dataset.** `RunRecorder.Wrap` returns a `RecordingAgent` around any agent (`RunRecorder.cs:58-69`), so a
   human session writes `steps.jsonl` in exactly the bot format. See Part 5.
 
@@ -220,7 +231,7 @@ The objects of components.md, one for one, so a player who has seen the cardboar
 | Condition dock, four lanes (components.md:533-550) | Chips grouped by remaining Rounds — `new`, `3`, `2`, `1` — with kind, amount and source, and permanent Conditions in their own group | `ConditionSnapshot(Effect, RemainingRounds, Source)` (`ConditionSnapshot.cs:6`); `RemainingRounds` is `null` when permanent (`Condition.cs:29-36`) |
 | The hand (components.md:649-679) | The seat's own Creatures' known Spells as cards, the castable ones enabled | `CreatureSnapshot.KnownSpells` (`CreatureSnapshot.cs:39`) for the hand, `IntentOption.CastableSpells` for what is enabled |
 | Face-down intent | A card back on each Creature that has declared. The seat's own back is tappable and reads its own card; the opponent's back carries no data at all | `PlayerBoardState.Intents` is the seat's own (`PlayerBoardState.cs:40-41`); the opponent's is a count, never a card |
-| Target markers and the `Targeted by` row (components.md:649-679) | Tapping a legal target marks it; each Creature row shows which casters point at it | `TargetOptions.LegalTargets` and `PlayerBoardState.RevealedActions` |
+| Naming targets, and the action that just resolved (components.md 3.8) | Tapping a legal target marks it until the set is confirmed. The confirmed action resolves at once: a **Just resolved** line in the decision sheet says who cast what on whom, whether it was critical, and what it did or why it fizzled, and the battlefield marks its caster, its targets and what changed on them. No Creature shows who is pointing at it: the `targetedBy` markers the page drew from the printed `Targeted by` row were removed with it, since nothing waits pointed at a Creature (ADR 0083) | `TargetOptions.LegalTargets`, `PlayerBoardState.RevealedActions`, and the seat's `CombatActionResolved` events (`lastResolved`, `table/feed.js:120`) |
 | Talent mat (components.md:694-764) | A separate tab: three class bands, every Spell with a pip box per Creature, the gates printed on the band | The card projection of 1.3 for the tree, `KnownSpells` for the pips, `EvolutionOption.UnlockableSpells` for what is tappable now |
 | Round track (components.md:628-647) | `Round 7 of 20` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
 
@@ -236,8 +247,11 @@ buttons. Intent is the hand, filtered by the server. Target is a tap on a legal 
 once `MinTargets` is met and disabled past `MaxTargets` — the same walk `ConsoleAgent.cs:41-67` does at the
 console, with the same numbers from the same `LegalTargets`.
 
-A Spell with no legal target is offered anyway, and says it will fizzle, because that is what the engine does
-(`TargetOptions.cs:6-8`).
+A Creature that cannot act when its slot comes up — dead, stunned, unable to pay, or with no legal target — is
+never offered: the match reveals it with no targets and fizzles it without asking its owner (ADR 0083), and
+the Just resolved line says so. Until then a Spell with no legal target was offered anyway, with a warning
+that it would fizzle; `TargetOptions` still documents that branch (`TargetOptions.cs:6-8`), and no command
+reaches it now.
 
 ### 3.3 A phone
 
@@ -287,9 +301,18 @@ with Escape. Arrows switch Evolution creatures, enter their offered packages, an
 or target rows without committing; focused controls retain their normal Enter behavior. They ignore text entry, repeat events and modifier chords and use the same asking and submission
 guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
 public speed, revealed spell, targets and resolution state. Each spell becomes public together with its
-confirmed targets in timeline order (ADR 0070). Unconfirmed enemy choices stay hidden throughout targeting;
-local selection reveals nothing. The previous round's
+confirmed targets in timeline order (ADR 0070), and since ADR 0083 it has resolved by the time it is public,
+so a card's state goes from hidden to resolved (or fizzled) in one step. Unconfirmed enemy choices stay
+hidden throughout targeting; local selection reveals nothing. The previous round's
 public action is labelled separately at the next round, using the retained public resolution feed.
+
+**Each action is shown as it resolves (2026-09-28, ADR 0083).** While `Activation` runs, the decision sheet
+carries a **Just resolved** line for the last action of the round: its caster and side, its Spell, its
+targets, whether it was critical, and what it did or why it fizzled. The battlefield marks that caster and
+its targets and shows what changed on them, on the board as it now stands. Outside `Activation` the line is
+gone and the round recap is where the round's actions are read. There is no automatic end-of-round replay any
+more: every action was seen live, so the action-by-action replay is only ever the player's choice, from the
+recap's **Replay action by action** button.
 
 Every offered option, card face, stat and ordering still comes from the host. The opaque hotseat handover
 remains the privacy boundary. See [table/README.md](../../table/README.md) for controls and verification.
@@ -480,7 +503,7 @@ Stated, not implied.
 | **Undo, rewind, and playing the current position out** | A `Match` has no undo, `InMemoryMatchRepository` keeps no history, and the aggregate cannot be copied: the repository holds the object itself (`InMemoryMatchRepository.cs:13,17-25`). So every one of these is the same mechanism — a **replay**, not a fork. A match is deterministic given its seed and its decision sequence, and `steps.jsonl` is that sequence, so an undo rebuilds the match and replays every step but the last, and "play this position out ten times with bots" replays the whole sequence into ten fresh matches. That replay is a decision of its own and it is not in v1. In v1 a misplay stays on the board and becomes a `Misplay` note — which is what happened at the table, and therefore the truth. |
 | **A session that survives a host restart** | The match lives in `InMemoryMatchRepository`. A restart abandons the session; the checkpointed trace (5.1) is what is left. A file-backed adapter for the existing `IMatchRepository` would fix it. |
 | **A push transport** | Part 2.3. |
-| **A per-event narration of resolution beyond the whitelist** | v1 shows the board before and after, plus the whitelisted events. Anything richer must pass the default-deny filter of 1.3 first. |
+| **A per-event narration of resolution beyond the whitelist** | v1 shows each action as it resolves (the Just resolved line of Part 3, read from the whitelisted `CombatActionResolved`) and the board after it, plus the other whitelisted events. Anything richer must pass the default-deny filter of 1.3 first. |
 | **A human-rolled die** | The engine rolls, through `IRandomSource`. Letting a player roll a physical d20 and type the face would be an adapter on that **existing** port, and it is the only way to playtest the die of decision B (plan.md:201-222) rather than the probability. **Which die is settled — a d20, with every chance a whole number of twentieths ([d20-criticals.md](d20-criticals.md))** — so the reason it is still out of v1 is not the die but the record: a typed face is an input nothing replays from a seed, and a number a player can mistype with no undo. v1 prints the threshold the card carries (`d20: 14+`) and says whether the roll landed. It cannot print the face: `CombatResolution` carries `IsCritical` and not the value behind it (`CombatResolution.cs:43`), so a face would mean a Domain change with its own ADR. |
 | **Content editing** | That is the studio (ADR 0015). The table host reads the built schema and never writes content. |
 | **Printing** | That is the printshop of components.md:766-860. |

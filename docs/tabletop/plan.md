@@ -49,10 +49,11 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 | Speed | Quick or Standard per creature | A two-sided speed token per creature |
 | Combat timeline | Quick then Standard, initiative descending, ties rolled off on a d20 (ADR 0063) | An initiative track with six creature markers |
 | Intent | Hidden, one per creature, revealed in timeline order | A card played face down, flipped when its slot comes up |
-| Reveal and target | Targets chosen at reveal, after seeing what came before | Target markers placed when the card flips |
+| Activation | One slot at a time: the Intent is revealed, targets are chosen on the board as it stands, and the action resolves at once, before the next slot (ADR 0083; two passes, reveal-and-target then resolution, until then) | The card flipped when its slot comes up, its targets named aloud, resolved on the spot; no target markers |
 | Effects | 4 instant, 8 lasting kinds, durations, stacking policy | Condition tokens with a value and a duration |
 | Crit | Creature chance + spell bonus, one roll per cast, multiplies damage and direct heal (ADR 0033) | A die, a card flip, or nothing at all — an open decision |
-| Fizzle | Dead or stunned actor, lost targets, unaffordable cost | A rule the rulebook must state once, clearly |
+| Fizzle | Dead or stunned actor, unaffordable cost, or no legal target when its slot comes up; revealed with no targets, owner not asked (ADR 0083) | A rule the rulebook must state once, clearly |
+| Win condition | A Team wiped ends the Match the moment it is, on an action or at upkeep (ADR 0083); otherwise the round cap, on total remaining Health (ADR 0011) | Checked after every action and every Bleed pass; the cap marker on the Round track |
 
 ## The hard problems, first pass
 

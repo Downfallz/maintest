@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, outcomeText, resolutionText, retainRoundEvents, roundRecap } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -233,10 +233,23 @@ test('the action resolved last is read live during combat and nowhere else', () 
   const last = lastResolved(entries, board, cards);
 
   assert.equal(last.actor.id, 1);
-  assert.equal(lastResolvedText(last), 'Just resolved · Creature 1 (opponent) · Throwing Star · fizzled: A dead creature cannot act.');
+  assert.equal(lastResolvedText(last), 'Creature 1 (opponent) · Throwing Star · fizzled: A dead creature cannot act.');
   assert.equal(lastResolvedText(lastResolved(entries.slice(0, 2), board, cards)),
-    'Just resolved · Creature 4 (yours) · Throwing Star → Creature 1 · critical · Damage 6! → Creature 1');
+    'Creature 4 (yours) · Throwing Star → Creature 1 · critical · Damage 6! → Creature 1');
   assert.equal(lastResolved(entries, { ...board, subPhase: 'Cleanup' }, cards), null);
   assert.equal(lastResolved(entries.slice(0, 1), board, cards), null);
   assert.equal(lastResolvedText(null), '');
+});
+
+// A bot can play several slots between two decisions of a person, and the last slot of a round is followed at
+// once by the next round: every action after the one the seat last decided on is read, across the boundary.
+test('what resolved since a seat last decided is every action after it, oldest first', () => {
+  const resolved = (sequence, round, actor) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor, spell: 's', targets: [] } }, appliedOutcomes: [] } });
+  const entries = [resolved(9, 1, 3), { sequence: 10, round: 2, event: { kind: 'RoundEnded', roundId: 1 } }, resolved(4, 1, 1), resolved(7, 1, 2)];
+
+  assert.deepEqual(resolvedSince(entries, 4, {}, cards).map(action => action.actor.id), [2, 3]);
+  assert.deepEqual(resolvedSince(entries, undefined, {}, cards).map(action => action.actor.id), [1, 2, 3]);
+  assert.deepEqual(resolvedSince(entries, 9, {}, cards), []);
+  assert.equal(latestResolution(entries), 9);
+  assert.equal(latestResolution([]), null);
 });

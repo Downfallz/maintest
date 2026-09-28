@@ -38,16 +38,18 @@ not recorded matches. Card text and creature names in the actual app come from t
 - A completed round adds a compact recap button in the sticky top status bar. Open it to read the
   colour-coded casts, targets and outcomes in a floating panel; it never scrolls or pushes the battlefield.
   It remains available throughout the next round and after the match ends. Escape closes it.
-- Newly completed rounds open an action-by-action resolution review in the decision column. Previous and
-  Next traverse actual public results (including criticals, fizzles and dropped targets); Skip returns to the
-  latest round or match results. The actor and targets are highlighted on the battlefield. Each action starts
+- Each action resolves as its targets are confirmed (ADR 0083) and is shown live: the decision sheet lists
+  every action resolved since this seat's last decision (a bot's slots in a row, the last slot of a round),
+  and the action resolved last marks its caster and targets on the battlefield with what it changed. A
+  completed round is not replayed on its own; the recap's Replay action by action button opens a review
+  in the decision column. Previous and Next traverse actual public results (including criticals and
+  fizzles); Skip returns to the latest round or match results. The actor and targets are highlighted on the battlefield. Each action starts
   with the recorded Before state; Next applies its After state and shows actual outcomes and stat changes.
   Previous reverses either step. HP, energy, conditions, spellbooks and the timeline come from engine
   snapshots captured before cleanup and upkeep (ADR 0075). Skip restores the latest state including upkeep.
   Older recordings without snapshots explicitly label their battlefield as current totals.
-  New-round controls and their asking acknowledgement wait until the review closes; replay controls send
-  no decisions. Arrow keys step backward/forward and Escape skips. Reloading does not auto-play old history;
-  the recap's Replay action by action button makes it available on demand.
+  The next question and its asking acknowledgement wait until the review closes; replay controls send
+  no decisions. Arrow keys step backward/forward and Escape skips.
 - The sticky top bar leads with round, current phase and the acting position/creature from the host timeline;
   on a phone the acting creature is the outlined chip in its battlefield bar instead.
   The decision repeats the phase and turn position above the creature/spell title; targeting starts with one
@@ -111,7 +113,7 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The initiative strip retains d20 rolls and rerolls. TieOrder has its own phase reminder and guarded
   keyboard/pointer controls to order your creatures within your side's assigned places before declarations.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
-  number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
+  number follows the full server order, including ties; the slot being activated is highlighted.
   Order numbers run from turquoise to violet; Quick tags are gold and Standard tags blue. Energy, defense
   and initiative have separate colours and retain text labels. The order strip spells out creature identity
   and initiative separately. Creature numbers replace repeated definition names in the play surface.

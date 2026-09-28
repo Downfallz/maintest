@@ -130,10 +130,11 @@ public sealed class AdvanceTests
         Arena.Find(creatures, Arena.Ghoul).TakeDamage(99);
         Arena.Find(creatures, Arena.Wraith).TakeDamage(99);
 
-        var outcome = Advance.Elimination(Arena.Snapshots(creatures), Arena.Resources);
+        var outcome = Advance.Elimination(Arena.Snapshots(creatures));
 
         outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
-        Advance.Elimination(Arena.Snapshots(Arena.FourCreatures()), Arena.Resources).ShouldBeNull();
+        Advance.Elimination(Arena.Snapshots(Arena.FourCreatures())).ShouldBeNull();
+        Should.Throw<ArgumentNullException>(() => Advance.Elimination(null!));
     }
 
     [Fact]
@@ -282,14 +283,14 @@ public sealed class AdvanceTests
             if (outcome is null)
             {
                 expected = Advance.StartOfRound(expected, Arena.Resources, match.RuleSet);
-                outcome = Advance.Elimination(expected, Arena.Resources);
+                outcome = Advance.Elimination(expected);
             }
 
             outcome.ShouldBe(match.Outcome);
         }
         else
         {
-            Advance.Elimination(expected, Arena.Resources).ShouldBe(match.Outcome);
+            Advance.Elimination(expected).ShouldBe(match.Outcome);
         }
 
         ShouldMatch(match.Snapshots(), expected);

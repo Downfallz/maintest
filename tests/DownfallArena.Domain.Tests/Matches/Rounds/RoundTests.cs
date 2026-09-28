@@ -208,6 +208,7 @@ public sealed class RoundTests
         round.SubmitAction(knightAction).IsSuccess.ShouldBeTrue();
         round.ActionOf(Knight).ShouldBe(knightAction);
         round.ActivationCursor.Index.ShouldBe(0, "the slot moves on once the match has resolved its action");
+        Should.Throw<InvalidOperationException>(() => round.SubmitAction(knightAction));
 
         round.MarkSlotActivated();
         round.ActivationCursor.Index.ShouldBe(1);

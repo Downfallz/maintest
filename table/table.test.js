@@ -1052,13 +1052,28 @@ test('the action resolved last is shown live, on the battlefield and in the shee
   p.draw();
   assert.equal(p.state.playback ?? null, null);
   assert.equal(p.nodes['live-action'].hidden, false);
-  assert.match(p.nodes['live-action'].textContent, /^Just resolved · Creature 1 \(yours\) · First card → Creature 2 · critical · Damage 3 → Creature 2$/);
+  assert.equal(p.nodes['live-action'].children[0].textContent, 'Creature 1 (yours) · First card → Creature 2 · critical · Damage 3 → Creature 2');
   assert.match(p.nodes.allies.children[0].className, /replay-caster/);
   assert.match(p.nodes.enemies.children[0].className, /replay-target/);
   assert.match(p.nodes.enemies.textContent, /HP 13 → 10/);
   p.view.board.subPhase = 'Cleanup'; p.draw();
-  assert.equal(p.nodes['live-action'].hidden, true);
+  assert.equal(p.nodes['live-action'].hidden, false, 'what resolved stays readable past the round');
   assert.doesNotMatch(p.nodes.allies.children[0].className, /replay-caster/);
+});
+
+test('every action resolved since the seat last decided is listed, and a decision clears them', async () => {
+  const p = page(); p.view.waitingFor = 'Intent'; p.view.board.subPhase = 'Activation';
+  p.current.transport.decide = async () => ({ ok: true });
+  p.view.roundEvents = completedRound(1).slice(0, 2); p.draw();
+  assert.equal(p.nodes['live-action'].children.length, 2);
+  assert.match(p.nodes['live-action'].children[1].textContent, /Second card → Creature 1 · fizzled: Cannot act\./);
+  await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
+  p.draw();
+  assert.equal(p.nodes['live-action'].hidden, true);
+  // The poll after the decision replaced the view the page holds; the next resolution arrives on that one.
+  const shown = p.state.views[0].view;
+  shown.roundEvents = [...shown.roundEvents, { ...completedRound(1)[0], sequence: 20 }]; p.draw();
+  assert.equal(p.nodes['live-action'].children.length, 1);
 });
 
 test('loading an old recap does not auto replay it, but its replay button is available after a skip', () => {

@@ -12,7 +12,8 @@ export function playbackBoard(replay, board) {
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
     activationCursor: replay.index,
-    revealedActions: replay.actions.map(item => item.action).filter(Boolean),
+    // Only the slots up to this one had been turned over when it resolved (ADR 0083).
+    revealedActions: replay.actions.slice(0, replay.index + 1).map(item => item.action).filter(Boolean),
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
   };
 }

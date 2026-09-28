@@ -354,7 +354,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             value += sign * _scorer.Score(advanced.Resolution, ahead);
             ahead = advanced.Board;
-            if (Advance.Elimination(ahead, resources) is { } wiped)
+            if (Advance.Elimination(ahead) is { } wiped)
             {
                 return Valued(wiped, board.Slot, value, stopped);
             }

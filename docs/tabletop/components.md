@@ -3,7 +3,8 @@
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
 question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
 day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
-`momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+`momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day; to one Activation a slot,
+2026-09-28). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -57,6 +58,16 @@ What is current, exactly:
   [3.5](#35-the-initiative-track) (41 cells, not 40) and Part 6, question 11; the package card's
   measurement ([4.1](#41-the-package-card)) was re-run and did not move. Every other count in this document
   is still read at `4ab506fa`.
+- **An action resolves as soon as its targets are confirmed**
+  ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). Combat walks the timeline
+  once: at each slot the card is flipped, its targets are named on the board as it stands, and it resolves
+  before the next slot comes up. No cast's targets wait on the table while another is chosen, so the
+  **18 target markers and the `Targeted by` row are retired** ([1.5](#15-the-rest-of-the-pieces),
+  [3.1](#31-the-creature-board), [3.7](#37-the-player-area-and-where-a-face-down-intent-sits),
+  [3.8](#38-how-a-cast-is-declared-and-resolved-in-components)). A target is named by pointing at its board and
+  saying its number. The token pieces go from 260 to **242** on the same 2 sheets, and the paper stays 49. No
+  other count moves: the dice, the Condition supply and the Immune tokens are sized per slot or per Creature,
+  and a Round still has at most six slots. A Match can now end on any slot, which no component has to show.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -139,14 +150,14 @@ Totals first, then the derivation of each line.
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
 | Condition tokens | 144 in 7 kinds |
-| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
+| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
 | Paper | about 49 A4 or Letter sheets |
 
 The paper: 24 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
 sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
-tokens (260 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
+tokens (242 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
 add 40 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -174,6 +185,9 @@ ADR 0072 moved one count after that: **6 Immune tokens**, so the token pieces we
 on 2 sheets, and the paper stays 49 ([1.5](#15-the-rest-of-the-pieces)). ADR 0078 took one count out: no
 Spell places an Energy regeneration, so its **6 tokens** leave the box, the Condition tokens go from 150 to
 **144** and the token pieces from 266 back to **260**, and the paper stays 49 ([1.4](#14-condition-tokens)).
+ADR 0083 took another out: an action resolves before the next slot is targeted, so the **18 target markers**
+leave the box, the token pieces go from 260 to **242**, still on 2 sheets, and the paper stays 49
+([1.5](#15-the-rest-of-the-pieces)).
 
 ### 1.1 Spell cards and package cards
 
@@ -224,7 +238,7 @@ package. The same holds for package cards: a Match lays out at most 2 x 20 = 40 
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the Creature's number, 1 to 6: who it is on the track and on a target marker, and the order tied Creatures roll in. The number breaks no tie (ADR 0063). | **VALUE** (team size) |
+| Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the Creature's number, 1 to 6: who it is on the track and when a cast names its targets, and the order tied Creatures roll in. The number breaks no tie (ADR 0063). | **VALUE** (team size) |
 | Player area mat | **2** | One per Player. A Match seats exactly two. | **RULE** |
 | Initiative track | **1** | Six ordered slots, a Quick band above a Standard band. Six is the number of Activation slots a Round can have: one per living, unstunned Creature. | **VALUE** (team size) |
 | Round track | **1**, 20 spaces, 10 pick marks | A Match is 10 to 15 Rounds (given, ADR 0068), and the table's Round cap is 20 (`playtest.rules.json`). The track is printed to the cap, so the Round cap marker always has its space. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 19 (`RuleSet.IsEvolutionRound`). | The 20 spaces, the cap marker and the pick marks are **VALUE**s (the table's cap; the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
@@ -319,10 +333,10 @@ is 16 short of that ceiling. Part 6, question 5.
 | Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track. A purchase moves one from the mat onto the board of the Creature that bought, and it stays there until the Sub-phase ends: a Creature holding one has bought this opportunity and cannot be picked again (`Planning.CreatureAlreadyEvolved`, ADR 0066). A pass takes the tokens still on the mat off it; the end of the Sub-phase takes every token off the mats and the boards (rulebook §5.3). One token marks one Creature, and a Player's picks go to different Creatures, so 2 a Player still covers every opportunity. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
-| Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
+| Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -726,27 +740,32 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 |              |     |       |       |       |  |
 |-----------------------------------------------|
 | Speed [ a card, 88.9 x 63.5 ] or a Stun token |
-| Targeted by  [1][2][3][4][5][6]               |
 +-----------------------------------------------+
 ```
 
 | Affordance | The rule it enforces, so nobody has to remember it |
 | --- | --- |
-| The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
+| The number 1 to 6 in the corner | It names the Creature: on its initiative marker, and aloud when a cast names its targets. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
 | The Health rail ending at 30 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
 | The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. The token comes off at the Cleanup that ends the Stun, when the dock's Stun token becomes an Immune token ([3.2](#32-the-condition-dock-and-the-countdown)); nothing goes in the Speed slot for the immunity, since an immune Creature takes a Speed card. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
-| The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
 
 **The Speed slot is sized for a card now**, not a token (Part 6, question 14). A Speed card is poker size
 ([2.6](#26-the-speed-card)), so the slot is a 90 x 65 mm rectangle, the card laid landscape with about a
 millimetre of play. Landscape costs the board the least height: 90 mm is inside the 95 mm of usable width
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) names, where a portrait card would take 90 mm of
-the board's height instead of 65. On the 105 x 148 mm board drawn above, the slot takes 65 of the 148 mm, and the rails, the
-dock and the `Targeted by` row share the rest. Whether they fit there is part of question 15, which already
-asks what size the board is. The drawing is not to scale.
+the board's height instead of 65. On the 105 x 148 mm board drawn above, the slot takes 65 of the 148 mm, and the rails
+and the dock share the rest. Whether they fit there is part of question 15, which already asks what size the
+board is. The drawing is not to scale.
+
+**The `Targeted by` row is retired** (ADR 0083). It was one box per caster number, and a caster's target
+marker sat in it from the reveal until the resolution, so a Player could read who was pointing at a Creature
+and one cast could not name a target twice. An action now resolves as soon as its targets are named, so
+nothing points at a Creature for longer than one resolution, and the row gives its line back to the rails.
+No duplicate targets (`TargetingRules.cs:68`) is a rule the rulebook states instead of a box that holds one
+marker: a cast whose targets are named aloud cannot name one twice without saying so.
 
 ### 3.2 The condition dock, and the countdown
 
@@ -927,14 +946,16 @@ and not otherwise. "Is it a pick Round?" is then a look at the track, not a pari
 because a table changes it between Matches; whether the schedule should be one too is Part 6, question 9.
 
 The track also carries the Round's shape as a printed strip, because it is where a Player looks when they lose
-their place. In the engine's order (`RoundSubPhase.cs`, eleven sub-phases since ADR 0063):
+their place. In the engine's order (`RoundSubPhase.cs`, ten sub-phases since ADR 0083 merged reveal and
+target with resolution into `Activation`; eleven from ADR 0063 until then):
 
 ```
  Start: energy -> energy regeneration -> regeneration -> bleed
  Planning: evolution (marked Rounds: 2 picks a player, one a creature) -> speed (face down)
            -> timeline, ties rolled off -> order your own ties (face down)
- Combat: intents (face down) -> reveal and target, all six -> resolve, all six
- End: conditions count down -> check the win condition
+ Combat: intents (face down) -> each slot in turn: flip, name targets, resolve
+ End: conditions count down -> check the round cap
+ A team wiped ends the match at once, on an action or a bleed.
 ```
 
 The two orderings that change results and will be got wrong are on it and on the player aid: **healing before
@@ -952,9 +973,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 
 ```
 +---------------------------------------------------------------+
-| Player 1        picks: [o][o]      target markers: 1 [][][]    |
-|                                                   2 [][][]    |
-|                                                   3 [][][]    |
+| Player 1        picks: [o][o]                                  |
 |---------------------------------------------------------------|
 |  creature 1        |  creature 2        |  creature 3         |
 |  [ board ]         |  [ board ]         |  [ board ]          |
@@ -980,9 +999,9 @@ An A4 landscape mat a Player, three columns, one a Creature:
   as an opportunity. A purchase moves one onto the header of the buyer's board ([3.1](#31-the-creature-board)),
   where it marks that Creature as done for the opportunity (ADR 0066). A pass takes the tokens still on the
   mat off it, and the end of the Sub-phase takes every token off the mat and the boards.
-- **The target markers** are three per Creature, in that Creature's colour, carrying its number. Reveal and
-  target walks the whole timeline before anything resolves, so all six casts' markers are on the table at
-  once: 18 markers, and a Creature's `Targeted by` row shows who is pointing at it.
+- **No target markers.** The mat's header held three per Creature while every cast was targeted before any
+  resolved. Since ADR 0083 an action resolves as soon as its targets are named, so the header holds the pick
+  tokens only.
 - **Speed cards**: a Player holds a Quick and a Standard card for each Creature, lays the chosen one face down
   in that board's Speed slot and keeps the other in hand. Both Players turn theirs together, which is what
   makes the Speed choice the genuine simultaneous decision it is in the engine
@@ -996,12 +1015,13 @@ An A4 landscape mat a Player, three columns, one a Creature:
 1. **Intent**: put a Spell card from the hand face down in the Creature's intent slot. Legal if the Creature
    knows it - a starting Spell, or one printed on a package card lying with that Creature - and the Energy
    rail is at or above the printed cost.
-2. **Reveal**: at the Creature's slot on the initiative track, turn the card face up and place its target
-   markers, one per target, in the `Targeted by` boxes of the targets' boards. Up to `maxTargets`, and fewer
-   is allowed. Do this for all six slots before resolving any.
-3. **Resolve**, in the same order: check the Fizzle conditions, roll the die if the card prints a chance, move
-   the Energy marker down by the cost, apply each effect line to each target, then the caster line, then take
-   the markers back.
+2. **Activate**, one slot of the initiative track at a time. If the Creature is dead, stunned, can no longer
+   pay, or has no legal target, turn its card face up with no targets: it Fizzles. Otherwise its owner turns
+   the card face up and names its targets on the board as it stands, pointing at each board and saying its
+   number. Up to `maxTargets`, and fewer is allowed.
+3. **Resolve** it at once, before the next slot: move the Energy marker down by the cost, roll the die if the
+   card prints a chance and the Speed card is Standard, apply each effect line to each target, then the
+   caster line. A Team left with no living Creature ends the Match there.
 
 ---
 
@@ -1422,8 +1442,9 @@ pieces? This is a layout question, not a rule, and the counts in Part 1 do not d
 board sheets.
 
 Question 14's answer adds to it on the board and not on the mat. The Speed slot now holds a poker card
-landscape, 90 x 65 mm, so a board has 65 mm less height for its rails, its dock and its `Targeted by` row
-([3.1](#31-the-creature-board)): on the A6 board that is 44% of it, on an A5 board 31%. The card a Player keeps
+landscape, 90 x 65 mm, so a board has 65 mm less height for its rails and its dock
+([3.1](#31-the-creature-board); its `Targeted by` row too, until ADR 0083 retired it): on the A6 board that is
+44% of it, on an A5 board 31%. The card a Player keeps
 goes in the concealed hand, so the player area holds nothing new.
 
 ADR 0068 adds to it on the board too. The Health rail runs 0 to 30 in two rows
@@ -1445,7 +1466,9 @@ are translation.md's as it reads on this branch after its package re-audit, its 
 ADR 0078 re-read: 18 from Part 1, 7 from Part 2, 18 from Part 3; 43 of 43. ADR 0078 took two rows out, the
 `EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
 and their verdicts are no longer **needs a component** ([1.4](#14-condition-tokens)). The re-audit was
-written alongside this document, so if a row name has moved since, the component beside it has not.
+written alongside this document, so if a row name has moved since, the component beside it has not. ADR 0083
+emptied one row without the audit being re-run: 1.8's target markers left the box, and the row is kept below
+with what answers it now.
 
 ### The 18 sub-phase rows
 
@@ -1462,7 +1485,7 @@ written alongside this document, so if a row name has moved since, the component
 | 1.5 Current initiative is Base plus buffs less debuffs, floored at zero | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
 | 1.5 A tie between the sides is rolled off on a d20 | The two d20s, [1.6](#16-dice), and the tie rules printed on the initiative track, [3.5](#35-the-initiative-track). The number on each board, [3.1](#31-the-creature-board), only fixes the order tied Creatures roll in. |
 | 1.6 Tie orders are hidden until both are in | 6 tie order chits, face down on the tied Creatures' boards, [1.5](#15-the-rest-of-the-pieces) and [3.5](#35-the-initiative-track) |
-| 1.8 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
+| 1.8 Reveal in timeline order, bind targets at reveal | **No component since ADR 0083.** It was 18 target markers and the `Targeted by` row. The reveal and the resolution are one turn of `Activation` now, so the Spell card turned face up in its intent slot and the targets named aloud are the whole of it, [3.8](#38-how-a-cast-is-declared-and-resolved-in-components). translation.md keeps the row as it measured it, with a note. |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
 | 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 144 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |

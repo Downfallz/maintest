@@ -38,19 +38,22 @@ public static class WinCondition
         ArgumentNullException.ThrowIfNull(player1);
         ArgumentNullException.ThrowIfNull(player2);
 
-        return player1.IsDefeated || player2.IsDefeated
-            ? new MatchOutcome(Survivor(player1, player2), MatchEndReason.Elimination)
-            : null;
+        return Elimination(player1.IsDefeated, player2.IsDefeated);
     }
 
-    private static PlayerSlot? Survivor(Team player1, Team player2)
+    /// <summary>
+    /// The same outcome from whether each side is defeated, for a reader that knows it without forming the
+    /// teams: a hypothetical board read after every slot of a rollout (ADR 0083).
+    /// </summary>
+    public static MatchOutcome? Elimination(bool player1Defeated, bool player2Defeated)
     {
-        if (player1.IsDefeated && player2.IsDefeated)
+        if (!player1Defeated && !player2Defeated)
         {
             return null;
         }
 
-        return player1.IsDefeated ? player2.Owner : player1.Owner;
+        PlayerSlot? survivor = player1Defeated && player2Defeated ? null : player1Defeated ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        return new MatchOutcome(survivor, MatchEndReason.Elimination);
     }
 
     private static PlayerSlot? Healthier(Team player1, Team player2)

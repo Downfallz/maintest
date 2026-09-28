@@ -125,6 +125,22 @@ export function lastResolved(entries, board, cards) {
   return entry ? recapAction(entry, board, cards) : null;
 }
 
+// Every action resolved after the sequence a seat last decided on, oldest first: a bot can play several slots
+// between two decisions of a person, the last slot of a round is followed at once by the next round, and each
+// of those resolved while nobody was looking. `seen` absent means the seat has not decided yet.
+export function resolvedSince(entries, seen, board, cards) {
+  return (entries ?? [])
+    .filter(item => item?.event?.kind === 'CombatActionResolved' && (!Number.isInteger(seen) || item.sequence > seen))
+    .sort((left, right) => left.sequence - right.sequence)
+    .map(entry => recapAction(entry, board, cards));
+}
+
+// The latest resolution a seat has in front of it, which is what a decision it sends was made after.
+export function latestResolution(entries) {
+  const sequences = (entries ?? []).filter(item => item?.event?.kind === 'CombatActionResolved').map(item => item.sequence);
+  return sequences.length ? Math.max(...sequences) : null;
+}
+
 // That action as one line: who, what, on whom, and what it did or why it fizzled.
 export function lastResolvedText(action) {
   if (!action) return '';
@@ -133,7 +149,7 @@ export function lastResolvedText(action) {
   const critical = action.status === 'Critical' ? ' · critical' : '';
   const result = action.status === 'Fizzled' ? `fizzled: ${action.reason}`
     : action.effects.map(effect => `${effect.text} → ${effect.target.label}`).join(', ') || 'no effect';
-  return `Just resolved · ${action.actor.label} (${side}) · ${action.spell}${targets}${critical} · ${result}`;
+  return `${action.actor.label} (${side}) · ${action.spell}${targets}${critical} · ${result}`;
 }
 
 function recapCreature(id, board) {

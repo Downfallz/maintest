@@ -4,8 +4,10 @@ using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Matches.Rules.Planning;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
+using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
 
@@ -108,6 +110,67 @@ public sealed class MatchPlayTests
         round.SubPhase.ShouldBe(RoundSubPhase.OngoingEffects);
         match.DomainEvents.OfType<RoundEnded>().Select(ended => ended.RoundId.Number).ShouldBe([1, 2]);
         match.DomainEvents.OfType<MatchEnded>().Single().RoundId.ShouldBe(RoundId.From(2));
+    }
+
+    /// <summary>
+    /// A creature still alive but no longer able to pay for its spell when its slot comes up: revealed with no
+    /// targets and fizzled, and its owner is never asked. Here it is the first slot of the round, so the
+    /// fizzle happens as Activation opens (ADR 0083).
+    /// </summary>
+    [Fact]
+    public void A_creature_that_can_no_longer_pay_is_revealed_and_fizzles_without_its_owner_being_asked()
+    {
+        var match = Table.Started();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        Table.ChooseStandard(match);
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
+        Table.CreatureNumber(match, 3).LoseEnergy(99);
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.Timeline[0].Creature.ShouldBe(CreatureId.From(3), "Guard's initiative puts it first");
+        var fizzle = match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem();
+        fizzle.Resolution.FizzleReason.ShouldBe(CombatErrors.NotEnoughEnergy);
+        fizzle.Resolution.Action.Targets.ShouldBeEmpty();
+        match.DomainEvents.OfType<ActionRevealed>().ShouldHaveSingleItem().Action.Targets.ShouldBeEmpty();
+        round.ActivationCursor.Index.ShouldBe(1);
+        round.NextSlot.ShouldNotBeNull().Owner.ShouldBe(PlayerSlot.Player1);
+    }
+
+    /// <summary>One action that kills the last creature of both teams, its target and its caster, is a draw.</summary>
+    [Fact]
+    public void An_action_that_wipes_both_teams_ends_the_match_in_a_draw_on_the_spot()
+    {
+        var recoil = Content.SpellWithCasterEffects("spell:recoil:v1", [Damage.Of(50)], Damage.Of(50));
+        var resources = GameResources.Create(
+            "recoil",
+            [Content.Creature("creature:main:v1", "spell:recoil:v1")],
+            [recoil],
+            [Content.Tree(Content.TalentSpell("spell:recoil:v1"))],
+            []);
+        var match = Match.Create(MatchId.New(), resources, RuleSet.Create(1, 2, 2, 30, 2.0), new FixedRandom(0.99));
+        match.Join(Table.Alice, [Table.Main]).IsSuccess.ShouldBeTrue();
+        match.Join(Table.Bob, [Table.Main]).IsSuccess.ShouldBeTrue();
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        foreach (var slot in match.CurrentRound.ShouldNotBeNull().Timeline.Slots)
+        {
+            match.SubmitIntent(slot.Owner, new CombatIntent(slot.Creature, recoil.Id)).IsSuccess.ShouldBeTrue();
+        }
+
+        var first = match.CurrentRound.NextSlot.ShouldNotBeNull();
+        var other = first.Owner == PlayerSlot.Player1 ? CreatureId.From(2) : CreatureId.From(1);
+
+        match.SubmitAction(first.Owner, CombatAction.Bind(new CombatIntent(first.Creature, recoil.Id), [other])).IsSuccess.ShouldBeTrue();
+
+        match.Outcome.ShouldBe(new MatchOutcome(null, MatchEndReason.Elimination));
+        match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem();
+        match.DomainEvents.OfType<MatchEnded>().ShouldHaveSingleItem().RoundId.ShouldBe(RoundId.First);
     }
 
     [Fact]
