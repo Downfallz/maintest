@@ -7,15 +7,19 @@ using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Messaging;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Resources.Authoring;
+using DownfallArena.SharedKernel.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -551,6 +555,30 @@ public sealed partial class TableApiTests : IDisposable
         answer.Status.ShouldBe(204, Text(answer));
     }
 
+    /// <summary>
+    /// A poll reads the options and the question in two steps, and the match does not wait for it in between:
+    /// the other seat resolves an action the moment it binds it (ADR 0083). Served in the wrong order, a page
+    /// was asked for an Intent beside the options of the step before, and had no spell to offer.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_is_served_the_options_of_the_question_it_is_asked()
+    {
+        var table = await Seated();
+        var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person) };
+        var api = new TableApi(
+            table.Session,
+            moving,
+            [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), Rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>());
+
+        var answer = await api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+
+        using var payload = JsonDocument.Parse(Text(answer));
+        payload.RootElement.GetProperty("options").GetProperty("kind").GetString()
+            .ShouldBe(payload.RootElement.GetProperty("waitingFor").GetString());
+    }
+
     private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated()
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
@@ -592,4 +620,29 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
+
+    /// <summary>
+    /// Reads the options, then moves the match on before handing them back: the person passes every evolution
+    /// until the match asks them something else. That is the step the other seat's play can take between two
+    /// reads of one poll, made certain instead of left to the scheduler.
+    /// </summary>
+    private sealed class AnsweredWhileRead(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person)
+        : IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>
+    {
+        public async Task<Result<PlayerOptions>> HandleAsync(GetPlayerOptions query, CancellationToken cancellationToken = default)
+        {
+            var options = await inner.HandleAsync(query, cancellationToken);
+            while (person.Waiting is not { Kind: not PlayerOptionsKind.Evolution })
+            {
+                if (person.Waiting is { } question)
+                {
+                    person.Submit(PlayerDecision.Pass, question.Asked);
+                }
+
+                await Task.Delay(5, TestContext.Current.CancellationToken);
+            }
+
+            return options;
+        }
+    }
 }

@@ -199,6 +199,14 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     {
         // Practice starts at its prepared question; setup rounds must not open a replay over that question.
         since = Math.Max(since, FeedStart);
+
+        // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
+        // own seat is asked, and the two differ while the other seat is still deciding. Read before the board
+        // and the options, never after: the other seat resolves its action the moment it binds it (ADR 0083),
+        // so the match can reach this seat's next question between two reads, and a question read last would
+        // be served beside the options of the step before it. While a person is asked the match cannot move
+        // past their answer, so everything read after this belongs to this question.
+        var waiting = seat.Person?.Waiting;
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
         {
@@ -221,10 +229,6 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // Through the session when there is one: closing hands the trace over and the recorder forgets the
         // match, while these two are still reading the end of it on their screens.
         var examined = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
-
-        // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
-        // own seat is asked, and the two differ while the other seat is still deciding.
-        var waiting = seat.Person?.Waiting;
 
         // The moment this seat was shown what it is being asked, which is what a decision's duration is
         // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
