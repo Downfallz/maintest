@@ -13,7 +13,7 @@
       "firstEvolutionRound": 1,
       "evolutionInterval": 2
     },
-    "featureSchema": "features:v7\u002Bf8655f8428df",
+    "featureSchema": "features:v8\u002Bf8655f8428df",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
@@ -98,8 +98,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -171,8 +170,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -306,8 +304,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -430,8 +427,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -566,8 +562,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -690,8 +685,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -824,8 +818,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -948,8 +941,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -1083,8 +1075,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -1207,8 +1198,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -1342,8 +1332,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -1466,8 +1455,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -1603,8 +1591,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -1727,8 +1714,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -1862,8 +1848,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -1986,8 +1971,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -2133,8 +2117,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -2260,8 +2243,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -2410,8 +2392,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -2545,8 +2526,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -2702,8 +2682,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -2840,8 +2819,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -3000,8 +2978,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -3145,8 +3122,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -3301,8 +3277,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -3446,8 +3421,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -3611,8 +3585,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -3756,8 +3729,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -3925,8 +3897,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -4070,8 +4041,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -4239,8 +4209,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -4389,8 +4358,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -4583,8 +4551,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -4762,8 +4729,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -4952,8 +4918,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -5131,8 +5096,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -5350,8 +5314,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -5529,8 +5492,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -5719,8 +5681,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -5898,8 +5859,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -6092,8 +6052,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -6271,8 +6230,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -6465,8 +6423,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -6644,8 +6601,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -6863,8 +6819,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -7042,8 +6997,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -7232,8 +7186,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -7411,8 +7364,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -7610,8 +7562,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -7789,8 +7740,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -7992,8 +7942,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -8171,8 +8120,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -8374,8 +8322,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -8558,15 +8505,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 27,
       "round": 1,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "IntentSubmitted",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -8584,7 +8530,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -8761,8 +8707,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -8772,7 +8717,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -8949,20 +8894,19 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 28,
       "round": 1,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 1,
-        "subPhase": "RevealAndTarget"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -8971,7 +8915,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -9148,8 +9092,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -9159,7 +9102,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -9336,15 +9279,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 29,
       "round": 1,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -9364,7 +9306,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -9549,8 +9491,7 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       },
       "player2": {
@@ -9560,7 +9501,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -9745,15 +9686,14 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       }
     },
     {
       "sequence": 30,
       "round": 1,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -9773,7 +9713,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -9965,8 +9905,7 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       },
       "player2": {
@@ -9976,7 +9915,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -10168,15 +10107,14 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       }
     },
     {
       "sequence": 31,
       "round": 1,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -10196,7 +10134,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -10395,8 +10333,7 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       },
       "player2": {
@@ -10406,7 +10343,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -10605,15 +10542,14 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       }
     },
     {
       "sequence": 32,
       "round": 1,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -10633,7 +10569,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -10839,8 +10775,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -10850,7 +10785,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -11056,20 +10991,19 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 33,
       "round": 1,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 1,
-        "subPhase": "ActionResolution"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -11078,7 +11012,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -11284,8 +11218,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -11295,7 +11228,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -11501,15 +11434,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 34,
       "round": 1,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -11853,7 +11785,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -12077,8 +12009,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -12088,7 +12019,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -12312,15 +12243,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 35,
       "round": 1,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -12693,7 +12623,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -12935,8 +12865,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -12946,7 +12875,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -13188,15 +13117,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 36,
       "round": 1,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -13604,7 +13532,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -13863,8 +13791,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -13874,7 +13801,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 1,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -14133,8 +14060,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       }
     },
@@ -14785,8 +14711,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -14991,8 +14916,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -15208,8 +15132,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -15414,8 +15337,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -15631,8 +15553,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -15837,8 +15758,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -16054,8 +15974,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -16260,8 +16179,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -16476,8 +16394,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -16682,8 +16599,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -16898,8 +16814,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -17104,8 +17019,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -17321,8 +17235,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -17527,8 +17440,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -17744,8 +17656,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -17950,8 +17861,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -18196,8 +18106,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -18402,8 +18311,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -18619,8 +18527,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -18825,8 +18732,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -19042,8 +18948,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -19248,8 +19153,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -19469,8 +19373,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -19680,8 +19583,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -19901,8 +19803,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -20116,8 +20017,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -20342,8 +20242,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -20557,8 +20456,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -20831,8 +20729,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -21090,8 +20987,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -21360,8 +21256,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -21619,8 +21514,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -21937,8 +21831,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -22196,8 +22089,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -22466,8 +22358,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -22725,8 +22616,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -22999,8 +22889,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -23258,8 +23147,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -23576,8 +23464,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -23835,8 +23722,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -24105,8 +23991,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -24364,8 +24249,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -24638,8 +24522,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -24902,8 +24785,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -25176,8 +25058,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -25444,8 +25325,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -25723,8 +25603,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -25991,15 +25870,14 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 61,
       "round": 2,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "IntentSubmitted",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -26017,7 +25895,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -26274,8 +26152,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -26285,7 +26162,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -26542,20 +26419,19 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 62,
       "round": 2,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 2,
-        "subPhase": "RevealAndTarget"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -26564,7 +26440,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -26821,8 +26697,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -26832,7 +26707,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -27089,15 +26964,14 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 63,
       "round": 2,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -27117,7 +26991,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -27382,8 +27256,7 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       },
       "player2": {
@@ -27393,7 +27266,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -27658,15 +27531,14 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       }
     },
     {
       "sequence": 64,
       "round": 2,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -27686,7 +27558,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -27958,8 +27830,7 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       },
       "player2": {
@@ -27969,7 +27840,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -28241,15 +28112,14 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       }
     },
     {
       "sequence": 65,
       "round": 2,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -28269,7 +28139,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -28548,8 +28418,7 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       },
       "player2": {
@@ -28559,7 +28428,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -28838,15 +28707,14 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       }
     },
     {
       "sequence": 66,
       "round": 2,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -28866,7 +28734,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -29152,8 +29020,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -29163,7 +29030,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -29449,20 +29316,19 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 67,
       "round": 2,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 2,
-        "subPhase": "ActionResolution"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -29471,7 +29337,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -29757,8 +29623,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -29768,7 +29633,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -30054,15 +29919,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 68,
       "round": 2,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -30525,7 +30389,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -30811,8 +30675,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -30822,7 +30685,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -31108,15 +30971,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 69,
       "round": 2,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -31618,7 +31480,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -31921,8 +31783,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -31932,7 +31793,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -32235,15 +32096,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 70,
       "round": 2,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -32779,7 +32639,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -33099,8 +32959,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -33110,7 +32969,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 2,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -33430,8 +33289,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       }
     },
@@ -34263,8 +34121,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -34521,8 +34378,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -34790,8 +34646,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -35048,8 +34903,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -35317,8 +35171,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -35575,8 +35428,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -35844,8 +35696,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -36102,8 +35953,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -36370,8 +36220,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -36628,8 +36477,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -36896,8 +36744,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -37154,8 +37001,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -37423,8 +37269,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -37681,8 +37526,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -37950,8 +37794,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -38208,8 +38051,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -38526,8 +38368,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -38784,8 +38625,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -39053,8 +38893,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -39311,8 +39150,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -39580,8 +39418,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -39838,8 +39675,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -40116,8 +39952,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -40374,8 +40209,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -40656,8 +40490,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -40914,8 +40747,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -41196,8 +41028,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -41459,8 +41290,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -41766,8 +41596,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -42058,8 +41887,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -42361,8 +42189,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -42653,8 +42480,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -42985,8 +42811,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -43277,8 +43102,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -43580,8 +43404,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -43872,8 +43695,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -44179,8 +44001,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -44471,8 +44292,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -44778,8 +44598,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -45070,8 +44889,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -45402,8 +45220,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -45694,8 +45511,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -45997,8 +45813,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -46289,8 +46104,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -46601,8 +46415,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -46893,8 +46706,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -47209,8 +47021,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -47501,8 +47312,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -47817,8 +47627,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -48114,15 +47923,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 96,
       "round": 3,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "IntentSubmitted",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -48140,7 +47948,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -48430,8 +48238,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -48441,7 +48248,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -48731,20 +48538,19 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 97,
       "round": 3,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 3,
-        "subPhase": "RevealAndTarget"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -48753,7 +48559,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -49043,8 +48849,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -49054,7 +48859,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -49344,15 +49149,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 98,
       "round": 3,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -49372,7 +49176,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -49670,8 +49474,7 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       },
       "player2": {
@@ -49681,7 +49484,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -49979,15 +49782,14 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       }
     },
     {
       "sequence": 99,
       "round": 3,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -50007,7 +49809,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -50312,8 +50114,7 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       },
       "player2": {
@@ -50323,7 +50124,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -50628,15 +50429,14 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       }
     },
     {
       "sequence": 100,
       "round": 3,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -50656,7 +50456,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -50968,8 +50768,7 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       },
       "player2": {
@@ -50979,7 +50778,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -51291,15 +51090,14 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       }
     },
     {
       "sequence": 101,
       "round": 3,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -51319,7 +51117,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -51638,8 +51436,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -51649,7 +51446,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -51968,20 +51765,19 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 102,
       "round": 3,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 3,
-        "subPhase": "ActionResolution"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -51990,7 +51786,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -52309,8 +52105,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -52320,7 +52115,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -52639,15 +52434,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 103,
       "round": 3,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -53227,7 +53021,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -53563,8 +53357,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -53574,7 +53367,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -53910,15 +53703,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 104,
       "round": 3,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -54500,7 +54292,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -54836,8 +54628,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -54847,7 +54638,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -55183,15 +54974,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 105,
       "round": 3,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -55812,7 +55602,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -56165,8 +55955,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -56176,7 +55965,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 3,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -56529,8 +56318,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       }
     },
@@ -57456,8 +57244,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -57731,8 +57518,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -58017,8 +57803,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -58292,8 +58077,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -58617,8 +58401,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -58892,8 +58675,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -59178,8 +58960,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -59453,8 +59234,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -59738,8 +59518,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -60013,8 +59792,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -60298,8 +60076,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -60573,8 +60350,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -60859,8 +60635,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -61134,8 +60909,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -61420,8 +61194,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -61695,8 +61468,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -62023,8 +61795,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -62298,8 +62069,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -62584,8 +62354,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -62859,8 +62628,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -63145,8 +62913,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -63420,8 +63187,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -63715,8 +63481,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -63990,8 +63755,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -64289,8 +64053,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -64564,8 +64327,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -64863,8 +64625,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -65143,8 +64904,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -65486,8 +65246,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -65814,8 +65573,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -66153,8 +65911,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -66481,8 +66238,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -66868,8 +66624,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -67196,8 +66951,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -67535,8 +67289,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -67863,8 +67616,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -68206,8 +67958,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -68534,8 +68285,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -68921,8 +68671,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -69249,8 +68998,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -69588,8 +69336,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -69916,8 +69663,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -70264,8 +70010,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -70592,8 +70337,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -70944,8 +70688,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -71272,8 +71015,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -71624,8 +71366,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -71957,15 +71698,14 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 130,
       "round": 4,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "IntentSubmitted",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -71983,7 +71723,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -72309,8 +72049,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -72320,7 +72059,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -72646,20 +72385,19 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 131,
       "round": 4,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 4,
-        "subPhase": "RevealAndTarget"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -72668,7 +72406,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -72994,8 +72732,7 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -73005,7 +72742,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -73331,15 +73068,14 @@
           }
         ],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 132,
       "round": 4,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -73359,7 +73095,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -73693,8 +73429,7 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       },
       "player2": {
@@ -73704,7 +73439,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -74038,15 +73773,14 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       }
     },
     {
       "sequence": 133,
       "round": 4,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -74066,7 +73800,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -74407,8 +74141,7 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       },
       "player2": {
@@ -74418,7 +74151,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -74759,15 +74492,14 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       }
     },
     {
       "sequence": 134,
       "round": 4,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -74787,7 +74519,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -75135,8 +74867,7 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       },
       "player2": {
@@ -75146,7 +74877,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -75494,15 +75225,14 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       }
     },
     {
       "sequence": 135,
       "round": 4,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -75522,7 +75252,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -75877,8 +75607,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -75888,7 +75617,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -76243,20 +75972,19 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 136,
       "round": 4,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 4,
-        "subPhase": "ActionResolution"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -76265,7 +75993,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -76620,8 +76348,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -76631,7 +76358,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -76986,15 +76713,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 137,
       "round": 4,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -77634,7 +77360,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -78006,8 +77732,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -78017,7 +77742,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -78389,15 +78114,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 138,
       "round": 4,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -79071,7 +78795,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -79460,8 +79184,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -79471,7 +79194,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -79860,15 +79583,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 139,
       "round": 4,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -80570,7 +80292,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -80977,8 +80699,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -80988,7 +80709,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 4,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -81395,8 +81116,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       }
     },
@@ -82429,8 +82149,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -82722,8 +82441,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -83026,8 +82744,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -83319,8 +83036,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -83681,8 +83397,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -83974,8 +83689,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -84278,8 +83992,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -84571,8 +84284,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -84874,8 +84586,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -85167,8 +84878,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -85470,8 +85180,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -85763,8 +85472,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -86067,8 +85775,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -86360,8 +86067,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -86664,8 +86370,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -86957,8 +86662,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -87317,8 +87021,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -87610,8 +87313,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -87914,8 +87616,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -88207,8 +87908,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -88511,8 +88211,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -88804,8 +88503,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -89112,8 +88810,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -89410,8 +89107,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -89718,8 +89414,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -90020,8 +89715,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -90333,8 +90027,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -90635,8 +90328,7 @@
         "timeline": [],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -90977,8 +90669,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -91304,8 +90995,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -91642,8 +91332,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -91969,8 +91658,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -92336,8 +92024,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -92663,8 +92350,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -93001,8 +92687,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -93328,8 +93013,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -93670,8 +93354,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -93997,8 +93680,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -94339,8 +94021,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -94666,8 +94347,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -95033,8 +94713,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -95360,8 +95039,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -95698,8 +95376,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -96025,8 +95702,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -96367,8 +96043,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -96699,8 +96374,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -97041,8 +96715,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -97377,8 +97050,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
@@ -97724,8 +97396,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -98060,15 +97731,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 165,
       "round": 5,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "IntentSubmitted",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -98086,7 +97756,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -98411,8 +98081,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -98422,7 +98091,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -98747,20 +98416,19 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 166,
       "round": 5,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 5,
-        "subPhase": "RevealAndTarget"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -98769,7 +98437,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -99094,8 +98762,7 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       },
       "player2": {
@@ -99105,7 +98772,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -99430,15 +99097,14 @@
         ],
         "rollOffs": [],
         "revealedActions": [],
-        "revealCursor": 0,
-        "resolveCursor": 0,
+        "activationCursor": 0,
         "outcome": null
       }
     },
     {
       "sequence": 167,
       "round": 5,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -99458,7 +99124,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -99791,8 +99457,7 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       },
       "player2": {
@@ -99802,7 +99467,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -100135,15 +99800,14 @@
             ]
           }
         ],
-        "revealCursor": 1,
-        "resolveCursor": 0,
+        "activationCursor": 1,
         "outcome": null
       }
     },
     {
       "sequence": 168,
       "round": 5,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -100163,7 +99827,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -100503,8 +100167,7 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       },
       "player2": {
@@ -100514,7 +100177,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -100854,15 +100517,14 @@
             ]
           }
         ],
-        "revealCursor": 2,
-        "resolveCursor": 0,
+        "activationCursor": 2,
         "outcome": null
       }
     },
     {
       "sequence": 169,
       "round": 5,
-      "subPhase": "RevealAndTarget",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -100882,7 +100544,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -101229,8 +100891,7 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       },
       "player2": {
@@ -101240,7 +100901,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "RevealAndTarget",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -101587,15 +101248,14 @@
             ]
           }
         ],
-        "revealCursor": 3,
-        "resolveCursor": 0,
+        "activationCursor": 3,
         "outcome": null
       }
     },
     {
       "sequence": 170,
       "round": 5,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "ActionRevealed",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -101615,7 +101275,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -101969,8 +101629,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -101980,7 +101639,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -102334,20 +101993,19 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 171,
       "round": 5,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
         "roundId": 5,
-        "subPhase": "ActionResolution"
+        "subPhase": "Activation"
       },
       "player1": {
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -102356,7 +102014,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -102710,8 +102368,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -102721,7 +102378,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -103075,15 +102732,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 0,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 172,
       "round": 5,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -103701,7 +103357,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -104055,8 +103711,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -104066,7 +103721,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -104420,15 +104075,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 1,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 173,
       "round": 5,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -105085,7 +104739,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -105456,8 +105110,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -105467,7 +105120,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -105838,15 +105491,14 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 2,
+        "activationCursor": 4,
         "outcome": null
       }
     },
     {
       "sequence": 174,
       "round": 5,
-      "subPhase": "ActionResolution",
+      "subPhase": "Activation",
       "event": {
         "kind": "CombatActionResolved",
         "matchId": "01a0d105-d3b5-76db-8864-b6cb64570540",
@@ -106537,7 +106189,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 1,
@@ -106925,8 +106577,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       },
       "player2": {
@@ -106936,7 +106587,7 @@
         "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
         "roundNumber": 5,
         "phase": "Combat",
-        "subPhase": "ActionResolution",
+        "subPhase": "Activation",
         "allies": [
           {
             "id": 3,
@@ -107324,8 +106975,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 3,
+        "activationCursor": 4,
         "outcome": null
       }
     },
@@ -108372,8 +108022,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -108741,8 +108390,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -109121,8 +108769,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -109490,8 +109137,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -109909,8 +109555,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -110278,8 +109923,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -110658,8 +110302,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -111027,8 +110670,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -111406,8 +111048,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -111775,8 +111416,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -112159,8 +111799,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
@@ -112528,8 +112167,7 @@
             ]
           }
         ],
-        "revealCursor": 4,
-        "resolveCursor": 4,
+        "activationCursor": 4,
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",

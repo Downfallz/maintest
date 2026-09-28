@@ -2,6 +2,7 @@ using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
@@ -82,7 +83,7 @@ public sealed class CommandHandlerTests
     }
 
     [Fact]
-    public async Task Combat_commands_reach_the_aggregate_and_report_the_step()
+    public async Task Combat_commands_reach_the_aggregate_and_each_action_resolves_on_confirmation()
     {
         var store = new MatchStore();
         var match = store.Started();
@@ -90,7 +91,6 @@ public sealed class CommandHandlerTests
         MatchStore.ChooseStandard(match);
         var intents = new SubmitIntentHandler(store.Workflow);
         var actions = new SubmitActionHandler(store.Workflow);
-        var resolve = new ResolveNextActionHandler(store.Workflow);
 
         foreach (var slot in match.CurrentRound.ShouldNotBeNull().Timeline.Slots)
         {
@@ -99,16 +99,16 @@ public sealed class CommandHandlerTests
 
         (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(2)]), TestContext.Current.CancellationToken)).Error.ShouldBe(CombatErrors.EnemiesOnly);
         (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(3)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        var first = match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem();
         (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(2), TestContent.Strike, [CreatureId.From(3)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(3), TestContent.Strike, [CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(4), TestContent.Strike, [CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
-        var step = await resolve.HandleAsync(new ResolveNextAction(match.Id), TestContext.Current.CancellationToken);
-
-        step.Value.RoundId.ShouldBe(RoundId.First);
-        step.Value.Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
-        step.Value.RoundCompleted.ShouldBeFalse();
-        (await resolve.HandleAsync(new ResolveNextAction(MatchId.New()), TestContext.Current.CancellationToken)).Error.ShouldBe(ApplicationErrors.MatchNotFound);
+        first.RoundId.ShouldBe(RoundId.First);
+        first.Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
+        match.DomainEvents.OfType<CombatActionResolved>().Count().ShouldBe(4);
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(2);
+        (await actions.HandleAsync(new SubmitAction(MatchId.New(), PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(3)]), TestContext.Current.CancellationToken)).Error.ShouldBe(ApplicationErrors.MatchNotFound);
     }
 
     [Fact]
@@ -123,6 +123,5 @@ public sealed class CommandHandlerTests
         await Should.ThrowAsync<ArgumentNullException>(() => new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new SubmitIntentHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new SubmitActionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
-        await Should.ThrowAsync<ArgumentNullException>(() => new ResolveNextActionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 }

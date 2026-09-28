@@ -50,7 +50,7 @@ async function open(page, scenario) {
 test('target previews stay readable on a phone and restart clears the selection', async ({ page }, info) => {
   await open(page, 'targeting');
   await expect(page.locator('#decision-guide')).toContainText('If cast on the current board');
-  await expect(page.locator('#decision-guide')).toContainText('hidden choices and rolls can change the outcome');
+  await expect(page.locator('#decision-guide')).toContainText('the earlier actions are already on the board');
   // A phone picks a target in the battlefield bar under the round; a laptop on the battlefield beside the desk.
   const target = info.project.name === 'table-phone' ? page.locator('#mini-board [aria-label^="Creature 4,"]') : page.locator('[data-focus="target-4"]');
   await target.click();
@@ -99,6 +99,11 @@ for (const scenario of ['stun', 'resolution']) {
       });
       expect(posted.status).toBe(204);
     }
+    // Each action was shown as it resolved (ADR 0083): the round's replay is the recap's, on demand.
+    await expect(page.locator('#recap')).toBeVisible();
+    await expect(page.locator('#playback')).toBeHidden();
+    await page.locator('#recap summary').click();
+    await page.getByRole('button', { name: 'Replay action by action' }).click();
     await expect(page.locator('#playback')).toBeVisible();
     await expect(page.locator('#playback-board-note')).toContainText('Before action');
     await page.locator('[data-focus="playback-next"]').click();

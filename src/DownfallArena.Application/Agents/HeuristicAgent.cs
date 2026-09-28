@@ -16,7 +16,7 @@ namespace DownfallArena.Application.Agents;
 public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resources, RuleSet rules) : IPlayerAgent
 {
     private readonly ActionScorer _scorer = new(resources, rules, weights);
-    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, weights), resources, rules);
+    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, weights));
 
     public ScoringWeights Weights => weights;
 
@@ -120,7 +120,8 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == options.Actor);
-        return _scorer.Best(actor, options.Spell, creatures, _foresight.GoneBeforeThisSlot(board, creatures), SpeedOf(board, actor.Id))?.Targets ?? [];
+        // The board already carries every action before this slot (ADR 0083): nobody is expected gone.
+        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id))?.Targets ?? [];
     }
 
     /// <summary>

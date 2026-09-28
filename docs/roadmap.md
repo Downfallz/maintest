@@ -132,7 +132,8 @@ the spell unlocked. Validate fully, then mutate.
 
 - `IntentRules` (alive, not stunned, knows the spell, can afford it; gate lists the timeline creatures without
   an intent), `TargetingRules` (a full `TargetingReport` with global and per-target failures, and the legal
-  targets of a spell), `ActionRules` (any targeting failure blocks the binding; gate follows the reveal cursor).
+  targets of a spell), `ActionRules` (any targeting failure blocks the binding; gate follows the reveal cursor, the activation
+  cursor since ADR 0083).
 - `ResolutionRules` computes a `CombatResolution` without touching the creatures: an actor that cannot act or
   a global targeting failure fizzles, per-target failures drop targets, one outcome per effect and target with
   the **crit multiplier applied to damage** and the **energy cost recorded**. `CombatExecution` applies it.
@@ -146,7 +147,8 @@ Fix: legacy never applied the crit multiplier nor spent the energy; both are cov
 
 - `Match`: `Join` (roster of creature definitions, team size from the rule set, auto-start on the second
   player), one method per player action (`SubmitEvolutionChoice`, `PassEvolution`, `SubmitSpeedChoice`,
-  `SubmitIntent`, `SubmitAction`), `ResolveNextAction` returning a `CombatStep`. No `EndTurn`.
+  `SubmitIntent`, `SubmitAction`), `ResolveNextAction` returning a `CombatStep` (both retired by ADR 0083:
+  an action resolves on `SubmitAction`). No `EndTurn`.
 - The phase driver is one private loop in `Match`: run the automatic step or ask the progression gate, advance,
   raise `SubPhaseEntered`, repeat until the round waits on a player or the match ends.
 - Events: `PlayerJoined`, `MatchStarted`, `RoundStarted`, `SubPhaseEntered`, `OngoingEffectsApplied`,

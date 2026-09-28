@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules;
 using DownfallArena.Domain.Matches.Rules.Combat;
@@ -20,7 +21,7 @@ public sealed class AdvanceTests
     /// <summary>
     /// The test ADR 0047 asks for: a board cloned and advanced by the same rules must land where the match
     /// lands. The script exercises everything the applier carries -- a stun and a defense buff applied in
-    /// combat, the fizzles they cause, energy paid, damage through a buff, conditions counting down across two
+    /// combat, the fizzles they cause when a slot comes up, energy paid, damage through a buff, conditions counting down across two
     /// cleanups, one of them fresh and one not -- and then plays on to the elimination, so the last round's
     /// cleanup, with an outcome and no start of round after it, is compared too.
     /// </summary>
@@ -69,9 +70,8 @@ public sealed class AdvanceTests
         {
             Table.PassEvolution(match);
             Table.ChooseStandard(match);
-            Table.DeclareStrikes(match);
-            Table.HitFirstLivingEnemy(match);
-            ResolveAndCompare(match);
+            Compared(match, () => Table.DeclareStrikes(match));
+            ActivateEachSlot(match, slot => [Table.Living(match, Enemy(slot.Owner)).First().Id]);
         }
 
         match.Outcome.ShouldNotBeNull().Reason.ShouldBe(MatchEndReason.Elimination);
@@ -84,19 +84,21 @@ public sealed class AdvanceTests
         Table.PassEvolution(match);
         Table.ChooseStandard(match);
         Table.DeclareStrikes(match);
-        Table.HitFirstLivingEnemy(match);
-        for (var resolved = 0; resolved < 3; resolved++)
+        var round = match.CurrentRound.ShouldNotBeNull();
+        for (var activated = 0; activated < 3; activated++)
         {
-            match.ResolveNextAction().Value.RoundCompleted.ShouldBeFalse();
+            var slot = round.NextSlot.ShouldNotBeNull();
+            match.SubmitAction(slot.Owner, FirstLivingEnemy(match, round)).IsSuccess.ShouldBeTrue();
         }
 
         var before = match.Snapshots();
-        var action = match.CurrentRound.ShouldNotBeNull().NextActionToResolve();
+        var action = FirstLivingEnemy(match, round);
+        var owner = round.NextSlot.ShouldNotBeNull().Owner;
 
         var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
-        var step = match.ResolveNextAction().Value;
+        match.SubmitAction(owner, action).IsSuccess.ShouldBeTrue();
 
-        step.MatchCompleted.ShouldBeTrue();
+        match.State.ShouldBe(MatchState.Ended);
         ShouldMatch(match.Snapshots(), Advance.Cleanup(advanced.Board, Arena.Resources));
         match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(2));
     }
@@ -122,16 +124,28 @@ public sealed class AdvanceTests
     }
 
     [Fact]
+    public void A_board_with_a_team_wiped_is_an_elimination_whatever_the_round()
+    {
+        var creatures = Arena.FourCreatures();
+        Arena.Find(creatures, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(creatures, Arena.Wraith).TakeDamage(99);
+
+        var outcome = Advance.Elimination(Arena.Snapshots(creatures), Arena.Resources);
+
+        outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
+        Advance.Elimination(Arena.Snapshots(Arena.FourCreatures()), Arena.Resources).ShouldBeNull();
+    }
+
+    [Fact]
     public void Advancing_a_board_leaves_the_match_it_was_taken_from_where_it_was()
     {
         var match = Table.Started();
         Table.PassEvolution(match);
         Table.ChooseStandard(match);
         Table.DeclareStrikes(match);
-        Table.HitFirstLivingEnemy(match);
         var before = match.Snapshots();
 
-        var advanced = Advance.Action(match.CurrentRound.ShouldNotBeNull().NextActionToResolve(), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
+        var advanced = Advance.Action(FirstLivingEnemy(match, match.CurrentRound.ShouldNotBeNull()), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
 
         advanced.AppliedOutcomes.ShouldNotBeEmpty();
         ShouldMatch(match.Snapshots(), before);
@@ -207,61 +221,87 @@ public sealed class AdvanceTests
     }
 
     /// <summary>
-    /// Standard speeds, the planned intent per creature on the timeline, its planned targets in reveal order,
-    /// then every action resolved through the match and through <see cref="Advance"/> side by side.
+    /// Standard speeds, the planned intent per creature on the timeline, and its planned targets when its slot
+    /// comes up, every action compared with what <see cref="Advance"/> makes of it.
     /// </summary>
     private static void PlayCombat(Match match, Dictionary<CreatureId, (SpellId Spell, CreatureId[] Targets)> plan)
     {
         Table.ChooseStandard(match);
         var round = match.CurrentRound.ShouldNotBeNull();
-        foreach (var slot in round.Timeline.Slots)
+        Compared(match, () =>
         {
-            match.SubmitIntent(slot.Owner, new CombatIntent(slot.Creature, plan[slot.Creature].Spell)).IsSuccess.ShouldBeTrue();
-        }
+            foreach (var slot in round.Timeline.Slots)
+            {
+                match.SubmitIntent(slot.Owner, new CombatIntent(slot.Creature, plan[slot.Creature].Spell)).IsSuccess.ShouldBeTrue();
+            }
+        });
+        ActivateEachSlot(match, slot => plan[slot.Creature].Targets);
+    }
 
-        while (round.NextSlotToReveal is { } slot)
+    /// <summary>Binds the targets of every slot a player is asked for, comparing each activation.</summary>
+    private static void ActivateEachSlot(Match match, Func<ActivationSlot, CreatureId[]> targets)
+    {
+        var round = match.CurrentRound.ShouldNotBeNull();
+        while (match.State == MatchState.InProgress && round.SubPhase == RoundSubPhase.Activation && round.NextSlot is { } slot)
         {
-            var intent = round.IntentOf(slot.Creature).ShouldNotBeNull();
-            match.SubmitAction(slot.Owner, CombatAction.Bind(intent, plan[slot.Creature].Targets)).IsSuccess.ShouldBeTrue();
+            var action = CombatAction.Bind(round.IntentOf(slot.Creature).ShouldNotBeNull(), targets(slot));
+            Compared(match, () => match.SubmitAction(slot.Owner, action).IsSuccess.ShouldBeTrue());
         }
-
-        ResolveAndCompare(match);
     }
 
     /// <summary>
-    /// Walks the match's own steps: an action, and when it was the round's last, the cleanup, the outcome, and
-    /// the start of the next round unless that outcome ended the match.
+    /// Runs a command and walks what the match did in it: every action resolved, the fizzles it activated on
+    /// its own included, each from the board the one before it left; then, when the round ended, the cleanup,
+    /// the outcome, and the start of the next round unless that outcome ended the match; or the elimination
+    /// the match stopped on (ADR 0083).
     /// </summary>
-    private static void ResolveAndCompare(Match match)
+    private static void Compared(Match match, Action command)
     {
-        while (match.State == MatchState.InProgress && match.CurrentRound.ShouldNotBeNull().SubPhase == RoundSubPhase.ActionResolution)
+        var seen = match.DomainEvents.Count;
+        var round = match.CurrentRound.ShouldNotBeNull().Number;
+        var expected = match.Snapshots();
+
+        command();
+
+        var events = match.DomainEvents.Skip(seen).ToList();
+        foreach (var resolved in events.OfType<CombatActionResolved>())
         {
-            var before = match.Snapshots();
-            var round = match.CurrentRound.Number;
-            var action = match.CurrentRound.NextActionToResolve();
-            var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
+            var advanced = Advance.Action(resolved.Resolution.Action, expected, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
+            advanced.Resolution.Fizzled.ShouldBe(resolved.Resolution.Fizzled);
+            advanced.Resolution.FizzleReason.ShouldBe(resolved.Resolution.FizzleReason);
+            advanced.Resolution.Outcomes.ShouldBe(resolved.Resolution.Outcomes);
+            advanced.AppliedOutcomes.ShouldBe(resolved.AppliedOutcomes);
+            ShouldMatch(resolved.Frame.ShouldNotBeNull().After, advanced.Board);
+            expected = advanced.Board;
+        }
 
-            var step = match.ResolveNextAction().Value;
-
-            advanced.Resolution.Fizzled.ShouldBe(step.Resolution.Fizzled);
-            advanced.Resolution.FizzleReason.ShouldBe(step.Resolution.FizzleReason);
-            advanced.Resolution.Outcomes.ShouldBe(step.Resolution.Outcomes);
-            advanced.AppliedOutcomes.ShouldBe(step.AppliedOutcomes);
-            var expected = advanced.Board;
-            if (step.RoundCompleted)
+        if (events.OfType<ConditionsExpired>().Any())
+        {
+            expected = Advance.Cleanup(expected, Arena.Resources);
+            var outcome = Advance.Outcome(expected, Arena.Resources, round, match.RuleSet);
+            if (outcome is null)
             {
-                expected = Advance.Cleanup(expected, Arena.Resources);
-                var outcome = Advance.Outcome(expected, Arena.Resources, round, match.RuleSet);
-                outcome.ShouldBe(match.Outcome);
-                if (outcome is null)
-                {
-                    expected = Advance.StartOfRound(expected, Arena.Resources, match.RuleSet);
-                }
+                expected = Advance.StartOfRound(expected, Arena.Resources, match.RuleSet);
+                outcome = Advance.Elimination(expected, Arena.Resources);
             }
 
-            ShouldMatch(match.Snapshots(), expected);
+            outcome.ShouldBe(match.Outcome);
         }
+        else
+        {
+            Advance.Elimination(expected, Arena.Resources).ShouldBe(match.Outcome);
+        }
+
+        ShouldMatch(match.Snapshots(), expected);
     }
+
+    private static CombatAction FirstLivingEnemy(Match match, Round round)
+    {
+        var slot = round.NextSlot.ShouldNotBeNull();
+        return CombatAction.Bind(round.IntentOf(slot.Creature).ShouldNotBeNull(), [Table.Living(match, Enemy(slot.Owner)).First().Id]);
+    }
+
+    private static PlayerSlot Enemy(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
     /// <summary>
     /// Field by field: a snapshot is a record, but its known spells and conditions are collections, which a

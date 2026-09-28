@@ -18,7 +18,7 @@ public sealed class RoundFlowTests
     [InlineData(RoundSubPhase.Evolution, RoundPhase.Planning)]
     [InlineData(RoundSubPhase.TurnOrderResolution, RoundPhase.Planning)]
     [InlineData(RoundSubPhase.IntentSelection, RoundPhase.Combat)]
-    [InlineData(RoundSubPhase.ActionResolution, RoundPhase.Combat)]
+    [InlineData(RoundSubPhase.Activation, RoundPhase.Combat)]
     [InlineData(RoundSubPhase.Cleanup, RoundPhase.EndOfRound)]
     [InlineData(RoundSubPhase.Finalization, RoundPhase.EndOfRound)]
     public void Every_sub_phase_belongs_to_its_phase(RoundSubPhase subPhase, RoundPhase phase)
@@ -32,6 +32,8 @@ public sealed class RoundFlowTests
         RoundFlow.After(RoundSubPhase.EnergyGain).ShouldBe(RoundSubPhase.OngoingEffects);
         RoundFlow.After(RoundSubPhase.TurnOrderResolution).ShouldBe(RoundSubPhase.TieOrder);
         RoundFlow.After(RoundSubPhase.TieOrder).ShouldBe(RoundSubPhase.IntentSelection);
+        RoundFlow.After(RoundSubPhase.IntentSelection).ShouldBe(RoundSubPhase.Activation);
+        RoundFlow.After(RoundSubPhase.Activation).ShouldBe(RoundSubPhase.Cleanup);
         RoundFlow.After(RoundSubPhase.Finalization).ShouldBeNull();
     }
 }

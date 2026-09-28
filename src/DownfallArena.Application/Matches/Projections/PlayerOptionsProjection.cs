@@ -36,8 +36,7 @@ public static class PlayerOptionsProjection
             RoundSubPhase.Speed => Speed(round, slot, snapshots),
             RoundSubPhase.TieOrder => TieOrder(round, slot),
             RoundSubPhase.IntentSelection => Intent(round, slot, snapshots, resources),
-            RoundSubPhase.RevealAndTarget => Target(round, slot, snapshots, resources),
-            RoundSubPhase.ActionResolution => new PlayerOptions { Kind = PlayerOptionsKind.Resolution, SubPhase = round.SubPhase },
+            RoundSubPhase.Activation => Target(round, slot, snapshots, resources),
             _ => Waiting(round),
         };
     }
@@ -92,7 +91,9 @@ public static class PlayerOptionsProjection
 
     private static PlayerOptions Target(Round round, PlayerSlot slot, IReadOnlyList<CreatureSnapshot> snapshots, IGameResources resources)
     {
-        if (round.NextSlotToReveal is not { } next || next.Owner != slot)
+        // The match only waits on a slot whose creature can act: one that cannot is revealed and fizzles on
+        // its own (ADR 0083), so the owner is never asked for it.
+        if (round.NextSlot is not { } next || next.Owner != slot)
         {
             return Waiting(round);
         }

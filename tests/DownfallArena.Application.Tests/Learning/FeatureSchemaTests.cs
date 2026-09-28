@@ -14,8 +14,8 @@ public sealed class FeatureSchemaTests
     [Fact]
     public void The_schema_is_the_published_version()
     {
-        Schema.Version.ShouldBe("features:v7");
-        FeatureSchema.CurrentVersion.ShouldBe("features:v7");
+        Schema.Version.ShouldBe("features:v8");
+        FeatureSchema.CurrentVersion.ShouldBe("features:v8");
         Schema.TeamSize.ShouldBe(2);
         Schema.RoundCap.ShouldBe(30);
     }
@@ -29,7 +29,7 @@ public sealed class FeatureSchemaTests
         var otherContent = FeatureSchema.Build(GameResources.Create("other", [], [], []), MatchStore.TwoOnTwo());
 
         Schema.Id.ShouldBe(same.Id);
-        Schema.Id.ShouldMatch("^features:v7\\+[0-9a-f]{12}$");
+        Schema.Id.ShouldMatch("^features:v8\\+[0-9a-f]{12}$");
         new[] { Schema.Id, otherTeamSize.Id, otherRoundCap.Id, otherContent.Id }.Distinct(StringComparer.Ordinal).Count().ShouldBe(4);
         FeatureSchema.Build(TestContent.Resources, RuleSet.Create(2, 9, 9, 30, 9.0)).Id.ShouldBe(Schema.Id);
     }

@@ -39,7 +39,22 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ## Versions
 
-### features:v7 (published, ADR 0072)
+### features:v8 (published, ADR 0083)
+
+`features:v7` with the same layout and a new meaning for the combat steps. An action resolves as its targets
+are confirmed, so the board of a Target decision already includes every action before it in the round:
+
+| Feature | v8 value |
+| --- | --- |
+| `sub_phase` | 6/9 for `Activation`, the one combat step left; the 7/9 of `ActionResolution` is never written |
+| `reveal_progress` | the activated slots over the timeline length, each one revealed, targeted and resolved |
+| `revealed_enemy_actions` | the enemy actions activated so far, already on the board |
+
+The creature blocks are v7 unchanged, but the health, energy and conditions they read at a Target decision
+are after the earlier slots rather than before them. No run recorded under v7 is comparable to one under v8,
+and a policy trained under v7 is refused.
+
+### features:v7 (superseded by v8, ADR 0083)
 
 `features:v6` with one more feature at the end of the opening creature features: `stun_immune`, 1 through the
 round after a stun ends, when a stun cast on the creature would be ignored, and 0 otherwise. A creature block is
@@ -185,7 +200,7 @@ Global block, indexes 0 to 4:
 | 0 | `round_fraction` | round number over round cap; 0 before the first round |
 | 1 | `phase` | `RoundPhase` ordinal over 3: StartOfRound 0, Planning 1/3, Combat 2/3, EndOfRound 1 |
 | 2 | `sub_phase` | the ten steps of ADR 0010 in order, over 9: EnergyGain 0, ..., Finalization 1. `TieOrder` (ADR 0063) reads as `TurnOrderResolution`, 4/9: the values are a table, not the enum's ordinal, so the step inserted later moved none of them |
-| 3 | `reveal_progress` | reveal cursor over timeline length; 0 while the timeline is empty |
+| 3 | `reveal_progress` | reveal cursor over timeline length (the activation cursor from v8); 0 while the timeline is empty |
 | 4 | `revealed_enemy_actions` | actions revealed this round whose actor is an enemy, over `T` |
 
 Creature blocks. The **board slot** of a creature is its index among the player's own creatures (0 to

@@ -127,10 +127,9 @@ public sealed class RoundTests
         round.SetTimeline(Timeline);
 
         round.Timeline.ShouldBeSameAs(Timeline);
-        round.RevealCursor.ShouldBe(TurnCursor.Start);
-        round.ResolveCursor.ShouldBe(TurnCursor.Start);
-        round.NextSlotToReveal.ShouldBe(Timeline[0]);
-        round.AllActionsBound.ShouldBeFalse();
+        round.ActivationCursor.ShouldBe(TurnCursor.Start);
+        round.NextSlot.ShouldBe(Timeline[0]);
+        round.IsCombatResolved.ShouldBeFalse();
     }
 
     [Fact]
@@ -192,7 +191,7 @@ public sealed class RoundTests
     }
 
     [Fact]
-    public void Actions_bind_the_revealed_intents_in_timeline_order()
+    public void Each_slot_binds_its_action_then_is_activated_in_timeline_order()
     {
         var round = PlannedRound();
         var knightAction = CombatAction.Bind(new CombatIntent(Knight, Strike), [Ghoul]);
@@ -201,22 +200,26 @@ public sealed class RoundTests
         round.SubmitAction(knightAction).Error.ShouldBe(RoundErrors.TargetingNotOpen);
 
         round.Advance();
-        round.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+        round.SubPhase.ShouldBe(RoundSubPhase.Activation);
         round.PeekNextIntent().ShouldBe(new CombatIntent(Knight, Strike));
 
         round.SubmitAction(ghoulAction).Error.ShouldBe(RoundErrors.NotThisCreaturesTurn);
         round.SubmitAction(CombatAction.Bind(new CombatIntent(Knight, Guard), [Ghoul])).Error.ShouldBe(RoundErrors.ActionDoesNotMatchIntent);
         round.SubmitAction(knightAction).IsSuccess.ShouldBeTrue();
+        round.ActionOf(Knight).ShouldBe(knightAction);
+        round.ActivationCursor.Index.ShouldBe(0, "the slot moves on once the match has resolved its action");
 
-        round.RevealCursor.Index.ShouldBe(1);
+        round.MarkSlotActivated();
+        round.ActivationCursor.Index.ShouldBe(1);
         round.PeekNextIntent().ShouldBe(new CombatIntent(Ghoul, Guard));
         round.SubmitAction(ghoulAction).IsSuccess.ShouldBeTrue();
+        round.MarkSlotActivated();
 
-        round.AllActionsBound.ShouldBeTrue();
-        round.NextSlotToReveal.ShouldBeNull();
+        round.IsCombatResolved.ShouldBeTrue();
+        round.NextSlot.ShouldBeNull();
         round.PeekNextIntent().ShouldBeNull();
         round.SubmitAction(ghoulAction).Error.ShouldBe(RoundErrors.NothingLeftToReveal);
-        round.ActionOf(Knight).ShouldBe(knightAction);
+        Should.Throw<InvalidOperationException>(round.MarkSlotActivated);
     }
 
     [Fact]
@@ -225,47 +228,20 @@ public sealed class RoundTests
         var round = Round.First();
         AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
         round.SetTimeline(Timeline);
-        AdvanceTo(round, RoundSubPhase.RevealAndTarget);
+        AdvanceTo(round, RoundSubPhase.Activation);
 
         Should.Throw<InvalidOperationException>(() => round.SubmitAction(CombatAction.Bind(new CombatIntent(Knight, Strike), [])));
     }
 
     [Fact]
-    public void Actions_resolve_in_timeline_order_until_combat_is_resolved()
+    public void A_slot_activated_without_a_bound_action_is_an_invariant_violation()
     {
         var round = PlannedRound();
-        round.Advance();
-        var knightAction = CombatAction.Bind(new CombatIntent(Knight, Strike), [Ghoul]);
-        var ghoulAction = CombatAction.Bind(new CombatIntent(Ghoul, Guard), [Ghoul]);
-        round.SubmitAction(knightAction);
-        round.SubmitAction(ghoulAction);
 
-        Should.Throw<InvalidOperationException>(round.NextActionToResolve);
-        Should.Throw<InvalidOperationException>(round.MarkActionResolved);
+        Should.Throw<InvalidOperationException>(round.MarkSlotActivated);
 
         round.Advance();
-        round.SubPhase.ShouldBe(RoundSubPhase.ActionResolution);
-        round.NextSlotToResolve.ShouldBe(Timeline[0]);
-        round.NextActionToResolve().ShouldBe(knightAction);
-
-        round.MarkActionResolved();
-        round.NextActionToResolve().ShouldBe(ghoulAction);
-        round.IsCombatResolved.ShouldBeFalse();
-
-        round.MarkActionResolved();
-        round.IsCombatResolved.ShouldBeTrue();
-        round.NextSlotToResolve.ShouldBeNull();
-        Should.Throw<InvalidOperationException>(round.NextActionToResolve);
-        Should.Throw<InvalidOperationException>(round.MarkActionResolved);
-    }
-
-    [Fact]
-    public void A_creature_on_the_timeline_without_a_bound_action_is_an_invariant_violation()
-    {
-        var round = PlannedRound();
-        AdvanceTo(round, RoundSubPhase.ActionResolution);
-
-        Should.Throw<InvalidOperationException>(round.NextActionToResolve);
+        Should.Throw<InvalidOperationException>(round.MarkSlotActivated);
     }
 
     private static Round PlannedRound()

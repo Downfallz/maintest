@@ -10,7 +10,8 @@ namespace DownfallArena.Application.Matches.Driving;
 
 /// <summary>
 /// Plays a started match to its end through the public commands: for each player in turn, asks what they
-/// can do, lets their agent decide, submits, and drives the resolution. An agent that produces a refused
+/// can do, lets their agent decide, and submits; the match resolves each action as its targets are confirmed
+/// (ADR 0083). An agent that produces a refused
 /// decision is a bug, reported as an invariant violation.
 /// </summary>
 public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandlers queries)
@@ -90,9 +91,6 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
                 return true;
             case PlayerOptionsKind.Target:
                 await TargetAsync(matchId, slot, agent, board, Section(options.Target), cancellationToken);
-                return true;
-            case PlayerOptionsKind.Resolution:
-                Accept(await commands.ResolveNextAction.HandleAsync(new ResolveNextAction(matchId), cancellationToken));
                 return true;
             default:
                 return false;

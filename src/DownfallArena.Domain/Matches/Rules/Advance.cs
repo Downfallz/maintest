@@ -75,6 +75,19 @@ public static class Advance
     }
 
     /// <summary>
+    /// How the match would end on this board if a team is wiped, or <c>null</c> while both stand: the check the
+    /// match makes after every action and every upkeep, and ends on at once (ADR 0083).
+    /// </summary>
+    public static MatchOutcome? Elimination(IReadOnlyList<CreatureSnapshot> board, IGameResources resources)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(resources);
+
+        var creatures = Restore(board, resources);
+        return WinCondition.Elimination(TeamOf(PlayerSlot.Player1, creatures), TeamOf(PlayerSlot.Player2, creatures));
+    }
+
+    /// <summary>
     /// The board after the automatic steps that start a round: the energy gain, then the ongoing effects in
     /// the order the match applies them.
     /// </summary>

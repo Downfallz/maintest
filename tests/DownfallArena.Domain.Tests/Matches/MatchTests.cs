@@ -83,7 +83,6 @@ public sealed class MatchTests
         match.SubmitTieOrder(PlayerSlot.Player1, [creature]).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(creature, Arena.Strike)).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(creature, Arena.Strike), [])).Error.ShouldBe(MatchErrors.NotInProgress);
-        match.ResolveNextAction().Error.ShouldBe(MatchErrors.NotInProgress);
     }
 
     [Fact]
@@ -95,7 +94,6 @@ public sealed class MatchTests
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(creature, Speed.Quick)).Error.ShouldBe(RoundErrors.SpeedNotOpen);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(creature, Arena.Strike)).Error.ShouldBe(RoundErrors.IntentsNotOpen);
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(creature, Arena.Strike), [])).Error.ShouldBe(RoundErrors.TargetingNotOpen);
-        match.ResolveNextAction().Error.ShouldBe(RoundErrors.ResolutionNotOpen);
 
         Table.PassEvolution(match);
 
@@ -311,7 +309,7 @@ public sealed class MatchTests
     }
 
     [Fact]
-    public void Intents_then_targets_follow_the_timeline_and_open_the_resolution()
+    public void Intents_then_targets_follow_the_timeline_and_each_action_resolves_on_confirmation()
     {
         var match = Table.Started();
         Table.PassEvolution(match);
@@ -319,7 +317,7 @@ public sealed class MatchTests
 
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Guard)).Error.ShouldBe(CombatErrors.SpellNotKnown);
         Table.DeclareStrikes(match);
-        match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+        match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.Activation);
 
         var first = new CombatIntent(CreatureId.From(1), Arena.Strike);
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(first, [CreatureId.From(3)])).Error.ShouldBe(CombatErrors.NotYourCreature);
@@ -327,31 +325,25 @@ public sealed class MatchTests
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(2), Arena.Strike), [CreatureId.From(3)])).Error.ShouldBe(RoundErrors.NotThisCreaturesTurn);
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(first, [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
 
-        Table.HitFirstLivingEnemy(match);
-
-        match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.ActionResolution);
-        match.DomainEvents.OfType<ActionRevealed>().Count().ShouldBe(4);
+        match.DomainEvents.OfType<CombatActionResolved>().Single().Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
+        Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(17));
+        match.CurrentRound.ActivationCursor.Index.ShouldBe(1);
+        match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.Activation);
     }
 
     [Fact]
-    public void Resolving_the_last_action_ends_the_round_and_starts_the_next_one()
+    public void Activating_the_last_slot_ends_the_round_and_starts_the_next_one()
     {
         var match = Table.Started();
         Table.PassEvolution(match);
         Table.ChooseStandard(match);
         Table.DeclareStrikes(match);
-        Table.HitFirstLivingEnemy(match);
 
-        var steps = Table.ResolveAll(match);
+        var steps = Table.HitFirstLivingEnemy(match);
 
         steps.Count.ShouldBe(4);
-        steps.Take(3).ShouldAllBe(step => !step.RoundCompleted && !step.MatchCompleted && step.RoundId == RoundId.First);
-        steps[3].RoundId.ShouldBe(RoundId.First);
-        steps[3].RoundCompleted.ShouldBeTrue();
-        steps[3].MatchCompleted.ShouldBeFalse();
-        steps[3].Resolution.Fizzled.ShouldBeFalse();
+        steps.ShouldAllBe(step => step.RoundId == RoundId.First && !step.Resolution.Fizzled);
         steps[0].Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
-
         Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(14));
         Table.CreatureNumber(match, 1).Health.ShouldBe(Health.Of(14));
         match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(4));
@@ -361,7 +353,7 @@ public sealed class MatchTests
         // Round 2 offers no evolution opportunity, so the sub-phase completes as it opens and the round is
         // waiting on speeds instead (ADR 0056).
         round.SubPhase.ShouldBe(RoundSubPhase.Speed);
-        match.DomainEvents.OfType<CombatActionResolved>().Count().ShouldBe(4);
+        match.DomainEvents.OfType<ActionRevealed>().Count().ShouldBe(4);
         match.DomainEvents.OfType<ConditionsExpired>().Single().Expired.ShouldBeEmpty();
         match.DomainEvents.OfType<RoundEnded>().Single().RoundId.ShouldBe(RoundId.First);
         match.DomainEvents.OfType<RoundStarted>().Select(started => started.RoundId.Number).ShouldBe([1, 2]);
@@ -369,9 +361,9 @@ public sealed class MatchTests
     }
 
     /// <summary>
-    /// The event and the step are how anything outside the aggregate learns what a spell did, so what they
-    /// carry has to be what the board took. Publishing the resolution's own outcomes instead would leave every
-    /// other test in this suite green.
+    /// The event is how anything outside the aggregate learns what a spell did, so what it carries has to be
+    /// what the board took. Publishing the resolution's own outcomes instead would leave every other test in
+    /// this suite green.
     /// </summary>
     [Fact]
     public void Resolving_publishes_what_the_board_took_beside_what_the_action_aimed_for()
@@ -380,8 +372,6 @@ public sealed class MatchTests
         Table.PassEvolution(match);
         Table.ChooseStandard(match);
         Table.DeclareStrikes(match);
-        Table.HitFirstLivingEnemy(match);
-
         // Strike deals three; leave the first target with one health so the hit has more to give than it can.
         var target = Table.CreatureNumber(match, 3);
         while (target.Health.Value > 1)
@@ -389,12 +379,11 @@ public sealed class MatchTests
             target.TakeDamage(1);
         }
 
-        var step = match.ResolveNextAction();
+        match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Strike), [target.Id])).IsSuccess.ShouldBeTrue();
 
-        var applied = step.Value.AppliedOutcomes.OfType<DamageOutcome>().Single(outcome => outcome.Target == target.Id);
-        applied.Amount.ShouldBe(1, "it had one health to lose, whatever the spell aimed for");
-        step.Value.Resolution.Outcomes.OfType<DamageOutcome>().Single().Amount.ShouldBe(3, "what it aimed for is unchanged");
-        match.DomainEvents.OfType<CombatActionResolved>().Last().AppliedOutcomes.ShouldBe(step.Value.AppliedOutcomes);
+        var step = match.DomainEvents.OfType<CombatActionResolved>().Single();
+        step.AppliedOutcomes.OfType<DamageOutcome>().Single(outcome => outcome.Target == target.Id).Amount.ShouldBe(1, "it had one health to lose, whatever the spell aimed for");
+        step.Resolution.Outcomes.OfType<DamageOutcome>().Single().Amount.ShouldBe(3, "what it aimed for is unchanged");
     }
 
     [Fact]

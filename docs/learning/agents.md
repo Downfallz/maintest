@@ -60,14 +60,12 @@ Decisions:
   3, 6 and 9 and at no other value tried, because its share term landed on an exact integer there and so on
   another candidate's score. Two weight values that differ can play identically while a third between them
   does not.
-- **Targets**: the best target set of the declared spell, on the board at reveal time **minus the creatures
-  the actions already revealed will kill first**; no target when the spell is no longer castable. Targets are
-  bound in `RevealAndTarget`, a whole sub-phase before anything resolves, so the board a creature binds on is
-  the one from before combat. `RevealedActions` carries the slots ahead of this one, in timeline order and
-  with their targets bound, for both teams — binding order is timeline order — so the agent replays them
-  against a board it carries forward and writes off who does not survive — stopping at the first action it
-  would have to guess about, so the answer is sound but incomplete. That was 45.6 % of all fizzles
-  (ADR 0039).
+- **Targets**: the best target set of the declared spell, on the board as it stands; no target when the
+  spell is no longer castable. An action resolves when its targets are confirmed (ADR 0083), so every slot
+  before this one has already resolved and the board carries it: nothing is written off. Until then targets
+  were bound a whole sub-phase before anything resolved, and the agent replayed the revealed actions to write
+  off who would not survive them; that was 45.6 % of all fizzles (ADR 0039), and the replay is gone with the
+  two passes.
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Tie order**: the order the roll-off left (ADR 0063). The scorer reads one action at a time and has no view
   of which of two of its own creatures should act first, so it does not pretend to; the lookahead plays each
@@ -101,10 +99,10 @@ the match's own rules on them, so the agent can put a move on the board and keep
   holds**, the actor's team's for and the other's against, each scored on the board it lands on; a round
   that ends the match outranks any round that does not, won above every score and lost below every score,
   whatever the weights say, because the two are never added. The spell whose round is worth most wins.
-- **Targets**: the same, from the actor's slot on, starting from the board the **revealed actions** leave.
-  They are public and bound in timeline order, so `Advance` replays them exactly where the one-step agent
-  could only carry health forward and stop at the first stun, heal or buff (ADR 0039). No target when the
-  spell is no longer castable.
+- **Targets**: the same, from the actor's slot on, starting from the board as it stands: the earlier slots
+  have resolved already (ADR 0083). The enemies still ahead are guessed on that board too, since the one they
+  declared on is no longer in the state. No target when the spell is no longer castable. A round played out
+  stops at the slot that wipes a team, as the match does.
 - **Ties** go to the candidate with the best one-step score, then to the first in order. The second key
   decides whenever the round cannot: when the guessed slots have the actor dead or stunned before its own,
   every candidate leaves the same round, and the choice still matters in every world where the guess is

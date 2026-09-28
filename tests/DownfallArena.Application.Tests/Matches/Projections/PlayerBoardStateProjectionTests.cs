@@ -53,7 +53,7 @@ public sealed class PlayerBoardStateProjectionTests
         player1.Intents.ShouldBe([new CombatIntent(CreatureId.From(1), TestContent.Strike)]);
         player1.Timeline.Select(slot => slot.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(2), CreatureId.From(3), CreatureId.From(4)]);
         player1.RevealedActions.ShouldBeEmpty();
-        player1.RevealCursor.ShouldBe(0);
+        player1.ActivationCursor.ShouldBe(0);
 
         player2.EvolutionChoices.ShouldBeEmpty();
         player2.SpeedChoices.Select(choice => choice.Creature).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
@@ -78,7 +78,7 @@ public sealed class PlayerBoardStateProjectionTests
     }
 
     [Fact]
-    public void Revealed_actions_and_cursors_are_public()
+    public void Revealed_actions_and_the_cursor_are_public()
     {
         var match = new MatchStore().Started();
         MatchStore.PassEvolution(match);
@@ -89,10 +89,9 @@ public sealed class PlayerBoardStateProjectionTests
 
         var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player2);
 
-        board.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+        board.SubPhase.ShouldBe(RoundSubPhase.Activation);
         board.RevealedActions.ShouldBe([action]);
-        board.RevealCursor.ShouldBe(1);
-        board.ResolveCursor.ShouldBe(0);
+        board.ActivationCursor.ShouldBe(1);
     }
 
     [Fact]
@@ -123,9 +122,9 @@ public sealed class PlayerBoardStateProjectionTests
         foreach (var player in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
         {
             var revealed = PlayerBoardStateProjection.Build(match, player);
-            revealed.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+            revealed.SubPhase.ShouldBe(RoundSubPhase.Activation);
             revealed.RevealedActions.ShouldBeEmpty();
-            revealed.RevealCursor.ShouldBe(0);
+            revealed.ActivationCursor.ShouldBe(0);
         }
 
         foreach (var activation in timeline.Take(4))
@@ -138,8 +137,7 @@ public sealed class PlayerBoardStateProjectionTests
         var fifth = PlayerBoardStateProjection.Build(match, timeline[4].Owner);
         fifth.RevealedActions.Select(action => action.Actor).ShouldBe(timeline.Take(4).Select(activation => activation.Creature));
         fifth.RevealedActions.ShouldAllBe(action => action.Targets.Count == 1);
-        fifth.RevealCursor.ShouldBe(4);
-        fifth.ResolveCursor.ShouldBe(0);
+        fifth.ActivationCursor.ShouldBe(4);
     }
 
     [Fact]

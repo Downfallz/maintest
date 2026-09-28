@@ -216,8 +216,7 @@ public sealed class BatchRunnerTests
                     new SubmitSpeedChoiceHandler(workflow),
                     new SubmitTieOrderHandler(workflow),
                     new SubmitIntentHandler(workflow),
-                    new SubmitActionHandler(workflow),
-                    new ResolveNextActionHandler(workflow)),
+                    new SubmitActionHandler(workflow)),
                 new MatchQueryHandlers(
                     new GetBoardStateForPlayerHandler(workflow),
                     new GetPlayerOptionsHandler(workflow, TestContent.Resources))),

@@ -11,10 +11,12 @@ namespace DownfallArena.Application.Agents;
 
 /// <summary>
 /// What a heuristic reading of the board can already tell about who will be dead before an action lands
-/// (ADR 0039): the two readings <see cref="HeuristicAgent"/> takes before a declaration and before binding
-/// targets, kept apart so that the terms a dataset records per candidate (ADR 0051) are read the same way.
+/// (ADR 0039): the reading <see cref="HeuristicAgent"/> takes before a declaration, kept apart so that the terms
+/// a dataset records per candidate (ADR 0051) are read the same way. Binding targets needs no reading: an
+/// action resolves as its targets are confirmed, so the board a creature aims on already carries every action
+/// before it (ADR 0083).
 /// </summary>
-public sealed class Foresight(ActionScorer scorer, IGameResources resources, RuleSet rules)
+public sealed class Foresight(ActionScorer scorer)
 {
     public static List<CreatureSnapshot> Creatures(PlayerBoardState board)
     {
@@ -31,7 +33,7 @@ public sealed class Foresight(ActionScorer scorer, IGameResources resources, Rul
     /// has <em>already declared</em> -- declaration order is not timeline order, so both tests are needed.
     /// </para>
     /// <para>
-    /// An intent carries a spell and no targets: targets are bound at reveal. So the ally's target set is the
+    /// An intent carries a spell and no targets: targets are bound when its slot comes up. So the ally's target set is the
     /// one this same agent will pick for it, read one level deep and with an empty set of its own. Deeper
     /// would mean guessing how an ally reasons about a third ally, which is a different claim than reading
     /// what the board says. An ally earlier on the timeline that has not declared yet is skipped: unknown,
@@ -90,81 +92,5 @@ public sealed class Foresight(ActionScorer scorer, IGameResources resources, Rul
         }
 
         return -1;
-    }
-
-    /// <summary>
-    /// The creatures the actions already revealed this round will kill before this one resolves (ADR 0039).
-    /// <para>
-    /// Targets are bound in <c>RevealAndTarget</c>, a whole sub-phase before <c>ActionResolution</c>, so a
-    /// creature choosing targets is looking at the board as it stood before combat: nothing has resolved yet,
-    /// and every creature that dies during combat invalidates a target bound on it. That is 45.6 % of every
-    /// fizzle in a greedy mirror, second only to the actor dying first, which no choice of target can help.
-    /// </para>
-    /// <para>
-    /// What makes it readable is that <c>RevealedActions</c> holds the slots before this one, in timeline
-    /// order and with their targets already bound — <em>both</em> teams, because a revealed action is public.
-    /// So this is not a guess about a hidden choice: it replays what has been declared, in order, against a
-    /// board it carries forward, and reports who does not survive it.
-    /// </para>
-    /// <para>
-    /// On the plain roll, not the critical one: a target that only a critical would kill is not one to write
-    /// off. The replay carries health forward and nothing else, which is enough for the case it exists for --
-    /// attacks piling onto the same creature -- and not enough for anything that changes whether a later
-    /// action happens or lands: a stun on its actor, a drain that takes it below its cost, a heal or a
-    /// defense buff on its target. Rather than re-implement the whole of <c>CombatExecution</c> against
-    /// snapshots, the replay **stops as soon as it would have to guess**: a creature touched by an outcome
-    /// this reading does not model becomes uncertain, and the first action whose actor or targets are
-    /// uncertain ends the replay. What comes back is therefore sound but incomplete, which is the safe
-    /// direction — a creature wrongly left out is an opportunity missed, while a creature wrongly written off
-    /// makes the actor pick a worse target on purpose.
-    /// </para>
-    /// </summary>
-    public IReadOnlySet<CreatureId> GoneBeforeThisSlot(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures)
-    {
-        ArgumentNullException.ThrowIfNull(board);
-        ArgumentNullException.ThrowIfNull(creatures);
-
-        if (board.RevealedActions.Count == 0)
-        {
-            return ActionScorer.NoneGone;
-        }
-
-        var ahead = creatures.ToList();
-        var dead = new HashSet<CreatureId>();
-        var uncertain = new HashSet<CreatureId>();
-        foreach (var action in board.RevealedActions)
-        {
-            if (uncertain.Contains(action.Actor) || action.Targets.Any(uncertain.Contains))
-            {
-                break;
-            }
-
-            // Forced plain, so the speed cannot move this reading; Standard is passed because the call needs one.
-            var resolution = ResolutionRules.Resolve(action, ahead, resources, rules, ForcedRandom.NotCritical, Speed.Standard);
-            if (resolution.Fizzled)
-            {
-                continue;
-            }
-
-            foreach (var hit in resolution.Outcomes.OfType<DamageOutcome>().GroupBy(outcome => outcome.Target))
-            {
-                var index = ahead.FindIndex(creature => creature.Id == hit.Key);
-                var left = Math.Max(0, ahead[index].Health.Value - hit.Sum(outcome => outcome.Amount));
-                ahead[index] = ahead[index] with { Health = Health.Of(left) };
-                if (left == 0)
-                {
-                    dead.Add(hit.Key);
-                }
-            }
-
-            // Everything else -- a stun, a heal, an energy move, any condition -- is not carried forward, so
-            // whoever it touched can no longer be read.
-            foreach (var outcome in resolution.Outcomes.Where(outcome => outcome is not DamageOutcome))
-            {
-                uncertain.Add(outcome.Target);
-            }
-        }
-
-        return dead;
     }
 }

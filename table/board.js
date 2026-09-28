@@ -133,41 +133,15 @@ function value(stat) {
   return Number.isFinite(Number(stat)) ? Number(stat) : 0;
 }
 
-// What has already been revealed this round: who is acting, with what, and on whom. An action goes face up the
-// moment the reveal cursor reaches its slot, and it stays face up -- which matters most in hotseat play, where
-// the next player picks their targets on a screen that has to show them the action before theirs. Without this
-// the reveal exists only in the payload: the board draws the creatures, and the feed prints the event's kind.
+// What has already been revealed this round: who acted, with what, and on whom. An action goes face up the moment
+// its slot is activated, and resolves with it (ADR 0083); it stays face up -- which matters most in hotseat play,
+// where the next player picks their targets on a screen that has to show them the action before theirs. Without
+// this the reveal exists only in the payload: the board draws the creatures, and the feed prints the event's kind.
 export function revealedText(action, cards) {
   const actor = action?.actor ?? '';
   const spell = cards?.get?.(action?.spell)?.name ?? action?.spell ?? '';
   const targets = (action?.targets ?? []).join(', ');
   return targets === '' ? `${actor}: ${spell}` : `${actor}: ${spell} → ${targets}`;
-}
-
-// Which casters point at a creature, from the casts whose markers are still on the table. The printed board
-// has a `Targeted by` row of one box a caster (components.md §3.7), and it is there because reveal-and-target
-// walks the whole timeline before anything resolves: six casts' markers are on the table at once, and "who is
-// pointing at me" is what a player reads before choosing their own. A caster appearing twice is impossible --
-// a cast cannot name one target twice -- so this is a list and not a count.
-export function targetedBy(creature, board) {
-  return standing(board)
-    .filter(action => (action?.targets ?? []).includes(creature))
-    .map(action => action?.actor);
-}
-
-// The casts whose markers are still on the table: revealed, and not yet resolved. At the table a marker is
-// placed when a cast is revealed and taken off when it resolves, so the two are not the same set for the whole
-// of the resolution sub-phase -- and the board's `revealedActions` only ever grows, because it is the reveal
-// cursor's prefix. Taking the resolve cursor's prefix back out is what keeps a row from naming a caster whose
-// cast is already spent. No sub-phase to test for: the resolve cursor is 0 while nothing has resolved and past
-// the last slot once everything has, and both of those come out right.
-export function standing(board) {
-  const resolved = new Set(
-    (board?.timeline ?? [])
-      .slice(0, Number.isInteger(board?.resolveCursor) ? board.resolveCursor : 0)
-      .map(slot => slot?.creature));
-
-  return (board?.revealedActions ?? []).filter(action => !resolved.has(action?.actor));
 }
 
 // Keep only confirmed public actions: never consult private intents or infer a spellbook choice.
@@ -181,7 +155,7 @@ export function liveChoice(creature, board, entries) {
   const action = (board?.revealedActions ?? []).find(one => one.actor === creature?.id) ?? resolved?.action;
   const index = (board?.timeline ?? []).findIndex(slot => slot.creature === creature?.id);
   const status = !action ? 'Hidden until reveal' : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
-    : resolved || (index >= 0 && index < (board?.resolveCursor ?? 0)) ? 'Resolved' : 'Revealed';
+    : resolved || (index >= 0 && index < (board?.activationCursor ?? 0)) ? 'Resolved' : 'Revealed';
   const previous = events.filter(entry => roundOf(entry) === round - 1).at(-1);
   return { round, action, status, previous: previous ? { round: roundOf(previous), action: previous.event.resolution.action } : null };
 }

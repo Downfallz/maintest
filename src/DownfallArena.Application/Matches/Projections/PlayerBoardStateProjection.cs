@@ -39,9 +39,8 @@ public static class PlayerBoardStateProjection
             Intents = [.. round.IntentsOf(slot)],
             Timeline = round.Timeline.Slots,
             RollOffs = round.Timeline.RollOffs,
-            RevealedActions = [.. round.Timeline.Slots.Take(round.RevealCursor.Index).Select(activation => round.ActionOf(activation.Creature)).OfType<CombatAction>()],
-            RevealCursor = round.RevealCursor.Index,
-            ResolveCursor = round.ResolveCursor.Index,
+            RevealedActions = [.. round.Timeline.Slots.Take(round.ActivationCursor.Index).Select(activation => round.ActionOf(activation.Creature)).OfType<CombatAction>()],
+            ActivationCursor = round.ActivationCursor.Index,
         };
     }
 }

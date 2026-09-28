@@ -94,7 +94,7 @@ public sealed class PlaytestNoteTests
     [InlineData(NoteKind.Comment)]
     public void A_note_a_player_typed_carries_what_they_wrote(NoteKind kind)
     {
-        var note = PlaytestNote.Typed(Where(PlayerSlot.Player2, 6, RoundSubPhase.ActionResolution), kind, "who wins an initiative tie", new FixedClock(Now));
+        var note = PlaytestNote.Typed(Where(PlayerSlot.Player2, 6, RoundSubPhase.Activation), kind, "who wins an initiative tie", new FixedClock(Now));
 
         note.Kind.ShouldBe(kind);
         note.Text.ShouldBe("who wins an initiative tie");

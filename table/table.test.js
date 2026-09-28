@@ -173,7 +173,7 @@ test('a spell aimed at an ally is aimed from the round bar, and any other chip o
 
 test('the creature the round is on is marked on its chip whoever is being asked', () => {
   const p = page(); p.view.waitingFor = null; p.view.waitingCreature = null;
-  p.view.board.subPhase = 'ActionResolution'; p.view.board.resolveCursor = 1;
+  p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 1;
   p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }];
   p.draw();
   assert.match(p.nodes['mini-enemies'].children[0].className, /\bturn\b/);
@@ -616,7 +616,7 @@ test('opponent spellbooks grow only from public known spells and preserve their 
 test('battlefield turn badges appear only after the timeline exists and follow its current cursor', () => {
   const p = page(); p.draw(); assert.doesNotMatch(p.nodes.allies.textContent, /Turn/);
   p.view.board.timeline = [{ creature: 2 }, { creature: 1 }];
-  p.view.board.subPhase = 'RevealAndTarget'; p.view.board.revealCursor = 1; p.draw();
+  p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 1; p.draw();
   assert.match(p.nodes.enemies.textContent, /Turn 1/); assert.match(p.nodes.allies.textContent, /Turn 2/);
   const number = p.nodes.allies.children[0].children[3].children[0].children[0];
   assert.match(number.className, /now/); assert.equal(number.attributes['aria-label'], 'Acts 2 of 2');
@@ -714,7 +714,7 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
 });
 
 test('targeting exposes only confirmed spells and targets while later choices stay hidden', () => {
-  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
   p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.view.board.timeline = [{ creature: 1 }, { creature: 2 }];
   p.view.board.revealedIntents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
@@ -779,8 +779,8 @@ test('the persistent phase guide distinguishes simultaneous speeds from sequenti
   assert.match(p.nodes['phase-round'].textContent, /Round 1 \/ 16/);
   assert.match(p.nodes['phase-reminder'].textContent, /All speeds reveal together/);
   assert.equal(p.nodes['phase-steps'].children[2].attributes['aria-current'], 'step');
-  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
-  assert.match(p.nodes['phase-reminder'].textContent, /confirmed spell and its targets reveal together/);
+  p.view.board.subPhase = 'Activation'; p.draw();
+  assert.match(p.nodes['phase-reminder'].textContent, /chooses targets, and it resolves at once/);
   assert.equal(p.nodes['phase-steps'].children[5].attributes['aria-current'], 'step');
   p.view.board.phase = 'StartOfRound'; p.draw();
   assert.equal(p.nodes['phase-steps'].children[0].attributes['aria-current'], 'step');
@@ -865,8 +865,8 @@ test('phase notices survive selection redraws, expire once, and announce only re
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true);
-  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Targeting/);
+  p.view.board.subPhase = 'Activation'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Combat/);
   assert.equal(p.nodes['phase-notice'].hidden, false);
   assert.equal(p.timers.has(timer), false);
 });
@@ -927,16 +927,16 @@ test('spell stats label cast cost and crit without reviving retired spell initia
 });
 
 test('targeting names the actual host cursor separately from creature identity in both headers', () => {
-  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
   p.view.board.timeline = [4, 5, 1, 3, 6, 2].map(creature => ({ creature, speed: 'Standard' }));
-  p.view.board.revealCursor = 2;
+  p.view.board.activationCursor = 2;
   p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.draw();
   assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
   assert.equal(p.nodes['decision-turn'].textContent, 'Turn 3 of 6 · Standard');
-  assert.equal(p.nodes['phase-current'].textContent, 'Targeting');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
   assert.equal(p.nodes['phase-turn'].textContent, 'Turn 3 of 6 · Creature 1');
-  p.view.board.revealCursor = 6; p.draw();
+  p.view.board.activationCursor = 6; p.draw();
   assert.equal(p.nodes['decision-turn'].hidden, true);
   assert.equal(p.nodes['phase-turn'].textContent, '');
 });
@@ -962,11 +962,11 @@ test('announcements last longer, pause while reading and can be kept open', () =
 test('announcement history is bounded, separate per seat, and replays without changing current decisions', () => {
   const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
   assert.equal(p.state.announcements.get('player1').length, 1);
-  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
+  p.view.board.subPhase = 'Activation'; p.draw();
   p.nodes['announcement-list'].children[1].children[0].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement/);
   assert.match(p.nodes['phase-notice-title'].textContent, /Spells/);
-  assert.equal(p.nodes['phase-current'].textContent, 'Targeting');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
   assert.equal(p.state.chosen, 'one');
   assert.equal(p.state.noticePinned, true);
   assert.equal(p.timers.has(p.state.phaseTimer), false);
@@ -983,7 +983,7 @@ test('own battlefield cards track draft, private declaration, pending targets an
   const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
   assert.match(p.nodes.allies.textContent, /Not declaredFirst cardNo targets chosen yet/);
   p.view.board.intents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
-  p.view.waitingAsked++; p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  p.view.waitingAsked++; p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
   p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } }; p.draw();
   assert.match(p.nodes.allies.textContent, /Not revealedFirst cardNo targets chosen yet/);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
@@ -1004,21 +1004,30 @@ function completedRound(round) {
   ];
 }
 
-test('new completed rounds review one actual action at a time and delay the next asking acknowledgement', async () => {
+function openReplay(p) {
+  p.nodes['recap-actions'].children[0].children[0].click();
+}
+
+// Each action is shown as it resolves (ADR 0083), so the end of a round no longer plays them back; the recap
+// replays them on demand, one at a time, and holds the next question until the player leaves it.
+test('a completed round is not replayed on its own, and its recap replays one actual action at a time', async () => {
   const p = page(); const acknowledgements = []; const sent = [];
   p.current.transport.seat = async (_, drawn) => { acknowledgements.push(drawn); return { ok: true }; };
   p.current.transport.decide = async body => { sent.push(body); return { ok: true }; };
   p.draw();
   p.view.board.roundNumber = 2; p.view.waitingAsked = 2; p.view.roundEvents = completedRound(1); p.draw();
+  assert.equal(p.state.playback ?? null, null);
+  assert.equal(p.nodes.planning.hidden, false);
+  assert.deepEqual(acknowledgements, [1, 2]);
+  openReplay(p);
   assert.equal(p.state.playback.index, 0);
   assert.equal(p.nodes.planning.hidden, true);
   assert.equal(p.nodes.playback.hidden, false);
-  assert.equal(p.nodes['phase-current'].textContent, 'Resolution replay');
+  assert.equal(p.nodes['phase-current'].textContent, 'Round replay');
   assert.match(p.nodes['playback-action'].textContent, /First cardCritical/);
   assert.match(p.nodes['playback-action'].textContent, /Damage 3 → Creature 2/);
   assert.match(p.nodes.allies.children[0].className, /replay-caster/);
   assert.match(p.nodes.enemies.children[0].className, /replay-target/);
-  assert.deepEqual(acknowledgements, [1]);
   await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
   assert.deepEqual(sent, []);
   p.nodes['playback-controls'].children[1].click();
@@ -1031,9 +1040,25 @@ test('new completed rounds review one actual action at a time and delay the next
   p.nodes['playback-controls'].children[2].click();
   assert.equal(p.state.playback, null);
   assert.equal(p.nodes.planning.hidden, false);
-  assert.deepEqual(acknowledgements, [1, 2]);
   assert.deepEqual(sent, []);
   p.draw(); assert.equal(p.state.playback, null);
+});
+
+test('the action resolved last is shown live, on the battlefield and in the sheet, until combat moves on', () => {
+  const p = page(); p.view.waitingFor = null; p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 1;
+  p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }];
+  p.view.roundEvents = [completedRound(1)[0]];
+  p.view.roundEvents[0].event.frame = { before: [{ ...p.view.board.enemies[0], health: 13 }], after: [], timeline: p.view.board.timeline, rollOffs: [] };
+  p.draw();
+  assert.equal(p.state.playback ?? null, null);
+  assert.equal(p.nodes['live-action'].hidden, false);
+  assert.match(p.nodes['live-action'].textContent, /^Just resolved · Creature 1 \(yours\) · First card → Creature 2 · critical · Damage 3 → Creature 2$/);
+  assert.match(p.nodes.allies.children[0].className, /replay-caster/);
+  assert.match(p.nodes.enemies.children[0].className, /replay-target/);
+  assert.match(p.nodes.enemies.textContent, /HP 13 → 10/);
+  p.view.board.subPhase = 'Cleanup'; p.draw();
+  assert.equal(p.nodes['live-action'].hidden, true);
+  assert.doesNotMatch(p.nodes.allies.children[0].className, /replay-caster/);
 });
 
 test('loading an old recap does not auto replay it, but its replay button is available after a skip', () => {
@@ -1064,7 +1089,7 @@ function framedRound(p) {
 test('recorded frames rewind stats, death, timeline and energy without replacing live state', async () => {
   const p = page(); const sent = []; p.current.transport.decide = async body => { sent.push(body); return { ok: true }; };
   p.draw(); p.view.roundEvents = framedRound(p); p.view.board.roundNumber = 2; p.view.board.allies[0].energy = 6;
-  const live = JSON.stringify(p.view.board); p.draw();
+  const live = JSON.stringify(p.view.board); p.draw(); openReplay(p);
   assert.equal(p.state.playback.stage, 'before');
   assert.match(p.nodes.allies.textContent, /17\/20 HP/);
   assert.match(p.nodes.enemies.textContent, /3\/20 HP/);
@@ -1104,7 +1129,7 @@ test('replay shows recorded conditions and spellbooks and skip restores the next
   const p = page(); p.draw(); const entries = framedRound(p);
   entries[0].event.frame.after[0] = { ...entries[0].event.frame.after[0], isStunned: true, totalDefense: 3,
     conditions: [{ effect: { kind: 'Stun', duration: { rounds: 1 } }, remainingRounds: 1, isFresh: true }], knownSpells: ['one'] };
-  p.view.roundEvents = entries; p.view.board.roundNumber = 2; p.draw();
+  p.view.roundEvents = entries; p.view.board.roundNumber = 2; p.draw(); openReplay(p);
   p.context.movePlayback(p.state, 1);
   assert.match(p.nodes.allies.textContent, /stunned/);
   assert.match(p.nodes.allies.textContent, /Defense 1 → 3/);
@@ -1118,7 +1143,7 @@ test('replay shows recorded conditions and spellbooks and skip restores the next
 
 test('end-of-match replay uses results controls and hotseat fences keep the review hidden', () => {
   const p = page(); p.draw(); p.view.over = true; p.view.waitingFor = null;
-  p.view.roundEvents = completedRound(1); p.draw();
+  p.view.roundEvents = completedRound(1); p.draw(); openReplay(p);
   assert.match(p.nodes['playback-controls'].textContent, /Skip to results/);
   p.context.movePlayback(p.state, 1);
   assert.match(p.nodes['playback-controls'].textContent, /Match results/);

@@ -2,6 +2,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -53,7 +54,7 @@ public sealed class ActionRulesTests
     }
 
     [Fact]
-    public void The_gate_follows_the_reveal_cursor()
+    public void The_gate_follows_the_activation_cursor()
     {
         var round = Arena.CombatRoundAt(RoundSubPhase.IntentSelection);
         round.SubmitIntent(PlayerSlot.Player1, new CombatIntent(Arena.Knight, Arena.Strike));
@@ -66,11 +67,13 @@ public sealed class ActionRulesTests
         open.ShouldBe(new ActionGateResult(false, 4, Arena.Knight));
 
         round.SubmitAction(CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul])).IsSuccess.ShouldBeTrue();
+        ActionRules.Evaluate(round).ShouldBe(new ActionGateResult(false, 4, Arena.Knight), "bound but not yet resolved");
+        round.MarkSlotActivated();
         ActionRules.Evaluate(round).ShouldBe(new ActionGateResult(false, 3, Arena.Archer));
 
-        round.SubmitAction(CombatAction.Bind(new CombatIntent(Arena.Archer, Arena.Strike), [Arena.Ghoul]));
-        round.SubmitAction(CombatAction.Bind(new CombatIntent(Arena.Ghoul, Arena.Strike), [Arena.Knight]));
-        round.SubmitAction(CombatAction.Bind(new CombatIntent(Arena.Wraith, Arena.Strike), [Arena.Knight]));
+        Activate(round, CombatAction.Bind(new CombatIntent(Arena.Archer, Arena.Strike), [Arena.Ghoul]));
+        Activate(round, CombatAction.Bind(new CombatIntent(Arena.Ghoul, Arena.Strike), [Arena.Knight]));
+        Activate(round, CombatAction.Bind(new CombatIntent(Arena.Wraith, Arena.Strike), [Arena.Knight]));
 
         ActionRules.Evaluate(round).ShouldBe(new ActionGateResult(true, 0, null));
     }
@@ -78,7 +81,43 @@ public sealed class ActionRulesTests
     [Fact]
     public void An_empty_timeline_has_nothing_to_reveal()
     {
-        ActionRules.Evaluate(Arena.RoundAt(RoundSubPhase.RevealAndTarget)).ShouldBe(new ActionGateResult(true, 0, null));
+        ActionRules.Evaluate(Arena.RoundAt(RoundSubPhase.Activation)).ShouldBe(new ActionGateResult(true, 0, null));
+    }
+
+    [Fact]
+    public void A_creature_able_to_cast_on_a_legal_target_takes_its_slot()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), creatures, Arena.Resources).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_dead_creature_does_not_take_its_slot()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).TakeDamage(99);
+
+        ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), Arena.Snapshots(living), Arena.Resources).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_stunned_creature_does_not_take_its_slot()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Apply(Stun.For(1)).ShouldNotBeNull();
+
+        ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), Arena.Snapshots(living), Arena.Resources).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_creature_left_with_no_legal_target_does_not_take_its_slot()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(living, Arena.Wraith).TakeDamage(99);
+
+        ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), Arena.Snapshots(living), Arena.Resources).ShouldBeFalse();
     }
 
     [Fact]
@@ -91,6 +130,15 @@ public sealed class ActionRulesTests
         Should.Throw<ArgumentNullException>(() => ActionRules.ValidateAction(PlayerSlot.Player1, action, null!, Arena.Resources));
         Should.Throw<ArgumentNullException>(() => ActionRules.ValidateAction(PlayerSlot.Player1, action, creatures, null!));
         Should.Throw<ArgumentNullException>(() => ActionRules.Evaluate(null!));
+        Should.Throw<ArgumentNullException>(() => ActionRules.CanTakeItsSlot(null!, creatures, Arena.Resources));
+        Should.Throw<ArgumentNullException>(() => ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), null!, Arena.Resources));
+        Should.Throw<ArgumentNullException>(() => ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), creatures, null!));
+    }
+
+    private static void Activate(Round round, CombatAction action)
+    {
+        round.SubmitAction(action).IsSuccess.ShouldBeTrue();
+        round.MarkSlotActivated();
     }
 
     private static Result Validate(

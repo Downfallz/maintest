@@ -38,7 +38,6 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<ICommandHandler<SubmitTieOrder, Result>, SubmitTieOrderHandler>();
         services.TryAddTransient<ICommandHandler<SubmitIntent, Result>, SubmitIntentHandler>();
         services.TryAddTransient<ICommandHandler<SubmitAction, Result>, SubmitActionHandler>();
-        services.TryAddTransient<ICommandHandler<ResolveNextAction, Result<CombatStep>>, ResolveNextActionHandler>();
         services.TryAddTransient<IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>>, GetBoardStateForPlayerHandler>();
         services.TryAddTransient<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>, GetPlayerOptionsHandler>();
 

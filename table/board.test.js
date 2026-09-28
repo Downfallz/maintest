@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, standing, statPairs, targetedBy } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, statPairs } from './board.js';
 
 const creature = { id: 1, health: 14, maxHealth: 20, energy: 2, totalDefense: 3, currentInitiative: 7 };
 
@@ -105,73 +105,6 @@ test('a revealed action with no targets is printed without an arrow', () => {
   assert.equal(revealedText(undefined, undefined), ': ');
 });
 
-// Reveal-and-target walks the whole timeline before anything resolves, so every cast's markers are on the
-// table at once and "who is pointing at me" is what a player reads before choosing their own.
-test('a creature row names every caster already pointing at it', () => {
-  const board = {
-    resolveCursor: 0,
-    timeline: [{ creature: 1 }, { creature: 2 }, { creature: 3 }],
-    revealedActions: [
-      { actor: 1, spell: 's', targets: [4, 5] },
-      { actor: 2, spell: 's', targets: [4] },
-      { actor: 3, spell: 's', targets: [6] },
-    ],
-  };
-
-  assert.deepEqual(targetedBy(4, board), [1, 2]);
-  assert.deepEqual(targetedBy(5, board), [1]);
-  assert.deepEqual(targetedBy(6, board), [3]);
-});
-
-test('a creature nothing points at has no markers, and neither does an empty board', () => {
-  const board = { resolveCursor: 0, timeline: [{ creature: 1 }], revealedActions: [{ actor: 1, spell: 's', targets: [4] }] };
-
-  assert.deepEqual(targetedBy(9, board), []);
-  assert.deepEqual(targetedBy(4, { resolveCursor: 0, timeline: [], revealedActions: [] }), []);
-  assert.deepEqual(targetedBy(4, undefined), []);
-});
-
-// A cast with nothing left to hit is revealed with no targets: it points at nobody rather than at everybody.
-test('a revealed cast with no targets points at nothing', () => {
-  const board = { resolveCursor: 0, timeline: [{ creature: 1 }] };
-
-  assert.deepEqual(targetedBy(4, { ...board, revealedActions: [{ actor: 1, spell: 's', targets: [] }] }), []);
-  assert.deepEqual(targetedBy(4, { ...board, revealedActions: [{ actor: 1, spell: 's' }] }), []);
-});
-
-// At the table a marker goes on when a cast is revealed and comes off when it resolves. `revealedActions` only
-// grows -- it is the reveal cursor's prefix -- so through the whole of resolution the two sets differ, and a
-// row that read the raw list would name a caster whose cast is already spent.
-test('a marker comes off the row when its cast resolves', () => {
-  const board = {
-    timeline: [{ creature: 1 }, { creature: 2 }, { creature: 3 }],
-    revealedActions: [
-      { actor: 1, spell: 's', targets: [4] },
-      { actor: 2, spell: 's', targets: [4] },
-      { actor: 3, spell: 's', targets: [4] },
-    ],
-  };
-
-  assert.deepEqual(targetedBy(4, { ...board, resolveCursor: 0 }), [1, 2, 3]);
-  assert.deepEqual(targetedBy(4, { ...board, resolveCursor: 1 }), [2, 3]);
-  assert.deepEqual(targetedBy(4, { ...board, resolveCursor: 2 }), [3]);
-  assert.deepEqual(targetedBy(4, { ...board, resolveCursor: 3 }), []);
-});
-
-// No sub-phase is tested for, and none needs to be: the resolve cursor is zero while nothing has resolved and
-// past the last slot once everything has, so the standing set is right at both ends of the round.
-test('every marker is standing before resolution and none after it', () => {
-  const board = {
-    timeline: [{ creature: 1 }, { creature: 2 }],
-    revealedActions: [{ actor: 1, spell: 's', targets: [4] }, { actor: 2, spell: 's', targets: [4] }],
-  };
-
-  assert.equal(standing({ ...board, resolveCursor: 0 }).length, 2);
-  assert.equal(standing({ ...board, resolveCursor: 2 }).length, 0);
-  assert.equal(standing({ ...board }).length, 2);
-  assert.deepEqual(standing(undefined), []);
-});
-
 // A permanent condition is applied fresh like any other -- the domain sets the flag and leaves the countdown
 // null -- so reading freshness first would put a new permanent buff in a countdown lane, say it was counting
 // down, and then move it at the next cleanup. Permanent conditions never enter the lanes at all.
@@ -227,12 +160,12 @@ test('turn numbers follow server order even with tied or higher initiative elsew
 test('live enemy choices stay hidden until revealed, then persist through resolution', async () => {
   const { liveChoice } = await import('./board.js');
   const creature = { id: 4, knownSpells: ['secret'] };
-  const board = { roundNumber: 3, timeline: [{ creature: 4, speed: 'Quick' }], intents: [{ actor: 4, spell: 'secret' }], revealedActions: [], resolveCursor: 0 };
+  const board = { roundNumber: 3, timeline: [{ creature: 4, speed: 'Quick' }], intents: [{ actor: 4, spell: 'secret' }], revealedActions: [], activationCursor: 0 };
   assert.equal(liveChoice(creature, board, []).action, undefined);
   assert.equal(liveChoice(creature, board, []).status, 'Hidden until reveal');
   board.revealedActions = [{ actor: 4, spell: 'shown', targets: [1] }];
   assert.equal(liveChoice(creature, board, []).status, 'Revealed');
-  board.resolveCursor = 1;
+  board.activationCursor = 1;
   assert.equal(liveChoice(creature, board, []).status, 'Resolved');
   assert.equal(liveChoice(creature, board, []).action.spell, 'shown');
 });
@@ -254,7 +187,6 @@ test('an unbound declaration never reveals a spell or target marker', async () =
   const waiting = liveChoice(creature, board, []);
   assert.equal(waiting.action, undefined);
   assert.equal(waiting.status, 'Hidden until reveal');
-  assert.deepEqual(targetedBy(1, board), []);
   board.revealedActions = [{ actor: 4, spell: 'shown', targets: [] }];
   assert.equal(liveChoice(creature, board, []).status, 'Revealed');
   assert.deepEqual(liveChoice(creature, board, []).action.targets, []);

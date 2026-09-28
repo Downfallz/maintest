@@ -113,6 +113,29 @@ export function roundRecap(entries, board, cards) {
   return { round, actions };
 }
 
+// The action the round resolved last, while its combat is still running. An action resolves the moment its
+// targets are confirmed (ADR 0083), so the table shows each one as it happens rather than replaying the round
+// at its end; the replay stays in the recap, on demand. Outside Activation the round has moved on to cleanup
+// or to the next round, and the recap is where its actions are read.
+export function lastResolved(entries, board, cards) {
+  if (board?.subPhase !== 'Activation') return null;
+  const entry = (entries ?? [])
+    .filter(item => eventRound(item) === board.roundNumber && item?.event?.kind === 'CombatActionResolved')
+    .sort((left, right) => right.sequence - left.sequence)[0];
+  return entry ? recapAction(entry, board, cards) : null;
+}
+
+// That action as one line: who, what, on whom, and what it did or why it fizzled.
+export function lastResolvedText(action) {
+  if (!action) return '';
+  const side = action.actor.side === 'ally' ? 'yours' : action.actor.side === 'enemy' ? 'opponent' : 'unknown side';
+  const targets = action.targets.length ? ` → ${action.targets.map(target => target.label).join(', ')}` : '';
+  const critical = action.status === 'Critical' ? ' · critical' : '';
+  const result = action.status === 'Fizzled' ? `fizzled: ${action.reason}`
+    : action.effects.map(effect => `${effect.text} → ${effect.target.label}`).join(', ') || 'no effect';
+  return `Just resolved · ${action.actor.label} (${side}) · ${action.spell}${targets}${critical} · ${result}`;
+}
+
 function recapCreature(id, board) {
   const ally = (board?.allies ?? []).find(creature => creature.id === id);
   const enemy = (board?.enemies ?? []).find(creature => creature.id === id);

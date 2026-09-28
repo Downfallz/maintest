@@ -7,11 +7,11 @@ export function playbackBoard(replay, board) {
   return {
     ...board,
     roundNumber: replay.round,
-    phase: 'Combat', subPhase: 'ActionResolution',
+    phase: 'Combat', subPhase: 'Activation',
     allies: creatures.filter(creature => allies.has(creature.id)),
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
-    resolveCursor: replay.index, revealCursor: action.frame.timeline.length,
+    activationCursor: replay.index,
     revealedActions: replay.actions.map(item => item.action).filter(Boolean),
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
   };

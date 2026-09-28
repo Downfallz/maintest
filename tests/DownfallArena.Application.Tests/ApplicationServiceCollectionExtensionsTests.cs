@@ -68,7 +68,6 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         provider.GetRequiredService<ICommandHandler<SubmitTieOrder, Result>>().ShouldBeOfType<SubmitTieOrderHandler>();
         provider.GetRequiredService<ICommandHandler<SubmitIntent, Result>>().ShouldBeOfType<SubmitIntentHandler>();
         provider.GetRequiredService<ICommandHandler<SubmitAction, Result>>().ShouldBeOfType<SubmitActionHandler>();
-        provider.GetRequiredService<ICommandHandler<ResolveNextAction, Result<CombatStep>>>().ShouldBeOfType<ResolveNextActionHandler>();
         provider.GetRequiredService<IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>>>().ShouldBeOfType<GetBoardStateForPlayerHandler>();
         provider.GetRequiredService<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>>().ShouldBeOfType<GetPlayerOptionsHandler>();
         provider.GetRequiredService<MatchDriver>().ShouldNotBeNull();

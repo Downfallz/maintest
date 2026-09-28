@@ -67,8 +67,8 @@ internal sealed record TableDecisionBody
 
     /// <summary>
     /// The kinds a body may name, so a refusal can say what was expected. Listed rather than read off
-    /// <see cref="PlayerOptionsKind" />, which also carries the states nobody decides — <c>Waiting</c>,
-    /// <c>Resolution</c> and <c>Ended</c> are what a seat is in, not what it is asked.
+    /// <see cref="PlayerOptionsKind" />, which also carries the states nobody decides — <c>Waiting</c>
+    /// and <c>Ended</c> are what a seat is in, not what it is asked.
     /// </summary>
     public static string Kinds => string.Join(", ", Decidable);
 

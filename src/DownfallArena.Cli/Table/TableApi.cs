@@ -151,7 +151,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     /// <summary>
     /// How many of a board's intents are still face down. A round keeps every intent it was given
-    /// (<c>Round.IntentsOf</c>) and tracks what has been turned over separately, in the actions the reveal
+    /// (<c>Round.IntentsOf</c>) and tracks what has been turned over separately, in the actions the activation
     /// cursor has reached, so the count of the one is not the count of the other from the first reveal
     /// onwards. Subtracting here is what keeps the number and the reveal strip from contradicting each other
     /// on the same screen: three face down beside two of them face up is a table nobody would believe.

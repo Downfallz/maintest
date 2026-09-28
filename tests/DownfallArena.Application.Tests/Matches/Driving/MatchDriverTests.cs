@@ -74,7 +74,7 @@ public sealed class MatchDriverTests
     }
 
     [Fact]
-    public async Task An_intent_left_without_a_legal_target_is_revealed_empty_and_the_match_still_ends()
+    public async Task A_team_the_upkeep_wipes_ends_the_match_before_anyone_is_asked_again()
     {
         var store = new MatchStore();
         var match = store.Empty(random: new TestRandom(1));
@@ -85,11 +85,14 @@ public sealed class MatchDriverTests
 
         var outcome = await Driver(store).PlayAsync(match.Id, bleeder, striker, TestContext.Current.CancellationToken);
 
-        // Round 1: the bleeders rend one enemy each. Round 2 starts by killing both enemies; the bleeders' intents
-        // are revealed without targets and fizzle, and the round ends with Player2 defeated.
+        // Round 1: the bleeders rend one enemy each. Round 2 starts by killing both enemies, and the match ends
+        // there, at upkeep, before a single decision of round 2 is asked for (ADR 0083).
         outcome.Value.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
-        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(2);
-        bleeder.Received(2).DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Is<TargetOptions>(options => !options.LegalTargets.IsCastable));
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.Number.ShouldBe(2);
+        round.SubPhase.ShouldBe(RoundSubPhase.OngoingEffects);
+        bleeder.Received(2).DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>());
+        bleeder.DidNotReceive().DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Is<TargetOptions>(options => !options.LegalTargets.IsCastable));
     }
 
     [Fact]
@@ -148,8 +151,7 @@ public sealed class MatchDriverTests
                 new SubmitSpeedChoiceHandler(store.Workflow),
                 new SubmitTieOrderHandler(store.Workflow),
                 new SubmitIntentHandler(store.Workflow),
-                new SubmitActionHandler(store.Workflow),
-                new ResolveNextActionHandler(store.Workflow)),
+                new SubmitActionHandler(store.Workflow)),
             new MatchQueryHandlers(
                 new GetBoardStateForPlayerHandler(store.Workflow),
                 new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources)));

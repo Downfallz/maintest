@@ -51,22 +51,18 @@ test('a slot is ours or theirs, from the seat reading it', () => {
   assert.equal(side(undefined, 'Player1'), 'enemy');
 });
 
-// The two cursors do not advance together: the resolve cursor stays at zero for the whole of RevealAndTarget
-// while the reveal cursor walks the strip, so reading the wrong one lights the wrong creature for a sub-phase.
-test('the strip points at the slot being revealed while targets are being picked', () => {
-  assert.equal(cursorOf({ subPhase: 'RevealAndTarget', revealCursor: 2, resolveCursor: 0 }), 2);
-});
-
-test('the strip points at the slot being resolved while actions resolve', () => {
-  assert.equal(cursorOf({ subPhase: 'ActionResolution', revealCursor: 4, resolveCursor: 1 }), 1);
+// Combat walks the timeline once (ADR 0083): the slot the activation cursor is on is revealed, targeted and
+// resolved before the cursor moves.
+test('the strip points at the slot being activated', () => {
+  assert.equal(cursorOf({ subPhase: 'Activation', activationCursor: 2 }), 2);
 });
 
 // The timeline is built before intents are even declared, so for several sub-phases it exists and the round is
 // on none of its slots. A lit slot there would be pointing at a creature nobody is playing.
 test('the strip points at nothing outside the sub-phases that spend a slot', () => {
-  assert.equal(cursorOf({ subPhase: 'IntentSelection', revealCursor: 0, resolveCursor: 0 }), -1);
-  assert.equal(cursorOf({ subPhase: 'Evolution', revealCursor: 0, resolveCursor: 0 }), -1);
-  assert.equal(cursorOf({ subPhase: 'RevealAndTarget' }), -1);
+  assert.equal(cursorOf({ subPhase: 'IntentSelection', activationCursor: 0 }), -1);
+  assert.equal(cursorOf({ subPhase: 'Evolution', activationCursor: 0 }), -1);
+  assert.equal(cursorOf({ subPhase: 'Activation' }), -1);
   assert.equal(cursorOf(undefined), -1);
 });
 

@@ -451,7 +451,7 @@ public sealed partial class TableApiTests : IDisposable
 
         var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
 
-        body.ShouldContain("\"subPhase\":\"RevealAndTarget\"");
+        body.ShouldContain("\"subPhase\":\"Activation\"");
         // Enemy 3 is the first slot, so its card is face up; the other seat has two creatures, so one back
         // is left. Before the count subtracted the reveal this line read two.
         body.ShouldContain("\"revealedActions\":[{\"actor\":3,");

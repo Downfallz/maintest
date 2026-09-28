@@ -1,6 +1,5 @@
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Messaging;
-using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Matches.Driving;
@@ -14,5 +13,4 @@ public sealed record MatchCommandHandlers(
     ICommandHandler<SubmitSpeedChoice, Result> SubmitSpeedChoice,
     ICommandHandler<SubmitTieOrder, Result> SubmitTieOrder,
     ICommandHandler<SubmitIntent, Result> SubmitIntent,
-    ICommandHandler<SubmitAction, Result> SubmitAction,
-    ICommandHandler<ResolveNextAction, Result<CombatStep>> ResolveNextAction);
+    ICommandHandler<SubmitAction, Result> SubmitAction);
