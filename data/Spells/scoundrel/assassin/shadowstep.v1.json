@@ -1,0 +1,27 @@
+{
+  "id": "spell:shadowstep:v1",
+  "name": "Shadowstep",
+  "spellType": "Offensive",
+  "creatureClass": "Assassin",
+  "energyCost": 3,
+  "criticalChance": 0.5,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 5
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "InitiativeBuff",
+      "amount": 2,
+      "durationRounds": 1
+    }
+  ]
+}
