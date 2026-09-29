@@ -2290,7 +2290,7 @@ async function load() {
   renderNav();
   restoreLocation();
   if (!catalogue.problems.length) clearBanner();
-  readValueWeights();
+  await readValueWeights();
 }
 
 /**
