@@ -1435,3 +1435,14 @@ test("an opponent action being read heads the sheet with its own turn, and names
   assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
   assert.equal(p.nodes['decision-turn'].textContent, 'Turn 6 of 6 · Standard');
 });
+
+test("a round's last opponent action read in the next round leaves the round bar on the live round", () => {
+  const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Standard' }, { creature: 1, speed: 'Standard' }]; p.draw();
+  p.view.board.roundNumber = 2; p.view.waitingAsked = 2;
+  p.view.roundEvents = [opponentAction(30, 4)]; p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.equal(p.nodes['phase-current'].textContent, 'Spells');
+  assert.equal(p.nodes['phase-turn'].textContent, '');
+  p.view.over = true; p.draw();
+  assert.equal(p.nodes['phase-turn'].textContent, '');
+});

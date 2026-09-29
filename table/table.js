@@ -466,7 +466,11 @@ function render(state, views) {
   else {
     renderPhaseGuide(state, view, current.seat);
     renderOrder(state, view, current.seat);
-    if (state.step) element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
+    // Only while the round bar is on that action's combat: the last slot of a round is often read once the host
+    // has moved on to the next round or the result, and the bar must not mix the two.
+    if (state.step && state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation' && !view.over) {
+      element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
+    }
   }
   element('planning').hidden = Boolean(state.playback);
   element('playback').hidden = !state.playback;
