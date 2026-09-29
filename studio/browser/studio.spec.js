@@ -119,8 +119,68 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   await page.goto('https://downfallz.github.io/maintest/');
   await expect(page.locator('.family-pick')).toHaveCount(3);
   await expect(page.locator('.hero-stats')).toContainText('21packages');
+  await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(36);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Energy & effects', exact: true })).toBeVisible();
+  await page.locator('#explore-view').click();
   await page.locator('.package-tile').first().click();
   await expect(page.locator('.reader-heading h2')).toHaveText('Brute');
+});
+
+test('energy overview exposes gaps without a wide table and retains filters after reading', async ({ page }, info) => {
+  await page.locator('#spells-view').click();
+  await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
+  await expect(page).toHaveURL(/#strategy$/);
+  await expect(page.locator('.strategy-spell')).toHaveCount(36);
+  await page.getByRole('button', { name: '1 energy', exact: true }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(5);
+  await expect(page.getByRole('button', { name: 'Healing 0', exact: true })).toBeVisible();
+  await fit(page); await shot(page, info, 'energy-overview');
+  await page.getByRole('button', { name: 'Healing 0', exact: true }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(0);
+  await expect(page.getByText('No spells in this combination.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'All effects 5', exact: true }).click();
+  const pummel = page.locator('.strategy-spell').filter({ hasText: 'Pummel' });
+  await pummel.locator('summary').click();
+  await pummel.getByRole('button', { name: 'Full spell →' }).click();
+  await expect(page.locator('.reader-heading h2')).toHaveText('Pummel');
+  await page.getByRole('button', { name: '← Back', exact: true }).click();
+  await expect(page.getByRole('button', { name: '1 energy', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.strategy-spell')).toHaveCount(5);
+  await page.locator('.strategy-spell').last().scrollIntoViewIfNeeded();
+  const sticky = await page.locator('.strategy-sticky').boundingBox();
+  expect(sticky.y).toBeGreaterThanOrEqual(0);
+  expect(sticky.y + sticky.height).toBeLessThan(page.viewportSize().height);
+  await fit(page);
+});
+
+test('package comparison combines distinct spells and separates caster effects', async ({ page }, info) => {
+  await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
+  await page.getByText('Compare packages', { exact: true }).click();
+  await page.getByLabel('Spell scope', { exact: true }).selectOption('packages');
+  await expect(page.locator('.strategy-spell')).toHaveCount(0);
+  await page.getByLabel('Add a package', { exact: true }).selectOption('tier:brute:v1');
+  await expect(page.locator('.strategy-spell')).toHaveCount(2);
+  await page.getByLabel('Add a package', { exact: true }).selectOption('tier:occultist:v1');
+  await expect(page.locator('.strategy-spell')).toHaveCount(4);
+  await page.getByLabel('Include starting kit').check();
+  await expect(page.locator('.strategy-spell')).toHaveCount(7);
+  await fit(page); await shot(page, info, 'package-comparison');
+  await page.getByRole('button', { name: 'Remove Brute', exact: true }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(5);
+  await page.getByLabel('Spell scope', { exact: true }).selectOption('all');
+  await page.getByText('Compare packages', { exact: true }).click();
+  await page.getByRole('button', { name: '0 energy', exact: true }).click();
+  await page.getByRole('button', { name: 'On caster', exact: true }).click();
+  await page.locator('.strategy-effect').filter({ hasText: 'Energy' }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(1);
+  await expect(page.locator('.strategy-spell')).toContainText('Momentum');
+  await expect(page.locator('.strategy-caster')).toContainText('Energy + 2');
+  await page.getByRole('button', { name: 'On targets', exact: true }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(1);
+  await expect(page.locator('.strategy-spell')).toContainText('Wait');
+  await fit(page);
 });
 
 

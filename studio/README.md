@@ -59,6 +59,17 @@ The page opens on **Explore**: the current package families and their tiers, der
 with every prerequisite and included spell one tap away. Class trees remain authoring content and do not
 supply the progression display. **Spells** offers search by name, effect and package, plus type filters.
 
+Inside **Spells**, **Energy & effects** (`#strategy`) compares costs and affected stats in a compact mobile
+view. Tap a cost, then an effect to see the matching spells; zero counts expose gaps. **Compare packages**
+switches between the whole enabled catalogue, starting spells, or a union of selected packages with an
+optional starting kit. Shared spells count once, aliases resolve to their current documents, and prerequisite
+packages are not silently included: this is a content comparison, not a legal build planner.
+
+Target and caster effects have separate filters. Compact rows retain amounts, durations and permanence;
+tap a row for details and its teaching packages, or **Full spell** for the existing reader. Counts can overlap
+across effects, and authored values are before defense, criticals and caps. Returning from a reader keeps
+the comparison filters during the session. The same view works locally and on GitHub Pages.
+
 The persistent navigation has four destinations: **Explore**, **Spells**, **Catalogue**, and **Tools**. Catalogue
 opens a searchable sheet for every document, including disabled content. Tools groups the run, history,
 audit, balance, access and build controls. Sheets work on phones and desktops; reading gets the full width.

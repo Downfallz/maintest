@@ -10,7 +10,7 @@
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
 import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
-import { explore, spellLibrary, reader } from './codex.js';
+import { explore, spellLibrary, strategyLibrary, reader } from './codex.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
@@ -651,9 +651,10 @@ function renderDetail() {
   document.body.classList.toggle('editing', state.editing);
   syncPrimaryNavigation();
   if (!state.selected || !state.draft) {
-    const content = state.section === 'spells'
-      ? spellLibrary(state.catalogue, state.codex, select)
-      : explore(state.catalogue, state.codex, select, renderDetail);
+    let content;
+    if (state.section === 'strategy') content = strategyLibrary(state.catalogue, state.codex.strategy ??= {}, select, goSection);
+    else if (state.section === 'spells') content = spellLibrary(state.catalogue, state.codex, select, goSection);
+    else content = explore(state.catalogue, state.codex, select, renderDetail, goSection);
     view.replaceChildren(content);
     return;
   }
@@ -2306,7 +2307,7 @@ function leaveDraft() {
 
 function syncPrimaryNavigation() {
   $('explore-view').setAttribute('aria-pressed', String(state.section === 'explore'));
-  $('spells-view').setAttribute('aria-pressed', String(state.section === 'spells'));
+  $('spells-view').setAttribute('aria-pressed', String(['spells', 'strategy'].includes(state.section)));
 }
 
 function goSection(section) {
@@ -2334,7 +2335,7 @@ function restoreLocation() {
   if (!leaveDraft()) { recordLocation(); return; }
   state.restoring = true;
   closeSheets();
-  state.section = history.state?.section ?? (location.hash === '#spells' ? 'spells' : 'explore');
+  state.section = history.state?.section ?? (['#spells', '#strategy'].includes(location.hash) ? location.hash.slice(1) : 'explore');
   let path = null;
   try { if (location.hash.startsWith('#entry=')) path = decodeURIComponent(location.hash.slice(7)); } catch { path = null; }
   state.editing = false;
