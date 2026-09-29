@@ -1516,3 +1516,13 @@ test("a round's last opponent action read in the next round leaves the round bar
   p.view.over = true; p.draw();
   assert.equal(p.nodes['phase-turn'].textContent, '');
 });
+
+test("the next creature's speed or spell question starts its spellbook at the top", () => {
+  const p = page(); p.draw();
+  p.nodes['hand-section'].scrollTop = 320; p.nodes.planning.scrollTop = 40;
+  p.state.chosen = 'one'; p.draw();
+  assert.equal(p.nodes['hand-section'].scrollTop, 320, 'a redraw of the same question keeps the scroll');
+  p.view.waitingCreature = 2; p.view.waitingAsked++; p.draw();
+  assert.equal(p.nodes['hand-section'].scrollTop, 0);
+  assert.equal(p.nodes.planning.scrollTop, 0);
+});

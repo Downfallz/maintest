@@ -790,8 +790,8 @@ body:has(#table) { padding-bottom: 24px; }
      tools one line (the Round guide at the top of the page already lists the round's steps), and the atlas is
      reached from the spellbook rather than from a tab row of its own.
    - The decision states itself in one line and the spellbook heading is one row.
-   - The hand is a list to choose from, not a spread of printed cards: one compact row per spell. The rules
-     reminder and the "select" label come back on the chosen card.
+   - The hand is a list to choose from, not a spread of printed cards: one compact row per spell. The "select"
+     label comes back on the chosen card; the critical reminder does not, so a chosen card barely grows.
    - Each package is a two-line row, and the atlas and pass sit side by side.
    - The opened battlefield draws each creature on a few lines, its stats as the symbols the cards already use
      (the word stays for a screen reader), and the turn order wraps.
@@ -846,7 +846,9 @@ body:has(#table) { padding-bottom: 24px; }
   :is(#own-hand, .enemy-books) .held > .card-body { order: 5; flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
   :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
   :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
-  :is(#own-hand, .enemy-books) .held:not(.chosen) .card-critical-note { display: none; }
+  /* The critical reminder stays off the phone rows, chosen or not: it lengthened the chosen card under the thumb
+     between the two taps that declare it. The Speed reference and the laptop cards still carry it. */
+  :is(#own-hand, .enemy-books) .held .card-critical-note { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; flex: 1 0 100%; padding: 0; font-size: 11px; }
   :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }

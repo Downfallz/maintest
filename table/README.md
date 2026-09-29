@@ -83,7 +83,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   never widens the page: a long phase name is cut short, and on the narrowest phones a chip showing a health
   change leaves its energy out.
 - Phones keep scrolling short and never sideways: the hand is a list of compact rows (name, cues, cost,
-  effects; the rules reminder and the declare cue on the chosen card), packages are two-line rows, the
+  effects; the declare cue on the chosen card, which carries no critical reminder so it barely grows between
+  its two taps), packages are two-line rows, the
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
   ↟ initiative), and the turn order wraps. Round flow and the tab row are left to the Round guide and the
   spellbook's Talent atlas link, and the turn in the round bar to the decision heading and the acting chip.

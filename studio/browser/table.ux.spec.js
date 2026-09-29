@@ -15,6 +15,7 @@ async function expectNoSidewaysScroll(page) {
 const cards = ['Basic Attack', 'Full Plate', 'Guard', 'Heavy Strike', 'Pummel', 'Wait'].map((name, index) => ({
   id: `spell-${index}`, name, cost: index === 5 ? 0 : 2, critical: index === 4 ? '77%' : '0%',
   targeting: 'One enemy', effects: ['Damage 7'],
+  criticalNote: 'Quick cannot crit. Standard can, and a critical multiplies only direct damage or healing on its targets.',
 }));
 const view = {
   waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 3, options: { speed: { missing: [1] } }, feed: [],
@@ -148,9 +149,15 @@ test('a phone lists the castable spells as compact rows, the chosen one with its
   if (isPhone(page)) expect(Math.max(...heights)).toBeLessThan(140);
   await expectNoSidewaysScroll(page);
   const pummel = page.locator('#own-hand .held.offered').filter({ hasText: 'Pummel' });
+  const before = (await pummel.boundingBox()).height;
   await pummel.click();
   await expect(pummel).toContainText('Tap again to declare');
   await expect(pummel.locator('.card-availability')).toBeVisible();
+  // The second tap lands where the first did: a phone does not unfold the critical reminder on the chosen card.
+  if (isPhone(page)) {
+    await expect(pummel.locator('.card-critical-note')).toBeHidden();
+    expect((await pummel.boundingBox()).height - before).toBeLessThan(30);
+  }
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
 });
 
@@ -348,4 +355,19 @@ test('revealed speeds open the turn order from the round bar, and the spell bein
   await page.locator('#announcements-label').click();
   await page.locator('#announcement-list .announcement-mute button').click();
   await expect(page.locator('#announcements-label')).toContainText('muted');
+});
+
+test("the next creature's question opens its spellbook at the top, not where the last one was scrolled", async ({ page }) => {
+  test.skip(!isPhone(page), 'the spellbook scrolls on its own only on a phone');
+  const creature = id => ({ id, health: 30, maxHealth: 30, energy: 4, knownSpells: cards.map(card => card.id) });
+  const board = { ...view.board, allies: [view.board.allies[0], creature(5)] };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board } }));
+  const hand = page.locator('#hand-section');
+  await expect(page.locator('.speed-reference')).toHaveCount(2);
+  await page.locator('#hand-section .hand-row').nth(1).locator('> summary').click();
+  await hand.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  expect(await hand.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board, waitingCreature: 5, waitingAsked: 4 } }));
+  await expect(page.locator('#asking')).toContainText('Creature 5');
+  expect(await hand.evaluate(node => node.scrollTop)).toBe(0);
 });
