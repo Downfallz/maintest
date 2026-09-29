@@ -1,3 +1,4 @@
+import { EFFECT_GROUPS, energyCost, strategyOverview, compactEffect } from './strategy.js';
 import { active, named, packageFamilies, packageParents, packagesTeaching, spellMatches, effectText, targetText } from './catalogue.js';
 
 const h = (tag, className, text) => {
@@ -52,7 +53,7 @@ function packageTile(item, catalogue, open) {
     h('span', 'tile-arrow', '↗'));
 }
 
-export function explore(catalogue, ui, open, repaint) {
+export function explore(catalogue, ui, open, repaint, navigate) {
   const groups = packageFamilies(catalogue);
   const packages = active(catalogue.tiers);
   const spells = active(catalogue.spells);
@@ -62,6 +63,7 @@ export function explore(catalogue, ui, open, repaint) {
     h('h2', '', 'Find your next move.'),
     h('p', 'codex-copy', 'Every package. Every spell. Your next build.'),
     append(h('div', 'hero-stats'), stat(packages.length, 'packages'), stat(spells.length, 'spells'), stat(new Set(packages.map(item => item.document.level)).size, 'tiers'))));
+  view.append(button('Compare energy & effects →', 'strategy-entry', () => navigate('strategy')));
   if (!packages.length) { view.append(message('No enabled packages yet. Open Catalogue to add the first one.')); return view; }
   const selected = groups.find(group => group.root.id === ui.family) ?? groups[0];
   if (selected) {
@@ -98,8 +100,9 @@ function progression(group, catalogue, open) {
   return grid;
 }
 
-export function spellLibrary(catalogue, ui, open) {
+export function spellLibrary(catalogue, ui, open, navigate) {
   const view = append(h('div', 'codex'), title('SPELL LIBRARY', 'Know your options.', 'Find a spell by name, effect or package. Tap a card for the full details.'));
+  view.prepend(spellViews('spells', navigate));
   const controls = h('div', 'library-controls');
   const search = h('input', 'codex-search'); search.type = 'search'; search.placeholder = 'Search spells, effects, packages…'; search.value = ui.query ?? '';
   search.setAttribute('aria-label', 'Search spells');
@@ -173,4 +176,157 @@ function creatureReading(view, item, catalogue, open) {
     title('STARTING KIT', 'Ready for the arena', 'Spells this creature knows before acquiring any packages.'));
   const spells = (doc.startingSpellIds ?? []).map(id => named(catalogue.spells, id, catalogue)).filter(Boolean);
   view.append(append(h('div', 'spell-grid'), ...spells.map(spell => spellTile(spell, catalogue, open))));
+}
+
+function spellViews(selected, navigate) {
+  const nav = h('div', 'spell-views');
+  nav.setAttribute('role', 'navigation');
+  nav.setAttribute('aria-label', 'Spell views');
+  for (const [id, name] of [['spells', 'Cards'], ['strategy', 'Energy & effects']]) {
+    const pick = button(name, 'filter-pill', () => navigate(id));
+    pick.setAttribute('aria-pressed', String(selected === id));
+    nav.append(pick);
+  }
+  return nav;
+}
+
+export function strategyLibrary(catalogue, ui, open, navigate) {
+  const view = append(h('div', 'codex strategy'), spellViews('strategy', navigate),
+    h('h2', 'strategy-heading', 'Energy & effects'));
+  const summary = h('p', 'strategy-summary');
+  const costs = h('div', 'strategy-costs');
+  costs.setAttribute('aria-label', 'Energy cost');
+  const effects = h('div', 'strategy-effects');
+  effects.setAttribute('aria-label', 'Affected stats');
+  const results = h('div', 'strategy-results');
+  const count = h('p', 'result-count'); count.setAttribute('role', 'status');
+  const scopeText = h('p', 'strategy-scope-text');
+  const facets = [...EFFECT_GROUPS, { id: 'other', name: 'Other effects' }];
+  const costButtons = new Map();
+  const effectButtons = new Map();
+  const allCosts = strategyOverview(catalogue).costs.map(([cost]) => cost);
+  const draw = () => {
+    const data = strategyOverview(catalogue, ui);
+    summary.textContent = `${data.total} distinct spells · Energy per cast`;
+    const costCounts = new Map(data.costs);
+    for (const [cost, pick] of costButtons) {
+      const total = cost === 'all' ? data.total : costCounts.get(cost) ?? 0;
+      pick.querySelector('small').textContent = `${total} spells`;
+      // Unknown cost is a real bucket; null must not become the default All selection.
+      pick.setAttribute('aria-pressed', String(cost === (ui.cost === undefined ? 'all' : ui.cost)));
+      pick.style.setProperty('--share', `${data.total ? total / data.total * 100 : 0}%`);
+    }
+    for (const [id, pick] of effectButtons) {
+      const total = id ? data.facets.find(group => group.id === id)?.count ?? 0 : data.atCost;
+      pick.querySelector('strong').textContent = String(total);
+      pick.setAttribute('aria-pressed', String(id === (ui.effect ?? '')));
+      pick.hidden = id === 'other' && total === 0 && ui.effect !== 'other';
+    }
+    const side = ui.side === 'caster' ? 'caster effects' : 'target effects';
+    const costName = costLabel(ui.cost);
+    count.textContent = `${data.matches.length} spells · ${costName} · ${side}`;
+    scopeText.textContent = scopeDescription(catalogue, ui);
+    results.replaceChildren(...data.matches.map(item => strategySpell(item, catalogue, open)));
+    if (!data.matches.length) results.append(message('No spells in this combination. Try another cost or effect, or widen the package scope.'));
+  };
+  for (const cost of ['all', ...allCosts]) {
+    const pick = button('', 'strategy-cost', () => { ui.cost = cost; draw(); });
+    const short = cost === 'all' ? 'All' : String(cost ?? '?');
+    pick.setAttribute('aria-label', costLabel(cost));
+    append(pick, h('span', '', short), h('small', '', ''));
+    costs.append(pick); costButtons.set(cost, pick);
+  }
+  for (const group of [{ id: '', name: 'All effects' }, ...facets]) {
+    const pick = button('', 'strategy-effect', () => { ui.effect = group.id; draw(); });
+    append(pick, h('span', '', group.name), h('strong', '', ''));
+    effects.append(pick); effectButtons.set(group.id, pick);
+  }
+  const filters = strategyFilters(catalogue, ui, draw);
+  const sides = h('div', 'strategy-sides'); sides.setAttribute('aria-label', 'Effect recipient');
+  for (const [id, name] of [['target', 'On targets'], ['caster', 'On caster']]) {
+    const pick = button(name, 'filter-pill', () => {
+      ui.side = id;
+      for (const child of sides.children) child.setAttribute('aria-pressed', String(child === pick));
+      draw();
+    });
+    pick.setAttribute('aria-pressed', String(id === (ui.side ?? 'target'))); sides.append(pick);
+  }
+  filters.append(scopeText, h('p', 'strategy-note', 'Counts are distinct spells. A spell can affect several stats. Target effects include self-targeted spells.'));
+  view.append(filters, append(h('div', 'strategy-sticky'), summary, costs), sides, effects, count, results);
+  draw(); return view;
+}
+
+function costLabel(cost) {
+  if (cost === null) return 'Unknown cost';
+  if (cost === undefined || cost === 'all') return 'All costs';
+  return `${cost} energy`;
+}
+
+function scopeDescription(catalogue, ui) {
+  if (ui.scope === 'starting') return 'Starting spells from enabled creatures.';
+  if (ui.scope !== 'packages') return 'All enabled spells · authored values before defense, criticals and caps.';
+  const names = active(catalogue.tiers).filter(item => ui.packages?.includes(item.id)).map(item => item.name);
+  if (ui.includeStarting) names.unshift('Starting kit');
+  return names.length ? names.join(' + ') : 'Add a package or include the starting kit.';
+}
+
+function strategyFilters(catalogue, ui, draw) {
+  const filters = append(h('details', 'strategy-filters'), h('summary', '', 'Compare packages'));
+  const scope = h('select', ''); scope.setAttribute('aria-label', 'Spell scope');
+  for (const [value, text] of [['all', 'Whole catalogue'], ['starting', 'Starting kit'], ['packages', 'Selected packages']]) {
+    const option = h('option', '', text); option.value = value; scope.append(option);
+  }
+  scope.value = ui.scope ?? 'all';
+  const packages = h('div', 'strategy-package-picker');
+  const add = h('select', ''); add.setAttribute('aria-label', 'Add a package');
+  const placeholder = h('option', '', 'Add a package…'); placeholder.value = ''; add.append(placeholder);
+  for (const item of active(catalogue.tiers).toSorted((a, b) => a.document.level - b.document.level || a.name.localeCompare(b.name))) {
+    const option = h('option', '', `Tier ${item.document.level} · ${item.name}`); option.value = item.id; add.append(option);
+  }
+  const chosen = h('div', 'strategy-package-chips');
+  const include = h('input', ''); include.type = 'checkbox'; include.checked = Boolean(ui.includeStarting);
+  include.addEventListener('change', () => { ui.includeStarting = include.checked; draw(); });
+  const paint = () => {
+    packages.hidden = ui.scope !== 'packages';
+    const selected = active(catalogue.tiers).filter(item => ui.packages?.includes(item.id));
+    chosen.replaceChildren(...selected.map(item => {
+      const remove = button(`${item.name} ×`, 'filter-pill', () => {
+        ui.packages = ui.packages.filter(id => id !== item.id); paint(); draw(); add.focus();
+      });
+      remove.setAttribute('aria-label', `Remove ${item.name}`); return remove;
+    }));
+    for (const option of add.options) option.disabled = Boolean(ui.packages?.includes(option.value));
+  };
+  scope.addEventListener('change', () => { ui.scope = scope.value; paint(); draw(); });
+  add.addEventListener('change', () => {
+    if (!add.value) return;
+    ui.packages = [...new Set([...(ui.packages ?? []), add.value])]; add.value = ''; paint(); draw();
+  });
+  append(packages, add, chosen, append(h('label', 'strategy-starting'), include, h('span', '', 'Include starting kit')),
+    h('p', 'strategy-note', 'Only the selected packages are counted. Prerequisites are not added automatically.'));
+  filters.append(append(h('label', 'strategy-scope-label'), h('span', '', 'Spell scope'), scope), packages);
+  paint(); return filters;
+}
+
+function strategySpell(item, catalogue, open) {
+  const doc = item.document;
+  const row = h('details', 'strategy-spell');
+  const summary = h('summary', '');
+  const heading = append(h('span', 'strategy-spell-heading'), h('strong', '', item.name), h('span', 'energy-cost', costLabel(energyCost(item))));
+  const main = (doc.effects ?? []).map(compactEffect).join(' · ') || 'No target effects';
+  const caster = (doc.casterEffects ?? []).map(compactEffect).join(' · ');
+  append(summary, heading, h('span', 'strategy-spell-facts', `${targetText(doc.targeting)}: ${main}`));
+  if (caster) summary.append(h('span', 'strategy-caster', `Caster: ${caster}`));
+  const detail = h('div', 'strategy-spell-detail');
+  detail.append(h('p', 'strategy-note', 'Authored values per target; actual results depend on the board.'));
+  for (const effect of doc.effects ?? []) detail.append(effectRow(effect));
+  if (doc.casterEffects?.length) {
+    detail.append(h('h3', 'reader-subtitle', 'On the caster'));
+    for (const effect of doc.casterEffects) detail.append(effectRow(effect));
+  }
+  if (doc.criticalChance > 0) detail.append(h('p', '', `${Number((doc.criticalChance * 100).toFixed(2))}% critical bonus · Standard speed`));
+  const packs = packagesTeaching(item, catalogue);
+  if (packs.length) detail.append(h('p', 'strategy-note', 'Taught by'), append(h('div', 'reader-links'), ...packs.map(pack => itemLink(pack, open))));
+  detail.append(button('Full spell →', 'codex-link', () => open(item.path)));
+  row.append(summary, detail); return row;
 }
