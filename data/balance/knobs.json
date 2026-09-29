@@ -662,6 +662,21 @@
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
+    "spell:frostbite": {
+      "name": "Frostbite",
+      "class": "Wizard",
+      "intent": "The Elementalist's spare-energy spell: one point is what Meteor leaves behind on an income of two, and this spends it. A light chill that slows its target for a round -- the small first step of the ice that Ice Spear carries at tier 3.",
+      "keep": [
+        "One energy: it exists to spend what Meteor leaves over",
+        "A slow, not a nuke: the damage stays small and the chill lasts one round"
+      ],
+      "note": "Authored at 7.0 a round in the check-knobs reading, most of it the initiative debuff at the 2.1 weight -- a stronger slow per cast than Ice Spear's at tier 3. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.6, "step": 0.05 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
     "spell:meteor": {
       "name": "Meteor",
       "class": "Wizard",
