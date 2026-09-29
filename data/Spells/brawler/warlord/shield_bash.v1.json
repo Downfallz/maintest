@@ -1,0 +1,27 @@
+{
+  "id": "spell:shield_bash:v1",
+  "name": "Shield Bash",
+  "spellType": "Offensive",
+  "creatureClass": "Warlord",
+  "energyCost": 3,
+  "criticalChance": 0.35,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 5
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "DefenseBuff",
+      "amount": 3,
+      "durationRounds": 3
+    }
+  ]
+}
