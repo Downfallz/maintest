@@ -69,7 +69,8 @@ export function compactEffect(effect) {
   if (recurring[effect.kind]) return `${recurring[effect.kind]} ${effect.amountPerRound ?? '?'} / round · ${duration(effect)}`;
   if (!names[effect.kind]) return effect.kind ?? 'Unknown effect';
   const lasting = ['DefenseBuff', 'DefenseDebuff', 'InitiativeBuff', 'InitiativeDebuff'].includes(effect.kind);
-  return `${names[effect.kind]} ${effect.amount ?? '?'}${lasting ? ` · ${duration(effect)}` : ''}`;
+  const suffix = lasting ? ` · ${duration(effect)}` : '';
+  return `${names[effect.kind]} ${effect.amount ?? '?'}${suffix}`;
 }
 
 function duration(effect) {

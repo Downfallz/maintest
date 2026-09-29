@@ -652,7 +652,10 @@ function renderDetail() {
   syncPrimaryNavigation();
   if (!state.selected || !state.draft) {
     let content;
-    if (state.section === 'strategy') content = strategyLibrary(state.catalogue, state.codex.strategy ??= {}, select, goSection);
+    if (state.section === 'strategy') {
+      state.codex.strategy ??= {};
+      content = strategyLibrary(state.catalogue, state.codex.strategy, select, goSection);
+    }
     else if (state.section === 'spells') content = spellLibrary(state.catalogue, state.codex, select, goSection);
     else content = explore(state.catalogue, state.codex, select, renderDetail, goSection);
     view.replaceChildren(content);
