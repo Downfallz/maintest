@@ -774,6 +774,82 @@ test('the evolution budget follows the configured team allowance and does not re
   assert.match(p.nodes['evolution-budget'].textContent, /3 \/ 4 team picks remaining/);
 });
 
+test('newly acquired packages are summarized together after evolution and shown on the opponent board', () => {
+  const p = page(); p.draw();
+  p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } };
+  p.draw();
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
+  p.view.board.enemies[0].acquiredTiers = ['tier:two:v1']; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Second package/);
+  assert.equal(p.nodes.enemies.children[0].querySelectorAll('[data-focus]').length, 0);
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1 · yoursFirst package/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2 · opponentSecond package/);
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
+  p.draw();
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
+});
+
+test('package recap waits through an automatic phase and appears with the next decision', () => {
+  const p = page(); p.draw();
+  p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution'; p.draw();
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
+  p.view.board.subPhase = 'EnergyGain'; p.view.waitingFor = null; p.draw();
+  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /First package/);
+});
+
+test("in hotseat, each seat's package recap names purchases made before the device was handed over", () => {
+  const p = page(); p.draw();
+  p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } };
+  p.draw();
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
+  p.current.seat = 'player2'; p.view.waitingAsked++; p.draw();
+  p.state.holder = 'player2'; p.draw();
+  p.view.board.enemies[0].acquiredTiers = ['tier:two:v1']; p.draw();
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.view.waitingAsked++; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2, 'the purchase made before the handover is included');
+  p.current.seat = 'player1'; p.view.waitingAsked++; p.draw();
+  p.state.holder = 'player1'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
+});
+
+test("switching the creature to evolve starts its package list at the top, and a redraw keeps a creature's own scroll", () => {
+  const p = page();
+  p.view.waitingFor = 'Evolution'; p.view.board.subPhase = 'Evolution';
+  p.view.board.allies.push({ id: 3, health: 20, maxHealth: 20, energy: 2 });
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } };
+  p.draw();
+  const list = () => p.nodes.choices.children.find(child => child.className === 'choice-cards');
+  list().scrollTop = 140; p.state.rendered = null; p.draw();
+  assert.equal(list().scrollTop, 140);
+  p.nodes.choices.children[0].children[1].click();
+  assert.equal(list().scrollTop, 0);
+});
+
+test('upkeep popup distinguishes applied ticks from conditions still active on the current board', () => {
+  const p = page(); p.draw();
+  p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';
+  p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
+  p.view.roundEvents = [{ sequence: 42, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    regenerationTicks: [{ creature: 1, healed: 1 }], bleedTicks: [{ creature: 2, damage: 2 }] } }];
+  p.draw();
+  assert.match(p.nodes['phase-notice-detail'].textContent, /Open Upkeep for details/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+1 HP · Healing over time/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−2 HP · Ongoing damage/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /DefenseModifier -2 · still active/);
+  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeepCreature 2 · DefenseModifier -2/);
+  p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
+  assert.equal(p.nodes['upkeep-conditions'].hidden, true);
+});
+
 test('the persistent phase guide distinguishes simultaneous speeds from sequential spell revelation', () => {
   const p = page(); p.view.board.subPhase = 'Speed'; p.draw();
   assert.match(p.nodes['phase-round'].textContent, /Round 1 \/ 16/);
@@ -1051,37 +1127,32 @@ test('a completed round is not replayed on its own, and its recap replays one ac
   p.draw(); assert.equal(p.state.playback, null);
 });
 
-test('the action resolved last is shown live, on the battlefield and in the sheet, until combat moves on', () => {
+test('the action resolved last is shown in the round bar and battlefield until combat moves on', () => {
   const p = page(); p.view.waitingFor = null; p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 1;
   p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }];
   p.view.roundEvents = [completedRound(1)[0]];
   p.view.roundEvents[0].event.frame = { before: [{ ...p.view.board.enemies[0], health: 13 }], after: [], timeline: p.view.board.timeline, rollOffs: [] };
   p.draw();
   assert.equal(p.state.playback ?? null, null);
-  assert.equal(p.nodes['live-action'].hidden, false);
-  assert.equal(p.nodes['live-action'].children[0].textContent, 'Creature 1 (yours) · First card → Creature 2 · critical · Damage 3 → Creature 2');
+  assert.match(p.nodes['combat-line'].textContent, /First card/);
   assert.match(p.nodes.allies.children[0].className, /replay-caster/);
   assert.match(p.nodes.enemies.children[0].className, /replay-target/);
   assert.match(p.nodes.enemies.textContent, /HP 13 → 10/);
   p.view.board.subPhase = 'Cleanup'; p.draw();
-  assert.equal(p.nodes['live-action'].hidden, false, 'what resolved stays readable past the round');
+  assert.equal(p.nodes['combat-line'].hidden, true);
   assert.doesNotMatch(p.nodes.allies.children[0].className, /replay-caster/);
 });
 
-test('every action resolved since the seat last decided is listed, and a decision clears them', async () => {
+test('the next decision keeps the round bar and recap available without another resolved-action box', async () => {
   const p = page(); p.view.waitingFor = 'Intent'; p.view.board.subPhase = 'Activation';
   p.current.transport.decide = async () => ({ ok: true });
   p.view.roundEvents = completedRound(1).slice(0, 2); p.draw();
   stepOk(p);
-  assert.equal(p.nodes['live-action'].children.length, 2);
-  assert.match(p.nodes['live-action'].children[1].textContent, /Second card → Creature 1 · fizzled: Cannot act\./);
+  assert.match(p.nodes['combat-line'].textContent, /Second card/);
+  assert.equal(p.nodes['live-action'], undefined);
   await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
   p.draw();
-  assert.equal(p.nodes['live-action'].hidden, true);
-  // The poll after the decision replaced the view the page holds; the next resolution arrives on that one.
-  const shown = p.state.views[0].view;
-  shown.roundEvents = [...shown.roundEvents, { ...completedRound(1)[0], sequence: 20 }]; p.draw();
-  assert.equal(p.nodes['live-action'].children.length, 1);
+  assert.equal(p.nodes['combat-step'].hidden, true);
 });
 
 test('loading an old recap does not auto replay it, but its replay button is available after a skip', () => {
@@ -1289,7 +1360,6 @@ test("opponent actions hold the next question, one OK each, and the question is 
   assert.equal(p.nodes['combat-step'].hidden, true);
   assert.deepEqual(acknowledgements, [1, 2]);
   assert.ok(p.nodes.choices.children.length > 0);
-  assert.equal(p.nodes['live-action'].children.length, 2);
   assert.equal(p.nodes['combat-line'].dataset.pending, 'false');
 });
 
