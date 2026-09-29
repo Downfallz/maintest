@@ -83,7 +83,16 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
             return Speed.Quick;
         }
 
-        return BestScore(actor, castable, creatures, Speed.Standard) > BestScore(actor, castable, creatures, Speed.Quick)
+        // A spell that cannot crit scores the same at either speed, since the speed changes nothing else a
+        // resolution reads. So Standard beats Quick exactly when one of the spells that can crit beats the best
+        // Quick score of them all, and only those spells need reading a second time.
+        var critical = castable.Where(spell => ResolutionRules.CriticalChanceOf(actor, resources.GetSpell(spell), Speed.Standard) > 0).ToList();
+        if (critical.Count == 0)
+        {
+            return Speed.Quick;
+        }
+
+        return BestScore(actor, critical, creatures, Speed.Standard) > BestScore(actor, castable, creatures, Speed.Quick)
             ? Speed.Standard
             : Speed.Quick;
     }

@@ -66,8 +66,17 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == action.Actor);
         var chance = ResolutionRules.CriticalChanceOf(actor, resources.GetSpell(action.Spell), speed);
-        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone, stillToAct);
         var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone, stillToAct);
+
+        // With no chance of a critical the mix below is the plain reading exactly -- nought times a finite
+        // reading adds nothing -- so the second resolution is skipped rather than weighed at zero. A Quick cast
+        // never crits, so this is most of the actions a turn scores.
+        if (chance == 0)
+        {
+            return plain;
+        }
+
+        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone, stillToAct);
         return (chance * critical) + ((1 - chance) * plain);
     }
 
