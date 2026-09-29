@@ -6,7 +6,8 @@
     "tier:brute:v1"
   ],
   "spells": [
-    "spell:protective_slam:v1"
+    "spell:protective_slam:v1",
+    "spell:extort:v1"
   ],
   "initiativeBonus": 1
 }

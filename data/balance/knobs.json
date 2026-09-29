@@ -250,6 +250,22 @@
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
+    "spell:extort": {
+      "name": "Extort",
+      "class": "Mercenary",
+      "intent": "The Mercenary takes its cut: a cheap hit that skims a point of energy off the target and pockets one. It slows an enemy's big spells without ever locking them, which is the whole design: the drain stays under the two a creature earns each round, so the target always climbs, and the price stays at or above what the caster pockets, so casting it every round banks nothing.",
+      "keep": [
+        "Never a lock: the drain stays below the energy a creature earns each round",
+        "Never a farm: the energy cost stays at or above the energy the caster gains",
+        "A hit first: the damage is what makes it worth the activation, the skim is the flavour"
+      ],
+      "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 0, "max": 1, "step": 1 }
+      ]
+    },
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",

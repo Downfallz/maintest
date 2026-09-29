@@ -157,7 +157,7 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   await expect(page.locator('.family-pick')).toHaveCount(3);
   await expect(page.locator('.hero-stats')).toContainText('21packages');
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
-  await expect(page.locator('.strategy-spell')).toHaveCount(38);
+  await expect(page.locator('.strategy-spell')).toHaveCount(39);
   await expect(page.locator('.strategy-spell .spell-value').first()).toContainText('a round');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Energy & effects', exact: true })).toBeVisible();
@@ -170,7 +170,7 @@ test('energy overview exposes gaps without a wide table and retains filters afte
   await page.locator('#spells-view').click();
   await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
   await expect(page).toHaveURL(/#strategy$/);
-  await expect(page.locator('.strategy-spell')).toHaveCount(38);
+  await expect(page.locator('.strategy-spell')).toHaveCount(39);
   await page.getByRole('button', { name: '1 energy', exact: true }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(5);
   await expect(page.getByRole('button', { name: 'Healing 0', exact: true })).toBeVisible();

@@ -1,0 +1,30 @@
+{
+  "id": "spell:extort:v1",
+  "name": "Extort",
+  "spellType": "Offensive",
+  "creatureClass": "Mercenary",
+  "energyCost": 2,
+  "criticalChance": 0.3,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 3
+    },
+    {
+      "kind": "EnergyDrain",
+      "amount": 1
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "EnergyGain",
+      "amount": 1
+    }
+  ]
+}
