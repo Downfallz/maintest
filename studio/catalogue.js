@@ -32,11 +32,38 @@ export function packagesTeaching(spell, catalogue) {
   return active(catalogue.tiers).filter(item => (item.document.spells ?? []).some(id => resolve(id, catalogue) === spell.id));
 }
 
+/**
+ * Where a spell comes from while browsing: every enabled package that teaches it, lowest tier first, and
+ * whether an enabled creature already starts with it. A spell can be both, and one with neither is content
+ * nobody can play.
+ */
+export function spellOrigins(spell, catalogue) {
+  const packages = packagesTeaching(spell, catalogue)
+    .map(pack => ({ id: pack.id, name: pack.name, level: pack.document.level }))
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+  const starting = active(catalogue?.creatures).some(creature =>
+    (creature.document?.startingSpellIds ?? []).some(id => resolve(id, catalogue) === spell.id));
+  return { packages, starting };
+}
+
+export function originText({ packages, starting }) {
+  const parts = packages.map(pack => `Tier ${pack.level} · ${pack.name}`);
+  if (starting) parts.push('Starting kit');
+  return parts.join(' / ') || 'Not taught by any package';
+}
+
+/** The tier filter: `All`, a level, or `Starting` for the kit a creature begins with. */
+export function spellInTier(item, tier, catalogue) {
+  if (tier === undefined || tier === 'All') return true;
+  const { packages, starting } = spellOrigins(item, catalogue);
+  return tier === 'Starting' ? starting : packages.some(pack => pack.level === Number(tier));
+}
+
 export function spellMatches(item, query, type, catalogue) {
   if (type !== 'All' && item.document?.spellType !== type) return false;
   const search = [item.name, item.id, item.document?.creatureClass,
     ...[...(item.document?.effects ?? []), ...(item.document?.casterEffects ?? [])].map(effect => effect.kind),
-    ...packagesTeaching(item, catalogue).map(pack => pack.name)].join(' ').toLowerCase();
+    ...packagesTeaching(item, catalogue).flatMap(pack => [pack.name, `tier ${pack.document.level}`])].join(' ').toLowerCase();
   return query.toLowerCase().trim().split(/\s+/).every(word => search.includes(word));
 }
 

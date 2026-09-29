@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { active, packageFamilies, packageParents, packagesTeaching, spellMatches, effectText, targetText } from './catalogue.js';
+import { active, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
 
 const pack = (id, level, prerequisites = [], spells = []) => ({ id, name: id, enabled: true, document: { level, prerequisites, spells } });
 const spell = { id: 'spark:v1', name: 'Spark', document: { spellType: 'Offensive', effects: [{ kind: 'Damage' }], casterEffects: [{ kind: 'Bleed' }] } };
@@ -44,4 +44,26 @@ test('target copy distinguishes self, single and bounded multiple targets', () =
   assert.equal(targetText({ origin: 'Self', scope: 'SingleTarget' }), 'Self');
   assert.equal(targetText({ origin: 'Enemy', scope: 'SingleTarget' }), '1 enemy');
   assert.equal(targetText({ origin: 'Ally', scope: 'Multi', maxTargets: 3 }), 'Up to 3 allies');
+});
+
+test('a spell names every package that teaches it, lowest tier first, and the starting kit it belongs to', () => {
+  const catalogue = {
+    aliases: { spark: 'spark:v1' },
+    tiers: [pack('Warlock', 3, [], ['spark']), pack('Occultist', 1, [], ['spark']), { ...pack('Gone', 1, [], ['spark']), enabled: false }],
+    creatures: [{ id: 'imp', enabled: true, document: { startingSpellIds: ['spark'] } }],
+  };
+  const origins = spellOrigins(spell, catalogue);
+  assert.deepEqual(origins.packages.map(p => [p.name, p.level]), [['Occultist', 1], ['Warlock', 3]]);
+  assert.equal(origins.starting, true);
+  assert.equal(originText(origins), 'Tier 1 · Occultist / Tier 3 · Warlock / Starting kit');
+  assert.equal(originText(spellOrigins(spell, { tiers: [] })), 'Not taught by any package');
+});
+
+test('the tier filter keeps a spell taught at that level or, for the kit, one a creature starts with', () => {
+  const catalogue = { tiers: [pack('Occultist', 2, [], ['spark:v1'])], creatures: [{ id: 'off', enabled: false, document: { startingSpellIds: ['spark:v1'] } }] };
+  assert.equal(spellInTier(spell, 'All', catalogue), true);
+  assert.equal(spellInTier(spell, '2', catalogue), true);
+  assert.equal(spellInTier(spell, '1', catalogue), false);
+  assert.equal(spellInTier(spell, 'Starting', catalogue), false);
+  assert.equal(spellMatches(spell, 'tier 2', 'All', catalogue), true);
 });
