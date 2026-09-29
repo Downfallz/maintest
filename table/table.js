@@ -361,13 +361,15 @@ function selectable(face, selected, onClick) {
 function rememberPosition() {
   return {
     focus: document.activeElement?.dataset?.focus,
-    scrolls: [...document.querySelectorAll('[data-scroll]')].map(node => [node.dataset.scroll, node.scrollLeft]),
+    scrolls: [...document.querySelectorAll('[data-scroll]')].map(node => [node.dataset.scroll, node.scrollLeft, node.scrollTop]),
   };
 }
 
 function restorePosition(saved) {
   for (const node of document.querySelectorAll('[data-scroll]')) {
-    node.scrollLeft = saved.scrolls.find(([key]) => key === node.dataset.scroll)?.[1] ?? 0;
+    const previous = saved.scrolls.find(([key]) => key === node.dataset.scroll);
+    node.scrollLeft = previous?.[1] ?? 0;
+    node.scrollTop = previous?.[2] ?? 0;
   }
   if (saved.focus) {
     [...document.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === saved.focus)?.focus({ preventScroll: true });
@@ -837,7 +839,21 @@ function line(state, creature, which, marks) {
     tags.append(one);
   }
 
-  box.append(who, health, stats, tags, dock(state, creature.conditions));
+  box.append(who, health, stats, tags);
+  if (which === 'enemy' && creature.acquiredTiers?.length) {
+    const packages = document.createElement('div');
+    packages.className = 'enemy-packages';
+    packages.setAttribute('aria-label', `Creature ${creature.id} packages`);
+    for (const tier of creature.acquiredTiers) {
+      const chip = document.createElement('span');
+      chip.className = 'enemy-package';
+      chip.style.setProperty('--class-color', classColour(tier, state.palette));
+      chip.textContent = state.packages.get(tier)?.name ?? tier;
+      packages.append(chip);
+    }
+    box.append(packages);
+  }
+  box.append(dock(state, creature.conditions));
   if (marks?.playbackStage === 'after') {
     const changes = document.createElement('div');
     changes.className = 'replay-changes';
@@ -1524,17 +1540,6 @@ function renderDecision(state, current) {
     stepHeading(state, current);
     return;
   }
-  // What resolved since this seat last decided, live (ADR 0083): the last few, so a bot's two slots in a row
-  // or the last slot of a round are read as well as the action just before this one.
-  const fresh = resolvedSince(view.roundEvents, state.liveSeen?.get(current.seat), view.board, state.cards).slice(-4);
-  element('live-action').replaceChildren(...fresh.map(action => {
-    const item = document.createElement('li');
-    item.textContent = lastResolvedText(action);
-    item.title = item.textContent;
-    return item;
-  }));
-  element('live-action').hidden = fresh.length === 0 || Boolean(state.step);
-
   if (view.over) {
     asking.textContent = 'The match is over.';
     choices.replaceChildren();
@@ -1577,7 +1582,6 @@ function stepHeading(state, current) {
   element('decision-turn').hidden = slot < 0;
   element('decision-state').textContent = 'Reading';
   element('asking').textContent = `${step.action.actor.label} · ${step.action.spell}`;
-  element('live-action').hidden = true;
   element('choices').replaceChildren();
   const next = isAsked(view) && !view.over && !view.playedByBot;
   const turn = activeTurn(view.board) ?? plannedTurn(view);
@@ -1660,6 +1664,29 @@ function evolutionBudget(state, view) {
   return box;
 }
 
+// Public ownership is read from the board. Collect both team picks before the phase changes so the notice
+// names the whole opportunity, even when the host serves each purchase as a separate asking.
+function unlockedPackages(state, seat, board) {
+  state.packagePrevious ??= new Map();
+  state.packagePending ??= new Map();
+  const previous = state.packagePrevious.get(seat);
+  const current = new Map([...(board.allies ?? []), ...(board.enemies ?? [])]
+    .map(creature => [creature.id, { side: (board.allies ?? []).includes(creature) ? 'yours' : 'opponent', tiers: creature.acquiredTiers ?? [] }]));
+  const pending = previous?.round === board.roundNumber ? state.packagePending.get(seat) ?? [] : [];
+  if (previous?.round === board.roundNumber) {
+    for (const [id, creature] of current) {
+      const old = previous.creatures.get(id)?.tiers ?? [];
+      for (const tier of creature.tiers) {
+        if (!old.includes(tier)) pending.push({ creature: id, side: creature.side, tier });
+      }
+    }
+  }
+  state.packagePrevious.set(seat, { round: board.roundNumber, phase: board.subPhase, creatures: current });
+  const automaticGain = board.subPhase === 'EnergyGain' && ['Evolution', 'EnergyGain'].includes(previous?.phase);
+  state.packagePending.set(seat, board.subPhase === 'Evolution' || automaticGain ? pending : []);
+  return ['Evolution', 'EnergyGain'].includes(previous?.phase) && !['Evolution', 'EnergyGain'].includes(board.subPhase) ? pending : [];
+}
+
 function renderPhaseGuide(state, view, seat) {
   const phases = [
     ['Upkeep', [], 'Round upkeep is automatic.'],
@@ -1686,19 +1713,24 @@ function renderPhaseGuide(state, view, seat) {
     : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${view.board.nextEvolutionRound > view.board.roundNumber ? ` Next evolution: round ${view.board.nextEvolutionRound}.` : ''}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   renderUpkeep(state, view, upkeep, seat);
+  const unlocked = unlockedPackages(state, seat, view.board);
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
   state.phaseSeen ??= new Map();
   const previous = state.phaseSeen.get(seat);
   renderAnnouncements(state, seat);
+  if (view.board.subPhase === 'EnergyGain') return;
   if (previous?.key === key) return;
   state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
   const newRound = previous?.round !== view.board.roundNumber;
   const begins = Boolean(previous) && newRound && !view.over;
   const label = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
-  const title = begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
-    : `Round ${view.board.roundNumber} · ${label}`;
+  const title = unlocked.length ? `Round ${view.board.roundNumber} · Packages unlocked`
+    : begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
+      : `Round ${view.board.roundNumber} · ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
-  const entry = { title, detail, upkeep: newRound && upkeep ? upkeepPreview(state, upkeep) : '', newRound: begins };
+  const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
+    : newRound && upkeep ? upkeepChanges(view.board, upkeep) : [];
+  const entry = { title, detail, changes, upkeep: newRound && upkeep ? upkeepPreview(state) : '', newRound: begins };
   state.announcements ??= new Map();
   state.announcements.set(seat, [...(state.announcements.get(seat) ?? []), entry].slice(-12));
   renderAnnouncements(state, seat);
@@ -1710,15 +1742,40 @@ function upkeepEnergy(state) {
   return Number.isInteger(amount) ? `+${amount} energy per creature alive at round start.` : 'Round energy applied by the host.';
 }
 
-function upkeepPreview(state, upkeep) {
-  const changes = upkeep.rows.filter(row => row.amount > 0).slice(0, 2)
-    .map(row => `Creature ${row.creature}: ${row.sign}${row.amount} ${row.unit}`);
-  return [upkeepEnergy(state), ...changes, 'Open Upkeep for details.'].join(' · ');
+function upkeepPreview(state) {
+  return `${upkeepEnergy(state)} Open Upkeep for details.`;
+}
+
+function activeConditions(board) {
+  return [...(board.allies ?? []), ...(board.enemies ?? [])].flatMap(creature => (creature.conditions ?? [])
+    .map(condition => ({ who: `Creature ${creature.id}`, text: chipText(condition), tone: 'active' }))
+    .filter(one => one.text));
+}
+
+function upkeepChanges(board, upkeep) {
+  const applied = new Map();
+  for (const row of upkeep.rows.filter(one => one.amount > 0)) {
+    const who = `Creature ${row.creature}`;
+    const parts = applied.get(who) ?? [];
+    parts.push(`${row.sign}${row.amount} ${row.unit} · ${row.label}`);
+    applied.set(who, parts);
+  }
+  const lasting = new Map();
+  for (const condition of activeConditions(board)) {
+    const parts = lasting.get(condition.who) ?? [];
+    parts.push(condition.text);
+    lasting.set(condition.who, parts);
+  }
+  return [
+    ...[...applied].map(([who, parts]) => ({ who, text: parts.join(' · '), tone: 'applied' })),
+    ...[...lasting].map(([who, parts]) => ({ who, text: `${parts.join(' · ')} · still active`, tone: 'active' })),
+  ];
 }
 
 function renderUpkeep(state, view, upkeep, seat) {
   const panel = element('upkeep');
   panel.hidden = !upkeep;
+  element('upkeep-conditions').hidden = !upkeep;
   const key = `${seat}/${view.board.roundNumber}`;
   if (state.upkeepShown !== key) panel.open = false;
   state.upkeepShown = key;
@@ -1744,6 +1801,17 @@ function renderUpkeep(state, view, upkeep, seat) {
     rows.push(empty);
   }
   element('upkeep-effects').replaceChildren(...rows);
+  const conditions = activeConditions(view.board);
+  const active = element('upkeep-conditions');
+  active.hidden = conditions.length === 0;
+  active.replaceChildren(...(conditions.length ? [
+    Object.assign(document.createElement('strong'), { textContent: 'Still active after upkeep' }),
+    ...conditions.map(one => {
+      const row = document.createElement('p');
+      row.textContent = `${one.who} · ${one.text}`;
+      return row;
+    }),
+  ] : []));
 }
 
 function hidePhaseNotice(state) {
@@ -1753,7 +1821,7 @@ function hidePhaseNotice(state) {
   element('phase-notice').hidden = true;
 }
 
-function showPhaseNotice(state, { title, detail, upkeep, newRound }, replay = false) {
+function showPhaseNotice(state, { title, detail, upkeep, changes = [], newRound }, replay = false) {
   hidePhaseNotice(state);
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
   if (state.quiet && !replay) return;
@@ -1768,6 +1836,18 @@ function showPhaseNotice(state, { title, detail, upkeep, newRound }, replay = fa
   element('phase-notice-pin').disabled = replay;
   element('phase-notice-title').textContent = title;
   element('phase-notice-detail').textContent = upkeep ? `${upkeep} ${detail}` : detail;
+  const list = element('phase-notice-changes');
+  list.hidden = changes.length === 0;
+  list.replaceChildren(...changes.map(change => {
+    const row = document.createElement('p');
+    row.dataset.tone = change.tone;
+    const who = document.createElement('strong');
+    who.textContent = change.who;
+    const value = document.createElement('span');
+    value.textContent = change.text;
+    row.append(who, value);
+    return row;
+  }));
   notice.hidden = false;
   if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
@@ -1918,6 +1998,7 @@ function evolutionButtons(state, current) {
   }
   const cards = document.createElement('div');
   cards.className = 'choice-cards';
+  cards.dataset.scroll = 'evolution-packages';
   for (const tier of selected?.availableTiers ?? []) {
     const choice = packageCard(state, tier, () => buyPackage(state, current, selected.creature, tier));
     choice.dataset.focus = `evolve-package-${selected.creature}-${tier}`;
@@ -2276,8 +2357,6 @@ async function submit(state, current, decision) {
     state.chosen = null;
     state.ordered = [];
     state.error = '';
-    state.liveSeen ??= new Map();
-    state.liveSeen.set(current.seat, latestResolution(current.view.roundEvents) ?? -1);
     state.stepSeen ??= new Map();
     state.stepSeen.set(current.seat, Math.max(state.stepSeen.get(current.seat) ?? -1, latestResolution(current.view.roundEvents) ?? -1));
   } catch {

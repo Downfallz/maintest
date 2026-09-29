@@ -296,8 +296,6 @@ body:has(#table) { overflow: auto; }
 #decision #asking { grid-column: 1; font-size: clamp(28px, 3vw, 40px); text-wrap: initial; margin: 0; align-self: center; }
 .decision-context { grid-column: 1; color: #c7d4c4; font-size: 14px; margin: 6px 0 8px; }
 .decision-context:empty { display: none; }
-.live-action { grid-column: 1; list-style: none; margin: 0 0 8px; padding: 6px 10px; border-left: 3px solid #e4c37a; border-radius: 6px; background: #1d2a21; color: #efe2c2; font-size: 13px; line-height: 1.4; }
-.live-action::before { content: 'Resolved since your last move'; display: block; color: #b9a877; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
 #choices { grid-column: 2; grid-row: 1 / span 3; align-content: center; }
 #decision .shortcuts, #decision .problem { grid-column: 1 / -1; margin-top: 5px; }
 #decision[data-kind="Speed"] #choices { grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -505,6 +503,16 @@ body:has(#table) { padding-bottom: 110px; }
 #phase-notice[data-kind="round"] { border-color: #e6c57d; background: linear-gradient(110deg, #343424fa, #182923fa); }
 #phase-notice[data-kind="round"] #phase-notice-title { font: 650 26px Georgia, serif; letter-spacing: .2px; }
 #phase-notice-detail { margin: 6px 0 0; font-size: 12px; line-height: 1.55; color: #d4dfd5; }
+.notice-changes { display: grid; gap: 5px; margin-top: 9px; }
+.notice-changes p { display: flex; justify-content: space-between; gap: 8px; margin: 0; padding: 7px 9px; border-left: 3px solid #9ac9a5; border-radius: 5px; background: #ffffff0a; font-size: 12px; }
+.notice-changes p[data-tone="opponent"], .notice-changes p[data-tone="harm"] { border-left-color: var(--enemy); }
+.notice-changes p[data-tone="energy"] { border-left-color: #e6be70; }
+.notice-changes p[data-tone="active"] { border-left-color: #a997d0; }
+.notice-changes strong { flex: 0 0 auto; white-space: nowrap; }
+.notice-changes span { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.enemy-packages { grid-column: 1 / -1; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.enemy-packages::before { content: 'Packages'; color: var(--muted); font-size: 10px; margin-right: 3px; }
+.enemy-package { padding: 4px 7px; border: 1px solid var(--class-color, var(--line)); border-radius: 5px; background: #ffffff0b; color: var(--class-color, var(--ink)); font-size: 11px; overflow-wrap: anywhere; }
 #phase-dock { grid-template-columns: auto 1fr auto; }
 #phase-reminder { grid-column: 1 / 3; }
 #upkeep { grid-column: 3; grid-row: 1 / 3; align-self: center; }
@@ -522,6 +530,9 @@ body:has(#upkeep[open]) .round-recap { visibility: hidden; }
 #upkeep-effects [data-tone="energy"] { border-color: #e6be70; color: #e6be70; }
 #upkeep-effects [data-tone="recovery"] { border-color: #96d3a1; color: #96d3a1; }
 #upkeep-effects [data-tone="harm"] { border-color: #efa199; color: #efa199; }
+.upkeep-conditions { border-top: 1px solid #526657; padding-top: 10px; font-size: 11px; color: #c8d4ca; }
+.upkeep-conditions > strong { display: block; margin-bottom: 5px; color: #e9d49b; }
+.upkeep-conditions p { margin: 5px 0; }
 .card .card-cost { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 10px; font-size: 17px; color: #684b1d; background: #e6d5ab; }
 .card-cost small { font: 650 8px ui-sans-serif, system-ui, sans-serif; text-transform: uppercase; letter-spacing: .4px; }
 .card-stats { display: grid; gap: 4px; margin-top: 9px; }
@@ -803,7 +814,6 @@ body:has(#table) { padding-bottom: 24px; }
   #decision .decision-heading { margin-bottom: 2px; }
   #decision #asking, #decision[data-kind="Speed"] #asking, #decision[data-kind="Target"] #asking { font-size: 22px; margin: 2px 0; }
   .decision-context { margin: 0 0 4px; }
-  .live-action { margin: 0 0 4px; padding: 4px 8px; font-size: 12px; }
   #decision .shortcuts { display: none; }
   .decision-guide { padding: 8px 10px; margin-block: 6px; font-size: 12px; }
   .decision-guide p { margin-block: 3px; line-height: 1.4; }
@@ -911,8 +921,7 @@ body:has(#table) { padding-bottom: 24px; }
 /* Nothing in the decision sheet may widen it: a grid track sized `1fr` grows to its widest unbreakable line, and a
    resolved action or a pick token is one long line on a phone. Every line wraps inside the sheet instead. */
 #decision > * { min-width: 0; }
-.live-action li, .pick-token, .pick-note, #decision-context { overflow-wrap: anywhere; }
-.live-action li + li { margin-top: 3px; }
+.pick-token, .pick-note, #decision-context { overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   #decision[data-kind="Evolution"] #choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #decision[data-kind="Evolution"] #choices > button { white-space: normal; }
@@ -963,3 +972,33 @@ body:has(#table) { padding-bottom: 24px; }
 
 /* The turn order is read, not worked in: a tap anywhere on it closes it. */
 #order-panel { cursor: pointer; }
+
+/* On a phone the question and its controls stay put. Only the offered packages or the spellbook move. */
+@media (max-width: 760px) {
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) {
+    display: flex; flex-direction: column; min-height: 0;
+    height: calc(100dvh - var(--phase-height, 140px) - 18px); overflow: hidden;
+  }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) .action-area { flex: none; position: static; }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { display: block; overflow: visible; max-height: none; padding: 0 0 8px; }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) .hand-section {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  }
+  .action-area:has(#decision[data-kind="Evolution"]) {
+    position: sticky; top: calc(var(--phase-height, 140px) + 8px);
+  }
+  #decision[data-kind="Evolution"] {
+    display: flex; flex-direction: column; gap: 5px;
+    max-height: calc(100dvh - var(--phase-height, 140px) - 18px); overflow: hidden;
+  }
+  #decision[data-kind="Evolution"] #choices {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    flex: 1; min-height: 0; overflow: hidden; align-content: stretch;
+  }
+  #decision[data-kind="Evolution"] .choice-cards {
+    grid-column: 1 / -1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    grid-auto-rows: minmax(66px, auto); align-content: start; scrollbar-width: thin;
+  }
+  #decision[data-kind="Evolution"] .package-card { min-height: 66px; }
+}

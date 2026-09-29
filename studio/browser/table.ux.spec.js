@@ -154,6 +154,93 @@ test('a phone lists the castable spells as compact rows, the chosen one with its
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
 });
 
+test('on a phone the speed and spell decisions remain visible while only their spellbook scrolls', async ({ page }, info) => {
+  test.skip(!isPhone(page));
+  for (const kind of ['Speed', 'Intent']) {
+    const current = kind === 'Speed' ? view : { ...view, waitingFor: 'Intent',
+      options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
+      board: { ...view.board, subPhase: 'IntentSelection' } };
+    await page.route('**/api/seat/player1**', route => route.fulfill({ json: current }));
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', kind);
+    await expect(page.locator(kind === 'Speed' ? '.speed-spell' : '#own-hand .held')).toHaveCount(cards.length);
+    const before = await page.locator('#decision').boundingBox();
+    const scroller = page.locator('#planning .hand-section');
+    expect(await scroller.evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
+    const overflows = await scroller.evaluate(node => node.scrollHeight > node.clientHeight);
+    await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
+    if (overflows) expect(await scroller.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+    const after = await page.locator('#decision').boundingBox();
+    expect(Math.abs(after.y - before.y)).toBeLessThan(2);
+    await expect(page.locator('#choices')).toBeInViewport();
+    await expectNoSidewaysScroll(page);
+    await page.screenshot({ path: info.outputPath(`${kind.toLowerCase()}-scroll.png`), animations: 'disabled' });
+  }
+});
+
+test('package budget stays above a separately scrolling choice list on a phone', async ({ page }, info) => {
+  test.skip(!isPhone(page));
+  const evolving = { ...view, waitingFor: 'Evolution', options: { evolution: { remainingPicks: 2,
+    creatures: [{ creature: 1, availableTiers: packages.map(item => item.id) }] } },
+    board: { ...view.board, subPhase: 'Evolution', evolutionChoices: [] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: evolving }));
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Evolution');
+  const budget = page.locator('#evolution-budget');
+  const before = await budget.boundingBox();
+  const scroller = page.locator('#decision .choice-cards');
+  expect(await scroller.evaluate(node => node.scrollHeight > node.clientHeight && getComputedStyle(node).overflowY === 'auto')).toBe(true);
+  await scroller.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  expect(await scroller.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  const heights = await scroller.locator('.package-card').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+  expect(Math.min(...heights)).toBeGreaterThan(48);
+  const after = await budget.boundingBox();
+  expect(Math.abs(after.y - before.y)).toBeLessThan(2);
+  await expect(budget).toBeInViewport();
+  await expectNoSidewaysScroll(page);
+  await page.screenshot({ path: info.outputPath('packages-scroll.png'), animations: 'disabled' });
+});
+
+test('battlefield names public opponent packages and upkeep popup separates ticks from lasting effects', async ({ page }, info) => {
+  const enemy = { ...view.board.enemies[0], acquiredTiers: [packages[0].id],
+    conditions: [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }] };
+  const applied = { ...view, board: { ...view.board, roundNumber: 4, enemies: [enemy] },
+    feed: [{ sequence: 5, event: { kind: 'OngoingEffectsApplied', roundId: 4,
+      regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }] };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: applied }));
+  await expect(page.locator('#upkeep')).toBeVisible();
+  await expect(page.locator('#phase-notice-changes')).toContainText('still active');
+  await expect(page.locator('#phase-notice-changes')).toContainText('+2 HP');
+  await page.locator('#upkeep-label').click();
+  await expect(page.locator('#upkeep-conditions')).toContainText('DefenseModifier -2');
+  if (!isLaptop(page)) await page.locator('#board-toggle').click();
+  await expect(page.locator('#enemies .enemy-packages')).toContainText('North');
+  await expectNoSidewaysScroll(page);
+  await page.screenshot({ path: info.outputPath('opponent-packages-upkeep.png'), animations: 'disabled' });
+});
+
+test('the phase popup recaps both teams packages after the unlock opportunity', async ({ page }, info) => {
+  test.skip(!isPhone(page));
+  let served = { ...view, waitingFor: 'Evolution', options: { evolution: { remainingPicks: 2,
+    creatures: [{ creature: 1, availableTiers: [packages[0].id] }] } },
+    board: { ...view.board, subPhase: 'Evolution', evolutionChoices: [] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: served }));
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Evolution');
+  served = structuredClone(served);
+  served.waitingAsked = 4;
+  served.options.evolution.remainingPicks = 1;
+  served.board.allies[0].acquiredTiers = [packages[0].id];
+  served.board.evolutionChoices = [{ creature: 1, tier: packages[0].id }];
+  await expect(page.locator('#evolution-budget')).toContainText('1 / 2 team picks remaining');
+  served = structuredClone(served);
+  served.board.enemies[0].acquiredTiers = [packages[7].id];
+  await expect(page.locator('#enemies .enemy-packages')).toContainText('East');
+  served = { ...served, waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 5,
+    options: view.options, board: { ...served.board, subPhase: 'Speed' } };
+  await expect(page.locator('#phase-notice-title')).toHaveText('Round 3 · Packages unlocked');
+  await expect(page.locator('#phase-notice-changes')).toContainText('Creature 1 · yours');
+  await expect(page.locator('#phase-notice-changes')).toContainText('Creature 2 · opponent');
+  await page.screenshot({ path: info.outputPath('packages-unlocked.png'), animations: 'disabled' });
+});
+
 test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {
   if (isLaptop(page)) {
     await expect(page.locator('#mini-board')).toBeHidden();
@@ -223,7 +310,7 @@ for (const kind of ['Speed', 'Evolution', 'Target']) {
     await page.screenshot({ path: info.outputPath(`opponent-action-${kind}.png`), animations: 'disabled' });
     await page.locator('#combat-step-controls button').first().click();
     await expect(page.locator('#combat-step')).toBeHidden();
-    await expect(page.locator('#live-action li')).toHaveCount(2);
+    await expect(page.locator('#live-action')).toHaveCount(0);
     await expect(page.locator('#choices')).not.toBeEmpty();
     await expectNoSidewaysScroll(page);
     await page.locator('#decision').scrollIntoViewIfNeeded();

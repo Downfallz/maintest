@@ -48,9 +48,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   round** OKs the rest of that round's opponent actions after a short pause each (and any still to come in
   it); the next round is read by hand again. **Skip all** reads past them at once; Enter or → is OK, Escape is
   Skip all. The seat's own actions are never held, and a reload only asks again for what resolved after the
-  seat's own latest action. Once read, the sheet lists every action resolved since this seat's last decision
-  (a bot's slots in a row, the last slot of a round), wrapped inside the sheet at every width, and the action
-  resolved last marks its caster and targets on the battlefield with what it changed. A
+  seat's own latest action. Once read, the round bar shows the last action and the recap keeps the completed
+  sequence. The action resolved last marks its caster and targets on the battlefield with what it changed. A
   completed round is not replayed on its own; the recap's Replay action by action button opens a review
   in the decision column. Previous and Next traverse actual public results (including criticals and
   fizzles); Skip returns to the latest round or match results. The actor and targets are highlighted on the battlefield. Each action starts
@@ -157,6 +156,13 @@ not recorded matches. Card text and creature names in the actual app come from t
   including zero/capped results, in engine order. These public events are retained separately from the short
   activity log. Escape closes the panel. A new round announces upkeep even when polling skipped that phase;
   missing events are never reconstructed from board deltas or guessed from conditions.
+- On phones, the evolution budget and creature picker remain in view while the offered packages scroll within
+  the decision. Speed options and the spell declaration remain in view while only the spellbook scrolls. The
+  battlefield shows each opponent creature's public acquired packages beside its conditions and confirmed
+  spell, with no inference from its known spells. After an observed evolution opportunity, one announcement
+  recaps both teams' newly acquired packages; an initial load does not invent a purchase. A round announcement
+  separates actual ongoing ticks from conditions still active on the current board, while Upkeep retains the
+  full tick list. The round bar and board already show resolved actions, so the duplicate decision box is gone.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
 - Each spell becomes public together with its confirmed targets, in timeline order (ADR 0070).
