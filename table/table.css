@@ -960,3 +960,6 @@ body:has(#table) { padding-bottom: 24px; }
   /* Recap, turn order, announcements and upkeep can all be up at once: a second line beats a wider bar. */
   .phase-tools { flex-wrap: wrap; }
 }
+
+/* The turn order is read, not worked in: a tap anywhere on it closes it. */
+#order-panel { cursor: pointer; }

@@ -11,11 +11,18 @@ export function playbackBoard(replay, board) {
     allies: creatures.filter(creature => allies.has(creature.id)),
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
-    activationCursor: replay.index,
+    // The slot the action was played from: a creature that fizzled unasked is still a slot, so the action's
+    // index among the round's resolutions is only a fallback.
+    activationCursor: slotOf(action, replay.index),
     // Only the slots up to this one had been turned over when it resolved (ADR 0083).
     revealedActions: replay.actions.slice(0, replay.index + 1).map(item => item.action).filter(Boolean),
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
   };
+}
+
+function slotOf(action, fallback) {
+  const slot = (action.frame.timeline ?? []).findIndex(one => one.creature === action.actor?.id);
+  return slot < 0 ? fallback : slot;
 }
 
 export function playbackChanges(action, creature) {

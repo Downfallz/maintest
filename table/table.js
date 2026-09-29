@@ -31,6 +31,10 @@ const FeedKept = 60;
 // enough that a round of bot slots is over in a few seconds.
 const StepPause = 1400;
 
+// How long the turn order stays open on its own after the reveal: long enough to read six slots, and then out of
+// the way of the question it covers.
+const OrderPause = 9000;
+
 // Which tables this browser muted the pop-ups of, by their seat tokens: a token lasts one match, so a mute does
 // too, and it survives a reload in the middle of it.
 const QuietKey = 'downfall.table.quiet';
@@ -462,6 +466,11 @@ function render(state, views) {
   else {
     renderPhaseGuide(state, view, current.seat);
     renderOrder(state, view, current.seat);
+    // Only while the round bar is on that action's combat: the last slot of a round is often read once the host
+    // has moved on to the next round or the result, and the bar must not mix the two.
+    if (state.step && state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation' && !view.over) {
+      element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
+    }
   }
   element('planning').hidden = Boolean(state.playback);
   element('playback').hidden = !state.playback;
@@ -591,7 +600,8 @@ function renderBoard(state, current, spellbook = current) {
     candidates: !replay && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
     canConfirm: canCastTargets(state, view),
-    turn: activeTurn(board)?.slot.creature ?? null,
+    // A replayed or stepped action outlines its caster as the one acting; the live cursor is somewhere else.
+    turn: replay ? null : activeTurn(board)?.slot.creature ?? null,
   };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
@@ -1251,8 +1261,9 @@ function renderCombatLine(state, view) {
 }
 
 // The speeds both sides chose and the order they make, from the round bar. Below a laptop it opens by itself once
-// a round, when the timeline first exists (speeds reveal together), unless the pop-ups are muted or an opponent
-// action is still being read: the battlefield's turn order says the same, but a tap further away on a phone.
+// a round, when the timeline first exists (speeds reveal together), and closes itself after a few seconds or on a
+// tap: it is read, not worked in. Muting the phase pop-ups does not silence it -- it is the one place a phone
+// shows the opponent's speeds without opening the battlefield.
 function renderOrder(state, view, seat) {
   const panel = element('order');
   const reveal = speedReveal(view.board);
@@ -1283,10 +1294,21 @@ function renderOrder(state, view, seat) {
   }));
   state.orderShown ??= new Map();
   const key = `${view.board.roundNumber}`;
-  if (state.orderShown.get(seat) === key || state.step) return;
+  // Not over an opponent action being read, nor over the tie order's own creature buttons: it waits for the
+  // next question instead.
+  if (state.orderShown.get(seat) === key || state.step || (isAsked(view) && view.waitingFor === 'TieOrder')) return;
   state.orderShown.set(seat, key);
   // A laptop has the turn order on screen beside the battlefield already; the pop-up would cover the desk.
-  if (!state.quiet && !(globalThis.innerWidth >= 1100)) panel.open = true;
+  if (globalThis.innerWidth >= 1100) return;
+  panel.open = true;
+  clearTimeout(state.orderTimer);
+  state.orderTimer = setTimeout(() => { element('order').open = false; }, OrderPause);
+}
+
+// Where the opponent action being read was played from, for the round bar.
+function stepTurnText(step, board) {
+  const slot = (board.timeline ?? []).findIndex(one => one.creature === step.action.actor.id);
+  return slot < 0 ? '' : `Turn ${slot + 1} of ${board.timeline.length} · Creature ${step.action.actor.id}`;
 }
 
 // What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire, and a
@@ -1498,6 +1520,10 @@ function renderDecision(state, current) {
   element('decision-turn').textContent = turn ? `${turn.planned ? 'Acts' : 'Turn'} ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
   element('decision-turn').hidden = !turn;
   renderStep(state, current);
+  if (state.step) {
+    stepHeading(state, current);
+    return;
+  }
   // What resolved since this seat last decided, live (ADR 0083): the last few, so a bot's two slots in a row
   // or the last slot of a round are read as well as the action just before this one.
   const fresh = resolvedSince(view.roundEvents, state.liveSeen?.get(current.seat), view.board, state.cards).slice(-4);
@@ -1532,15 +1558,32 @@ function renderDecision(state, current) {
     ? `${healthText(actor)} HP · ${actor.energy ?? 0} energy`
     : '';
   asking.textContent = titleOf(state, view);
-  if (state.step) {
-    element('decision-context').textContent = 'The opponent acted first. OK each action to reach your move.';
-    choices.replaceChildren();
-    return;
-  }
   const buttons = buttonsFor(state, current);
   const guidance = guidancePanel(document, view, state.chosen, state.picked);
   element('decision-guide').replaceChildren(guidance);
   choices.replaceChildren(...buttons);
+}
+
+// While an opponent action is read, the sheet's heading is that action's -- its turn, its caster, its spell --
+// and the seat's own question is named underneath as what comes next. A heading that kept the question's turn
+// would say "turn 6 of 6" over turns 3, 4 and 5.
+function stepHeading(state, current) {
+  const view = current.view;
+  const step = state.step;
+  const board = step.action.frame ? { timeline: step.action.frame.timeline } : view.board;
+  const slot = (board.timeline ?? []).findIndex(one => one.creature === step.action.actor.id);
+  element('decision-phase').textContent = "Opponent's turn";
+  element('decision-turn').textContent = slot < 0 ? '' : `Turn ${slot + 1} of ${board.timeline.length}`;
+  element('decision-turn').hidden = slot < 0;
+  element('decision-state').textContent = 'Reading';
+  element('asking').textContent = `${step.action.actor.label} · ${step.action.spell}`;
+  element('live-action').hidden = true;
+  element('choices').replaceChildren();
+  const next = isAsked(view) && !view.over && !view.playedByBot;
+  const turn = activeTurn(view.board) ?? plannedTurn(view);
+  element('decision-context').textContent = next
+    ? `Then your move: ${titleOf(state, view)}${turn ? ` (turn ${turn.position} of ${turn.total})` : ''}.`
+    : '';
 }
 
 function titleOf(state, view) {
@@ -1748,7 +1791,7 @@ function renderAnnouncements(state, seat) {
   element('announcements-label').textContent = `Announcements · ${history.length}${state.quiet ? ' · muted' : ''}`;
   const mute = document.createElement('li');
   mute.className = 'announcement-mute';
-  const toggle = button(state.quiet ? 'Pop-ups muted for this match · turn back on' : 'Mute pop-ups for this match', () => setQuiet(state, !state.quiet));
+  const toggle = button(state.quiet ? 'Phase pop-ups muted · turn back on' : 'Mute phase pop-ups for this match', () => setQuiet(state, !state.quiet));
   toggle.className = 'secondary';
   toggle.setAttribute('aria-pressed', String(Boolean(state.quiet)));
   mute.append(toggle);
@@ -1772,8 +1815,8 @@ function quietTables() {
   }
 }
 
-// Phase pop-ups and the turn order opening on its own, for the rest of this match. The history stays in the
-// round bar either way; only the interruption goes.
+// The phase pop-ups, for the rest of this match. The history stays under Announcements, whose first line turns
+// them back on; only the interruption goes.
 function setQuiet(state, quiet) {
   state.quiet = quiet;
   if (quiet) hidePhaseNotice(state);
@@ -1789,6 +1832,7 @@ function setQuiet(state, quiet) {
 
 function setupPhaseControls(state) {
   const notice = element('phase-notice');
+  element('order-panel').addEventListener('click', () => { element('order').open = false; });
   element('phase-notice-mute').addEventListener('click', () => {
     setQuiet(state, true);
     element('announcements-label').focus({ preventScroll: true });
@@ -1814,7 +1858,10 @@ function setupPhaseControls(state) {
   const panels = ['upkeep', 'recap', 'announcements', 'phase-progress', 'order'];
   for (const id of panels) {
     element(id).addEventListener('toggle', () => {
-      if (!element(id).open) return;
+      if (!element(id).open) {
+        if (id === 'order') clearTimeout(state.orderTimer);
+        return;
+      }
       hidePhaseNotice(state);
       for (const other of panels) if (other !== id) element(other).open = false;
     });
