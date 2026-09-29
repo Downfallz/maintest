@@ -792,6 +792,17 @@ test('newly acquired packages are summarized together after evolution and shown 
   assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
 });
 
+test('package recap waits through an automatic phase and appears with the next decision', () => {
+  const p = page(); p.draw();
+  p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution'; p.draw();
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
+  p.view.board.subPhase = 'EnergyGain'; p.view.waitingFor = null; p.draw();
+  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /First package/);
+});
+
 test('upkeep popup distinguishes applied ticks from conditions still active on the current board', () => {
   const p = page(); p.draw();
   p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';

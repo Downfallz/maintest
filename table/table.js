@@ -1666,7 +1666,7 @@ function evolutionBudget(state, view) {
 
 // Public ownership is read from the board. Collect both team picks before the phase changes so the notice
 // names the whole opportunity, even when the host serves each purchase as a separate asking.
-function unlockedPackages(state, seat, board) {
+function unlockedPackages(state, seat, board, phaseVisible) {
   state.packagePrevious ??= new Map();
   state.packagePending ??= new Map();
   const previous = state.packagePrevious.get(seat);
@@ -1681,10 +1681,12 @@ function unlockedPackages(state, seat, board) {
       }
     }
   }
-  state.packagePrevious.set(seat, { round: board.roundNumber, phase: board.subPhase, creatures: current });
-  const automaticGain = board.subPhase === 'EnergyGain' && ['Evolution', 'EnergyGain'].includes(previous?.phase);
-  state.packagePending.set(seat, board.subPhase === 'Evolution' || automaticGain ? pending : []);
-  return ['Evolution', 'EnergyGain'].includes(previous?.phase) && !['Evolution', 'EnergyGain'].includes(board.subPhase) ? pending : [];
+  const evolving = board.subPhase === 'Evolution';
+  const opportunity = evolving || (previous?.round === board.roundNumber && previous.opportunity);
+  const complete = opportunity && !evolving && phaseVisible;
+  state.packagePrevious.set(seat, { round: board.roundNumber, opportunity: opportunity && !complete, creatures: current });
+  state.packagePending.set(seat, opportunity && !complete ? pending : []);
+  return complete ? pending : [];
 }
 
 function renderPhaseGuide(state, view, seat) {
@@ -1713,12 +1715,12 @@ function renderPhaseGuide(state, view, seat) {
     : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${view.board.nextEvolutionRound > view.board.roundNumber ? ` Next evolution: round ${view.board.nextEvolutionRound}.` : ''}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   renderUpkeep(state, view, upkeep, seat);
-  const unlocked = unlockedPackages(state, seat, view.board);
+  const unlocked = unlockedPackages(state, seat, view.board, current >= 0 || view.over);
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
   state.phaseSeen ??= new Map();
   const previous = state.phaseSeen.get(seat);
   renderAnnouncements(state, seat);
-  if (view.board.subPhase === 'EnergyGain') return;
+  if (current < 0 && !view.over) return;
   if (previous?.key === key) return;
   state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
   const newRound = previous?.round !== view.board.roundNumber;
