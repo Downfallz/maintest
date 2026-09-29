@@ -356,3 +356,18 @@ test('revealed speeds open the turn order from the round bar, and the spell bein
   await page.locator('#announcement-list .announcement-mute button').click();
   await expect(page.locator('#announcements-label')).toContainText('muted');
 });
+
+test("the next creature's question opens its spellbook at the top, not where the last one was scrolled", async ({ page }) => {
+  test.skip(!isPhone(page), 'the spellbook scrolls on its own only on a phone');
+  const creature = id => ({ id, health: 30, maxHealth: 30, energy: 4, knownSpells: cards.map(card => card.id) });
+  const board = { ...view.board, allies: [view.board.allies[0], creature(5)] };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board } }));
+  const hand = page.locator('#hand-section');
+  await expect(page.locator('.speed-reference')).toHaveCount(2);
+  await page.locator('#hand-section .hand-row').nth(1).locator('> summary').click();
+  await hand.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  expect(await hand.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board, waitingCreature: 5, waitingAsked: 4 } }));
+  await expect(page.locator('#asking')).toContainText('Creature 5');
+  expect(await hand.evaluate(node => node.scrollTop)).toBe(0);
+});

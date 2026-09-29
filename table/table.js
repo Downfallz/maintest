@@ -397,6 +397,10 @@ function render(state, views) {
     state.inspectCreature = null;
     state.ordered = [];
     element('decision').scrollTop = 0;
+    // On a phone the spellbook and the desk scroll on their own: the next creature's speed or spell starts at the
+    // top of its list, not where the last creature's choice left it.
+    element('hand-section').scrollTop = 0;
+    element('planning').scrollTop = 0;
     if (['Speed', 'TieOrder', 'Intent', 'Target'].includes(view.waitingFor)) showTab(state, 'board');
   }
 
