@@ -4,6 +4,52 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-29. The tuner's exploit panel is measured under ADR 0083 to 0085: search-23 leaves, kill-first returns
+
+- **What changed.** The `exploit` evaluation of `data/balance/knobs.json` was `search-23`, `search-21`,
+  `pressure-floor`, `search-19` and `stun-first`. It is now `search-19`, `kill-first`, `search-21`,
+  `pressure-floor` and `stun-first`. The content does not move.
+- **The measurement.** Every weights file against Greedy on the benchmark seeds, the seeds the objective reads,
+  content `813bb91b`, `main` at `fc9ded9`. Agent A's score, average rounds and share at the round cap:
+
+  | set | score | rounds | at the cap |
+  | --- | --- | --- | --- |
+  | `search-19` | 1.000 | 10.08 | 0.000 |
+  | `kill-first` | 0.995 | 11.61 | 0.000 |
+  | `lookahead:lookahead-30` | 0.975 | 13.37 | 0.028 |
+  | `search-21` | 0.880 | 15.02 | 0.000 |
+  | `pressure-floor` | 0.733 | 12.64 | 0.020 |
+  | `stun-first` | 0.710 | 12.68 | 0.000 |
+  | `search-3` | 0.545 | 9.22 | 0.000 |
+  | `search-4` | 0.525 | 9.76 | 0.013 |
+  | `mixture-mean` | 0.497 | 9.69 | 0.015 |
+  | `search-2` | 0.485 | 9.52 | 0.003 |
+  | `mixture-worst` | 0.481 | 9.63 | 0.010 |
+  | `search-23` | 0.196 | 15.94 | 0.080 |
+
+- **What it says.** `search-23` now loses to Greedy and can never be the best exploiter, so it left.
+  `kill-first` is the second best and came back. The panel stays at five evaluations a candidate.
+  `lookahead-30` stays out: it wins less and more slowly than `search-19`, so it could not be the best
+  exploiter, and it costs about twice a heuristic. The best exploiter was `search-23` and is now `search-19`, at
+  10.08 rounds, just above the 10-round floor. The `exploit` term scores nothing either way. The objective
+  reads 12.844 on the benchmark seeds with either panel.
+- **Where the content stands.** Four targets are outside their range: `variety.player1WinShare` 0.615 (5.07),
+  `variety.tierUsageShare` 0.867 (3.64), `variety.spellUsageShare` 0.434 (3.40) and `variety.tierDamageSpread`
+  2.429 (0.74).
+- **The seat share is not a seat advantage.** The exploring mirror was replayed on three commits, content
+  `813bb91b`:
+
+  | commit | benchmark seeds (400 matches) | confirmation seeds (800 matches) |
+  | --- | --- | --- |
+  | `e342615`, before ADR 0083 | 0.505 | 0.507 |
+  | `536425f`, ADR 0083 | 0.540 | |
+  | `e9fe0d9`, ADR 0084 and 0085 | 0.615 | **0.492** |
+
+  On the benchmark seeds it climbs with ADR 0084 and 0085. On the 800 confirmation matches it does not move.
+  The two matches of a seed are nearly the same game with the seats swapped, so the 400 benchmark matches
+  count for much less than 400 independent readings. The largest term of the objective is noise on those
+  seeds, which is what a tuning pass's confirmation seeds are for (ADR 0074).
+
 ## 2026-09-28. Search 30 finds lookahead weights above search-19's, and they hold on 200 seeds they never saw
 
 - **What ran.** #230: `search-weights --kind lookahead` from `search-19`, against search-19, stun-first,
