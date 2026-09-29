@@ -197,6 +197,8 @@ test('package budget stays above a separately scrolling choice list on a phone',
   await expect(budget).toBeInViewport();
   await expectNoSidewaysScroll(page);
   await page.screenshot({ path: info.outputPath('packages-scroll.png'), animations: 'disabled' });
+  await page.locator('#hand-talents').click();
+  await expect(page.locator('#mat')).toBeVisible();
 });
 
 test('battlefield names public opponent packages and upkeep popup separates ticks from lasting effects', async ({ page }, info) => {

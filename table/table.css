@@ -984,9 +984,6 @@ body:has(#table) { padding-bottom: 24px; }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) .hand-section {
     flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
-  .action-area:has(#decision[data-kind="Evolution"]) {
-    position: sticky; top: calc(var(--phase-height, 140px) + 8px);
-  }
   #decision[data-kind="Evolution"] {
     display: flex; flex-direction: column; gap: 5px;
     max-height: calc(100dvh - var(--phase-height, 140px) - 18px); overflow: hidden;
