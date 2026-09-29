@@ -92,10 +92,17 @@ export function standing(spell, spells, levels, weights) {
   if (level === undefined) return { value, cast: castValue(spell.document, weights), attack, level: null, peers: 0 };
   const peers = spells.filter(other => levels.get(other.id) === level && isAttack(other.document) === attack)
     .map(other => roundValue(other.document, weights));
-  const low = Math.min(...peers), high = Math.max(...peers);
+  const low = Math.min(...peers);
+  const high = Math.max(...peers);
   return {
     value, cast: castValue(spell.document, weights), attack, level, peers: peers.length,
-    low, high, median: median(peers),
-    place: peers.length < 2 ? 'alone' : value <= low ? 'lowest' : value >= high ? 'highest' : 'within',
+    low, high, median: median(peers), place: placeIn(value, low, high, peers.length),
   };
+}
+
+function placeIn(value, low, high, count) {
+  if (count < 2) return 'alone';
+  if (value <= low) return 'lowest';
+  if (value >= high) return 'highest';
+  return 'within';
 }

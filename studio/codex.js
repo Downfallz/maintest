@@ -24,7 +24,17 @@ let weights = null;
 export function useWeights(values) { weights = values && typeof values === 'object' ? values : null; }
 
 const decimal = value => (Math.round(value * 10) / 10).toFixed(1);
-const tierGroup = read => `${read.level === 0 ? 'Starting kit' : `Tier ${read.level}`} ${read.attack ? 'attacks' : 'non-attacks'}`;
+function tierGroup(read) {
+  const tier = read.level === 0 ? 'Starting kit' : 'Tier ' + read.level;
+  return `${tier} ${read.attack ? 'attacks' : 'non-attacks'}`;
+}
+
+function valuePlace(read) {
+  if (read.level === null) return 'No package teaches it and no creature starts with it, so it has no tier to be compared in.';
+  if (read.peers < 2) return `It is the only one of the ${tierGroup(read)}, so there is nothing to compare it with.`;
+  const place = { lowest: 'the lowest of', highest: 'the highest of', within: 'inside' }[read.place];
+  return `${tierGroup(read)} today: ${decimal(read.low)} to ${decimal(read.high)}, median ${decimal(read.median)}. This one is ${place} that range.`;
+}
 
 function reading(item, catalogue) {
   return weights ? standing(item, active(catalogue.spells), spellLevels(catalogue), weights) : null;
@@ -44,12 +54,7 @@ function valueLine(item, catalogue) {
 function valueReading(item, catalogue) {
   const read = reading(item, catalogue);
   if (!read) return null;
-  const place = { lowest: 'the lowest of', highest: 'the highest of', within: 'inside', alone: 'the only spell in' }[read.place];
-  const where = read.level === null
-    ? 'No package teaches it and no creature starts with it, so it has no tier to be compared in.'
-    : read.peers < 2
-      ? `It is the only one of the ${tierGroup(read)}, so there is nothing to compare it with.`
-      : `${tierGroup(read)} today: ${decimal(read.low)} to ${decimal(read.high)}, median ${decimal(read.median)}. This one is ${place} that range.`;
+  const where = valuePlace(read);
   const box = append(h('details', 'value-reading'),
     h('summary', '', `Value ${decimal(read.value)} a round · ${decimal(read.cast)} a cast`),
     h('p', '', where),
