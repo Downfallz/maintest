@@ -1,0 +1,26 @@
+{
+  "id": "spell:reckless_swing:v1",
+  "name": "Reckless Swing",
+  "spellType": "Offensive",
+  "creatureClass": "Berserker",
+  "energyCost": 2,
+  "criticalChance": 0.5,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 5
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Damage",
+      "amount": 2
+    }
+  ]
+}

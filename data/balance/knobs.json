@@ -378,6 +378,21 @@
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
       ]
     },
+    "spell:reckless_swing": {
+      "name": "Reckless Swing",
+      "class": "Berserker",
+      "intent": "The Berserker's every-round swing: cheap enough to throw each round on the income alone, and paid for in the Berserker's own blood. Enraged Charge is the big hit two rounds in three; this is what the rage does in between, and the self-inflicted wound is the rage -- the line that ends in Psycho Rush fights by giving something up.",
+      "keep": [
+        "Always hurts its caster: the recklessness is the spell",
+        "Cheaper than Enraged Charge and lighter than it, so the Charge stays the finisher"
+      ],
+      "note": "Authored at 5.5 a round in the check-knobs reading, the caster's damage priced as a cost. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 4, "max": 6, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
     "spell:enraged_charge": {
       "name": "Enraged Charge",
       "class": "Berserker",
