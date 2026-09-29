@@ -40,8 +40,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   It remains available throughout the next round and after the match ends. Escape closes it.
 - Each action resolves as its targets are confirmed (ADR 0083) and is shown live. The round bar carries one
   line of play-by-play: the action resolved last, the player's own included, or the opponent action being read.
-  The opponent's actions are read one at a time before this seat's next question: the decision sheet shows
-  each one (caster, targets, outcomes) with the battlefield as it stood right after it, and **OK** moves on;
+  The opponent's actions are read one at a time before this seat's next question: the decision sheet is headed
+  by that action (`Opponent's turn`, its own turn number, its caster and spell) with the seat's question named
+  underneath as what comes next, shows the action (caster, targets, outcomes) with the battlefield as it stood
+  right after it, and **OK** moves on;
   the question, its controls and its acknowledgement to the host wait until the last one is read. **Auto this
   round** OKs the rest of that round's opponent actions after a short pause each (and any still to come in
   it); the next round is read by hand again. **Skip all** reads past them at once; Enter or → is OK, Escape is
@@ -95,9 +97,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   supplies the next evolution round, displayed in the phase guide between opportunities.
 - Once speeds are revealed the round bar gains **Turn order**: each side's speeds (the opponent's first) and
   every slot in play order with its initiative and any d20 roll, read off the host's timeline. Below laptop
-  width it opens by itself once a round, when the timeline first exists; a laptop shows the same order beside
-  the battlefield, so there it opens on request. While a spell is chosen, the decision heading and the
-  spellbook rows say where each creature acts (`Acts 2 of 6 · Quick`), since the order is set before intents.
+  width it opens by itself once a round, when the timeline first exists (after a tie order question rather than
+  over its buttons), and closes itself after nine seconds or on a tap anywhere on it; a laptop shows the same
+  order beside the battlefield, so there it opens on request. Muting the phase pop-ups does not silence it.
+  While a spell is chosen, the decision heading and the spellbook rows say where each creature acts (`Acts 2 of 6 · Quick`), since the order is set before intents.
 - Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
   Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
   throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
@@ -145,10 +148,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
   announcement; it does not change the current phase, question or selection. The top bar remains current.
-  **Mute pop-ups** (on the notice, or at the top of Announcements) stops phase notices and the turn order
-  opening by itself for the rest of the match; changes are still listed under Announcements and earlier ones
-  still open from there. The mute is kept per match (by its seat tokens) across a reload, and the same control
-  turns it back on.
+  **Mute phase pop-ups** (on the notice, or at the top of Announcements) stops the phase explanations for the
+  rest of the match; changes are still listed under Announcements and earlier ones still open from there. While
+  muted, the same toggle at the top of Announcements turns them back on. The mute is kept per match (by its
+  seat tokens) across a reload.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
   including zero/capped results, in engine order. These public events are retained separately from the short

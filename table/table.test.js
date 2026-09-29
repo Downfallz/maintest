@@ -1360,7 +1360,7 @@ test('muted pop-ups stay listed, hold for the rest of the match across a reload,
   assert.equal(p.nodes['phase-notice'].hidden, false);
 });
 
-test('revealed speeds open the turn order once a round, opponent first, unless the pop-ups are muted', () => {
+test('revealed speeds open the turn order once a round, opponent first, even with the phase pop-ups muted', () => {
   const p = page(); p.view.board.slot = 'Player1';
   p.view.board.timeline = [{ creature: 2, owner: 'Player2', speed: 'Quick', initiative: 9 }, { creature: 1, owner: 'Player1', speed: 'Standard', initiative: 7 }];
   p.draw();
@@ -1374,8 +1374,7 @@ test('revealed speeds open the turn order once a round, opponent first, unless t
   p.view.board.roundNumber = 2; p.draw();
   assert.equal(p.nodes.order.open, true);
   p.nodes.order.open = false; p.state.quiet = true; p.view.board.roundNumber = 3; p.draw();
-  assert.equal(p.nodes.order.open, false);
-  assert.equal(p.nodes.order.hidden, false);
+  assert.equal(p.nodes.order.open, true, 'the mute is for phase explanations only');
   p.view.board.timeline = []; p.draw();
   assert.equal(p.nodes.order.hidden, true);
 });
@@ -1403,4 +1402,36 @@ test('stopping auto cancels the pause already running, and auto never carries ov
   assert.equal(p.nodes['combat-step'].hidden, false);
   assert.equal(p.state.stepTimerFor, null, "the other seat's actions wait for its own OK");
   assert.doesNotMatch(p.nodes['combat-step-count'].textContent, /auto/);
+});
+
+test('the turn order closes itself, closes on a tap, and waits out a tie order question', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.view.board.slot = 'Player1';
+  p.view.board.timeline = [{ creature: 2, owner: 'Player2', speed: 'Quick', initiative: 9 }, { creature: 1, owner: 'Player1', speed: 'Quick', initiative: 9 }];
+  p.view.waitingFor = 'TieOrder'; p.view.options = { tieOrder: { ties: [[1]] } }; p.draw();
+  assert.notEqual(p.nodes.order.open, true, 'the tie order buttons stay free');
+  p.view.waitingFor = 'Intent'; p.view.waitingAsked++; p.view.options = { intent: { creatures: [{ creature: 1, castableSpells: ['one'] }] } }; p.draw();
+  assert.equal(p.nodes.order.open, true);
+  assert.equal(p.delays.get(p.state.orderTimer), 9000);
+  p.timers.get(p.state.orderTimer)();
+  assert.equal(p.nodes.order.open, false);
+  p.nodes.order.open = true;
+  p.nodes['order-panel'].click();
+  assert.equal(p.nodes.order.open, false);
+});
+
+test("an opponent action being read heads the sheet with its own turn, and names the seat's move as next", () => {
+  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
+  p.view.board.timeline = [4, 5, 2, 3, 6, 1].map(creature => ({ creature, speed: 'Standard' }));
+  p.view.board.activationCursor = 5;
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
+  p.draw();
+  p.view.waitingAsked = 2; p.view.roundEvents = [opponentAction(30, 4)]; p.draw();
+  assert.equal(p.nodes['decision-phase'].textContent, "Opponent's turn");
+  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 3 of 6');
+  assert.equal(p.nodes.asking.textContent, 'Creature 2 · Second card');
+  assert.equal(p.nodes['decision-context'].textContent, 'Then your move: Creature 1 · First card (turn 6 of 6).');
+  assert.equal(p.nodes['phase-turn'].textContent, 'Turn 3 of 6 · Creature 2');
+  stepOk(p);
+  assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
+  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 6 of 6 · Standard');
 });
