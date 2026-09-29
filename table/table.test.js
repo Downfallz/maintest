@@ -803,6 +803,37 @@ test('package recap waits through an automatic phase and appears with the next d
   assert.match(p.nodes['phase-notice-changes'].textContent, /First package/);
 });
 
+test("in hotseat, each seat's package recap names purchases made before the device was handed over", () => {
+  const p = page(); p.draw();
+  p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } };
+  p.draw();
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
+  p.current.seat = 'player2'; p.view.waitingAsked++; p.draw();
+  p.state.holder = 'player2'; p.draw();
+  p.view.board.enemies[0].acquiredTiers = ['tier:two:v1']; p.draw();
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.view.waitingAsked++; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2, 'the purchase made before the handover is included');
+  p.current.seat = 'player1'; p.view.waitingAsked++; p.draw();
+  p.state.holder = 'player1'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
+});
+
+test("switching the creature to evolve starts its package list at the top, and a redraw keeps a creature's own scroll", () => {
+  const p = page();
+  p.view.waitingFor = 'Evolution'; p.view.board.subPhase = 'Evolution';
+  p.view.board.allies.push({ id: 3, health: 20, maxHealth: 20, energy: 2 });
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } };
+  p.draw();
+  const list = () => p.nodes.choices.children.find(child => child.className === 'choice-cards');
+  list().scrollTop = 140; p.state.rendered = null; p.draw();
+  assert.equal(list().scrollTop, 140);
+  p.nodes.choices.children[0].children[1].click();
+  assert.equal(list().scrollTop, 0);
+});
+
 test('upkeep popup distinguishes applied ticks from conditions still active on the current board', () => {
   const p = page(); p.draw();
   p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';

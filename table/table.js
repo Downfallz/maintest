@@ -1665,28 +1665,26 @@ function evolutionBudget(state, view) {
 }
 
 // Public ownership is read from the board. Collect both team picks before the phase changes so the notice
-// names the whole opportunity, even when the host serves each purchase as a separate asking.
+// names the whole opportunity, even when the host serves each purchase as a separate asking. Creature ids are the
+// match's, not a seat's, so one record serves both seats of a hotseat page: a purchase seen through either seat
+// is in the recap each seat gets once the opportunity is over, whoever held the device when it was bought.
 function unlockedPackages(state, seat, board, phaseVisible) {
-  state.packagePrevious ??= new Map();
-  state.packagePending ??= new Map();
-  const previous = state.packagePrevious.get(seat);
-  const current = new Map([...(board.allies ?? []), ...(board.enemies ?? [])]
-    .map(creature => [creature.id, { side: (board.allies ?? []).includes(creature) ? 'yours' : 'opponent', tiers: creature.acquiredTiers ?? [] }]));
-  const pending = previous?.round === board.roundNumber ? state.packagePending.get(seat) ?? [] : [];
-  if (previous?.round === board.roundNumber) {
-    for (const [id, creature] of current) {
-      const old = previous.creatures.get(id)?.tiers ?? [];
-      for (const tier of creature.tiers) {
-        if (!old.includes(tier)) pending.push({ creature: id, side: creature.side, tier });
-      }
-    }
+  if (state.packageRound?.round !== board.roundNumber) {
+    state.packageRound = { round: board.roundNumber, tiers: new Map(), unlocked: [], opportunity: false, recapped: new Set() };
+  }
+  const record = state.packageRound;
+  for (const creature of [...(board.allies ?? []), ...(board.enemies ?? [])]) {
+    const tiers = creature.acquiredTiers ?? [];
+    const seen = record.tiers.get(creature.id);
+    for (const tier of seen ? tiers.filter(one => !seen.includes(one)) : []) record.unlocked.push({ creature: creature.id, tier });
+    record.tiers.set(creature.id, [...tiers]);
   }
   const evolving = board.subPhase === 'Evolution';
-  const opportunity = evolving || (previous?.round === board.roundNumber && previous.opportunity);
-  const complete = opportunity && !evolving && phaseVisible;
-  state.packagePrevious.set(seat, { round: board.roundNumber, opportunity: opportunity && !complete, creatures: current });
-  state.packagePending.set(seat, opportunity && !complete ? pending : []);
-  return complete ? pending : [];
+  record.opportunity ||= evolving;
+  if (!record.opportunity || evolving || !phaseVisible || record.recapped.has(seat)) return [];
+  record.recapped.add(seat);
+  const allies = new Set((board.allies ?? []).map(creature => creature.id));
+  return record.unlocked.map(one => ({ ...one, side: allies.has(one.creature) ? 'yours' : 'opponent' }));
 }
 
 function renderPhaseGuide(state, view, seat) {
@@ -2000,7 +1998,8 @@ function evolutionButtons(state, current) {
   }
   const cards = document.createElement('div');
   cards.className = 'choice-cards';
-  cards.dataset.scroll = 'evolution-packages';
+  // Per creature: another creature's offers start at their top, not at the offset the last one was left at.
+  cards.dataset.scroll = `evolution-packages-${selected?.creature}`;
   for (const tier of selected?.availableTiers ?? []) {
     const choice = packageCard(state, tier, () => buyPackage(state, current, selected.creature, tier));
     choice.dataset.focus = `evolve-package-${selected.creature}-${tier}`;
