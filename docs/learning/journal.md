@@ -4,11 +4,11 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-29. The tuner's exploit panel is measured under ADR 0083 to 0085: search-23 leaves, kill-first returns
+## 2026-09-29. The tuner's exploit panel is measured under ADR 0083 to 0085: search-23 leaves, kill-first and lookahead-30 join
 
 - **What changed.** The `exploit` evaluation of `data/balance/knobs.json` was `search-23`, `search-21`,
-  `pressure-floor`, `search-19` and `stun-first`. It is now `search-19`, `kill-first`, `search-21`,
-  `pressure-floor` and `stun-first`. The content does not move.
+  `pressure-floor`, `search-19` and `stun-first`. It is now `search-19`, `kill-first`,
+  `lookahead:lookahead-30`, `search-21` and `pressure-floor`. The content does not move.
 - **The measurement.** Every weights file against Greedy on the benchmark seeds, the seeds the objective reads,
   content `813bb91b`, `main` at `fc9ded9`. Agent A's score, average rounds and share at the round cap:
 
@@ -28,11 +28,12 @@ first.
   | `search-23` | 0.196 | 15.94 | 0.080 |
 
 - **What it says.** `search-23` now loses to Greedy and can never be the best exploiter, so it left.
-  `kill-first` is the second best and came back. The panel stays at five evaluations a candidate.
-  `lookahead-30` stays out: it wins less and more slowly than `search-19`, so it could not be the best
-  exploiter, and it costs about twice a heuristic. The best exploiter was `search-23` and is now `search-19`, at
+  `kill-first` is the second best and came back. `lookahead-30` is the newest search and joined: it is not the best exploiter today, but the panel keeps the
+  newest search in because a moved catalogue can blind the sets that lead now (ADR 0052). `stun-first` left as
+  the weakest set that still beats Greedy, so a candidate still costs five `exploit` evaluations, as when
+  `kill-first` left on 2026-09-24. The best exploiter was `search-23` and is now `search-19`, at
   10.08 rounds, just above the 10-round floor. The `exploit` term scores nothing either way. The objective
-  reads 12.844 on the benchmark seeds with either panel.
+  reads 12.844 on the benchmark seeds with the old panel and with the new one.
 - **Where the content stands.** Four targets are outside their range: `variety.player1WinShare` 0.615 (5.07),
   `variety.tierUsageShare` 0.867 (3.64), `variety.spellUsageShare` 0.434 (3.40) and `variety.tierDamageSpread`
   2.429 (0.74).
