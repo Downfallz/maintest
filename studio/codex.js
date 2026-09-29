@@ -1,5 +1,5 @@
 import { EFFECT_GROUPS, energyCost, strategyOverview, compactEffect } from './strategy.js';
-import { active, named, packageFamilies, packageParents, packagesTeaching, spellMatches, effectText, targetText } from './catalogue.js';
+import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
 
 const h = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -16,6 +16,14 @@ const label = text => h('p', 'eyebrow', text);
 const title = (kicker, heading, description) => append(h('div', 'codex-heading'), label(kicker), h('h2', '', heading), h('p', 'codex-copy', description));
 const stat = (value, name) => append(h('div', 'codex-stat'), h('strong', '', value), h('span', '', name));
 const message = text => h('p', 'codex-empty', text);
+
+// The tier and the package a spell is bought in, on every card that lists it: browsing spells is how a player
+// plans the next pick, and the pick is a package, not a spell.
+function origin(item, catalogue) {
+  const node = h('span', 'spell-origin', originText(spellOrigins(item, catalogue)));
+  node.setAttribute('aria-label', `Learned from: ${node.textContent}`);
+  return node;
+}
 
 function rune(index) {
   const node = h('span', `rune rune-${index % 3}`);
@@ -37,7 +45,7 @@ function spellTile(item, catalogue, open) {
   const summary = [...(doc.effects ?? []).map(effectText), ...(doc.casterEffects ?? []).map(effect => `Caster: ${effectText(effect)}`)].join(' · ');
   return append(tile,
     append(h('span', 'spell-tile-top'), rune(family?.tone ?? 0), h('span', 'energy-cost', `${doc.energyCost ?? 0} energy`)),
-    h('strong', 'spell-name', item.name), h('span', 'spell-summary', summary),
+    h('strong', 'spell-name', item.name), origin(item, catalogue), h('span', 'spell-summary', summary),
     h('span', 'spell-meta', `${doc.spellType} · ${targetText(doc.targeting)}`));
 }
 
@@ -109,16 +117,23 @@ export function spellLibrary(catalogue, ui, open, navigate) {
   const results = h('div', 'spell-grid');
   const count = h('p', 'result-count'); count.setAttribute('aria-live', 'polite');
   const filters = h('div', 'spell-filters'); filters.setAttribute('aria-label', 'Spell type');
+  const tiers = h('div', 'spell-filters'); tiers.setAttribute('aria-label', 'Tier');
   const draw = () => {
-    const matches = active(catalogue.spells).filter(item => spellMatches(item, ui.query ?? '', ui.type ?? 'All', catalogue));
+    const matches = active(catalogue.spells).filter(item => spellMatches(item, ui.query ?? '', ui.type ?? 'All', catalogue) && spellInTier(item, ui.tier ?? 'All', catalogue));
     count.textContent = `${matches.length} spells`;
     results.replaceChildren(...matches.map(item => spellTile(item, catalogue, open)));
     if (!matches.length) results.append(message('No spells match. Try another name or clear the filters.'));
     for (const pick of filters.children) pick.setAttribute('aria-pressed', String(pick.textContent === (ui.type ?? 'All')));
+    for (const pick of tiers.children) pick.setAttribute('aria-pressed', String(pick.dataset.tier === (ui.tier ?? 'All')));
   };
   for (const type of ['All', 'Offensive', 'Defensive', 'Passive']) filters.append(button(type, 'filter-pill', () => { ui.type = type; draw(); }));
+  const levels = [...new Set(active(catalogue.tiers).map(item => item.document.level))].sort((a, b) => a - b);
+  for (const [tier, name] of [['All', 'Any tier'], ...levels.map(level => [String(level), `Tier ${level}`]), ['Starting', 'Starting kit']]) {
+    const pick = button(name, 'filter-pill', () => { ui.tier = tier; draw(); });
+    pick.dataset.tier = tier; tiers.append(pick);
+  }
   search.addEventListener('input', () => { ui.query = search.value; draw(); });
-  view.append(append(controls, search, filters), count, results); draw(); return view;
+  view.append(append(controls, search, filters, tiers), count, results); draw(); return view;
 }
 
 export function reader(item, catalogue, open, edit, back) {
@@ -154,6 +169,7 @@ function packageReading(view, item, catalogue, open) {
 function spellReading(view, item, catalogue, open) {
   const doc = item.document;
   view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(`${Number(((doc.criticalChance ?? 0) * 100).toFixed(2))}%`, 'critical bonus')));
+  view.append(origin(item, catalogue));
   view.append(title(doc.spellType ?? 'SPELL', 'What it does', 'Authored effect values; actual results depend on the combat situation.'));
   for (const effect of doc.effects ?? []) view.append(effectRow(effect));
   if (doc.casterEffects?.length) {
@@ -315,7 +331,7 @@ function strategySpell(item, catalogue, open) {
   const heading = append(h('span', 'strategy-spell-heading'), h('strong', '', item.name), h('span', 'energy-cost', costLabel(energyCost(item))));
   const main = (doc.effects ?? []).map(compactEffect).join(' · ') || 'No target effects';
   const caster = (doc.casterEffects ?? []).map(compactEffect).join(' · ');
-  append(summary, heading, h('span', 'strategy-spell-facts', `${targetText(doc.targeting)}: ${main}`));
+  append(summary, heading, origin(item, catalogue), h('span', 'strategy-spell-facts', `${targetText(doc.targeting)}: ${main}`));
   if (caster) summary.append(h('span', 'strategy-caster', `Caster: ${caster}`));
   const detail = h('div', 'strategy-spell-detail');
   detail.append(h('p', 'strategy-note', 'Authored values per target; actual results depend on the board.'));

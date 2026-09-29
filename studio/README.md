@@ -57,7 +57,10 @@ a stored token is what separates a page that can save from one that can only rea
 
 The page opens on **Explore**: the current package families and their tiers, derived from authored prerequisites,
 with every prerequisite and included spell one tap away. Class trees remain authoring content and do not
-supply the progression display. **Spells** offers search by name, effect and package, plus type filters.
+supply the progression display. **Spells** offers search by name, effect, package and tier, plus type and tier
+filters (*Any tier*, each authored level, *Starting kit*). Every spell card, compact row and reader names where the
+spell is learned: each enabled package that teaches it with its tier, lowest first (`Tier 2 · Berserker`), and
+*Starting kit* when an enabled creature begins with it. A spell with neither says it is not taught by any package.
 
 Inside **Spells**, **Energy & effects** (`#strategy`) compares costs and affected stats in a compact mobile
 view. Tap a cost, then an effect to see the matching spells; zero counts expose gaps. **Compare packages**

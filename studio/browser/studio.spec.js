@@ -73,6 +73,26 @@ test('search stays usable while filtering and remembers its query after reading'
   await fit(page); await shot(page, info, 'spells');
 });
 
+test('browsing spells shows the tier and package each one is learned from, and filters by tier', async ({ page }, info) => {
+  await page.locator('#spells-view').click();
+  const search = page.getByRole('searchbox', { name: 'Search spells', exact: true });
+  await search.fill('pummel');
+  await expect(page.locator('.spell-tile .spell-origin')).toHaveText(/Tier \d · \w+|Starting kit/);
+  await search.fill('');
+  const tiers = page.getByRole('group', { name: 'Tier' }).or(page.locator('[aria-label="Tier"]'));
+  await tiers.getByRole('button', { name: 'Tier 2', exact: true }).click();
+  const origins = await page.locator('.spell-tile .spell-origin').allTextContents();
+  expect(origins.length).toBeGreaterThan(0);
+  for (const text of origins) expect(text).toContain('Tier 2 · ');
+  const controls = await page.locator('.library-controls').boundingBox();
+  if (page.viewportSize().width < 600) expect(controls.height).toBeLessThan(200);
+  await page.locator('.spell-tile').first().scrollIntoViewIfNeeded();
+  await fit(page); await shot(page, info, 'spells-by-tier');
+  await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
+  await expect(page.locator('.strategy-spell .spell-origin').first()).toBeVisible();
+  await fit(page);
+});
+
 test('editing is explicit and cancelling a navigation preserves the draft', async ({ page }, info) => {
   await page.locator('.package-tile').first().click();
   await expect(page.locator('#detail input')).toHaveCount(0);
