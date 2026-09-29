@@ -1641,3 +1641,33 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
     hit = {"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}
 
     assert cast_value(hit, WEIGHTS | {"damage": 0.0}) == pytest.approx(0.0)
+
+
+# The content studio prints the same reading on every spell card (studio/value.js), and
+# `studio/value.test.js` pins these very numbers on the JavaScript side. Changing the formula here fails this
+# test, which is the cue to change value.js and its test with it, rather than let the page show a different
+# number from check-knobs.
+@pytest.mark.parametrize(
+    ("name", "cast", "per_round"),
+    [
+        ("protective_slam", 13.53, 9.02),
+        ("full_plate", 5.85, 5.85),
+        ("noxious_cure", 8.39, 8.39),
+        ("summon_minions", 12.4, 8.27),
+        ("meteor", 8.1, 5.4),
+        ("pummel", 3.53, 3.53),
+        ("restorative_burst", 3.8, 2.53),
+    ],
+)
+def test_the_studio_value_reading_matches_cast_value_on_the_authored_content(
+    name: str, cast: float, per_round: float
+) -> None:
+    document = next(
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in (REPO_ROOT / "data" / "Spells").rglob("*.json")
+        if json.loads(path.read_text(encoding="utf-8")).get("id") == f"spell:{name}:v1"
+    )
+    weights = load_weights()
+    value = cast_value(document, weights)
+    rounds = max(1.0, int(document["energyCost"]) / 2)
+    assert (round(value, 2), round(value / rounds, 2)) == (cast, per_round)

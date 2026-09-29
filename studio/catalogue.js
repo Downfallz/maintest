@@ -52,6 +52,20 @@ export function originText({ packages, starting }) {
   return parts.join(' / ') || 'Not taught by any package';
 }
 
+/**
+ * The tier a spell is read in: its shallowest package, 0 when a creature starts with it. A spell with neither has
+ * no tier and is left out, the same grouping `check-knobs` reads (ADR 0058).
+ */
+export function spellLevels(catalogue) {
+  const levels = new Map();
+  for (const spell of active(catalogue?.spells)) {
+    const { packages, starting } = spellOrigins(spell, catalogue);
+    if (starting) levels.set(spell.id, 0);
+    else if (packages.length) levels.set(spell.id, packages[0].level);
+  }
+  return levels;
+}
+
 /** The tier filter: `All`, a level, or `Starting` for the kit a creature begins with. */
 export function spellInTier(item, tier, catalogue) {
   if (tier === undefined || tier === 'All') return true;

@@ -16,6 +16,8 @@ const catalogue = {
   aliases: json('aliases.json'), balance: json('balance/knobs.json'), contentHash: 'browser-fixture', problems: [],
 };
 
+const weights = JSON.parse(readFileSync(join(root, 'learning', 'weights', 'greedy.json'), 'utf8'));
+
 async function fit(page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
@@ -25,6 +27,7 @@ async function shot(page, info, name) {
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: catalogue } }));
+  await page.route('**/api/weights', route => route.fulfill({ json: { ok: true, result: { values: weights, order: Object.keys(weights) } } }));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Find your next move.' })).toBeVisible();
 });
@@ -93,6 +96,19 @@ test('browsing spells shows the tier and package each one is learned from, and f
   await fit(page);
 });
 
+test('a spell shows its value a round next to its tier, and the reader says what the estimate leaves out', async ({ page }, info) => {
+  await page.locator('#spells-view').click();
+  await page.getByRole('searchbox', { name: 'Search spells', exact: true }).fill('protective slam');
+  await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 9\.0 a round · Tier 2 attacks \d+\.\d–9\.0$/);
+  await page.locator('.spell-tile').click();
+  const reading = page.locator('.value-reading');
+  await expect(reading.locator('summary')).toHaveText('Value 9.0 a round · 13.5 a cast');
+  await reading.locator('summary').click();
+  await expect(reading).toContainText('This one is the highest of that range.');
+  await expect(reading).toContainText('Played matches decide balance');
+  await fit(page); await shot(page, info, 'spell-value');
+});
+
 test('editing is explicit and cancelling a navigation preserves the draft', async ({ page }, info) => {
   await page.locator('.package-tile').first().click();
   await expect(page.locator('#detail input')).toHaveCount(0);
@@ -132,6 +148,7 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   await page.route('https://downfallz.github.io/maintest/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/maintest/', '');
     if (path === 'data/catalogue.json') { await route.fulfill({ json: catalogue }); return; }
+    if (path === 'data/weights.json') { await route.fulfill({ json: { values: weights, order: Object.keys(weights) } }); return; }
     const relative = path || 'index.html';
     const folder = relative === 'viewer.css' ? 'viewer' : 'studio';
     await route.fulfill({ path: join(root, folder, relative) });
@@ -141,6 +158,7 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   await expect(page.locator('.hero-stats')).toContainText('21packages');
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(36);
+  await expect(page.locator('.strategy-spell .spell-value').first()).toContainText('a round');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Energy & effects', exact: true })).toBeVisible();
   await page.locator('#explore-view').click();

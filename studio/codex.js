@@ -1,5 +1,6 @@
 import { EFFECT_GROUPS, energyCost, strategyOverview, compactEffect } from './strategy.js';
-import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
+import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellLevels, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
+import { standing } from './value.js';
 
 const h = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -16,6 +17,45 @@ const label = text => h('p', 'eyebrow', text);
 const title = (kicker, heading, description) => append(h('div', 'codex-heading'), label(kicker), h('h2', '', heading), h('p', 'codex-copy', description));
 const stat = (value, name) => append(h('div', 'codex-stat'), h('strong', '', value), h('span', '', name));
 const message = text => h('p', 'codex-empty', text);
+
+// The agents' scoring weights, read once the page has them. Until then, and on a page that cannot read them, the
+// value is simply not shown: it is a reading added to a card, never something a card waits for.
+let weights = null;
+export function useWeights(values) { weights = values && typeof values === 'object' ? values : null; }
+
+const decimal = value => (Math.round(value * 10) / 10).toFixed(1);
+const tierGroup = read => `${read.level === 0 ? 'Starting kit' : `Tier ${read.level}`} ${read.attack ? 'attacks' : 'non-attacks'}`;
+
+function reading(item, catalogue) {
+  return weights ? standing(item, active(catalogue.spells), spellLevels(catalogue), weights) : null;
+}
+
+/** One line: the value a round and, when the spell has a group, the range of that group. */
+function valueLine(item, catalogue) {
+  const read = reading(item, catalogue);
+  if (!read) return null;
+  const range = read.level === null || read.peers < 2 ? '' : ` · ${tierGroup(read)} ${decimal(read.low)}–${decimal(read.high)}`;
+  const node = h('span', 'spell-value', `Value ${decimal(read.value)} a round${range}`);
+  node.title = 'A coarse estimate, not a balance verdict: open the spell for what it leaves out.';
+  return node;
+}
+
+/** The reader's explanation: the number, where it sits, and what it cannot see. */
+function valueReading(item, catalogue) {
+  const read = reading(item, catalogue);
+  if (!read) return null;
+  const place = { lowest: 'the lowest of', highest: 'the highest of', within: 'inside', alone: 'the only spell in' }[read.place];
+  const where = read.level === null
+    ? 'No package teaches it and no creature starts with it, so it has no tier to be compared in.'
+    : read.peers < 2
+      ? `It is the only one of the ${tierGroup(read)}, so there is nothing to compare it with.`
+      : `${tierGroup(read)} today: ${decimal(read.low)} to ${decimal(read.high)}, median ${decimal(read.median)}. This one is ${place} that range.`;
+  const box = append(h('details', 'value-reading'),
+    h('summary', '', `Value ${decimal(read.value)} a round · ${decimal(read.cast)} a cast`),
+    h('p', '', where),
+    h('p', 'muted', 'Damage-equivalents priced with the agents\' scoring weights, the reading check-knobs uses: every effect for every target allowed, critical chance included, divided by the rounds of energy one cast costs. It leaves out the board, the target\'s defense and health, the kill, and the threat behind a defensive effect, and overstates a spell with several targets late in a match. Played matches decide balance; this only places a spell next to its neighbours.'));
+  return box;
+}
 
 // The tier and the package a spell is bought in, on every card that lists it: browsing spells is how a player
 // plans the next pick, and the pick is a package, not a spell.
@@ -46,7 +86,7 @@ function spellTile(item, catalogue, open) {
   return append(tile,
     append(h('span', 'spell-tile-top'), rune(family?.tone ?? 0), h('span', 'energy-cost', `${doc.energyCost ?? 0} energy`)),
     h('strong', 'spell-name', item.name), origin(item, catalogue), h('span', 'spell-summary', summary),
-    h('span', 'spell-meta', `${doc.spellType} · ${targetText(doc.targeting)}`));
+    valueLine(item, catalogue), h('span', 'spell-meta', `${doc.spellType} · ${targetText(doc.targeting)}`));
 }
 
 function packageTile(item, catalogue, open) {
@@ -170,6 +210,8 @@ function spellReading(view, item, catalogue, open) {
   const doc = item.document;
   view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(`${Number(((doc.criticalChance ?? 0) * 100).toFixed(2))}%`, 'critical bonus')));
   view.append(origin(item, catalogue));
+  const value = valueReading(item, catalogue);
+  if (value) view.append(value);
   view.append(title(doc.spellType ?? 'SPELL', 'What it does', 'Authored effect values; actual results depend on the combat situation.'));
   for (const effect of doc.effects ?? []) view.append(effectRow(effect));
   if (doc.casterEffects?.length) {
@@ -332,6 +374,8 @@ function strategySpell(item, catalogue, open) {
   const main = (doc.effects ?? []).map(compactEffect).join(' · ') || 'No target effects';
   const caster = (doc.casterEffects ?? []).map(compactEffect).join(' · ');
   append(summary, heading, origin(item, catalogue), h('span', 'strategy-spell-facts', `${targetText(doc.targeting)}: ${main}`));
+  const value = valueLine(item, catalogue);
+  if (value) summary.append(value);
   if (caster) summary.append(h('span', 'strategy-caster', `Caster: ${caster}`));
   const detail = h('div', 'strategy-spell-detail');
   detail.append(h('p', 'strategy-note', 'Authored values per target; actual results depend on the board.'));
