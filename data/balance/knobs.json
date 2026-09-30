@@ -824,12 +824,12 @@
     "spell:soothing_chant": {
       "name": "Soothing Chant",
       "class": "Shaman",
-      "intent": "The Shaman's group mend: a point of healing a round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
+      "intent": "The Shaman's group mend: a little healing each round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
       "keep": [
         "One energy, several allies: a small heal spread wide, never a big one",
         "Healing over time only: the burst heal is Healing Screech's"
       ],
-      "note": "Authored at 4.8 a round in the check-knobs reading. Regeneration stacks beside the ones already there, so a Chant cast every round keeps two running on each ally -- 2 a round each, 6 across three allies, for one energy a round -- which that reading does not see. If that proves too much, the reach is the knob to cut (two allies reads 3.2). No evaluation has measured it yet.",
+      "note": "Authored at 4.8 a round and cast 25 times against Healing Screech's 399 on the confirmation seeds' exploring run (94% of the Shaman's casts to one spell, the worst package in the catalogue on 8b842137), so the owner raised the regeneration to **2 a round** on 2026-09-30: 9.6 a round in the check-knobs reading. Regeneration stacks beside the ones already there, so a Chant cast every round keeps two running on each ally -- 4 a round each, 12 across three allies, for one energy a round -- which that reading does not see. The reach is the knob to cut if that proves too much.",
       "knobs": [
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
