@@ -651,16 +651,17 @@
     "spell:infectious_blast": {
       "name": "Infectious Blast",
       "class": "Trickster",
-      "intent": "The only spell that neither damages nor heals: one energy to strip the armour off the whole enemy team, and it never grows back. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
+      "intent": "A plague cloud: one energy to strip the armour off the whole enemy team for good, with a little damage as it lands. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
       "keep": [
-        "No damage: it is control or it is nothing",
+        "Control first: the shred is the spell, the damage a sting that never makes it an attack worth casting for itself",
         "The cheapest thing that touches all three enemies",
         "The shred is permanent: the Trickster takes something off the board rather than borrowing it"
       ],
       "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it reads 11.70, inside the tier-3 band. The `revenant_guards` finding went away without either spell moving; `death_squad` is still reported, now against `revenant_guards` at 15.60, which is its own bounds and not this spell's. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:lightning_bolt": {
@@ -799,7 +800,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 }
       ]

@@ -15,6 +15,10 @@
       "kind": "DefenseDebuff",
       "amount": 3,
       "permanent": true
+    },
+    {
+      "kind": "Damage",
+      "amount": 2
     }
   ],
   "enabled": true
