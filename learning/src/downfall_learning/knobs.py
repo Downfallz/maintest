@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from operator import itemgetter
@@ -55,6 +56,11 @@ CRITICAL_CHANCE = "/criticalChance"
 
 #: The pointer that names a spell's energy cost.
 ENERGY_COST = "/energyCost"
+
+#: The effect numbers the engine refuses below 1: every effect's amount, amount per round and duration
+#: throw on construction (`src/DownfallArena.Domain/Resources/Effects`), so a knob whose minimum is below 1
+#: hands the search content that cannot load, found one candidate at a time (journal, 2026-09-30).
+AT_LEAST_ONE = re.compile(r"^/(effects|casterEffects)/\d+/(amount|amountPerRound|durationRounds)$")
 
 #: The one number a package carries that a tuning pass may move: what a purchase adds to Base initiative
 #: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
@@ -641,6 +647,11 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
         if not knob.minimum <= value <= knob.maximum:
             problems.append(
                 f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
+            )
+        if AT_LEAST_ONE.match(knob.path) and knob.minimum < 1:
+            problems.append(
+                f"{knob.key}: a search could take it below 1, which the engine refuses for an effect's "
+                "amount or duration."
             )
         if _inert_critical(knob, document):
             problems.append(

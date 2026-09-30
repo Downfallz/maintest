@@ -358,6 +358,15 @@ def test_bounds_the_wrong_way_round_are_reported(tmp_path: Path) -> None:
     )
 
 
+def test_an_effect_amount_a_search_could_take_below_one_is_reported(tmp_path: Path) -> None:
+    """The engine refuses such content: tuning pass 16 died on it (journal, 2026-09-30)."""
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"][0] = {"path": DAMAGE_POINTER, "min": 0, "max": 5, "step": 1}
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert any("below 1" in problem for problem in validate(knobs, content(**{"spell:attack": ATTACK})))
+
+
 def test_a_step_that_moves_nothing_is_reported(tmp_path: Path) -> None:
     document = knobs_json()
     document["spells"]["spell:attack"]["knobs"][0]["step"] = 0
