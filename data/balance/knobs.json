@@ -601,6 +601,20 @@
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
+    "spell:adrenaline_tonic": {
+      "name": "Adrenaline Tonic",
+      "class": "Trickster",
+      "intent": "The Plague Doctor's stimulant: a point of energy for up to three allies, with a point of poison in the same dose. It is Noxious Cure's idea turned to energy -- the remedy that costs something -- and its point is where the energy goes, not how much: across three allies it nets the team what Wait would, so it never out-earns waiting, but it brings three creatures to their next threshold a round early.",
+      "keep": [
+        "Never out-earns Wait: the energy it spreads, less its price, stays at or under the two Wait gives",
+        "Always poisons what it feeds: every ally it reaches takes the bleed"
+      ],
+      "note": "Authored at -1.5 a round in the check-knobs reading, which prices the bleed on an ally as a cost at 0.8 and the energy at 0.3; the greedy agents are unlikely ever to cast it, so an evaluation will say little about it. A spell for human players until the energy weight says otherwise.",
+      "knobs": [
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 }
+      ]
+    },
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",

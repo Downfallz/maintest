@@ -1,0 +1,25 @@
+{
+  "id": "spell:adrenaline_tonic:v1",
+  "name": "Adrenaline Tonic",
+  "spellType": "Defensive",
+  "creatureClass": "Trickster",
+  "energyCost": 1,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Ally",
+    "scope": "Multi",
+    "maxTargets": 3
+  },
+  "effects": [
+    {
+      "kind": "EnergyGain",
+      "amount": 1
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 1
+    }
+  ],
+  "enabled": true
+}
