@@ -4,35 +4,53 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-30. Every tier-2 package teaches two spells, and Soothing Chant is raised after the first read
+## 2026-09-30. Every tier-2 package teaches two spells, five tier-3 spells are raised, and a match is 8 to 14 rounds
 
-- **What changed.** #245 (content `8b842137`) gave each of the nine tier-2 packages a second spell -- Shield
-  Bash, Shadowstep, Extort, Reckless Swing, Frostbite, Soothing Chant, Bone Ward, Latch and Adrenaline Tonic --
-  gave Meteor a 1-round bleed of 1 on each target, turned Ice Spear's slow into a one-round stun, and cut
-  Tranquilizer Dart's stun to one round while giving it a bleed of 1 for 2 rounds, so that Ice Spear does not
-  strictly dominate it. The spells were sized with the `check-knobs` reading the studio now shows, and no tuning
-  ran. #246 (content `ab944cfb`) then raised Soothing Chant's regeneration from 1 to 2 a round.
-- **The measurement.** `score-content` on engine `ceb54380`, objective `adr-0065` with targets `baac0add74b0`,
-  on both seed files:
+- **What changed.**
+  - #245 (content `8b842137`) gave each of the nine tier-2 packages a second spell: Shield Bash, Shadowstep,
+    Extort, Reckless Swing, Frostbite, Soothing Chant, Bone Ward, Latch and Adrenaline Tonic. It also gave
+    Meteor a 1-round bleed of 1 on each target and turned Ice Spear's slow into a one-round stun.
+  - #245 cut Tranquilizer Dart's stun to one round and gave it a bleed of 1 for 2 rounds, so that Ice Spear does
+    not strictly dominate it.
+  - #246 raises Soothing Chant's regeneration from 1 to 2 a round.
+  - #246 raises five tier-3 spells: Restorative Burst heals 6 (was 4), Hateful Sacrifice deals 11 and costs its
+    caster 3 (was 10 and 4), Mortal Wound's bleed of 4 lasts 2 rounds (was 1), Tornado deals 5 (was 4), and
+    Infectious Blast's permanent shred is 3 (was 2). Restorative Burst's heal bound widens to 6 for this.
+  - #246 records ADR 0086: the exploring run's length band is 8 to 14 rounds (was 10 to 15), and the exploiter's
+    clock floor is 8 (was 10).
+  - The spells were sized with the `check-knobs` reading the studio now shows, and no tuning ran.
+- **The measurement.** `score-content` on engine `ceb54380`, on both seed files. The first three rows use the
+  objective as it was (`adr-0065`, targets `baac0add74b0`). The last two use the objective with ADR 0086's
+  bands, so they compare with each other and not with the rows above.
 
-  | content | benchmark seeds | confirmation seeds |
-  | --- | --- | --- |
-  | `813bb91b`, before #245 | 12.84 | 8.91 |
-  | `8b842137`, #245 | 11.62 | 17.53 |
-  | `ab944cfb`, #246 | **7.80** | **12.48** |
+  | content | objective | benchmark seeds | confirmation seeds |
+  | --- | --- | --- | --- |
+  | `813bb91b`, before #245 | before ADR 0086 | 12.84 | 8.91 |
+  | `8b842137`, #245 | before ADR 0086 | 11.62 | 17.53 |
+  | `ab944cfb`, Soothing Chant at 2 | before ADR 0086 | 7.80 | 12.48 |
+  | `ab944cfb`, Soothing Chant at 2 | ADR 0086 | 7.80 | 12.48 |
+  | `c8d39320`, plus the tier-3 changes | ADR 0086 | **7.53** | **10.91** |
 
-- **What it says.** #245 did not win on the confirmation seeds, so by ADR 0074's rule it was not an
-  improvement on its own. Its benchmark-seed gain was mostly the seat: `variety.player1WinShare` 0.615 to
-  0.575. What it bought is choice inside tier 2: on the confirmation seeds' exploring run Berserker splits 62/83,
-  Parasite 43/35 and Necromancer 645/383, where each package had one spell. What it cost is
-  `variety.tierUsageShare` and `variety.tierDamageSpread`, led by the Shaman (Soothing Chant 25 casts against
-  Healing Screech's 399, 94% on one spell), and a Blightweaver that fell from 77 casts to 6 after the Dart
-  change. Raising Chant to 2 a round took it to 124 casts against 307 and brought both scores down; the
-  confirmation score is still above where it started, and the remaining excess is within-package spread among
-  the tier-3 packages (Blightweaver, Deathstalker, Soulreaver). The owner keeps the one-round stuns as they are,
-  having played them.
-- **Stamps.** The digests for `8b842137` (from #245) and `ab944cfb` are in `benchmarks/`. The exploring run
-  averaged 9.9 to 10.2 rounds throughout.
+- **What #245 did.** It did not win on the confirmation seeds, so by ADR 0074's rule it was not an improvement
+  on its own.
+  - Its benchmark-seed gain was mostly the seat: `variety.player1WinShare` went from 0.615 to 0.575.
+  - What it bought is choice inside tier 2. On the confirmation seeds' exploring run, Berserker splits 62/83,
+    Parasite 43/35 and Necromancer 645/383, where each package had one spell.
+  - What it cost is `variety.tierUsageShare`, led by the Shaman: Soothing Chant 25 casts against Healing
+    Screech's 399.
+- **What #246 did.**
+  - Soothing Chant at 2 a round is cast 124 times against 307.
+  - The tier-3 changes move Mortal Wound from 29 casts to 133 on the confirmation seeds, Restorative Burst from
+    7 to 14, Tornado from 5 to 12, and Infectious Blast from 0 to 8. Hateful Sacrifice stays at 5.
+  - The exploring run shortens from 9.88 to 9.75 rounds.
+  - ADR 0086's bands change nothing measurable today: the exploring run was already inside both old and new
+    bands. They matter for the next pass that shortens matches.
+  - The confirmation score is still above the 8.91 it started from, all of it within-package spread:
+    `variety.tierDamageSpread` 3.09 and `variety.tierUsageShare` 0.873.
+  - The owner keeps the one-round stuns as they are, having played them.
+- **Worth watching.** Infectious Blast now reads 17.55 a round in the `check-knobs` reading. That reading
+  overstates a permanent shred on three targets, and the exploring run still casts it only 8 times.
+- **Stamps.** The digests for `8b842137` (from #245) and `c8d39320` are in `benchmarks/`.
 
 ## 2026-09-29. Tuning pass 14 runs out of time inside its opening sweep, and the lookahead leaves the exploit panel again
 

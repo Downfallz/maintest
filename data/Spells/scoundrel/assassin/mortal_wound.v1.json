@@ -18,7 +18,7 @@
     {
       "kind": "Bleed",
       "amountPerRound": 4,
-      "durationRounds": 1
+      "durationRounds": 2
     }
   ],
   "enabled": true

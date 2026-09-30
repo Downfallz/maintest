@@ -19,7 +19,7 @@ section, ready to be numbered and moved into `docs/adr/` by whoever lands the co
 What this document takes as given, from [plan.md](plan.md) and [components.md](components.md):
 
 - A **faithful port** (plan.md:188-199). The app plays the engine's rules through the engine.
-- A Match is **10 to 15 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
+- A Match is **8 to 14 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
   built to measure; the engine measures rounds and cannot measure minutes.
 - The components of phase 3 are the screen layout. The initiative track, the creature board, the condition
   dock, the player area and the talent mat are specified in components.md:491-764, and the app renders those
@@ -483,7 +483,7 @@ What the app does about it:
    answer: a printed deck and an app that disagree about the Round cap is a playtest of neither.
 
 **And when the content changes while a session is open.** It will, often: the maintainer is tuning toward
-10 to 15 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
+8 to 14 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
 the built schema (`InfrastructureServiceCollectionExtensions.cs:38-46`), the `Match` keeps the hash it was
 created with (`Match.cs:38,46`), and that hash is on every board the client fetches
 (`PlayerBoardState.cs:20`). The host **must not reload**: a Match whose rules changed mid-Round is a playtest

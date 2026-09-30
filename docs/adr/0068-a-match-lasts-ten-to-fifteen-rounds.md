@@ -2,7 +2,7 @@
 
 Date: 2026-09-23
 
-Status: Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md)
+Status: Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) and [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) (the band is now 8 to 14 rounds)
 
 ## Context
 

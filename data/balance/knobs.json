@@ -55,11 +55,11 @@
       {
         "metric": "averageRounds",
         "on": "variety",
-        "min": 10,
-        "max": 15,
+        "min": 8,
+        "max": 14,
         "scale": 3,
         "weight": 2,
-        "why": "The length the game is designed for: ten to fifteen rounds (ADR 0068). Long enough that a bad round can be traded back and the deepest packages, which arrive at round 5 at the earliest since ADR 0066, get played; short enough that the cap of 30 stays out of reach. Read on the exploring run, not the greedy mirror (ADR 0071): two greedy agents play a narrow game that ends sooner than a person's would, and a band on the mirror held every tuning pass at its bottom edge, where any move that shortened the mirror by a tenth of a round was penalised however it played. The mirror read 7.8 at 20 base health under ADR 0066 and 10.05 at 30; the exploring run reads 10.03 at 30."
+        "why": "The length the game is designed for: eight to fourteen rounds (ADR 0086, which moved it from ADR 0068's ten to fifteen). Long enough that a bad round can be traded back and the deepest packages, which arrive at round 5 at the earliest since ADR 0066, get played; short enough that the cap of 30 stays out of reach. Read on the exploring run, not the greedy mirror (ADR 0071): two greedy agents play a narrow game that ends sooner than a person's would, and a band on the mirror held every tuning pass at its bottom edge, where any move that shortened the mirror by a tenth of a round was penalised however it played. The mirror read 7.8 at 20 base health under ADR 0066 and 10.05 at 30; the exploring run reads 10.03 at 30, and 9.9 to 10.2 on ab944cfb, which is what ADR 0086 lowered the band from the bottom edge of."
       },
       {
         "metric": "roundCapShare",
@@ -152,10 +152,10 @@
       {
         "metric": "averageRounds",
         "on": "exploit",
-        "min": 10,
+        "min": 8,
         "scale": 2,
         "weight": 2,
-        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Ten rounds is the floor a match is held to (ADR 0068; it was eight), read on the exploring run since ADR 0071, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the exploring run's own 10-to-15 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
+        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Eight rounds is the floor a match is held to (ADR 0086; ADR 0068 had raised it from eight to ten), read on the exploring run since ADR 0071, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the exploring run's own 8-to-14 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
       }
     ]
   },
@@ -866,7 +866,7 @@
       "note": "**3.80 a round against a tier-3 band of 8 to 14, with a ceiling of 4.10** -- the worst reading in the catalogue now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal goes 3 to **4**, the top of its box that keeps every clause above, so the trade against `restorative_gush` is 2 heal for 2 energy rather than 3 for 2: 2.80 to **3.60** at the price of the day, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },

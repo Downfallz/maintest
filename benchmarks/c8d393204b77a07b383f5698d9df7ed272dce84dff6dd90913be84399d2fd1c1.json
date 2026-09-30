@@ -1,6 +1,6 @@
 {
-  "contentHash": "ab944cfb37dd43dfc889772ffedb8adc09d4098fbdd731ce333be305bc423f5e",
-  "engineVersion": "ceb54380bb67-dirty",
+  "contentHash": "c8d393204b77a07b383f5698d9df7ed272dce84dff6dd90913be84399d2fd1c1",
+  "engineVersion": "bfe8b548d4bf-dirty",
   "agentA": "Greedy",
   "agentB": "Greedy",
   "entries": [
@@ -9,8 +9,8 @@
       "order": "AB",
       "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 10,
-      "player1Health": 15,
+      "rounds": 11,
+      "player1Health": 13,
       "player2Health": 0
     },
     {
@@ -18,8 +18,8 @@
       "order": "BA",
       "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 10,
-      "player1Health": 15,
+      "rounds": 11,
+      "player1Health": 13,
       "player2Health": 0
     },
     {
@@ -946,7 +946,7 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 14,
-      "player1Health": 14,
+      "player1Health": 7,
       "player2Health": 0
     },
     {
@@ -955,7 +955,7 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 14,
-      "player1Health": 14,
+      "player1Health": 7,
       "player2Health": 0
     },
     {
@@ -1595,7 +1595,7 @@
       "reason": "Elimination",
       "rounds": 17,
       "player1Health": 0,
-      "player2Health": 37
+      "player2Health": 35
     },
     {
       "seed": 392438,
@@ -1604,7 +1604,7 @@
       "reason": "Elimination",
       "rounds": 17,
       "player1Health": 0,
-      "player2Health": 37
+      "player2Health": 35
     },
     {
       "seed": 396754,
@@ -1663,20 +1663,20 @@
     {
       "seed": 425560,
       "order": "AB",
-      "winner": "Player2",
+      "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 16,
-      "player1Health": 0,
-      "player2Health": 4
+      "rounds": 15,
+      "player1Health": 10,
+      "player2Health": 0
     },
     {
       "seed": 425560,
       "order": "BA",
-      "winner": "Player2",
+      "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 16,
-      "player1Health": 0,
-      "player2Health": 4
+      "rounds": 15,
+      "player1Health": 10,
+      "player2Health": 0
     },
     {
       "seed": 427634,
@@ -2188,7 +2188,7 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 13,
-      "player1Health": 15,
+      "player1Health": 13,
       "player2Health": 0
     },
     {
@@ -2197,115 +2197,115 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 13,
+      "player1Health": 13,
+      "player2Health": 0
+    },
+    {
+      "seed": 573068,
+      "order": "AB",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 8,
+      "player1Health": 0,
+      "player2Health": 19
+    },
+    {
+      "seed": 573068,
+      "order": "BA",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 8,
+      "player1Health": 0,
+      "player2Health": 19
+    },
+    {
+      "seed": 582058,
+      "order": "AB",
+      "winner": "Player1",
+      "reason": "Elimination",
+      "rounds": 7,
+      "player1Health": 34,
+      "player2Health": 0
+    },
+    {
+      "seed": 582058,
+      "order": "BA",
+      "winner": "Player1",
+      "reason": "Elimination",
+      "rounds": 7,
+      "player1Health": 34,
+      "player2Health": 0
+    },
+    {
+      "seed": 582173,
+      "order": "AB",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 8,
+      "player1Health": 0,
+      "player2Health": 44
+    },
+    {
+      "seed": 582173,
+      "order": "BA",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 8,
+      "player1Health": 0,
+      "player2Health": 44
+    },
+    {
+      "seed": 589724,
+      "order": "AB",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 10,
+      "player1Health": 0,
+      "player2Health": 2
+    },
+    {
+      "seed": 589724,
+      "order": "BA",
+      "winner": "Player2",
+      "reason": "Elimination",
+      "rounds": 10,
+      "player1Health": 0,
+      "player2Health": 2
+    },
+    {
+      "seed": 592583,
+      "order": "AB",
+      "winner": "Player1",
+      "reason": "Elimination",
+      "rounds": 11,
+      "player1Health": 9,
+      "player2Health": 0
+    },
+    {
+      "seed": 592583,
+      "order": "BA",
+      "winner": "Player1",
+      "reason": "Elimination",
+      "rounds": 11,
+      "player1Health": 9,
+      "player2Health": 0
+    },
+    {
+      "seed": 592888,
+      "order": "AB",
+      "winner": "Player1",
+      "reason": "Elimination",
+      "rounds": 13,
       "player1Health": 15,
       "player2Health": 0
     },
     {
-      "seed": 573068,
-      "order": "AB",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 8,
-      "player1Health": 0,
-      "player2Health": 19
-    },
-    {
-      "seed": 573068,
-      "order": "BA",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 8,
-      "player1Health": 0,
-      "player2Health": 19
-    },
-    {
-      "seed": 582058,
-      "order": "AB",
-      "winner": "Player1",
-      "reason": "Elimination",
-      "rounds": 7,
-      "player1Health": 34,
-      "player2Health": 0
-    },
-    {
-      "seed": 582058,
-      "order": "BA",
-      "winner": "Player1",
-      "reason": "Elimination",
-      "rounds": 7,
-      "player1Health": 34,
-      "player2Health": 0
-    },
-    {
-      "seed": 582173,
-      "order": "AB",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 8,
-      "player1Health": 0,
-      "player2Health": 44
-    },
-    {
-      "seed": 582173,
-      "order": "BA",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 8,
-      "player1Health": 0,
-      "player2Health": 44
-    },
-    {
-      "seed": 589724,
-      "order": "AB",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 10,
-      "player1Health": 0,
-      "player2Health": 2
-    },
-    {
-      "seed": 589724,
-      "order": "BA",
-      "winner": "Player2",
-      "reason": "Elimination",
-      "rounds": 10,
-      "player1Health": 0,
-      "player2Health": 2
-    },
-    {
-      "seed": 592583,
-      "order": "AB",
-      "winner": "Player1",
-      "reason": "Elimination",
-      "rounds": 11,
-      "player1Health": 9,
-      "player2Health": 0
-    },
-    {
-      "seed": 592583,
-      "order": "BA",
-      "winner": "Player1",
-      "reason": "Elimination",
-      "rounds": 11,
-      "player1Health": 9,
-      "player2Health": 0
-    },
-    {
-      "seed": 592888,
-      "order": "AB",
-      "winner": "Player1",
-      "reason": "Elimination",
-      "rounds": 15,
-      "player1Health": 12,
-      "player2Health": 0
-    },
-    {
       "seed": 592888,
       "order": "BA",
       "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 15,
-      "player1Health": 12,
+      "rounds": 13,
+      "player1Health": 15,
       "player2Health": 0
     },
     {
@@ -2333,7 +2333,7 @@
       "reason": "Elimination",
       "rounds": 12,
       "player1Health": 0,
-      "player2Health": 6
+      "player2Health": 8
     },
     {
       "seed": 594473,
@@ -2342,7 +2342,7 @@
       "reason": "Elimination",
       "rounds": 12,
       "player1Health": 0,
-      "player2Health": 6
+      "player2Health": 8
     },
     {
       "seed": 596146,
@@ -2782,7 +2782,7 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 13,
-      "player1Health": 15,
+      "player1Health": 13,
       "player2Health": 0
     },
     {
@@ -2791,7 +2791,7 @@
       "winner": "Player1",
       "reason": "Elimination",
       "rounds": 13,
-      "player1Health": 15,
+      "player1Health": 13,
       "player2Health": 0
     },
     {
@@ -3035,7 +3035,7 @@
       "reason": "Elimination",
       "rounds": 17,
       "player1Health": 0,
-      "player2Health": 29
+      "player2Health": 26
     },
     {
       "seed": 828805,
@@ -3044,7 +3044,7 @@
       "reason": "Elimination",
       "rounds": 17,
       "player1Health": 0,
-      "player2Health": 29
+      "player2Health": 26
     },
     {
       "seed": 853691,
@@ -3305,7 +3305,7 @@
       "reason": "Elimination",
       "rounds": 13,
       "player1Health": 0,
-      "player2Health": 19
+      "player2Health": 16
     },
     {
       "seed": 897949,
@@ -3314,7 +3314,7 @@
       "reason": "Elimination",
       "rounds": 13,
       "player1Health": 0,
-      "player2Health": 19
+      "player2Health": 16
     },
     {
       "seed": 910472,
