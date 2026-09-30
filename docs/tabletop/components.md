@@ -26,7 +26,7 @@ What is current, exactly:
   rather than 20 ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the
   Health rail ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach
   of the Bleed supply ([1.4](#14-condition-tokens)); no piece count moved.
-- **A Match is 10 to 15 Rounds, and the table's Round cap is 20** (ADR 0068; the plan said 8 to 16). The
+- **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
   Base initiative tens rail ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)) and the cards a
@@ -103,7 +103,7 @@ A count is often both: 216 Spell cards is one card per Creature per Spell (RULE)
 From [plan.md](plan.md), phase 2 and the Decisions section:
 
 - A **faithful port**. A rule that costs bookkeeping gets a component; nothing is dropped.
-- A Match is **10 to 15 Rounds** (ADR 0068). The table's Round cap is **20**, so everything sized per Round
+- A Match is **8 to 14 Rounds** (ADR 0086). The table's Round cap is **20**, so everything sized per Round
   is built for **20** and says so: a Match can run to its cap.
 - Two Players, **three Creatures each**, all six from `data/Creatures/main.v1.json`.
 - The Creature's base Critical chance is **zero**. A Spell's printed chance is the chance rolled. The 15
@@ -241,7 +241,7 @@ package. The same holds for package cards: a Match lays out at most 2 x 20 = 40 
 | Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the Creature's number, 1 to 6: who it is on the track and when a cast names its targets, and the order tied Creatures roll in. The number breaks no tie (ADR 0063). | **VALUE** (team size) |
 | Player area mat | **2** | One per Player. A Match seats exactly two. | **RULE** |
 | Initiative track | **1** | Six ordered slots, a Quick band above a Standard band. Six is the number of Activation slots a Round can have: one per living, unstunned Creature. | **VALUE** (team size) |
-| Round track | **1**, 20 spaces, 10 pick marks | A Match is 10 to 15 Rounds (given, ADR 0068), and the table's Round cap is 20 (`playtest.rules.json`). The track is printed to the cap, so the Round cap marker always has its space. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 19 (`RuleSet.IsEvolutionRound`). | The 20 spaces, the cap marker and the pick marks are **VALUE**s (the table's cap; the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
+| Round track | **1**, 20 spaces, 10 pick marks | A Match is 8 to 14 Rounds (given, ADR 0086), and the table's Round cap is 20 (`playtest.rules.json`). The track is printed to the cap, so the Round cap marker always has its space. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 19 (`RuleSet.IsEvolutionRound`). | The 20 spaces, the cap marker and the pick marks are **VALUE**s (the table's cap; the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
 
 ### 1.3 Stat markers and the rails they ride
 
@@ -924,7 +924,7 @@ setup on the space equal to the `RuleSet`'s Round cap: when the Round marker rea
 total remaining Health (`WinCondition.cs:23-26`). The cap is a component rather than a memory, and moving it
 is how a shorter or longer Match is set up without a reprint.
 
-**Why twenty.** A Match is designed to last 10 to 15 Rounds (ADR 0068), and the table's Round cap is 20
+**Why twenty.** A Match is designed to last 8 to 14 Rounds (ADR 0086), and the table's Round cap is 20
 (`playtest.rules.json`), so the Round cap marker needs a space 20. The track stops at the cap: a space past it
 is one no Match reaches. It was 16 spaces while the band was 8 to 16. A cap above 20 needs a longer track,
 and a reprint of this one sheet.

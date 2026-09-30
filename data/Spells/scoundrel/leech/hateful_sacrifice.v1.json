@@ -13,14 +13,14 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 10
+      "amount": 11
     }
   ],
   "enabled": true,
   "casterEffects": [
     {
       "kind": "Damage",
-      "amount": 4
+      "amount": 3
     }
   ]
 }

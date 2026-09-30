@@ -13,7 +13,7 @@
   "effects": [
     {
       "kind": "Regeneration",
-      "amountPerRound": 1,
+      "amountPerRound": 2,
       "durationRounds": 2
     }
   ],

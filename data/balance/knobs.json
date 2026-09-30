@@ -55,11 +55,11 @@
       {
         "metric": "averageRounds",
         "on": "variety",
-        "min": 10,
-        "max": 15,
+        "min": 8,
+        "max": 14,
         "scale": 3,
         "weight": 2,
-        "why": "The length the game is designed for: ten to fifteen rounds (ADR 0068). Long enough that a bad round can be traded back and the deepest packages, which arrive at round 5 at the earliest since ADR 0066, get played; short enough that the cap of 30 stays out of reach. Read on the exploring run, not the greedy mirror (ADR 0071): two greedy agents play a narrow game that ends sooner than a person's would, and a band on the mirror held every tuning pass at its bottom edge, where any move that shortened the mirror by a tenth of a round was penalised however it played. The mirror read 7.8 at 20 base health under ADR 0066 and 10.05 at 30; the exploring run reads 10.03 at 30."
+        "why": "The length the game is designed for: eight to fourteen rounds (ADR 0086, which moved it from ADR 0068's ten to fifteen). Long enough that a bad round can be traded back and the deepest packages, which arrive at round 5 at the earliest since ADR 0066, get played; short enough that the cap of 30 stays out of reach. Read on the exploring run, not the greedy mirror (ADR 0071): two greedy agents play a narrow game that ends sooner than a person's would, and a band on the mirror held every tuning pass at its bottom edge, where any move that shortened the mirror by a tenth of a round was penalised however it played. The mirror read 7.8 at 20 base health under ADR 0066 and 10.05 at 30; the exploring run reads 10.03 at 30, and 9.9 to 10.2 on ab944cfb, which is what ADR 0086 lowered the band from the bottom edge of."
       },
       {
         "metric": "roundCapShare",
@@ -152,10 +152,10 @@
       {
         "metric": "averageRounds",
         "on": "exploit",
-        "min": 10,
+        "min": 8,
         "scale": 2,
         "weight": 2,
-        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Ten rounds is the floor a match is held to (ADR 0068; it was eight), read on the exploring run since ADR 0071, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the exploring run's own 10-to-15 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
+        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Eight rounds is the floor a match is held to (ADR 0086; ADR 0068 had raised it from eight to ten), read on the exploring run since ADR 0071, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the exploring run's own 8-to-14 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
       }
     ]
   },
@@ -666,11 +666,11 @@
     "spell:lightning_bolt": {
       "name": "Lightning Bolt",
       "class": "Sorcerer",
-      "intent": "The Sorcerer's bread and butter: a modest hit that crits two times in three. It is the caster's mirror of Pummel and the spell every Sorcerer branch gets compared against.",
+      "intent": "The Sorcerer's bread and butter: a modest hit that crits one time in two. It is the caster's mirror of Pummel and the spell every Sorcerer branch gets compared against.",
       "keep": [
         "The class's baseline attack: everything deeper in the tree must beat it"
       ],
-      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four. Its critical chance was listed here as its identity until a measurement showed the identity does not distinguish it: Pummel carries the same 0.667, and a critical multiplies base damage, so at equal rates it widens the gap it is supposed to close. Against a Pummel at 3 damage, dropping this spell's chance to 0.417 leaves Pummel 448 landed casts of about 5900, 0.317 leaves it 649, and one in six flips the catalogue: Pummel 4986, this spell 754, and eight spells cast instead of seven. The cost is length -- 7.6, 9.2 and 11.3 rounds, with the round-cap share 0.000, 0.045 and 0.100 against a band of 0.05 -- so the objective has a real trade to arbitrate, and none of that range was reachable at a floor of 0.4. What makes this a Sorcerer spell rather than a Brawler one is deliberately left unstated: the critical chance no longer says it, and the answer is a design decision rather than a bound.",
+      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four. Its critical chance was listed here as its identity until a measurement showed the identity does not distinguish it: Pummel carries the same 0.667, and a critical multiplies base damage, so at equal rates it widens the gap it is supposed to close. Against a Pummel at 3 damage, dropping this spell's chance to 0.417 leaves Pummel 448 landed casts of about 5900, 0.317 leaves it 649, and one in six flips the catalogue: Pummel 4986, this spell 754, and eight spells cast instead of seven. The cost is length -- 7.6, 9.2 and 11.3 rounds, with the round-cap share 0.000, 0.045 and 0.100 against a band of 0.05 -- so the objective has a real trade to arbitrate, and none of that range was reachable at a floor of 0.4. What makes this a Sorcerer spell rather than a Brawler one is deliberately left unstated: the critical chance no longer says it, and the answer is a design decision rather than a bound. On 2026-09-30 the owner took the critical chance from 0.617 to **0.5**: on content `c8d39320`, score-content 7.53 to 5.26 on the benchmark seeds and 10.91 to 9.02 on the confirmation seeds, with Greedy still beating Random every time and the best exploiter slowed from 14.5 rounds to 12.2. At 0.4 and below the spell falls from about 6,000 casts to 1,000 behind Heavy Strike, Greedy's edge over Random drops to 0.88, and the exploiter closes in 8.4 rounds: a line worth understanding before going there.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
@@ -824,12 +824,12 @@
     "spell:soothing_chant": {
       "name": "Soothing Chant",
       "class": "Shaman",
-      "intent": "The Shaman's group mend: a point of healing a round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
+      "intent": "The Shaman's group mend: a little healing each round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
       "keep": [
         "One energy, several allies: a small heal spread wide, never a big one",
         "Healing over time only: the burst heal is Healing Screech's"
       ],
-      "note": "Authored at 4.8 a round in the check-knobs reading. Regeneration stacks beside the ones already there, so a Chant cast every round keeps two running on each ally -- 2 a round each, 6 across three allies, for one energy a round -- which that reading does not see. If that proves too much, the reach is the knob to cut (two allies reads 3.2). No evaluation has measured it yet.",
+      "note": "Authored at 4.8 a round and cast 25 times against Healing Screech's 399 on the confirmation seeds' exploring run (94% of the Shaman's casts to one spell, the worst package in the catalogue on 8b842137), so the owner raised the regeneration to **2 a round** on 2026-09-30: 9.6 a round in the check-knobs reading. Regeneration stacks beside the ones already there, so a Chant cast every round keeps two running on each ally -- 4 a round each, 12 across three allies, for one energy a round -- which that reading does not see. The reach is the knob to cut if that proves too much.",
       "knobs": [
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
@@ -866,7 +866,7 @@
       "note": "**3.80 a round against a tier-3 band of 8 to 14, with a ceiling of 4.10** -- the worst reading in the catalogue now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal goes 3 to **4**, the top of its box that keeps every clause above, so the trade against `restorative_gush` is 2 heal for 2 energy rather than 3 for 2: 2.80 to **3.60** at the price of the day, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },

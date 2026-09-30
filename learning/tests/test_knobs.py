@@ -1656,7 +1656,7 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
         ("summon_minions", 12.4, 8.27),
         ("meteor", 10.5, 7.0),
         ("pummel", 3.53, 3.53),
-        ("restorative_burst", 3.8, 2.53),
+        ("restorative_burst", 5.4, 3.6),
     ],
 )
 def test_the_studio_value_reading_matches_cast_value_on_the_authored_content(
