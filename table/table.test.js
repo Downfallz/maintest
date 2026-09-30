@@ -244,9 +244,11 @@ test('a replayed action shows what it did to health on the chip once applied', (
   const marks = { picked: [], candidates: [], playbackStage: 'after', playback: { actor: { id: 2 }, targets: [{ id: 1 }], frame: { before: [{ id: 1, health: 20 }] } } };
   const chip = p.context.miniCreature(p.state, creature, 'ally', marks);
   assert.match(chip.className, /replay-target/);
-  assert.equal(chip.children[2].children.find(child => child.className === 'mini-delta harm').textContent, '−3');
+  // Beside the health bar it changed, not among the stats on the line below.
+  assert.equal(chip.children.find(child => child.className === 'mini-delta harm').textContent, '−3');
+  assert.equal(chip.children[2].className, 'mini-delta harm');
   const before = p.context.miniCreature(p.state, creature, 'ally', { ...marks, playbackStage: 'before' });
-  assert.equal(before.children[2].children.some(child => /mini-delta/.test(child.className)), false);
+  assert.equal(before.children.some(child => /mini-delta/.test(child.className)), false);
 });
 
 test('the compact battlefield reads current initiative with energy and defense', () => {
@@ -514,6 +516,28 @@ test('a single-target spell allows switching targets before the second tap', () 
   p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 1, maxTargets: 1 } } }; p.draw();
   p.nodes.enemies.children[0].events.click(); p.nodes.allies.children[0].events.click();
   assert.deepEqual([...p.state.picked], [1]);
+});
+
+test('Enter on the chosen card declares it; a second tap on it does not', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  const key = { key: 'Enter', preventDefault() {} };
+  held(p).children[0].events.keydown(key);
+  assert.equal(p.state.chosen, 'one'); assert.equal(sent.length, 0);
+  held(p).children[0].events.click();
+  assert.equal(sent.length, 0);
+  await held(p).children[0].events.keydown(key);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
+});
+
+test('choosing a card closes an announcement that would cover the Declare button', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.context.showPhaseNotice(p.state, { title: 'Round 1 · Spells', detail: 'Declare one spell.', changes: [] });
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+  held(p).children[0].events.click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.state.chosen, 'one');
 });
 
 test('in-flight confirmation ignores additional card taps', async () => {
@@ -879,6 +903,22 @@ test('upkeep popup distinguishes applied ticks from conditions still active on t
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
   assert.equal(p.nodes['upkeep-conditions'].hidden, true);
+});
+
+test('Skip leaves the upkeep steps at once and is gone on the last one', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.view.board.roundNumber = 2;
+  p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  p.draw();
+  assert.equal(p.nodes['phase-notice-skip'].hidden, false);
+  p.nodes['phase-notice-next'].click();
+  assert.equal(p.nodes['phase-notice-skip'].hidden, true, 'the last step has Done');
+  p.context.showPhaseNotice(p.state, p.state.announcements.get(p.state.announcementSeat).at(-1), true);
+  assert.equal(p.nodes['phase-notice-skip'].hidden, false);
+  p.nodes['phase-notice-skip'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.nodes.upkeep.hidden, false, 'Upkeep keeps the list');
 });
 
 test('reopening an upkeep announcement restarts the tick sequence', () => {

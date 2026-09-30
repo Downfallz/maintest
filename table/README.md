@@ -110,7 +110,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
-- Tap a spell to select it, then use the fixed Declare button. Tap a selected target again to cast on the entire
+- Tap a spell to select it, then use the fixed Declare button; choosing a card also closes a phase announcement
+  that would cover that button on a phone. With a keyboard, Enter or Space on the chosen card declares it, and the
+  arrow keys reach the Declare button. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
@@ -147,8 +149,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
   Next advances through each applied tick in engine order and then shows the remaining condition durations;
-  the energy allowance is context on the first step, not a step per creature. The notice waits until Done or
-  Close, and a replay from Announcements starts again at the first tick. Loading an existing round does not
+  the energy allowance is context on the first step, not a step per creature. The notice waits until Done,
+  Skip ▸▸ or Close, and a replay from Announcements starts again at the first tick. Loading an existing round does not
   pretend that a new round just started.
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
@@ -238,9 +240,11 @@ slow connection. Verify that only the chosen action is submitted, unavailable ca
 that the handover screen covers the entire board.
 ## Decision guidance and practice
 
-Before confirming a spell or target, the table shows the engine's energy cost, energy
-left after paying it, turn position, and plain/critical effects against the current
-targets. Choosing speed shows the Quick/Standard trade and each spell's critical
+Choosing a spell shows the engine's energy cost, energy left after paying it, turn
+position and critical chance on the card itself (on a phone's compact cards, under
+**Full details**). The plain/critical effects against the current targets appear at the
+Target step, before the cast is confirmed: during Intent a growing preview moved the
+cards under the player's finger, so it stays out of the fixed decision. Choosing speed shows the Quick/Standard trade and each spell's critical
 chance. Unaffordable cards keep the engine's reason visible. Caster effects appear
 once, separately from target effects.
 

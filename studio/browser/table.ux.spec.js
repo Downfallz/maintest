@@ -167,6 +167,12 @@ test('spell rows stay put on selection and only the fixed button declares', asyn
   await expect(pummel).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#decision-guide')).toBeEmpty();
   await expect(page.locator('#choices .declare-spell')).toHaveText('Declare Pummel');
+  // A phone's phase announcement sits exactly on the Declare button; choosing a card closes it, so the button
+  // the choice just named is the thing under the finger, not the notice.
+  await expect(page.locator('#phase-notice')).toBeHidden();
+  const declare = await page.locator('#choices .declare-spell').boundingBox();
+  expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest('.declare-spell')),
+    [declare.x + declare.width / 2, declare.y + declare.height / 2])).toBe(true);
   await pummel.click();
   expect(decisions).toHaveLength(0);
   if (isPhone(page)) {
@@ -262,10 +268,12 @@ test('battlefield names public opponent packages and upkeep popup separates tick
   await expect(page.locator('#upkeep')).toBeVisible();
   await expect(page.locator('#phase-notice-changes')).toContainText('+2 HP');
   await expect(page.locator('#phase-notice-context')).toContainText('1 / 3');
+  await expect(page.locator('#phase-notice-skip')).toBeVisible();
   await page.locator('#phase-notice-next').click();
   await expect(page.locator('#phase-notice-changes')).toContainText('−1 HP');
   await page.locator('#phase-notice-next').click();
   await expect(page.locator('#phase-notice-changes')).toContainText('DefenseModifier -2 · 2 rounds left');
+  await expect(page.locator('#phase-notice-skip')).toBeHidden();
   await page.locator('#upkeep-label').click();
   await expect(page.locator('#upkeep-conditions')).toContainText('DefenseModifier -2');
   if (!isLaptop(page)) await page.locator('#board-toggle').click();

@@ -358,7 +358,7 @@ function selectable(face, selected, onClick) {
   face.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      if (!event.repeat) onClick();
+      if (!event.repeat) return onClick(event, true);
     }
   });
 }
@@ -681,28 +681,10 @@ function handRow(state, row, asked, current) {
   // makes the hand readable, but only one creature is being asked at a time.
   const card = spell => reference ? speedSpell(state, spell, row.creature, current)
     : heldCard(state, spell, active && spell.castable, row.creature, current);
-  // The catalogue owns each card's type. Group only the active hand when there is more than one type;
-  // the other creatures remain ordinary collapsible references.
-  const types = new Map();
-  if (active) for (const spell of row.spells) {
-    const type = state.cards.get(spell.spell)?.type;
-    if (!type) continue;
-    if (!types.has(type)) types.set(type, []);
-    types.get(type).push(spell);
-  }
-  if (types.size > 1 && [...types.values()].reduce((sum, spells) => sum + spells.length, 0) === row.spells.length) {
+  const types = active ? spellTypes(state, row.spells) : null;
+  if (types) {
     held.className += ' grouped-spells';
-    held.append(...[...types].map(([type, spells]) => {
-      const group = document.createElement('section');
-      group.className = 'spell-group';
-      const heading = document.createElement('h3');
-      heading.textContent = `${type} · ${spells.length}`;
-      const grid = document.createElement('div');
-      grid.className = 'spell-grid';
-      grid.append(...spells.map(card));
-      group.append(heading, grid);
-      return group;
-    }));
+    held.append(...[...types].map(([type, spells]) => spellGroup(type, spells.map(card))));
   } else held.append(...row.spells.map(card));
 
   one.append(who, held);
@@ -781,6 +763,31 @@ function heldCard(state, spell, offered, creature, current, reference = false) {
   return face;
 }
 
+// The catalogue owns each card's type. Only the active hand is grouped, and only when every spell has a type and
+// there is more than one: the other creatures remain ordinary collapsible references.
+function spellTypes(state, spells) {
+  const types = new Map();
+  for (const spell of spells) {
+    const type = state.cards.get(spell.spell)?.type;
+    if (!type) return null;
+    if (!types.has(type)) types.set(type, []);
+    types.get(type).push(spell);
+  }
+  return types.size > 1 ? types : null;
+}
+
+function spellGroup(type, cards) {
+  const group = document.createElement('section');
+  group.className = 'spell-group';
+  const heading = document.createElement('h3');
+  heading.textContent = `${type} · ${cards.length}`;
+  const grid = document.createElement('div');
+  grid.className = 'spell-grid';
+  grid.append(...cards);
+  group.append(heading, grid);
+  return group;
+}
+
 function availabilityText(spell, offered, chosen, reference) {
   if (offered) return chosen ? '✓ Selected · declare above' : 'Select card →';
   if (reference) return 'Spell reference';
@@ -793,7 +800,7 @@ function offerCard(state, current, face, availability, spell, creature, chosen) 
   const number = offeredSpells.indexOf(spell.spell) + 1;
   if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
   face.dataset.focus = `card-${creature}-${spell.spell}`;
-  selectable(face, chosen, () => chooseCard(state, current, spell.spell));
+  selectable(face, chosen, (event, keyboard) => chooseCard(state, current, spell.spell, keyboard === true));
 }
 
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
@@ -955,7 +962,7 @@ function miniCreature(state, creature, which, marks) {
   energy.textContent = `ϟ${creature.energy ?? 0}`;
   const stats = document.createElement('span');
   stats.className = 'mini-stats';
-  stats.append(energy, ...miniDelta(creature, marks));
+  stats.append(energy);
   // Defense only when there is some: a creature without any is the usual case, and a phone has no room to say so.
   if (creature.totalDefense > 0) {
     const defense = document.createElement('span');
@@ -969,7 +976,7 @@ function miniCreature(state, creature, which, marks) {
     initiative.textContent = `↟${creature.currentInitiative}`;
     stats.append(initiative);
   }
-  chip.append(id, health, stats);
+  chip.append(id, health, ...miniDelta(creature, marks), stats);
   if (creature.isStunned === true) {
     const stunned = document.createElement('span');
     stunned.className = 'mini-flag';
@@ -1920,24 +1927,34 @@ function showPhaseNotice(state, entry, replay = false) {
   schedulePhaseNotice(state);
 }
 
+function noticeContext(state, step, replay) {
+  const earlier = replay ? 'Earlier announcement · ' : '';
+  if (step) return `${earlier}Upkeep · ${state.noticeStep + 1} / ${state.noticeEntry.steps.length}`;
+  return replay ? 'Earlier announcement · review' : 'Phase update';
+}
+
+function noticeDetail(entry, step, final) {
+  if (step) return final ? `${step.label} · ${entry.detail}` : step.label;
+  return entry.upkeep ? `${entry.upkeep} ${entry.detail}` : entry.detail;
+}
+
 function renderNoticeContent(state, replay = state.noticeReplay) {
   const entry = state.noticeEntry;
   const step = entry.steps?.[state.noticeStep];
   const final = state.noticeStep === entry.steps?.length - 1;
-  element('phase-notice-context').textContent = step
-    ? `${replay ? 'Earlier announcement · ' : ''}Upkeep · ${state.noticeStep + 1} / ${entry.steps.length}`
-    : replay ? 'Earlier announcement · review' : 'Phase update';
+  const stepping = Boolean(step && entry.steps.length > 1);
+  element('phase-notice-context').textContent = noticeContext(state, step, replay);
   element('phase-notice-title').textContent = entry.title;
-  element('phase-notice-detail').textContent = step
-    ? `${step.label}${final ? ` · ${entry.detail}` : ''}`
-    : entry.upkeep ? `${entry.upkeep} ${entry.detail}` : entry.detail;
+  element('phase-notice-detail').textContent = noticeDetail(entry, step, final);
   const pin = element('phase-notice-pin');
-  pin.hidden = Boolean(step && entry.steps.length > 1);
+  pin.hidden = stepping;
   pin.textContent = replay ? 'Kept open' : 'Keep open';
   pin.disabled = replay;
   const next = element('phase-notice-next');
-  next.hidden = !step || entry.steps.length < 2;
+  next.hidden = !stepping;
   next.textContent = final ? 'Done ✓' : 'Next effect →';
+  // The steps wait for the player, so the way past them is one tap too: Upkeep keeps the whole list.
+  element('phase-notice-skip').hidden = !stepping || final;
   const list = element('phase-notice-changes');
   const changes = step?.changes ?? entry.changes ?? [];
   list.hidden = changes.length === 0;
@@ -2018,6 +2035,7 @@ function setupPhaseControls(state) {
     renderNoticeContent(state);
     element('phase-notice-next').focus({ preventScroll: true });
   });
+  element('phase-notice-skip').addEventListener('click', () => hidePhaseNotice(state));
   element('phase-notice-mute').addEventListener('click', () => {
     setQuiet(state, true);
     element('announcements-label').focus({ preventScroll: true });
@@ -2235,11 +2253,16 @@ function intentButtons(state, current) {
   return [confirm];
 }
 
-function chooseCard(state, current, spell) {
+// A second tap on the chosen card does nothing: the row can move under a finger. A key cannot, so Enter or Space
+// on the card that is already chosen declares it, as the fixed button does.
+function chooseCard(state, current, spell, keyboard = false) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
   if (!option?.castableSpells?.includes(spell)) return;
-  if (state.chosen === spell) return;
+  if (state.chosen === spell) return keyboard ? declareChosen(state, current) : undefined;
+  // Choosing a card is the player moving on: an announcement still over the decision would hide the Declare
+  // button it has just named (a phone's notice sits exactly on it).
+  if (!element('phase-notice').hidden) hidePhaseNotice(state);
   state.chosen = spell;
   redraw(state);
 }
@@ -2771,7 +2794,7 @@ function navigateChoices(state, current, event) {
     else focus(next ?? active);
     return;
   }
-  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-'], Target: ['target-', 'mini-target-'] }[view.waitingFor];
+  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-', 'declare-'], Target: ['target-', 'mini-target-'] }[view.waitingFor];
   if (!prefixes) return;
   const controls = prefixes.flatMap(nodes).filter(node => node.checkVisibility?.() ?? true);
   if (!controls.length) return;

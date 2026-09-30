@@ -587,7 +587,7 @@ body:has(#table) { padding-bottom: 24px; }
 .notice-controls { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .notice-controls button { min-height: 30px; font-size: 11px; padding: 5px 9px; background: transparent; }
 .notice-controls #phase-notice-next { min-height: 44px; margin-right: auto; background: var(--gold); border-color: var(--gold); color: #2b251a; font-size: 13px; font-weight: 750; }
-.notice-controls #phase-notice-next[hidden], .notice-controls #phase-notice-pin[hidden] { display: none; }
+.notice-controls #phase-notice-next[hidden], .notice-controls #phase-notice-skip[hidden], .notice-controls #phase-notice-pin[hidden] { display: none; }
 #decision .decision-heading { flex-wrap: wrap; gap: 8px; }
 #decision-phase { color: #f1d69b; font-size: 17px; font-weight: 750; }
 .decision-turn { background: #394b3b; border: 1px solid #83967b; color: #e2eeda; border-radius: 6px; padding: 5px 8px; font-size: 12px; font-weight: 700; }
@@ -952,9 +952,11 @@ body:has(#table) { padding-bottom: 24px; }
 #hand-view { display: none; }
 
 @media (max-width: 1099px) {
-  .mini-creature { display: grid; grid-template-columns: 18px minmax(0, 1fr); grid-template-rows: 15px 13px; gap: 2px 4px; min-height: 39px; align-content: center; }
+  .mini-creature { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; grid-template-rows: 15px 13px; gap: 2px 4px; min-height: 39px; align-content: center; }
   .mini-id { grid-column: 1; grid-row: 1; }
   .mini-health { grid-column: 2; grid-row: 1; width: 100%; }
+  /* A health change is read against the bar it changed, never beside the energy on the line below. */
+  .mini-delta { grid-column: 3; grid-row: 1; }
   .mini-stats { grid-column: 1 / -1; grid-row: 2; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 2px; white-space: nowrap; }
   .mini-initiative { flex: none; font-size: 10px; font-weight: 700; color: #d0aff3; }
 }
