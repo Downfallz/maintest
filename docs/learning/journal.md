@@ -4,6 +4,36 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-30. Every tier-2 package teaches two spells, and Soothing Chant is raised after the first read
+
+- **What changed.** #245 (content `8b842137`) gave each of the nine tier-2 packages a second spell -- Shield
+  Bash, Shadowstep, Extort, Reckless Swing, Frostbite, Soothing Chant, Bone Ward, Latch and Adrenaline Tonic --
+  gave Meteor a 1-round bleed of 1 on each target, turned Ice Spear's slow into a one-round stun, and cut
+  Tranquilizer Dart's stun to one round while giving it a bleed of 1 for 2 rounds, so that Ice Spear does not
+  strictly dominate it. The spells were sized with the `check-knobs` reading the studio now shows, and no tuning
+  ran. #246 (content `ab944cfb`) then raised Soothing Chant's regeneration from 1 to 2 a round.
+- **The measurement.** `score-content` on engine `ceb54380`, objective `adr-0065` with targets `baac0add74b0`,
+  on both seed files:
+
+  | content | benchmark seeds | confirmation seeds |
+  | --- | --- | --- |
+  | `813bb91b`, before #245 | 12.84 | 8.91 |
+  | `8b842137`, #245 | 11.62 | 17.53 |
+  | `ab944cfb`, #246 | **7.80** | **12.48** |
+
+- **What it says.** #245 did not win on the confirmation seeds, so by ADR 0074's rule it was not an
+  improvement on its own. Its benchmark-seed gain was mostly the seat: `variety.player1WinShare` 0.615 to
+  0.575. What it bought is choice inside tier 2: on the confirmation seeds' exploring run Berserker splits 62/83,
+  Parasite 43/35 and Necromancer 645/383, where each package had one spell. What it cost is
+  `variety.tierUsageShare` and `variety.tierDamageSpread`, led by the Shaman (Soothing Chant 25 casts against
+  Healing Screech's 399, 94% on one spell), and a Blightweaver that fell from 77 casts to 6 after the Dart
+  change. Raising Chant to 2 a round took it to 124 casts against 307 and brought both scores down; the
+  confirmation score is still above where it started, and the remaining excess is within-package spread among
+  the tier-3 packages (Blightweaver, Deathstalker, Soulreaver). The owner keeps the one-round stuns as they are,
+  having played them.
+- **Stamps.** The digests for `8b842137` (from #245) and `ab944cfb` are in `benchmarks/`. The exploring run
+  averaged 9.9 to 10.2 rounds throughout.
+
 ## 2026-09-29. Tuning pass 14 runs out of time inside its opening sweep, and the lookahead leaves the exploit panel again
 
 - **What ran.** [Workflow run 14](https://github.com/Downfallz/maintest/actions/runs/36516613826):
