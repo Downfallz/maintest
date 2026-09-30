@@ -431,7 +431,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTick(state, view.board)]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -466,6 +466,18 @@ function render(state, views) {
     roundEvents: (view.roundEvents ?? []).filter(entry => entry.sequence < replay.actions[replay.index].sequence
       || (replay.stage === 'after' && entry.sequence === replay.actions[replay.index].sequence)),
   } } : current;
+  // The dock and its notice before the battlefield: the upkeep tick the notice is on is marked on the chip whose
+  // bar it moved (`noticeTick`), so the chips are drawn once the notice knows its step.
+  if (state.playback) renderPlayback(state, current);
+  else {
+    renderPhaseGuide(state, view, current.seat);
+    renderOrder(state, view, current.seat);
+    // Where the action being read was played from, off its recorded frame; without one, only while the round bar
+    // is on that action's combat, because the last slot of a round is often read once the host has moved on to
+    // the next round or the result, and the bar must not mix the two.
+    const stepped = state.step && (state.step.action.frame || (state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation'));
+    if (stepped && !view.over) element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
+  }
   renderTimeline(display.view.board);
   // The spellbook stays the live one while an opponent action is read: it is the player's, not the replay's.
   renderBoard(state, display, state.playback ? display : current);
@@ -474,16 +486,6 @@ function render(state, views) {
   renderRecap(state, view);
   renderDecision(state, current);
   renderCombatLine(state, view);
-  if (state.playback) renderPlayback(state, current);
-  else {
-    renderPhaseGuide(state, view, current.seat);
-    renderOrder(state, view, current.seat);
-    // Only while the round bar is on that action's combat: the last slot of a round is often read once the host
-    // has moved on to the next round or the result, and the bar must not mix the two.
-    if (state.step && state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation' && !view.over) {
-      element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
-    }
-  }
   element('planning').hidden = Boolean(state.playback);
   element('playback').hidden = !state.playback;
   element('playback-board-note').hidden = !state.playback;
@@ -612,6 +614,7 @@ function renderBoard(state, current, spellbook = current) {
     playback: replay?.actions[replay.index] ?? live,
     playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
+    tick: replay ? null : noticeTick(state, board),
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
     targeting: isAsked(view) && view.waitingFor === 'Target',
     candidates: !replay && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
@@ -1017,9 +1020,12 @@ function targetStatus(marks, picked) {
   return marks.canConfirm ? 'selected target, tap again to cast' : 'selected target, choose more targets';
 }
 
-// Once a replayed action is applied, what it did to health is on the chip, where the bar just moved.
+// Once a replayed action is applied, what it did to health is on the chip, where the bar just moved; so is the
+// upkeep tick the notice is reading.
 function miniDelta(creature, marks) {
-  const change = marks.playbackStage === 'after' ? healthChange(marks.playback, creature) : 0;
+  let change = 0;
+  if (marks.playbackStage === 'after') change = healthChange(marks.playback, creature);
+  else if (marks.tick?.creature === creature.id) change = marks.tick.change;
   if (change === 0) return [];
   const delta = document.createElement('span');
   delta.className = `mini-delta ${change < 0 ? 'harm' : 'recovery'}`;
@@ -1756,10 +1762,14 @@ function renderPhaseGuide(state, view, seat) {
     ['Combat', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.'],
     ['Cleanup', ['Cleanup', 'Finalization'], 'Conditions count down, then the next round begins.'],
   ];
-  const current = view.board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(view.board.subPhase));
-  element('phase-round').textContent = `Round ${view.board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
+  // An opponent action of an earlier round being read keeps the dock on that round's combat: the battlefield under
+  // it is that round's (playbackBoard), and a dock announcing the next round would contradict what is on screen.
+  const board = state.step && state.step.round !== view.board.roundNumber
+    ? { ...view.board, roundNumber: state.step.round, phase: 'Combat', subPhase: 'Activation' } : view.board;
+  const current = board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(board.subPhase));
+  element('phase-round').textContent = `Round ${board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
   element('phase-current').textContent = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
-  const turn = activeTurn(view.board);
+  const turn = activeTurn(board);
   element('phase-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total} · Creature ${turn.slot.creature}` : '';
   element('phase-steps').replaceChildren(...phases.map(([label], index) => {
     const step = document.createElement('li');
@@ -1769,15 +1779,20 @@ function renderPhaseGuide(state, view, seat) {
     return step;
   }));
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
-    : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${view.board.nextEvolutionRound > view.board.roundNumber ? ` Next evolution: round ${view.board.nextEvolutionRound}.` : ''}`;
+    : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${board.nextEvolutionRound > board.roundNumber ? ` Next evolution: round ${board.nextEvolutionRound}.` : ''}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   renderUpkeep(state, view, upkeep, seat);
-  const unlocked = unlockedPackages(state, seat, view.board, current >= 0 || view.over);
+  const unlocked = unlockedPackages(state, seat, view.board, (current >= 0 || view.over) && !state.step);
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
   state.phaseSeen ??= new Map();
   const previous = state.phaseSeen.get(seat);
   renderAnnouncements(state, seat);
   if (current < 0 && !view.over) return;
+  // The opponent's actions are read first. The host has often moved on to the next round by the time they are,
+  // and a notice for it -- its upkeep ticks above all -- would sit over an action of the round before, with the
+  // battlefield still showing that round. It waits for the last OK, and the ticks are then read on the board
+  // they moved.
+  if (state.step) return;
   if (previous?.key === key) return;
   state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
   const newRound = previous?.round !== view.board.roundNumber;
@@ -1790,7 +1805,7 @@ function renderPhaseGuide(state, view, seat) {
   const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
     : newRound && upkeep ? upkeepChanges(view.board, upkeep) : [];
   const entry = { title, detail, changes, upkeep: newRound && upkeep ? upkeepPreview(state) : '',
-    steps: newRound && upkeep ? upkeepSteps(state, view.board, upkeep) : [], newRound: begins };
+    steps: newRound && upkeep ? upkeepSteps(state, view.board, upkeep) : [], newRound: begins, round: view.board.roundNumber };
   state.announcements ??= new Map();
   state.announcements.set(seat, [...(state.announcements.get(seat) ?? []), entry].slice(-12));
   renderAnnouncements(state, seat);
@@ -1830,6 +1845,8 @@ function upkeepSteps(state, board, upkeep) {
   const steps = ticks.map(row => ({
     label: row.label,
     changes: [{ who: `Creature ${row.creature}`, text: `${row.sign}${row.amount} ${row.unit}`, tone: row.tone }],
+    // What the tick did to that creature's health, for its chip while this step is read.
+    tick: { creature: row.creature, change: row.tone === 'harm' ? -row.amount : row.amount },
   }));
   if (conditions.length) steps.push({ label: 'Conditions remaining', changes: conditions });
   steps[0].label = `${upkeepEnergy(state)} ${steps[0].label}`;
@@ -1898,6 +1915,15 @@ function renderUpkeep(state, view, upkeep, seat) {
   ] : []));
 }
 
+// The upkeep tick the notice on screen is reading, for the chip whose bar it moved: the notice and the
+// battlefield tell one story. An earlier announcement reopened is about a board that has moved on, and says
+// nothing on the chips.
+function noticeTick(state, board) {
+  const entry = state.noticeEntry;
+  if (!entry || state.noticeReplay || element('phase-notice').hidden || entry.round !== board.roundNumber) return null;
+  return entry.steps?.[state.noticeStep]?.tick ?? null;
+}
+
 function hidePhaseNotice(state) {
   clearTimeout(state.phaseTimer);
   state.phaseMotion?.cancel();
@@ -1909,7 +1935,9 @@ function hidePhaseNotice(state) {
 function showPhaseNotice(state, entry, replay = false) {
   hidePhaseNotice(state);
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
-  if (state.quiet && !replay) return;
+  // The upkeep's ticks are not a phase explanation: like the turn order, they are what happened to the board,
+  // and the mute leaves them.
+  if (state.quiet && !replay && !(entry.steps?.length > 0)) return;
   // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
   element('order').open = false;
   state.noticeEntry = entry;
@@ -2028,20 +2056,25 @@ function setQuiet(state, quiet) {
 function setupPhaseControls(state) {
   const notice = element('phase-notice');
   element('order-panel').addEventListener('click', () => { element('order').open = false; });
+  // A step read or left is redrawn: the tick it names is on the chips (`noticeTick`), and so was the one before.
   element('phase-notice-next').addEventListener('click', () => {
     if (!state.noticeEntry) return;
-    if (state.noticeStep >= state.noticeEntry.steps.length - 1) return hidePhaseNotice(state);
-    state.noticeStep += 1;
-    renderNoticeContent(state);
-    element('phase-notice-next').focus({ preventScroll: true });
+    if (state.noticeStep >= state.noticeEntry.steps.length - 1) hidePhaseNotice(state);
+    else {
+      state.noticeStep += 1;
+      renderNoticeContent(state);
+    }
+    redraw(state);
+    if (!element('phase-notice').hidden) element('phase-notice-next').focus({ preventScroll: true });
   });
-  element('phase-notice-skip').addEventListener('click', () => hidePhaseNotice(state));
+  element('phase-notice-skip').addEventListener('click', () => { hidePhaseNotice(state); redraw(state); });
   element('phase-notice-mute').addEventListener('click', () => {
     setQuiet(state, true);
     element('announcements-label').focus({ preventScroll: true });
   });
   element('phase-notice-close').addEventListener('click', () => {
     hidePhaseNotice(state);
+    redraw(state);
     element('announcements-label').focus({ preventScroll: true });
   });
   element('phase-notice-pin').addEventListener('click', () => {
