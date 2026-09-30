@@ -115,6 +115,19 @@ test('a card can be selected with the keyboard without a network poll or losing 
   assert.equal(p.document.activeElement.attributes['aria-pressed'], 'true');
 });
 
+test('the active hand groups the catalogue types without changing spell selection', () => {
+  const p = page();
+  p.state.cards.get('one').type = 'First type';
+  p.state.cards.get('two').type = 'Second type';
+  p.draw();
+  const groups = held(p).children;
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].children[0].textContent, 'First type · 1');
+  assert.equal(groups[1].children[0].textContent, 'Second type · 1');
+  groups[1].children[1].children[0].click();
+  assert.equal(p.state.chosen, 'two');
+});
+
 test('a new asking of the same kind clears the old selection', () => {
   const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
   p.view.waitingAsked += 1; p.draw();
@@ -231,9 +244,18 @@ test('a replayed action shows what it did to health on the chip once applied', (
   const marks = { picked: [], candidates: [], playbackStage: 'after', playback: { actor: { id: 2 }, targets: [{ id: 1 }], frame: { before: [{ id: 1, health: 20 }] } } };
   const chip = p.context.miniCreature(p.state, creature, 'ally', marks);
   assert.match(chip.className, /replay-target/);
+  // Beside the health bar it changed, not among the stats on the line below.
   assert.equal(chip.children.find(child => child.className === 'mini-delta harm').textContent, '−3');
+  assert.equal(chip.children[2].className, 'mini-delta harm');
   const before = p.context.miniCreature(p.state, creature, 'ally', { ...marks, playbackStage: 'before' });
   assert.equal(before.children.some(child => /mini-delta/.test(child.className)), false);
+});
+
+test('the compact battlefield reads current initiative with energy and defense', () => {
+  const p = page(); p.view.board.allies[0].currentInitiative = 7; p.view.board.allies[0].totalDefense = 2; p.draw();
+  const chip = p.nodes['mini-allies'].children[0];
+  assert.match(chip.textContent, /ϟ4◇2↟7/);
+  assert.match(chip.attributes['aria-label'], /, 2 defense, 7 initiative/);
 });
 
 test('candidates a spell treats alike share one preview line', () => {
@@ -438,11 +460,16 @@ test('an already visible hand does not move when the question changes', () => {
   assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
-test('tapping a selected card declares that card once with the asking identity', async () => {
+test('repeated card taps only select; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
-  held(p).children[0].events.click(); assert.equal(sent.length, 0);
-  await held(p).children[0].events.click();
+  const first = held(p).children[0];
+  first.events.click(); first.events.click();
+  assert.equal(sent.length, 0);
+  assert.equal(p.nodes.choices.children[0].textContent, 'Declare First card');
+  assert.equal(p.nodes['decision-guide'].children.length, 0);
+  assert.match(held(p).children[0].textContent, /Selected/);
+  await p.nodes.choices.children[0].click();
   assert.equal(sent.length, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
 });
@@ -491,12 +518,34 @@ test('a single-target spell allows switching targets before the second tap', () 
   assert.deepEqual([...p.state.picked], [1]);
 });
 
+test('Enter on the chosen card declares it; a second tap on it does not', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  const key = { key: 'Enter', preventDefault() {} };
+  held(p).children[0].events.keydown(key);
+  assert.equal(p.state.chosen, 'one'); assert.equal(sent.length, 0);
+  held(p).children[0].events.click();
+  assert.equal(sent.length, 0);
+  await held(p).children[0].events.keydown(key);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
+});
+
+test('choosing a card closes an announcement that would cover the Declare button', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.context.showPhaseNotice(p.state, { title: 'Round 1 · Spells', detail: 'Declare one spell.', changes: [] });
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+  held(p).children[0].events.click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.state.chosen, 'one');
+});
+
 test('in-flight confirmation ignores additional card taps', async () => {
   const p = page(); let release; let entered; let sent = 0;
   const started = new Promise(resolve => { entered = resolve; });
   p.current.transport.decide = () => { sent += 1; entered(); return new Promise(resolve => { release = resolve; }); }; p.draw();
   await p.state.announced; held(p).children[0].events.click();
-  const pending = held(p).children[0].events.click(); await started;
+  const pending = p.nodes.choices.children[0].click(); await started;
   held(p).children[1].events.click(); held(p).children[0].events.click();
   assert.equal(sent, 1); assert.equal(p.state.chosen, 'one');
   release({ ok: true }); await pending;
@@ -835,19 +884,68 @@ test("switching the creature to evolve starts its package list at the top, and a
 });
 
 test('upkeep popup distinguishes applied ticks from conditions still active on the current board', () => {
-  const p = page(); p.draw();
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
   p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';
   p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
   p.view.roundEvents = [{ sequence: 42, event: { kind: 'OngoingEffectsApplied', roundId: 2,
     regenerationTicks: [{ creature: 1, healed: 1 }], bleedTicks: [{ creature: 2, damage: 2 }] } }];
   p.draw();
-  assert.match(p.nodes['phase-notice-detail'].textContent, /Open Upkeep for details/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+1 HP · Healing over time/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−2 HP · Ongoing damage/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /DefenseModifier -2 · still active/);
-  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeepCreature 2 · DefenseModifier -2/);
+  assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 3/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+1 HP/);
+  assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /Creature 2/);
+  assert.equal(p.timers.has(p.state.phaseTimer), false, 'steps wait for the player');
+  p.nodes['phase-notice-next'].click();
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−2 HP/);
+  p.nodes['phase-notice-next'].click();
+  assert.match(p.nodes['phase-notice-changes'].textContent, /DefenseModifier -2 · 2 rounds left/);
+  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeepCreature 2 · DefenseModifier -2 · 2 rounds left/);
+  p.nodes['phase-notice-next'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
   assert.equal(p.nodes['upkeep-conditions'].hidden, true);
+});
+
+test('Skip leaves the upkeep steps at once and is gone on the last one', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.view.board.roundNumber = 2;
+  p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  p.draw();
+  assert.equal(p.nodes['phase-notice-skip'].hidden, false);
+  p.nodes['phase-notice-next'].click();
+  assert.equal(p.nodes['phase-notice-skip'].hidden, true, 'the last step has Done');
+  p.context.showPhaseNotice(p.state, p.state.announcements.get(p.state.announcementSeat).at(-1), true);
+  assert.equal(p.nodes['phase-notice-skip'].hidden, false);
+  p.nodes['phase-notice-skip'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.nodes.upkeep.hidden, false, 'Upkeep keeps the list');
+});
+
+test('reopening an upkeep announcement restarts the tick sequence', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.view.board.roundNumber = 2;
+  p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  p.draw();
+  p.nodes['phase-notice-next'].click();
+  assert.match(p.nodes['phase-notice-context'].textContent, /2 \/ 2/);
+  p.nodes['announcement-list'].children[1].children[0].click();
+  assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement · Upkeep · 1 \/ 2/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+2 HP/);
+});
+
+test('a round with conditions but no health ticks shows their actual counters in one notice', () => {
+  const p = page(); p.draw();
+  p.view.board.roundNumber = 2;
+  p.view.board.allies[0].conditions = [
+    { effect: { kind: 'Ward', amount: 2 }, remainingRounds: 2, isFresh: true },
+    { effect: { kind: 'Aura' }, remainingRounds: null },
+  ];
+  p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2 } }];
+  p.draw();
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Ward 2 · new · 2 rounds left/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Aura · permanent/);
+  assert.equal(p.nodes['phase-notice-next'].hidden, true);
 });
 
 test('the persistent phase guide distinguishes simultaneous speeds from sequential spell revelation', () => {
@@ -948,7 +1046,7 @@ test('phase notices survive selection redraws, expire once, and announce only re
 });
 
 test('upkeep remains readable after a skipped automatic phase and after the notice fades', () => {
-  const p = page(); p.draw();
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
   p.state.catalogue.rules.energyPerRound = 3;
   p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';
   p.view.roundEvents = [{ sequence: 40, round: 2, event: { kind: 'OngoingEffectsApplied', roundId: 2,
@@ -956,12 +1054,12 @@ test('upkeep remains readable after a skipped automatic phase and after the noti
   p.draw();
   assert.match(p.nodes['phase-notice-title'].textContent, /Round 2 begins/);
   assert.equal(p.nodes['phase-notice'].dataset.kind, 'round');
-  assert.match(p.nodes['phase-notice-detail'].textContent, /Now: Evolve/);
+  assert.match(p.nodes['phase-notice-detail'].textContent, /\+3 energy.*Healing over time/);
   assert.match(p.nodes['upkeep-energy'].textContent, /\+3 energy/);
   assert.match(p.nodes['upkeep-effects'].textContent, /Creature 1\+2 HP/);
   assert.match(p.nodes['upkeep-effects'].textContent, /Creature 2−1 HP/);
   p.nodes.upkeep.open = true;
-  p.timers.get(p.state.phaseTimer)(); p.view.waitingAsked++; p.draw();
+  p.nodes['phase-notice-close'].click(); p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes.upkeep.open, true);
   assert.equal(p.nodes.upkeep.hidden, false);
   p.context.keyboardDecision(p.state, { key: 'Escape', preventDefault() {} });

@@ -82,11 +82,13 @@ not recorded matches. Card text and creature names in the actual app come from t
   the chips mark the caster and its targets and, once the action is applied, what it did to health. The bar
   never widens the page: a long phase name is cut short, and on the narrowest phones a chip showing a health
   change leaves its energy out.
-- Phones keep scrolling short and never sideways: the hand is a list of compact rows (name, cues, cost,
-  effects; the declare cue on the chosen card, which carries no critical reminder so it barely grows between
-  its two taps), packages are two-line rows, the
+- Phones keep scrolling short and never sideways: the acting creature's spellbook uses two compact columns,
+  grouped by the card types the host supplies. **Full details** expands its cards into one column; speed's
+  two-column reference reveals each spell's effects on tap. Selecting a spell keeps the cards and the fixed
+  decision the same height; only the fixed Declare button commits it. Packages are two-line rows, the
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
-  ↟ initiative), and the turn order wraps. Round flow and the tab row are left to the Round guide and the
+  ↟ current initiative), and the turn order wraps. The mini battlefield shows health, energy, defense when
+  present and current initiative on each creature. Round flow and the tab row are left to the Round guide and the
   spellbook's Talent atlas link, and the turn in the round bar to the decision heading and the acting chip.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
@@ -108,7 +110,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
-- Tap a spell once to select it, then again to declare it. Tap a selected target again to cast on the entire
+- Tap a spell to select it, then use the fixed Declare button; choosing a card also closes a phase announcement
+  that would cover that button on a phone. With a keyboard, Enter or Space on the chosen card declares it, and the
+  arrow keys reach the Declare button. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
@@ -143,8 +147,11 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
-  New rounds get a larger, gold-accented “Round N begins” announcement for 8 seconds, alongside upkeep
-  results and the next task. Loading an existing round does not pretend that a new round just started.
+  New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
+  Next advances through each applied tick in engine order and then shows the remaining condition durations;
+  the energy allowance is context on the first step, not a step per creature. The notice waits until Done,
+  Skip ▸▸ or Close, and a replay from Announcements starts again at the first tick. Loading an existing round does not
+  pretend that a new round just started.
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
   announcement; it does not change the current phase, question or selection. The top bar remains current.
@@ -154,7 +161,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   seat tokens) across a reload.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
-  including zero/capped results, in engine order. These public events are retained separately from the short
+  including zero/capped results, in engine order, followed by active conditions and their remaining rounds.
+  These public events are retained separately from the short
   activity log. Escape closes the panel. A new round announces upkeep even when polling skipped that phase;
   missing events are never reconstructed from board deltas or guessed from conditions.
 - On phones, the evolution budget and creature picker remain in view while the offered packages scroll within
@@ -162,7 +170,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   battlefield shows each opponent creature's public acquired packages beside its conditions and confirmed
   spell, with no inference from its known spells. After an observed evolution opportunity, one announcement
   recaps both teams' newly acquired packages; an initial load does not invent a purchase. A round announcement
-  separates actual ongoing ticks from conditions still active on the current board, while Upkeep retains the
+  steps through actual ongoing ticks and conditions still active on the current board, while Upkeep retains the
   full tick list. The round bar and board already show resolved actions, so the duplicate decision box is gone.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
@@ -232,9 +240,11 @@ slow connection. Verify that only the chosen action is submitted, unavailable ca
 that the handover screen covers the entire board.
 ## Decision guidance and practice
 
-Before confirming a spell or target, the table shows the engine's energy cost, energy
-left after paying it, turn position, and plain/critical effects against the current
-targets. Choosing speed shows the Quick/Standard trade and each spell's critical
+Choosing a spell shows the engine's energy cost, energy left after paying it, turn
+position and critical chance on the card itself (on a phone's compact cards, under
+**Full details**). The plain/critical effects against the current targets appear at the
+Target step, before the cast is confirmed: during Intent a growing preview moved the
+cards under the player's finger, so it stays out of the fixed decision. Choosing speed shows the Quick/Standard trade and each spell's critical
 chance. Unaffordable cards keep the engine's reason visible. Caster effects appear
 once, separately from target effects.
 

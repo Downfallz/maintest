@@ -586,6 +586,8 @@ body:has(#table) { padding-bottom: 24px; }
 #phase-notice-title { font-size: 18px; }
 .notice-controls { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .notice-controls button { min-height: 30px; font-size: 11px; padding: 5px 9px; background: transparent; }
+.notice-controls #phase-notice-next { min-height: 44px; margin-right: auto; background: var(--gold); border-color: var(--gold); color: #2b251a; font-size: 13px; font-weight: 750; }
+.notice-controls #phase-notice-next[hidden], .notice-controls #phase-notice-skip[hidden], .notice-controls #phase-notice-pin[hidden] { display: none; }
 #decision .decision-heading { flex-wrap: wrap; gap: 8px; }
 #decision-phase { color: #f1d69b; font-size: 17px; font-weight: 750; }
 .decision-turn { background: #394b3b; border: 1px solid #83967b; color: #e2eeda; border-radius: 6px; padding: 5px 8px; font-size: 12px; font-weight: 700; }
@@ -846,11 +848,11 @@ body:has(#table) { padding-bottom: 24px; }
   :is(#own-hand, .enemy-books) .held > .card-body { order: 5; flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
   :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
   :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
-  /* The critical reminder stays off the phone rows, chosen or not: it lengthened the chosen card under the thumb
-     between the two taps that declare it. The Speed reference and the laptop cards still carry it. */
+  /* The critical reminder stays off phone rows; the Speed reference and laptop cards still carry it. */
   :is(#own-hand, .enemy-books) .held .card-critical-note { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; flex: 1 0 100%; padding: 0; font-size: 11px; }
-  :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
+  /* The selected row keeps its height: the fixed Declare button gives the confirmation cue. */
+  #own-hand .held.offered > .card-availability, .enemy-books .held:not(.chosen) > .card-availability { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
 
   #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -941,6 +943,48 @@ body:has(#table) { padding-bottom: 24px; }
 #planning.stepping .hand-section { opacity: .55; }
 #planning.stepping #own-hand { pointer-events: none; }
 
+/* The active spellbook can be scanned by the types the catalogue supplies, with no classification guessed
+   from a spell name or effect sentence. Other creatures keep their ordinary collapsed hand. */
+#own-hand .held-cards.grouped-spells { grid-template-columns: minmax(0, 1fr); }
+.spell-group { min-width: 0; }
+.spell-group h3 { margin: 4px 2px; color: var(--gold); font-size: 11px; font-weight: 700; }
+.spell-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 8px; }
+#hand-view { display: none; }
+
+@media (max-width: 1099px) {
+  .mini-creature { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; grid-template-rows: 15px 13px; gap: 2px 4px; min-height: 39px; align-content: center; }
+  .mini-id { grid-column: 1; grid-row: 1; }
+  .mini-health { grid-column: 2; grid-row: 1; width: 100%; }
+  /* A health change is read against the bar it changed, never beside the energy on the line below. */
+  .mini-delta { grid-column: 3; grid-row: 1; }
+  .mini-stats { grid-column: 1 / -1; grid-row: 2; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 2px; white-space: nowrap; }
+  .mini-initiative { flex: none; font-size: 10px; font-weight: 700; color: #d0aff3; }
+}
+
+@media (max-width: 760px) {
+  #own-hand .held-cards.speed-reference:not(.grouped-spells),
+  #own-hand .speed-reference .spell-grid,
+  #planning[data-kind="Intent"] #own-hand .hand-row.active .held-cards:not(.grouped-spells),
+  #planning[data-kind="Intent"] #own-hand .hand-row.active .spell-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+  }
+  #own-hand .speed-spell > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px; min-height: 60px; padding: 7px; align-content: start; }
+  .speed-spell > summary strong { grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; line-height: 1.25; }
+  .speed-cost { font-size: 10px; }
+  .speed-critical { font-size: 9px; padding: 2px 3px; }
+  .speed-spell > summary::after { display: none; }
+  .hand-actions { display: flex; gap: 7px; }
+  .hand-actions #hand-view:not([hidden]) { display: inline-block; }
+  .hand-actions #hand-view { white-space: nowrap; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .held { min-height: 111px; padding: 8px; align-content: start; gap: 4px; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-title { font-size: 14px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-cues,
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-advice { display: none; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex-basis: 100%; padding-top: 2px; font-size: 11px; line-height: 1.25; }
+  #planning[data-kind="Intent"].full-spells #own-hand .hand-row.active .held-cards:not(.grouped-spells),
+  #planning[data-kind="Intent"].full-spells #own-hand .hand-row.active .spell-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* The round bar's play-by-play: one or two lines, never wider than the bar. */
 /* The clamp is on the text, inside the padding, so a third line is never half drawn in it. */
 .combat-line { grid-column: 1 / -1; min-width: 0; margin: 0; padding: 4px 8px; border-left: 3px solid #e4c37a; border-radius: 5px; background: #1d2a21; color: #efe2c2; font-size: 12px; line-height: 1.35; }
@@ -983,6 +1027,7 @@ body:has(#table) { padding-bottom: 24px; }
   }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) .action-area { flex: none; position: static; }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { display: block; overflow: visible; max-height: none; padding: 0 0 8px; }
+  #decision[data-kind="Intent"] .declare-spell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) .hand-section {
     /* A floor, so a long preview on a short phone never squeezes the spellbook to nothing: the desk scrolls. */
     flex: 1 0 auto; height: 0; min-height: 132px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
