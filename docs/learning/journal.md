@@ -4,6 +4,33 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-30. search-31 joins the tuner's exploit panel before tuning pass 15
+
+- **What changed.** The `exploit` panel of `data/balance/knobs.json` was `search-19`, `kill-first`, `search-21`,
+  `pressure-floor` and `stun-first`. It is now `search-19`, `kill-first`, `search-31`, `search-21` and
+  `pressure-floor`. The content does not move.
+- **The measurement.** Each set against Greedy on the benchmark seeds, content `9659f610`, `main` at `dc341ed`,
+  with the time one evaluation takes here:
+
+  | set | score | rounds | at the cap | time |
+  | --- | --- | --- | --- | --- |
+  | `search-19` | 1.000 | 12.18 | 0.000 | 12.1 s |
+  | `search-31` | 1.000 | 12.28 | 0.000 | 13.0 s |
+  | `kill-first` | 1.000 | 14.46 | 0.005 | 15.6 s |
+  | `search-21` | 1.000 | 15.08 | 0.000 | 17.7 s |
+  | `pressure-floor` | 0.961 | 12.27 | 0.005 | 12.3 s |
+  | `stun-first` | 0.740 | 12.33 | 0.000 | 12.0 s |
+
+- **What it says.** `search-31` is the newest search and joins. `stun-first` is the weakest set that still beats
+  Greedy and leaves, so a candidate still costs five `exploit` evaluations. `search-19` stays the best exploiter,
+  above the 10-round floor, so the `exploit` term scores nothing.
+- **Where the content stands.** The objective reads **5.009** on the benchmark seeds, down from 12.844 on
+  `813bb91b`. Three targets are outside their range: `variety.tierDamageSpread` 2.903 (3.26),
+  `variety.tierUsageShare` 0.836 (1.06) and `variety.spellUsageShare` 0.333 (0.69).
+- **What a pass costs.** The eight evaluations of a candidate take 94.5 s one after another here, and one
+  `score-content` takes 88 s. The catalogue has 175 knobs where pass 14 had 155, so the opening sweep grows to
+  about 274 candidates. Pass 15 runs 2 rounds of 6, as passes 12 and 13 did.
+
 ## 2026-09-30. Search 31 finds heuristic weights above search-19 against its panel, and they lose to search-19 itself
 
 - **What ran.** #248: `search-weights --kind heuristic` from `search-19`, against greedy, kill-first, search-21,
