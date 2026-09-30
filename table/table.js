@@ -747,7 +747,7 @@ function heldCard(state, spell, offered, creature, current, reference = false) {
 }
 
 function availabilityText(spell, offered, chosen, reference) {
-  if (offered) return chosen ? '✓ Tap again to declare' : 'Select card →';
+  if (offered) return chosen ? '✓ Selected · declare above' : 'Select card →';
   if (reference) return 'Spell reference';
   return spell.castable ? 'Available' : 'Not available now';
 }
@@ -1568,8 +1568,10 @@ function renderDecision(state, current) {
     : '';
   asking.textContent = titleOf(state, view);
   const buttons = buttonsFor(state, current);
-  const guidance = guidancePanel(document, view, state.chosen, state.picked);
-  element('decision-guide').replaceChildren(guidance);
+  // Spell details already live in the scrollable hand. A selected spell must not grow the fixed decision
+  // above it: that moves the rows under the player's finger and makes the confirmation easy to miss.
+  element('decision-guide').replaceChildren(...(view.waitingFor === 'Intent'
+    ? [] : [guidancePanel(document, view, state.chosen, state.picked)]));
   choices.replaceChildren(...buttons);
 }
 
@@ -2115,36 +2117,30 @@ function tieOrderButtons(state, current) {
   return [help, ...ties, confirm, keep, again];
 }
 
-// An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
-// and there is no undo (playtest-app.md §3.3, §7), so the first tap chooses a card in the hand and the second
-// confirms it, on that same card or here. The chosen card stays on the screen, marked, which is what makes the second tap a reading
-// of the first rather than a formality.
+// A card tap only selects. The fixed button names the selected spell and is the explicit commitment: another
+// tap on a moving spell row must never submit an irreversible choice.
 function intentButtons(state, current) {
   const view = current.view;
   const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
   const castable = option?.castableSpells ?? [];
   const chosen = castable.includes(state.chosen) ? state.chosen : null;
 
-  // No card a choice: the cards are in the hand, where their whole face is, and the hand is the picker
-  // (playtest-app.md §3.2). The sheet says what to tap and holds the commitment.
-  const asking = document.createElement('p');
-  asking.className = 'muted';
-  asking.textContent = 'Tap a card, then tap it again to declare, or use the button.';
-
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
-  const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () => {
+  const confirm = button(chosen === null ? 'Select a spell' : `Declare ${name}`, () => {
     confirm.disabled = true;
-    declareChosen(state, current);
+    return declareChosen(state, current);
   });
+  confirm.className = 'declare-spell';
+  confirm.dataset.focus = 'declare-spell';
   confirm.disabled = chosen === null;
-  return [asking, confirm];
+  return [confirm];
 }
 
 function chooseCard(state, current, spell) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
   if (!option?.castableSpells?.includes(spell)) return;
-  if (state.chosen === spell) return declareChosen(state, current);
+  if (state.chosen === spell) return;
   state.chosen = spell;
   redraw(state);
 }

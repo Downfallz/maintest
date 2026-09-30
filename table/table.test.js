@@ -438,11 +438,16 @@ test('an already visible hand does not move when the question changes', () => {
   assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
-test('tapping a selected card declares that card once with the asking identity', async () => {
+test('repeated card taps only select; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
-  held(p).children[0].events.click(); assert.equal(sent.length, 0);
-  await held(p).children[0].events.click();
+  const first = held(p).children[0];
+  first.events.click(); first.events.click();
+  assert.equal(sent.length, 0);
+  assert.equal(p.nodes.choices.children[0].textContent, 'Declare First card');
+  assert.equal(p.nodes['decision-guide'].children.length, 0);
+  assert.match(held(p).children[0].textContent, /Selected/);
+  await p.nodes.choices.children[0].click();
   assert.equal(sent.length, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
 });
@@ -496,7 +501,7 @@ test('in-flight confirmation ignores additional card taps', async () => {
   const started = new Promise(resolve => { entered = resolve; });
   p.current.transport.decide = () => { sent += 1; entered(); return new Promise(resolve => { release = resolve; }); }; p.draw();
   await p.state.announced; held(p).children[0].events.click();
-  const pending = held(p).children[0].events.click(); await started;
+  const pending = p.nodes.choices.children[0].click(); await started;
   held(p).children[1].events.click(); held(p).children[0].events.click();
   assert.equal(sent, 1); assert.equal(p.state.chosen, 'one');
   release({ ok: true }); await pending;

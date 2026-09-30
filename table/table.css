@@ -846,11 +846,11 @@ body:has(#table) { padding-bottom: 24px; }
   :is(#own-hand, .enemy-books) .held > .card-body { order: 5; flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
   :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
   :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
-  /* The critical reminder stays off the phone rows, chosen or not: it lengthened the chosen card under the thumb
-     between the two taps that declare it. The Speed reference and the laptop cards still carry it. */
+  /* The critical reminder stays off phone rows; the Speed reference and laptop cards still carry it. */
   :is(#own-hand, .enemy-books) .held .card-critical-note { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; flex: 1 0 100%; padding: 0; font-size: 11px; }
-  :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
+  /* The selected row keeps its height: the fixed Declare button gives the confirmation cue. */
+  #own-hand .held.offered > .card-availability, .enemy-books .held:not(.chosen) > .card-availability { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
 
   #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -983,6 +983,7 @@ body:has(#table) { padding-bottom: 24px; }
   }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) .action-area { flex: none; position: static; }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { display: block; overflow: visible; max-height: none; padding: 0 0 8px; }
+  #decision[data-kind="Intent"] .declare-spell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #planning:is([data-kind="Speed"], [data-kind="Intent"]) .hand-section {
     /* A floor, so a long preview on a short phone never squeezes the spellbook to nothing: the desk scrolls. */
     flex: 1 0 auto; height: 0; min-height: 132px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;

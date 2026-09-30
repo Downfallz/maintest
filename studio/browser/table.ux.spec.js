@@ -140,25 +140,41 @@ test('the talent atlas lays its families out without overlap or sideways panning
   await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });
 
-test('a phone lists the castable spells as compact rows, the chosen one with its declare cue', async ({ page }, info) => {
+test('spell rows stay put on selection and only the fixed button declares', async ({ page }, info) => {
   const intent = { ...view, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
     board: { ...view.board, subPhase: 'IntentSelection' } };
+  const decisions = [];
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: intent }));
+  await page.route('**/api/seat/player1/decision', route => {
+    decisions.push(route.request().postDataJSON());
+    return route.fulfill({ status: 204 });
+  });
   await expect(page.locator('#own-hand .held.offered')).toHaveCount(cards.length);
   const heights = await page.locator('#own-hand .held.offered').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
   if (isPhone(page)) expect(Math.max(...heights)).toBeLessThan(140);
   await expectNoSidewaysScroll(page);
   const pummel = page.locator('#own-hand .held.offered').filter({ hasText: 'Pummel' });
-  const before = (await pummel.boundingBox()).height;
+  await pummel.scrollIntoViewIfNeeded();
+  const before = await pummel.boundingBox();
+  const headerBefore = await page.locator('#decision').boundingBox();
   await pummel.click();
-  await expect(pummel).toContainText('Tap again to declare');
-  await expect(pummel.locator('.card-availability')).toBeVisible();
-  // The second tap lands where the first did: a phone does not unfold the critical reminder on the chosen card.
+  await expect(pummel).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#decision-guide')).toBeEmpty();
+  await expect(page.locator('#choices .declare-spell')).toHaveText('Declare Pummel');
+  await pummel.click();
+  expect(decisions).toHaveLength(0);
   if (isPhone(page)) {
     await expect(pummel.locator('.card-critical-note')).toBeHidden();
-    expect((await pummel.boundingBox()).height - before).toBeLessThan(30);
+    await expect(pummel.locator('.card-availability')).toBeHidden();
+    const after = await pummel.boundingBox();
+    expect(Math.abs(after.height - before.height)).toBeLessThan(2);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(2);
+    expect(Math.abs((await page.locator('#decision').boundingBox()).height - headerBefore.height)).toBeLessThan(2);
   }
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
+  await page.locator('#choices .declare-spell').click();
+  await expect.poll(() => decisions.length).toBe(1);
+  expect(decisions[0]).toMatchObject({ kind: 'Intent', creature: 1, spell: 'spell-4', asked: 3 });
 });
 
 test('on a phone the speed and spell decisions remain visible while only their spellbook scrolls', async ({ page }, info) => {
