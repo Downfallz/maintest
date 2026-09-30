@@ -315,6 +315,10 @@ internal sealed class PlaytestRun
         return NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase: null), change.From, change.To, change.AtRound, _clock), cancellationToken);
     }
 
+    /// <summary>This seat gave the match up, where the match had got to (ADR 0087).</summary>
+    public Task ConcededAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, CancellationToken cancellationToken = default) =>
+        NoteAsync(PlaytestNote.Conceded(Where(matchId, slot, round, subPhase), _clock), cancellationToken);
+
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>
         NoteAsync(PlaytestNote.Typed(Where(matchId, slot, round, subPhase), kind, text, _clock), cancellationToken);

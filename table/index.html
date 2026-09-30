@@ -50,6 +50,18 @@
           <p id="phase-reminder"></p>
           <div class="phase-tools">
           <details id="phase-progress"><summary>Round flow</summary><ol id="phase-steps" aria-label="Round phases"></ol></details>
+          <details id="match-tools" hidden>
+            <summary id="match-tools-label">Match</summary>
+            <section id="match-panel" aria-label="This match">
+              <button id="concede" type="button" class="secondary">Concede the match…</button>
+              <div id="concede-confirm" hidden>
+                <p>Give the match up? Your opponent wins on the spot, and the session records it.</p>
+                <button id="concede-yes" type="button">Concede</button>
+                <button id="concede-no" type="button" class="secondary">Keep playing</button>
+              </div>
+              <p id="concede-problem" class="muted" role="status" hidden></p>
+            </section>
+          </details>
           <details id="order" hidden>
             <summary id="order-label">Turn order</summary>
             <section id="order-panel" aria-labelledby="order-title">

@@ -31,6 +31,9 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
 
+    // Gives the match up for this seat: the other seat wins on the spot (ADR 0087).
+    concede: () => send('POST', `/api/seat/${seat}/concede`),
+
     // A note goes to one route for both seats: the host records it against whichever seat's token carried it,
     // so nobody can file a misplay against the other player.
     note: note => send('POST', '/api/notes', note),

@@ -92,3 +92,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0084](0084-a-creature-waits-only-for-a-critical-worth-waiting-for.md) | A creature waits only for a critical worth waiting for | Accepted |
 | [0085](0085-a-denied-kill-reads-the-enemies-still-to-act.md) | A denied kill reads the enemies still to act | Accepted |
 | [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) | A match lasts eight to fourteen rounds | Accepted |
+| [0087](0087-a-player-may-concede.md) | A player may concede | Accepted |

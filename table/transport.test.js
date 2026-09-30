@@ -41,6 +41,19 @@ test('a decision is posted as json, which is also what the host requires of a wr
   assert.equal(answer.body, null);
 });
 
+test('a concession is posted to the seat, with nothing to say but which seat (ADR 0087)', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: '{"winner":"player2","reason":"Concession"}' });
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  const answer = await transport.concede();
+
+  assert.equal(calls[0].path, '/api/seat/player1/concede');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.equal(calls[0].options.body, undefined);
+  assert.deepEqual(answer.body, { winner: 'player2', reason: 'Concession' });
+});
+
 // One route for both seats, because the seat a note belongs to is the token's and not the path's.
 test('a note is posted to one route, carrying the seat token that wrote it', async () => {
   const { calls, fetchImpl } = stub({ status: 204, body: '' });

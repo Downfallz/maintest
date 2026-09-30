@@ -164,6 +164,12 @@ not recorded matches. Card text and creature names in the actual app come from t
   upkeep's ticks are not muted: like the turn order, they are what happened to the board, not an explanation. While
   muted, the same toggle at the top of Announcements turns them back on. The mute is kept per match (by its
   seat tokens) across a reload.
+- The dock's **Match** tool holds the one thing a player can do to the match itself: **Concede the match…**,
+  then **Concede** to confirm or **Keep playing** (ADR 0087). The seat on screen gives up -- in hotseat, whoever
+  holds the device -- and the opponent wins on the spot; the end screen and the masthead then say who won and
+  why (`You conceded · Player 2 wins.`, `You win · the last team standing.`, a draw), for every way a match
+  ends. A seat a bot plays, a finished match and the practice table offer no concession. A recorded session
+  writes it as a `Concession` note; the trace's `MatchEnded` carries the reason.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
   including zero/capped results, in engine order, followed by active conditions and their remaining rounds.

@@ -21,7 +21,8 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 {
     private readonly Lock _gate = new();
     private Question? _question;
-    private TaskCompletionSource<PlayerDecision>? _answer;
+    private TaskCompletionSource<PlayerDecision?>? _answer;
+    private bool _released;
 
     // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
     private long _asked;
@@ -76,40 +77,72 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
         }
     }
 
+    /// <summary>
+    /// Stops the seat waiting, now and for the rest of the match: the match has ended under it -- a concession
+    /// (ADR 0087) -- and the question it is blocking the driver on has no answer. What the driver is handed
+    /// from then on is a decision to a match that is over, which the match refuses and the driver reads as
+    /// the end (<c>MatchDriver.Accept</c>); nothing in it is anybody's choice.
+    /// </summary>
+    public void Release()
+    {
+        lock (_gate)
+        {
+            _released = true;
+            _answer?.TrySetResult(null);
+            _question = null;
+            _answer = null;
+        }
+    }
+
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         var decision = Ask(new Question(PlayerOptionsKind.Evolution, Creature: null));
-        return decision.IsPass
+        return decision is null || decision.IsPass
             ? EvolutionDecision.Pass
             : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Tier)));
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
-        Required(Ask(new Question(PlayerOptionsKind.Speed, creature)).Speed);
+        Ask(new Question(PlayerOptionsKind.Speed, creature)) is { } decision ? Required(decision.Speed) : Speed.Standard;
 
     public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
-        Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null)).Order;
+        Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null))?.Order ?? [];
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);
-        return Required(Ask(new Question(PlayerOptionsKind.Intent, intentOption.Creature)).Spell);
+        if (Ask(new Question(PlayerOptionsKind.Intent, intentOption.Creature)) is { } decision)
+        {
+            return Required(decision.Spell);
+        }
+
+        // Released: the match has ended and refuses the intent before it reads the spell, so any name will do,
+        // and a creature can be asked with nothing it can cast.
+        return intentOption.CastableSpells.Count > 0 ? intentOption.CastableSpells[0] : Nothing;
     }
+
+    private static readonly SpellId Nothing = SpellId.Parse("spell:nothing:v1");
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return Ask(new Question(PlayerOptionsKind.Target, options.Actor)).Targets;
+        return Ask(new Question(PlayerOptionsKind.Target, options.Actor))?.Targets ?? [];
     }
 
-    private PlayerDecision Ask(Question shape)
+    /// <summary>The person's answer, or <c>null</c> from a seat that has been released: nobody is answering.</summary>
+    private PlayerDecision? Ask(Question shape)
     {
         // Stamped here rather than at the call sites, which name the shape and have no reason to know
         // that two askings of it are two things.
         var question = shape with { Asked = Interlocked.Increment(ref _asked) };
-        var answer = new TaskCompletionSource<PlayerDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var answer = new TaskCompletionSource<PlayerDecision?>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
+            if (_released)
+            {
+                return null;
+            }
+
             _question = question;
             _answer = answer;
         }

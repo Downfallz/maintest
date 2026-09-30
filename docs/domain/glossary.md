@@ -11,8 +11,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Player | A participant in a Match. Controls one Team. Occupies a Player slot (`Player1`, `Player2`). | decided |
 | Team | The set of Creatures a Player commands during a Match. Defeated when all its Creatures are dead. | decided |
 | Rule set | The tunable parameters of a Match: team size, evolution picks per opportunity, the first evolution Round and the interval between opportunities, energy gain per round, round cap, damage and crit formulas. It answers the schedule for everything that needs it, so no client works out which Rounds offer a pick (ADR 0056). | decided |
-| Win condition | The match ends the moment a Team is defeated, on the action or the upkeep that wipes it (ADR 0083), or at the end of the round cap (ADR 0011). | decided |
-| Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`). | decided |
+| Win condition | The match ends the moment a Team is defeated, on the action or the upkeep that wipes it (ADR 0083), at the end of the round cap (ADR 0011), or when a Player concedes (ADR 0087). | decided |
+| Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`, `Concession`). | decided |
+| Concession | A Player giving the Match up: it ends on the spot, the other Player wins, and the Round is left where it was (ADR 0087). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
 | Roster | The Creature definitions a Player brings to a Match; its size is the Rule set's team size. | decided |
 | Board | Whether positions on a board matter (range, adjacency) or the game is slot-based only. | open |

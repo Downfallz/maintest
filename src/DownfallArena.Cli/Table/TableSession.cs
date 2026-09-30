@@ -25,12 +25,21 @@ internal sealed class TableSession : IDisposable
 {
     private readonly Action _forget;
 
-    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, MatchQueryHandlers queries, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget)
+    private TableSession(
+        MatchId matchId,
+        SeatAgent player1,
+        SeatAgent player2,
+        MatchQueryHandlers queries,
+        ICommandHandler<Concede, Result> concede,
+        TableGate gate,
+        Task<Result<MatchOutcome>> outcome,
+        Action forget)
     {
         MatchId = matchId;
         Player1 = player1;
         Player2 = player2;
         Queries = queries;
+        Concede = concede;
         Gate = gate;
         Outcome = outcome;
         _forget = forget;
@@ -43,6 +52,12 @@ internal sealed class TableSession : IDisposable
     /// writes, so a page polling while the match advances reads a board rather than a board being built.
     /// </summary>
     public MatchQueryHandlers Queries { get; }
+
+    /// <summary>
+    /// The one command a host sends the match itself (ADR 0087), behind the driver's lock like its reads: the
+    /// driver may be inside a command of its own when a seat gives up.
+    /// </summary>
+    public ICommandHandler<Concede, Result> Concede { get; }
 
     private TableGate Gate { get; }
 
@@ -106,6 +121,7 @@ internal sealed class TableSession : IDisposable
         var gate = new TableGate();
         var queries = gate.Around(services.GetRequiredService<MatchQueryHandlers>());
         var driver = new MatchDriver(gate.Around(services.GetRequiredService<MatchCommandHandlers>()), queries);
+        var concede = gate.Guarding(services.GetRequiredService<ICommandHandler<Concede, Result>>());
         var played1 = wrap?.Invoke(matchId, player1) ?? player1;
         var played2 = wrap?.Invoke(matchId, player2) ?? player2;
         var outcome = Task.Run(() => driver.PlayAsync(matchId, played1, played2, cancellationToken), cancellationToken);
@@ -113,7 +129,7 @@ internal sealed class TableSession : IDisposable
         // The recorder is optional: only a host that shows a feed registers one.
         var repository = services.GetRequiredService<IMatchRepository>();
         var recorder = services.GetService<MatchTraceRecorder>();
-        return new TableSession(matchId, player1, player2, queries, gate, outcome, () =>
+        return new TableSession(matchId, player1, player2, queries, concede, gate, outcome, () =>
         {
             recorder?.Forget(matchId);
             repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();

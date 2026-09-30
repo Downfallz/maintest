@@ -107,6 +107,35 @@ public sealed class MatchDriverTests
         await Should.ThrowAsync<InvalidOperationException>(() => Driver(store).PlayAsync(match.Id, cheater, cheater, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// A concession lands while the driver is inside a question (ADR 0087): the seat it was asking answers a
+    /// match that has ended, and that answer is refused as such rather than as a bug. Here the agent concedes
+    /// from inside its own speed choice, which is the tightest form of "while being asked".
+    /// </summary>
+    [Fact]
+    public async Task A_concession_while_a_seat_is_being_asked_ends_the_match_with_its_outcome()
+    {
+        var store = new MatchStore();
+        var match = store.Started();
+        var quitter = Scripted(TestContent.Slam);
+        quitter.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(_ =>
+        {
+            // Once: the driver asks the seat for its other creature's speed too, and that answer is to a match
+            // that has already ended.
+            if (match.State == MatchState.InProgress)
+            {
+                match.Concede(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+            }
+
+            return Speed.Standard;
+        });
+
+        var outcome = await Driver(store).PlayAsync(match.Id, Scripted(TestContent.Slam), quitter, TestContext.Current.CancellationToken);
+
+        outcome.Value.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Concession));
+        match.State.ShouldBe(MatchState.Ended);
+    }
+
     [Fact]
     public async Task A_match_that_is_not_in_progress_cannot_be_played()
     {

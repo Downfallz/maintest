@@ -631,6 +631,63 @@ test('a new question waits under an open battlefield and is guided to when it cl
   assert.equal(p.nodes.planning.scrolledIntoView, true);
 });
 
+// ADR 0087: the seat on screen can give the match up, in two taps because there is no undo.
+test('Concede asks for a confirmation, posts once confirmed, and the end screen says who won', async () => {
+  const p = page(); let conceded = 0;
+  p.current.transport.concede = async () => {
+    conceded += 1;
+    p.view.over = true; p.view.outcome = { winner: 'player2', reason: 'Concession' };
+    return { ok: true, body: p.view.outcome };
+  };
+  p.context.setupConcede(p.state); p.draw();
+  assert.equal(p.nodes['match-tools'].hidden, false);
+  p.nodes.concede.click();
+  assert.equal(p.nodes['concede-confirm'].hidden, false);
+  assert.equal(p.nodes.concede.hidden, true);
+  assert.equal(conceded, 0, 'one tap asks, it does not concede');
+  p.nodes['concede-no'].click();
+  assert.equal(p.nodes['concede-confirm'].hidden, true);
+  assert.equal(p.nodes.concede.hidden, false);
+  p.nodes.concede.click();
+  await p.nodes['concede-yes'].click();
+  assert.equal(conceded, 1);
+  p.draw();
+  assert.equal(p.nodes.asking.textContent, 'You conceded · Player 2 wins.');
+  assert.equal(p.nodes['decision-state'].textContent, 'Finished');
+  assert.equal(p.nodes['match-tools'].hidden, true, 'a finished match has nothing to give up');
+});
+
+test('a refused concession says why and leaves the match as it is', async () => {
+  const p = page();
+  p.current.transport.concede = async () => ({ ok: false, status: 409, body: { message: 'The match has not started or has already ended.' } });
+  p.context.setupConcede(p.state); p.draw();
+  p.nodes.concede.click();
+  await p.nodes['concede-yes'].click();
+  assert.equal(p.nodes['concede-problem'].hidden, false);
+  assert.match(p.nodes['concede-problem'].textContent, /already ended/);
+  assert.equal(p.view.over, undefined);
+});
+
+test('the end screen names the winner and the reason for every way a match ends', () => {
+  const p = page(); p.view.over = true;
+  const said = outcome => { p.view.outcome = outcome; p.state.rendered = null; p.draw(); return p.nodes.asking.textContent; };
+  assert.equal(said(undefined), 'The match is over.');
+  assert.equal(said({ winner: 'player1', reason: 'Elimination' }), 'You win · the last team standing.');
+  assert.equal(said({ winner: 'player2', reason: 'RoundCap' }), 'Player 2 wins · more health at the round cap.');
+  assert.equal(said({ winner: 'player1', reason: 'Concession' }), 'Player 2 conceded · you win.');
+  assert.equal(said({ winner: null, reason: 'Elimination' }), 'The match is a draw · the last team standing.');
+  assert.equal(p.nodes.phase.textContent, 'The match is a draw · the last team standing.');
+});
+
+test("a bot's seat, a finished match and practice offer no concession", () => {
+  const p = page(); p.draw();
+  assert.equal(p.nodes['match-tools'].hidden, false);
+  p.view.playedByBot = true; p.draw();
+  assert.equal(p.nodes['match-tools'].hidden, true);
+  p.view.playedByBot = false; p.state.practice = true; p.state.rendered = null; p.draw();
+  assert.equal(p.nodes['match-tools'].hidden, true);
+});
+
 test('a handover closes the battlefield so the next seat starts at its own move', () => {
   const p = page(); p.draw(); p.context.showBoard(p.state, true);
   p.state.holder = 'player2'; p.state.rendered = null; p.draw();

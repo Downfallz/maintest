@@ -2,6 +2,7 @@ using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -61,6 +62,30 @@ public sealed class HumanSeatTests
         seat.Waiting.ShouldBeNull();
         seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), asking).ShouldBeFalse();
         await asked;
+    }
+
+    /// <summary>
+    /// A released seat answers nobody, now and from then on: the match has ended under it (a concession, ADR
+    /// 0087). What the driver gets is a decision to a match that is over, which the match refuses; a tap that
+    /// arrives afterwards is late, like any tap on a question that is gone.
+    /// </summary>
+    [Fact]
+    public async Task A_released_seat_lets_the_driver_go_and_answers_nothing_afterwards()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var asked = Task.Run(() => seat.DecideSpeed(null!, Creature), TestContext.Current.CancellationToken);
+        await WaitingFor(seat, PlayerOptionsKind.Speed);
+        var asking = Asking(seat);
+
+        seat.Release();
+
+        (await asked).ShouldBe(Speed.Standard);
+        seat.Waiting.ShouldBeNull();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), asking).ShouldBeFalse();
+        seat.DecideTieOrder(null!, null!).ShouldBeEmpty();
+        seat.DecideTargets(null!, new TargetOptions(Creature, SpellId.Parse("spell:pummel:v1"), new LegalTargets(1, 1, []))).ShouldBeEmpty();
+        seat.DecideEvolution(null!, null!).IsPass.ShouldBeTrue();
+        seat.Waiting.ShouldBeNull("a released seat is never waiting");
     }
 
     /// <summary>A tie order is asked of the player, not of one creature, so any order answers it.</summary>

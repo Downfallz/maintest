@@ -181,6 +181,27 @@ public sealed record PlaytestNote
     }
 
     /// <summary>
+    /// This seat gave the match up (ADR 0087). Where the match had got to is the note's place; the outcome is
+    /// on the trace's <c>MatchEnded</c>, which says the same thing with its reason.
+    /// </summary>
+    public static PlaytestNote Conceded(NotePlace where, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        return new PlaytestNote
+        {
+            SessionId = where.SessionId,
+            MatchId = where.MatchId,
+            Slot = where.Slot,
+            Round = where.Round,
+            SubPhase = where.SubPhase,
+            At = timeProvider.GetUtcNow(),
+            Kind = NoteKind.Concession,
+        };
+    }
+
+    /// <summary>
     /// A note a player produced: a lookup, a misplay or a comment. The kind is checked here rather than
     /// trusted, because the three that a person can write are exactly the three the host must not invent.
     /// </summary>

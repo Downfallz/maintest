@@ -49,6 +49,34 @@ public sealed class MatchPlayTests
     }
 
     [Fact]
+    public void A_player_who_concedes_loses_on_the_spot()
+    {
+        var match = Table.Started();
+        Table.PassEvolution(match);
+
+        match.Concede(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+
+        match.State.ShouldBe(MatchState.Ended);
+        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Concession));
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(1);
+        match.DomainEvents.OfType<MatchEnded>().Single().ShouldBe(new MatchEnded(match.Id, RoundId.From(1), match.Outcome!));
+        match.DomainEvents.OfType<RoundEnded>().ShouldBeEmpty("the round is left where it was, not played out");
+        Table.TeamOf(match, PlayerSlot.Player2).IsDefeated.ShouldBeFalse();
+
+        match.Concede(PlayerSlot.Player1).Error.ShouldBe(MatchErrors.NotInProgress);
+        match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick)).Error.ShouldBe(MatchErrors.NotInProgress);
+    }
+
+    [Fact]
+    public void A_match_that_has_not_started_cannot_be_conceded()
+    {
+        var match = Table.Empty();
+
+        match.Concede(PlayerSlot.Player1).Error.ShouldBe(MatchErrors.NotInProgress);
+        match.State.ShouldBe(MatchState.WaitingForPlayers);
+    }
+
+    [Fact]
     public void A_creature_that_died_earlier_in_the_round_is_revealed_and_fizzles()
     {
         var match = Table.Started();

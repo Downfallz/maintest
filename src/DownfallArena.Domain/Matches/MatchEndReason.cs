@@ -10,4 +10,7 @@ public enum MatchEndReason
 
     /// <summary>The rule set's round cap was reached; total remaining health decided.</summary>
     RoundCap,
+
+    /// <summary>A player conceded; the other player won on the spot (ADR 0087).</summary>
+    Concession,
 }

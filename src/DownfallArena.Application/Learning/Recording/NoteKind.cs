@@ -25,6 +25,9 @@ public enum NoteKind
     /// </remarks>
     Seat,
 
+    /// <summary>This seat gave the match up, where the match had got to (ADR 0087).</summary>
+    Concession,
+
     /// <summary>A rule the player had to look up.</summary>
     Lookup,
 
