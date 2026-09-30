@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Sorcerer",
   "energyCost": 2,
-  "criticalChance": 0.617,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
