@@ -1,0 +1,21 @@
+{
+  "id": "spell:soothing_chant:v1",
+  "name": "Soothing Chant",
+  "spellType": "Defensive",
+  "creatureClass": "Shaman",
+  "energyCost": 1,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Ally",
+    "scope": "Multi",
+    "maxTargets": 3
+  },
+  "effects": [
+    {
+      "kind": "Regeneration",
+      "amountPerRound": 1,
+      "durationRounds": 2
+    }
+  ],
+  "enabled": true
+}

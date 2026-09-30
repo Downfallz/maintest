@@ -62,6 +62,25 @@ filters (*Any tier*, each authored level, *Starting kit*). Every spell card, com
 spell is learned: each enabled package that teaches it with its tier, lowest first (`Tier 2 · Berserker`), and
 *Starting kit* when an enabled creature begins with it. A spell with neither says it is not taught by any package.
 
+Each spell also shows its **value a round** next to the range of its tier (its shallowest package, or the starting
+kit), attacks compared only with attacks. It is the reading `check-knobs` prints (`cast_value` in
+`learning/src/downfall_learning/knobs.py`), priced with the agents' scoring weights (`/api/weights` locally,
+`weights.json` on the hosted page) and ported in `value.js`:
+
+```
+effect  = damage 1.0 x amount x crit | heal 0.8 x amount x crit | energy 0.3 x amount
+        | bleed 0.8 / regeneration 0.8 / energy regeneration 0.3 x amountPerRound x rounds
+        | stun 3.0 x rounds | defense ± 0.65 x amount x rounds | initiative ± 2.1 x amount x rounds
+          (crit = 1 + criticalChance; a permanent condition counts 3 rounds)
+a cast  = target effects x maxTargets + caster effects   (harmful on the caster or on allies subtracts)
+a round = a cast / max(1, energyCost / 2)
+```
+
+It is an estimate for placing a spell beside its neighbours, not a balance verdict: it sees no board, no
+defense, no kill and no threat, and overstates a spell with several targets late in a match. The spell reader
+says so. `studio/value.test.js` and `learning/tests/test_knobs.py` pin the same numbers on the authored content,
+so the two readings cannot drift apart silently.
+
 Inside **Spells**, **Energy & effects** (`#strategy`) compares costs and affected stats in a compact mobile
 view. Tap a cost, then an effect to see the matching spells; zero counts expose gaps. **Compare packages**
 switches between the whole enabled catalogue, starting spells, or a union of selected packages with an

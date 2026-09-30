@@ -6,7 +6,8 @@
     "tier:occultist:v1"
   ],
   "spells": [
-    "spell:summon_minions:v1"
+    "spell:summon_minions:v1",
+    "spell:bone_ward:v1"
   ],
   "initiativeBonus": 1
 }

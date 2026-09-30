@@ -250,6 +250,22 @@
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
+    "spell:extort": {
+      "name": "Extort",
+      "class": "Mercenary",
+      "intent": "The Mercenary takes its cut: a cheap hit that skims a point of energy off the target and pockets one. It slows an enemy's big spells without ever locking them, which is the whole design: the drain stays under the two a creature earns each round, so the target always climbs, and the price stays at or above what the caster pockets, so casting it every round banks nothing.",
+      "keep": [
+        "Never a lock: the drain stays below the energy a creature earns each round",
+        "Never a farm: the energy cost stays at or above the energy the caster gains",
+        "A hit first: the damage is what makes it worth the activation, the skim is the flavour"
+      ],
+      "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 0, "max": 1, "step": 1 }
+      ]
+    },
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
@@ -299,6 +315,23 @@
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
+    "spell:shield_bash": {
+      "name": "Shield Bash",
+      "class": "Warlord",
+      "intent": "Ironbound's active answer: Full Plate is a passive, so without this the package bought nothing to cast until Dreadnought. A hit that leaves the caster braced keeps the Warlord's armour identity while giving the tier-2 pick a move of its own, priced beside Enraged Charge and Protective Slam at three energy.",
+      "keep": [
+        "Always an attack that also armours its caster, never pure armour: self-defense alone is what Full Plate already sells",
+        "A tier-2 price, beside the Berserker and Marauder openers rather than above them"
+      ],
+      "note": "Authored at 8.4 a round in the check-knobs reading, the same as Enraged Charge; no evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
     "spell:full_plate": {
       "name": "Full Plate",
       "class": "Warlord",
@@ -343,6 +376,21 @@
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
+      ]
+    },
+    "spell:reckless_swing": {
+      "name": "Reckless Swing",
+      "class": "Berserker",
+      "intent": "The Berserker's every-round swing: cheap enough to throw each round on the income alone, and paid for in the Berserker's own blood. Enraged Charge is the big hit two rounds in three; this is what the rage does in between, and the self-inflicted wound is the rage -- the line that ends in Psycho Rush fights by giving something up.",
+      "keep": [
+        "Always hurts its caster: the recklessness is the spell",
+        "Cheaper than Enraged Charge and lighter than it, so the Charge stays the finisher"
+      ],
+      "note": "Authored at 5.5 a round in the check-knobs reading, the caster's damage priced as a cost. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 4, "max": 6, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:enraged_charge": {
@@ -425,6 +473,22 @@
         { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 }
       ]
     },
+    "spell:latch": {
+      "name": "Latch",
+      "class": "Leech",
+      "intent": "The Parasite attached: a point of blood drawn from one enemy each round and fed back to the caster for as long. Parasite Jab steals in one bite; this steals a little every round, keeping the Prowler's bleed as the line's mechanic and turning it into the caster's healing.",
+      "keep": [
+        "What the target bleeds, the caster regenerates: the two halves stay matched",
+        "Small per round: the big steal is Parasite Jab's, and Soul Devourer's at tier 3"
+      ],
+      "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
     "spell:parasite_jab": {
       "name": "Parasite Jab",
       "class": "Leech",
@@ -475,6 +539,23 @@
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
       ]
     },
+    "spell:shadowstep": {
+      "name": "Shadowstep",
+      "class": "Assassin",
+      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A strike that leaves its caster moving first next round, because the branch is about getting there first rather than hitting hardest -- the one-creature version of what Death Squad gives the whole team at tier 3.",
+      "keep": [
+        "Tempo on the caster, never bleed: the heavy bleed is Mortal Wound's at tier 3",
+        "A tier-2 price, beside Enraged Charge rather than above it: part of its value is the initiative, not the hit"
+      ],
+      "note": "Authored at 7.8 a round in the check-knobs reading; the reading cannot see the energy Momentum feeds it, and no evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.7, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
@@ -520,6 +601,20 @@
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
+    "spell:adrenaline_tonic": {
+      "name": "Adrenaline Tonic",
+      "class": "Trickster",
+      "intent": "The Plague Doctor's stimulant: a point of energy for up to three allies, with a point of poison in the same dose. It is Noxious Cure's idea turned to energy -- the remedy that costs something -- and its point is where the energy goes, not how much: across three allies it nets the team what Wait would, so it never out-earns waiting, but it brings three creatures to their next threshold a round early.",
+      "keep": [
+        "Never out-earns Wait: the energy it spreads, less its price, stays at or under the two Wait gives",
+        "Always poisons what it feeds: every ally it reaches takes the bleed"
+      ],
+      "note": "Authored at -1.5 a round in the check-knobs reading, which prices the bleed on an ally as a cost at 0.8 and the energy at 0.3; the greedy agents are unlikely ever to cast it, so an evaluation will say little about it. A spell for human players until the energy weight says otherwise.",
+      "knobs": [
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 }
+      ]
+    },
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",
@@ -546,7 +641,7 @@
         "Cheaper than Crushing Stomp and weaker for it",
         "The stun is the spell: the damage is a rounding error, not a second half"
       ],
-      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding stays: its ceiling of 10.00 is held down by a damage bound its own identity requires, and the rival is `ice_spear` at 10.20, so the bounds that need to move are the Wizard's.",
+      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding stays: its ceiling of 10.00 is held down by a damage bound its own identity requires, and the rival is `ice_spear` at 10.20, so the bounds that need to move are the Wizard's. The owner set the stun back to **one round** on 2026-09-30, keeping the price at 2, and gave the dart a poison: a bleed of 1 for 2 rounds, because Ice Spear became a two-energy, one-round stun with more damage in the same change and would otherwise have strictly dominated it. 8.00 a round to 6.60; the 1-in-400 of legacy was a 3-energy dart, so this one has not been measured yet.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
@@ -597,6 +692,21 @@
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
+    "spell:frostbite": {
+      "name": "Frostbite",
+      "class": "Wizard",
+      "intent": "The Elementalist's spare-energy spell: one point is what Meteor leaves behind on an income of two, and this spends it. A light chill that slows its target for a round -- the cold before the ice: Ice Spear freezes outright at tier 3.",
+      "keep": [
+        "One energy: it exists to spend what Meteor leaves over",
+        "A slow, not a nuke: the damage stays small and the chill lasts one round"
+      ],
+      "note": "Authored at 7.0 a round in the check-knobs reading, most of it the initiative debuff at the 2.1 weight -- the only initiative slow in the Wizard line now that Ice Spear stuns instead. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.6, "step": 0.05 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
     "spell:meteor": {
       "name": "Meteor",
       "class": "Wizard",
@@ -632,17 +742,31 @@
     "spell:ice_spear": {
       "name": "Ice Spear",
       "class": "Wizard",
-      "intent": "Damage that also slows: a hit now and initiative off the target for a round. It is the Wizard's answer to going second and the only offensive spell that touches the timeline.",
+      "intent": "Damage that also freezes: a hit now and the target frozen for a round. It is the Wizard's answer to going second -- the cold that Frostbite only slows at tier 2 sets hard here.",
       "keep": [
-        "Damage and slow in one cast",
+        "Damage and a one-round freeze in one cast",
         "A rate spell, not a nuke: it wins the next round, not this one"
       ],
-      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries today -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stops at 2, which is where the content sat when these bounds were drawn. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell was also the bar two others could not clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 was that slow**. It read 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reported was already far larger than the gap that was there. On content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, that reading has **inverted rather than narrowed**: this spell wins **44.1%** of the sides that declare it against `engulfing_flames`'s **71.2%**, and the damage it was losing on it has caught up only by casting far more often -- 653 to 690, in **127 landed casts against 77**. So the check does not merely overstate a gap; it names as the bar the spell that loses more than it wins. Read that as an argument about `cast_value`, which has no kill term, and not as a reason to move these bounds: lowering a spell already at 44.1% to satisfy a number that is wrong about it fixes the report and not the game. Tune run 9 then moved it anyway, and in the shape that argument asks for rather than the one tune 8 took: the slow 2 points to **1**, the cost back 3 to **2**. On content `7e199df4` it carries **8.10**, a quarter of it the slow, and it is no longer the bar for anything -- `check-knobs` now names `soul_devourer` at 10.10 for both spells that used to be measured against this one. What the cheaper price bought is small and real: tune 8's cost of 3 had taken it to **zero** casts, and it is back at **9** landed casts of tier 3's 1589, which is `barely cast` rather than dead.",
+      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries today -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stops at 2, which is where the content sat when these bounds were drawn. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell was also the bar two others could not clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 was that slow**. It read 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reported was already far larger than the gap that was there. On content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, that reading has **inverted rather than narrowed**: this spell wins **44.1%** of the sides that declare it against `engulfing_flames`'s **71.2%**, and the damage it was losing on it has caught up only by casting far more often -- 653 to 690, in **127 landed casts against 77**. So the check does not merely overstate a gap; it names as the bar the spell that loses more than it wins. Read that as an argument about `cast_value`, which has no kill term, and not as a reason to move these bounds: lowering a spell already at 44.1% to satisfy a number that is wrong about it fixes the report and not the game. Tune run 9 then moved it anyway, and in the shape that argument asks for rather than the one tune 8 took: the slow 2 points to **1**, the cost back 3 to **2**. On content `7e199df4` it carries **8.10**, a quarter of it the slow, and it is no longer the bar for anything -- `check-knobs` now names `soul_devourer` at 10.10 for both spells that used to be measured against this one. What the cheaper price bought is small and real: tune 8's cost of 3 had taken it to **zero** casts, and it is back at **9** landed casts of tier 3's 1589, which is `barely cast` rather than dead. The owner turned the slow into a **one-round stun** on 2026-09-30: 8.10 a round to 9.00, with no duration knob for the same reason the slow lost its own. Tranquilizer Dart, the other two-energy stun at tier 3, took a bleed in the same change so that this spell does not strictly dominate it.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
+      ]
+    },
+    "spell:bone_ward": {
+      "name": "Bone Ward",
+      "class": "Necromancer",
+      "intent": "The Necromancer's single ward: a shell of bone around one ally, paid for in the caster's own blood. It spends the point Summon Minions leaves over on an income of two, and it is the one-target first step of Revenant Guards, which wards the whole team at the same kind of price at tier 3.",
+      "keep": [
+        "Always paid in the caster's blood: dark magic costs life in this line",
+        "One ally: the group ward is Revenant Guards' at tier 3"
+      ],
+      "note": "Authored at 3.1 a round in the check-knobs reading, which prices defense without the threat it stands against -- the same blind spot that reads Guard and Full Plate low. Recast on one ally it stacks, bounded by the cap on defense buffs (ADR 0076) and by the caster bleeding each cast. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:summon_minions": {
@@ -695,6 +819,21 @@
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
+      ]
+    },
+    "spell:soothing_chant": {
+      "name": "Soothing Chant",
+      "class": "Shaman",
+      "intent": "The Shaman's group mend: a point of healing a round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
+      "keep": [
+        "One energy, several allies: a small heal spread wide, never a big one",
+        "Healing over time only: the burst heal is Healing Screech's"
+      ],
+      "note": "Authored at 4.8 a round in the check-knobs reading. Regeneration stacks beside the ones already there, so a Chant cast every round keeps two running on each ally -- 2 a round each, 6 across three allies, for one energy a round -- which that reading does not see. If that proves too much, the reach is the knob to cut (two allies reads 3.2). No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 }
       ]
     },
     "spell:healing_screech": {

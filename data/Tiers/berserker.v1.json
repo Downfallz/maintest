@@ -6,7 +6,8 @@
     "tier:brute:v1"
   ],
   "spells": [
-    "spell:enraged_charge:v1"
+    "spell:enraged_charge:v1",
+    "spell:reckless_swing:v1"
   ],
   "initiativeBonus": 1
 }

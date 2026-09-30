@@ -32,6 +32,7 @@ internal sealed class StudioFiles
             ["/strategy.js"] = (Path.Combine(studioDirectory, "strategy.js"), JavaScript),
             ["/codex.js"] = (Path.Combine(studioDirectory, "codex.js"), JavaScript),
             ["/tiers.js"] = (Path.Combine(studioDirectory, "tiers.js"), JavaScript),
+            ["/value.js"] = (Path.Combine(studioDirectory, "value.js"), JavaScript),
             ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), Css),
         };
     }

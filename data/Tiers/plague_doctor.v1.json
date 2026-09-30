@@ -6,7 +6,8 @@
     "tier:prowler:v1"
   ],
   "spells": [
-    "spell:noxious_cure:v1"
+    "spell:noxious_cure:v1",
+    "spell:adrenaline_tonic:v1"
   ],
   "initiativeBonus": 1
 }

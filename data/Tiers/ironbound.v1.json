@@ -6,7 +6,8 @@
     "tier:brute:v1"
   ],
   "spells": [
-    "spell:full_plate:v1"
+    "spell:full_plate:v1",
+    "spell:shield_bash:v1"
   ],
   "initiativeBonus": 1
 }

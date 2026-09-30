@@ -1,0 +1,28 @@
+{
+  "id": "spell:latch:v1",
+  "name": "Latch",
+  "spellType": "Offensive",
+  "creatureClass": "Leech",
+  "energyCost": 1,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 3
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Regeneration",
+      "amountPerRound": 1,
+      "durationRounds": 3
+    }
+  ]
+}

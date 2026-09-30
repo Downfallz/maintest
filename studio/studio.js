@@ -10,7 +10,7 @@
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
 import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
-import { explore, spellLibrary, strategyLibrary, reader } from './codex.js';
+import { explore, spellLibrary, strategyLibrary, reader, useWeights } from './codex.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
@@ -2290,6 +2290,20 @@ async function load() {
   renderNav();
   restoreLocation();
   if (!catalogue.problems.length) clearBanner();
+  await readValueWeights();
+}
+
+/**
+ * The scoring weights the spell value is priced with. Read quietly, outside `act`: the value is an extra line on
+ * a card, so a page that cannot read them shows the cards without it rather than an error.
+ */
+async function readValueWeights() {
+  try {
+    useWeights((await backend.weights())?.values);
+  } catch {
+    return;
+  }
+  if (!state.editing) renderDetail();
 }
 
 for (const tab of document.querySelectorAll('.tab')) {

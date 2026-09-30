@@ -1,10 +1,10 @@
 {
-  "id": "spell:ice_spear:v1",
-  "name": "Ice Spear",
+  "id": "spell:frostbite:v1",
+  "name": "Frostbite",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
-  "energyCost": 2,
-  "criticalChance": 0.5,
+  "energyCost": 1,
+  "criticalChance": 0.4,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -13,10 +13,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 4
+      "amount": 2
     },
     {
-      "kind": "Stun",
+      "kind": "InitiativeDebuff",
+      "amount": 2,
       "durationRounds": 1
     }
   ],

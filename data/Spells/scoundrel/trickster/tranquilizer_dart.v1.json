@@ -17,6 +17,11 @@
     },
     {
       "kind": "Stun",
+      "durationRounds": 1
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
       "durationRounds": 2
     }
   ],

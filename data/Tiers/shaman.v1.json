@@ -6,7 +6,8 @@
     "tier:occultist:v1"
   ],
   "spells": [
-    "spell:healing_screech:v1"
+    "spell:healing_screech:v1",
+    "spell:soothing_chant:v1"
   ],
   "initiativeBonus": 0
 }

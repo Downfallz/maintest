@@ -6,7 +6,8 @@
     "tier:prowler:v1"
   ],
   "spells": [
-    "spell:momentum:v1"
+    "spell:momentum:v1",
+    "spell:shadowstep:v1"
   ],
   "initiativeBonus": 3
 }

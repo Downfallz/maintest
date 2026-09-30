@@ -1,9 +1,9 @@
 {
-  "id": "spell:ice_spear:v1",
-  "name": "Ice Spear",
+  "id": "spell:shadowstep:v1",
+  "name": "Shadowstep",
   "spellType": "Offensive",
-  "creatureClass": "Wizard",
-  "energyCost": 2,
+  "creatureClass": "Assassin",
+  "energyCost": 3,
   "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
@@ -13,12 +13,15 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 4
-    },
-    {
-      "kind": "Stun",
-      "durationRounds": 1
+      "amount": 5
     }
   ],
-  "enabled": true
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "InitiativeBuff",
+      "amount": 2,
+      "durationRounds": 1
+    }
+  ]
 }

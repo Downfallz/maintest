@@ -60,7 +60,8 @@ export function strategyOverview(catalogue, ui = {}) {
   return { total: scoped.length, costs, atCost: atCost.length, facets, matches };
 }
 
-// Keep duration, permanence and caster effects explicit; never add unlike effects into one power score.
+// Keep duration, permanence and caster effects explicit. The one summed number the page shows is value.js, the
+// check-knobs reading, labelled as an estimate beside these facts and never in place of them.
 export function compactEffect(effect) {
   const names = { Damage: 'Damage', Heal: 'Heal', EnergyGain: 'Energy +', EnergyDrain: 'Energy −',
     DefenseBuff: 'Defense +', DefenseDebuff: 'Defense −', InitiativeBuff: 'Initiative +', InitiativeDebuff: 'Initiative −' };
