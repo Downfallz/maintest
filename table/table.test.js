@@ -460,11 +460,11 @@ test('an already visible hand does not move when the question changes', () => {
   assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
-test('repeated card taps only select; the fixed button declares once with the asking identity', async () => {
+test('a card tap selects; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   const first = held(p).children[0];
-  first.events.click(); first.events.click();
+  first.events.click();
   assert.equal(sent.length, 0);
   assert.equal(p.nodes.choices.children[0].textContent, 'Declare First card');
   assert.equal(p.nodes['decision-guide'].children.length, 0);
@@ -518,17 +518,22 @@ test('a single-target spell allows switching targets before the second tap', () 
   assert.deepEqual([...p.state.picked], [1]);
 });
 
-test('Enter on the chosen card declares it; a second tap on it does not', async () => {
+test('a second tap or Enter on the chosen card declares it', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   const key = { key: 'Enter', preventDefault() {} };
   held(p).children[0].events.keydown(key);
   assert.equal(p.state.chosen, 'one'); assert.equal(sent.length, 0);
-  held(p).children[0].events.click();
-  assert.equal(sent.length, 0);
-  await held(p).children[0].events.keydown(key);
+  held(p).children[1].events.click();
+  assert.equal(p.state.chosen, 'two', 'another card is a change of choice'); assert.equal(sent.length, 0);
+  await held(p).children[1].events.click();
   assert.equal(sent.length, 1);
-  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
+  p.view.waitingAsked = 2; p.draw();
+  held(p).children[0].events.click();
+  await held(p).children[0].events.keydown(key);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].spell, 'one');
 });
 
 test('choosing a card closes an announcement that would cover the Declare button', () => {

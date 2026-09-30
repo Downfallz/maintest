@@ -88,7 +88,7 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Phones keep scrolling short and never sideways: the acting creature's spellbook uses two compact columns,
   grouped by the card types the host supplies. **Full details** expands its cards into one column; speed's
   two-column reference reveals each spell's effects on tap. Selecting a spell keeps the cards and the fixed
-  decision the same height; only the fixed Declare button commits it. Packages are two-line rows, the
+  decision the same height, so the second tap that commits it lands where the first did. Packages are two-line rows, the
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
   ↟ current initiative), and the turn order wraps. The mini battlefield shows health, energy, defense when
   present and current initiative on each creature. Round flow and the tab row are left to the Round guide and the
@@ -113,9 +113,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
-- Tap a spell to select it, then use the fixed Declare button; choosing a card also closes a phase announcement
-  that would cover that button on a phone. With a keyboard, Enter or Space on the chosen card declares it, and the
-  arrow keys reach the Declare button. Tap a selected target again to cast on the entire
+- Tap a spell to select it, then tap it again or use the fixed Declare button; the rows do not move between
+  the two taps, and choosing a card also closes a phase announcement that would cover that button on a phone.
+  With a keyboard, Enter or Space on the chosen card declares it, and the arrow keys reach the Declare button. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.

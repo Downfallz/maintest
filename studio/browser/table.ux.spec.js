@@ -146,7 +146,7 @@ test('the talent atlas lays its families out without overlap or sideways panning
   await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });
 
-test('spell rows stay put on selection and only the fixed button declares', async ({ page }, info) => {
+test('spell rows stay put between the tap that chooses and the tap that declares', async ({ page }, info) => {
   const intent = { ...view, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
     board: { ...view.board, subPhase: 'IntentSelection' } };
   const decisions = [];
@@ -173,18 +173,18 @@ test('spell rows stay put on selection and only the fixed button declares', asyn
   const declare = await page.locator('#choices .declare-spell').boundingBox();
   expect(await page.evaluate(([x, y]) => Boolean(document.elementFromPoint(x, y)?.closest('.declare-spell')),
     [declare.x + declare.width / 2, declare.y + declare.height / 2])).toBe(true);
-  await pummel.click();
   expect(decisions).toHaveLength(0);
+  // The chosen card is where it was, so the second tap lands on it: it declares.
+  const after = await pummel.boundingBox();
+  expect(Math.abs(after.y - before.y)).toBeLessThan(2);
   if (isPhone(page)) {
     await expect(pummel.locator('.card-critical-note')).toBeHidden();
     await expect(pummel.locator('.card-availability')).toBeHidden();
-    const after = await pummel.boundingBox();
     expect(Math.abs(after.height - before.height)).toBeLessThan(2);
-    expect(Math.abs(after.y - before.y)).toBeLessThan(2);
     expect(Math.abs((await page.locator('#decision').boundingBox()).height - headerBefore.height)).toBeLessThan(2);
   }
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
-  await page.locator('#choices .declare-spell').click();
+  await pummel.click();
   await expect.poll(() => decisions.length).toBe(1);
   expect(decisions[0]).toMatchObject({ kind: 'Intent', creature: 1, spell: 'spell-4', asked: 3 });
 });

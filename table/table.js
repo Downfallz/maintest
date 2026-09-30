@@ -358,7 +358,7 @@ function selectable(face, selected, onClick) {
   face.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      if (!event.repeat) return onClick(event, true);
+      if (!event.repeat) return onClick(event);
     }
   });
 }
@@ -803,7 +803,7 @@ function offerCard(state, current, face, availability, spell, creature, chosen) 
   const number = offeredSpells.indexOf(spell.spell) + 1;
   if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
   face.dataset.focus = `card-${creature}-${spell.spell}`;
-  selectable(face, chosen, (event, keyboard) => chooseCard(state, current, spell.spell, keyboard === true));
+  selectable(face, chosen, () => chooseCard(state, current, spell.spell));
 }
 
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
@@ -2267,8 +2267,8 @@ function tieOrderButtons(state, current) {
   return [help, ...ties, confirm, keep, again];
 }
 
-// A card tap only selects. The fixed button names the selected spell and is the explicit commitment: another
-// tap on a moving spell row must never submit an irreversible choice.
+// The fixed button names the selected spell and commits it, for a player who would rather not tap the card
+// twice; the rows keep their place so that the second tap on the card is the same commitment.
 function intentButtons(state, current) {
   const view = current.view;
   const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
@@ -2286,13 +2286,13 @@ function intentButtons(state, current) {
   return [confirm];
 }
 
-// A second tap on the chosen card does nothing: the row can move under a finger. A key cannot, so Enter or Space
-// on the card that is already chosen declares it, as the fixed button does.
-function chooseCard(state, current, spell, keyboard = false) {
+function chooseCard(state, current, spell) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
   if (!option?.castableSpells?.includes(spell)) return;
-  if (state.chosen === spell) return keyboard ? declareChosen(state, current) : undefined;
+  // The second tap on the chosen card declares it, as the Declare button does: the rows do not move between the
+  // two taps, so the finger lands on the card it chose.
+  if (state.chosen === spell) return declareChosen(state, current);
   // Choosing a card is the player moving on: an announcement still over the decision would hide the Declare
   // button it has just named (a phone's notice sits exactly on it).
   if (!element('phase-notice').hidden) hidePhaseNotice(state);
