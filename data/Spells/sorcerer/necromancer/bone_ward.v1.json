@@ -1,0 +1,28 @@
+{
+  "id": "spell:bone_ward:v1",
+  "name": "Bone Ward",
+  "spellType": "Defensive",
+  "creatureClass": "Necromancer",
+  "energyCost": 1,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Ally",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "DefenseBuff",
+      "amount": 3,
+      "durationRounds": 2
+    }
+  ],
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 1
+    }
+  ]
+}

@@ -725,6 +725,21 @@
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
+    "spell:bone_ward": {
+      "name": "Bone Ward",
+      "class": "Necromancer",
+      "intent": "The Necromancer's single ward: a shell of bone around one ally, paid for in the caster's own blood. It spends the point Summon Minions leaves over on an income of two, and it is the one-target first step of Revenant Guards, which wards the whole team at the same kind of price at tier 3.",
+      "keep": [
+        "Always paid in the caster's blood: dark magic costs life in this line",
+        "One ally: the group ward is Revenant Guards' at tier 3"
+      ],
+      "note": "Authored at 3.1 a round in the check-knobs reading, which prices defense without the threat it stands against -- the same blind spot that reads Guard and Full Plate low. Recast on one ally it stacks, bounded by the cap on defense buffs (ADR 0076) and by the caster bleeding each cast. No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
     "spell:summon_minions": {
       "name": "Summon Minions",
       "class": "Necromancer",
