@@ -25,21 +25,13 @@ internal sealed class TableSession : IDisposable
 {
     private readonly Action _forget;
 
-    private TableSession(
-        MatchId matchId,
-        SeatAgent player1,
-        SeatAgent player2,
-        MatchQueryHandlers queries,
-        ICommandHandler<Concede, Result> concede,
-        TableGate gate,
-        Task<Result<MatchOutcome>> outcome,
-        Action forget)
+    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget)
     {
         MatchId = matchId;
         Player1 = player1;
         Player2 = player2;
-        Queries = queries;
-        Concede = concede;
+        Queries = handlers.Queries;
+        Concede = handlers.Concede;
         Gate = gate;
         Outcome = outcome;
         _forget = forget;
@@ -129,7 +121,7 @@ internal sealed class TableSession : IDisposable
         // The recorder is optional: only a host that shows a feed registers one.
         var repository = services.GetRequiredService<IMatchRepository>();
         var recorder = services.GetService<MatchTraceRecorder>();
-        return new TableSession(matchId, player1, player2, queries, concede, gate, outcome, () =>
+        return new TableSession(matchId, player1, player2, new TableHandlers(queries, concede), gate, outcome, () =>
         {
             recorder?.Forget(matchId);
             repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();

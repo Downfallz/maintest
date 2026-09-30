@@ -521,7 +521,8 @@ body:has(#table) { padding-bottom: 110px; }
 #upkeep-panel, #match-panel { position: absolute; left: 20px; bottom: calc(100% + 12px); width: min(520px, calc(100vw - 40px)); max-height: 48dvh; overflow-y: auto; padding: 18px; border: 1px solid #738769; border-radius: 10px; background: #192921; box-shadow: 0 8px 30px #0008; }
 #match-tools[hidden] { display: none; }
 #match-panel { display: grid; gap: 10px; }
-#match-panel p { font-size: 13px; line-height: 1.5; margin: 0; }
+#match-panel p, #concede-problem { display: block; font-size: 13px; line-height: 1.5; margin: 0; }
+#concede-problem[hidden] { display: none; }
 #concede-confirm { display: grid; gap: 8px; }
 #concede-yes { background: #7a2b2b; border-color: #a54848; color: #fff; }
 #phase-dock:has(#upkeep[open]) #phase-notice { visibility: hidden; }

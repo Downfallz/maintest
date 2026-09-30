@@ -313,22 +313,35 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     }
 
     /// <summary>How the match ended, as the page names seats; nothing while it has not.</summary>
-    private static object? Outcome(MatchOutcome? outcome) =>
-        outcome is null ? null : new { winner = outcome.Winner is { } winner ? TableSeat.NameOf(winner) : null, reason = outcome.Reason.ToString() };
+    private static object? Outcome(MatchOutcome? outcome)
+    {
+        if (outcome is null)
+        {
+            return null;
+        }
+
+        var winner = outcome.Winner is { } slot ? TableSeat.NameOf(slot) : null;
+        return new { winner, reason = outcome.Reason.ToString() };
+    }
 
     /// <summary>
     /// The seat gives the match up (ADR 0087). The command ends the match behind the driver's lock; every seat
     /// a person holds is then released, because the driver is blocked inside one of them waiting for a tap that
     /// is not coming, and it reads the outcome once it is let go. Where the match had got to is read before,
-    /// for the note: afterwards there is only the end.
+    /// for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
+    /// token whose person is waiting for a handover (<c>--handover</c>, a swap) is watching a bot play, and a
+    /// match a bot is playing is not theirs to end yet.
     /// </summary>
     private async Task<StudioResponse> ConcedeAsync(TableSeat seat)
     {
-        if (seat.Person is null)
+        if (seat.Person is not { } person || !ReferenceEquals(session.Seat(seat.Slot).Seated.Agent, person))
         {
             return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
         }
 
+        // Declared before the match is ended, and held until the note is written: ending the match releases the
+        // driver, and the session would otherwise close itself with this note still on its way.
+        using var accepting = run?.Accepting();
         var (round, subPhase) = await WhereAsync(seat.Slot);
         var conceded = await session.Concede.HandleAsync(new Concede(session.MatchId, seat.Slot));
         if (conceded.IsFailure)
@@ -361,7 +374,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             await recording.ConcededAsync(session.MatchId, slot, round, subPhase, CancellationToken.None);
         }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
             Console.WriteLine($"  The concession of {TableSeat.NameOf(slot)} could not be written down: {failure.Message}");
         }

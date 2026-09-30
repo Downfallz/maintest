@@ -69,6 +69,25 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
+    /// A concession is written where the match had got to, and before the session closes: ending the match
+    /// releases the driver, whose end is what closes a recorded session, and the note is declared to it first.
+    /// </summary>
+    [Fact]
+    public async Task A_concession_is_noted_where_the_match_had_got_to_before_the_session_closes()
+    {
+        var table = await Recording();
+
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+        answer.Status.ShouldBe(200);
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        var note = Notes(table).Single(note => note.GetProperty("kind").GetString() == "Concession");
+        note.GetProperty("slot").GetString().ShouldBe("Player1");
+        note.GetProperty("round").GetInt32().ShouldBe(1);
+        note.GetProperty("subPhase").GetString().ShouldBe("Evolution");
+    }
+
+    /// <summary>
     /// A tie order records no step, so it writes no Decision note either: the n-th note of a seat is its n-th
     /// step, by order and nothing else (playtest-app.md 5.3), and one note too many would put every later
     /// duration beside the wrong decision (ADR 0063).

@@ -104,16 +104,27 @@ public sealed partial class TableApiTests : IDisposable
         Text(again).ShouldContain(MatchErrors.NotInProgress.Code);
     }
 
+    /// <summary>
+    /// Neither a seat without a person, nor a person whose seat a bot is playing for now (<c>--handover</c>, a
+    /// swap): a match a bot is playing is not theirs to end yet, and a concession from the sideline would end
+    /// a recorded match the bot was in the middle of.
+    /// </summary>
     [Fact]
-    public async Task A_seat_a_bot_plays_cannot_concede()
+    public async Task A_seat_a_bot_plays_cannot_concede_even_for_the_person_waiting_to_take_it()
     {
         var table = await Seated();
+        var bot = new GreedyAgent(_host!.Services.GetRequiredService<IGameResources>(), Rules);
 
-        var answer = await table.Api.HandleAsync("POST", "/api/seat/player2/concede", string.Empty, "token-of-player-2");
+        var nobody = await table.Api.HandleAsync("POST", "/api/seat/player2/concede", string.Empty, "token-of-player-2");
+        var held = table.Session.Seat(PlayerSlot.Player1).Seat(new Occupant(bot, "greedy"));
+        var sideline = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+        table.Session.Seat(PlayerSlot.Player1).Seat(held);
+        var playing = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
 
-        answer.Status.ShouldBe(409);
-        Text(answer).ShouldContain("bot");
-        table.Session.IsOver.ShouldBeFalse();
+        nobody.Status.ShouldBe(409);
+        Text(nobody).ShouldContain("bot");
+        sideline.Status.ShouldBe(409, Text(sideline));
+        playing.Status.ShouldBe(200, Text(playing));
     }
 
     /// <summary>
