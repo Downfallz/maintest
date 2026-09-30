@@ -1782,7 +1782,9 @@ function renderPhaseGuide(state, view, seat) {
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
     : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${evolution}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
-  renderUpkeep(state, view, upkeep, seat);
+  // The next round's Upkeep panel waits with its notice: a dock on round N's combat with round N+1's ticks one
+  // tap away would let the player read them before the action they follow.
+  renderUpkeep(state, view, board === view.board ? upkeep : null, seat);
   const unlocked = unlockedPackages(state, seat, view.board, (current >= 0 || view.over) && !state.step);
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
   state.phaseSeen ??= new Map();
@@ -1937,8 +1939,8 @@ function showPhaseNotice(state, entry, replay = false) {
   hidePhaseNotice(state);
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
   // The upkeep's ticks are not a phase explanation: like the turn order, they are what happened to the board,
-  // and the mute leaves them.
-  if (state.quiet && !replay && (entry.steps?.length ?? 0) === 0) return;
+  // and the mute leaves them. Conditions merely still running are not a tick: the Upkeep panel lists them.
+  if (state.quiet && !replay && !entry.steps?.some(step => step.tick)) return;
   // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
   element('order').open = false;
   state.noticeEntry = entry;

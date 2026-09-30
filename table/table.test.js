@@ -937,11 +937,14 @@ test("the next round's notice waits until the opponent's actions are read, and i
   assert.equal(p.nodes['phase-notice'].hidden, true, 'no round 4 pop-up over a round 3 action');
   assert.match(p.nodes['phase-round'].textContent, /^Round 3 \//);
   assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes.upkeep.hidden, true, 'nor round 4\'s Upkeep panel under a round 3 dock');
   p.nodes['combat-step-controls'].children[0].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.nodes['combat-step-controls'].children[0].click();
   assert.equal(p.nodes['combat-step'].hidden, true);
   assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
+  assert.equal(p.nodes.upkeep.hidden, false);
+  assert.match(p.nodes['upkeep-title'].textContent, /Round 4 · Upkeep applied/);
   assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 2/);
   const delta = chip => chip.children.find(node => /mini-delta/.test(node.className));
   assert.equal(delta(p.nodes['mini-enemies'].children[0]).textContent, '+1', 'healing first, in the host\'s order');
@@ -971,6 +974,10 @@ test('muted pop-ups still read the upkeep ticks, and only them', () => {
   p.nodes['phase-notice-next'].click();
   p.view.board.roundNumber = 3; p.view.roundEvents = [{ sequence: 12, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }]; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true, 'a round with nothing applied announces nothing');
+  p.view.board.roundNumber = 4; p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
+  p.view.roundEvents = [{ sequence: 15, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }]; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'conditions still running are not a tick; the Upkeep panel lists them');
+  assert.equal(p.nodes['upkeep-conditions'].hidden, false);
 });
 
 test('reopening an upkeep announcement restarts the tick sequence', () => {
