@@ -460,11 +460,11 @@ test('an already visible hand does not move when the question changes', () => {
   assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
-test('repeated card taps only select; the fixed button declares once with the asking identity', async () => {
+test('a card tap selects; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   const first = held(p).children[0];
-  first.events.click(); first.events.click();
+  first.events.click();
   assert.equal(sent.length, 0);
   assert.equal(p.nodes.choices.children[0].textContent, 'Declare First card');
   assert.equal(p.nodes['decision-guide'].children.length, 0);
@@ -518,17 +518,22 @@ test('a single-target spell allows switching targets before the second tap', () 
   assert.deepEqual([...p.state.picked], [1]);
 });
 
-test('Enter on the chosen card declares it; a second tap on it does not', async () => {
+test('a second tap or Enter on the chosen card declares it', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   const key = { key: 'Enter', preventDefault() {} };
   held(p).children[0].events.keydown(key);
   assert.equal(p.state.chosen, 'one'); assert.equal(sent.length, 0);
-  held(p).children[0].events.click();
-  assert.equal(sent.length, 0);
-  await held(p).children[0].events.keydown(key);
+  held(p).children[1].events.click();
+  assert.equal(p.state.chosen, 'two', 'another card is a change of choice'); assert.equal(sent.length, 0);
+  await held(p).children[1].events.click();
   assert.equal(sent.length, 1);
-  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
+  p.view.waitingAsked = 2; p.draw();
+  held(p).children[0].events.click();
+  await held(p).children[0].events.keydown(key);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].spell, 'one');
 });
 
 test('choosing a card closes an announcement that would cover the Declare button', () => {
@@ -919,6 +924,60 @@ test('Skip leaves the upkeep steps at once and is gone on the last one', () => {
   p.nodes['phase-notice-skip'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   assert.equal(p.nodes.upkeep.hidden, false, 'Upkeep keeps the list');
+});
+
+test("the next round's notice waits until the opponent's actions are read, and its ticks are marked on the chips", () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  p.context.hidePhaseNotice(p.state);
+  p.view.board.roundNumber = 4;
+  p.view.roundEvents = [opponentAction(30, 4, 3), opponentAction(31, 2, 3), { sequence: 32, event: { kind: 'OngoingEffectsApplied', roundId: 4,
+    bleedTicks: [{ creature: 1, damage: 2 }], regenerationTicks: [{ creature: 2, healed: 1 }] } }];
+  p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'no round 4 pop-up over a round 3 action');
+  assert.match(p.nodes['phase-round'].textContent, /^Round 3 \//);
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes.upkeep.hidden, true, 'nor round 4\'s Upkeep panel under a round 3 dock');
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.equal(p.nodes['combat-step'].hidden, true);
+  assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
+  assert.equal(p.nodes.upkeep.hidden, false);
+  assert.match(p.nodes['upkeep-title'].textContent, /Round 4 · Upkeep applied/);
+  assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 2/);
+  const delta = chip => chip.children.find(node => /mini-delta/.test(node.className));
+  assert.equal(delta(p.nodes['mini-enemies'].children[0]).textContent, '+1', 'healing first, in the host\'s order');
+  assert.equal(delta(p.nodes['mini-enemies'].children[0]).className, 'mini-delta recovery');
+  assert.equal(delta(p.nodes['mini-allies'].children[0]), undefined);
+  p.nodes['phase-notice-next'].click();
+  assert.equal(delta(p.nodes['mini-enemies'].children[0]), undefined);
+  assert.equal(delta(p.nodes['mini-allies'].children[0]).textContent, '−2');
+  assert.equal(delta(p.nodes['mini-allies'].children[0]).className, 'mini-delta harm');
+  p.nodes['phase-notice-next'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(delta(p.nodes['mini-allies'].children[0]), undefined);
+  p.nodes['announcement-list'].children[1].children[0].click();
+  assert.equal(delta(p.nodes['mini-allies'].children[0]), undefined, 'an earlier announcement marks nothing');
+});
+
+test('muted pop-ups still read the upkeep ticks, and only them', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.state.quiet = true; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.view.board.subPhase = 'Activation'; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'a phase explanation is muted');
+  p.view.board.roundNumber = 2; p.view.board.subPhase = 'IntentSelection';
+  p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, false, 'what happened to the board is not');
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−1 HP/);
+  p.nodes['phase-notice-next'].click();
+  p.view.board.roundNumber = 3; p.view.roundEvents = [{ sequence: 12, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }]; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'a round with nothing applied announces nothing');
+  p.view.board.roundNumber = 4; p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
+  p.view.roundEvents = [{ sequence: 15, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }]; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'conditions still running are not a tick; the Upkeep panel lists them');
+  assert.equal(p.nodes['upkeep-conditions'].hidden, false);
 });
 
 test('reopening an upkeep announcement restarts the tick sequence', () => {
@@ -1604,15 +1663,19 @@ test("an opponent action being read heads the sheet with its own turn, and names
   assert.equal(p.nodes['decision-turn'].textContent, 'Turn 6 of 6 · Standard');
 });
 
-test("a round's last opponent action read in the next round leaves the round bar on the live round", () => {
+test("a round's last opponent action read in the next round keeps the round bar on its own round's combat", () => {
   const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Standard' }, { creature: 1, speed: 'Standard' }]; p.draw();
   p.view.board.roundNumber = 2; p.view.waitingAsked = 2;
   p.view.roundEvents = [opponentAction(30, 4)]; p.draw();
   assert.equal(p.nodes['combat-step'].hidden, false);
-  assert.equal(p.nodes['phase-current'].textContent, 'Spells');
-  assert.equal(p.nodes['phase-turn'].textContent, '');
+  assert.match(p.nodes['phase-round'].textContent, /^Round 1 \//);
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes['phase-turn'].textContent, '', 'the live timeline is the next round\'s, not this action\'s');
   p.view.over = true; p.draw();
+  assert.equal(p.nodes['phase-current'].textContent, 'Match complete');
   assert.equal(p.nodes['phase-turn'].textContent, '');
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.match(p.nodes['phase-round'].textContent, /^Round 2 \//);
 });
 
 test("the next creature's speed or spell question starts its spellbook at the top", () => {

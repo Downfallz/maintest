@@ -44,7 +44,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   by that action (`Opponent's turn`, its own turn number, its caster and spell) with the seat's question named
   underneath as what comes next, shows the action (caster, targets, outcomes) with the battlefield as it stood
   right after it, and **OK** moves on;
-  the question, its controls and its acknowledgement to the host wait until the last one is read. **Auto this
+  the question, its controls and its acknowledgement to the host wait until the last one is read, and so does
+  the next phase's announcement: a round's last actions are often read once the host has started the next
+  round, and the dock stays on the round being read (its combat) until the last OK, when the new round is
+  announced, its upkeep ticks read on the board they moved, and the question asked. **Auto this
   round** OKs the rest of that round's opponent actions after a short pause each (and any still to come in
   it); the next round is read by hand again. **Skip all** reads past them at once; Enter or → is OK, Escape is
   Skip all. The seat's own actions are never held, and a reload only asks again for what resolved after the
@@ -85,7 +88,7 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Phones keep scrolling short and never sideways: the acting creature's spellbook uses two compact columns,
   grouped by the card types the host supplies. **Full details** expands its cards into one column; speed's
   two-column reference reveals each spell's effects on tap. Selecting a spell keeps the cards and the fixed
-  decision the same height; only the fixed Declare button commits it. Packages are two-line rows, the
+  decision the same height, so the second tap that commits it lands where the first did. Packages are two-line rows, the
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
   ↟ current initiative), and the turn order wraps. The mini battlefield shows health, energy, defense when
   present and current initiative on each creature. Round flow and the tab row are left to the Round guide and the
@@ -110,9 +113,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
-- Tap a spell to select it, then use the fixed Declare button; choosing a card also closes a phase announcement
-  that would cover that button on a phone. With a keyboard, Enter or Space on the chosen card declares it, and the
-  arrow keys reach the Declare button. Tap a selected target again to cast on the entire
+- Tap a spell to select it, then tap it again or use the fixed Declare button; the rows do not move between
+  the two taps, and choosing a card also closes a phase announcement that would cover that button on a phone.
+  With a keyboard, Enter or Space on the chosen card declares it, and the arrow keys reach the Declare button. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
@@ -149,6 +152,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
   Next advances through each applied tick in engine order and then shows the remaining condition durations;
+  the tick being read is marked on its creature's chip in the mini battlefield, beside the health bar it moved;
   the energy allowance is context on the first step, not a step per creature. The notice waits until Done,
   Skip ▸▸ or Close, and a replay from Announcements starts again at the first tick. Loading an existing round does not
   pretend that a new round just started.
@@ -156,7 +160,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
   announcement; it does not change the current phase, question or selection. The top bar remains current.
   **Mute phase pop-ups** (on the notice, or at the top of Announcements) stops the phase explanations for the
-  rest of the match; changes are still listed under Announcements and earlier ones still open from there. While
+  rest of the match; changes are still listed under Announcements and earlier ones still open from there. The
+  upkeep's ticks are not muted: like the turn order, they are what happened to the board, not an explanation. While
   muted, the same toggle at the top of Announcements turns them back on. The mute is kept per match (by its
   seat tokens) across a reload.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
