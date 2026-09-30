@@ -307,6 +307,30 @@ test('the phase popup recaps both teams packages after the unlock opportunity', 
   await page.screenshot({ path: info.outputPath('packages-unlocked.png'), animations: 'disabled' });
 });
 
+// ADR 0087: the Match tool opens under the dock on every layout, where a finger can reach it; two taps concede.
+test('Concede opens in view under the dock, asks twice, and the end screen says who won', async ({ page }) => {
+  await page.locator('#phase-notice-close').click();
+  await page.locator('#match-tools-label').click();
+  await expect(page.locator('#concede')).toBeInViewport();
+  const panel = await page.locator('#match-panel').boundingBox();
+  const dock = await page.locator('#phase-dock').boundingBox();
+  expect(panel.y).toBeGreaterThanOrEqual(dock.y);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(widthOf(page));
+  await page.locator('#concede').click();
+  await expect(page.locator('#concede-yes')).toBeInViewport();
+  let conceded = 0;
+  // The seat reports the end only once the concession has been posted: a poll landing between here and the
+  // tap would otherwise end the match under the confirmation. The later route wins, so the concession's is
+  // registered after the seat's, which matches its path too.
+  const ended = { ...view, over: true, outcome: { winner: 'player2', reason: 'Concession' } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: conceded > 0 ? ended : view }));
+  await page.route('**/api/seat/player1/concede', route => { conceded += 1; return route.fulfill({ json: ended.outcome }); });
+  await page.locator('#concede-yes').click();
+  await expect.poll(() => conceded).toBe(1);
+  await expect(page.locator('#asking')).toHaveText('You conceded · Player 2 wins.');
+  await expect(page.locator('#match-tools')).toBeHidden();
+});
+
 test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {
   if (isLaptop(page)) {
     await expect(page.locator('#mini-board')).toBeHidden();

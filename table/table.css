@@ -559,7 +559,7 @@ body:has(#upkeep[open]) .round-recap { visibility: hidden; }
   #phase-reminder { grid-column: 1 / -1; grid-row: 3; }
   #upkeep { grid-column: 2; grid-row: 1; }
   #upkeep summary { padding: 5px 8px; }
-  #phase-notice, #upkeep-panel { left: 12px; width: calc(100vw - 24px); }
+  #phase-notice, #upkeep-panel, #match-panel { left: 12px; width: calc(100vw - 24px); }
   #phase-notice-title { font-size: 15px; }
   #phase-notice-detail { font-size: 11px; }
 }
@@ -579,7 +579,7 @@ body:has(#table) { padding-bottom: 24px; }
 .phase-tools > details > summary::-webkit-details-marker { display: none; }
 .phase-tools > details[open] > summary { background: #35442e; border-color: #c5ac6c; }
 #upkeep { grid-column: auto; grid-row: auto; }
-#phase-steps, #announcement-list, #upkeep-panel, #recap-actions { position: absolute; top: calc(100% + 8px); bottom: auto; left: auto; right: 0; width: min(580px, calc(100vw - 40px)); max-height: min(58dvh, 480px); margin: 0; padding: 16px; border: 1px solid #758064; border-radius: 10px; background: #192921; box-shadow: 0 12px 30px #0008; overflow-y: auto; }
+#phase-steps, #announcement-list, #upkeep-panel, #match-panel, #recap-actions { position: absolute; top: calc(100% + 8px); bottom: auto; left: auto; right: 0; width: min(580px, calc(100vw - 40px)); max-height: min(58dvh, 480px); margin: 0; padding: 16px; border: 1px solid #758064; border-radius: 10px; background: #192921; box-shadow: 0 12px 30px #0008; overflow-y: auto; }
 #phase-steps { width: auto; gap: 6px; }
 #announcement-list { list-style: none; display: grid; gap: 7px; }
 #announcement-list button { width: 100%; padding: 10px 12px; font-size: 13px; }
@@ -622,7 +622,7 @@ body:has(#table) { padding-bottom: 24px; }
   #phase-turn { font-size: 11px; }
   .phase-tools { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 4px; }
   .phase-tools > details > summary { min-height: 32px; padding: 6px; font-size: 9px; }
-  #phase-notice, #phase-steps, #announcement-list, #upkeep-panel, #recap-actions { width: min(480px, calc(100vw - 28px)); right: 0; left: auto; top: calc(100% + 6px); bottom: auto; max-height: 58dvh; }
+  #phase-notice, #phase-steps, #announcement-list, #upkeep-panel, #match-panel, #recap-actions { width: min(480px, calc(100vw - 28px)); right: 0; left: auto; top: calc(100% + 6px); bottom: auto; max-height: 58dvh; }
   #phase-notice { padding: 12px; }
   #phase-notice[data-kind="round"] #phase-notice-title { font-size: 23px; }
   #decision-phase { font-size: 16px; }
