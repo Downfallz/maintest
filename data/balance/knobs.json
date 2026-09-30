@@ -473,6 +473,22 @@
         { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 }
       ]
     },
+    "spell:latch": {
+      "name": "Latch",
+      "class": "Leech",
+      "intent": "The Parasite attached: a point of blood drawn from one enemy each round and fed back to the caster for as long. Parasite Jab steals in one bite; this steals a little every round, keeping the Prowler's bleed as the line's mechanic and turning it into the caster's healing.",
+      "keep": [
+        "What the target bleeds, the caster regenerates: the two halves stay matched",
+        "Small per round: the big steal is Parasite Jab's, and Soul Devourer's at tier 3"
+      ],
+      "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). No evaluation has measured it yet.",
+      "knobs": [
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
     "spell:parasite_jab": {
       "name": "Parasite Jab",
       "class": "Leech",

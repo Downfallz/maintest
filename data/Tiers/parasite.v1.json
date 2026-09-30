@@ -6,7 +6,8 @@
     "tier:prowler:v1"
   ],
   "spells": [
-    "spell:parasite_jab:v1"
+    "spell:parasite_jab:v1",
+    "spell:latch:v1"
   ],
   "initiativeBonus": 1
 }
