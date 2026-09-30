@@ -1778,8 +1778,9 @@ function renderPhaseGuide(state, view, seat) {
     if (index === current) step.setAttribute('aria-current', 'step');
     return step;
   }));
+  const evolution = board.nextEvolutionRound > board.roundNumber ? ` Next evolution: round ${board.nextEvolutionRound}.` : '';
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
-    : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${board.nextEvolutionRound > board.roundNumber ? ` Next evolution: round ${board.nextEvolutionRound}.` : ''}`;
+    : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${evolution}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   renderUpkeep(state, view, upkeep, seat);
   const unlocked = unlockedPackages(state, seat, view.board, (current >= 0 || view.over) && !state.step);
@@ -1937,7 +1938,7 @@ function showPhaseNotice(state, entry, replay = false) {
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
   // The upkeep's ticks are not a phase explanation: like the turn order, they are what happened to the board,
   // and the mute leaves them.
-  if (state.quiet && !replay && !(entry.steps?.length > 0)) return;
+  if (state.quiet && !replay && (entry.steps?.length ?? 0) === 0) return;
   // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
   element('order').open = false;
   state.noticeEntry = entry;
