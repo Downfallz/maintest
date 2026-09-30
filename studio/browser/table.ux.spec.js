@@ -14,14 +14,15 @@ async function expectNoSidewaysScroll(page) {
 // Host-shaped responses keep layout regressions independent of simulation progress.
 const cards = ['Basic Attack', 'Full Plate', 'Guard', 'Heavy Strike', 'Pummel', 'Wait'].map((name, index) => ({
   id: `spell-${index}`, name, cost: index === 5 ? 0 : 2, critical: index === 4 ? '77%' : '0%',
+  type: [0, 3, 4].includes(index) ? 'Offensive' : index === 5 ? 'Passive' : 'Defensive',
   targeting: 'One enemy', effects: ['Damage 7'],
   criticalNote: 'Quick cannot crit. Standard can, and a critical multiplies only direct damage or healing on its targets.',
 }));
 const view = {
   waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 3, options: { speed: { missing: [1] } }, feed: [],
   guidance: cards.map(card => ({ spell: card.id, cost: card.cost, energyAfterCost: 4 - card.cost, quickCriticalChance: 0, standardCriticalChance: card.name === 'Pummel' ? .77 : 0 })),
-  board: { roundNumber: 3, subPhase: 'Speed', allies: [{ id: 1, name: 'Creature 1', health: 6, maxHealth: 30, energy: 4, knownSpells: cards.map(card => card.id) }],
-    enemies: [{ id: 2, health: 20, maxHealth: 30 }], intents: [], timeline: [] },
+  board: { roundNumber: 3, subPhase: 'Speed', allies: [{ id: 1, name: 'Creature 1', health: 6, maxHealth: 30, energy: 4, currentInitiative: 8, knownSpells: cards.map(card => card.id) }],
+    enemies: [{ id: 2, health: 20, maxHealth: 30, currentInitiative: 5 }], intents: [], timeline: [] },
 };
 // Three families of three upgrades, each with one successor: the shape of the standard catalogue's packages.
 const packages = ['North', 'East', 'West'].flatMap((family, root) => [
@@ -75,6 +76,11 @@ test('speed spells fit in one compact list and only positive critical chances st
   await list.scrollIntoViewIfNeeded();
   await expect(list.locator('.speed-critical')).toHaveCount(1);
   await expect(list.locator('.speed-critical')).toHaveText('✦ 77% crit');
+  await expect(list.locator('.spell-group')).toHaveCount(3);
+  if (isPhone(page)) {
+    const columns = await list.locator('.spell-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+    expect(columns).toBe(2);
+  }
   await expect(page.locator('#decision-guide')).not.toContainText('Basic Attack');
   await expect(list).not.toContainText('0%');
   expect((await list.boundingBox()).height).toBeLessThan(360);
@@ -177,6 +183,28 @@ test('spell rows stay put on selection and only the fixed button declares', asyn
   expect(decisions[0]).toMatchObject({ kind: 'Intent', creature: 1, spell: 'spell-4', asked: 3 });
 });
 
+test('phone spell choices use two compact columns with a full detail switch', async ({ page }, info) => {
+  test.skip(!isPhone(page));
+  const intent = { ...view, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
+    board: { ...view.board, subPhase: 'IntentSelection' } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: intent }));
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+  const groups = page.locator('#own-hand .hand-row.active .spell-group');
+  await expect(groups).toHaveCount(3);
+  const grid = groups.first().locator('.spell-grid');
+  expect(await grid.evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length)).toBe(2);
+  const first = grid.locator('.held').first();
+  expect((await first.boundingBox()).height).toBeLessThan(145);
+  await page.locator('#hand-view').click();
+  await expect(page.locator('#planning')).toHaveClass(/full-spells/);
+  expect(await grid.evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length)).toBe(1);
+  await expect(first.locator('.card-body')).toBeVisible();
+  await page.locator('#hand-view').click();
+  expect(await grid.evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length)).toBe(2);
+  await expectNoSidewaysScroll(page);
+  await page.screenshot({ path: info.outputPath('compact-spellbook.png'), animations: 'disabled' });
+});
+
 test('on a phone the speed and spell decisions remain visible while only their spellbook scrolls', async ({ page }, info) => {
   test.skip(!isPhone(page));
   for (const kind of ['Speed', 'Intent']) {
@@ -232,12 +260,17 @@ test('battlefield names public opponent packages and upkeep popup separates tick
       regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }] };
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: applied }));
   await expect(page.locator('#upkeep')).toBeVisible();
-  await expect(page.locator('#phase-notice-changes')).toContainText('still active');
   await expect(page.locator('#phase-notice-changes')).toContainText('+2 HP');
+  await expect(page.locator('#phase-notice-context')).toContainText('1 / 3');
+  await page.locator('#phase-notice-next').click();
+  await expect(page.locator('#phase-notice-changes')).toContainText('−1 HP');
+  await page.locator('#phase-notice-next').click();
+  await expect(page.locator('#phase-notice-changes')).toContainText('DefenseModifier -2 · 2 rounds left');
   await page.locator('#upkeep-label').click();
   await expect(page.locator('#upkeep-conditions')).toContainText('DefenseModifier -2');
   if (!isLaptop(page)) await page.locator('#board-toggle').click();
   await expect(page.locator('#enemies .enemy-packages')).toContainText('North');
+  if (!isLaptop(page)) await expect(page.locator('#mini-board')).toBeHidden();
   await expectNoSidewaysScroll(page);
   await page.screenshot({ path: info.outputPath('opponent-packages-upkeep.png'), animations: 'disabled' });
 });
@@ -275,6 +308,8 @@ test('below a laptop the battlefield is in the round bar at a glance, not at the
   await expect(page.locator('#board')).toBeHidden();
   await expect(page.locator('#mini-board .mini-creature')).toHaveCount(2);
   await expect(page.locator('#mini-enemies .mini-creature')).toHaveAttribute('aria-label', /^Creature 2, opponent, 20\/30 health/);
+  await expect(page.locator('#mini-enemies .mini-initiative')).toHaveText('↟5');
+  await expect(page.locator('#mini-allies .mini-initiative')).toHaveText('↟8');
   const mini = await page.locator('#mini-board').boundingBox();
   expect(mini.x + mini.width).toBeLessThanOrEqual(widthOf(page));
   await expectNoSidewaysScroll(page);

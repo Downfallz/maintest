@@ -586,6 +586,8 @@ body:has(#table) { padding-bottom: 24px; }
 #phase-notice-title { font-size: 18px; }
 .notice-controls { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .notice-controls button { min-height: 30px; font-size: 11px; padding: 5px 9px; background: transparent; }
+.notice-controls #phase-notice-next { min-height: 44px; margin-right: auto; background: var(--gold); border-color: var(--gold); color: #2b251a; font-size: 13px; font-weight: 750; }
+.notice-controls #phase-notice-next[hidden], .notice-controls #phase-notice-pin[hidden] { display: none; }
 #decision .decision-heading { flex-wrap: wrap; gap: 8px; }
 #decision-phase { color: #f1d69b; font-size: 17px; font-weight: 750; }
 .decision-turn { background: #394b3b; border: 1px solid #83967b; color: #e2eeda; border-radius: 6px; padding: 5px 8px; font-size: 12px; font-weight: 700; }
@@ -940,6 +942,46 @@ body:has(#table) { padding-bottom: 24px; }
 #combat-step-controls > button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
 #planning.stepping .hand-section { opacity: .55; }
 #planning.stepping #own-hand { pointer-events: none; }
+
+/* The active spellbook can be scanned by the types the catalogue supplies, with no classification guessed
+   from a spell name or effect sentence. Other creatures keep their ordinary collapsed hand. */
+#own-hand .held-cards.grouped-spells { grid-template-columns: minmax(0, 1fr); }
+.spell-group { min-width: 0; }
+.spell-group h3 { margin: 4px 2px; color: var(--gold); font-size: 11px; font-weight: 700; }
+.spell-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 8px; }
+#hand-view { display: none; }
+
+@media (max-width: 1099px) {
+  .mini-creature { display: grid; grid-template-columns: 18px minmax(0, 1fr); grid-template-rows: 15px 13px; gap: 2px 4px; min-height: 39px; align-content: center; }
+  .mini-id { grid-column: 1; grid-row: 1; }
+  .mini-health { grid-column: 2; grid-row: 1; width: 100%; }
+  .mini-stats { grid-column: 1 / -1; grid-row: 2; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 2px; white-space: nowrap; }
+  .mini-initiative { flex: none; font-size: 10px; font-weight: 700; color: #d0aff3; }
+}
+
+@media (max-width: 760px) {
+  #own-hand .held-cards.speed-reference:not(.grouped-spells),
+  #own-hand .speed-reference .spell-grid,
+  #planning[data-kind="Intent"] #own-hand .hand-row.active .held-cards:not(.grouped-spells),
+  #planning[data-kind="Intent"] #own-hand .hand-row.active .spell-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+  }
+  #own-hand .speed-spell > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px; min-height: 60px; padding: 7px; align-content: start; }
+  .speed-spell > summary strong { grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; line-height: 1.25; }
+  .speed-cost { font-size: 10px; }
+  .speed-critical { font-size: 9px; padding: 2px 3px; }
+  .speed-spell > summary::after { display: none; }
+  .hand-actions { display: flex; gap: 7px; }
+  .hand-actions #hand-view:not([hidden]) { display: inline-block; }
+  .hand-actions #hand-view { white-space: nowrap; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .held { min-height: 111px; padding: 8px; align-content: start; gap: 4px; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-title { font-size: 14px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-cues,
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-advice { display: none; }
+  #planning[data-kind="Intent"]:not(.full-spells) #own-hand .hand-row.active .card-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex-basis: 100%; padding-top: 2px; font-size: 11px; line-height: 1.25; }
+  #planning[data-kind="Intent"].full-spells #own-hand .hand-row.active .held-cards:not(.grouped-spells),
+  #planning[data-kind="Intent"].full-spells #own-hand .hand-row.active .spell-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* The round bar's play-by-play: one or two lines, never wider than the bar. */
 /* The clamp is on the text, inside the padding, so a third line is never half drawn in it. */

@@ -2,7 +2,7 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, turnOrder, liveChoice } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
@@ -92,6 +92,12 @@ function start(seats, holder = null) {
   element('board-toggle').addEventListener('click', () => showBoard(state, !state.boardOpen));
   globalThis.addEventListener?.('resize', () => placeBoard(state));
   element('hand-talents').addEventListener('click', () => openTalents(state));
+  element('hand-view').addEventListener('click', () => {
+    state.fullSpellView = !state.fullSpellView;
+    element('planning').classList.toggle('full-spells', state.fullSpellView);
+    element('hand-view').textContent = state.fullSpellView ? 'Compact view' : 'Full details';
+    element('hand-view').setAttribute('aria-pressed', String(state.fullSpellView));
+  });
 
   // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
   // against whichever seat is on screen then rather than whichever was when the page loaded.
@@ -585,6 +591,11 @@ function renderTimeline(board) {
 function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
+  const handView = element('hand-view');
+  handView.hidden = view.waitingFor !== 'Intent' || !isAsked(view);
+  handView.textContent = state.fullSpellView ? 'Compact view' : 'Full details';
+  handView.setAttribute('aria-pressed', String(Boolean(state.fullSpellView)));
+  element('planning').classList.toggle('full-spells', Boolean(state.fullSpellView));
   state.targetAnchor = null;
   state.creatureRows = new Map();
   // What a row may do and say this poll. Targeting is a tap on a legal creature (playtest-app.md §3.2), so
@@ -668,7 +679,31 @@ function handRow(state, row, asked, current) {
   held.dataset.scroll = `hand-${row.creature}`;
   // Tappable only on the creature being asked: every row says what its creature could cast, which is what
   // makes the hand readable, but only one creature is being asked at a time.
-  held.append(...row.spells.map(spell => reference ? speedSpell(state, spell, row.creature, current) : heldCard(state, spell, active && spell.castable, row.creature, current)));
+  const card = spell => reference ? speedSpell(state, spell, row.creature, current)
+    : heldCard(state, spell, active && spell.castable, row.creature, current);
+  // The catalogue owns each card's type. Group only the active hand when there is more than one type;
+  // the other creatures remain ordinary collapsible references.
+  const types = new Map();
+  if (active) for (const spell of row.spells) {
+    const type = state.cards.get(spell.spell)?.type;
+    if (!type) continue;
+    if (!types.has(type)) types.set(type, []);
+    types.get(type).push(spell);
+  }
+  if (types.size > 1 && [...types.values()].reduce((sum, spells) => sum + spells.length, 0) === row.spells.length) {
+    held.className += ' grouped-spells';
+    held.append(...[...types].map(([type, spells]) => {
+      const group = document.createElement('section');
+      group.className = 'spell-group';
+      const heading = document.createElement('h3');
+      heading.textContent = `${type} · ${spells.length}`;
+      const grid = document.createElement('div');
+      grid.className = 'spell-grid';
+      grid.append(...spells.map(card));
+      group.append(heading, grid);
+      return group;
+    }));
+  } else held.append(...row.spells.map(card));
 
   one.append(who, held);
   return one;
@@ -893,8 +928,8 @@ function line(state, creature, which, marks) {
   return box;
 }
 
-// The battlefield at a glance, in the round bar below the laptop layout: each creature's number, health and
-// energy, and whether it is stunned. A legal target is picked here exactly as on its row, so a spell aimed at
+// The battlefield at a glance, in the round bar below the laptop layout: each creature's number, health,
+// energy and current initiative, and whether it is stunned. A legal target is picked here exactly as on its row, so a spell aimed at
 // an ally never sends the player past the opponent to find one; any other creature opens the battlefield at its
 // row, where its defense, conditions and choice are.
 function miniCreature(state, creature, which, marks) {
@@ -918,14 +953,23 @@ function miniCreature(state, creature, which, marks) {
   const energy = document.createElement('span');
   energy.className = 'mini-energy';
   energy.textContent = `ϟ${creature.energy ?? 0}`;
-  chip.append(id, health, ...miniDelta(creature, marks), energy);
+  const stats = document.createElement('span');
+  stats.className = 'mini-stats';
+  stats.append(energy, ...miniDelta(creature, marks));
   // Defense only when there is some: a creature without any is the usual case, and a phone has no room to say so.
   if (creature.totalDefense > 0) {
     const defense = document.createElement('span');
     defense.className = 'mini-defense';
     defense.textContent = `◇${creature.totalDefense}`;
-    chip.append(defense);
+    stats.append(defense);
   }
+  if (creature.currentInitiative != null && Number.isFinite(Number(creature.currentInitiative))) {
+    const initiative = document.createElement('span');
+    initiative.className = 'mini-initiative';
+    initiative.textContent = `↟${creature.currentInitiative}`;
+    stats.append(initiative);
+  }
+  chip.append(id, health, stats);
   if (creature.isStunned === true) {
     const stunned = document.createElement('span');
     stunned.className = 'mini-flag';
@@ -956,7 +1000,9 @@ function miniLabel(creature, which, marks, legal, picked) {
   const acting = creature.id === marks.active || creature.id === marks.turn;
   const status = [acting && 'acting now', creature.isAlive === false && 'defeated', creature.isStunned === true && 'stunned',
     legal && targetStatus(marks, picked)];
-  return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy, ${creature.totalDefense ?? 0} defense`, ...status.filter(Boolean)].join(', ');
+  const initiative = creature.currentInitiative != null && Number.isFinite(Number(creature.currentInitiative))
+    ? `, ${creature.currentInitiative} initiative` : '';
+  return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy, ${creature.totalDefense ?? 0} defense${initiative}`, ...status.filter(Boolean)].join(', ');
 }
 
 function targetStatus(marks, picked) {
@@ -1736,7 +1782,8 @@ function renderPhaseGuide(state, view, seat) {
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
   const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
     : newRound && upkeep ? upkeepChanges(view.board, upkeep) : [];
-  const entry = { title, detail, changes, upkeep: newRound && upkeep ? upkeepPreview(state) : '', newRound: begins };
+  const entry = { title, detail, changes, upkeep: newRound && upkeep ? upkeepPreview(state) : '',
+    steps: newRound && upkeep ? upkeepSteps(state, view.board, upkeep) : [], newRound: begins };
   state.announcements ??= new Map();
   state.announcements.set(seat, [...(state.announcements.get(seat) ?? []), entry].slice(-12));
   renderAnnouncements(state, seat);
@@ -1754,8 +1801,32 @@ function upkeepPreview(state) {
 
 function activeConditions(board) {
   return [...(board.allies ?? []), ...(board.enemies ?? [])].flatMap(creature => (creature.conditions ?? [])
-    .map(condition => ({ who: `Creature ${creature.id}`, text: chipText(condition), tone: 'active' }))
+    .map(condition => ({ who: `Creature ${creature.id}`,
+      text: chipText(condition) ? `${chipText(condition)} · ${remainingText(condition)}` : '', tone: 'active' }))
     .filter(one => one.text));
+}
+
+function remainingText(condition) {
+  const lane = laneOf(condition);
+  if (lane === null) return 'permanent';
+  const remaining = condition.remainingRounds;
+  return `${lane === 'new' ? 'new · ' : ''}${remaining} ${remaining === 1 ? 'round' : 'rounds'} left`;
+}
+
+// Applied healing and damage are host events, in their actual order. Energy is context on the first step,
+// never a click per creature. The final step reads current condition counters from the board rather than
+// pretending upkeep itself decremented them (the countdown happens during cleanup).
+function upkeepSteps(state, board, upkeep) {
+  const ticks = upkeep.rows.filter(row => row.tone !== 'energy' && row.amount > 0);
+  const conditions = activeConditions(board);
+  if (!ticks.length && !conditions.length) return [];
+  const steps = ticks.map(row => ({
+    label: row.label,
+    changes: [{ who: `Creature ${row.creature}`, text: `${row.sign}${row.amount} ${row.unit}`, tone: row.tone }],
+  }));
+  if (conditions.length) steps.push({ label: 'Conditions remaining', changes: conditions });
+  steps[0].label = `${upkeepEnergy(state)} ${steps[0].label}`;
+  return steps;
 }
 
 function upkeepChanges(board, upkeep) {
@@ -1825,24 +1896,50 @@ function hidePhaseNotice(state) {
   state.phaseMotion?.cancel();
   if (element('phase-notice').contains?.(document.activeElement)) element('announcements-label').focus({ preventScroll: true });
   element('phase-notice').hidden = true;
+  state.noticeEntry = null;
 }
 
-function showPhaseNotice(state, { title, detail, upkeep, changes = [], newRound }, replay = false) {
+function showPhaseNotice(state, entry, replay = false) {
   hidePhaseNotice(state);
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
   if (state.quiet && !replay) return;
   // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
   element('order').open = false;
-  state.noticePinned = replay;
-  state.noticeDuration = newRound ? 8000 : 6000;
+  state.noticeEntry = entry;
+  state.noticeReplay = replay;
+  state.noticeStep = 0;
+  state.noticePinned = replay || entry.steps?.length > 1;
+  state.noticeDuration = entry.newRound ? 8000 : 6000;
   const notice = element('phase-notice');
-  notice.dataset.kind = newRound ? 'round' : 'phase';
-  element('phase-notice-context').textContent = replay ? 'Earlier announcement · review' : 'Phase update';
-  element('phase-notice-pin').textContent = replay ? 'Kept open' : 'Keep open';
-  element('phase-notice-pin').disabled = replay;
-  element('phase-notice-title').textContent = title;
-  element('phase-notice-detail').textContent = upkeep ? `${upkeep} ${detail}` : detail;
+  notice.dataset.kind = entry.newRound ? 'round' : 'phase';
+  renderNoticeContent(state, replay);
+  notice.hidden = false;
+  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
+  }
+  schedulePhaseNotice(state);
+}
+
+function renderNoticeContent(state, replay = state.noticeReplay) {
+  const entry = state.noticeEntry;
+  const step = entry.steps?.[state.noticeStep];
+  const final = state.noticeStep === entry.steps?.length - 1;
+  element('phase-notice-context').textContent = step
+    ? `${replay ? 'Earlier announcement · ' : ''}Upkeep · ${state.noticeStep + 1} / ${entry.steps.length}`
+    : replay ? 'Earlier announcement · review' : 'Phase update';
+  element('phase-notice-title').textContent = entry.title;
+  element('phase-notice-detail').textContent = step
+    ? `${step.label}${final ? ` · ${entry.detail}` : ''}`
+    : entry.upkeep ? `${entry.upkeep} ${entry.detail}` : entry.detail;
+  const pin = element('phase-notice-pin');
+  pin.hidden = Boolean(step && entry.steps.length > 1);
+  pin.textContent = replay ? 'Kept open' : 'Keep open';
+  pin.disabled = replay;
+  const next = element('phase-notice-next');
+  next.hidden = !step || entry.steps.length < 2;
+  next.textContent = final ? 'Done ✓' : 'Next effect →';
   const list = element('phase-notice-changes');
+  const changes = step?.changes ?? entry.changes ?? [];
   list.hidden = changes.length === 0;
   list.replaceChildren(...changes.map(change => {
     const row = document.createElement('p');
@@ -1854,11 +1951,6 @@ function showPhaseNotice(state, { title, detail, upkeep, changes = [], newRound 
     row.append(who, value);
     return row;
   }));
-  notice.hidden = false;
-  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-    state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
-  }
-  schedulePhaseNotice(state);
 }
 
 function schedulePhaseNotice(state) {
@@ -1919,6 +2011,13 @@ function setQuiet(state, quiet) {
 function setupPhaseControls(state) {
   const notice = element('phase-notice');
   element('order-panel').addEventListener('click', () => { element('order').open = false; });
+  element('phase-notice-next').addEventListener('click', () => {
+    if (!state.noticeEntry) return;
+    if (state.noticeStep >= state.noticeEntry.steps.length - 1) return hidePhaseNotice(state);
+    state.noticeStep += 1;
+    renderNoticeContent(state);
+    element('phase-notice-next').focus({ preventScroll: true });
+  });
   element('phase-notice-mute').addEventListener('click', () => {
     setQuiet(state, true);
     element('announcements-label').focus({ preventScroll: true });
