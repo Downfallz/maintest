@@ -334,6 +334,8 @@ change (`docs/learning/explained.md`).
 - a pointer addresses nothing, or something that is not a number, or the same one is listed twice;
 - bounds are the wrong way round, or a step of zero moves nothing;
 - the value the content carries today falls outside its own bounds;
+- an effect's amount, amount per round or duration could be moved below 1, which the engine refuses to load,
+  so a search would only find out when it reached that candidate;
 - a target reads an evaluation the objective does not declare, which would silently drop a term from
   every score;
 - `startingKitOffersAChoice` names a spell nothing resolves to, which would silently check nothing.
