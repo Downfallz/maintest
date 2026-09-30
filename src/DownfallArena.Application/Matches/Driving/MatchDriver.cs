@@ -120,9 +120,14 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         where TSection : class =>
         section ?? throw new InvalidOperationException($"The options announce a decision but carry no {typeof(TSection).Name}.");
 
+    /// <summary>
+    /// A refused decision is a bug in an agent, with one exception: the match ended between the question and
+    /// the answer. A concession lands while a seat is being asked (ADR 0087), so the answer that seat gives is
+    /// to a match that is over and is refused as such; the loop reads the outcome next.
+    /// </summary>
     private static void Accept(Result result)
     {
-        if (result.IsFailure)
+        if (result.IsFailure && result.Error != MatchErrors.NotInProgress)
         {
             throw new InvalidOperationException($"An agent's decision was refused: {result.Error.Code} ({result.Error.Message}).");
         }

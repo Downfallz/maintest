@@ -59,6 +59,17 @@ internal sealed class TableGate : IDisposable
         }
     }
 
+    /// <summary>
+    /// One command of the host's own behind the same lock as the driver's: a concession (ADR 0087) lands
+    /// from a request thread while the driver may be inside a command of its own.
+    /// </summary>
+    public ICommandHandler<TCommand, TResult> Guarding<TCommand, TResult>(ICommandHandler<TCommand, TResult> handler)
+        where TCommand : notnull
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return Around(handler);
+    }
+
     private Command<TCommand, TResult> Around<TCommand, TResult>(ICommandHandler<TCommand, TResult> handler)
         where TCommand : notnull =>
         new(handler, _gate);

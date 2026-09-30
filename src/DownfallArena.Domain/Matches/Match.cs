@@ -294,6 +294,23 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Success();
     }
 
+    /// <summary>
+    /// Ends the match now, with the other player as the winner (ADR 0087). A concession is a player's act and
+    /// not a state of the board, so it is legal at any point of a match in progress, whatever the round is
+    /// waiting on; the round it lands in is left where it was, not played out.
+    /// </summary>
+    public Result Concede(PlayerSlot slot)
+    {
+        if (State != MatchState.InProgress)
+        {
+            return Result.Failure(MatchErrors.NotInProgress);
+        }
+
+        var winner = slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        End(ActiveRound, new MatchOutcome(winner, MatchEndReason.Concession));
+        return Result.Success();
+    }
+
     private Round ActiveRound =>
         CurrentRound ?? throw new InvalidOperationException($"Match {Id} has no round in progress.");
 

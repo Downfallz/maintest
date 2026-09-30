@@ -48,7 +48,7 @@ function boot(practice) {
   } else {
     // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
     if (!practice) tidy();
-    start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null);
+    start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
   }
 }
 
@@ -58,12 +58,12 @@ function tidy() {
   }
 }
 
-function start(seats, holder = null) {
+function start(seats, holder = null, practicing = false) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
   const state = {
-    seats, views: [], holder, shown: null, asked: null,
+    seats, views: [], holder, shown: null, asked: null, practice: practicing,
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
@@ -74,6 +74,7 @@ function start(seats, holder = null) {
   load(state);
   setupTalentWindow(state);
   setupPhaseControls(state);
+  setupConcede(state);
   document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -455,8 +456,9 @@ function render(state, views) {
   }
 
   setPhase(view.over
-    ? 'The match is over.'
+    ? outcomeText(view, current.seat)
     : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`, !view.over);
+  renderMatchTools(state, view);
   state.palette = talentPalette(state.catalogue, state.cards);
   // A replay the player opened, or the opponent's action being stepped through: the battlefield as it stood
   // right after that action (when the host recorded it), and no question on it.
@@ -534,6 +536,82 @@ function canInteract(state, current, kind) {
     current.view.waitingFor === kind && current.seat === state.shown &&
     active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
     !needsPass(current, state.holder);
+}
+
+// How the match ended, for the seat reading it: who won and why, off the outcome the host serves. A page on
+// an older host that serves none says only that it is over.
+function outcomeText(view, seat) {
+  const outcome = view.outcome;
+  if (!outcome) return 'The match is over.';
+  const because = { Elimination: 'the last team standing', RoundCap: 'more health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason;
+  if (!outcome.winner) return `The match is a draw · ${because}.`;
+  const won = outcome.winner === seat;
+  const winner = nameOf(outcome.winner);
+  if (outcome.reason === 'Concession') {
+    const other = nameOf(seat === 'player1' ? 'player2' : 'player1');
+    return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
+  }
+  return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
+}
+
+// The one thing a player can do to the match itself: give it up (ADR 0087). It is a dock tool like the
+// upkeep's, so it never sits on a decision, and it takes two taps because there is no undo. Not while a bot
+// plays the seat, not once the match is over, and not at practice, whose scenarios restart instead.
+function renderMatchTools(state, view) {
+  const tools = element('match-tools');
+  const hidden = Boolean(view.over || view.playedByBot || state.practice || state.playback);
+  if (hidden && !tools.hidden) {
+    tools.open = false;
+    resetConcede();
+  }
+  tools.hidden = hidden;
+}
+
+function resetConcede() {
+  element('concede').hidden = false;
+  element('concede-confirm').hidden = true;
+  element('concede-problem').hidden = true;
+}
+
+function setupConcede(state) {
+  element('concede').addEventListener('click', () => {
+    element('concede').hidden = true;
+    element('concede-confirm').hidden = false;
+    element('concede-yes').focus({ preventScroll: true });
+  });
+  element('concede-no').addEventListener('click', () => {
+    resetConcede();
+    element('match-tools').open = false;
+    element('match-tools-label').focus({ preventScroll: true });
+  });
+  element('concede-yes').addEventListener('click', () => concede(state));
+}
+
+// The seat on screen gives up: in hotseat that is whoever holds the device, which the pass screen has just
+// asked. The host answers with the outcome, and the poll that follows draws the end.
+async function concede(state) {
+  const current = state.seats.find(seat => seat.seat === state.shown);
+  const problem = element('concede-problem');
+  if (!current || state.conceding) return;
+  state.conceding = true;
+  element('concede-yes').disabled = true;
+  try {
+    const answer = await current.transport.concede();
+    if (!answer.ok) {
+      problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+      problem.hidden = false;
+      return;
+    }
+    element('match-tools').open = false;
+    resetConcede();
+    await refresh(state);
+  } catch {
+    problem.textContent = 'Could not reach the host. Check your connection and try again.';
+    problem.hidden = false;
+  } finally {
+    state.conceding = false;
+    element('concede-yes').disabled = false;
+  }
 }
 
 // The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
@@ -1604,7 +1682,7 @@ function renderDecision(state, current) {
     return;
   }
   if (view.over) {
-    asking.textContent = 'The match is over.';
+    asking.textContent = outcomeText(view, current.seat);
     choices.replaceChildren();
     return;
   }

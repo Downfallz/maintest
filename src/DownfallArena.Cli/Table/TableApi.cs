@@ -5,6 +5,7 @@ using System.Text.Json;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
@@ -131,6 +132,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
+            ("POST", [_, "concede"]) => await ConcedeAsync(holder),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -282,7 +284,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 // inherit the first's moment.
                 waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
-                over = session.IsOver,
+
+                // Over on the board as well as on the driver: a concession ends the match on the board first,
+                // and the driver says so only once the seat it was asking has let it go (ADR 0087).
+                over = session.IsOver || board.State == MatchState.Ended,
+                outcome = Outcome(board.Outcome),
 
                 // Whether anything a player writes will be kept. A table told --no-record keeps nothing, and
                 // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
@@ -304,6 +310,74 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 feedNext = since + examined.Count,
             },
             ArtifactJson.LineOptions);
+    }
+
+    /// <summary>How the match ended, as the page names seats; nothing while it has not.</summary>
+    private static object? Outcome(MatchOutcome? outcome)
+    {
+        if (outcome is null)
+        {
+            return null;
+        }
+
+        var winner = outcome.Winner is { } slot ? TableSeat.NameOf(slot) : null;
+        return new { winner, reason = outcome.Reason.ToString() };
+    }
+
+    /// <summary>
+    /// The seat gives the match up (ADR 0087). The command ends the match behind the driver's lock; every seat
+    /// a person holds is then released, because the driver is blocked inside one of them waiting for a tap that
+    /// is not coming, and it reads the outcome once it is let go. Where the match had got to is read before,
+    /// for the note: afterwards there is only the end. Only the person playing the seat now can give it up: a
+    /// token whose person is waiting for a handover (<c>--handover</c>, a swap) is watching a bot play, and a
+    /// match a bot is playing is not theirs to end yet.
+    /// </summary>
+    private async Task<StudioResponse> ConcedeAsync(TableSeat seat)
+    {
+        if (seat.Person is not { } person || !ReferenceEquals(session.Seat(seat.Slot).Seated.Agent, person))
+        {
+            return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
+        }
+
+        // Declared before the match is ended, and held until the note is written: ending the match releases the
+        // driver, and the session would otherwise close itself with this note still on its way.
+        using var accepting = run?.Accepting();
+        var (round, subPhase) = await WhereAsync(seat.Slot);
+        var conceded = await session.Concede.HandleAsync(new Concede(session.MatchId, seat.Slot));
+        if (conceded.IsFailure)
+        {
+            return Refused(conceded.Error);
+        }
+
+        foreach (var held in seats)
+        {
+            held.Person?.Release();
+        }
+
+        await NoteConcessionAsync(seat.Slot, round, subPhase);
+        return StudioResponse.OfJson(Outcome(new MatchOutcome(Other(seat.Slot), MatchEndReason.Concession)), ArtifactJson.LineOptions);
+    }
+
+    /// <summary>
+    /// Writes the concession down, and never takes it back: the match has ended by the time this runs, and a
+    /// session that fails to record it must not become a 500 for a player who has just given up. A lost line
+    /// goes to the console, where it is the operator's problem rather than the player's.
+    /// </summary>
+    private async Task NoteConcessionAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase)
+    {
+        if (run is not { } recording)
+        {
+            return;
+        }
+
+        try
+        {
+            await recording.ConcededAsync(session.MatchId, slot, round, subPhase, CancellationToken.None);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  The concession of {TableSeat.NameOf(slot)} could not be written down: {failure.Message}");
+        }
     }
 
     private async Task<StudioResponse> DecideAsync(TableSeat seat, string body)

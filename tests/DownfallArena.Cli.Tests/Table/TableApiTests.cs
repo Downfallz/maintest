@@ -75,6 +75,59 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
+    /// A concession ends the match on the spot for the other seat (ADR 0087): the driver, blocked on the person's
+    /// question, is let go and completes with the outcome; the seat is told it is over and who won; a second
+    /// concession, and a bot's, are refused.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_that_concedes_ends_the_match_for_its_opponent_and_is_told_who_won()
+    {
+        var table = await Seated();
+
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        Text(answer).ShouldBe("""{"winner":"player2","reason":"Concession"}""");
+        var outcome = await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        outcome.Value.ShouldBe(new MatchOutcome(PlayerSlot.Player2, MatchEndReason.Concession));
+        table.Person.Waiting.ShouldBeNull("the seat was let go");
+
+        var seat = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+        seat.Status.ShouldBe(200, Text(seat));
+        Text(seat).ShouldContain("\"over\":true");
+        Text(seat).ShouldContain("""
+            "outcome":{"winner":"player2","reason":"Concession"}
+            """.Trim());
+
+        var again = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+        again.Status.ShouldBe(409);
+        Text(again).ShouldContain(MatchErrors.NotInProgress.Code);
+    }
+
+    /// <summary>
+    /// Neither a seat without a person, nor a person whose seat a bot is playing for now (<c>--handover</c>, a
+    /// swap): a match a bot is playing is not theirs to end yet, and a concession from the sideline would end
+    /// a recorded match the bot was in the middle of.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_a_bot_plays_cannot_concede_even_for_the_person_waiting_to_take_it()
+    {
+        var table = await Seated();
+        var bot = new GreedyAgent(_host!.Services.GetRequiredService<IGameResources>(), Rules);
+
+        var nobody = await table.Api.HandleAsync("POST", "/api/seat/player2/concede", string.Empty, "token-of-player-2");
+        var held = table.Session.Seat(PlayerSlot.Player1).Seat(new Occupant(bot, "greedy"));
+        var sideline = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+        table.Session.Seat(PlayerSlot.Player1).Seat(held);
+        var playing = await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token);
+
+        nobody.Status.ShouldBe(409);
+        Text(nobody).ShouldContain("bot");
+        sideline.Status.ShouldBe(409, Text(sideline));
+        playing.Status.ShouldBe(200, Text(playing));
+    }
+
+    /// <summary>
     /// Every route, not the one a test happened to pick. The token is the whole fence around a seat, and it is
     /// the only fence left once the host binds an address a phone can reach (ADR 0054): a route added later
     /// that forgets to ask for one would hand a seat to whoever is on the network.
@@ -86,6 +139,7 @@ public sealed partial class TableApiTests : IDisposable
     [InlineData("GET", "/api/seat/player2", "")]
     [InlineData("POST", "/api/seat/player1/decision", """{"kind":"Evolution","pass":true}""")]
     [InlineData("POST", "/api/seat/player2/decision", """{"kind":"Evolution","pass":true}""")]
+    [InlineData("POST", "/api/seat/player1/concede", "")]
     public async Task No_route_answers_without_a_token_or_with_one_this_table_never_minted(string method, string path, string body)
     {
         var table = await Seated();
