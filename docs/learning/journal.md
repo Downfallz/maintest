@@ -4,6 +4,43 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-01. The knobs catch up with the content: no package initiative, every new number covered, room past every bound
+
+- **Why.** The content had moved by hand (#245 to #247: nine new tier-2 spells, five tier-3 spells raised)
+  and the knobs had not followed. 78 knobs held their value on a bound, so a search could move them one way
+  only. Several numbers on the new and reworked spells had no knob at all. The 21 package initiative knobs were
+  still in the search, though initiative is the lever a search pulls to buy seat asymmetry rather than
+  balance (ADR 0061).
+- **What changed in `data/balance/knobs.json`.** The content does not move: every value stays where it is,
+  only the bounds around it change.
+  - The 21 `/initiativeBonus` knobs are gone. The package entries and their intents stay, so a knob can come
+    back without losing what each package is for. A tuning pass now moves spells only.
+  - 14 knobs are new: Reckless Swing's cost `[1, 2]`, kept under Enraged Charge's floor of 3. Extort's cost
+    `[2, 3]`, which never falls under what it pockets. Latch's and Adrenaline Tonic's costs `[1, 2]`. The
+    duration of the caster's price on Psycho Rush, Bone Ward, Revenant Guards and Crazed Specter `[1, 2]`.
+    Death Squad's buff duration `[1, 2]`. Adrenaline Tonic's bleed duration `[1, 2]`. Tranquilizer Dart's
+    bleed `[1, 2]` a round over `[1, 3]` rounds. Meteor's bleed `[1, 2]` a round over `[1, 2]` rounds.
+  - 45 bounds moved one step past the value sitting on them. Examples: Enraged Charge's critical chance now
+    reaches 0.85, Hateful Sacrifice 12 damage, Engulfing Flames 11, Restorative Gush 8, and several tier-3
+    costs may come down one.
+  - Left where the intents put them:
+    - Wait's 2, Frostbite's, Bone Ward's and Soothing Chant's one energy, and Momentum's and Wait's zero.
+    - Extort's drain.
+    - Adrenaline Tonic's energy, which never out-earns Wait.
+    - Every stun duration (ADR 0072).
+    - Soothing Chant's heal, which is never a big one.
+    - The "expensive" floors of Chain Slash, Enraged Charge and Psycho Rush.
+    - The tier-2 price ceilings of Shadowstep and Shield Bash.
+    - Throwing Star level with Poison Slash.
+    - Lightning Bolt and Heavy Strike at no less than 2.
+    - Restorative Burst never costing more than it gives back.
+    - A critical chance on a spell that can only buff, which `check-knobs` refuses as inert.
+    - The critical chance of zero on the spells authored without one.
+- **The reading.** 168 knobs (was 175), and 280 legal single steps in the opening sweep (was 263). That is
+  about 47 a slice, roughly an hour each at tune 18's pace. No number is measured. The objective is unchanged, so the content
+  scores what it did (5.009 on the benchmark seeds), but run 18's proposal was found in a smaller box. The
+  next pass searches this one.
+
 ## 2026-10-01. Tuning run 17 runs out of its six hours inside the opening sweep, so the sweep is played in slices
 
 - **What happened.** Run 17 (`main` at `9aeecff`, 2 rounds of 6) started at 18:10 UTC and was still in its
