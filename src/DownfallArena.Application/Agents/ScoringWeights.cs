@@ -22,7 +22,7 @@ public sealed record ScoringWeights(
 {
     /// <summary>
     /// The greedy agent's weights: a kill is worth five damage, a stun three, energy kept, two thirds of a
-    /// point per point of damage prevented, two and a bit per point of initiative. There is no term for a
+    /// point per point of damage prevented, two and a bit per place in the turn order. There is no term for a
     /// wasted action: ADR 0040 removed it after four measurements found it priced nothing, and an action that
     /// comes to nothing now scores nothing rather than being charged on top.
     /// <para>
@@ -35,7 +35,9 @@ public sealed record ScoringWeights(
     /// <para>
     /// <c>Initiative</c> is above one for the opposite reason: a point of it is bought once and kept for the
     /// match, in a game the first mover was winning 64 % of. ADR 0018 guessed 0.5 and said so; ADR 0032 has
-    /// the sweep that replaced the guess, and 2.1 sits in the middle of its step the same way.
+    /// the sweep that replaced the guess, and 2.1 sits in the middle of its step the same way. That sweep
+    /// priced a point; since ADR 0088 the term counts places in the turn order instead (the enemies a change
+    /// moves a creature past), so 2.1 is carried over rather than measured for the new unit.
     /// </para>
     /// <para>
     /// <c>Energy</c> was hand-set at 0.2 in phase L5 and priced one thing: the energy an actor keeps. Three

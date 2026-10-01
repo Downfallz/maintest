@@ -175,20 +175,78 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// One price for one point whether it is given or taken (ADR 0032, ADR 0036): hasting an ally is worth
-    /// exactly what slowing an enemy by the same amount for the same rounds is, and hasting an enemy costs it.
+    /// ADR 0088: initiative is worth the turn order it changes, not its points. Hasting an ally past nobody buys
+    /// nothing, however many points it adds.
     /// </summary>
     [Fact]
-    public void An_initiative_buff_on_an_ally_is_worth_what_the_same_debuff_on_an_enemy_is()
+    public void An_initiative_buff_that_passes_no_enemy_is_worth_nothing()
+    {
+        var fast = Boards.Creature(2, PlayerSlot.Player1) with { CurrentInitiative = Initiative.Of(10) };
+        var creatures = new List<CreatureSnapshot> { Board(enemyHealth: 20)[0], fast, Board(enemyHealth: 20)[1], Board(enemyHealth: 20)[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), fast.Id, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(0, 1e-9);
+    }
+
+    /// <summary>
+    /// The enemies the buff moves its target past, a tie counting half since a d20 decides it (ADR 0063): from
+    /// 5 to 7 it leaves a tie with the enemy at 5 and gets ahead of the one at 6, one and a half a round.
+    /// </summary>
+    [Fact]
+    public void An_initiative_buff_is_priced_by_the_enemies_it_moves_past_a_tie_counting_half()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] with { CurrentInitiative = Initiative.Of(6) } };
+
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(Tempo * 1.5 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A debuff is read from the other side: the creatures of the actor's team the slowed enemy falls behind.
+    /// From 7 to 5 the enemy drops behind the ally at 6 and into a tie with the actor at 5.
+    /// </summary>
+    [Fact]
+    public void An_initiative_debuff_is_priced_by_the_allies_it_puts_ahead_of_the_enemy()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { CurrentInitiative = Initiative.Of(6) };
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1] with { CurrentInitiative = Initiative.Of(7) }, board[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), Three, InitiativeDebuff.Of(2, Duration.OfRounds(1))), creatures).ShouldBe(Tempo * 1.5, 1e-9);
+    }
+
+    /// <summary>Hasting an enemy costs exactly what it gains on the actor's team, and slowing an ally the same.</summary>
+    [Fact]
+    public void Initiative_given_to_an_enemy_or_taken_from_an_ally_counts_against()
     {
         var board = Board(enemyHealth: 20);
         var ally = Boards.Creature(2, PlayerSlot.Player1);
         var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
-        var action = Strike(One, Three);
 
-        Scorer.Score(Cast(action, ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(Tempo * 2 * 3, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(Tempo * 2 * 3, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(-Tempo * 2 * 3, 1e-9);
+        Scorer.Score(Cast(Strike(One, Three), Three, InitiativeBuff.Of(1, Duration.OfRounds(2))), creatures).ShouldBe(-Tempo * 1.0 * 2, 1e-9);
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, InitiativeDebuff.Of(1, Duration.OfRounds(2))), creatures).ShouldBe(-Tempo * 1.0 * 2, 1e-9);
+    }
+
+    /// <summary>Initiative is floored at zero (ADR 0036), so a slow below it is read only as far as zero.</summary>
+    [Fact]
+    public void An_initiative_debuff_is_read_down_to_zero_and_no_further()
+    {
+        var board = Board(enemyHealth: 20);
+        var crawling = board[0] with { CurrentInitiative = Initiative.Of(0) };
+        var creatures = new List<CreatureSnapshot> { crawling, board[1] with { CurrentInitiative = Initiative.Of(1) }, board[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), Three, InitiativeDebuff.Of(5, Duration.OfRounds(1))), creatures).ShouldBe(Tempo * 0.5, 1e-9);
+    }
+
+    /// <summary>A dead creature takes no slot, so moving past it buys nothing.</summary>
+    [Fact]
+    public void An_initiative_buff_does_not_count_a_dead_enemy()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1] with { Health = Health.Of(0) }, board[2] with { CurrentInitiative = Initiative.Of(9) } };
+
+        Scorer.Score(Cast(Strike(One, Four), ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(1))), creatures).ShouldBe(0, 1e-9);
     }
 
     [Fact]
@@ -315,8 +373,10 @@ public sealed class ActionScorerTests
 
         Scorer.Score(Cast(action, Three, Stun.For(1)), board).ShouldBe(3.0, 1e-9);
         Scorer.Score(Cast(action, Three, Stun.For(2)), board).ShouldBe(3.0 * 2, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(Tempo * 1 * 2, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(Tempo * 2 * 3, 1e-9);
+        // Both creatures stand at 5, so either slow turns the actor's tie with the target into a lead: half an
+        // enemy's worth of order a round, whatever the points (ADR 0088).
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(Tempo * 0.5 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(Tempo * 0.5 * 3, 1e-9);
     }
 
     /// <summary>
@@ -443,8 +503,10 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// An unlock is worth what the spell does plus the initiative it buys (ADR 0017), priced by the initiative
-    /// weight (ADR 0018, measured by ADR 0032). Here Guard is a Spell initiative of 6 and the others 1.
+    /// An unlock is worth what the spell does plus the turn order its initiative buys (ADR 0017, ADR 0088),
+    /// priced by the initiative weight (ADR 0018, measured by ADR 0032). Guard's package adds 6 and the others
+    /// 1, but on this board everyone stands at 5, so any bonus takes the buyer out of the same two ties and
+    /// buys the same one enemy's worth of order.
     /// </summary>
     [Fact]
     public void Buying_a_package_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
@@ -454,20 +516,22 @@ public sealed class ActionScorerTests
 
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. The three costs
         // -- Strike 0, Guard 1, Slam 2 -- price at nothing, one point of energy and two.
-        scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - PerEnergy, 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe((0.65 * 2 * 2) + Tempo - PerEnergy, 1e-9);
         scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
         scorer.PurchaseValue(board[0], TestContent.SlamPack, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
     }
 
     /// <summary>
-    /// Guard is worth 2.6 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
-    /// priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
+    /// Guard is worth 2.6 in combat against Strike's 3.15 and still wins the pick once the order its initiative
+    /// buys is priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
     /// </summary>
     [Fact]
     public void A_package_worth_less_in_combat_can_still_be_the_better_purchase()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        // An enemy at 9: Guard's 6 takes the buyer past it and Jab's 1 does not (ADR 0088).
         var board = Board(enemyHealth: 20);
+        board[2] = board[2] with { CurrentInitiative = Initiative.Of(9) };
 
         scorer.Estimate(board[0], TestContent.Guard, board)
             .ShouldBeLessThan(scorer.Estimate(board[0], TestContent.Strike, board));
@@ -538,9 +602,8 @@ public sealed class ActionScorerTests
 
         foreach (var (tier, spell) in new[] { (TestContent.JabPack, TestContent.Strike), (TestContent.GuardPack, TestContent.Guard), (TestContent.SlamPack, TestContent.Slam) })
         {
-            var initiative = tier == TestContent.GuardPack ? Tempo * 6 : Tempo;
             (scorer.PurchaseValue(board[0], tier, board) - scorer.Estimate(board[0], spell, board))
-                .ShouldBe(initiative, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
+                .ShouldBe(Tempo, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
         }
     }
 

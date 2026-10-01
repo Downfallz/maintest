@@ -160,9 +160,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>
-    /// What buying a package is worth: the best of its spells in combat, plus the base initiative the package
-    /// buys for the rest of the match (ADR 0056), priced by the initiative weight (ADR 0018), minus the part of
-    /// that spell's cost the combat reading cannot see, priced by the energy weight (ADR 0020, ADR 0026).
+    /// What buying a package is worth: the best of its spells in combat, plus the turn order the package's
+    /// initiative bonus buys for the rest of the match (ADR 0056, read as the enemies it moves the buyer past
+    /// since ADR 0088), priced by the initiative weight (ADR 0018), minus the part of that spell's cost the
+    /// combat reading cannot see, priced by the energy weight (ADR 0020, ADR 0026).
     /// <para>
     /// Without the second term a pick taken for tempo scores as if it bought nothing. The third exists because
     /// <see cref="Estimate"/> raises the actor's energy to at least the spell's cost, so that a spell too
@@ -182,7 +183,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// A spell the creature already knows is not part of what the package sells: two packages may teach the
     /// same spell, and <see cref="Domain.Matches.Creatures.Creature.BuyTier"/> grants it idempotently, so
     /// pricing it again would have an agent pay a pick for a combat option it already has. A package whose
-    /// every spell is already known is still worth its initiative bonus, and nothing else.
+    /// every spell is already known is still worth the order its initiative bonus buys, and nothing else.
     /// </para>
     /// </summary>
     public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures) =>
@@ -212,7 +213,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             }
         }
 
-        return best with { Initiative = best.Initiative + tier.InitiativeBonus.Value };
+        return best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) };
     }
 
     /// <summary>
@@ -257,7 +258,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 HealOutcome heal => HealTerms(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
                 EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target]),
-                ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
+                ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target], creatures),
                 _ => ScoreTerms.Zero,
             };
         }
@@ -272,6 +273,30 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>Plus one for something done to an enemy of the actor, minus one for something done to an ally or the actor.</summary>
     private static int Sign(CreatureSnapshot actor, CreatureSnapshot target) => target.Owner == actor.Owner ? -1 : 1;
+
+    /// <summary>
+    /// How far a change of <paramref name="delta"/> initiative moves <paramref name="target"/> through the turn
+    /// order, counted in the living creatures of the other team it gets ahead of (positive) or falls behind
+    /// (negative), with a tie counting half because a d20 decides it (ADR 0063). This is what initiative buys
+    /// (ADR 0088): the timeline orders on it, and a point that passes nobody changes no slot. Initiative is
+    /// floored at zero (ADR 0036), so a debuff is read only as far down as that.
+    /// <para>
+    /// It reads the board as it stands, the way every other term does: the order a buff changes is the order
+    /// of the next timeline, which the speeds still to be chosen can rearrange (a <c>Quick</c> creature acts
+    /// before every <c>Standard</c> one) and nothing here can see.
+    /// </para>
+    /// </summary>
+    private static double Overtaken(CreatureSnapshot target, int delta, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var before = target.CurrentInitiative.Value;
+        var after = Math.Max(0, before + delta);
+        return creatures
+            .Where(other => other.Owner != target.Owner && other.IsAlive)
+            .Sum(other => Ahead(after, other.CurrentInitiative.Value) - Ahead(before, other.CurrentInitiative.Value));
+    }
+
+    /// <summary>One for acting first, none for acting after, a half for a tie the dice decide.</summary>
+    private static double Ahead(int mine, int theirs) => (Math.Sign(mine - theirs) + 1) / 2.0;
 
     /// <summary>
     /// What a resolution's damage does to each creature it lands on: the points that count, whether they
@@ -349,7 +374,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private static ScoreTerms EnergyDrainTerms(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         -1 * EnergyTerms(actor, target, Math.Min(amount, target.Energy.Value), remainingHealth);
 
-    private static ScoreTerms ConditionTerms(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
+    private static ScoreTerms ConditionTerms(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
     {
         if (remainingHealth == 0)
         {
@@ -365,8 +390,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Regeneration regeneration => ScoreTerms.Zero with { Heal = -sign * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth) },
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
-            InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * buff.Amount * rounds },
-            InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = sign * debuff.Amount * rounds },
+            InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures) * rounds },
+            InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures) * rounds },
             // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
             // debuff actually lets through, the way `DefensiveTerms` reads what a buff prevents (ADR 0035).
             // That costs the bot more than precision. `DefensiveTerms` is the only term that reads the threat
