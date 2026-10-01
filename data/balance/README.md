@@ -94,12 +94,11 @@ Every enabled package needs an entry with an intent, as every enabled spell does
 creates a package and prunes it when it deletes one. The 21 bonuses are the sums `scripts/build-tiers.py`
 seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
 
-**Do not run a tuning pass with these knobs yet.** They are live — moving `tier:prowler` from 3 to 5 moves 54
-of the 71 objective metrics — and that is the problem: the same move takes the objective from 285.77 to
-101.76, all of it from `mirror.player1WinShare` (243.00 to 41.07) while every variety term gets worse. That
-term reads the seat advantage between two identical greedy agents, a mirror that is degenerate under packages:
-equal initiative is broken by the seat, so Player 1 takes 400 of 400. Initiative is exactly the lever that
-reaches it, so a search would buy seat asymmetry rather than balance (ADR 0061). The mirror reading is next.
+**No package carries a knob today** (journal, 2026-10-01). The bonuses are set by hand, and a tuning pass moves
+spells only. The entries stay, with their intents, so that putting a knob back is one line and not a
+rediscovery of what each package is for. The reason is older than the decision: initiative is live --
+moving `tier:prowler` from 3 to 5 once moved 54 of the 71 objective metrics -- and it is exactly the lever
+that reaches the seat reading (ADR 0061), so a search buys seat asymmetry with it more easily than balance.
 
 ## The objective
 
@@ -275,7 +274,7 @@ sweep again in the job it was taken out of.
 
 | | candidates | at 88 s |
 | --- | --- | --- |
-| the opening sweep, in six slices side by side | 263, about 44 a slice | about 65 min a slice |
+| the opening sweep, in six slices side by side | 244 at 160 knobs (2026-10-01), about 41 a slice | under an hour a slice: tune 18's 44 took 57 to 60 min |
 | the search: the catalogue itself and 6 rounds of 6 | 37 | about 54 min |
 | plus the confirmations of ADR 0074, 400 seeds each: the catalogue and at most one a round | about 14 | about 20 min |
 | 24 rounds, as tune 10 ran it, paired opening on | killed at 349 | **> 6h, nothing kept** |

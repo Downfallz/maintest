@@ -4,6 +4,109 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-01. Occultist's initiative goes back to 2, and the keeps that stopped being true are rewritten
+
+- **What changed.** The owner set `tier:occultist`'s initiative bonus from 3 back to 2, the value it was
+  seeded at before tuning pass 11 moved it. The reason is Prowler's keep: the Scoundrel line is the fast one
+  at every level, and at level 1 Prowler had tied Occultist at 3 since that pass. Content `9659f610` becomes
+  `f1bc21d0`, with a regenerated benchmark digest. The rulebook's purchase example follows: Occultist takes
+  Creature 2 to 7, not 8.
+- **What it moved**, on the benchmark seeds with the same objective:
+
+  | | before | after |
+  | --- | --- | --- |
+  | objective | 5.009 | **8.408** |
+  | `variety.tierUsageShare` | 0.836 | 0.879 (penalty 1.06 to 5.04) |
+  | `variety.tierDamageSpread` | 2.903 | 2.861 |
+  | `variety.spellUsageShare` | 0.333 | 0.313 |
+  | `variety.player1WinShare` | 0.505 | 0.485 |
+  | `exploit.averageRounds` | 12.18 | **8.41** |
+
+  The score is worse, almost all of it from one package's top spell taking more of that package's casts.
+  The best exploiter also wins in 8.41 rounds instead of 12.18, just above its floor of 8. One point of
+  initiative on one level-1 package moved both. That is the lever ADR 0061 warns about, read from the other
+  side. This is a design decision taken for the keep, not a tuning result. The next tuning pass starts
+  from 8.408, and the content it tunes no longer ties at level 1.
+- **Keeps rewritten to what the content is.** The owner's call was that every keep the content had moved past
+  could change, except Prowler's:
+  - Chain Slash still hits exactly two, but shares that with Throwing Star, which it outhits.
+  - Tornado is the hardest-hitting sweep that costs its caster nothing.
+  - Infectious Blast's damage is a sting of two at most a target.
+  - Rejuvenate is the cheapest instant heal, beside Soothing Chant's cheaper regeneration.
+  - Soul Devourer is heavier than Parasite Jab on every half, at the same price.
+  - Restorative Burst hands on most of its price, never all of it.
+  - Guard is no dearer than any heal.
+  - Restorative Gush heals the most at once on one ally.
+  - The 19 package intents that called the initiative bonus "the reason this knob exists" now say it would be
+    the first thing a knob on that package moved, since none has one.
+- **Intents and notes brought to the present.** 78 sentences across 39 spells and 10 packages said
+  something about today that is no longer true:
+  - The tier-2 packages named one spell of the two each teaches since #245.
+  - Several numbers had moved: Wait gives 2, Crushing Stomp stuns for 2 rounds, Hateful Sacrifice costs 3
+    health, Revenant Guards and Crazed Specter cost 4, Full Plate gives 3 points.
+  - Several "the only" and "the cheapest" claims were broken by the new spells: Latch, Soothing Chant,
+    Adrenaline Tonic.
+  - Some value readings were stale, such as Infectious Blast's 11.70, now 23.55.
+  - Some mentions named mechanics that are gone: `HealScore`, Ice Spear's slow, Tornado being disabled, and
+    `check-knobs` findings that no longer appear.
+  Each is rewritten minimally. History stays, in the past tense, and only what reads as true today was
+  corrected. No bound and no content number moved.
+
+## 2026-10-01. The knobs catch up with the content: no package initiative, new numbers covered, room past a bound
+
+- **Why.** The content had moved by hand (#245 to #247: nine new tier-2 spells, five tier-3 spells raised)
+  and the knobs had not followed. Many knobs held their value on a bound, so a search could move them one
+  way only. Some numbers on the new spells had no knob at all. The 21 package initiative knobs were still
+  in the search, though initiative is the lever a search pulls to buy seat asymmetry rather than balance
+  (ADR 0061).
+- **What changed in `data/balance/knobs.json`.** The content does not move: every value stays where it is,
+  only the bounds around it change.
+  - The 21 `/initiativeBonus` knobs are gone. The package entries and their intents stay, so a knob can come
+    back without losing what each package is for. A tuning pass now moves spells only.
+  - 6 knobs are new:
+    - Reckless Swing's cost `[1, 2]`. Its intent is an every-round swing, under Enraged Charge's floor of 3.
+    - Latch's and Adrenaline Tonic's costs `[1, 2]`.
+    - Bone Ward's blood price `[1, 2]` rounds.
+    - Meteor's bleed `[1, 2]` rounds.
+    - Tranquilizer Dart's bleed `[1, 2]` rounds, which can only shorten it: its damage stays a rounding error.
+  - 17 bounds moved one step past the value sitting on them, where no intent ties the number to another spell:
+    - Enraged Charge's critical chance now reaches 0.85.
+    - Hateful Sacrifice reaches 12 damage, Crushing Stomp 8, Restorative Gush 8, Lightning Bolt 5 and Rejuvenate 5.
+    - Thundering Seal, Shield Bash, Full Plate and Revenant Guards can armour one more point.
+    - The rest: Frostbite's slow, Infectious Blast's shred, Healing Screech's regeneration.
+- **What stays, and why.** A first pass widened every bound a value sat on and added a knob to every number
+  left without one. Codex's review of #259, then a second reading of every intent and note, showed how much
+  of that broke a sentence the entries keep. What follows is left alone:
+  - **No cost bound moved.** Costs are where the entries tie spells to each other:
+    - Tornado hits harder than Meteor at the same price.
+    - The three big tier-3 single-target hits all cost three.
+    - Every heal costs more than Rejuvenate.
+    - Thundering Seal is dearer than Guard.
+    - Crazed Specter's energy cost was never what it lacked.
+  - **No new duration knob where the docs say one round:**
+    - Death Squad's haste, and Psycho Rush's recoil.
+    - The four health Revenant Guards and Crazed Specter take from their caster.
+    - Adrenaline Tonic's point of poison.
+  - **No damage bound moved where a keep ranks one spell against another:**
+    - Psycho Rush and Engulfing Flames stay under Hateful Sacrifice.
+    - Tornado stays under Crazed Specter.
+    - Poison Slash stays weaker than Mortal Wound on every axis.
+    - Parasite Jab stays a worse attack than its tier's.
+    - Infectious Blast's damage stays a sting.
+    - Soul Devourer's drain stays under a lock.
+    - Restorative Burst stays point for point against Restorative Gush.
+    - Psycho Rush's critical chance stays under Enraged Charge's.
+  - **Also unchanged:** Meteor's damage floor of 2 (its note), Latch's durations (its note names them as the
+    knob to cut), Extort's cost and drain, the one-energy and free spells, every stun duration (ADR 0072),
+    and the inert critical chances.
+- **The reading.** 160 knobs (was 175), and 244 legal single steps in the opening sweep (was 263). That is
+  about 41 a slice, under an hour each at tune 18's pace. No number is measured. The objective is
+  unchanged, so the content scores what it did (5.009 on the benchmark seeds), but the box is a different
+  one: run 18's proposal is still inside it, and the next pass searches the rest.
+- **Keeps that no longer read true** (Chain Slash, Tornado, Infectious Blast, Rejuvenate, Soul Devourer,
+  Restorative Burst, Guard): this pass leaves them as written. Rewriting a keep or moving the content to meet
+  it is a design call, not a bound.
+
 ## 2026-10-01. Tuning run 17 runs out of its six hours inside the opening sweep, so the sweep is played in slices
 
 - **What happened.** Run 17 (`main` at `9aeecff`, 2 rounds of 6) started at 18:10 UTC and was still in its

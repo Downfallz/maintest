@@ -185,7 +185,7 @@
     "spell:wait": {
       "name": "Wait",
       "class": "Creature",
-      "intent": "The floor of the game: spend the activation on nothing and come back one energy richer. It is what a creature does when everything it knows is too expensive, so it must stay free and it must stay worse than acting.",
+      "intent": "The floor of the game: spend the activation on nothing and come back two energy richer. It is what a creature does when everything it knows is too expensive, so it must stay free and it must stay worse than acting.",
       "keep": [
         "Free to cast",
         "Never worth more than an attack the creature can already afford"
@@ -223,12 +223,12 @@
     "spell:pummel": {
       "name": "Pummel",
       "class": "Brawler",
-      "intent": "The Brawler's cheap swing: one energy for a hit that crits two times in three. It buys tempo rather than a big number, and the critical chance is the whole reason to take it over Basic Attack.",
+      "intent": "The Brawler's cheap swing: one energy for a hit that crits about three times in four. It buys tempo rather than a big number, and the critical chance is the whole reason to take it over Basic Attack.",
       "keep": [
         "At most one energy dearer than Basic Attack",
         "Its critical chance stays its defining stat"
       ],
-      "note": "check-knobs reports this spell as outclassed, and raising its own bounds is not the way out. At 4 damage it would be strictly better than Lightning Bolt -- same damage, same critical chance, one energy cheaper -- so noNewStrictDominance refuses it, and a wider bound here would only buy candidates the constraints throw away. Measured: its whole box tops out around 5.4 against Lightning Bolt's 6.7, and even a certain critical at 3 damage reaches 6.2. Its other edge, costing 1 against 2, is worth nothing on this rule set: 0 of 319 traced declarations had the caster below 2 energy, so the cost never binds. Making this spell a choice is a move on the pair -- Lightning Bolt down as this one comes up -- which is a two-spell candidate, so neither the sweep nor the paired opening can build it and only the climb can. That is what the search budget is for.",
+      "note": "check-knobs reports this spell as outclassed, and raising its own bounds is not the way out. At 4 damage it would be strictly better than Lightning Bolt -- same damage, a higher critical chance (0.767 against 0.5), one energy cheaper -- so noNewStrictDominance refuses it, and a wider bound here would only buy candidates the constraints throw away. Measured: its whole box tops out around 5.4 against Lightning Bolt's 6.0, and even a certain critical at 3 damage only reaches 6.0, a tie. Its other edge, costing 1 against 2, is worth nothing on this rule set: 0 of 319 traced declarations had the caster below 2 energy, so the cost never binds. Making this spell a choice is a move on the pair -- Lightning Bolt down as this one comes up -- which is a two-spell candidate, so neither the sweep nor the paired opening can build it and only the climb can. That is what the search budget is for.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -241,7 +241,7 @@
       "intent": "The Brawler's investment: a point of defense on an ally for good, plus a point while the pressure is on. Cheap, repeatable and permanent, which makes it the likeliest single cause of a match no one can finish.",
       "keep": [
         "Half of it is permanent and stacks on every cast",
-        "Cheaper than any healing spell: it prevents, it does not repair"
+        "No dearer than any heal: it prevents, it does not repair"
       ],
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
@@ -259,7 +259,7 @@
         "Never a farm: the energy cost stays at or above the energy the caster gains",
         "A hit first: the damage is what makes it worth the activation, the skim is the flavour"
       ],
-      "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
+      "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks but for Momentum's 2.6, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
       "knobs": [
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
@@ -269,7 +269,7 @@
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
-      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense, which the taxonomy cannot express: a spell has one target origin, so hitting an enemy and protecting an ally are two spells. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
+      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
         "Protection through tempo, never armour: it always carries an initiative debuff",
         "Reads as a trade, not a nuke",
@@ -287,12 +287,12 @@
     "spell:chain_slash": {
       "name": "Chain Slash",
       "class": "Mercenary",
-      "intent": "The Mercenary's payoff, and the only cast in the catalogue that hits exactly two: the rung between a single-target spike and a line-wide storm. It is the reason to walk that line to the end, so it stays expensive and stays late.",
+      "intent": "The Mercenary's payoff, and, beside Throwing Star, the only cast in the catalogue that hits exactly two, and the harder of the pair: the rung between a single-target spike and a line-wide storm. It is the reason to walk that line to the end, so it stays expensive and stays late.",
       "keep": [
-        "Hits exactly two: the one rung between a spike and a storm, and the only spell on it",
+        "Hits exactly two: the rung between a spike and a storm, shared only with `throwing_star` at tier 1, which it outhits",
         "Expensive and late: the end of the Mercenary's line, never something to open with"
       ],
-      "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 12, both at the same depth, and `hateful_sacrifice` ties it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
+      "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 15, both at the same depth, `hateful_sacrifice` beats it at 11 on one, and `engulfing_flames` and `psycho_rush` tie it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
@@ -302,23 +302,23 @@
     "spell:thundering_seal": {
       "name": "Thundering Seal",
       "class": "Mercenary",
-      "intent": "Guard grown up: three permanent points of defense on an ally and three more for two rounds. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation. It is the one place the Mercenary protects with armour rather than with tempo -- `protective_slam` says 'never armour' and means it -- because the taxonomy has no initiative *buff*, so protecting an ally through tempo cannot be said at all.",
+      "intent": "Guard grown up: three permanent points of defense on an ally and three more for two rounds. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation. It is the one place the Mercenary protects with armour rather than with tempo -- `protective_slam` says 'never armour' and means it -- because the taxonomy's initiative buff (ADR 0036) belongs to the Assassin's line, not to this one, so the Mercenary protects an ally with armour alone.",
       "keep": [
         "Stronger and dearer than Guard",
         "The permanent half stacks on every cast"
       ],
-      "note": "It read 5.20 a round against a tier-3 band of 8 to 14, so it was raised to the top of its own bounds rather than redesigned: 2 permanent and 2 for a round became 3 and 3 for two, at the same price. Measured, that is 16 casts to 94 and `spellsNeverCast` 6 to 1 -- longer matches (5.56 rounds to 6.33) buy more evolution picks, so more of the catalogue comes up at all. It is not the best score available: 3 permanent and 2 for two rounds reads 34.33 against this one's 39.97, and the difference is `spellsBarelyCast`. Taken deliberately, because the tier's problem is its floor and this is the shape closer to the tier-3 median of about 10.5. Its overlap with `revenant_guards` -- the same two effects on three allies -- is left for the Necromancer's turn.",
+      "note": "It read 5.20 a round against a tier-3 band of 8 to 14, so it was raised to the top of its own bounds rather than redesigned: 2 permanent and 2 for a round became 3 and 3 for two, at the same price. Measured, that is 16 casts to 94 and `spellsNeverCast` 6 to 1 -- longer matches (5.56 rounds to 6.33) buy more evolution picks, so more of the catalogue comes up at all. It is not the best score available: 3 permanent and 2 for two rounds reads 34.33 against this one's 39.97, and the difference is `spellsBarelyCast`. Taken deliberately, because the tier's problem is its floor and this is the shape closer to the tier-3 median, about 10.5 then and about 9.4 today. Its overlap with `revenant_guards` -- the same two effects on three allies -- is left for the Necromancer's turn.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:shield_bash": {
       "name": "Shield Bash",
       "class": "Warlord",
-      "intent": "Ironbound's active answer: Full Plate is a passive, so without this the package bought nothing to cast until Dreadnought. A hit that leaves the caster braced keeps the Warlord's armour identity while giving the tier-2 pick a move of its own, priced beside Enraged Charge and Protective Slam at three energy.",
+      "intent": "Ironbound's active answer: Full Plate only armours its caster, so without this the package bought nothing to hit with until Dreadnought. A hit that leaves the caster braced keeps the Warlord's armour identity while giving the tier-2 pick a move of its own, priced beside Enraged Charge and Protective Slam at three energy.",
       "keep": [
         "Always an attack that also armours its caster, never pure armour: self-defense alone is what Full Plate already sells",
         "A tier-2 price, beside the Berserker and Marauder openers rather than above them"
@@ -328,23 +328,23 @@
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 4, "step": 1 }
       ]
     },
     "spell:full_plate": {
       "name": "Full Plate",
       "class": "Warlord",
-      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a self-targeted permanent point of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income per point, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
+      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is three self-targeted permanent points of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income for three points, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
       "keep": [
         "Plate, not a shirt: one cast is armour a creature can feel, and it stacks by being cast again",
         "Never free: a permanent effect nobody pays for has no brake but the round cap",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also the Warlord's opener, so `restorative_gush` and `crushing_stomp` are only ever as reachable as it is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
+      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also half of the Warlord's opener, Ironbound, beside Shield Bash, so `restorative_gush` and `crushing_stomp` are only ever as reachable as that package is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 }
       ]
     },
     "spell:restorative_gush": {
@@ -352,20 +352,20 @@
       "class": "Warlord",
       "intent": "The big single-target heal: more health back than most single hits take away. It decides on its own whether a war of attrition is winnable, which is why the average match length moves with it.",
       "keep": [
-        "Heals more in one cast than anything else",
+        "Heals more at once on one ally than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
       "note": "Its critical chance became a live number with ADR 0033, and that ADR's follow-up said the knob was added here. It was not -- this entry carried three sentences that were false by the time anyone read them: that the knob existed, that the spell was disabled, and that it carried no chance. The knob is real now. The heal goes to 7 with a chance of 0.5, which is 5.62 a round to 8.40 and inside the 8-to-14 band tier 3 is aimed at; its own bounds could not reach the band on the heal alone, which is why the missing knob mattered rather than being a tidy-up.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 8, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:crushing_stomp": {
       "name": "Crushing Stomp",
       "class": "Warlord",
-      "intent": "The Warlord's hammer and the costliest spell in the game: heavy damage and a round of the target doing nothing. Losing an activation is the harshest thing that can happen to a creature, so the price is the point of the spell.",
+      "intent": "The Warlord's hammer and the costliest spell in the game: heavy damage and two rounds of the target doing nothing. Losing an activation is the harshest thing that can happen to a creature, so the price is the point of the spell.",
       "keep": [
         "The most expensive cast in the catalogue",
         "Damage and stun together, or it is just an expensive hit"
@@ -373,7 +373,7 @@
       "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/effects/0/amount", "min": 4, "max": 8, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
       ]
@@ -390,23 +390,24 @@
       "knobs": [
         { "path": "/effects/0/amount", "min": 4, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:enraged_charge": {
       "name": "Enraged Charge",
       "class": "Berserker",
-      "intent": "The Berserker's gamble, and the one spell in the catalogue whose whole point is the roll. One heavy swing at the highest critical chance anywhere, bought at a price that keeps it to every other round: rage that lands or does not, rather than a steady beat. It is what the class is offered before it is offered anything reliable.",
+      "intent": "The Berserker's gamble, and the one spell in the catalogue whose whole point is the roll. One heavy swing at the highest critical chance anywhere, bought at a price that keeps it to two rounds in three: rage that lands or does not, rather than a steady beat. It comes in one package with Reckless Swing, the every-round beat, so the class is offered the gamble and the steady hit together.",
       "keep": [
         "One swing, not a flurry: the roll is the spell, and two effects only split it",
         "The highest critical chance in the catalogue, or it is just an expensive hit",
         "Expensive enough that it cannot be the every-round attack"
       ],
-      "note": "It reads big per cast on purpose and must be read per round instead: at three energy against an income of two it comes up every other round, so 12.60 a cast is 8.40 a round against `protective_slam`'s 7.33 at two energy. Read per cast it looks like twice the bolt; read per round it is fifteen percent over the spell beside it, which is what a tier-2 opener should be. Its own history is the warning: at 7.00 a cast it was 4.67 a round and fell from 122 landed casts to 32 the moment something at two energy arrived.",
+      "note": "It reads big per cast on purpose and must be read per round instead: at three energy against an income of two it comes up two rounds in three, so 12.60 a cast is 8.40 a round against `protective_slam`'s 9.02, also at three energy. Read per cast it looks like twice the bolt; read per round it sits just under the Marauder opener and level with `shield_bash`, which is what a tier-2 opener should be. Its own history is the warning: at 7.00 a cast it was 4.67 a round and fell from 122 landed casts to 32 the moment something at two energy arrived.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
-        { "path": "/criticalChance", "min": 0.5, "max": 0.8, "step": 0.05 }
+        { "path": "/criticalChance", "min": 0.5, "max": 0.85, "step": 0.05 }
       ]
     },
     "spell:tornado": {
@@ -414,11 +415,11 @@
       "class": "Berserker",
       "intent": "The sweep: against a full team it is among the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly, and that is where it has been looked.",
       "keep": [
-        "The cheapest *damaging* sweep -- never the cheapest spell that reaches three, which is `infectious_blast` at one",
+        "Hits each target harder than any other sweep that costs its caster nothing: only `crazed_specter` hits harder, and it pays in health",
         "Its efficiency comes from breadth, not from the size of the hit",
         "It hits harder than `meteor` at the same price, or the two are one spell"
       ],
-      "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it reads 10.64. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turns the spell into a cheaper `meteor`: the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
+      "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it read 10.64; tune run 9 then took its critical chance 0.33 to 0.38 and #246 its damage 4 to 5, and it reads 13.80 today. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turned the spell into what was then a cheaper `meteor` (3 damage on three targets): the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
@@ -428,7 +429,7 @@
     "spell:psycho_rush": {
       "name": "Psycho Rush",
       "class": "Berserker",
-      "intent": "The Berserker's all-in: close to half a creature in a single cast, and the caster stands there open for a round afterwards. It throws itself at one target and the recoil is the spell -- swing that hard and you are not covering yourself.",
+      "intent": "The Berserker's all-in: a third of a creature in a single cast, two-thirds on a critical, and the caster stands there open for a round afterwards. It throws itself at one target and the recoil is the spell -- swing that hard and you are not covering yourself.",
       "keep": [
         "The line's gamble: big, single target, expensive",
         "It costs its caster defense, not health: the Berserker is not hurt by its own swing, it is exposed by it"
@@ -444,12 +445,12 @@
     "spell:poison_slash": {
       "name": "Poison Slash",
       "class": "Scoundrel",
-      "intent": "The Scoundrel's signature: a small hit that keeps hurting. It is the cheapest way into bleed and the spell that teaches a player what a lasting effect is.",
+      "intent": "The Scoundrel's signature: a small hit that keeps hurting. It is the first way into bleed, at level 1, and the spell that teaches a player what a lasting effect is.",
       "keep": [
         "The bleed is the point, the damage is the garnish",
         "The entry-level bleed: weaker than Mortal Wound on every axis"
       ],
-      "note": "These bounds contain a good answer and it is in the interior, not at a corner -- but the measurements below were taken on the Brawler-buffed catalogue of the studio/content branch, where this spell carries a bleed of 1 per round over 2 rounds and Pummel carries 3 damage. This branch carries 1 over 1, so read them as the shape of the curve and not as this catalogue's numbers. There, at 2 damage: 1 over 2 is 6 landed casts; 2 over 2 is 59, still nothing; 2 over 3 takes 5155 of about 8900 with matches at 11.3 rounds, no draw and nothing at the round cap; 3 over 2 reaches the same usage with 12.5% draws; and the corner, 3 over 3, is worse than the middle at 2600, because it kills so fast that a match is 6.0 rounds and there are half as many casts to take a share of. The middle point takes the top spell's share of landed casts from 0.778 to 0.578. On this branch the same spell is at 3 landed casts, and one same-direction pair of steps from 1 over 1 lands on 2 over 2, which measures 310 casts of about 6150 -- fifty times better and still not the interior point, which is two steps of the duration away. Whether the objective keeps that first pair is its own question.",
+      "note": "These bounds contain a good answer and it is in the interior, not at a corner -- but the measurements below were taken on the Brawler-buffed catalogue of the studio/content branch, where this spell carries a bleed of 1 per round over 2 rounds and Pummel carries 3 damage. The catalogue then carried 1 over 1 (it has carried 3 damage and 3 over 1 since the 2026-09-12 pass), so read them as the shape of the curve and not as this catalogue's numbers. There, at 2 damage: 1 over 2 is 6 landed casts; 2 over 2 is 59, still nothing; 2 over 3 takes 5155 of about 8900 with matches at 11.3 rounds, no draw and nothing at the round cap; 3 over 2 reaches the same usage with 12.5% draws; and the corner, 3 over 3, is worse than the middle at 2600, because it kills so fast that a match is 6.0 rounds and there are half as many casts to take a share of. The middle point takes the top spell's share of landed casts from 0.778 to 0.578. On that catalogue, at 1 over 1, the same spell was at 3 landed casts, and one same-direction pair of steps landed on 2 over 2, which measured 310 casts of about 6150 -- fifty times better and still not the interior point. Whether the objective keeps that first pair is its own question.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -466,7 +467,7 @@
         "Never more targets than `meteor`, which is what a Wizard climbs two levels for",
         "Priced level with `poison_slash`: the choice is the shape of the damage, never what it costs"
       ],
-      "note": "The pair it belongs to was the worst reading in the catalogue. On content `d367db1c` the package split its casts **1813 to 140** -- 93 % to `poison_slash` -- because the two spells did the same thing and one did more of it: identical damage per energy at 3.0, and `poison_slash` taking 6 off a target per activation against 3. Costing 1 was the only edge this spell had, and it is worth nothing here: of **123,592** recorded states where a creature knew it, **1.0 %** sat below 2 energy and 77 % sat at 6 or more. The activation is the scarce thing, not the energy. So the cost went level with its sibling and the reach became the difference, which is a difference the board decides and not the price list. What it must not become is the catalogue's cheap sweep: `meteor` is 3 energy for three targets at level 2, and this is 2 for two at level 1 -- dearer per target, shorter reach, and that ordering is the reason a Wizard still climbs. If a tuning pass ever makes this the better sweep, the finding is about `meteor`. Measured on the benchmark seeds, the split did not balance, it flipped: this spell went from **7 % to 85 %** of the pair's landed casts on `variety`, and one point less damage or one energy more each sends it back to about 10 %. Against a deterministic greedy a pair's usage is a step in its numbers, and the step sits between two integers, so `criticalChance` is here as the continuous lever to walk it with. Tuning it is still to do.",
+      "note": "The pair it belongs to was the worst reading in the catalogue. On content `d367db1c` the package split its casts **1813 to 140** -- 93 % to `poison_slash` -- because the two spells did the same thing and one did more of it: identical damage per energy at 3.0, and `poison_slash` taking 6 off a target per activation against 3. Costing 1 was the only edge this spell had, and it is worth nothing here: of **123,592** recorded states where a creature knew it, **1.0 %** sat below 2 energy and 77 % sat at 6 or more. The activation is the scarce thing, not the energy. So the cost went level with its sibling and the reach became the difference, which is a difference the board decides and not the price list. What it must not become is the catalogue's cheap sweep: `meteor` is 3 energy for three targets at level 2, and this is 2 for two at level 1 -- the same energy a target but a smaller reading on each (3.00 against `meteor`'s 3.50), shorter reach, and that ordering is the reason a Wizard still climbs. If a tuning pass ever makes this the better sweep, the finding is about `meteor`. Measured on the benchmark seeds, the split did not balance, it flipped: this spell went from **7 % to 85 %** of the pair's landed casts on `variety`, and one point less damage or one energy more each sends it back to about 10 %. Against a deterministic greedy a pair's usage is a step in its numbers, and the step sits between two integers, so `criticalChance` is here as the continuous lever to walk it with. Tuning it is still to do.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
@@ -481,24 +482,25 @@
         "What the target bleeds, the caster regenerates: the two halves stay matched",
         "Small per round: the big steal is Parasite Jab's, and Soul Devourer's at tier 3"
       ],
-      "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). No evaluation has measured it yet.",
+      "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). On #245's content the confirmation seeds' exploring run split the Parasite's casts 43/35 between its two spells; the stacking has not been measured on its own.",
       "knobs": [
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:parasite_jab": {
       "name": "Parasite Jab",
       "class": "Leech",
-      "intent": "The Leech's opener and the first spell in the catalogue that feeds its caster (ADR 0031): a modest bite that puts some of what it takes back into whoever threw it. It is deliberately the weaker attack of its tier and the only one that answers being hurt, so the choice it offers is not how hard to hit but whether you need the health.",
+      "intent": "The Leech's opener and the first spell in the catalogue that feeds its caster (ADR 0031): a modest bite that puts some of what it takes back into whoever threw it. It is deliberately a lighter hit than its tier's heavy attacks, and with Latch beside it the line that answers being hurt, so the choice it offers is not how hard to hit but whether you need the health.",
       "keep": [
         "It always feeds its caster: the bite is the price of the meal, not the point of it",
         "A worse attack than the tier's attacks: the healing is what it is for",
         "Never more healing than a real heal: it is a bite, not a Restorative Gush"
       ],
-      "note": "The reading that matters is not in the numbers: `ActionScorer.HealScore` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.50 against `lightning_bolt`'s 6.47 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.90 where play reads between 4.50 and 6.90.",
+      "note": "The reading that matters is not in the numbers: `ActionScorer`'s `HealTerms` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.35 against `lightning_bolt`'s 6.00 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.75 where play reads between 4.35 and 6.75.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -509,15 +511,15 @@
     "spell:hateful_sacrifice": {
       "name": "Hateful Sacrifice",
       "class": "Leech",
-      "intent": "The largest single hit in the game, and it costs the caster four health to throw. The sacrifice is the name of the spell and it is finally in it (ADR 0031): the legacy prototype paired a hit of 10 with `SelfDirect Health -4`, and only the first half survived the port.",
+      "intent": "The largest single hit in the game, and it costs the caster three health to throw. The sacrifice is the name of the spell and it is finally in it (ADR 0031): the legacy prototype paired a hit of 10 with `SelfDirect Health -4`, and only the first half survived the port.",
       "keep": [
         "The heaviest single-target hit",
         "It is paid in the caster's own health: that is the sacrifice the name promises"
       ],
-      "note": "The self-damage was restored when its tier opened, which `docs/domain/spells.md` said would happen -- 'Psycho Rush and Hateful Sacrifice are still halves of themselves, and are re-authored when their tier is opened'. Its old second keep said the energy price stood in for the missing recoil; the recoil is here, so the stand-in is gone. It reads 10.00 a round to 7.33, just under the tier-3 band of 8 to 14, and that is accepted rather than compensated: `cast_value` charges the four health in full, where a bot pays it only in the rounds where four health is what it had left. Measured, 621 casts to 420.",
+      "note": "The self-damage was restored when its tier opened, which `docs/domain/spells.md` said would happen -- 'Psycho Rush and Hateful Sacrifice are still halves of themselves, and are re-authored when their tier is opened'. Its old second keep said the energy price stood in for the missing recoil; the recoil is here, so the stand-in is gone. It read 10.00 a round to 7.33, just under the tier-3 band of 8 to 14, and that was accepted rather than compensated: `cast_value` charges the health in full, where a bot pays it only in the rounds where that health is what it had left. #246 has since made it 11 damage for three health, which reads 9.00, inside the band. Measured, 621 casts to 420.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 7, "max": 11, "step": 1 },
+        { "path": "/effects/0/amount", "min": 7, "max": 12, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
@@ -529,9 +531,9 @@
       "keep": [
         "It takes from what it hits: the Leech's whole line does, and this is the large version",
         "It takes energy, not only health: that is what makes it a Soul Devourer and not a bigger `parasite_jab`",
-        "Dearer and heavier than `parasite_jab`, or the opener is the better spell"
+        "Heavier than `parasite_jab` on every half -- the hit, the heal, and a drain the opener does not have -- or the opener is the better spell"
       ],
-      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it is back where legacy had it, 2 energy off the target, with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.60 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking two off a creature does not cost it two points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it came back where legacy had it, 2 energy off the target (tune run 9 has since taken it to 3, and the damage 5 to 6), with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.90 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking three off a creature does not cost it three points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
@@ -612,7 +614,8 @@
       "note": "Authored at -1.5 a round in the check-knobs reading, which prices the bleed on an ally as a cost at 0.8 and the energy at 0.3; the greedy agents are unlikely ever to cast it, so an evaluation will say little about it. A spell for human players until the energy weight says otherwise.",
       "knobs": [
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 }
+        { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 },
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:noxious_cure": {
@@ -624,7 +627,7 @@
         "It always shreds the allies it heals: the price is paid by the cured, which is what makes it noxious",
         "The shred runs out: a cure that costs the team its armour for good is not a cure"
       ],
-      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size.",
+      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `ActionScorer`'s `HealTerms` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size.",
       "knobs": [
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
@@ -641,11 +644,12 @@
         "Cheaper than Crushing Stomp and weaker for it",
         "The stun is the spell: the damage is a rounding error, not a second half"
       ],
-      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding stays: its ceiling of 10.00 is held down by a damage bound its own identity requires, and the rival is `ice_spear` at 10.20, so the bounds that need to move are the Wizard's. The owner set the stun back to **one round** on 2026-09-30, keeping the price at 2, and gave the dart a poison: a bleed of 1 for 2 rounds, because Ice Spear became a two-energy, one-round stun with more damage in the same change and would otherwise have strictly dominated it. 8.00 a round to 6.60; the 1-in-400 of legacy was a 3-energy dart, so this one has not been measured yet.",
+      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding of the time -- a ceiling of 10.00 against `ice_spear` at 10.20 -- is gone: the dart's bounds now reach 11.60 and `ice_spear` reads 9.00. The owner set the stun back to **one round** on 2026-09-30, keeping the price at 2, and gave the dart a poison: a bleed of 1 for 2 rounds, because Ice Spear, already at two energy, became a one-round stun with more damage in the same change and would otherwise have strictly dominated it. 8.00 a round to 6.60; the 1-in-400 of legacy was a 3-energy dart; this one, measured on `9659f610`, is cast 9 times on the confirmation seeds' exploring run, which keeps Blightweaver the least bought tier-3 package.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/2/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:infectious_blast": {
@@ -653,14 +657,14 @@
       "class": "Trickster",
       "intent": "A plague cloud: one energy to strip the armour off the whole enemy team for good, with a little damage as it lands. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
       "keep": [
-        "Control first: the shred is the spell, the damage a sting that never makes it an attack worth casting for itself",
+        "Control first: the shred is the spell, and the damage stays a sting on each target, two at most, even where three of them add up",
         "The cheapest thing that touches all three enemies",
         "The shred is permanent: the Trickster takes something off the board rather than borrowing it"
       ],
-      "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it reads 11.70, inside the tier-3 band. The `revenant_guards` finding went away without either spell moving; `death_squad` is still reported, now against `revenant_guards` at 15.60, which is its own bounds and not this spell's. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
+      "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it read 11.70, inside the tier-3 band; #246 raised the debuff to 3 and #247 added 2 damage, and it reads **23.55** today, the largest number in the catalogue again. The `revenant_guards` finding went away without either spell moving, and `death_squad` is no longer reported at all; today `check-knobs` reports `crazed_specter`, `tornado` and `toxic_waves` against this spell's 23.55, each with a ceiling under it. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
       ]
     },
@@ -671,25 +675,25 @@
       "keep": [
         "The class's baseline attack: everything deeper in the tree must beat it"
       ],
-      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four. Its critical chance was listed here as its identity until a measurement showed the identity does not distinguish it: Pummel carries the same 0.667, and a critical multiplies base damage, so at equal rates it widens the gap it is supposed to close. Against a Pummel at 3 damage, dropping this spell's chance to 0.417 leaves Pummel 448 landed casts of about 5900, 0.317 leaves it 649, and one in six flips the catalogue: Pummel 4986, this spell 754, and eight spells cast instead of seven. The cost is length -- 7.6, 9.2 and 11.3 rounds, with the round-cap share 0.000, 0.045 and 0.100 against a band of 0.05 -- so the objective has a real trade to arbitrate, and none of that range was reachable at a floor of 0.4. What makes this a Sorcerer spell rather than a Brawler one is deliberately left unstated: the critical chance no longer says it, and the answer is a design decision rather than a bound. On 2026-09-30 the owner took the critical chance from 0.617 to **0.5**: on content `c8d39320`, score-content 7.53 to 5.26 on the benchmark seeds and 10.91 to 9.02 on the confirmation seeds, with Greedy still beating Random every time and the best exploiter slowed from 14.5 rounds to 12.2. At 0.4 and below the spell falls from about 6,000 casts to 1,000 behind Heavy Strike, Greedy's edge over Random drops to 0.88, and the exploiter closes in 8.4 rounds: a line worth understanding before going there.",
+      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four. Its critical chance was listed here as its identity until a measurement showed the identity does not distinguish it: Pummel carried the same 0.667 then (0.767 today, against this spell's 0.5), and a critical multiplies base damage, so at equal rates it widens the gap it is supposed to close. Against a Pummel at 3 damage, dropping this spell's chance to 0.417 leaves Pummel 448 landed casts of about 5900, 0.317 leaves it 649, and one in six flips the catalogue: Pummel 4986, this spell 754, and eight spells cast instead of seven. The cost is length -- 7.6, 9.2 and 11.3 rounds, with the round-cap share 0.000, 0.045 and 0.100 against a band of 0.05 -- so the objective has a real trade to arbitrate, and none of that range was reachable at a floor of 0.4. What makes this a Sorcerer spell rather than a Brawler one is deliberately left unstated: the critical chance no longer says it, and the answer is a design decision rather than a bound. On 2026-09-30 the owner took the critical chance from 0.617 to **0.5**: on content `c8d39320`, score-content 7.53 to 5.26 on the benchmark seeds and 10.91 to 9.02 on the confirmation seeds, with Greedy still beating Random every time and the best exploiter slowed from 14.5 rounds to 12.2. At 0.4 and below the spell falls from about 6,000 casts to 1,000 behind Heavy Strike, Greedy's edge over Random drops to 0.88, and the exploiter closes in 8.4 rounds: a line worth understanding before going there.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.17, "max": 0.8, "step": 0.05 }
       ]
     },
     "spell:rejuvenate": {
       "name": "Rejuvenate",
       "class": "Sorcerer",
-      "intent": "The cheapest healing in the game and the reason a Sorcerer team can outlast a Brawler team. Its price sets the whole healing line: every other heal has to justify costing more than this one.",
+      "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 4 health for two energy, the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
       "keep": [
-        "The cheapest heal",
+        "No instant heal costs less: only `soothing_chant` is cheaper, and it heals over time",
         "Single target"
       ],
-      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration is now worth 0.68 of expected healing, and it is a knob. The cheapest heal setting the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
+      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration became worth 0.68 of expected healing, and it is a knob; tune run 6 took it to 0.22, 0.88 today. The heal that sets the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -705,35 +709,36 @@
       "knobs": [
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.6, "step": 0.05 },
-        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:meteor": {
       "name": "Meteor",
       "class": "Wizard",
-      "intent": "The Wizard's sweep, and the spell that says what reach costs: each enemy takes less than one of them would take from a single-target spell of the same depth, and the whole line is worth more than any of them. It opens the class whose three spells are all about reach, so it is the one that has to make the trade legible -- a sweep that hit as hard per target as a bolt would simply be a bolt that hits three.",
+      "intent": "The Wizard's sweep, and the spell that says what reach costs: each enemy takes less than one of them would take from a single-target spell of the same depth, and the whole line reads 7.00 a round, under the tier-2 hits beside it (Enraged Charge and Shield Bash at 8.40, Protective Slam at 9.02). It is the only sweep in a class whose other three spells each strike one target, so it is the one that has to make the trade legible -- a sweep that hit as hard per target as a bolt would simply be a bolt that hits three.",
       "keep": [
         "Reaches three enemies",
         "Each of them takes less than a single-target spell of its tier deals: reach is paid for per target",
         "The strongest thing in its tier, but by a step and not by half again"
       ],
-      "note": "Its bounds used to defer to Tornado -- 'these two are priced against each other or one of them is dead content' -- and Tornado is a tier deeper and disabled, so this spell was deferring its numbers to one nobody can cast while it became the ceiling of its own tier. Read per round, four damage on three targets was 12.00 against `enraged_charge`'s 8.40, 43% clear of everything; three is 9.00, a step ahead rather than a different game. The damage floor drops to 2 so a real per-target discount is reachable, and the cap to 4 so it can never hit as hard per target as `lightning_bolt` does on one. When Tornado is enabled the comparison comes back, and it is a comparison between two sweeps rather than a reason to leave this one unpriced.",
+      "note": "Its bounds used to defer to Tornado -- 'these two are priced against each other or one of them is dead content' -- and Tornado was a tier deeper and disabled then, so this spell was deferring its numbers to one nobody could cast while it became the ceiling of its own tier. Read per round, four damage on three targets was 12.00 against `enraged_charge`'s 8.40, 43% clear of everything; three was 9.00, a step ahead rather than a different game; reworked since to 2 damage and a one-round bleed, it reads 7.00, now behind `enraged_charge`'s 8.40. The damage floor drops to 2 so a real per-target discount is reachable, and the cap to 4, `lightning_bolt`'s own damage on one, so its hit per target can never exceed the bolt's. Tornado is enabled now, at tier 3 in Ravager, so the comparison is back: Tornado reads 13.80 a round against this spell's 7.00, a comparison between two sweeps rather than a reason to leave this one unpriced.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:engulfing_flames": {
       "name": "Engulfing Flames",
       "class": "Wizard",
-      "intent": "The clean nuke. The catalogue holds three big single-target hits at three energy and this is the only one that costs its caster nothing -- Psycho Rush leaves the Berserker open for a round, Hateful Sacrifice takes four of the Leech's own health, and the Wizard simply casts.",
+      "intent": "The clean nuke. The catalogue holds three big single-target hits at three energy and this is the only one that costs its caster nothing -- Psycho Rush leaves the Berserker open for a round, Hateful Sacrifice takes three of the Leech's own health, and the Wizard simply casts.",
       "keep": [
         "No caster effect: what separates it from Psycho Rush and Hateful Sacrifice is that it pays nothing",
         "It pays for that once, in critical chance, and not twice",
         "The Wizard's single-target answer to its own sweep"
       ],
-      "note": "Its old intent read 'Psycho Rush in a robe: the same cost, the same damage, the same critical chance and the same targeting', and its first keep was 'must stop being a copy of Psycho Rush'. That was settled by the **Berserker** pass, not by this spell: Psycho Rush now carries 10 damage, a chance of 0.5 and a recoil on its own caster. The claim is withdrawn. What was left was a spell paying twice for the one thing that makes it itself -- 9 damage *and* a chance of 0.33 against the other two's 10 and 0.5, for the privilege of costing nothing. Damage goes to **10**, so the discount is taken once, in the chance alone: 7.98 a round to **8.87**, between Psycho Rush's 9.13 and Hateful Sacrifice's 7.33. The `check-knobs` finding against `ice_spear` stays and is **twice an artifact**: `cast_value` has no kill term, which is what a nuke is for, and prices `ice_spear`'s slow at 2.1 a point, which is 41% of that spell's reading. Measured on content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, the gap is **wider than when this note was written**, not narrower: the two win **71.2% and 44.1%** of the sides that declare them, where they read 44.4% and 49.0% before, and this one now takes 690 damage to its 653 in **77 landed casts against 127**. The spell the report calls the bar is the one losing more than it wins, which is why the way out is not this spell's bounds and is probably not the Wizard's either: it is the missing kill term.",
+      "note": "Its old intent read 'Psycho Rush in a robe: the same cost, the same damage, the same critical chance and the same targeting', and its first keep was 'must stop being a copy of Psycho Rush'. That was settled by the **Berserker** pass, not by this spell: Psycho Rush now carries 10 damage, a chance of 0.5 and a recoil on its own caster. The claim is withdrawn. What was left was a spell paying twice for the one thing that makes it itself -- 9 damage *and* a chance of 0.33 against the other two's 10 and 0.5, for the privilege of costing nothing. Damage goes to **10**, so the discount is taken once, in the chance alone: 7.98 a round to **8.87**, between Psycho Rush's 9.13 and Hateful Sacrifice's 7.33 at the time; #246 has since raised Hateful Sacrifice to 9.00, so this spell now reads the lowest of the three. The `check-knobs` finding against `ice_spear` was **twice an artifact**: `cast_value` has no kill term, which is what a nuke is for, and it priced `ice_spear`'s slow at 2.1 a point, which was 41% of that spell's reading. The finding stays, now against `soul_devourer` at 10.10 over this spell's ceiling of 10.00, and the missing kill term still applies. Measured on content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, the gap is **wider than when this note was written**, not narrower: the two win **71.2% and 44.1%** of the sides that declare them, where they read 44.4% and 49.0% before, and this one now takes 690 damage to its 653 in **77 landed casts against 127**. The spell the report called the bar then was the one losing more than it won, which is why the way out is not this spell's bounds and is probably not the Wizard's either: it is the missing kill term.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
@@ -748,7 +753,7 @@
         "Damage and a one-round freeze in one cast",
         "A rate spell, not a nuke: it wins the next round, not this one"
       ],
-      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries today -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stops at 2, which is where the content sat when these bounds were drawn. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell was also the bar two others could not clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 was that slow**. It read 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reported was already far larger than the gap that was there. On content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, that reading has **inverted rather than narrowed**: this spell wins **44.1%** of the sides that declare it against `engulfing_flames`'s **71.2%**, and the damage it was losing on it has caught up only by casting far more often -- 653 to 690, in **127 landed casts against 77**. So the check does not merely overstate a gap; it names as the bar the spell that loses more than it wins. Read that as an argument about `cast_value`, which has no kill term, and not as a reason to move these bounds: lowering a spell already at 44.1% to satisfy a number that is wrong about it fixes the report and not the game. Tune run 9 then moved it anyway, and in the shape that argument asks for rather than the one tune 8 took: the slow 2 points to **1**, the cost back 3 to **2**. On content `7e199df4` it carries **8.10**, a quarter of it the slow, and it is no longer the bar for anything -- `check-knobs` now names `soul_devourer` at 10.10 for both spells that used to be measured against this one. What the cheaper price bought is small and real: tune 8's cost of 3 had taken it to **zero** casts, and it is back at **9** landed casts of tier 3's 1589, which is `barely cast` rather than dead. The owner turned the slow into a **one-round stun** on 2026-09-30: 8.10 a round to 9.00, with no duration knob for the same reason the slow lost its own. Tranquilizer Dart, the other two-energy stun at tier 3, took a bleed in the same change so that this spell does not strictly dominate it.",
+      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carried then (it carries no slow today, a one-round stun worth 3.00 instead) -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stopped at 2, which is where the content sat when these bounds were drawn; that knob went with the slow. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell was also the bar two others could not clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 was that slow**. It read 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reported was already far larger than the gap that was there. On content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, that reading has **inverted rather than narrowed**: this spell wins **44.1%** of the sides that declare it against `engulfing_flames`'s **71.2%**, and the damage it was losing on it has caught up only by casting far more often -- 653 to 690, in **127 landed casts against 77**. So the check does not merely overstate a gap; it names as the bar the spell that loses more than it wins. Read that as an argument about `cast_value`, which has no kill term, and not as a reason to move these bounds: lowering a spell already at 44.1% to satisfy a number that is wrong about it fixes the report and not the game. Tune run 9 then moved it anyway, and in the shape that argument asks for rather than the one tune 8 took: the slow 2 points to **1**, the cost back 3 to **2**. On content `7e199df4` it carries **8.10**, a quarter of it the slow, and it is no longer the bar for anything -- `check-knobs` named `soul_devourer` at 10.10 for both spells that used to be measured against this one, and today names it for `engulfing_flames` and `psycho_rush`; `tranquilizer_dart` is no longer reported. What the cheaper price bought is small and real: tune 8's cost of 3 had taken it to **zero** casts, and it is back at **9** landed casts of tier 3's 1589, which is `barely cast` rather than dead. The owner turned the slow into a **one-round stun** on 2026-09-30: 8.10 a round to 9.00, with no duration knob for the same reason the slow lost its own. Tranquilizer Dart, the other two-energy stun at tier 3, took a bleed in the same change so that this spell does not strictly dominate it.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
@@ -767,19 +772,20 @@
       "knobs": [
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 }
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:summon_minions": {
       "name": "Summon Minions",
       "class": "Necromancer",
-      "intent": "The only cast in the catalogue that does nothing when it lands: the minions are raised, and they gnaw at the whole enemy line over the rounds that follow. Raising them is paid in the Necromancer's own health, so the class opens on a bargain rather than on a blow -- patience bought with life. It is what both its children inherit: `crazed_specter`'s reach and `revenant_guards`' willingness to pay.",
+      "intent": "One of the two attacks in the catalogue that do nothing when they land (`latch` is the other): the minions are raised, and they gnaw at the whole enemy line over the rounds that follow. Raising them is paid in the Necromancer's own health, so the class opens on a bargain rather than on a blow -- patience bought with life. It is what both its children inherit: `crazed_specter`'s reach and `revenant_guards`' willingness to pay.",
       "keep": [
         "Nothing lands now: every point of its damage is deferred, which is what makes it a summon and not an attack",
         "It is paid in the summoner's own health, never in anyone else's",
         "It reaches the whole enemy line: one minion each, not three on one"
       ],
-      "note": "Two firsts, and they are the design: no other spell defers all of its damage, and no other spell charges its caster health (ADR 0031). It used to be `EnergyGain 3` for 2, an approximation of the minions the two spells behind it spent -- and ADR 0020 named it as one of the two candidates for `EnergyRegeneration`. That nomination is declined here, with a measurement: energy was 0.2 a point then and is 0.3 since ADR 0037, so an energy spell tops out around 1.60 an activation and 2.40 today, against an attack's 6 and up either way, and `momentum` was measured cast 0 times at `explore:0.2` and 8 at `explore:0.5` after being given exactly that treatment. Two energy openers would have been two dead openers. It was then briefly `DefenseBuff 1` for two rounds on three allies, which measured fine and read as nothing: a smaller `revenant_guards`, the spell it is supposed to open rather than rehearse.",
+      "note": "Two traits, and they are the design: it defers all of its damage, and it charges its caster health (ADR 0031) -- no longer alone in either, since `latch` defers its damage too and `bone_ward`, `crazed_specter`, `revenant_guards`, `reckless_swing` and `hateful_sacrifice` charge health. It used to be `EnergyGain 3` for 2, an approximation of the minions the two spells behind it spent -- and ADR 0020 named it as one of the two candidates for `EnergyRegeneration`. That nomination is declined here, with a measurement: energy was 0.2 a point then and is 0.3 since ADR 0037, so an energy spell tops out around 1.60 an activation and 2.40 today, against an attack's 6 and up either way, and `momentum` was measured cast 0 times at `explore:0.2` and 8 at `explore:0.5` after being given exactly that treatment. Two energy openers would have been two dead openers. It was then briefly `DefenseBuff 1` for two rounds on three allies, which measured fine and read as nothing: a smaller `revenant_guards`, the spell it is supposed to open rather than rehearse.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 3, "step": 1 },
@@ -790,17 +796,17 @@
     "spell:revenant_guards": {
       "name": "Revenant Guards",
       "class": "Necromancer",
-      "intent": "Thundering Seal for the whole team, paid in the Necromancer's own blood: permanent defense on three allies at once, and three health off whoever raised them. It is the willingness to pay its parent names, spent on the team instead of on the enemy.",
+      "intent": "Thundering Seal for the whole team, paid in the Necromancer's own blood: permanent defense on three allies at once, and four health off whoever raised them. It is the willingness to pay its parent names, spent on the team instead of on the enemy.",
       "keep": [
         "Team-wide and permanent: the strongest defensive cast in the game",
         "Priced above the single-target version or it simply replaces it -- and the price is health, not energy",
         "The caster pays: a Necromancer never gets a cast for nothing"
       ],
-      "note": "Its second keep was **false**. It asks to be priced above `thundering_seal` and both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **4 health on the caster**, as a one-round `Bleed` (ADR 0031). 15.60 to **12.40**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this costs two energy *and* four health. No energy price moved. The price is a bleed and not a `Damage` because **this spell would otherwise pay its own price down**: `Ally` targeting includes the caster (`TargetingRules`), so every cast permanently armours the summoner, and `ResolutionRules` reduces a caster `Damage` by that armour -- 3 health on the first cast, 1 on the second, 0 on the third. A bleed tick ignores defense (ADR 0019), so the toll is the same every time. `ResolutionRulesTests` pins the difference. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
+      "note": "Its second keep was **false**. It asked to be priced above `thundering_seal` while both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **4 health on the caster**, as a one-round `Bleed` (ADR 0031). 15.60 to **12.40**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this cost two energy *and* four health. No energy price moved then; tune run 9 has since raised this one to three. The price is a bleed and not a `Damage` because **this spell would otherwise pay its own price down**: `Ally` targeting includes the caster (`TargetingRules`), so every cast permanently armours the summoner, and `ResolutionRules` reduces a caster `Damage` by that armour -- 3 health on the first cast, 1 on the second, 0 on the third. A bleed tick ignores defense (ADR 0019), so the toll is the same every time. `ResolutionRulesTests` pins the difference. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 5, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 }
       ]
@@ -808,7 +814,7 @@
     "spell:crazed_specter": {
       "name": "Crazed Specter",
       "class": "Necromancer",
-      "intent": "The heaviest sweep in the game, and the Necromancer bleeds for it: against a whole team it is the single biggest swing anywhere, and three health off the caster every time it is thrown. Reach is what this class inherits from its opener; paying for it is the other half.",
+      "intent": "The heaviest sweep in the game, and the Necromancer bleeds for it: against a whole team it is the single biggest swing anywhere, and four health off the caster every time it is thrown. Reach is what this class inherits from its opener; paying for it is the other half.",
       "keep": [
         "The heaviest sweep",
         "The minion it costs is paid in the summoner's health, the currency `summon_minions` set",
@@ -840,7 +846,7 @@
     "spell:healing_screech": {
       "name": "Healing Screech",
       "class": "Shaman",
-      "intent": "The one heal that arrives in pieces: a quarter of it now and the rest over the next two rounds, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 8 health against `rejuvenate`'s 4 for the same price -- and the step is entirely in the part that has to be bought early.",
+      "intent": "The one heal split between now and later: a quarter of it now and the rest over the next two rounds, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 8 health against `rejuvenate`'s 4 for the same price -- and the step is entirely in the part that has to be bought early.",
       "keep": [
         "Most of it is lasting: the instant half is a down payment, never the point",
         "The anticipation heal, not the emergency one: on a creature dying this round it does 2",
@@ -850,7 +856,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
@@ -858,13 +864,13 @@
     "spell:restorative_burst": {
       "name": "Restorative Burst",
       "class": "Shaman",
-      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand -- `wait` is the only other spell that hands energy out at all, and it hands it to itself.",
+      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only spell that hands one ally health and energy at once -- `adrenaline_tonic` gives up to three allies a point of energy for a bleed, and `wait`, `momentum` and `extort` hand energy only to their own caster.",
       "keep": [
-        "Gives back at least the energy it costs",
+        "Hands on most of what it costs: the energy it gives stays below its price, so it is never free tempo",
         "Single target",
         "It trades heal for energy point for point against `restorative_gush`, whatever the weights say the trade is worth"
       ],
-      "note": "**3.80 a round against a tier-3 band of 8 to 14, with a ceiling of 4.10** -- the worst reading in the catalogue now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal goes 3 to **4**, the top of its box that keeps every clause above, so the trade against `restorative_gush` is 2 heal for 2 energy rather than 3 for 2: 2.80 to **3.60** at the price of the day, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
+      "note": "**3.60 a round against a tier-3 band of 8 to 14, with a ceiling of 5.70** -- the lowest reading at tier 3 now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal went 3 to **4** then, the top of its box at the time, 2.80 to **3.60** at the price of the day; #246 has since raised it to **6**, the top of today's box, so against `restorative_gush`'s 7 the trade is 1 heal for 2 energy at one more energy to cast, still 3.60 a round, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
@@ -874,7 +880,7 @@
     "spell:toxic_waves": {
       "name": "Toxic Waves",
       "class": "Shaman",
-      "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the rounds after. It is what makes a Shaman team win the rounds it did not act in.",
+      "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the round after. It is what makes a Shaman team win the rounds it did not act in.",
       "keep": [
         "Team-wide bleed",
         "What it has over `tornado` is that it keeps working, not that it costs more"
@@ -892,309 +898,169 @@
   "packages": {
     "tier:brute": {
       "name": "Brute",
-      "intent": "The Brawler's opener: a cheap swing and a point of armour, bought together. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Brawler's opener: a cheap swing and a point of armour, bought together. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:occultist": {
       "name": "Occultist",
-      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the eleventh tuning pass moved it to 3 (journal, 2026-09-24).",
+      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it back to 2 so the Prowler stays the fastest opener (journal, 2026-10-01).",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 4,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:prowler": {
       "name": "Prowler",
-      "intent": "The Scoundrel's opener, and with Occultist the fastest of the three since the eleventh tuning pass: the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Scoundrel's opener, and the fastest of the three, alone again since the owner set Occultist back to 2 (journal, 2026-10-01): the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 1,
-          "max": 5,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:assassin": {
       "name": "Assassin",
-      "intent": "The Assassin's opener: Momentum, the energy that arrives later rather than now. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Shadowstep, a hit that hastes its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 1,
-          "max": 5,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:berserker": {
       "name": "Berserker",
-      "intent": "The Berserker's opener: Enraged Charge, two hits in one activation. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Berserker's opener: Enraged Charge, one swing on the highest critical chance, and Reckless Swing, the every-round hit paid in blood. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:elementalist": {
       "name": "Elementalist",
-      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies, and Frostbite, the cheap slowing hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:ironbound": {
       "name": "Ironbound",
-      "intent": "The Warlord's opener: Full Plate, armour as a line's identity. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Warlord's opener: Full Plate, armour as a line's identity, and Shield Bash, the hit that braces its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:marauder": {
       "name": "Marauder",
-      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger, and Extort, the hit that skims energy. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:necromancer": {
       "name": "Necromancer",
-      "intent": "The Necromancer's opener: Summon Minions, paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Necromancer's opener: Summon Minions and Bone Ward, both paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:parasite": {
       "name": "Parasite",
-      "intent": "The Leech's opener: Parasite Jab, the start of the line that feeds on its targets. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Leech's opener: Parasite Jab and Latch, the start of the line that feeds on its targets. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:plague_doctor": {
       "name": "Plague Doctor",
-      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team at a point of poison. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 3,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:shaman": {
       "name": "Shaman",
-      "intent": "The Shaman's opener: Healing Screech, the team heal of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 0 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Shaman's opener: Healing Screech, a heal that keeps healing, and Soothing Chant, the team regeneration of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 0 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 2,
-          "step": 1
-        }
-      ],
-      "note": "Worth nothing on purchase: its one spell carried no per-spell bonus, so the seeded sum is 0. A package that buys no tempo at all may be right for a healer and may be an accident of the migration; the bounds let a tuning pass find out rather than assume either."
+      "knobs": [],
+      "note": "Worth nothing on purchase: the one spell it had at the migration carried no per-spell bonus, so the seeded sum is 0. A package that buys no tempo at all may be right for a healer and may be an accident of the migration; with no initiative knob since 2026-10-01, finding out is a hand edit and a measurement, not a tuning pass."
     },
     "tier:blightweaver": {
       "name": "Blightweaver",
-      "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 2,
-          "max": 6,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:deathstalker": {
       "name": "Deathstalker",
-      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 3,
-          "max": 7,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:dreadnought": {
       "name": "Dreadnought",
-      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 1,
-          "max": 5,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:harbinger": {
       "name": "Harbinger",
-      "intent": "The Wizard's close: the burning nuke and the slowing spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Wizard's close: the burning nuke and the stunning spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 1,
-          "max": 5,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:lich": {
       "name": "Lich",
-      "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 4,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:ravager": {
       "name": "Ravager",
-      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 0,
-          "max": 4,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:soulreaver": {
       "name": "Soulreaver",
-      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 3,
-          "max": 7,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:spiritcaller": {
       "name": "Spiritcaller",
-      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 1,
-          "max": 5,
-          "step": 1
-        }
-      ]
+      "knobs": []
     },
     "tier:warmonger": {
       "name": "Warmonger",
@@ -1202,14 +1068,7 @@
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": [
-        {
-          "path": "/initiativeBonus",
-          "min": 2,
-          "max": 6,
-          "step": 1
-        }
-      ]
+      "knobs": []
     }
   }
 }
