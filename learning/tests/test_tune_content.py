@@ -30,10 +30,13 @@ from downfall_learning.tune_content import (
     apply_moves,
     format_result,
     format_score,
+    load_swept,
     metrics_of,
     playable,
+    played_inputs,
     propose,
     score_content,
+    sweep_shard,
     tune_content,
     violations,
 )
@@ -190,6 +193,40 @@ def test_a_score_on_the_engine_plays_the_seeds_the_objective_names(
 
     assert score.seeds == "unseen.json"
     assert score.metrics["mirror"]["averageRounds"] == pytest.approx(32.0)
+
+
+def test_tune_content_plays_the_sweep_in_slices_and_then_searches_from_them(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """End to end on the fake builder and engine: what the sweep jobs of tune.yml run, then its search."""
+    builder = tmp_path / "fake_builder.py"
+    builder.write_text(FAKE_BUILDER, encoding="utf-8")
+    engine = tmp_path / "fake_engine.py"
+    engine.write_text(FAKE_ENGINE, encoding="utf-8")
+    (tmp_path / "template.json").write_text(json.dumps(evaluation_json(0.5, 0.5)), encoding="utf-8")
+    data = tmp_path / "data"
+    content_tree(data)
+    knobs = data / "balance" / "knobs.json"
+    knobs.parent.mkdir()
+    knobs.write_text(json.dumps(knobs_document()), encoding="utf-8")
+    common = [
+        *("--knobs", str(knobs), "--data", str(data), "--repo", str(tmp_path), "--no-confirm"),
+        *("--engine", sys.executable, str(engine), "--builder", sys.executable, str(builder)),
+    ]
+
+    sliced = [
+        cli.main(
+            ["tune-content", "-o", str(tmp_path / f"slice-{shard}"), "--sweep-shard", f"{shard}/2", *common]
+        )
+        for shard in range(2)
+    ]
+    swept = [str(tmp_path / f"slice-{shard}" / f"swept-{shard}.json") for shard in range(2)]
+    budget = ["--iterations", "1", "--neighbours", "1"]
+    code = cli.main(["tune-content", "-o", str(tmp_path / "out"), *budget, *common, "--swept", *swept])
+
+    assert sliced == [0, 0]
+    assert code == 0
+    assert "3 catalogue(s) of the opening sweep read from 2 slice(s)." in capsys.readouterr().out
 
 
 def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
@@ -878,6 +915,106 @@ def test_the_sweep_can_be_skipped(tmp_path: Path) -> None:
     )
 
     assert evaluator.calls == 2
+
+
+def write_swept(tmp_path: Path, knobs: Knobs, content: Content, shards: int) -> list[Path]:
+    paths = []
+    for shard in range(shards):
+        path = tmp_path / f"swept-{shard}.json"
+        sweep_shard(FakeEvaluator(), knobs, content, shard, shards).write(path)
+        paths.append(path)
+    return paths
+
+
+def test_a_sweep_split_into_shards_plays_each_of_its_catalogues_once(tmp_path: Path) -> None:
+    """Attack one step up and one down, Jab one step up: three catalogues, however they are split."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    evaluator = FakeEvaluator()
+
+    shards = [sweep_shard(evaluator, knobs, content, shard, 2) for shard in range(2)]
+
+    played = [key for shard in shards for key in shard.played]
+    assert len(played) == len(set(played)) == evaluator.calls == 3
+
+
+def test_a_search_handed_its_swept_catalogues_plays_none_again_and_finds_the_same(tmp_path: Path) -> None:
+    """The opening sweep outgrew a six-hour job (journal, 2026-10-01), so the workflow plays it in slices."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    options = TuneOptions(iterations=2, neighbours=2, seed=0)
+    alone_evaluator = FakeEvaluator()
+    alone = tune_content(alone_evaluator, knobs, content, options)
+    known = load_swept(write_swept(tmp_path, knobs, content, 2), knobs, content)
+    evaluator = FakeEvaluator()
+
+    handed = tune_content(evaluator, knobs, content, replace(options, known=known))
+
+    assert handed.best == alone.best
+    assert handed.candidates == alone.candidates
+    assert handed.played == alone.played
+    assert evaluator.calls == alone_evaluator.calls - len(known)
+
+
+def test_swept_catalogues_read_by_another_objective_are_refused(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    paths = write_swept(tmp_path, knobs, content, 1)
+    objective = knobs_document()["objective"]
+    other = load(tmp_path, objective={**objective, "seeds": "benchmarks/confirmation-seeds.json"})
+
+    with pytest.raises(ValueError, match="objective"):
+        load_swept(paths, other, content)
+
+
+def test_swept_catalogues_of_another_content_are_refused(tmp_path: Path) -> None:
+    """Every key would miss, and the search would replay the whole sweep in the job it was taken out of."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    paths = write_swept(tmp_path, knobs, content, 1)
+    moved = Content(
+        spells=apply_moves(content.spells, [move(content, "spell:attack", DAMAGE, 4)]), files=content.files
+    )
+
+    with pytest.raises(ValueError, match="content"):
+        load_swept(paths, knobs, moved)
+
+
+def test_swept_catalogues_played_on_other_inputs_are_refused(tmp_path: Path) -> None:
+    """Codex's review of #256: a file rewritten under the same name keeps the objective's fingerprint."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    path = tmp_path / "swept-0.json"
+    replace(sweep_shard(FakeEvaluator(), knobs, content, 0, 1), inputs="before").write(path)
+
+    with pytest.raises(ValueError, match="other inputs"):
+        load_swept([path], knobs, content, "after")
+
+
+def test_rewriting_a_file_an_agent_reads_changes_the_inputs_a_slice_is_stamped_with(tmp_path: Path) -> None:
+    weights = tmp_path / "learning" / "weights" / "set.json"
+    weights.parent.mkdir(parents=True)
+    weights.write_text('{"damage": 1}', encoding="utf-8")
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"exploit": {"p1": ["heuristic:learning/weights/set.json"], "p2": "greedy"}},
+        targets=(),
+    )
+    (tmp_path / "seeds.json").write_text('{"seeds": [1]}', encoding="utf-8")
+    before = played_inputs(objective, tmp_path)
+
+    weights.write_text('{"damage": 2}', encoding="utf-8")
+
+    assert played_inputs(objective, tmp_path) != before
+
+
+def test_a_sweep_missing_a_shard_is_refused(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    first, _ = write_swept(tmp_path, knobs, content, 2)
+
+    with pytest.raises(ValueError, match="shard"):
+        load_swept([first], knobs, content)
 
 
 def test_the_random_phase_leans_on_the_knobs_the_sweep_showed_can_move_a_metric(tmp_path: Path) -> None:

@@ -13,7 +13,7 @@ on:
         description: "Search seed (the same seed on the same content returns the same moves)"
         default: "0"
       iterations:
-        description: "Rounds of neighbours after the opening sweep. Six is what fits beside the sweep in the six hours GitHub gives a job, at 155 knobs and the measured 61.7 seconds a candidate; 24 is what ran before the panel doubled that cost, and tune 10 died at the ceiling with nothing to show"
+        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 6 is about 9 minutes at 88 seconds a candidate, plus at most one confirmation"
         default: "6"
       neighbours:
         description: "Candidates played per round"
@@ -22,7 +22,7 @@ on:
         description: "Knobs one proposal may move at once"
         default: "12"
       pairs:
-        description: "Also open on paired moves, two knobs of one spell stepped together for the spells no single step improved. Off by default since the catalogue reached 155 knobs: the pairs are built per spell and are not capped, and the opening sweep alone already takes four of the six hours a job gets"
+        description: "Also open on paired moves, two knobs of one spell stepped together for the spells no single step improved. Off by default since the catalogue reached 155 knobs: the pairs are built per spell, are not capped, and are played in the search job rather than in the sweep jobs"
         type: boolean
         default: false
       pair_depth:
@@ -33,10 +33,10 @@ on:
         type: boolean
         default: true
 
-# Pushing the proposal branch, and nothing else. The pull request is opened by a person from the link in the
-# run summary, which is what makes the repository's own checks run on it -- see the comment on that step.
+# Read only by default: the sweep jobs only play. The search job alone pushes the proposal branch, and
+# reads the sweep's artifacts back -- see the permissions on that job.
 permissions:
-  contents: write
+  contents: read
 
 # One tuning pass at a time: two of them would each measure a catalogue the other is about to change.
 concurrency:
@@ -52,35 +52,99 @@ env:
   OUT: runs/tune-${{ github.run_number }}
 
 jobs:
+  # The opening sweep, in slices side by side. It is one candidate per legal single step of every playable
+  # knob, and it outgrew the six hours a job gets: **263 candidates at 175 knobs, about 88 seconds each on a
+  # runner**, so 6h26 before the climb plays anything. Tune 17 was killed inside it with nothing to show
+  # (journal, 2026-10-01). The engine is deterministic, so a catalogue played here reads exactly as it would
+  # in the search, and the search takes these metrics instead of playing them again: the moves, the leader
+  # and the proposal are the ones a single job would have reached. Six slices of about 44 candidates are about
+  # 65 minutes each; the count is the matrix below and nothing else needs to change with it.
+  sweep:
+    name: Sweep slice ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      # One slice missing is a sweep the search would have to play whole, so the first failure stops them all.
+      fail-fast: true
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Install uv and the dependencies of the learning project
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+          uv sync --project learning --locked --no-build --no-install-project
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+      - name: Check the balance knobs
+        run: uv run --project learning --locked --no-sync --no-build python -m downfall_learning.cli check-knobs
+
+      - name: Play this slice of the opening sweep
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli tune-content -o runs/sweep --sweep-shard "$SHARD/$SHARDS"
+
+      - name: Upload the slice
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: swept-${{ matrix.shard }}
+          path: runs/sweep/swept-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 7
+
   tune:
     name: Search the balance knobs
+    needs: sweep
     runs-on: ubuntu-latest
-    # A candidate costs one content build plus one evaluation per agent the objective names. That was four
-    # since ADR 0029, one per entry, and it is eight since ADR 0052 seated a panel of five on `exploit`: three
-    # entries of one agent and five of it.
+    # Pushing the proposal branch, and reading the sweep's slices back. The pull request is opened by a
+    # person from the link in the run summary, which is what makes the repository's own checks run on it --
+    # see the comment on that step.
+    permissions:
+      contents: write
+      actions: read
+    # A candidate costs one content build plus one evaluation per agent the objective names: three entries of
+    # one agent and a panel of five on `exploit` since ADR 0052, eight evaluations in all. **On this runner a
+    # candidate is about 88 seconds** on content 9659f610 (tune 16 played 20 in 29m13s); tune 10 measured
+    # 61.7 on a smaller catalogue, and `data/balance/README.md` prices one at 30 on a four-core machine. The
+    # number that has to fit a job is the runner's.
     #
-    # **On this runner a candidate is 61.7 seconds**, measured rather than derived: tune 10 played 349 of them
-    # in 5h59m at an even pace, candidate 1 at 1m01s. `data/balance/README.md` prices an evaluation at 3.8
-    # seconds and so a candidate at 30, which is that reading on a four-core machine; a GitHub runner is not
-    # one, and the number that has to fit a job is the runner's.
+    # The opening sweep is no longer played here (the `sweep` job above), so this job holds the catalogue
+    # itself, the climb and the confirmations of ADR 0074 (the catalogue and at most one challenger a round,
+    # each on 400 seeds, so about two candidates each):
     #
-    # And the opening sweep is no longer small. It is one candidate per legal single step of every playable
-    # knob, and the catalogue has grown to **155 knobs and 243 legal single steps** -- 4h10 of a six-hour job
-    # before a single round of the climb. So the budget is what changed, not the ceiling:
+    #   the catalogue + 6 rounds of 6 + about 14 confirmation candidates = about 51 candidates = about 1h15
     #
-    #   sweep 243 + the catalogue itself + 6 rounds of 6 = 280 candidates = about 4h48
-    #   plus the confirmations of ADR 0074 (the catalogue and at most one challenger a batch, each on 400
-    #   seeds, so about two candidates each) = about 16 candidates more = about 5h05
+    # which leaves room for the hold-out, the gate, and many more rounds than the default. Tune 10 ran 24
+    # rounds with the paired opening on and was killed at the ceiling **with nothing to show**; the search now
+    # writes its leader after the opening pass and after every round, so a run killed late still leaves one.
     #
-    # which leaves just under an hour for the setup, the hold-out and the gate. Tune 10 ran 24 rounds with
-    # the paired opening on, reached 349 candidates without finishing, and was killed at the ceiling **with
-    # nothing to show**, because the proposal is only written when the search ends.
-    #
-    # The paired opening is off by default for the same reason (Codex's review of #138). It builds every legal
-    # pair of one spell's knobs for every spell the sweep did not improve, in both directions, which is not
-    # capped and grows with the catalogue; there is no room for it beside a four-hour sweep. `pairs` turns it
-    # back on for a run that is willing to pay, and the panel is the other knob if the cost itself becomes
-    # binding (ADR 0052).
+    # The paired opening is off by default (Codex's review of #138). It builds every legal pair of one spell's
+    # knobs for every spell the sweep did not improve, in both directions, which is not capped and grows with
+    # the catalogue, and it is played here, not sliced. `pairs` turns it back on for a run that is willing to
+    # pay, and the panel is the other knob if the cost itself becomes binding (ADR 0052).
     timeout-minutes: 360
     steps:
       # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
@@ -127,6 +191,22 @@ jobs:
       - name: Keep the content the search starts from
         run: cp -r data "$RUNNER_TEMP/data-initial"
 
+      # The slices the sweep jobs played, from this run's artifacts. `gh` is on the runner and artifacts are
+      # readable through the API as soon as they are uploaded, so this needs no other action. The count is
+      # checked here and the slices again by the search, which refuses a sweep that is not whole: a missing
+      # slice would otherwise be played again in this job, which is the six hours the slices exist to save.
+      - name: Fetch the opening sweep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'swept-*' --dir "$RUNNER_TEMP/swept"
+          find "$RUNNER_TEMP/swept" -name 'swept-*.json' | sort
+          if [[ -z "$(find "$RUNNER_TEMP/swept" -name 'swept-*.json' -print -quit)" ]]; then
+            echo "No slice of the opening sweep was downloaded." >&2
+            exit 1
+          fi
+
       # Inputs reach the shell through the environment, never through the script text. --apply writes the
       # winning numbers into data/ itself; without it the proposal stays in the run directory.
       - name: Tune
@@ -139,8 +219,10 @@ jobs:
           PAIRS: ${{ inputs.pairs }}
           APPLY: ${{ inputs.apply }}
         run: |
+          mapfile -t swept < <(find "$RUNNER_TEMP/swept" -name 'swept-*.json' | sort)
           arguments=(-o "$OUT" --seed "$SEED" --iterations "$ITERATIONS"
-            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES" --pair-depth "$PAIR_DEPTH")
+            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES" --pair-depth "$PAIR_DEPTH"
+            --swept "${swept[@]}")
           if [[ "$PAIRS" != "true" ]]; then
             arguments+=(--no-pairs)
           fi

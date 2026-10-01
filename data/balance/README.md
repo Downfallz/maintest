@@ -257,19 +257,27 @@ knob — on the nine-spell core content that is 29 knobs and 41 legal single ste
 up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
 then climbs.
 
-**Those counts are from the nine-spell core content and the catalogue has outgrown them.** Today it is **155
-playable knobs and 243 legal single steps**, so the opening sweep alone is 243 candidates. And on a GitHub
-runner a candidate is **61.7 seconds**, not 14: tune 10 played 349 of them in 5h59m at an even pace. The 3.8
-seconds above is what an evaluation costs *here*, on four cores; the runner is the machine a workflow has to
-fit, and there the sweep alone is **4h10 of a six-hour job**.
+**Those counts are from the nine-spell core content and the catalogue has outgrown them.** Tune 10 measured
+**61.7 seconds** a candidate on a GitHub runner at 155 knobs, not the 30 above: the 3.8 seconds an evaluation
+costs *here*, on four cores, is not what the runner gives. On content `9659f610` it is **175 playable knobs
+and 263 legal single steps**, and about **88 seconds** a candidate (tune 16 played 20 in 29m13s), so the
+opening sweep alone is **6h26 of a six-hour job**. Tune 17 was killed inside it with nothing to show
+(journal, 2026-10-01).
 
-So the workflow's defaults are what fits rather than what used to:
+So the workflow plays the sweep in **six slices side by side**, each its own job: `tune-content
+--sweep-shard I/N` plays every N-th catalogue of the sweep from the I-th, and writes what it measured to
+`swept-I.json`. The search job then runs `tune-content --swept <every slice>` and takes those metrics instead
+of playing the sweep again. The engine is deterministic, so the moves, the leader and the proposal are the
+ones one job would have reached, only sooner; the search refuses slices read by another objective, slices of
+another content, slices played on other inputs (the seed file, an agent's weights or the engine's sources
+changed under the same names), and a set of slices that is not the whole sweep, since any of them would mean playing the
+sweep again in the job it was taken out of.
 
-| | candidates | at 61.7 s |
+| | candidates | at 88 s |
 | --- | --- | --- |
-| the opening sweep | 243 | 4h10 |
-| plus the catalogue itself and 6 rounds of 6 | 280 | **4h48** |
-| plus the confirmations of ADR 0074, 400 seeds each: the catalogue and at most one a batch | about 16 | about 16 min |
+| the opening sweep, in six slices side by side | 263, about 44 a slice | about 65 min a slice |
+| the search: the catalogue itself and 6 rounds of 6 | 37 | about 54 min |
+| plus the confirmations of ADR 0074, 400 seeds each: the catalogue and at most one a round | about 14 | about 20 min |
 | 24 rounds, as tune 10 ran it, paired opening on | killed at 349 | **> 6h, nothing kept** |
 
 Tune 10 was killed at the ceiling with nothing to show, since the proposal is only written when the search
