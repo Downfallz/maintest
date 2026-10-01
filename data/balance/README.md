@@ -274,7 +274,7 @@ sweep again in the job it was taken out of.
 
 | | candidates | at 88 s |
 | --- | --- | --- |
-| the opening sweep, in six slices side by side | 280 at 168 knobs (2026-10-01), about 47 a slice | about an hour a slice: tune 18's 44 took 57 to 60 min |
+| the opening sweep, in six slices side by side | 244 at 160 knobs (2026-10-01), about 41 a slice | under an hour a slice: tune 18's 44 took 57 to 60 min |
 | the search: the catalogue itself and 6 rounds of 6 | 37 | about 54 min |
 | plus the confirmations of ADR 0074, 400 seeds each: the catalogue and at most one a round | about 14 | about 20 min |
 | 24 rounds, as tune 10 ran it, paired opening on | killed at 349 | **> 6h, nothing kept** |
