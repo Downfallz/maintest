@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { aliasOfSpell, surveyPackages } from '../balance.js';
 const root = resolve('../..');
 const json = path => JSON.parse(readFileSync(join(root, 'data', path), 'utf8'));
 function documents(folder, kind) {
@@ -15,6 +16,10 @@ const catalogue = {
   talentTrees: documents('TalentTrees', 'TalentTree'), tiers: documents('Tiers', 'Tier'),
   aliases: json('aliases.json'), balance: json('balance/knobs.json'), contentHash: 'browser-fixture', problems: [],
 };
+
+// What the balance overview lists: every enabled package a knob can name, and every enabled spell an alias points at.
+const knobbedPackages = surveyPackages(catalogue.balance, catalogue.tiers, catalogue.aliases).rows.length;
+const knobbedSpells = catalogue.spells.filter(spell => spell.enabled && aliasOfSpell(spell.id, catalogue.aliases)).length;
 
 const weights = JSON.parse(readFileSync(join(root, 'learning', 'weights', 'greedy.json'), 'utf8'));
 
@@ -149,9 +154,9 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await page.locator('#balance-panel').click();
   const sheet = page.locator('#balance');
   await expect(sheet).toContainText('enabled packages have an entry');
-  await expect(sheet.locator('.balance-item')).toHaveCount(66);
+  await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages + knobbedSpells);
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
-  await expect(sheet.locator('.balance-item')).toHaveCount(21);
+  await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
   await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
   await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Prowler');
   const prowler = sheet.locator('.balance-item');
@@ -167,6 +172,24 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await page.getByLabel('Initiative bonus', { exact: true }).fill('99');
   await expect(page.locator('#balance-strip .knob .value')).toHaveText('99');
   await expect(page.locator('#balance-strip')).toContainText('outside');
+});
+
+test('reading a spell that is off shows its missing balance entry as a note, not a check', async ({ page }) => {
+  const resting = structuredClone(catalogue);
+  const spell = resting.spells.find(item => item.id === 'spell:basic_attack:v1');
+  spell.enabled = false; spell.document.enabled = false;
+  delete resting.balance.spells[aliasOfSpell(spell.id, resting.aliases)];
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: resting } }));
+  // A hash alone does not reload the page, so the catalogue the override serves needs an explicit load.
+  await page.goto(`/#entry=${encodeURIComponent(spell.path)}`);
+  await page.reload();
+  const reader = page.locator('#detail');
+  await expect(reader).toContainText('Disabled · this content is not used in matches.');
+  const card = reader.locator('.balance-item');
+  await expect(card).toHaveCount(1);
+  await expect(card).not.toHaveClass(/tone-bad/);
+  await expect(card.locator('.balance-item-alert')).toHaveCount(0);
+  await expect(card).toContainText('This content is off, so it is out of the build and nothing tunes it.');
 });
 
 test('GitHub Pages subpath reads deployed data without a token', async ({ page }) => {

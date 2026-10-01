@@ -499,32 +499,12 @@ export function survey(balance, spells, aliases) {
 /** The package half of `check-knobs`: an alias selects the current version, otherwise one enabled version
  * owns the unversioned name. Two unaliased enabled versions cannot safely share one knob. */
 export function surveyPackages(balance, packages, aliases) {
-  const map = isRecord(aliases) ? aliases : {};
-  const grouped = new Map();
-  const resting = new Set();
-  for (const row of list(packages)) {
-    const alias = aliasOfPackage(row?.id, map);
-    if (!alias) continue;
-    if (row.enabled === false) { resting.add(alias); continue; }
-    if (!grouped.has(alias)) grouped.set(alias, []);
-    grouped.get(alias).push(row);
-  }
+  const { grouped, resting } = groupPackages(packages, isRecord(aliases) ? aliases : {});
   const ambiguous = [];
   const rows = [];
-  const uncovered = [];
-  const flagged = [];
   for (const [alias, candidates] of grouped) {
-    if (candidates.length > 1) {
-      ambiguous.push(`${alias}: ${candidates.length} enabled versions and no alias saying which one a knob moves.`);
-      continue;
-    }
-    const item = candidates[0];
-    const entry = entryFor(balance, alias);
-    const summary = entry && !item.problem ? summarise(entry, item.document) : null;
-    const row = { ...item, alias, summary };
-    rows.push(row);
-    if (!entry && !item.problem) uncovered.push(row);
-    if (summary?.tone === 'bad') flagged.push(flag(entry, item, alias));
+    if (candidates.length > 1) ambiguous.push(`${alias}: ${candidates.length} enabled versions and no alias saying which one a knob moves.`);
+    else rows.push(packageRow(balance, alias, candidates[0]));
   }
   const entries = Object.keys(balance?.packages ?? {});
   return {
@@ -534,9 +514,31 @@ export function surveyPackages(balance, packages, aliases) {
     enabled: rows.length,
     covered: rows.filter(row => row.summary).length,
     resting: [...resting].filter(alias => !grouped.has(alias)).length,
-    uncovered, flagged,
+    uncovered: rows.filter(row => !row.problem && !entryFor(balance, row.alias)),
+    flagged: rows.filter(row => row.summary?.tone === 'bad').map(row => flag(entryFor(balance, row.alias), row, row.alias)),
     unresolved: entries.filter(alias => !grouped.has(alias) && !resting.has(alias)).sort(ordinal),
   };
+}
+
+/** The enabled packages by the alias a knob would name them by, and the aliases only off packages answer to. */
+function groupPackages(packages, map) {
+  const grouped = new Map();
+  const resting = new Set();
+  for (const row of list(packages)) {
+    const alias = aliasOfPackage(row?.id, map);
+    if (!alias) continue;
+    if (row.enabled === false) { resting.add(alias); continue; }
+    if (!grouped.has(alias)) grouped.set(alias, []);
+    grouped.get(alias).push(row);
+  }
+  return { grouped, resting };
+}
+
+/** One enabled package with its reading, or with none when the file has no entry or the document is broken. */
+function packageRow(balance, alias, item) {
+  const entry = entryFor(balance, alias);
+  const summary = entry && !item.problem ? summarise(entry, item.document) : null;
+  return { ...item, alias, summary };
 }
 
 /** One spell's disagreements, flattened so a finding names the pointer it is about. Null when there are none. */

@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry } from './balance.js';
 import { explore, spellLibrary, strategyLibrary, reader, useWeights } from './codex.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
@@ -673,12 +673,7 @@ function renderDetail() {
   }
 
   if (!state.editing) {
-    const content = reader(item, state.catalogue, select, () => {
-      state.editing = true; renderDetail(); $('detail').focus({ preventScroll: true });
-    }, goBack);
-    const balance = readingForItem(item);
-    if (balance) content.insertBefore(balance, content.querySelector('.reader-identity'));
-    view.replaceChildren(content);
+    view.replaceChildren(readerOf(item));
     return;
   }
 
@@ -693,6 +688,16 @@ function renderDetail() {
   if (state.tab === 'tiers') parts.push(tierEditor(), usedByTier(item));
 
   view.replaceChildren(...parts);
+}
+
+/** The reader for one item, with its balance reading (when the tab has knobs) above the identity block. */
+function readerOf(item) {
+  const content = reader(item, state.catalogue, select, () => {
+    state.editing = true; renderDetail(); $('detail').focus({ preventScroll: true });
+  }, goBack);
+  const balance = readingForItem(item);
+  if (balance) content.insertBefore(balance, content.querySelector('.reader-identity'));
+  return content;
 }
 
 function header(item) {
@@ -1729,24 +1734,43 @@ function renderBalance() {
 function balanceCard(row, showKind = true) {
   const { summary } = row;
   const kind = row.id?.startsWith('tier:') ? 'Package' : 'Spell';
-  const bad = !summary || summary.tone === 'bad';
+  // Off content is out of the build, so an entry it lacks is nothing to check (check-knobs ignores it too).
+  const off = row.enabled === false;
+  const bad = !off && (!summary || summary.tone === 'bad');
   const card = element('details', { className: `balance-item${bad ? ' tone-bad' : ''}` });
   card.append(element('summary', {}, [
     element('span', { className: 'balance-item-name', textContent: row.name || summary?.name || row.alias || row.id }),
     showKind ? element('span', { className: 'balance-item-kind', textContent: kind }) : null,
     bad ? element('span', { className: 'balance-item-alert', textContent: 'Check' }) : null,
-    element('span', { className: 'balance-values' }, summary?.knobs.length
-      ? summary.knobs.map(knob => element('span', { className: `balance-value tone-${knob.tone}`, textContent: `${knobLabel(knob.path, row.document)} ${knob.value === null ? '?' : formatNumber(knob.value)} · ${formatNumber(knob.minimum)}–${formatNumber(knob.maximum)}` }))
-      : [element('span', { className: 'muted', textContent: summary ? 'No tunable numbers' : 'No balance entry' })]),
+    element('span', { className: 'balance-values' }, balanceValues(row)),
   ]));
-  if (summary) {
-    card.append(element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' }));
-    for (const reading of summary.knobs) card.append(knobRow(reading));
-    for (const issue of summary.problems) card.append(element('p', { className: 'problem', textContent: issue.message }));
-    if (summary.keep.length) card.append(element('p', { className: 'muted', textContent: `Keep: ${summary.keep.join(' · ')}` }));
-  } else card.append(element('p', { className: 'problem', textContent: 'No entry for this enabled content in the knobs file.' }));
+  card.append(...balanceDetails(row, off));
   if (showKind && row.path) card.append(miniButton('Open content →', () => { closeSheets(); select(row.path); }, 'mini'));
   return card;
+}
+
+/** The one-line reading of a card: each knob's value and band, or why there is none. */
+function balanceValues(row) {
+  const { summary } = row;
+  if (summary?.knobs.length) {
+    return summary.knobs.map(knob => element('span', { className: `balance-value tone-${knob.tone}`, textContent: `${knobLabel(knob.path, row.document)} ${knob.value === null ? '?' : formatNumber(knob.value)} · ${formatNumber(knob.minimum)}–${formatNumber(knob.maximum)}` }));
+  }
+  return [element('span', { className: 'muted', textContent: summary ? 'No tunable numbers' : 'No balance entry' })];
+}
+
+/** What a card opens on: the intent, the knobs and the problems of its entry, or the one line saying it has none. */
+function balanceDetails(row, off) {
+  const { summary } = row;
+  if (!summary) {
+    return off
+      ? [element('p', { className: 'muted', textContent: `No entry for ${row.alias || row.id}. This content is off, so it is out of the build and nothing tunes it.` })]
+      : [element('p', { className: 'problem', textContent: 'No entry for this enabled content in the knobs file.' })];
+  }
+  const details = [element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' })];
+  details.push(...summary.knobs.map(knobRow));
+  details.push(...summary.problems.map(issue => element('p', { className: 'problem', textContent: issue.message })));
+  if (summary.keep.length) details.push(element('p', { className: 'muted', textContent: `Keep: ${summary.keep.join(' · ')}` }));
+  return details;
 }
 
 function knobLabel(path, document) {
@@ -1759,7 +1783,8 @@ function knobLabel(path, document) {
   return path;
 }
 
-function balanceOverview(balance) {
+/** The overview's rows: every enabled package and aliased spell, each with its reading, in name order. */
+function overviewRows(balance) {
   const aliases = state.catalogue?.aliases || {};
   const spells = surveyedSpells().flatMap(item => {
     const alias = aliasOfSpell(item.id, aliases);
@@ -1769,10 +1794,23 @@ function balanceOverview(balance) {
   });
   const packages = surveyPackages(balance, surveyedPackages(), aliases).rows.filter(item => !item.problem);
   const all = [...packages, ...spells].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+  return { all, packages: packages.length, spells: spells.length };
+}
+
+/** Whether the overview shows a row under one filter and one search: a row with no entry counts as an issue. */
+function overviewShows(row, filter, query) {
+  if (filter === 'issues' && row.summary?.tone === 'ok') return false;
+  if (filter === 'packages' && !row.id.startsWith('tier:')) return false;
+  if (filter === 'spells' && !row.id.startsWith('spell:')) return false;
+  return `${row.name} ${row.alias} ${row.summary?.knobs.map(knob => knob.path).join(' ')}`.toLowerCase().includes(query);
+}
+
+function balanceOverview(balance) {
+  const { all, packages, spells } = overviewRows(balance);
   const count = all.filter(row => !row.summary || row.summary.tone === 'bad').length;
   const block = element('section', { className: 'balance-overview' }, [
     element('h3', { className: 'section', textContent: 'Current tuning values' }),
-    element('p', { className: 'hint', textContent: `${packages.length} packages · ${spells.length} spells · ${count} to check. Values come from the content; bands show what a tuning pass may change.` }),
+    element('p', { className: 'hint', textContent: `${packages} packages · ${spells} spells · ${count} to check. Values come from the content; bands show what a tuning pass may change.` }),
   ]);
   const controls = element('div', { className: 'balance-filters' });
   const search = element('input', { type: 'search', placeholder: 'Find a package, spell or knob…', ariaLabel: 'Find a balance knob' });
@@ -1786,12 +1824,7 @@ function balanceOverview(balance) {
   const results = element('div', { className: 'balance-items' });
   const redraw = () => {
     const query = search.value.trim().toLowerCase();
-    const shown = all.filter(row => {
-      if (filter.value === 'issues' && row.summary?.tone === 'ok') return false;
-      if (filter.value === 'packages' && !row.id.startsWith('tier:')) return false;
-      if (filter.value === 'spells' && !row.id.startsWith('spell:')) return false;
-      return `${row.name} ${row.alias} ${row.summary?.knobs.map(knob => knob.path).join(' ')}`.toLowerCase().includes(query);
-    });
+    const shown = all.filter(row => overviewShows(row, filter.value, query));
     results.replaceChildren(...shown.map(row => balanceCard(row)),
       ...(!shown.length ? [element('p', { className: 'hint', textContent: 'No matching knobs.' })] : []));
   };
