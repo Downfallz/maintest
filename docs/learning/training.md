@@ -387,7 +387,7 @@ no local SDK and no machine left on:
 
 | Workflow | Dispatch inputs | What comes back |
 | --- | --- | --- |
-| **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
+| **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | Six jobs play the opening sweep in slices side by side, then one searches from what they measured (`data/balance/README.md`). The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
 | **Search the agent weights** (`search.yml`) | opponent, a check opponent for the hold-out, the agent kind, the weights to start from, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
 
 Both can propose a branch; what a branch may contain is where they differ. A tuning pass proposes content, and

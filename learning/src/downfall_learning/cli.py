@@ -58,10 +58,13 @@ from downfall_learning.tune_content import (
     ConfirmationSeeds,
     ContentEngine,
     EngineContentEvaluator,
+    MemoizingEvaluator,
     TuneOptions,
     format_result,
     format_score,
+    load_swept,
     score_content,
+    sweep_shard,
     tune_content,
 )
 from downfall_learning.viewer import RUN_PAGE, write_run_page
@@ -176,9 +179,28 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         action="store_false",
         help="keep every round's best that beats the leader on the search seeds alone, as before ADR 0074",
     )
+    tune.add_argument(
+        "--sweep-shard",
+        type=_shard,
+        default=None,
+        metavar="I/N",
+        help="play only the I-th of N slices of the opening sweep, counted from 0, write what it measured "
+        "to swept-I.json in the output directory, and stop: how the workflow plays the sweep side by side",
+    )
+    tune.add_argument(
+        "--swept",
+        type=Path,
+        nargs="+",
+        default=(),
+        metavar="FILE",
+        help="every slice --sweep-shard wrote, so the search reads their metrics instead of playing them",
+    )
     tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
+    )
+    tune.add_argument(
+        "--builder", nargs="+", help="the data builder command prefix (default: the built assembly)"
     )
     _add_quiet(tune)
     tune.add_argument(
@@ -630,11 +652,33 @@ def _confirmation_seeds(
     return ConfirmationSeeds(EngineContentEvaluator(host, confirming, content), str(path))
 
 
+def _shard(text: str) -> tuple[int, int]:
+    """``I/N``: the I-th of N slices, counted from 0."""
+    shard, slash, shards = text.partition("/")
+    if not slash or not shard.isdigit() or not shards.isdigit() or not int(shard) < int(shards):
+        raise argparse.ArgumentTypeError(f"'{text}' is not I/N with 0 <= I < N.")
+    return int(shard), int(shards)
+
+
+def _sweep_shard(
+    arguments: argparse.Namespace, knobs: Knobs, content: Content, evaluator: EngineContentEvaluator
+) -> int:
+    shard, shards = arguments.sweep_shard
+    heartbeat = MemoizingEvaluator(evaluator, _progress(arguments, f"sweep {shard}/{shards}"))
+    swept = sweep_shard(heartbeat, knobs, content, shard, shards)
+    path = swept.write(arguments.output / f"swept-{shard}.json")
+    print(f"Slice {shard} of {shards}: {len(swept.played)} sweep catalogue(s) played, in '{path}'.")
+    return 0
+
+
 def _tune_content(arguments: argparse.Namespace) -> int:
     prepared = _content_evaluator(arguments)
     if prepared is None:
         return 1
     knobs, content, _, evaluator = prepared
+    if arguments.sweep_shard is not None:
+        return _sweep_shard(arguments, knobs, content, evaluator)
+    known = load_swept(arguments.swept, knobs, content) if arguments.swept else {}
     confirm = _confirmation_seeds(arguments, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,
@@ -648,7 +692,10 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         # job timeout rather than ended by one, and the artifact is uploaded either way.
         checkpoint=lambda reached: reached.write(arguments.output, arguments.data, complete=False),
         confirm=confirm,
+        known=known,
     )
+    if known:
+        print(f"{len(known)} catalogue(s) of the opening sweep read from {len(arguments.swept)} slice(s).")
     result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content"))
     result.write(arguments.output, arguments.data)
     print(format_result(result, knobs.objective))

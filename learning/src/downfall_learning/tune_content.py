@@ -12,6 +12,7 @@ thing it has found rather than on a population it will throw away.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -253,6 +254,10 @@ class TuneOptions:
     #: The second seed block a round's best has to beat the leader on as well (ADR 0074); ``None`` keeps
     #: every round's best that beats it on the search seeds alone, as the search did before.
     confirm: ConfirmationSeeds | None = None
+    #: Catalogues already played on the search seeds, by :func:`catalogue_key`: the opening sweep played in
+    #: slices by other jobs (:func:`sweep_shard`), read back with :func:`load_swept`. The search takes their
+    #: metrics instead of playing them, so it proposes and keeps exactly what it would have without them.
+    known: Mapping[str, Mapping[str, Mapping[str, float]]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -815,6 +820,11 @@ def _values(moves: Sequence[Move]) -> dict[str, float]:
     return {move.knob.key: move.after for move in moves}
 
 
+def catalogue_key(documents: Mapping[str, dict]) -> str:
+    """What a catalogue is known by: the digest of every document in it, whatever moves produced it."""
+    return hashlib.sha256(json.dumps(documents, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 class MemoizingEvaluator:
     """A `ContentEvaluator` that plays a catalogue it has already played only once.
 
@@ -827,9 +837,17 @@ class MemoizingEvaluator:
     the same numbers, and it is the numbers the engine reads.
     """
 
-    def __init__(self, inner: ContentEvaluator, progress: Progress | None = None) -> None:
+    def __init__(
+        self,
+        inner: ContentEvaluator,
+        progress: Progress | None = None,
+        known: Mapping[str, Mapping[str, Mapping[str, float]]] | None = None,
+    ) -> None:
         self._inner = inner
-        self._seen: dict[str, dict[str, dict[str, float]]] = {}
+        self._seen: dict[str, Mapping[str, Mapping[str, float]]] = {}
+        #: Played by another process on the same seeds (`TuneOptions.known`). One moves into ``_seen`` when
+        #: the search first asks for it, so ``plays`` counts what this search used, wherever it was played.
+        self._known = dict(known or {})
         self.hits = 0
         #: Counted here because this is the one place that knows a catalogue reached the engine: a replay
         #: served from the cache is not work, and a heartbeat for it would overstate how far the run is.
@@ -840,12 +858,15 @@ class MemoizingEvaluator:
         """Catalogues actually handed to the engine."""
         return len(self._seen)
 
-    def evaluate(self, documents: Mapping[str, dict]) -> dict[str, dict[str, float]]:
-        key = json.dumps(documents, sort_keys=True)
+    def evaluate(self, documents: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]:
+        key = catalogue_key(documents)
         cached = self._seen.get(key)
         if cached is not None:
             self.hits += 1
             return cached
+        if key in self._known:
+            self._seen[key] = self._known.pop(key)
+            return self._seen[key]
         measured = self._inner.evaluate(documents)
         self._seen[key] = measured
         self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
@@ -920,7 +941,7 @@ def tune_content(
     if options.iterations < 1 or options.neighbours < 1:
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
-    evaluator = MemoizingEvaluator(evaluator, progress)
+    evaluator = MemoizingEvaluator(evaluator, progress, options.known)
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
     climb = Climb(evaluator, objective, search, np.random.default_rng(options.seed))
@@ -1016,8 +1037,16 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     the single best move in the catalogue that way: `lightning_bolt`'s energy cost, worth more on its own
     than everything the search did find. A sweep costs two evaluations per knob and removes the question.
     """
+    return [
+        _candidate(evaluator, knobs.objective, apply_moves(content.documents, moves), moves, iteration=0)
+        for moves in _sweep_moves(knobs, content)
+    ]
+
+
+def _sweep_moves(knobs: Knobs, content: Content) -> list[tuple[Move, ...]]:
+    """Every legal single step of every playable knob, once each, in the order the sweep plays them."""
     played: set[tuple[tuple[str, float], ...]] = set()
-    swept: list[Candidate] = []
+    swept: list[tuple[Move, ...]] = []
     for knob in playable(knobs, content):
         for direction in (1, -1):
             moves = _nudged(knob, (), content, direction)
@@ -1027,9 +1056,96 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
             if key in played:
                 continue
             played.add(key)
-            spells = apply_moves(content.documents, moves)
-            swept.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+            swept.append(tuple(moves))
     return swept
+
+
+@dataclass(frozen=True)
+class SweptShard:
+    """One slice of the opening sweep, played apart from the search that will read it (journal, 2026-10-01).
+
+    The sweep is one candidate per legal single step and grows with the catalogue: 263 of them at 175 knobs,
+    about 88 seconds each on a runner, which is more than the six hours a job gets before the climb has
+    played anything. The engine is deterministic, so a catalogue played in another job reads the same, and
+    the workflow plays the sweep in slices side by side and hands the search what they measured.
+    """
+
+    shard: int
+    shards: int
+    #: `objective_version` of the objective the slice was played for. Its fingerprint names the seed file
+    #: and every evaluation, the panel included, so a slice read by another objective is refused.
+    objective: Mapping[str, str]
+    #: The `catalogue_key` of the content the sweep stepped from.
+    content: str
+    played: Mapping[str, Mapping[str, Mapping[str, float]]]
+
+    def write(self, path: Path) -> Path:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        document = {
+            "shard": self.shard,
+            "shards": self.shards,
+            "objective": dict(self.objective),
+            "content": self.content,
+            "played": {
+                key: {name: dict(metrics) for name, metrics in by.items()} for key, by in self.played.items()
+            },
+        }
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        return path
+
+
+def sweep_shard(
+    evaluator: ContentEvaluator,
+    knobs: Knobs,
+    content: Content,
+    shard: int,
+    shards: int,
+) -> SweptShard:
+    """Plays every ``shards``-th catalogue of the opening sweep, starting at ``shard``.
+
+    A heartbeat is the evaluator's to give: a `MemoizingEvaluator` with a progress, as the search uses.
+    """
+    if not 0 <= shard < shards:
+        raise ValueError(f"Shard {shard} of {shards} does not exist: a shard is counted from 0.")
+    played: dict[str, Mapping[str, Mapping[str, float]]] = {}
+    for moves in _sweep_moves(knobs, content)[shard::shards]:
+        documents = apply_moves(content.documents, moves)
+        played[catalogue_key(documents)] = evaluator.evaluate(documents)
+    return SweptShard(
+        shard=shard,
+        shards=shards,
+        objective=objective_version(knobs.objective),
+        content=catalogue_key(content.documents),
+        played=played,
+    )
+
+
+def load_swept(
+    paths: Sequence[Path], knobs: Knobs, content: Content
+) -> dict[str, Mapping[str, Mapping[str, float]]]:
+    """What the slices of one sweep played, refused unless together they are the whole of it.
+
+    Every refusal is a sweep the search would otherwise play again in full, in the job it was taken out of,
+    and run out of time doing it -- so a mismatch fails at once rather than hours later.
+    """
+    objective = objective_version(knobs.objective)
+    base = catalogue_key(content.documents)
+    known: dict[str, Mapping[str, Mapping[str, float]]] = {}
+    shards: dict[int, int] = {}
+    for path in paths:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+        if document["objective"] != objective:
+            raise ValueError(f"'{path}' was played for another objective than this search reads.")
+        if document["content"] != base:
+            raise ValueError(f"'{path}' swept another content than the one this search starts from.")
+        shards[int(document["shard"])] = int(document["shards"])
+        known.update(document["played"])
+    counts = set(shards.values())
+    if len(counts) != 1 or set(shards) != set(range(counts.pop())):
+        raise ValueError(
+            f"The sweep is not whole: shard(s) {sorted(shards)} of {sorted(set(shards.values()))}."
+        )
+    return known
 
 
 def _opening(
