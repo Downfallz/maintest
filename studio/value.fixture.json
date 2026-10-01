@@ -1,0 +1,171 @@
+{
+  "about": "Seven spells frozen as they were authored on 2026-09-30 (content 9659f610), so the studio's value reading (studio/value.js) and check-knobs' (cast_value in learning/src/downfall_learning/knobs.py) are pinned to the same numbers on the same documents. Read by studio/value.test.js and learning/tests/test_knobs.py. Not the live content: a tuning pass that moves one of these spells must not fail a test about the formula.",
+  "spells": [
+    {
+      "id": "spell:protective_slam:v1",
+      "name": "Protective Slam",
+      "spellType": "Offensive",
+      "creatureClass": "Mercenary",
+      "energyCost": 3,
+      "criticalChance": 0.283,
+      "targeting": {
+        "origin": "Enemy",
+        "scope": "SingleTarget",
+        "maxTargets": 1
+      },
+      "effects": [
+        {
+          "kind": "Damage",
+          "amount": 4
+        },
+        {
+          "kind": "InitiativeDebuff",
+          "amount": 2,
+          "durationRounds": 2
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spell:full_plate:v1",
+      "name": "Full Plate",
+      "spellType": "Passive",
+      "creatureClass": "Warlord",
+      "energyCost": 1,
+      "criticalChance": 0,
+      "targeting": {
+        "origin": "Self",
+        "scope": "SingleTarget",
+        "maxTargets": 1
+      },
+      "effects": [
+        {
+          "kind": "DefenseBuff",
+          "amount": 3,
+          "permanent": true
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spell:noxious_cure:v1",
+      "name": "Noxious Cure",
+      "spellType": "Defensive",
+      "creatureClass": "Trickster",
+      "energyCost": 2,
+      "criticalChance": 0.28,
+      "targeting": {
+        "origin": "Ally",
+        "scope": "Multi",
+        "maxTargets": 3
+      },
+      "effects": [
+        {
+          "kind": "Heal",
+          "amount": 4
+        },
+        {
+          "kind": "DefenseDebuff",
+          "amount": 2,
+          "durationRounds": 1
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spell:summon_minions:v1",
+      "name": "Summon Minions",
+      "spellType": "Offensive",
+      "creatureClass": "Necromancer",
+      "energyCost": 3,
+      "criticalChance": 0,
+      "targeting": {
+        "origin": "Enemy",
+        "scope": "Multi",
+        "maxTargets": 3
+      },
+      "effects": [
+        {
+          "kind": "Bleed",
+          "amountPerRound": 2,
+          "durationRounds": 3
+        }
+      ],
+      "casterEffects": [
+        {
+          "kind": "Damage",
+          "amount": 2
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spell:meteor:v1",
+      "name": "Meteor",
+      "spellType": "Offensive",
+      "creatureClass": "Wizard",
+      "energyCost": 3,
+      "criticalChance": 0.35,
+      "targeting": {
+        "origin": "Enemy",
+        "scope": "Multi",
+        "maxTargets": 3
+      },
+      "effects": [
+        {
+          "kind": "Damage",
+          "amount": 2
+        },
+        {
+          "kind": "Bleed",
+          "amountPerRound": 1,
+          "durationRounds": 1
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "spell:pummel:v1",
+      "name": "Pummel",
+      "spellType": "Offensive",
+      "creatureClass": "Brawler",
+      "energyCost": 1,
+      "criticalChance": 0.767,
+      "targeting": {
+        "origin": "Enemy",
+        "scope": "SingleTarget",
+        "maxTargets": 1
+      },
+      "effects": [
+        {
+          "kind": "Damage",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "spell:restorative_burst:v1",
+      "name": "Restorative Burst",
+      "spellType": "Defensive",
+      "creatureClass": "Shaman",
+      "energyCost": 3,
+      "criticalChance": 0,
+      "targeting": {
+        "origin": "Ally",
+        "scope": "SingleTarget",
+        "maxTargets": 1
+      },
+      "effects": [
+        {
+          "kind": "Heal",
+          "amount": 6
+        },
+        {
+          "kind": "EnergyGain",
+          "amount": 2
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}

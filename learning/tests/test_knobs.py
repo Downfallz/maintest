@@ -1655,7 +1655,8 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
 # The content studio prints the same reading on every spell card (studio/value.js), and
 # `studio/value.test.js` pins these very numbers on the JavaScript side. Changing the formula here fails this
 # test, which is the cue to change value.js and its test with it, rather than let the page show a different
-# number from check-knobs.
+# number from check-knobs. Both read frozen copies of the spells (studio/value.fixture.json), not data/Spells:
+# tuning pass 18 moved Summon Minions and failed this test on a formula nobody had touched.
 @pytest.mark.parametrize(
     ("name", "cast", "per_round"),
     [
@@ -1668,14 +1669,11 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
         ("restorative_burst", 5.4, 3.6),
     ],
 )
-def test_the_studio_value_reading_matches_cast_value_on_the_authored_content(
+def test_the_studio_value_reading_matches_cast_value_on_the_same_documents(
     name: str, cast: float, per_round: float
 ) -> None:
-    document = next(
-        json.loads(path.read_text(encoding="utf-8"))
-        for path in (REPO_ROOT / "data" / "Spells").rglob("*.json")
-        if json.loads(path.read_text(encoding="utf-8")).get("id") == f"spell:{name}:v1"
-    )
+    fixture = json.loads((REPO_ROOT / "studio" / "value.fixture.json").read_text(encoding="utf-8"))
+    document = next(spell for spell in fixture["spells"] if spell["id"] == f"spell:{name}:v1")
     weights = load_weights()
     value = cast_value(document, weights)
     rounds = max(1.0, int(document["energyCost"]) / 2)
