@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry } from './balance.js';
 import { explore, spellLibrary, strategyLibrary, reader, useWeights } from './codex.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
@@ -673,9 +673,7 @@ function renderDetail() {
   }
 
   if (!state.editing) {
-    view.replaceChildren(reader(item, state.catalogue, select, () => {
-      state.editing = true; renderDetail(); $('detail').focus({ preventScroll: true });
-    }, goBack));
+    view.replaceChildren(readerOf(item));
     return;
   }
 
@@ -690,6 +688,16 @@ function renderDetail() {
   if (state.tab === 'tiers') parts.push(tierEditor(), usedByTier(item));
 
   view.replaceChildren(...parts);
+}
+
+/** The reader for one item, with its balance reading (when the tab has knobs) above the identity block. */
+function readerOf(item) {
+  const content = reader(item, state.catalogue, select, () => {
+    state.editing = true; renderDetail(); $('detail').focus({ preventScroll: true });
+  }, goBack);
+  const balance = readingForItem(item);
+  if (balance) content.insertBefore(balance, content.querySelector('.reader-identity'));
+  return content;
 }
 
 function header(item) {
@@ -926,7 +934,7 @@ function creatureEditor() {
     ['Defense', numberBox(draft, 'baseDefense', { min: 0 })],
     ['Initiative', element('div', { className: 'inline' }, [
       numberBox(draft, 'baseInitiative', { min: 0 }),
-      element('span', { className: 'muted', textContent: 'at spawn; unlocking a spell raises it' }),
+      element('span', { className: 'muted', textContent: 'at spawn; buying a package adds its initiative bonus once' }),
     ])],
     ['Critical chance', element('div', { className: 'inline' }, [
       numberBox(draft, 'baseCriticalChance', { step: 0.01, min: 0 }),
@@ -1001,7 +1009,7 @@ function tierEditor() {
     tierList(draft, 'prerequisites'),
   ]);
 
-  return element('div', {}, [card, spells, prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
+  return element('div', {}, [card, balanceStrip(), spells, prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
 }
 
 function tierWarningRows(draft) {
@@ -1272,9 +1280,18 @@ const noKnobs = why => element('p', { className: 'muted balance-none', textConte
  * being authored, not the one that was on disk when the page loaded.
  */
 function balanceOf(balance, id, document) {
-  const alias = aliasOfSpell(id, state.catalogue?.aliases || {});
+  const alias = id.startsWith('tier:') ? aliasOfPackage(id, state.catalogue?.aliases || {}) : aliasOfSpell(id, state.catalogue?.aliases || {});
   const entry = alias ? entryFor(balance, alias) : null;
   return entry ? { alias, summary: summarise(entry, document) } : { alias, summary: null };
+}
+
+/** Package and spell knobs stay readable on a content page without opening the editor. */
+function readingForItem(item) {
+  if (!['Spell', 'Tier'].includes(item.kind) || item.problem) return null;
+  const answer = knobsHere();
+  if (!answer.ok) return null;
+  const { alias, summary } = balanceOf(answer.balance, item.id, item.document);
+  return balanceCard({ ...item, alias, summary }, false);
 }
 
 /**
@@ -1284,14 +1301,15 @@ function balanceOf(balance, id, document) {
  */
 function entryOfSelected(tab, item) {
   const answer = knobsHere();
-  if (tab !== 'spells' || item.problem || !answer.ok) return null;
-  const alias = aliasOfSpell(item.id, state.catalogue?.aliases || {});
+  if (!KNOBBED_TABS.has(tab) || item.problem || !answer.ok) return null;
+  const alias = tab === 'tiers' ? aliasOfPackage(item.id, state.catalogue?.aliases || {}) : aliasOfSpell(item.id, state.catalogue?.aliases || {});
   return alias ? entryFor(answer.balance, alias) : null;
 }
 
 /** A seeded entry in the shape the strip edits, through the reader, so that shape has one definition. */
 function seededEntry(alias, document, intent) {
-  return entryFor({ spells: { [alias]: seedEntry(document, intent) } }, alias);
+  const section = alias.startsWith('tier:') ? 'packages' : 'spells';
+  return entryFor({ [section]: { [alias]: seedEntry(document, intent) } }, alias);
 }
 
 /** Where a value stands in its band, in words: the part of the strip that is read rather than looked at. */
@@ -1393,7 +1411,8 @@ function fillBalanceStrip(holder) {
 
   // The entry belongs to the spell being edited, so the alias is looked up by the id it was opened under and
   // the numbers are read from the draft: typing a new id in the box must not make the entry vanish mid-word.
-  const alias = aliasOfSpell(state.selected?.id ?? state.draft.id, state.catalogue?.aliases || {});
+  const id = state.selected?.id ?? state.draft.id;
+  const alias = id.startsWith('tier:') ? aliasOfPackage(id, state.catalogue?.aliases || {}) : aliasOfSpell(id, state.catalogue?.aliases || {});
   if (!state.entry) {
     holder.className = 'card balance tone-bad';
     holder.replaceChildren(title, ...missingEntry(alias));
@@ -1426,7 +1445,7 @@ function fillBalanceStrip(holder) {
   if (state.draft.enabled === false) {
     // The entry stays on purpose: `check-knobs` asks nothing of a spell that left the build, and this is the
     // only thing left saying what the spell was for while it waits for a rule to come back.
-    body.push(element('p', { className: 'muted', textContent: 'This spell is off, so it is out of the build and check-knobs does not read its entry. Nothing below is failing anything; it is what would be owed if the spell came back.' }));
+    body.push(element('p', { className: 'muted', textContent: 'This content is off, so check-knobs does not read its entry. These values will matter if it is enabled again.' }));
   }
 
   // One grid for the whole entry, so the four things it says are labelled the same way and read as one form
@@ -1434,8 +1453,8 @@ function fillBalanceStrip(holder) {
   // is a band with four controls under it -- neither is half a row wide, even on a desk.
   body.push(
     fields([
-      ['What this spell is for', textArea(state.entry, 'intent', {
-        placeholder: 'The decision this spell exists to pose. A tuning pass may move every number below; it may not move this.',
+      [`What this ${state.tab === 'tiers' ? 'package' : 'spell'} is for`, textArea(state.entry, 'intent', {
+        placeholder: 'The decision this content exists to pose. A tuning pass may move every number below; it may not move this.',
         dirty: dirtyEntry,
       })],
       ['Whatever the numbers do', keepList(state.entry, dirtyEntry)],
@@ -1449,7 +1468,7 @@ function fillBalanceStrip(holder) {
     element('p', { className: 'muted source' }, [
       'Keyed by ',
       element('code', { textContent: alias }),
-      ' in data/balance/knobs.json, and written there by the same Save as the spell.',
+      ' in data/balance/knobs.json, and written there by the same Save as the content.',
     ]),
   );
 
@@ -1464,13 +1483,13 @@ function fillBalanceStrip(holder) {
  */
 function missingEntry(alias) {
   if (!alias) {
-    return [element('p', { className: 'problem', textContent: 'No alias points at this spell, so the knobs file has no name to key an entry by. Aliases live in data/aliases.json.' })];
+    return [element('p', { className: 'problem', textContent: 'No alias points at this content, so the knobs file has no name to key an entry by. Aliases live in data/aliases.json.' })];
   }
 
   const off = state.draft.enabled === false;
   const say = off
-    ? element('p', { className: 'muted', textContent: `No entry for ${alias}. This spell is off, so it is out of the build and nothing tunes it.` })
-    : element('p', { className: 'problem', textContent: `No entry for ${alias}: nothing says what this spell is for or which of its numbers may move. check-knobs fails on enabled content with no entry.` });
+    ? element('p', { className: 'muted', textContent: `No entry for ${alias}. This content is off, so it is out of the build and nothing tunes it.` })
+    : element('p', { className: 'problem', textContent: `No entry for ${alias}: nothing says what this content is for or which of its numbers may move. check-knobs fails on enabled content with no entry.` });
   // Seeded, not written: the name and the class are in the document, and the intent is the one thing that
   // cannot be derived from it (ADR 0021), so this opens the editor on an empty intent rather than inventing one.
   const write = miniButton('Write an entry', () => {
@@ -1511,17 +1530,18 @@ function knobList(dirty) {
     // question about the other knobs, so changing one pointer changes what two readings say, and neither block
     // may be torn down to say it.
     const readingsOf = [];
-    const free = unclaimedPointer(state.entry, state.draft);
+    const scope = state.tab === 'tiers' ? { initiativeBonus: state.draft.initiativeBonus } : state.draft;
+    const free = unclaimedPointer(state.entry, scope);
     list.replaceChildren(
       ...(knobs.length
         ? [...knobs.keys()].map(index => knobBlock(index, dirty, redraw, readingsOf))
-        : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })]),
+        : [element('p', { className: 'muted', textContent: 'No knob: a tuning pass may move none of these numbers.' })]),
       element('div', { className: 'row' }, [
         // Offered only while there is a number left to claim. A knob with no pointer refuses every save until
         // it is removed, and the picker cannot be used to fix it: with nothing selected the browser shows the
         // first option, so choosing what is already on screen fires no change at all.
-        free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, state.draft)); dirty(); redraw(); }) : null,
-        free ? null : element('span', { className: 'muted', textContent: 'Every number this spell has already has a knob.' }),
+        free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, scope)); dirty(); redraw(); }) : null,
+        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Initiative already has a knob.' : 'Every number this spell has already has a knob.' }),
       ]),
     );
   };
@@ -1539,9 +1559,9 @@ function knobList(dirty) {
 function knobBlock(index, dirty, redrawList, readingsOf) {
   const knob = state.entry.knobs[index];
   const block = element('div', { className: 'knob-block' });
-  let row = knobRow(readings(state.entry, state.draft)[index]);
+  let row = knobRow(summarise(state.entry, state.draft).knobs[index]);
   const redrawReading = () => {
-    const next = knobRow(readings(state.entry, state.draft)[index]);
+    const next = knobRow(summarise(state.entry, state.draft).knobs[index]);
     row.replaceWith(next);
     row = next;
   };
@@ -1572,7 +1592,7 @@ function knobBlock(index, dirty, redrawList, readingsOf) {
     // nothing else worth offering -- though a pointer that reads fine can still be refused for what it means,
     // a critical chance on a spell that deals no damage being the one the file already documents. A pointer the
     // entry holds and the spell no longer has stays in the list, marked unknown, rather than being dropped.
-    picker(knob, 'path', pointersOf(state.draft), { dirty, onChange: repoint }),
+    picker(knob, 'path', state.tab === 'tiers' ? ['/initiativeBonus'] : pointersOf(state.draft), { dirty, onChange: repoint }),
     element('span', { className: 'muted', textContent: 'min' }), bound('minimum'),
     element('span', { className: 'muted', textContent: 'max' }), bound('maximum'),
     element('span', { className: 'muted', textContent: 'step' }), bound('step'),
@@ -1700,10 +1720,126 @@ function renderBalance() {
   const about = typeof balance.about === 'string' && balance.about.trim() ? balance.about : null;
   body.replaceChildren(...[
     balanceCoverage(balance),
-    balanceObjective(balance),
-    balanceConstraints(balance),
+    balanceOverview(balance),
+    element('details', { className: 'balance-rules' }, [
+      element('summary', { textContent: 'Targets & constraints · how a tuning pass is judged' }),
+      balanceObjective(balance),
+      balanceConstraints(balance),
+    ]),
     about ? element('p', { className: 'hint', textContent: about }) : null,
   ].filter(Boolean));
+}
+
+/** Compact current values first; intent and all findings are one tap away. */
+function balanceCard(row, showKind = true) {
+  const { summary } = row;
+  const kind = row.id?.startsWith('tier:') ? 'Package' : 'Spell';
+  // Off content, and a version no alias reaches, are out of the build, so an entry they lack is nothing to
+  // check: check-knobs reads the alias map, not the folder, and ignores both.
+  const off = row.enabled === false || !row.alias;
+  const bad = !off && (!summary || summary.tone === 'bad');
+  const card = element('details', { className: `balance-item${bad ? ' tone-bad' : ''}` });
+  card.append(element('summary', {}, [
+    element('span', { className: 'balance-item-name', textContent: row.name || summary?.name || row.alias || row.id }),
+    showKind ? element('span', { className: 'balance-item-kind', textContent: kind }) : null,
+    bad ? element('span', { className: 'balance-item-alert', textContent: 'Check' }) : null,
+    element('span', { className: 'balance-values' }, balanceValues(row)),
+  ]));
+  card.append(...balanceDetails(row, off));
+  if (showKind && row.path) card.append(miniButton('Open content →', () => { closeSheets(); select(row.path); }, 'mini'));
+  return card;
+}
+
+/** The one-line reading of a card: each knob's value and band, or why there is none. */
+function balanceValues(row) {
+  const { summary } = row;
+  if (summary?.knobs.length) {
+    return summary.knobs.map(knob => element('span', { className: `balance-value tone-${knob.tone}`, textContent: `${knobLabel(knob.path, row.document)} ${knob.value === null ? '?' : formatNumber(knob.value)} · ${formatNumber(knob.minimum)}–${formatNumber(knob.maximum)}` }));
+  }
+  return [element('span', { className: 'muted', textContent: summary ? 'No tunable numbers' : 'No balance entry' })];
+}
+
+/** What a card opens on: the intent, the knobs and the problems of its entry, or the one line saying it has none. */
+function balanceDetails(row, off) {
+  const { summary } = row;
+  if (!summary) {
+    if (!row.alias) return [element('p', { className: 'muted', textContent: `No alias points at ${row.id}, so it is out of the build and nothing tunes it. Aliases live in data/aliases.json.` })];
+    return off
+      ? [element('p', { className: 'muted', textContent: `No entry for ${row.alias}. This content is off, so it is out of the build and nothing tunes it.` })]
+      : [element('p', { className: 'problem', textContent: 'No entry for this enabled content in the knobs file.' })];
+  }
+  return [
+    element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' }),
+    ...summary.knobs.map(knobRow),
+    ...summary.problems.map(issue => element('p', { className: 'problem', textContent: issue.message })),
+    ...(summary.keep.length ? [element('p', { className: 'muted', textContent: `Keep: ${summary.keep.join(' · ')}` })] : []),
+  ];
+}
+
+function knobLabel(path, document) {
+  if (path === '/initiativeBonus') return 'Initiative +';
+  if (path === '/energyCost') return 'Energy';
+  if (path === '/criticalChance') return 'Crit';
+  const parts = path.split('/');
+  const effect = document?.[parts[1]]?.[Number(parts[2])];
+  if (effect) return `${parts[1] === 'casterEffects' ? 'Self ' : ''}${effect.kind} ${parts[3]}`;
+  return path;
+}
+
+/**
+ * The overview's rows: every enabled package and aliased spell, each with its reading, in name order. A spell
+ * two aliases point at is two rows, because each alias may own an entry of its own and both are the file's.
+ */
+function overviewRows(balance) {
+  const aliases = state.catalogue?.aliases || {};
+  const spells = surveyedSpells().flatMap(item => {
+    if (item.enabled === false || item.problem) return [];
+    return entryAliasesOf(item.id, aliases).map(alias => {
+      const entry = entryFor(balance, alias);
+      return { ...item, alias, summary: entry ? summarise(entry, item.document) : null };
+    });
+  });
+  const packages = surveyPackages(balance, surveyedPackages(), aliases).rows.filter(item => !item.problem);
+  const all = [...packages, ...spells].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+  return { all, packages: packages.length, spells: spells.length };
+}
+
+/** Whether the overview shows a row under one filter and one search: a row with no entry counts as an issue. */
+function overviewShows(row, filter, query) {
+  if (filter === 'issues' && row.summary?.tone === 'ok') return false;
+  if (filter === 'packages' && !row.id.startsWith('tier:')) return false;
+  if (filter === 'spells' && !row.id.startsWith('spell:')) return false;
+  return `${row.name} ${row.alias} ${row.summary?.knobs.map(knob => knob.path).join(' ')}`.toLowerCase().includes(query);
+}
+
+function balanceOverview(balance) {
+  const { all, packages, spells } = overviewRows(balance);
+  const count = all.filter(row => !row.summary || row.summary.tone === 'bad').length;
+  const block = element('section', { className: 'balance-overview' }, [
+    element('h3', { className: 'section', textContent: 'Current tuning values' }),
+    element('p', { className: 'hint', textContent: `${packages} packages · ${spells} spells · ${count} to check. Values come from the content; bands show what a tuning pass may change.` }),
+  ]);
+  const controls = element('div', { className: 'balance-filters' });
+  const search = element('input', { type: 'search', placeholder: 'Find a package, spell or knob…', ariaLabel: 'Find a balance knob' });
+  const filter = element('select', { ariaLabel: 'Filter balance knobs' }, [
+    element('option', { value: 'all', textContent: 'All content' }),
+    element('option', { value: 'issues', textContent: `To check (${count})` }),
+    element('option', { value: 'packages', textContent: 'Packages' }),
+    element('option', { value: 'spells', textContent: 'Spells' }),
+  ]);
+  controls.append(search, filter);
+  const results = element('div', { className: 'balance-items' });
+  const redraw = () => {
+    const query = search.value.trim().toLowerCase();
+    const shown = all.filter(row => overviewShows(row, filter.value, query));
+    results.replaceChildren(...shown.map(row => balanceCard(row)),
+      ...(!shown.length ? [element('p', { className: 'hint', textContent: 'No matching knobs.' })] : []));
+  };
+  search.addEventListener('input', redraw);
+  filter.addEventListener('change', redraw);
+  block.append(controls, results);
+  redraw();
+  return block;
 }
 
 /**
@@ -1729,6 +1865,12 @@ function surveyedSpells() {
   return rows.map(row => (row.path === state.selected.path ? { ...row, document: state.draft } : row));
 }
 
+function surveyedPackages() {
+  const rows = documentsOf('tiers');
+  if (!state.draft || state.tab !== 'tiers' || !state.selected) return rows;
+  return rows.map(row => row.path === state.selected.path ? { ...row, document: state.draft } : row);
+}
+
 /**
  * A finding's way into the spell it is about, or its name and nothing more.
  *
@@ -1741,27 +1883,31 @@ function openSpell(path, label) {
 
 /** The file against the content it describes: the same reading `check-knobs` prints, on what is on screen. */
 function balanceCoverage(balance) {
-  const rolled = survey(balance, surveyedSpells(), state.catalogue?.aliases || {});
-  const clean = !rolled.uncovered.length && !rolled.unresolved.length && !rolled.flagged.length
-    && !rolled.constraintProblems.length;
+  const aliases = state.catalogue?.aliases || {};
+  const rolled = survey(balance, surveyedSpells(), aliases);
+  const packages = surveyPackages(balance, surveyedPackages(), aliases);
+  const clean = ![rolled, packages].some(group => group.uncovered.length || group.unresolved.length || group.flagged.length)
+    && !rolled.constraintProblems.length && !packages.ambiguous.length;
   const block = element('div', {}, [
     element('div', { className: 'audit-line' }, [
       element('span', { textContent: `${rolled.covered} of ${rolled.enabled} enabled spells have an entry` }),
-      element('span', { textContent: `${rolled.entries} entries, ${rolled.knobs} knobs` }),
+      element('span', { textContent: `${packages.covered} of ${packages.enabled} enabled packages have an entry` }),
+      element('span', { textContent: `${rolled.entries + packages.entries} entries, ${rolled.knobs + packages.knobs} knobs` }),
       // Most of this catalogue is off, and those entries are kept on purpose: they are the only thing left
       // saying what a spell was for while it waits for a rule to come back.
-      rolled.resting ? element('span', { textContent: `${rolled.resting} for spells that are off` }) : null,
-      rolled.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length} with no entry` }) : null,
-      rolled.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length} the file disagrees with` }) : null,
-      rolled.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length} naming nothing` }) : null,
+      rolled.resting + packages.resting ? element('span', { textContent: `${rolled.resting + packages.resting} for content that is off` }) : null,
+      rolled.uncovered.length + packages.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length + packages.uncovered.length} with no entry` }) : null,
+      rolled.flagged.length + packages.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length + packages.flagged.length} the file disagrees with` }) : null,
+      rolled.unresolved.length + packages.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length + packages.unresolved.length} naming nothing` }) : null,
+      packages.ambiguous.length ? element('span', { className: 'warn', textContent: `${packages.ambiguous.length} ambiguous package versions` }) : null,
       rolled.constraintProblems.length ? element('span', { className: 'warn', textContent: `${plural(rolled.constraintProblems.length, 'constraint')} checking nothing` }) : null,
-      clean ? element('span', { textContent: 'every enabled spell is covered' }) : null,
+      clean ? element('span', { textContent: 'every enabled spell and package is covered' }) : null,
     ]),
   ]);
 
   block.append(clean
-    ? element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell has an entry with an intent, every pointer addresses a number, and every number the content carries sits inside its own band.' })
-    : balanceFindings(rolled));
+    ? element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell and package has an entry with intent, and its knobs address numbers inside their bands.' })
+    : balanceFindings(rolled, packages));
   return block;
 }
 
@@ -1771,8 +1917,9 @@ function balanceCoverage(balance) {
  * The order is the order they are worth acting on. A constraint naming a spell nothing resolves to comes
  * first because it is the quietest: it does not fail anything, it simply stops guarding.
  */
-function balanceFindings(rolled) {
+function balanceFindings(rolled, packages) {
   const findings = element('ul', { className: 'findings' });
+  for (const message of packages.ambiguous) findings.append(element('li', { textContent: message }));
   for (const problem of rolled.constraintProblems) {
     findings.append(element('li', {}, [
       element('span', { className: 'mono', textContent: problem.alias }),
@@ -1780,21 +1927,21 @@ function balanceFindings(rolled) {
     ]));
   }
 
-  for (const spell of rolled.uncovered) {
+  for (const spell of [...rolled.uncovered, ...packages.uncovered]) {
     findings.append(element('li', {}, [
       openSpell(spell.path, spell.name || spell.id),
       element('span', { textContent: ' — enabled content with no entry in the knobs file.' }),
     ]));
   }
 
-  for (const alias of rolled.unresolved) {
+  for (const alias of [...rolled.unresolved, ...packages.unresolved]) {
     findings.append(element('li', {}, [
       element('span', { className: 'mono', textContent: alias }),
-      element('span', { textContent: ' — an entry for a spell no alias resolves to.' }),
+      element('span', { textContent: ' — an entry that no content resolves to.' }),
     ]));
   }
 
-  for (const spell of rolled.flagged) {
+  for (const spell of [...rolled.flagged, ...packages.flagged]) {
     findings.append(element('li', {}, [
       openSpell(spell.path, spell.name || spell.alias),
       element('ul', {}, spell.problems.map(problem => element('li', {}, [
@@ -2089,7 +2236,7 @@ async function saveAsNextVersion() {
  * one back **on** is the direction that can owe an entry, and this says so rather than letting a pipeline.
  */
 async function setEnabled(enabled) {
-  if (enabled && state.tab === 'spells' && !state.entry) {
+  if (enabled && KNOBBED_TABS.has(state.tab) && !state.entry) {
     const warning = `${state.draft.name || state.draft.id} has no entry in the balance knobs, and check-knobs`
       + ' fails on enabled content with none. Enable it anyway, and write the entry on its sheet?';
     if (!window.confirm(warning)) return;

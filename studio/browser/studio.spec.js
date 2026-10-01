@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { aliasOfSpell, surveyPackages } from '../balance.js';
 const root = resolve('../..');
 const json = path => JSON.parse(readFileSync(join(root, 'data', path), 'utf8'));
 function documents(folder, kind) {
@@ -15,6 +16,10 @@ const catalogue = {
   talentTrees: documents('TalentTrees', 'TalentTree'), tiers: documents('Tiers', 'Tier'),
   aliases: json('aliases.json'), balance: json('balance/knobs.json'), contentHash: 'browser-fixture', problems: [],
 };
+
+// What the balance overview lists: every enabled package a knob can name, and every enabled spell an alias points at.
+const knobbedPackages = surveyPackages(catalogue.balance, catalogue.tiers, catalogue.aliases).rows.length;
+const knobbedSpells = catalogue.spells.filter(spell => spell.enabled && aliasOfSpell(spell.id, catalogue.aliases)).length;
 
 const weights = JSON.parse(readFileSync(join(root, 'learning', 'weights', 'greedy.json'), 'utf8'));
 
@@ -142,6 +147,80 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await page.keyboard.press('Escape');
   await expect(page.locator('#tools')).toBeHidden();
   await expect(page.locator('#tools-panel')).toBeFocused();
+});
+
+test('balance shows package initiative and spell knobs before editing, with a path to the package entry', async ({ page }, info) => {
+  await page.locator('#tools-panel').click();
+  await page.locator('#balance-panel').click();
+  const sheet = page.locator('#balance');
+  await expect(sheet).toContainText('enabled packages have an entry');
+  await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages + knobbedSpells);
+  await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
+  await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
+  await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Prowler');
+  const prowler = sheet.locator('.balance-item');
+  await expect(prowler).toHaveCount(1);
+  await prowler.locator('summary').click();
+  await expect(prowler).toContainText('/initiativeBonus');
+  await fit(page); await shot(page, info, 'balance-package');
+  await prowler.getByRole('button', { name: 'Open content' }).click();
+  await expect(page.locator('#detail .balance-value')).toContainText('Initiative +');
+  await page.getByRole('button', { name: 'Edit content' }).click();
+  await expect(page.locator('#balance-strip')).toContainText('What this package is for');
+  await expect(page.locator('#balance-strip .knob .pointer')).toHaveText('/initiativeBonus');
+  await page.getByLabel('Initiative bonus', { exact: true }).fill('99');
+  await expect(page.locator('#balance-strip .knob .value')).toHaveText('99');
+  await expect(page.locator('#balance-strip')).toContainText('outside');
+});
+
+test('reading a spell that is off shows its missing balance entry as a note, not a check', async ({ page }) => {
+  const resting = structuredClone(catalogue);
+  const spell = resting.spells.find(item => item.id === 'spell:basic_attack:v1');
+  spell.enabled = false; spell.document.enabled = false;
+  delete resting.balance.spells[aliasOfSpell(spell.id, resting.aliases)];
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: resting } }));
+  // A hash alone does not reload the page, so the catalogue the override serves needs an explicit load.
+  await page.goto(`/#entry=${encodeURIComponent(spell.path)}`);
+  await page.reload();
+  const reader = page.locator('#detail');
+  await expect(reader).toContainText('Disabled · this content is not used in matches.');
+  const card = reader.locator('.balance-item');
+  await expect(card).toHaveCount(1);
+  await expect(card).not.toHaveClass(/tone-bad/);
+  await expect(card.locator('.balance-item-alert')).toHaveCount(0);
+  await expect(card).toContainText('This content is off, so it is out of the build and nothing tunes it.');
+});
+
+test('reading a version no alias reaches shows its missing balance entry as a note, not a check', async ({ page }) => {
+  const superseded = structuredClone(catalogue);
+  const current = superseded.spells.find(item => item.id === 'spell:basic_attack:v1');
+  const older = structuredClone(current);
+  older.id = 'spell:basic_attack:v0'; older.document.id = older.id; older.path = 'Spells/base/basic_attack.v0.json';
+  superseded.spells.push(older);
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: superseded } }));
+  await page.goto(`/#entry=${encodeURIComponent(older.path)}`);
+  await page.reload();
+  const card = page.locator('#detail .balance-item');
+  await expect(card).toHaveCount(1);
+  await expect(card).not.toHaveClass(/tone-bad/);
+  await expect(card).toContainText('No alias points at spell:basic_attack:v0');
+});
+
+test('a spell two aliases point at is two rows of the overview, one per entry', async ({ page }) => {
+  const doubled = structuredClone(catalogue);
+  doubled.aliases['spell:jab'] = 'spell:basic_attack:v1';
+  doubled.balance.spells['spell:jab'] = { name: 'Basic Attack', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: doubled } }));
+  await page.reload();
+  await page.locator('#tools-panel').click();
+  await page.locator('#balance-panel').click();
+  const sheet = page.locator('#balance');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('spell:jab');
+  await expect(sheet.locator('.balance-item')).toHaveCount(1);
+  await expect(sheet.locator('.balance-item')).toContainText('read by another name');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Basic Attack');
+  await expect(sheet.locator('.balance-item')).toHaveCount(2);
 });
 
 test('GitHub Pages subpath reads deployed data without a token', async ({ page }) => {
