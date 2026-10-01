@@ -19,9 +19,10 @@
 /** The one shape this page knows how to read. A file that says anything else is left unread, and says so. */
 export const KNOBS_VERSION = 'knobs:v1';
 
-/** The pointer the critical multiplier hangs off, and the one effect kind it applies to (`ResolutionRules`). */
+/** Criticals reach target damage and direct heal, but never caster effects or per-round effects. */
 const CRITICAL_CHANCE = '/criticalChance';
-const DAMAGE = 'Damage';
+const CRITTABLE = new Set(['Damage', 'Heal']);
+const EFFECT_AMOUNT = /^\/(effects|casterEffects)\/\d+\/(amount|amountPerRound|durationRounds)$/;
 
 /** 0.667 plus 0.05 does not land on 0.717, and a value authored at a band edge must not read as outside it. */
 const EPSILON = 1e-9;
@@ -87,6 +88,10 @@ export function readBalance(catalogue) {
       why: 'The balance knobs publish a `spells` that is not a map of alias to entry, so the page leaves the'
         + ' file unread rather than guessing at it.',
     };
+  }
+
+  if (balance.packages !== undefined && !isRecord(balance.packages)) {
+    return { ok: false, why: 'The balance knobs publish a `packages` that is not a map of alias to entry.' };
   }
 
   return { ok: true, balance };
@@ -222,14 +227,11 @@ function describe(node) {
 const problem = (code, message) => ({ code, message });
 
 /**
- * A spell deals damage, which is the only thing the critical multiplier reaches.
- *
- * A permanent damage effect does not count, because `_effects` groups it under `Damage:permanent` and
- * `_inert_critical` looks for `Damage` alone -- so check-knobs calls the knob inert there, and a page that
- * disagreed would clear a knob the build is about to refuse.
+ * The multiplier reaches a direct target damage or heal. A permanent effect is grouped separately by
+ * `_effects`, and caster effects never participate in the target roll.
  */
-function damaging(document) {
-  return list(document?.effects).some(effect => isRecord(effect) && effect.kind === DAMAGE && !effect.permanent);
+function crittable(document) {
+  return list(document?.effects).some(effect => isRecord(effect) && CRITTABLE.has(effect.kind) && !effect.permanent);
 }
 
 /**
@@ -272,8 +274,12 @@ export function knobReading(knob, document, { duplicate = false } = {}) {
     problems.push(problem('outside', `The content carries ${formatNumber(value)}, outside [${formatNumber(shape.minimum)}, ${formatNumber(shape.maximum)}]. A tuning pass would pull it back inside.`));
   }
 
-  if (path === CRITICAL_CHANCE && !damaging(document)) {
-    problems.push(problem('inert', 'The critical multiplier applies to damage only, and this spell deals none, so this knob cannot move anything.'));
+  if (EFFECT_AMOUNT.test(path) && shape.minimum < 1) {
+    problems.push(problem('effectMinimum', 'A tuning pass could take this effect below 1, which the engine refuses.'));
+  }
+
+  if (path === CRITICAL_CHANCE && !crittable(document)) {
+    problems.push(problem('inert', 'The critical multiplier reaches target damage and direct heal; this spell has neither, so this knob cannot move anything.'));
   }
 
   return {
@@ -337,7 +343,11 @@ export function readings(entry, document) {
  * plus the one line a collapsed strip or a tree node shows instead of all of it.
  */
 export function summarise(entry, document) {
-  const knobs = readings(entry, document);
+  const knobs = readings(entry, document).map(knob => {
+    if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || knob.path === '/initiativeBonus') return knob;
+    const problems = [...knob.problems, problem('packageIdentity', `Only /initiativeBonus is a package knob; ${knob.path} is progression, not a tuning value.`)];
+    return { ...knob, problems, tone: 'bad' };
+  });
   const problems = entry?.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];
   // An entry is only ever `ok` or `bad`: bounds are drawn around what a spell *is*, so a value authored at one
   // of its own bounds is the ordinary case -- 33 of the 36 entries have one -- and escalating that to the whole
@@ -483,6 +493,49 @@ export function survey(balance, spells, aliases) {
     unresolved: entries.filter(alias => !known.has(alias)).sort(ordinal),
     flagged,
     constraintProblems: constraintProblems(balance, known),
+  };
+}
+
+/** The package half of `check-knobs`: an alias selects the current version, otherwise one enabled version
+ * owns the unversioned name. Two unaliased enabled versions cannot safely share one knob. */
+export function surveyPackages(balance, packages, aliases) {
+  const map = isRecord(aliases) ? aliases : {};
+  const grouped = new Map();
+  const resting = new Set();
+  for (const row of list(packages)) {
+    const alias = aliasOfPackage(row?.id, map);
+    if (!alias) continue;
+    if (row.enabled === false) { resting.add(alias); continue; }
+    if (!grouped.has(alias)) grouped.set(alias, []);
+    grouped.get(alias).push(row);
+  }
+  const ambiguous = [];
+  const rows = [];
+  const uncovered = [];
+  const flagged = [];
+  for (const [alias, candidates] of grouped) {
+    if (candidates.length > 1) {
+      ambiguous.push(`${alias}: ${candidates.length} enabled versions and no alias saying which one a knob moves.`);
+      continue;
+    }
+    const item = candidates[0];
+    const entry = entryFor(balance, alias);
+    const summary = entry && !item.problem ? summarise(entry, item.document) : null;
+    const row = { ...item, alias, summary };
+    rows.push(row);
+    if (!entry && !item.problem) uncovered.push(row);
+    if (summary?.tone === 'bad') flagged.push(flag(entry, item, alias));
+  }
+  const entries = Object.keys(balance?.packages ?? {});
+  return {
+    rows, ambiguous,
+    entries: entries.length,
+    knobs: entries.reduce((count, alias) => count + (entryFor(balance, alias)?.knobs.length ?? 0), 0),
+    enabled: rows.length,
+    covered: rows.filter(row => row.summary).length,
+    resting: [...resting].filter(alias => !grouped.has(alias)).length,
+    uncovered, flagged,
+    unresolved: entries.filter(alias => !grouped.has(alias) && !resting.has(alias)).sort(ordinal),
   };
 }
 

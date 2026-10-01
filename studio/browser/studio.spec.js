@@ -144,6 +144,31 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await expect(page.locator('#tools-panel')).toBeFocused();
 });
 
+test('balance shows package initiative and spell knobs before editing, with a path to the package entry', async ({ page }, info) => {
+  await page.locator('#tools-panel').click();
+  await page.locator('#balance-panel').click();
+  const sheet = page.locator('#balance');
+  await expect(sheet).toContainText('enabled packages have an entry');
+  await expect(sheet.locator('.balance-item')).toHaveCount(66);
+  await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
+  await expect(sheet.locator('.balance-item')).toHaveCount(21);
+  await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Prowler');
+  const prowler = sheet.locator('.balance-item');
+  await expect(prowler).toHaveCount(1);
+  await prowler.locator('summary').click();
+  await expect(prowler).toContainText('/initiativeBonus');
+  await fit(page); await shot(page, info, 'balance-package');
+  await prowler.getByRole('button', { name: 'Open content' }).click();
+  await expect(page.locator('#detail .balance-value')).toContainText('Initiative +');
+  await page.getByRole('button', { name: 'Edit content' }).click();
+  await expect(page.locator('#balance-strip')).toContainText('What this package is for');
+  await expect(page.locator('#balance-strip .knob .pointer')).toHaveText('/initiativeBonus');
+  await page.getByLabel('Initiative bonus', { exact: true }).fill('99');
+  await expect(page.locator('#balance-strip .knob .value')).toHaveText('99');
+  await expect(page.locator('#balance-strip')).toContainText('outside');
+});
+
 test('GitHub Pages subpath reads deployed data without a token', async ({ page }) => {
   await page.route('https://downfallz.github.io/maintest/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/maintest/', '');

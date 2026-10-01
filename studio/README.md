@@ -110,7 +110,7 @@ selected family survive a return from a card during the same session.
 | Packages | What one evolution pick buys (ADR 0056): id, name, level, the spells taught and the one initiative bonus, plus the packages that have to be owned first — the only eligibility rule there is. Authored here rather than derived from the tree (ADR 0057). The sheet says what the builder will refuse while it can still be fixed: a package teaching nothing, a level that skips the one below it, a prerequisite that does not sit above what it opens. Plus **Used by**: what is bought behind it, and the creatures already starting with a spell it teaches. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |
-| Balance | What a tuning pass may change and what it is aiming at (`data/balance/knobs.json`): the objective's targets with their bands and the reason each band is where it is, the constraints and the starting kit, and how much of the catalogue the file covers. |
+| Balance | A searchable overview of current spell and package knobs, values and allowed bands, with filters for packages, spells and findings. Tap a row for intent and detailed bands; objective targets and constraints are below in a fold. |
 
 Each item has the same four actions:
 
@@ -188,26 +188,30 @@ distinction is live again, which is why the editor reads it from the content ins
 
 ## The balance knobs
 
-`data/balance/knobs.json` says what a tuning pass may change about each spell, between which bounds, and — the
-part a number cannot say — what the spell is for ([ADR 0021](../docs/adr/0021-tune-the-catalogue-with-a-declared-search-space.md),
-`data/balance/README.md`). The page reads it in three places and, since
+`data/balance/knobs.json` says what a tuning pass may change about each spell and package, between which bounds,
+and what the content is for ([ADR 0021](../docs/adr/0021-tune-the-catalogue-with-a-declared-search-space.md),
+`data/balance/README.md`). The page reads it in four places and, since
 [ADR 0025](../docs/adr/0025-the-balance-knobs-are-a-part-of-a-studio-change.md), writes it too:
 
-- on a **spell's sheet**, a strip between the spell's own numbers and its effects: the intent as prose, the
+- on a **spell or package's sheet**, a strip under its own numbers: the intent as prose, the
   invariants under `keep`, the note when there is one, and every knob as its pointer, the value the content
   carries today, and a band showing where that value sits between `min` and `max`. It is a fold, closed on a
   phone so the form stays within reach, and it is redrawn as you type — which is the point, because editing a
-  spell's damage here is exactly what pushes a number outside its own band;
+  spell's damage or a package's initiative here can push a number outside its own band; a package offers only
+  `/initiativeBonus` as a knob;
+- on a **read-only content page**, the current values and their bands appear before Edit content;
 - on a **talent node**, the same reading compacted to intent and bands, folded away unless the node is the one
   being picked, so a tier can be read without leaving the tree; and beside each spell in the node editor, the
   verdict in a word;
-- the **Balance** panel, for what belongs to no one spell: the objective, the constraints, the starting kit,
-  and the coverage of the catalogue.
+- the **Balance** panel shows all enabled spells and packages together, including current values, ranges,
+  missing entries and a filter for findings. Tap an item to read its intent and detailed bounds, then open
+  its content if needed. The objective and constraints are still available below the overview.
 
 Everything it flags is `check-knobs`' own list, surfaced where the edit causes it instead of only on the
 command line: an enabled spell with no entry, an entry for a spell no alias resolves to, an entry with no
 intent, a pointer that addresses nothing or something that is not a number, a value outside its own bounds, a
-critical chance knob on a spell that deals no damage, a duplicate pointer, bounds the wrong way round, a step
+critical chance knob on a spell that neither damages nor directly heals a target, an effect knob whose lower
+bound permits zero, a package knob on progression instead of initiative, a duplicate pointer, bounds the wrong way round, a step
 of zero, a target reading an evaluation the objective never declares, and a constraint naming a spell nothing
 resolves to. One thing it adds: a knob that is not a knob at all — no pointer, or a bound that is not a number
 — which `check-knobs` refuses while reading the file rather than reporting against the content.

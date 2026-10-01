@@ -12,7 +12,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import {
   STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
   newKnob, objectiveOf, pointersOf,
-  readBalance, readPointer, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry,
+  readBalance, readPointer, readings, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry,
 } from './balance.js';
 
 /** Every authored spell, parsed, so a test can hold the page's reading to the content the repository ships. */
@@ -54,6 +54,12 @@ test('knobs that are not an object at all are left unread rather than guessed at
 
   assert.equal(answer.ok, false);
   assert.match(answer.why, /not shaped like data\/balance\/knobs\.json/);
+});
+
+test('a malformed packages section is not interpreted as missing package knobs', () => {
+  const answer = readBalance({ balance: { version: 'knobs:v1', spells: {}, packages: [] } });
+  assert.equal(answer.ok, false);
+  assert.match(answer.why, /packages/);
 });
 
 test('a knobs version this page does not know is read as none of it, and names the version', () => {
@@ -161,11 +167,53 @@ test('a pointer that does not start with a slash is refused as not a pointer', (
 });
 
 test('a critical chance knob on a spell that deals no damage can move nothing, and says so', () => {
-  const heal = { id: 'spell:rejuvenate:v1', criticalChance: 0.3, effects: [{ kind: 'Heal', amount: 4 }] };
+  const heal = { id: 'spell:rejuvenate:v1', criticalChance: 0.3, effects: [{ kind: 'Regeneration', amountPerRound: 4 }] };
   const summary = of(withKnobs([{ path: '/criticalChance', min: 0.2, max: 0.5, step: 0.05 }]), 'spell:pummel', heal);
 
   assert.deepEqual(codes(summary), ['inert']);
-  assert.match(summary.knobs[0].problems[0].message, /applies to damage only/);
+  assert.match(summary.knobs[0].problems[0].message, /direct heal/);
+});
+
+test('a direct target heal can critical, while a caster-only heal cannot', () => {
+  const knob = [{ path: '/criticalChance', min: 0, max: 0.5, step: 0.05 }];
+  assert.deepEqual(codes(of(withKnobs(knob), 'spell:pummel', { criticalChance: 0.2, effects: [{ kind: 'Heal', amount: 2 }] })), []);
+  assert.deepEqual(codes(of(withKnobs(knob), 'spell:pummel', { criticalChance: 0.2, casterEffects: [{ kind: 'Heal', amount: 2 }] })), ['inert']);
+});
+
+test('an effect knob whose minimum permits zero is a disagreement even when its value is legal', () => {
+  const summary = of(withKnobs([{ path: '/effects/0/amount', min: 0, max: 4, step: 1 }]), 'spell:pummel', pummel());
+  assert.deepEqual(codes(summary), ['effectMinimum']);
+});
+
+test('package entries flag progression knobs and name their initiative bonus', () => {
+  const balance = knobsFile({}, { packages: { 'tier:prowler': { name: 'Prowler', intent: 'Fast.', knobs: [
+    { path: '/initiativeBonus', min: 1, max: 5, step: 1 },
+    { path: '/level', min: 1, max: 3, step: 1 },
+  ] } } });
+  const packageRow = { id: 'tier:prowler:v1', name: 'Prowler', path: 'Tiers/prowler.json', document: { initiativeBonus: 3, level: 1 } };
+  const rolled = surveyPackages(balance, [packageRow], {});
+  assert.equal(rolled.covered, 1);
+  assert.deepEqual(rolled.flagged[0].problems.map(item => item.code), ['packageIdentity']);
+  assert.equal(rolled.rows[0].summary.knobs[0].value, 3);
+  assert.equal(rolled.rows[0].summary.knobs[0].path, '/initiativeBonus');
+});
+
+test('package survey follows a version alias, spots ambiguity and keeps disabled entries at rest', () => {
+  const balance = knobsFile({}, { packages: { 'tier:prowler': { intent: 'Fast.', knobs: [] }, 'tier:orphan': { intent: 'Lost.', knobs: [] } } });
+  const rows = [
+    { id: 'tier:prowler:v1', path: 'v1.json', document: {} },
+    { id: 'tier:prowler:v2', path: 'v2.json', document: {} },
+    { id: 'tier:old:v1', path: 'off.json', enabled: false, document: {} },
+  ];
+  const aliases = { 'tier:prowler': 'tier:prowler:v2' };
+  const rolled = surveyPackages(balance, rows, aliases);
+  assert.equal(rolled.enabled, 1);
+  assert.equal(rolled.covered, 1);
+  assert.deepEqual(rolled.unresolved, ['tier:orphan']);
+  assert.equal(rolled.rows.length, 1);
+  const ambiguous = surveyPackages(balance, rows.slice(0, 2), {});
+  assert.equal(ambiguous.ambiguous.length, 1);
+  assert.equal(ambiguous.enabled, 0);
 });
 
 test('an entry with no intent is named: nothing says what its numbers are for', () => {
