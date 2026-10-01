@@ -150,6 +150,12 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
 });
 
 test('balance shows package initiative and spell knobs before editing, with a path to the package entry', async ({ page }, info) => {
+  // The shipped knobs move no package (journal, 2026-10-01); the studio still reads and edits one that does.
+  const knobbed = structuredClone(catalogue);
+  knobbed.balance.packages['tier:prowler'].knobs = [{ path: '/initiativeBonus', min: 1, max: 5, step: 1 }];
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: knobbed } }));
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Find your next move.' })).toBeVisible();
   await page.locator('#tools-panel').click();
   await page.locator('#balance-panel').click();
   const sheet = page.locator('#balance');
