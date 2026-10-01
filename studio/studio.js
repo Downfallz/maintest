@@ -1768,11 +1768,12 @@ function balanceDetails(row, off) {
       ? [element('p', { className: 'muted', textContent: `No entry for ${row.alias}. This content is off, so it is out of the build and nothing tunes it.` })]
       : [element('p', { className: 'problem', textContent: 'No entry for this enabled content in the knobs file.' })];
   }
-  const details = [element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' })];
-  details.push(...summary.knobs.map(knobRow));
-  details.push(...summary.problems.map(issue => element('p', { className: 'problem', textContent: issue.message })));
-  if (summary.keep.length) details.push(element('p', { className: 'muted', textContent: `Keep: ${summary.keep.join(' · ')}` }));
-  return details;
+  return [
+    element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' }),
+    ...summary.knobs.map(knobRow),
+    ...summary.problems.map(issue => element('p', { className: 'problem', textContent: issue.message })),
+    ...(summary.keep.length ? [element('p', { className: 'muted', textContent: `Keep: ${summary.keep.join(' · ')}` })] : []),
+  ];
 }
 
 function knobLabel(path, document) {
