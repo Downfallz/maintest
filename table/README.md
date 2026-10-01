@@ -175,8 +175,9 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and the actual applied ongoing energy, healing and damage ticks as one row a
   creature of symbol chips (♥ health, ϟ energy; the legend is on the panel), in engine order, followed by the
-  active conditions as chips (◇ defense, ↟ initiative, ⊘ stun, `2r` rounds left, `∞` permanent, any other
-  kind by the host's word) with their full words on each chip's title.
+  active conditions as chips (◇ defense, ↟ initiative, ⊘ stun, `2r` rounds left, `∞` permanent) with their
+  full words on each chip's title. The glyph and the sign of each kind come from the catalogue's `effects`
+  (`EffectCue`): the page names no effect, and a kind the host serves no mark for keeps its word.
   These public events are retained separately from the short
   activity log. Escape closes the panel. A new round announces upkeep even when polling skipped that phase;
   missing events are never reconstructed from board deltas or guessed from conditions.

@@ -17,4 +17,5 @@ public sealed record CatalogueView(
     IReadOnlyList<CardFace> Cards,
     IReadOnlyList<PackageCard> Packages,
     IReadOnlyList<TalentBand> Trees,
-    RoundShape Round);
+    RoundShape Round,
+    IReadOnlyList<EffectCue> Effects);

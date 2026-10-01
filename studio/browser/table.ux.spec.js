@@ -36,6 +36,7 @@ const catalogue = {
   cards, packages, contentHash: 'fixture', rules: { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, evolutionInterval: 2, firstEvolutionRound: 1, roundCap: 20, criticalMultiplier: 2 },
   round: { subPhases: ['Upkeep', 'Evolution', 'EnergyGain', 'Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'],
     orderings: ['Healing resolves before bleeding.', 'A critical is applied before defense is subtracted.'] },
+  effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }],
 };
 
 test.beforeEach(async ({ page }) => {
@@ -260,7 +261,7 @@ test('package budget stays above a separately scrolling choice list on a phone',
 
 test('battlefield names public opponent packages and upkeep popup separates ticks from lasting effects', async ({ page }, info) => {
   const enemy = { ...view.board.enemies[0], acquiredTiers: [packages[0].id],
-    conditions: [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }] };
+    conditions: [{ effect: { kind: 'DefenseDebuff', amount: 2 }, remainingRounds: 2 }] };
   const applied = { ...view, board: { ...view.board, roundNumber: 4, enemies: [enemy] },
     feed: [{ sequence: 5, event: { kind: 'OngoingEffectsApplied', roundId: 4,
       regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }] };
@@ -273,7 +274,7 @@ test('battlefield names public opponent packages and upkeep popup separates tick
   await expect(page.locator('#phase-notice-changes')).toContainText('−1 ♥');
   await page.locator('#phase-notice-next').click();
   await expect(page.locator('#phase-notice-changes')).toContainText('◇ −2 · 2r');
-  await expect(page.locator('#phase-notice-changes .tick')).toHaveAttribute('title', 'DefenseModifier -2 · 2 rounds left');
+  await expect(page.locator('#phase-notice-changes .tick')).toHaveAttribute('title', 'DefenseDebuff 2 · 2 rounds left');
   await expect(page.locator('#phase-notice-skip')).toBeHidden();
   await page.locator('#upkeep-label').click();
   await expect(page.locator('#upkeep-conditions')).toContainText('◇ −2');

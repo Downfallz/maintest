@@ -53,8 +53,42 @@ public static class CatalogueProjection
             [.. resources.Spells.Select(spell => Card(spell, placed.GetValueOrDefault(spell.Id)))],
             [.. resources.Tiers.Select(Package).OrderBy(package => package.Level).ThenBy(package => package.Id.Value, StringComparer.Ordinal)],
             bands,
-            Round());
+            Round(),
+            Effects());
     }
+
+    /// <summary>
+    /// Every effect the domain defines, with the mark a screen draws for it. Read off the assembly rather than
+    /// listed, so a kind added later is served the day it exists; <see cref="Cue" /> is the one place that has
+    /// to learn it, and its test says so.
+    /// </summary>
+    private static List<EffectCue> Effects() =>
+        [.. typeof(Effect).Assembly.GetTypes()
+            .Where(type => type.IsSealed && typeof(Effect).IsAssignableFrom(type))
+            .OrderBy(type => type.Name, StringComparer.Ordinal)
+            .Select(Cue)];
+
+    /// <summary>The set of effects is closed (ADR 0012), so each kind is marked here, as the combat rules name it.</summary>
+    private static readonly Dictionary<Type, (string Glyph, bool Harmful)> Marks = new()
+    {
+        [typeof(Damage)] = ("♥", true),
+        [typeof(Heal)] = ("♥", false),
+        [typeof(Bleed)] = ("♥", true),
+        [typeof(Regeneration)] = ("♥", false),
+        [typeof(EnergyGain)] = ("ϟ", false),
+        [typeof(EnergyDrain)] = ("ϟ", true),
+        [typeof(EnergyRegeneration)] = ("ϟ", false),
+        [typeof(DefenseBuff)] = ("◇", false),
+        [typeof(DefenseDebuff)] = ("◇", true),
+        [typeof(InitiativeBuff)] = ("↟", false),
+        [typeof(InitiativeDebuff)] = ("↟", true),
+        [typeof(Stun)] = ("⊘", true),
+    };
+
+    private static EffectCue Cue(Type effect) =>
+        Marks.TryGetValue(effect, out var mark)
+            ? new EffectCue(effect.Name, mark.Glyph, mark.Harmful)
+            : new EffectCue(effect.Name, string.Empty, Harmful: false);
 
     /// <summary>
     /// One package as its card. Ordered by level and then by id, which is the order a player reads a family

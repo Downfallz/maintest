@@ -1902,25 +1902,27 @@ function upkeepPreview(state) {
   return `${upkeepEnergy(state)} Open Upkeep for details.`;
 }
 
-// The symbols the mini battlefield already speaks, so the upkeep reads the way the chips do: ♥ health,
-// ϟ energy, ◇ defense, ↟ initiative, ⊘ stun. A condition of any other kind keeps the host's word for it.
-const GLYPHS = [['Defense', '◇'], ['Initiative', '↟'], ['Stun', '⊘'], ['Bleed', '♥'], ['Regeneration', '♥'], ['EnergyRegeneration', 'ϟ'], ['Heal', '♥'], ['Energy', 'ϟ']];
-
 function signed(amount) {
   return amount < 0 ? `−${-amount}` : `+${amount}`;
 }
 
+// How the host marks a kind of effect: the glyph of the stat it moves and whether it is a loss, served with
+// the catalogue (`EffectCue`). The page names no effect itself; a kind the host serves no mark for keeps its word.
+function cueOf(state, kind) {
+  return (state.catalogue?.effects ?? []).find(cue => cue.kind === kind) ?? null;
+}
+
 // A condition as one chip: its glyph and number, and how long it has left (`2r`, `new 2r`, `∞`). The words
 // stay on the chip's title, which is what a long press or a screen reader gets.
-function conditionGlyph(condition) {
+function conditionGlyph(state, condition) {
   const effect = condition?.effect ?? {};
-  const kind = typeof effect.kind === 'string' ? effect.kind : '';
-  const glyph = GLYPHS.find(([family]) => kind.startsWith(family))?.[1];
-  if (!glyph) return chipText(condition);
+  const cue = cueOf(state, effect.kind);
+  if (!cue?.glyph) return chipText(condition);
+  const sign = cue.harmful ? -1 : 1;
   let amount = '';
-  if (Number.isInteger(effect.amountPerRound)) amount = ` ${signed(kind === 'Bleed' ? -effect.amountPerRound : effect.amountPerRound)}/r`;
-  else if (Number.isInteger(effect.amount)) amount = ` ${signed(effect.amount)}`;
-  return `${glyph}${amount}`;
+  if (Number.isInteger(effect.amountPerRound)) amount = ` ${signed(sign * effect.amountPerRound)}/r`;
+  else if (Number.isInteger(effect.amount)) amount = ` ${signed(sign * effect.amount)}`;
+  return `${cue.glyph}${amount}`;
 }
 
 function remainingGlyph(condition) {
@@ -1943,7 +1945,7 @@ function tickChip(text, tone, title) {
 
 // One row a creature: its number in its side's colour, then what the upkeep did to it and what is still on
 // it, as chips. `rows` are the applied ticks to show; `lasting` adds every creature's conditions.
-function upkeepRows(board, rows, lasting) {
+function upkeepRows(state, board, rows, lasting) {
   const sides = new Map([...(board.allies ?? []).map(one => [one.id, 'ally']), ...(board.enemies ?? []).map(one => [one.id, 'enemy'])]);
   const byCreature = new Map();
   const chips = creature => {
@@ -1957,7 +1959,7 @@ function upkeepRows(board, rows, lasting) {
   if (lasting) {
     for (const creature of [...(board.allies ?? []), ...(board.enemies ?? [])]) {
       for (const condition of (creature.conditions ?? []).filter(chipText)) {
-        chips(creature.id).push(tickChip(`${conditionGlyph(condition)} · ${remainingGlyph(condition)}`, 'active', `${chipText(condition)} · ${remainingText(condition)}`));
+        chips(creature.id).push(tickChip(`${conditionGlyph(state, condition)} · ${remainingGlyph(condition)}`, 'active', `${chipText(condition)} · ${remainingText(condition)}`));
       }
     }
   }
@@ -2000,9 +2002,9 @@ function upkeepSteps(state, board, upkeep) {
     if (!rows.length) continue;
     // What the ticks did to each creature's health, for its chip while this step is read.
     const ticks = rows.map(row => ({ creature: row.creature, change: tone === 'harm' ? -row.amount : row.amount }));
-    steps.push({ label, rows: upkeepRows(board, rows, false), ticks });
+    steps.push({ label, rows: upkeepRows(state, board, rows, false), ticks });
   }
-  const lasting = upkeepRows(board, [], true);
+  const lasting = upkeepRows(state, board, [], true);
   if (lasting.length) steps.push({ label: 'Conditions remaining', rows: lasting, ticks: [] });
   if (!steps.length) return [];
   steps[0].label = `${upkeepEnergy(state)} ${steps[0].label}`;
@@ -2020,12 +2022,12 @@ function renderUpkeep(state, view, upkeep, seat) {
   element('upkeep-label').textContent = `Upkeep${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
   element('upkeep-title').textContent = `Round ${upkeep.round} · Upkeep applied`;
   element('upkeep-energy').textContent = upkeepEnergy(state);
-  const applied = upkeepRows(view.board, upkeep.rows.filter(row => row.amount > 0), false);
+  const applied = upkeepRows(state, view.board, upkeep.rows.filter(row => row.amount > 0), false);
   const empty = document.createElement('p');
   empty.className = 'muted';
   empty.textContent = 'No ongoing effects this round.';
   element('upkeep-effects').replaceChildren(applied.length ? upkeepGrid(applied) : empty);
-  const lasting = upkeepRows(view.board, [], true);
+  const lasting = upkeepRows(state, view.board, [], true);
   const active = element('upkeep-conditions');
   active.hidden = lasting.length === 0;
   active.replaceChildren(...(lasting.length ? [
