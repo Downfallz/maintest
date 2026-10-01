@@ -530,12 +530,19 @@ body:has(#upkeep[open]) .round-recap { visibility: hidden; }
 #upkeep-title { font-size: 18px; margin: 0 0 10px; }
 #upkeep-energy { color: #e6be70; font-size: 13px; }
 .upkeep-order, #upkeep-panel > .muted { font-size: 11px; line-height: 1.5; margin-top: 9px; }
-#upkeep-effects { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 6px; }
-#upkeep-effects li { display: grid; grid-template-columns: 1fr auto; padding: 8px 10px; background: #ffffff07; border-left: 2px solid #7b8b79; border-radius: 4px; font-size: 12px; }
-#upkeep-effects li span { grid-column: 1 / -1; font-size: 10px; color: #becabe; margin-top: 3px; }
-#upkeep-effects [data-tone="energy"] { border-color: #e6be70; color: #e6be70; }
-#upkeep-effects [data-tone="recovery"] { border-color: #96d3a1; color: #96d3a1; }
-#upkeep-effects [data-tone="harm"] { border-color: #efa199; color: #efa199; }
+#upkeep-effects { margin: 14px 0; }
+/* The upkeep as the chips read it: one row a creature, its number in its side's colour, then symbol chips. */
+.upkeep-grid { display: grid; gap: 6px; }
+.upkeep-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.upkeep-row .mini-id { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 750; color: #17231d; background: #9aa89c; }
+.upkeep-row .mini-id.enemy { background: var(--enemy); }
+.upkeep-row .mini-id.ally { background: var(--ally); }
+.tick { padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: 650; line-height: 1.3; white-space: nowrap; background: #303a32; color: #dfe6df; }
+.tick[data-tone="harm"] { color: #ffbbb4; background: #472a29; }
+.tick[data-tone="recovery"] { color: #b0edc2; background: #23452e; }
+.tick[data-tone="energy"] { color: #f0d08a; background: #4a3d20; }
+.tick[data-tone="active"] { color: #dfc4fa; background: #3f3050; }
+.upkeep-legend { margin-top: 10px; font-size: 10px; line-height: 1.5; }
 .upkeep-conditions { border-top: 1px solid #526657; padding-top: 10px; font-size: 11px; color: #c8d4ca; }
 .upkeep-conditions > strong { display: block; margin-bottom: 5px; color: #e9d49b; }
 .upkeep-conditions p { margin: 5px 0; }

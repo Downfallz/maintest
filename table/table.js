@@ -432,7 +432,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTick(state, view.board)]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTicks(state, view.board)]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -469,7 +469,7 @@ function render(state, views) {
       || (replay.stage === 'after' && entry.sequence === replay.actions[replay.index].sequence)),
   } } : current;
   // The dock and its notice before the battlefield: the upkeep tick the notice is on is marked on the chip whose
-  // bar it moved (`noticeTick`), so the chips are drawn once the notice knows its step.
+  // bar it moved (`noticeTicks`), so the chips are drawn once the notice knows its step.
   if (state.playback) renderPlayback(state, current);
   else {
     renderPhaseGuide(state, view, current.seat);
@@ -692,7 +692,7 @@ function renderBoard(state, current, spellbook = current) {
     playback: replay?.actions[replay.index] ?? live,
     playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
-    tick: replay ? null : noticeTick(state, board),
+    ticks: replay ? [] : noticeTicks(state, board),
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
     targeting: isAsked(view) && view.waitingFor === 'Target',
     candidates: !replay && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
@@ -1103,7 +1103,7 @@ function targetStatus(marks, picked) {
 function miniDelta(creature, marks) {
   let change = 0;
   if (marks.playbackStage === 'after') change = healthChange(marks.playback, creature);
-  else if (marks.tick?.creature === creature.id) change = marks.tick.change;
+  else change = (marks.ticks ?? []).filter(one => one.creature === creature.id).reduce((sum, one) => sum + one.change, 0);
   if (change === 0) return [];
   const delta = document.createElement('span');
   delta.className = `mini-delta ${change < 0 ? 'harm' : 'recovery'}`;
@@ -1884,7 +1884,7 @@ function renderPhaseGuide(state, view, seat) {
       : `Round ${view.board.roundNumber} · ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
   const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
-    : newRound && upkeep ? upkeepChanges(view.board, upkeep) : [];
+    : [];
   const entry = { title, detail, changes, upkeep: newRound && upkeep ? upkeepPreview(state) : '',
     steps: newRound && upkeep ? upkeepSteps(state, view.board, upkeep) : [], newRound: begins, round: view.board.roundNumber };
   state.announcements ??= new Map();
@@ -1895,18 +1895,38 @@ function renderPhaseGuide(state, view, seat) {
 
 function upkeepEnergy(state) {
   const amount = state.catalogue?.rules?.energyPerRound;
-  return Number.isInteger(amount) ? `+${amount} energy per creature alive at round start.` : 'Round energy applied by the host.';
+  return Number.isInteger(amount) ? `+${amount} ϟ per living creature.` : 'Round energy applied by the host.';
 }
 
 function upkeepPreview(state) {
   return `${upkeepEnergy(state)} Open Upkeep for details.`;
 }
 
-function activeConditions(board) {
-  return [...(board.allies ?? []), ...(board.enemies ?? [])].flatMap(creature => (creature.conditions ?? [])
-    .map(condition => ({ who: `Creature ${creature.id}`,
-      text: chipText(condition) ? `${chipText(condition)} · ${remainingText(condition)}` : '', tone: 'active' }))
-    .filter(one => one.text));
+// The symbols the mini battlefield already speaks, so the upkeep reads the way the chips do: ♥ health,
+// ϟ energy, ◇ defense, ↟ initiative, ⊘ stun. A condition of any other kind keeps the host's word for it.
+const GLYPHS = [['Defense', '◇'], ['Initiative', '↟'], ['Stun', '⊘'], ['Bleed', '♥'], ['Regeneration', '♥'], ['EnergyRegeneration', 'ϟ'], ['Heal', '♥'], ['Energy', 'ϟ']];
+
+function signed(amount) {
+  return amount < 0 ? `−${-amount}` : `+${amount}`;
+}
+
+// A condition as one chip: its glyph and number, and how long it has left (`2r`, `new 2r`, `∞`). The words
+// stay on the chip's title, which is what a long press or a screen reader gets.
+function conditionGlyph(condition) {
+  const effect = condition?.effect ?? {};
+  const kind = typeof effect.kind === 'string' ? effect.kind : '';
+  const glyph = GLYPHS.find(([family]) => kind.startsWith(family))?.[1];
+  if (!glyph) return chipText(condition);
+  let amount = '';
+  if (Number.isInteger(effect.amountPerRound)) amount = ` ${signed(kind === 'Bleed' ? -effect.amountPerRound : effect.amountPerRound)}/r`;
+  else if (Number.isInteger(effect.amount)) amount = ` ${signed(effect.amount)}`;
+  return `${glyph}${amount}`;
+}
+
+function remainingGlyph(condition) {
+  const lane = laneOf(condition);
+  if (lane === null) return '∞';
+  return lane === 'new' ? `new ${condition.remainingRounds}r` : `${lane}r`;
 }
 
 function remainingText(condition) {
@@ -1916,42 +1936,77 @@ function remainingText(condition) {
   return `${lane === 'new' ? 'new · ' : ''}${remaining} ${remaining === 1 ? 'round' : 'rounds'} left`;
 }
 
-// Applied healing and damage are host events, in their actual order. Energy is context on the first step,
-// never a click per creature. The final step reads current condition counters from the board rather than
-// pretending upkeep itself decremented them (the countdown happens during cleanup).
-function upkeepSteps(state, board, upkeep) {
-  const ticks = upkeep.rows.filter(row => row.tone !== 'energy' && row.amount > 0);
-  const conditions = activeConditions(board);
-  if (!ticks.length && !conditions.length) return [];
-  const steps = ticks.map(row => ({
-    label: row.label,
-    changes: [{ who: `Creature ${row.creature}`, text: `${row.sign}${row.amount} ${row.unit}`, tone: row.tone }],
-    // What the tick did to that creature's health, for its chip while this step is read.
-    tick: { creature: row.creature, change: row.tone === 'harm' ? -row.amount : row.amount },
-  }));
-  if (conditions.length) steps.push({ label: 'Conditions remaining', changes: conditions });
-  steps[0].label = `${upkeepEnergy(state)} ${steps[0].label}`;
-  return steps;
+// One chip of an upkeep row, as data: an announcement keeps its rows, and a kept row must not hold a node.
+function tickChip(text, tone, title) {
+  return { text, tone, title };
 }
 
-function upkeepChanges(board, upkeep) {
-  const applied = new Map();
-  for (const row of upkeep.rows.filter(one => one.amount > 0)) {
-    const who = `Creature ${row.creature}`;
-    const parts = applied.get(who) ?? [];
-    parts.push(`${row.sign}${row.amount} ${row.unit} · ${row.label}`);
-    applied.set(who, parts);
+// One row a creature: its number in its side's colour, then what the upkeep did to it and what is still on
+// it, as chips. `rows` are the applied ticks to show; `lasting` adds every creature's conditions.
+function upkeepRows(board, rows, lasting) {
+  const sides = new Map([...(board.allies ?? []).map(one => [one.id, 'ally']), ...(board.enemies ?? []).map(one => [one.id, 'enemy'])]);
+  const byCreature = new Map();
+  const chips = creature => {
+    if (!byCreature.has(creature)) byCreature.set(creature, { creature, side: sides.get(creature) ?? 'enemy', chips: [] });
+    return byCreature.get(creature).chips;
+  };
+  for (const row of rows) {
+    const glyph = row.unit === 'HP' ? '♥' : 'ϟ';
+    chips(row.creature).push(tickChip(`${row.sign}${row.amount} ${glyph}`, row.tone, `${row.sign}${row.amount} ${row.unit} · ${row.label}`));
   }
-  const lasting = new Map();
-  for (const condition of activeConditions(board)) {
-    const parts = lasting.get(condition.who) ?? [];
-    parts.push(condition.text);
-    lasting.set(condition.who, parts);
+  if (lasting) {
+    for (const creature of [...(board.allies ?? []), ...(board.enemies ?? [])]) {
+      for (const condition of (creature.conditions ?? []).filter(chipText)) {
+        chips(creature.id).push(tickChip(`${conditionGlyph(condition)} · ${remainingGlyph(condition)}`, 'active', `${chipText(condition)} · ${remainingText(condition)}`));
+      }
+    }
   }
-  return [
-    ...[...applied].map(([who, parts]) => ({ who, text: parts.join(' · '), tone: 'applied' })),
-    ...[...lasting].map(([who, parts]) => ({ who, text: `${parts.join(' · ')} · still active`, tone: 'active' })),
-  ];
+  return [...byCreature.values()];
+}
+
+function upkeepGrid(rows) {
+  const grid = document.createElement('div');
+  grid.className = 'upkeep-grid';
+  for (const row of rows) {
+    const line = document.createElement('div');
+    line.className = 'upkeep-row';
+    line.setAttribute('aria-label', `Creature ${row.creature}`);
+    const id = document.createElement('span');
+    id.className = `mini-id ${row.side}`;
+    id.textContent = row.creature;
+    line.append(id, ...row.chips.map(one => {
+      const chip = document.createElement('span');
+      chip.className = 'tick';
+      chip.dataset.tone = one.tone;
+      chip.textContent = one.text;
+      chip.title = one.title;
+      chip.setAttribute('aria-label', one.title);
+      return chip;
+    }));
+    grid.append(line);
+  }
+  return grid;
+}
+
+// Applied healing, then applied damage, then what is still running: one step a kind, every creature it
+// touched on it, in the host's order. Energy is context on the first step, never a click per creature. The
+// final step reads current condition counters from the board rather than pretending upkeep itself
+// decremented them (the countdown happens during cleanup).
+function upkeepSteps(state, board, upkeep) {
+  const applied = upkeep.rows.filter(row => row.tone !== 'energy' && row.amount > 0);
+  const steps = [];
+  for (const [tone, label] of [['recovery', 'Healing over time'], ['harm', 'Ongoing damage']]) {
+    const rows = applied.filter(row => row.tone === tone);
+    if (!rows.length) continue;
+    // What the ticks did to each creature's health, for its chip while this step is read.
+    const ticks = rows.map(row => ({ creature: row.creature, change: tone === 'harm' ? -row.amount : row.amount }));
+    steps.push({ label, rows: upkeepRows(board, rows, false), ticks });
+  }
+  const lasting = upkeepRows(board, [], true);
+  if (lasting.length) steps.push({ label: 'Conditions remaining', rows: lasting, ticks: [] });
+  if (!steps.length) return [];
+  steps[0].label = `${upkeepEnergy(state)} ${steps[0].label}`;
+  return steps;
 }
 
 function renderUpkeep(state, view, upkeep, seat) {
@@ -1965,44 +2020,27 @@ function renderUpkeep(state, view, upkeep, seat) {
   element('upkeep-label').textContent = `Upkeep${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
   element('upkeep-title').textContent = `Round ${upkeep.round} · Upkeep applied`;
   element('upkeep-energy').textContent = upkeepEnergy(state);
-  const rows = upkeep.rows.map(row => {
-    const item = document.createElement('li');
-    item.dataset.tone = row.tone;
-    const who = document.createElement('strong');
-    who.textContent = `Creature ${row.creature}`;
-    const amount = document.createElement('b');
-    amount.textContent = `${row.sign}${row.amount} ${row.unit}`;
-    const why = document.createElement('span');
-    why.textContent = `${row.label}${row.amount === 0 ? ' · no change' : ''}`;
-    item.append(who, amount, why);
-    return item;
-  });
-  if (!rows.length) {
-    const empty = document.createElement('li');
-    empty.textContent = 'No ongoing effects this round.';
-    rows.push(empty);
-  }
-  element('upkeep-effects').replaceChildren(...rows);
-  const conditions = activeConditions(view.board);
+  const applied = upkeepRows(view.board, upkeep.rows.filter(row => row.amount > 0), false);
+  const empty = document.createElement('p');
+  empty.className = 'muted';
+  empty.textContent = 'No ongoing effects this round.';
+  element('upkeep-effects').replaceChildren(applied.length ? upkeepGrid(applied) : empty);
+  const lasting = upkeepRows(view.board, [], true);
   const active = element('upkeep-conditions');
-  active.hidden = conditions.length === 0;
-  active.replaceChildren(...(conditions.length ? [
+  active.hidden = lasting.length === 0;
+  active.replaceChildren(...(lasting.length ? [
     Object.assign(document.createElement('strong'), { textContent: 'Still active after upkeep' }),
-    ...conditions.map(one => {
-      const row = document.createElement('p');
-      row.textContent = `${one.who} · ${one.text}`;
-      return row;
-    }),
+    upkeepGrid(lasting),
   ] : []));
 }
 
 // The upkeep tick the notice on screen is reading, for the chip whose bar it moved: the notice and the
 // battlefield tell one story. An earlier announcement reopened is about a board that has moved on, and says
 // nothing on the chips.
-function noticeTick(state, board) {
+function noticeTicks(state, board) {
   const entry = state.noticeEntry;
-  if (!entry || state.noticeReplay || element('phase-notice').hidden || entry.round !== board.roundNumber) return null;
-  return entry.steps?.[state.noticeStep]?.tick ?? null;
+  if (!entry || state.noticeReplay || element('phase-notice').hidden || entry.round !== board.roundNumber) return [];
+  return entry.steps?.[state.noticeStep]?.ticks ?? [];
 }
 
 function hidePhaseNotice(state) {
@@ -2018,7 +2056,7 @@ function showPhaseNotice(state, entry, replay = false) {
   // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
   // The upkeep's ticks are not a phase explanation: like the turn order, they are what happened to the board,
   // and the mute leaves them. Conditions merely still running are not a tick: the Upkeep panel lists them.
-  if (state.quiet && !replay && !entry.steps?.some(step => step.tick)) return;
+  if (state.quiet && !replay && !entry.steps?.some(step => step.ticks?.length)) return;
   // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
   element('order').open = false;
   state.noticeEntry = entry;
@@ -2065,6 +2103,11 @@ function renderNoticeContent(state, replay = state.noticeReplay) {
   // The steps wait for the player, so the way past them is one tap too: Upkeep keeps the whole list.
   element('phase-notice-skip').hidden = !stepping || final;
   const list = element('phase-notice-changes');
+  if (step?.rows) {
+    list.hidden = false;
+    list.replaceChildren(upkeepGrid(step.rows));
+    return;
+  }
   const changes = step?.changes ?? entry.changes ?? [];
   list.hidden = changes.length === 0;
   list.replaceChildren(...changes.map(change => {
@@ -2137,7 +2180,7 @@ function setQuiet(state, quiet) {
 function setupPhaseControls(state) {
   const notice = element('phase-notice');
   element('order-panel').addEventListener('click', () => { element('order').open = false; });
-  // A step read or left is redrawn: the tick it names is on the chips (`noticeTick`), and so was the one before.
+  // A step read or left is redrawn: the tick it names is on the chips (`noticeTicks`), and so was the one before.
   element('phase-notice-next').addEventListener('click', () => {
     if (!state.noticeEntry) return;
     if (state.noticeStep >= state.noticeEntry.steps.length - 1) hidePhaseNotice(state);

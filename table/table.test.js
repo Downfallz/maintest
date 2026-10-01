@@ -953,14 +953,16 @@ test('upkeep popup distinguishes applied ticks from conditions still active on t
     regenerationTicks: [{ creature: 1, healed: 1 }], bleedTicks: [{ creature: 2, damage: 2 }] } }];
   p.draw();
   assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 3/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+1 HP/);
-  assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /Creature 2/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /1\+1 ♥/);
+  assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /−2/);
+  assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, '+1 HP · Healing over time', 'the words stay on the chip');
   assert.equal(p.timers.has(p.state.phaseTimer), false, 'steps wait for the player');
   p.nodes['phase-notice-next'].click();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−2 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2−2 ♥/);
   p.nodes['phase-notice-next'].click();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /DefenseModifier -2 · 2 rounds left/);
-  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeepCreature 2 · DefenseModifier -2 · 2 rounds left/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2◇ −2 · 2r/);
+  assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, 'DefenseModifier -2 · 2 rounds left');
+  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeep2◇ −2 · 2r/);
   p.nodes['phase-notice-next'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
@@ -1027,7 +1029,7 @@ test('muted pop-ups still read the upkeep ticks, and only them', () => {
   p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 2, damage: 1 }] } }];
   p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, false, 'what happened to the board is not');
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−1 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2−1 ♥/);
   p.nodes['phase-notice-next'].click();
   p.view.board.roundNumber = 3; p.view.roundEvents = [{ sequence: 12, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }]; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true, 'a round with nothing applied announces nothing');
@@ -1047,7 +1049,7 @@ test('reopening an upkeep announcement restarts the tick sequence', () => {
   assert.match(p.nodes['phase-notice-context'].textContent, /2 \/ 2/);
   p.nodes['announcement-list'].children[1].children[0].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement · Upkeep · 1 \/ 2/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+2 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /1\+2 ♥/);
 });
 
 test('a round with conditions but no health ticks shows their actual counters in one notice', () => {
@@ -1059,8 +1061,8 @@ test('a round with conditions but no health ticks shows their actual counters in
   ];
   p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2 } }];
   p.draw();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Ward 2 · new · 2 rounds left/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Aura · permanent/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Ward 2 · new 2r/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Aura · ∞/);
   assert.equal(p.nodes['phase-notice-next'].hidden, true);
 });
 
@@ -1170,10 +1172,10 @@ test('upkeep remains readable after a skipped automatic phase and after the noti
   p.draw();
   assert.match(p.nodes['phase-notice-title'].textContent, /Round 2 begins/);
   assert.equal(p.nodes['phase-notice'].dataset.kind, 'round');
-  assert.match(p.nodes['phase-notice-detail'].textContent, /\+3 energy.*Healing over time/);
-  assert.match(p.nodes['upkeep-energy'].textContent, /\+3 energy/);
-  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 1\+2 HP/);
-  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 2−1 HP/);
+  assert.match(p.nodes['phase-notice-detail'].textContent, /\+3 ϟ.*Healing over time/);
+  assert.match(p.nodes['upkeep-energy'].textContent, /\+3 ϟ/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /1\+2 ♥/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /2−1 ♥/);
   p.nodes.upkeep.open = true;
   p.nodes['phase-notice-close'].click(); p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes.upkeep.open, true);
