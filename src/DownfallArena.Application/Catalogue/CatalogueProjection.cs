@@ -59,14 +59,14 @@ public static class CatalogueProjection
 
     /// <summary>
     /// Every effect the domain defines, with the mark a screen draws for it. Read off the assembly rather than
-    /// listed, so a kind added later is served the day it exists; <see cref="Cue" /> is the one place that has
+    /// listed, so a kind added later is served the day it exists; <see cref="Mark" /> is the one place that has
     /// to learn it, and its test says so.
     /// </summary>
     private static List<EffectCue> Effects() =>
         [.. typeof(Effect).Assembly.GetTypes()
             .Where(type => type.IsSealed && typeof(Effect).IsAssignableFrom(type))
             .OrderBy(type => type.Name, StringComparer.Ordinal)
-            .Select(Cue)];
+            .Select(Mark)];
 
     /// <summary>The set of effects is closed (ADR 0012), so each kind is marked here, as the combat rules name it.</summary>
     private static readonly Dictionary<Type, (string Glyph, bool Harmful)> Marks = new()
@@ -85,7 +85,7 @@ public static class CatalogueProjection
         [typeof(Stun)] = ("⊘", true),
     };
 
-    private static EffectCue Cue(Type effect) =>
+    private static EffectCue Mark(Type effect) =>
         Marks.TryGetValue(effect, out var mark)
             ? new EffectCue(effect.Name, mark.Glyph, mark.Harmful)
             : new EffectCue(effect.Name, string.Empty, Harmful: false);
