@@ -39,6 +39,18 @@ first.
   - Restorative Gush heals the most at once on one ally.
   - The 19 package intents that called the initiative bonus "the reason this knob exists" now say it would be
     the first thing a knob on that package moved, since none has one.
+- **Intents and notes brought to the present.** 78 sentences across 39 spells and 10 packages said
+  something about today that is no longer true:
+  - The tier-2 packages named one spell of the two each teaches since #245.
+  - Several numbers had moved: Wait gives 2, Crushing Stomp stuns for 2 rounds, Hateful Sacrifice costs 3
+    health, Revenant Guards and Crazed Specter cost 4, Full Plate gives 3 points.
+  - Several "the only" and "the cheapest" claims were broken by the new spells: Latch, Soothing Chant,
+    Adrenaline Tonic.
+  - Some value readings were stale, such as Infectious Blast's 11.70, now 23.55.
+  - Some mentions named mechanics that are gone: `HealScore`, Ice Spear's slow, Tornado being disabled, and
+    `check-knobs` findings that no longer appear.
+  Each is rewritten minimally. History stays, in the past tense, and only what reads as true today was
+  corrected. No bound and no content number moved.
 
 ## 2026-10-01. The knobs catch up with the content: no package initiative, new numbers covered, room past a bound
 
