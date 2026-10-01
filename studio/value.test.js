@@ -1,17 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { castValue, roundValue, isAttack, standing } from './value.js';
 
 const weights = JSON.parse(readFileSync(new URL('../learning/weights/greedy.json', import.meta.url), 'utf8'));
-const folder = new URL('../data/Spells/', import.meta.url);
-const spells = Object.fromEntries(readdirSync(folder, { recursive: true }).filter(name => name.endsWith('.json'))
-  .map(name => JSON.parse(readFileSync(new URL(name, folder), 'utf8'))).map(document => [document.id, document]));
+// Frozen copies, not data/Spells: a tuning pass that moves one of these spells must not fail a test about the
+// formula (tune 18 did). learning/tests/test_knobs.py reads the same file, so both readings stay pinned together.
+const fixture = JSON.parse(readFileSync(new URL('./value.fixture.json', import.meta.url), 'utf8'));
+const spells = Object.fromEntries(fixture.spells.map(document => [document.id, document]));
 const round = value => Math.round(value * 100) / 100;
 
-test('the value a round matches what check-knobs prints for the authored content', () => {
+test('the value a round matches what check-knobs prints for the same documents', () => {
   // From `cast_value(document, load_weights()) / _rounds_a_cast(cost)` in learning/src/downfall_learning/knobs.py,
-  // on the content these tests read. A content change that moves one of these moves both readings the same way.
+  // on the documents in value.fixture.json. Changing the formula on one side fails that side's test.
   const expected = {
     'spell:protective_slam:v1': [13.53, 9.02], // crit, and an initiative debuff over two rounds
     'spell:full_plate:v1': [5.85, 5.85], // permanent reads as three rounds
