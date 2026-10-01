@@ -36,6 +36,7 @@ const catalogue = {
   cards, packages, contentHash: 'fixture', rules: { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, evolutionInterval: 2, firstEvolutionRound: 1, roundCap: 20, criticalMultiplier: 2 },
   round: { subPhases: ['Upkeep', 'Evolution', 'EnergyGain', 'Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'],
     orderings: ['Healing resolves before bleeding.', 'A critical is applied before defense is subtracted.'] },
+  effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }],
 };
 
 test.beforeEach(async ({ page }) => {
@@ -260,22 +261,23 @@ test('package budget stays above a separately scrolling choice list on a phone',
 
 test('battlefield names public opponent packages and upkeep popup separates ticks from lasting effects', async ({ page }, info) => {
   const enemy = { ...view.board.enemies[0], acquiredTiers: [packages[0].id],
-    conditions: [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }] };
+    conditions: [{ effect: { kind: 'DefenseDebuff', amount: 2 }, remainingRounds: 2 }] };
   const applied = { ...view, board: { ...view.board, roundNumber: 4, enemies: [enemy] },
     feed: [{ sequence: 5, event: { kind: 'OngoingEffectsApplied', roundId: 4,
       regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }] };
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: applied }));
   await expect(page.locator('#upkeep')).toBeVisible();
-  await expect(page.locator('#phase-notice-changes')).toContainText('+2 HP');
+  await expect(page.locator('#phase-notice-changes')).toContainText('+2 ♥');
   await expect(page.locator('#phase-notice-context')).toContainText('1 / 3');
   await expect(page.locator('#phase-notice-skip')).toBeVisible();
   await page.locator('#phase-notice-next').click();
-  await expect(page.locator('#phase-notice-changes')).toContainText('−1 HP');
+  await expect(page.locator('#phase-notice-changes')).toContainText('−1 ♥');
   await page.locator('#phase-notice-next').click();
-  await expect(page.locator('#phase-notice-changes')).toContainText('DefenseModifier -2 · 2 rounds left');
+  await expect(page.locator('#phase-notice-changes')).toContainText('◇ −2 · 2r');
+  await expect(page.locator('#phase-notice-changes .tick')).toHaveAttribute('title', 'DefenseDebuff 2 · 2 rounds left');
   await expect(page.locator('#phase-notice-skip')).toBeHidden();
   await page.locator('#upkeep-label').click();
-  await expect(page.locator('#upkeep-conditions')).toContainText('DefenseModifier -2');
+  await expect(page.locator('#upkeep-conditions')).toContainText('◇ −2');
   if (!isLaptop(page)) await page.locator('#board-toggle').click();
   await expect(page.locator('#enemies .enemy-packages')).toContainText('North');
   if (!isLaptop(page)) await expect(page.locator('#mini-board')).toBeHidden();
@@ -305,6 +307,30 @@ test('the phase popup recaps both teams packages after the unlock opportunity', 
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 1 · yours');
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 2 · opponent');
   await page.screenshot({ path: info.outputPath('packages-unlocked.png'), animations: 'disabled' });
+});
+
+// ADR 0087: the Match tool opens under the dock on every layout, where a finger can reach it; two taps concede.
+test('Concede opens in view under the dock, asks twice, and the end screen says who won', async ({ page }) => {
+  await page.locator('#phase-notice-close').click();
+  await page.locator('#match-tools-label').click();
+  await expect(page.locator('#concede')).toBeInViewport();
+  const panel = await page.locator('#match-panel').boundingBox();
+  const dock = await page.locator('#phase-dock').boundingBox();
+  expect(panel.y).toBeGreaterThanOrEqual(dock.y);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(widthOf(page));
+  await page.locator('#concede').click();
+  await expect(page.locator('#concede-yes')).toBeInViewport();
+  let conceded = 0;
+  // The seat reports the end only once the concession has been posted: a poll landing between here and the
+  // tap would otherwise end the match under the confirmation. The later route wins, so the concession's is
+  // registered after the seat's, which matches its path too.
+  const ended = { ...view, over: true, outcome: { winner: 'player2', reason: 'Concession' } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: conceded > 0 ? ended : view }));
+  await page.route('**/api/seat/player1/concede', route => { conceded += 1; return route.fulfill({ json: ended.outcome }); });
+  await page.locator('#concede-yes').click();
+  await expect.poll(() => conceded).toBe(1);
+  await expect(page.locator('#asking')).toHaveText('You conceded · Player 2 wins.');
+  await expect(page.locator('#match-tools')).toBeHidden();
 });
 
 test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {

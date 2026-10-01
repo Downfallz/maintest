@@ -151,9 +151,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
-  Next advances through each applied tick in engine order and then shows the remaining condition durations;
-  the tick being read is marked on its creature's chip in the mini battlefield, beside the health bar it moved;
-  the energy allowance is context on the first step, not a step per creature. The notice waits until Done,
+  Next advances through the applied healing, then the applied damage, then the remaining conditions, one
+  step a kind: each step is one row a creature -- its number in its side's colour, then symbol chips (`+2 ♥`,
+  `−1 ♥`, `◇ −2 · 2r`) with the host's words on the chip's title. The ticks being read are marked on their
+  creatures' chips in the mini battlefield, beside the health bar they moved; the energy allowance is context
+  on the first step, not a step per creature. The notice waits until Done,
   Skip ▸▸ or Close, and a replay from Announcements starts again at the first tick. Loading an existing round does not
   pretend that a new round just started.
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
@@ -171,8 +173,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   ends. A seat a bot plays, a finished match and the practice table offer no concession. A recorded session
   writes it as a `Concession` note; the trace's `MatchEnded` carries the reason.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
-  configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
-  including zero/capped results, in engine order, followed by active conditions and their remaining rounds.
+  configured energy allowance and the actual applied ongoing energy, healing and damage ticks as one row a
+  creature of symbol chips (♥ health, ϟ energy; the legend is on the panel), in engine order, followed by the
+  active conditions as chips (◇ defense, ↟ initiative, ⊘ stun, `2r` rounds left, `∞` permanent) with their
+  full words on each chip's title. The glyph and the sign of each kind come from the catalogue's `effects`
+  (`EffectCue`): the page names no effect, and a kind the host serves no mark for keeps its word.
   These public events are retained separately from the short
   activity log. Escape closes the panel. A new round announces upkeep even when polling skipped that phase;
   missing events are never reconstructed from board deltas or guessed from conditions.

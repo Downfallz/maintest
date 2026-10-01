@@ -116,6 +116,24 @@ public sealed class CatalogueProjectionTests
     /// The pair that says which game this is: a session is reproducible against a content hash and a rule set,
     /// or it is not reproducible at all.
     /// </summary>
+    /// <summary>
+    /// The page draws a glyph for a condition and never names an effect, so every kind the domain defines has
+    /// to be served with one: a kind added without a cue would reach the table as its bare word.
+    /// </summary>
+    [Fact]
+    public void Every_effect_the_domain_defines_is_served_with_a_glyph_and_its_sign()
+    {
+        var cues = View.Effects;
+
+        var kinds = typeof(Effect).Assembly.GetTypes().Where(type => type.IsSealed && typeof(Effect).IsAssignableFrom(type)).Select(type => type.Name);
+        cues.Select(cue => cue.Kind).ShouldBe(kinds, ignoreOrder: true);
+        cues.ShouldAllBe(cue => cue.Glyph.Length > 0);
+        cues.Single(cue => cue.Kind == nameof(Bleed)).ShouldBe(new EffectCue(nameof(Bleed), "♥", Harmful: true));
+        cues.Single(cue => cue.Kind == nameof(Regeneration)).ShouldBe(new EffectCue(nameof(Regeneration), "♥", Harmful: false));
+        cues.Single(cue => cue.Kind == nameof(DefenseDebuff)).ShouldBe(new EffectCue(nameof(DefenseDebuff), "◇", Harmful: true));
+        cues.Single(cue => cue.Kind == nameof(Stun)).ShouldBe(new EffectCue(nameof(Stun), "⊘", Harmful: true));
+    }
+
     [Fact]
     public void The_view_names_the_content_and_the_rules_it_was_built_from()
     {

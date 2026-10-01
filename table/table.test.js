@@ -79,7 +79,9 @@ function page() {
   ]);
   const state = { views: [], rendered: null, revision: 0, polling: false, error: '', evolving: null, seats: [], holder: 'player1', shown: null,
     acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards, packages,
-    catalogue: { cards: [...cards.values()], packages: [...packages.values()], rules: { roundCap: 16 } }, tab: 'board', feeds: new Map(),
+    catalogue: { cards: [...cards.values()], packages: [...packages.values()], rules: { roundCap: 16 },
+      effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }, { kind: 'Stun', glyph: '⊘', harmful: true }] },
+    tab: 'board', feeds: new Map(),
   };
   const view = { waitingFor: 'Intent', waitingCreature: 1, waitingAsked: 1, options: { intent: { creatures: [{ creature: 1, castableSpells: ['one', 'two'] }] } },
     board: { roundNumber: 1, subPhase: 'IntentSelection', allies: [{ id: 1, name: 'First', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one', 'two'] }], enemies: [{ id: 2, health: 10, maxHealth: 20 }], intents: [], timeline: [] }, feed: [],
@@ -948,19 +950,21 @@ test("switching the creature to evolve starts its package list at the top, and a
 test('upkeep popup distinguishes applied ticks from conditions still active on the current board', () => {
   const p = page(); p.context.setupPhaseControls(p.state); p.draw();
   p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';
-  p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
+  p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseDebuff', amount: 2 }, remainingRounds: 2 }];
   p.view.roundEvents = [{ sequence: 42, event: { kind: 'OngoingEffectsApplied', roundId: 2,
     regenerationTicks: [{ creature: 1, healed: 1 }], bleedTicks: [{ creature: 2, damage: 2 }] } }];
   p.draw();
   assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 3/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+1 HP/);
-  assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /Creature 2/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /1\+1 ♥/);
+  assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /−2/);
+  assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, '+1 HP · Healing over time', 'the words stay on the chip');
   assert.equal(p.timers.has(p.state.phaseTimer), false, 'steps wait for the player');
   p.nodes['phase-notice-next'].click();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−2 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2−2 ♥/);
   p.nodes['phase-notice-next'].click();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /DefenseModifier -2 · 2 rounds left/);
-  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeepCreature 2 · DefenseModifier -2 · 2 rounds left/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2◇ −2 · 2r/);
+  assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, 'DefenseDebuff 2 · 2 rounds left');
+  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeep2◇ −2 · 2r/);
   p.nodes['phase-notice-next'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
@@ -1027,11 +1031,11 @@ test('muted pop-ups still read the upkeep ticks, and only them', () => {
   p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 2, damage: 1 }] } }];
   p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, false, 'what happened to the board is not');
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2−1 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /2−1 ♥/);
   p.nodes['phase-notice-next'].click();
   p.view.board.roundNumber = 3; p.view.roundEvents = [{ sequence: 12, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }]; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true, 'a round with nothing applied announces nothing');
-  p.view.board.roundNumber = 4; p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseModifier', amount: -2 }, remainingRounds: 2 }];
+  p.view.board.roundNumber = 4; p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseDebuff', amount: 2 }, remainingRounds: 2 }];
   p.view.roundEvents = [{ sequence: 15, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }]; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true, 'conditions still running are not a tick; the Upkeep panel lists them');
   assert.equal(p.nodes['upkeep-conditions'].hidden, false);
@@ -1047,7 +1051,7 @@ test('reopening an upkeep announcement restarts the tick sequence', () => {
   assert.match(p.nodes['phase-notice-context'].textContent, /2 \/ 2/);
   p.nodes['announcement-list'].children[1].children[0].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement · Upkeep · 1 \/ 2/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1\+2 HP/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /1\+2 ♥/);
 });
 
 test('a round with conditions but no health ticks shows their actual counters in one notice', () => {
@@ -1059,8 +1063,8 @@ test('a round with conditions but no health ticks shows their actual counters in
   ];
   p.view.roundEvents = [{ sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2 } }];
   p.draw();
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Ward 2 · new · 2 rounds left/);
-  assert.match(p.nodes['phase-notice-changes'].textContent, /Aura · permanent/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Ward 2 · new 2r/);
+  assert.match(p.nodes['phase-notice-changes'].textContent, /Aura · ∞/);
   assert.equal(p.nodes['phase-notice-next'].hidden, true);
 });
 
@@ -1170,10 +1174,10 @@ test('upkeep remains readable after a skipped automatic phase and after the noti
   p.draw();
   assert.match(p.nodes['phase-notice-title'].textContent, /Round 2 begins/);
   assert.equal(p.nodes['phase-notice'].dataset.kind, 'round');
-  assert.match(p.nodes['phase-notice-detail'].textContent, /\+3 energy.*Healing over time/);
-  assert.match(p.nodes['upkeep-energy'].textContent, /\+3 energy/);
-  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 1\+2 HP/);
-  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 2−1 HP/);
+  assert.match(p.nodes['phase-notice-detail'].textContent, /\+3 ϟ.*Healing over time/);
+  assert.match(p.nodes['upkeep-energy'].textContent, /\+3 ϟ/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /1\+2 ♥/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /2−1 ♥/);
   p.nodes.upkeep.open = true;
   p.nodes['phase-notice-close'].click(); p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes.upkeep.open, true);
