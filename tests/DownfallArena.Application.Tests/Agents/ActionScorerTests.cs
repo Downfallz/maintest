@@ -249,6 +249,42 @@ public sealed class ActionScorerTests
         Scorer.Score(Cast(Strike(One, Four), ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(1))), creatures).ShouldBe(0, 1e-9);
     }
 
+    /// <summary>An enemy the same cast kills holds no slot while the buff lasts, so passing it buys nothing either.</summary>
+    [Fact]
+    public void An_initiative_buff_does_not_count_an_enemy_the_same_cast_kills()
+    {
+        var board = Board(enemyHealth: 3);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1] with { CurrentInitiative = Initiative.Of(6) }, board[2] with { CurrentInitiative = Initiative.Of(6) } };
+        var action = Strike(One, Three);
+        var kill = new DamageOutcome(Three, 3, Critical: false);
+
+        var killAndBuff = Scorer.Score(CombatResolution.Resolved(action, [Three, ally.Id], [], false, Energy.Of(0), [kill, new ConditionOutcome(ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(1)))]), creatures);
+        var killAlone = Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill]), creatures);
+
+        (killAndBuff - killAlone).ShouldBe(Tempo, 1e-9);
+    }
+
+    /// <summary>
+    /// A creature held at zero by debuffs deeper than its initiative has to climb out of the deficit before a
+    /// buff moves it: the floor applies to the total, not to the initiative before the buff (ADR 0036).
+    /// </summary>
+    [Fact]
+    public void An_initiative_buff_on_a_creature_held_below_zero_pays_only_for_what_it_climbs_past()
+    {
+        var board = Board(enemyHealth: 20);
+        var slowed = Boards.Creature(2, PlayerSlot.Player1) with
+        {
+            BaseInitiative = Initiative.Of(2),
+            CurrentInitiative = Initiative.Of(0),
+            Conditions = [new ConditionSnapshot(InitiativeDebuff.Of(5, Duration.OfRounds(2)), 2)],
+        };
+        var creatures = new List<CreatureSnapshot> { board[0], slowed, board[1] with { CurrentInitiative = Initiative.Of(1) }, board[2] with { CurrentInitiative = Initiative.Of(0) } };
+
+        Scorer.Score(Cast(Strike(One, Four), slowed.Id, InitiativeBuff.Of(2, Duration.OfRounds(1))), creatures).ShouldBe(0, 1e-9);
+        Scorer.Score(Cast(Strike(One, Four), slowed.Id, InitiativeBuff.Of(4, Duration.OfRounds(1))), creatures).ShouldBe(Tempo, 1e-9);
+    }
+
     [Fact]
     public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
     {

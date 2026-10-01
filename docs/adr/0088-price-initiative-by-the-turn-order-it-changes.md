@@ -17,8 +17,9 @@ for a statistic the spell barely touches in play (journal, 2026-10-01).
 
 We will price initiative by the places in the turn order it changes. For a buff or a debuff on a target, the
 term is the number of living creatures of the target's other side it moves the target ahead of (a buff) or
-behind (a debuff), with a tie counting half because a d20 decides it (ADR 0063). Initiative is read down to
-zero and no further (ADR 0036). The term is multiplied by the effect's rounds and signed as before: for on
+behind (a debuff), with a tie counting half because a d20 decides it (ADR 0063). An enemy the same cast
+kills is not counted. The change is added to the total before the floor at zero, as the creature adds it
+(ADR 0036), so a creature held at zero by deeper debuffs climbs out of the deficit first. The term is multiplied by the effect's rounds and signed as before: for on
 the actor's side, against on the enemy's. A package's bonus is read the same way, from the buyer against the
 living enemies, once. The board is read as it stands, like every other term. The speeds still to be chosen
 can reorder it, and nothing here sees them. The weight stays 2.1, now per place.

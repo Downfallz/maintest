@@ -258,7 +258,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 HealOutcome heal => HealTerms(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
                 EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target]),
-                ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target], creatures),
+                ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining, creatures),
                 _ => ScoreTerms.Zero,
             };
         }
@@ -283,16 +283,38 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <para>
     /// It reads the board as it stands, the way every other term does: the order a buff changes is the order
     /// of the next timeline, which the speeds still to be chosen can rearrange (a <c>Quick</c> creature acts
-    /// before every <c>Standard</c> one) and nothing here can see.
+    /// before every <c>Standard</c> one) and nothing here can see. An enemy the same resolution kills, which
+    /// <paramref name="remaining"/> says when there is a resolution, holds no slot while the change lasts.
+    /// </para>
+    /// <para>
+    /// The change is added to the total before the floor, as the creature adds it (ADR 0036): a creature held
+    /// at zero by debuffs deeper than its initiative has to climb out of that deficit before it moves.
     /// </para>
     /// </summary>
-    private static double Overtaken(CreatureSnapshot target, int delta, IReadOnlyList<CreatureSnapshot> creatures)
+    private static double Overtaken(
+        CreatureSnapshot target, int delta, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int>? remaining = null)
     {
         var before = target.CurrentInitiative.Value;
-        var after = Math.Max(0, before + delta);
+        var after = Math.Max(0, UnflooredInitiative(target) + delta);
         return creatures
-            .Where(other => other.Owner != target.Owner && other.IsAlive)
+            .Where(other => other.Owner != target.Owner && other.IsAlive && (remaining is null || remaining[other.Id] > 0))
             .Sum(other => Ahead(after, other.CurrentInitiative.Value) - Ahead(before, other.CurrentInitiative.Value));
+    }
+
+    /// <summary>
+    /// The initiative a creature would have without the floor at zero. Above zero the floor did not bite, so
+    /// it is the current initiative; at zero it is the base plus the buffs less the debuffs, which may be below.
+    /// </summary>
+    private static int UnflooredInitiative(CreatureSnapshot creature)
+    {
+        if (creature.CurrentInitiative.Value > 0)
+        {
+            return creature.CurrentInitiative.Value;
+        }
+
+        var buffs = creature.Conditions.Select(condition => condition.Effect).OfType<InitiativeBuff>().Sum(buff => buff.Amount);
+        var debuffs = creature.Conditions.Select(condition => condition.Effect).OfType<InitiativeDebuff>().Sum(debuff => debuff.Amount);
+        return Math.Min(0, creature.BaseInitiative.Value + buffs - debuffs);
     }
 
     /// <summary>One for acting first, none for acting after, a half for a tie the dice decide.</summary>
@@ -374,8 +396,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private static ScoreTerms EnergyDrainTerms(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         -1 * EnergyTerms(actor, target, Math.Min(amount, target.Energy.Value), remainingHealth);
 
-    private static ScoreTerms ConditionTerms(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
+    private static ScoreTerms ConditionTerms(
+        CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, Dictionary<CreatureId, int> remaining, IReadOnlyList<CreatureSnapshot> creatures)
     {
+        var remainingHealth = remaining[target.Id];
         if (remainingHealth == 0)
         {
             return ScoreTerms.Zero;
@@ -390,8 +414,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Regeneration regeneration => ScoreTerms.Zero with { Heal = -sign * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth) },
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
-            InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures) * rounds },
-            InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures) * rounds },
+            InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
+            InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },
             // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
             // debuff actually lets through, the way `DefensiveTerms` reads what a buff prevents (ADR 0035).
             // That costs the bot more than precision. `DefensiveTerms` is the only term that reads the threat
