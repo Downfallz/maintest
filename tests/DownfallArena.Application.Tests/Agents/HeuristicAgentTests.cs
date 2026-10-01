@@ -185,7 +185,12 @@ public sealed class HeuristicAgentTests
     [Fact]
     public void An_evolution_pick_can_be_taken_for_the_initiative_it_buys_rather_than_the_damage()
     {
-        var board = Board(enemyHealth: 20, actorSpells: []);
+        // Enemies at 9 and 10, which Guard's bonus of 6 takes the buyer past and Jab's 1 does not (ADR 0088).
+        var plain = Board(enemyHealth: 20, actorSpells: []);
+        var board = plain with
+        {
+            Enemies = [plain.Enemies[0] with { CurrentInitiative = Initiative.Of(9) }, plain.Enemies[1] with { CurrentInitiative = Initiative.Of(10) }],
+        };
         var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.JabPack, TestContent.GuardPack])]);
 
         new HeuristicAgent(ScoringWeights.Default, TestContent.GuardIsFaster, Rules)
