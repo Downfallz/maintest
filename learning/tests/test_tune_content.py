@@ -33,6 +33,7 @@ from downfall_learning.tune_content import (
     load_swept,
     metrics_of,
     playable,
+    played_inputs,
     propose,
     score_content,
     sweep_shard,
@@ -977,6 +978,34 @@ def test_swept_catalogues_of_another_content_are_refused(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="content"):
         load_swept(paths, knobs, moved)
+
+
+def test_swept_catalogues_played_on_other_inputs_are_refused(tmp_path: Path) -> None:
+    """Codex's review of #256: a file rewritten under the same name keeps the objective's fingerprint."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    path = tmp_path / "swept-0.json"
+    replace(sweep_shard(FakeEvaluator(), knobs, content, 0, 1), inputs="before").write(path)
+
+    with pytest.raises(ValueError, match="other inputs"):
+        load_swept([path], knobs, content, "after")
+
+
+def test_rewriting_a_file_an_agent_reads_changes_the_inputs_a_slice_is_stamped_with(tmp_path: Path) -> None:
+    weights = tmp_path / "learning" / "weights" / "set.json"
+    weights.parent.mkdir(parents=True)
+    weights.write_text('{"damage": 1}', encoding="utf-8")
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"exploit": {"p1": ["heuristic:learning/weights/set.json"], "p2": "greedy"}},
+        targets=(),
+    )
+    (tmp_path / "seeds.json").write_text('{"seeds": [1]}', encoding="utf-8")
+    before = played_inputs(objective, tmp_path)
+
+    weights.write_text('{"damage": 2}', encoding="utf-8")
+
+    assert played_inputs(objective, tmp_path) != before
 
 
 def test_a_sweep_missing_a_shard_is_refused(tmp_path: Path) -> None:

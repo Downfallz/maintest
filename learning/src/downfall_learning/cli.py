@@ -63,6 +63,7 @@ from downfall_learning.tune_content import (
     format_result,
     format_score,
     load_swept,
+    played_inputs,
     score_content,
     sweep_shard,
     tune_content,
@@ -665,7 +666,8 @@ def _sweep_shard(
 ) -> int:
     shard, shards = arguments.sweep_shard
     heartbeat = MemoizingEvaluator(evaluator, _progress(arguments, f"sweep {shard}/{shards}"))
-    swept = sweep_shard(heartbeat, knobs, content, shard, shards)
+    inputs = played_inputs(knobs.objective, arguments.repo.resolve())
+    swept = replace(sweep_shard(heartbeat, knobs, content, shard, shards), inputs=inputs)
     path = swept.write(arguments.output / f"swept-{shard}.json")
     print(f"Slice {shard} of {shards}: {len(swept.played)} sweep catalogue(s) played, in '{path}'.")
     return 0
@@ -678,7 +680,8 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     knobs, content, _, evaluator = prepared
     if arguments.sweep_shard is not None:
         return _sweep_shard(arguments, knobs, content, evaluator)
-    known = load_swept(arguments.swept, knobs, content) if arguments.swept else {}
+    inputs = played_inputs(knobs.objective, arguments.repo.resolve()) if arguments.swept else ""
+    known = load_swept(arguments.swept, knobs, content, inputs) if arguments.swept else {}
     confirm = _confirmation_seeds(arguments, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,

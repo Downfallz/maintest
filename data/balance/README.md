@@ -269,7 +269,8 @@ So the workflow plays the sweep in **six slices side by side**, each its own job
 `swept-I.json`. The search job then runs `tune-content --swept <every slice>` and takes those metrics instead
 of playing the sweep again. The engine is deterministic, so the moves, the leader and the proposal are the
 ones one job would have reached, only sooner; the search refuses slices read by another objective, slices of
-another content, and a set of slices that is not the whole sweep, since any of them would mean playing the
+another content, slices played on other inputs (the seed file, an agent's weights or the engine's sources
+changed under the same names), and a set of slices that is not the whole sweep, since any of them would mean playing the
 sweep again in the job it was taken out of.
 
 | | candidates | at 88 s |

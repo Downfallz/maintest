@@ -666,7 +666,7 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
 _FILE_BACKED_AGENTS = frozenset({"heuristic", "policy"})
 
 
-def _agent_file(spec: str) -> str | None:
+def agent_file(spec: str) -> str | None:
     """The file an agent spec names, or ``None`` when the kind names none.
 
     Read the way ``AgentSpec.Parse`` reads it, because a reading of its own would check files the engine does
@@ -754,7 +754,7 @@ def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
             if not specs:
                 problems.append(f"objective: evaluation '{name}' {side} names no agent at all.")
             for spec in specs:
-                path = _agent_file(spec)
+                path = agent_file(spec)
                 if path is None:
                     continue
                 if not path:

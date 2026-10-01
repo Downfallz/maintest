@@ -34,6 +34,7 @@ from downfall_learning.knobs import (
     Knobs,
     Objective,
     Target,
+    agent_file,
     damage_is_the_point,
     dominates,
     load_weights,
@@ -44,7 +45,7 @@ from downfall_learning.knobs import (
     with_value,
 )
 from downfall_learning.progress import Progress, silent
-from downfall_learning.search_weights import EngineCommand, EvaluationError
+from downfall_learning.search_weights import BUILDER_SOURCES, NOT_SOURCE, EngineCommand, EvaluationError
 
 #: The data builder, as the assembly the build produced rather than through `dotnet run --no-build`, for the
 #: reason `ENGINE_COMMAND` gives: a tuning pass launches it once per candidate.
@@ -1078,6 +1079,9 @@ class SweptShard:
     #: The `catalogue_key` of the content the sweep stepped from.
     content: str
     played: Mapping[str, Mapping[str, Mapping[str, float]]]
+    #: `played_inputs`: what the engine read beside the catalogue, by content rather than by name. Empty when
+    #: the caller did not stamp it, and then only an unstamped search reads the slice.
+    inputs: str = ""
 
     def write(self, path: Path) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1086,12 +1090,42 @@ class SweptShard:
             "shards": self.shards,
             "objective": dict(self.objective),
             "content": self.content,
+            "inputs": self.inputs,
             "played": {
                 key: {name: dict(metrics) for name, metrics in by.items()} for key, by in self.played.items()
             },
         }
         path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
         return path
+
+
+def played_inputs(objective: Objective, root: Path) -> str:
+    """The digest of what an evaluation reads beside the catalogue, by content rather than by name.
+
+    The objective's fingerprint names the seed file and every agent, but by path: a seed file rewritten in
+    place, a weights file retrained under the same name, or an engine rebuilt from other code all keep it.
+    So a slice of the sweep is stamped with this as well, and a search refuses a slice played on other
+    inputs instead of mixing its metrics with its own (Codex's review of #256): the seed file, every file an
+    agent names, and the sources the engine and the data builder are built from.
+    """
+    files = [objective.seeds or EngineCommand().seeds]
+    for evaluation in objective.evaluations.values():
+        for side in ("p1", "p2"):
+            files.extend(path for spec in panel(evaluation, side) if (path := agent_file(spec)))
+    for source in BUILDER_SOURCES:
+        files.extend(
+            path.relative_to(root).as_posix()
+            for path in (root / source).rglob("*")
+            if path.is_file()
+            and path.suffix not in NOT_SOURCE
+            and not {"bin", "obj"} & set(path.relative_to(root).parts)
+        )
+    digest = hashlib.sha256()
+    for name in sorted(set(files)):
+        digest.update(name.encode("utf-8") + b"\0")
+        digest.update((root / name).read_bytes() if (root / name).is_file() else b"missing")
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def sweep_shard(
@@ -1121,7 +1155,7 @@ def sweep_shard(
 
 
 def load_swept(
-    paths: Sequence[Path], knobs: Knobs, content: Content
+    paths: Sequence[Path], knobs: Knobs, content: Content, inputs: str = ""
 ) -> dict[str, Mapping[str, Mapping[str, float]]]:
     """What the slices of one sweep played, refused unless together they are the whole of it.
 
@@ -1138,6 +1172,10 @@ def load_swept(
             raise ValueError(f"'{path}' was played for another objective than this search reads.")
         if document["content"] != base:
             raise ValueError(f"'{path}' swept another content than the one this search starts from.")
+        if document.get("inputs", "") != inputs:
+            raise ValueError(
+                f"'{path}' was played on other inputs: the engine, the seed file or an agent's file changed."
+            )
         shards[int(document["shard"])] = int(document["shards"])
         known.update(document["played"])
     counts = set(shards.values())
