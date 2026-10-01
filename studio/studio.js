@@ -1734,8 +1734,9 @@ function renderBalance() {
 function balanceCard(row, showKind = true) {
   const { summary } = row;
   const kind = row.id?.startsWith('tier:') ? 'Package' : 'Spell';
-  // Off content is out of the build, so an entry it lacks is nothing to check (check-knobs ignores it too).
-  const off = row.enabled === false;
+  // Off content, and a version no alias reaches, are out of the build, so an entry they lack is nothing to
+  // check: check-knobs reads the alias map, not the folder, and ignores both.
+  const off = row.enabled === false || !row.alias;
   const bad = !off && (!summary || summary.tone === 'bad');
   const card = element('details', { className: `balance-item${bad ? ' tone-bad' : ''}` });
   card.append(element('summary', {}, [
@@ -1762,8 +1763,9 @@ function balanceValues(row) {
 function balanceDetails(row, off) {
   const { summary } = row;
   if (!summary) {
+    if (!row.alias) return [element('p', { className: 'muted', textContent: `No alias points at ${row.id}, so it is out of the build and nothing tunes it. Aliases live in data/aliases.json.` })];
     return off
-      ? [element('p', { className: 'muted', textContent: `No entry for ${row.alias || row.id}. This content is off, so it is out of the build and nothing tunes it.` })]
+      ? [element('p', { className: 'muted', textContent: `No entry for ${row.alias}. This content is off, so it is out of the build and nothing tunes it.` })]
       : [element('p', { className: 'problem', textContent: 'No entry for this enabled content in the knobs file.' })];
   }
   const details = [element('p', { className: 'balance-intent', textContent: summary.intent || 'No intent recorded.' })];
@@ -1783,14 +1785,18 @@ function knobLabel(path, document) {
   return path;
 }
 
-/** The overview's rows: every enabled package and aliased spell, each with its reading, in name order. */
+/**
+ * The overview's rows: every enabled package and aliased spell, each with its reading, in name order. A spell
+ * two aliases point at is two rows, because each alias may own an entry of its own and both are the file's.
+ */
 function overviewRows(balance) {
   const aliases = state.catalogue?.aliases || {};
   const spells = surveyedSpells().flatMap(item => {
-    const alias = aliasOfSpell(item.id, aliases);
-    if (!alias || item.enabled === false || item.problem) return [];
-    const entry = entryFor(balance, alias);
-    return [{ ...item, alias, summary: entry ? summarise(entry, item.document) : null }];
+    if (item.enabled === false || item.problem) return [];
+    return entryAliasesOf(item.id, aliases).map(alias => {
+      const entry = entryFor(balance, alias);
+      return { ...item, alias, summary: entry ? summarise(entry, item.document) : null };
+    });
   });
   const packages = surveyPackages(balance, surveyedPackages(), aliases).rows.filter(item => !item.problem);
   const all = [...packages, ...spells].sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));

@@ -192,6 +192,37 @@ test('reading a spell that is off shows its missing balance entry as a note, not
   await expect(card).toContainText('This content is off, so it is out of the build and nothing tunes it.');
 });
 
+test('reading a version no alias reaches shows its missing balance entry as a note, not a check', async ({ page }) => {
+  const superseded = structuredClone(catalogue);
+  const current = superseded.spells.find(item => item.id === 'spell:basic_attack:v1');
+  const older = structuredClone(current);
+  older.id = 'spell:basic_attack:v0'; older.document.id = older.id; older.path = 'Spells/base/basic_attack.v0.json';
+  superseded.spells.push(older);
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: superseded } }));
+  await page.goto(`/#entry=${encodeURIComponent(older.path)}`);
+  await page.reload();
+  const card = page.locator('#detail .balance-item');
+  await expect(card).toHaveCount(1);
+  await expect(card).not.toHaveClass(/tone-bad/);
+  await expect(card).toContainText('No alias points at spell:basic_attack:v0');
+});
+
+test('a spell two aliases point at is two rows of the overview, one per entry', async ({ page }) => {
+  const doubled = structuredClone(catalogue);
+  doubled.aliases['spell:jab'] = 'spell:basic_attack:v1';
+  doubled.balance.spells['spell:jab'] = { name: 'Basic Attack', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
+  await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: doubled } }));
+  await page.reload();
+  await page.locator('#tools-panel').click();
+  await page.locator('#balance-panel').click();
+  const sheet = page.locator('#balance');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('spell:jab');
+  await expect(sheet.locator('.balance-item')).toHaveCount(1);
+  await expect(sheet.locator('.balance-item')).toContainText('read by another name');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Basic Attack');
+  await expect(sheet.locator('.balance-item')).toHaveCount(2);
+});
+
 test('GitHub Pages subpath reads deployed data without a token', async ({ page }) => {
   await page.route('https://downfallz.github.io/maintest/**', async route => {
     const path = new URL(route.request().url()).pathname.replace('/maintest/', '');

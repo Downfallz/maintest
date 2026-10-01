@@ -611,12 +611,12 @@ export function seedEntry(document, intent = '') {
 
 /** An entry as the file holds it, from the shape `entryFor` reads it into. The round trip has to be lossless. */
 export function entryDocument(entry) {
-  const written = {
-    name: text(entry?.name),
-    class: text(entry?.creatureClass),
-    intent: text(entry?.intent).trim(),
-    keep: list(entry?.keep).map(text).filter(Boolean),
-  };
+  const written = { name: text(entry?.name) };
+  // A package entry is a spell entry without a class (data/balance/README.md): writing an empty one back would
+  // churn the file on every save of a knob that never had it.
+  if (sectionOf(entry?.alias) === 'spells') written.class = text(entry?.creatureClass);
+  written.intent = text(entry?.intent).trim();
+  written.keep = list(entry?.keep).map(text).filter(Boolean);
   if (entry?.note) written.note = text(entry.note).trim();
   written.knobs = list(entry?.knobs).map(knob => ({
     path: text(knob?.path),

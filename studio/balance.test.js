@@ -649,6 +649,12 @@ test('an entry read and written back is the shape the file holds', () => {
   assert.deepEqual(written, { name: 'Pummel', class: '', intent: 'The all-in.', keep: [], knobs: [] });
 });
 
+test('a package entry is written back without a class, the shape the file holds for packages', () => {
+  const entry = entryFor({ packages: { 'tier:prowler': { name: 'Prowler', intent: 'i', keep: [], knobs: [] } } }, 'tier:prowler');
+
+  assert.deepEqual(entryDocument(entry), { name: 'Prowler', intent: 'i', keep: [], knobs: [] });
+});
+
 test('a knob written back uses the file keys, not the reading ones', () => {
   const entry = entryFor({ spells: { 'spell:x': { intent: 'i', knobs: [{ path: '/energyCost', min: 0, max: 2, step: 1 }] } } }, 'spell:x');
 
