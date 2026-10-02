@@ -61,23 +61,26 @@ if [[ "$user" == "0" ]]; then
 fi
 echo "ok: runs as user $user"
 
-# The image's own command: a lobby behind the token the log prints, recording nothing.
+# The image's own command: an admin panel behind the token the log prints, recording nothing.
 start
 expect 200 "the table page" "$BASE/"
-expect 200 "the lobby page" "$BASE/lobby"
+expect 200 "the admin panel" "$BASE/admin"
+expect 303 "the former lobby address redirects to the panel" "$BASE/lobby"
 expect 200 "a module of the page" "$BASE/table.js"
 expect 404 "a test module is not shipped" "$BASE/table.test.js"
-expect 403 "the lobby refuses a request without the operator's token" "$BASE/api/tables"
-expect 403 "the lobby ignores the platform's header when no platform is trusted" \
+expect 403 "the panel refuses a request without the operator's token" "$BASE/api/tables"
+expect 403 "the sessions are the operator's too" "$BASE/api/sessions"
+expect 200 "anybody may ask whether they are the operator" "$BASE/api/me"
+expect 403 "the panel ignores the platform's header when no platform is trusted" \
   -H "X-MS-CLIENT-PRINCIPAL-NAME: stranger@example.test" "$BASE/api/tables"
 
-token="$(docker logs "$CONTAINER" 2>&1 | sed -n 's/.*lobby?token=\([0-9a-f]*\).*/\1/p' | head -n 1)"
+token="$(docker logs "$CONTAINER" 2>&1 | sed -n 's/.*admin?token=\([0-9a-f]*\).*/\1/p' | head -n 1)"
 if [[ -z "$token" ]]; then
   fail "The log does not print the operator's token."
 fi
 expect 201 "the operator opens a table against a searched set of weights" \
   -H "X-Seat-Token: $token" -H "Content-Type: application/json" \
-  -d '{"player1":"person","player2":"heuristic:learning/weights/search-23.json"}' "$BASE/api/tables"
+  -d '{"player1":"person","player2":"heuristic:learning/weights/search-19.json"}' "$BASE/api/tables"
 
 # The container app's form: the platform's sign-in is the door, and nothing is recorded here.
 start table --lobby --platform-auth --bind 0.0.0.0 --port 8080 --rules docs/tabletop/playtest.rules.json --no-record

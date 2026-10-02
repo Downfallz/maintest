@@ -1,26 +1,55 @@
-// The operator's lobby: the tables this host is playing, and the form that opens one (ADR 0081).
+// The operator's admin panel: the tables this host is playing, the form that opens one, and the sessions its
+// store holds (ADR 0081, amended).
 //
 // It is the console of a host that has none. What a table's console lines used to say -- each seat's code,
 // the pilot's link, where the session is written -- this page shows, to the one person the host lets in:
-// whoever holds the token the console printed, or whoever the platform in front of the host signed in.
+// whoever holds the token the console printed, or whoever the platform in front of the host signed in. The
+// game is not open yet, so the operator opens every table and the players, who never sign in, join by code.
 
 const POLL_MS = 2500;
 
-// Who a seat may be opened with. `person` is a seat somebody joins by its code; the rest are agent specs the
-// CLI understands, the same short list the pilot offers, chosen for what the journal measured. The host takes
-// any spec it can parse, including a weights or policy path this page cannot know is on disk.
-export const SEATABLE = [
-  { value: 'person', label: 'a person, who joins by code' },
-  { value: 'greedy', label: 'Greedy — the baseline' },
-  { value: 'random', label: 'Random' },
-  { value: 'heuristic:learning/weights/search-23.json', label: 'search-23 — the strongest general weights' },
-  { value: 'lookahead', label: 'Lookahead' },
-];
+// Where this browser keeps the operator's token once a link brought it, so the table page can show the way
+// back here and a reload needs no link. The same reasoning as the seats' (session.js).
+export const OPERATOR_KEY = 'downfall.table.operator';
+
+// `person` is a seat somebody joins by its code; the host's answer carries the bots, read off its weights
+// directory, so a new search is offered the day it lands and nothing here names one.
+export const PERSON = { value: 'person', label: 'a person, who joins by code' };
+
+// What the pickers offer: the person, then the host's bots in the host's order. Before the host has answered,
+// or on a host that offers nothing, the person and the two bots every build has.
+export function seatable(answer) {
+  const offered = Array.isArray(answer?.agents) && answer.agents.length > 0
+    ? answer.agents
+    : [{ value: 'greedy', label: 'Greedy — the baseline' }, { value: 'random', label: 'Random' }];
+  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.label ?? agent.value, featured: agent.featured === true }))];
+}
+
+// The bot a new table's second seat is opened with when the operator has not chosen: the first the host puts
+// forward, which is what the journal measured as worth playing against.
+export function defaultOpponent(answer) {
+  return seatable(answer).find(agent => agent.featured)?.value ?? 'greedy';
+}
+
+// The operator's token: the link's, kept, or the kept one from an earlier link. Null when there is none, which
+// on a host behind the platform is the ordinary case: the browser's own cookies are the sign-in then.
+export function operatorToken(search, storage) {
+  const linked = new URLSearchParams(search ?? '').get('token');
+  if (linked) {
+    try { storage?.setItem(OPERATOR_KEY, linked); } catch { /* a browser that keeps nothing still works from the link */ }
+    return linked;
+  }
+  try {
+    return storage?.getItem(OPERATOR_KEY) || null;
+  } catch {
+    return null;
+  }
+}
 
 // One factory, so a test hands the page a stub instead of a network. With a token it speaks as the operator
 // the console named; without one it sends the browser's own cookies, which is how the platform's sign-in
 // reaches the host.
-export function lobbyTransport(token, fetchImpl = globalThis.fetch.bind(globalThis)) {
+export function adminTransport(token, fetchImpl = globalThis.fetch.bind(globalThis)) {
   async function send(method, path, body) {
     const options = { method, headers: {} };
     if (token) options.headers['X-Seat-Token'] = token;
@@ -35,11 +64,37 @@ export function lobbyTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
     return { status: response.status, ok: response.ok, body: text ? parse(text) : null };
   }
 
+  // A zip is bytes, not JSON: fetched the same way and handed back as a blob for the browser to save.
+  async function download(method, path, body) {
+    const options = { method, headers: {} };
+    if (token) options.headers['X-Seat-Token'] = token;
+    if (method !== 'GET') {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(body ?? {});
+    }
+    const response = await fetchImpl(path, options);
+    if (!response.ok) {
+      const text = await response.text();
+      return { status: response.status, ok: false, body: text ? parse(text) : null };
+    }
+    return { status: response.status, ok: true, blob: await response.blob(), filename: filenameOf(response.headers?.get?.('Content-Disposition')) };
+  }
+
   return {
     list: () => send('GET', '/api/tables'),
     open: request => send('POST', '/api/tables', request),
     close: id => send('DELETE', `/api/tables/${encodeURIComponent(id)}`),
+    sessions: () => send('GET', '/api/sessions'),
+    deleteSessions: ids => send('DELETE', '/api/sessions', { ids }),
+    exportSessions: ids => download('POST', '/api/sessions/export', { ids }),
+    exportSession: id => download('GET', `/api/sessions/${encodeURIComponent(id)}/export`),
   };
+}
+
+// The file name a download was given, or a plain one. The host names a single export by its session id.
+export function filenameOf(disposition) {
+  const match = /filename="([^"]+)"/.exec(disposition ?? '');
+  return match ? match[1] : 'sessions.zip';
 }
 
 // Where the operator signs in, when the host says a sign-in is what is missing, or nothing. A 401 carrying a
@@ -98,6 +153,22 @@ function stateOf(table) {
   return 'Playing';
 }
 
+// One recorded session as the list draws it. A session this host still has a table for is live; one with a
+// match counted is finished; anything else was abandoned, or is being played by a replica that is gone.
+export function sessionRows(answer) {
+  return (answer?.sessions ?? []).map(session => ({
+    id: session.id,
+    when: session.createdAt ? new Date(session.createdAt).toLocaleString() : 'unknown date',
+    players: session.player1 && session.player2 ? `${session.player1} vs ${session.player2}` : 'no manifest',
+    state: session.live ? 'live on this host' : session.over ? 'finished' : 'not finished',
+    steps: session.steps ?? 0,
+    live: session.live === true,
+    session: session.session,
+    export: session.export,
+    location: session.location ?? null,
+  }));
+}
+
 // What the page says after the host answered an opening. A refusal is the host telling the operator something
 // true, so it reads as a sentence and keeps its code.
 export function said(answer) {
@@ -109,6 +180,15 @@ export function said(answer) {
 
   const body = answer.body ?? {};
   return { refused: true, line: body.message ?? `The host refused it (${answer.status}).` };
+}
+
+// What the page says after a deletion: how many went, and which were not there to go.
+export function deletionSaid(answer) {
+  if (!answer.ok) return { refused: true, line: answer.body?.message ?? `The host refused it (${answer.status}).` };
+  const deleted = answer.body?.deleted ?? [];
+  const missing = answer.body?.missing ?? [];
+  const gone = `${deleted.length} session${deleted.length === 1 ? '' : 's'} deleted`;
+  return { refused: false, line: missing.length > 0 ? `${gone}; not found: ${missing.join(', ')}.` : `${gone}.` };
 }
 
 function parse(text) {
@@ -185,15 +265,78 @@ function card(row, transport, redraw) {
   return box;
 }
 
-async function start() {
-  const token = new URLSearchParams(globalThis.location?.search ?? '').get('token');
-  const transport = lobbyTransport(token);
-  const problem = element('problem');
+function sessionItem(row, transport) {
+  const item = document.createElement('li');
+  item.className = `session-row${row.live ? ' live' : ''}`;
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.value = row.id;
+  check.setAttribute('aria-label', `Select ${row.id}`);
+  const body = document.createElement('div');
+  const id = document.createElement('div');
+  id.className = 'session-id';
+  id.textContent = row.id;
+  const facts = document.createElement('div');
+  facts.className = 'muted';
+  facts.textContent = `${row.when} · ${row.players} · ${row.state} · ${row.steps} steps`;
+  const links = document.createElement('div');
+  links.className = 'session-links';
+  links.append(anchor(row.session, 'viewer'));
+  const save = document.createElement('a');
+  save.href = row.export;
+  save.textContent = 'export zip';
+  save.addEventListener('click', async event => {
+    event.preventDefault();
+    await saveZip(await transport.exportSession(row.id));
+  });
+  links.append(save);
+  if (row.location) links.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: row.location }));
+  body.append(id, facts, links);
+  item.append(check, body);
+  return item;
+}
 
-  for (const chooser of ['seat-1', 'seat-2']) {
-    element(chooser).replaceChildren(...SEATABLE.map(seat => option(seat.value, seat.label)));
+async function saveZip(answer) {
+  const told = element('sessions-said');
+  if (!answer.ok) {
+    told.textContent = answer.body?.message ?? `The host refused it (${answer.status}).`;
+    told.classList.add('refused');
+    return;
   }
-  element('seat-2').value = 'greedy';
+  const url = URL.createObjectURL(answer.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = answer.filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  told.textContent = `Saved ${answer.filename}.`;
+  told.classList.remove('refused');
+}
+
+async function start() {
+  const token = operatorToken(globalThis.location?.search ?? '', kept());
+  if (globalThis.location?.search && globalThis.history?.replaceState) {
+    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+  }
+  const transport = adminTransport(token);
+  const problem = element('problem');
+  let offered = null;
+
+  function fillPickers(answer) {
+    const list = seatable(answer);
+    const key = list.map(agent => agent.value).join('|');
+    if (key === offered) return;
+    offered = key;
+    for (const chooser of ['seat-1', 'seat-2']) {
+      const kept = element(chooser).value;
+      element(chooser).replaceChildren(...list.map(agent => option(agent.value, agent.label)));
+      if (list.some(agent => agent.value === kept)) element(chooser).value = kept;
+    }
+    if (!element('seat-2').value || element('seat-2').value === 'person') element('seat-2').value = defaultOpponent(answer);
+  }
+  fillPickers(null);
 
   async function redraw() {
     const answer = await transport.list();
@@ -202,7 +345,7 @@ async function start() {
       const door = element('sign-in');
       door.href = login;
       door.hidden = false;
-      element('lobby').hidden = true;
+      element('admin').hidden = true;
       problem.textContent = 'This host is behind a sign-in.';
       problem.hidden = false;
       return;
@@ -215,10 +358,36 @@ async function start() {
     }
 
     problem.hidden = true;
+    fillPickers(answer.body);
     element('rules').textContent = answer.body?.rules ?? '';
     element('recording').textContent = answer.body?.recording ? 'Sessions are recorded.' : 'Nothing is recorded (--no-record).';
     element('tables').replaceChildren(...tableRows(answer.body).map(row => card(row, transport, redraw)));
-    element('lobby').hidden = false;
+    element('admin').hidden = false;
+  }
+
+  function selected() {
+    return [...element('sessions').querySelectorAll('input[type=checkbox]:checked')].map(box => box.value);
+  }
+
+  function armTools() {
+    const count = selected().length;
+    element('sessions-export').disabled = count === 0;
+    element('sessions-delete').disabled = count === 0;
+  }
+
+  async function redrawSessions() {
+    const answer = await transport.sessions();
+    const told = element('sessions-said');
+    if (!answer.ok) {
+      told.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+      told.classList.add('refused');
+      element('sessions').replaceChildren();
+      return;
+    }
+    told.classList.remove('refused');
+    element('sessions').replaceChildren(...sessionRows(answer.body).map(row => sessionItem(row, transport)));
+    element('sessions-all').checked = false;
+    armTools();
   }
 
   element('open').addEventListener('click', async () => {
@@ -240,13 +409,47 @@ async function start() {
     told.textContent = outcome.line;
     told.classList.toggle('refused', outcome.refused);
     await redraw();
+    await redrawSessions();
+  });
+
+  element('sessions').addEventListener('change', armTools);
+  element('sessions-all').addEventListener('change', () => {
+    for (const box of element('sessions').querySelectorAll('input[type=checkbox]')) box.checked = element('sessions-all').checked;
+    armTools();
+  });
+  element('sessions-refresh').addEventListener('click', redrawSessions);
+  element('sessions-export').addEventListener('click', async () => saveZip(await transport.exportSessions(selected())));
+  element('sessions-delete').addEventListener('click', () => {
+    const ids = selected();
+    element('sessions-confirm-line').textContent = `Delete ${ids.length} session${ids.length === 1 ? '' : 's'}? A table still being played is closed, and its recording goes with it.`;
+    element('sessions-confirm').hidden = false;
+  });
+  element('sessions-delete-no').addEventListener('click', () => { element('sessions-confirm').hidden = true; });
+  element('sessions-delete-yes').addEventListener('click', async () => {
+    element('sessions-confirm').hidden = true;
+    const answer = await transport.deleteSessions(selected());
+    const outcome = deletionSaid(answer);
+    const told = element('sessions-said');
+    told.textContent = outcome.line;
+    told.classList.toggle('refused', outcome.refused);
+    await redraw();
+    await redrawSessions();
   });
 
   // Rescheduled after each answer rather than on an interval, so a poll slower than POLL_MS leaves nothing
-  // queued behind it.
+  // queued behind it. The sessions list is read on demand: listing a store is a walk of every run in it.
   const again = () => setTimeout(() => void redraw().finally(again), POLL_MS);
   await redraw();
+  await redrawSessions();
   again();
+}
+
+function kept() {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
 }
 
 if (globalThis.document) await start();

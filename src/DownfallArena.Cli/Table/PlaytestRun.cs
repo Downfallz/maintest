@@ -465,27 +465,8 @@ internal sealed class PlaytestRun
     /// the viewer ignores both today, which is deliberate: it can learn to read them later without the files
     /// having to be invented then.
     /// </summary>
-    public async Task<IReadOnlyList<(string Name, string Text)>> ArtifactsAsync(CancellationToken cancellationToken = default)
-    {
-        List<(string Name, string Text)> artifacts = [];
-        foreach (var trace in await _reader.ListAsync(RunRecorder.TracesDirectory, cancellationToken))
-        {
-            if (trace.EndsWith(".json", StringComparison.Ordinal) && await _reader.ReadTextAsync(trace, cancellationToken) is { } text)
-            {
-                artifacts.Add((trace, text));
-            }
-        }
-
-        foreach (var name in new[] { RunRecorder.ManifestFile, RunRecorder.EpisodesFile, RunRecorder.StepsFile, NotesFile, CatalogueFile })
-        {
-            if (await _reader.ReadTextAsync(name, cancellationToken) is { } text)
-            {
-                artifacts.Add((name, text));
-            }
-        }
-
-        return artifacts;
-    }
+    public Task<IReadOnlyList<(string Name, string Text)>> ArtifactsAsync(CancellationToken cancellationToken = default) =>
+        StoredSessions.ArtifactsOf(_reader, cancellationToken);
 
     /// <summary>
     /// A session id: when it was opened, to the second, so it sorts by when it was played, and four random

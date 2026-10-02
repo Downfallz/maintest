@@ -56,7 +56,7 @@ internal sealed record CliOptions
     public bool Practice { get; init; }
 
     /// <summary>
-    /// Whether the table starts with no session and waits for the lobby to open them (ADR 0081): the hosted
+    /// Whether the table starts with no session and waits for the admin panel to open them (ADR 0081): the hosted
     /// table's shape, where nobody is at the console. Without it the command line describes the one table
     /// the host starts with, as it always did.
     /// </summary>
@@ -200,7 +200,7 @@ internal sealed record CliOptions
 
         if (flags.Contains(LobbyOption) && (command != "table" || flags.Contains(PracticeOption) || LobbyConflicts.Any(values.ContainsKey)))
         {
-            return "'--lobby' is for table only and starts with no session: the lobby says who sits where, so --p1, --p2, --who, --handover and --seed have nothing to describe.";
+            return "'--lobby' is for table only and starts with no session: the admin panel says who sits where, so --p1, --p2, --who, --handover and --seed have nothing to describe.";
         }
 
         if (flags.Contains(PlatformAuthOption) && command != "table")

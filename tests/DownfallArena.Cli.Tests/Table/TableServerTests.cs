@@ -17,7 +17,7 @@ public sealed class TableServerTests : IAsyncDisposable
     private readonly TableRegistry _registry = new();
     private readonly Clock _clock = new();
     private readonly CancellationTokenSource _stopping = new();
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client = new(new HttpClientHandler { AllowAutoRedirect = false });
     private TableServer? _server;
     private Task? _serving;
 
@@ -159,10 +159,43 @@ public sealed class TableServerTests : IAsyncDisposable
         _registry.ById(finished.Id).ShouldBeNull();
     }
 
+    /// <summary>The operator's page moved; a link printed before it did still arrives, token and all.</summary>
+    [Fact]
+    public async Task The_former_lobby_address_sends_the_operator_to_the_admin_panel_with_their_token()
+    {
+        var url = Serve(OperatorGate.WithToken("op-token"));
+
+        var moved = await Get($"{url}lobby?token=op-token", token: null);
+
+        moved.StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+        moved.Headers.Location.ShouldNotBeNull().ToString().ShouldBe("/admin?token=op-token");
+        (await Get($"{url}admin", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// A session whose table this process no longer has is read from the store: the replica that played it
+    /// is gone, and the run is what survives (ADR 0080).
+    /// </summary>
+    [Fact]
+    public async Task A_session_this_host_no_longer_holds_is_served_from_the_store()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var finished = await Opened(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(finished);
+        _registry.Remove(finished.Id).ShouldBeTrue();
+
+        var page = await Get($"{url}session/{finished.Id}", token: null);
+
+        page.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("manifest.json");
+        (await Get($"{url}session/no-such-session", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
     private string Serve(OperatorGate gate)
     {
-        var lobby = new LobbyApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)");
-        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), lobby, _clock);
+        var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored);
         _serving = _server.RunAsync(_stopping.Token);
         return _server.Url;
     }

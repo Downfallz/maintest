@@ -5,7 +5,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// What a table is asked to be before it is composed: who sits in each seat, who the people are, when they
-/// take over, and the seed. It is what the command line says of the table it starts with and what the lobby
+/// take over, and the seed. It is what the command line says of the table it starts with and what the admin panel
 /// says of every table after it, read into one shape so both are composed the same way (ADR 0081).
 /// </summary>
 /// <param name="Player1">The agent in seat 1, or <c>null</c> for a person.</param>
@@ -15,7 +15,7 @@ namespace DownfallArena.Cli.Table;
 /// <param name="Seed">The match seed. None lets the host draw one.</param>
 internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, string? Who, int? Handover, int? Seed)
 {
-    /// <summary>The word the lobby uses for a seat a person plays; anything else names an agent.</summary>
+    /// <summary>The word the admin panel uses for a seat a person plays; anything else names an agent.</summary>
     public const string Person = "person";
 
     /// <summary>The table the command line asked for: a person in every seat no agent was named for.</summary>
@@ -31,7 +31,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
     }
 
     /// <summary>
-    /// A request as the lobby posts it, or the reason it is not one. Each seat is <c>person</c> or an agent spec
+    /// A request as the admin panel posts it, or the reason it is not one. Each seat is <c>person</c> or an agent spec
     /// the CLI understands; a seat left out is a person, as it is on the command line.
     /// </summary>
     public static TableRequest Parse(string body, out string? problem)
@@ -94,6 +94,6 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
     }
 
-    /// <summary>The JSON the lobby posts.</summary>
+    /// <summary>The JSON the admin panel posts.</summary>
     private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed);
 }

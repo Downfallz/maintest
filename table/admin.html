@@ -4,18 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#111917" />
-    <title>Downfall Arena — lobby</title>
+    <title>Downfall Arena — admin</title>
     <link rel="stylesheet" href="table.css" />
     <link rel="stylesheet" href="pilot.css" />
-    <link rel="stylesheet" href="lobby.css" />
+    <link rel="stylesheet" href="admin.css" />
   </head>
   <body>
     <header class="masthead">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The host</span><h1>Lobby</h1></div></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The host</span><h1>Admin</h1></div></div>
       <div class="session-state"><span class="seat-label">Rules</span><output id="rules">Connecting…</output></div>
     </header>
 
-    <main id="lobby" hidden>
+    <main id="admin" hidden>
       <p class="muted no-god-view">
         Open a table, read each seat's code to its player, and hand a seat over from its pilot page. This page
         shows who is at each table, never what they hold. <span id="recording"></span>
@@ -33,12 +33,33 @@
         <output id="said" class="said"></output>
       </section>
 
+      <h2 class="list-title">Tables under way</h2>
       <section id="tables" class="seats tables" aria-label="Tables"></section>
+
+      <section class="control sessions" aria-labelledby="sessions-title">
+        <div class="list-head">
+          <h2 id="sessions-title">Recorded sessions</h2>
+          <button id="sessions-refresh" type="button" class="secondary">Refresh</button>
+        </div>
+        <p class="muted">Every session this host's store holds, whether or not this host still has its table. Export one or several as a zip of run directories, the format <code>train-clone</code> and the viewer read.</p>
+        <div class="selection-tools">
+          <label class="check"><input id="sessions-all" type="checkbox" /> Select all</label>
+          <button id="sessions-export" type="button" disabled>Export selected</button>
+          <button id="sessions-delete" type="button" class="danger" disabled>Delete selected…</button>
+        </div>
+        <div id="sessions-confirm" class="confirm" hidden>
+          <p id="sessions-confirm-line"></p>
+          <button id="sessions-delete-yes" type="button" class="danger">Delete</button>
+          <button id="sessions-delete-no" type="button" class="secondary">Keep them</button>
+        </div>
+        <output id="sessions-said" class="said"></output>
+        <ol id="sessions" class="session-list" aria-label="Recorded sessions"></ol>
+      </section>
     </main>
 
     <p id="problem" class="problem" hidden></p>
-    <a id="sign-in" class="sign-in" hidden>Sign in to open a table</a>
+    <a id="sign-in" class="sign-in" hidden>Sign in to manage the tables</a>
 
-    <script type="module" src="lobby.js"></script>
+    <script type="module" src="admin.js"></script>
   </body>
 </html>

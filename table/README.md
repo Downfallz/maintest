@@ -12,9 +12,16 @@ hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md)
 
 ## Many tables, one host
 
-The host plays as many tables as an evening needs (ADR 0081). Open `/lobby?token=<the operator token the
-console prints>` to see them and to open more: choose who sits in each seat, read each seat's code to its
-player, and follow the pilot link to hand a seat over. `--lobby` starts the host with no table at all, which
+The host plays as many tables as an evening needs (ADR 0081). Open `/admin?token=<the operator token the
+console prints>` -- the admin panel -- to see them and to open more: choose who sits in each seat, read each
+seat's code to its player, and follow the pilot link to hand a seat over. The bots a seat is offered are the
+ones `learning/seatable.json` puts forward, then every weights file under `learning/weights/`, read by the
+host so a new search is offered without a page change. The panel also lists every recorded session the store
+holds, whether or not this host still has its table, deletes one or several (a table still being played is
+closed first) and exports one or several as a zip of run directories: unzipped under `runs/`, each is what
+`train-clone`, `export-csv` and the viewer read. A table page shows an **Admin** link in its header to the
+operator's own browser (the panel keeps the token, or the platform's sign-in says so) and to nobody else.
+`/lobby`, the panel's former address, redirects. `--lobby` starts the host with no table at all, which
 is how it runs in its container, and `--platform-auth` makes the platform's sign-in the operator's door
 instead of a printed token (ADR 0080). The hosted table runs exactly that, on Azure: see
 [infra/README.md](../infra/README.md). From a shell:

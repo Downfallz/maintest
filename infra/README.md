@@ -1,6 +1,6 @@
 # The hosted table
 
-The table, running on Azure Container Apps (ADR 0080), opening tables from a lobby behind the platform's
+The table, running on Azure Container Apps (ADR 0080), opening tables from an admin panel behind the platform's
 sign-in (ADR 0081), deployed from GitHub without a secret anywhere (ADR 0082). The studio is not here: it is
 on GitHub Pages (ADR 0023).
 
@@ -17,7 +17,8 @@ on GitHub Pages (ADR 0023).
 The app scales to zero a few minutes after the last request. An open page polls, so a table being played
 keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. **A match
 lives in memory**: a table nobody has open for long enough is gone when the replica goes. The recording is
-what survives, and the lobby links to it once the match is over.
+what survives: the admin panel lists every recorded session, links to it in the viewer and exports it, whether or
+not the replica that played it is still there.
 
 The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/deploy.yml` from the
 `Dockerfile` at the root and tried both ways before it is pushed (`.github/scripts/try-table-image.sh`).
@@ -35,7 +36,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
 
    It registers the four resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
-   one resource group and to assign one role in it), and the registration the lobby's sign-in uses (no client
+   one resource group and to assign one role in it), and the registration the admin panel's sign-in uses (no client
    secret). It prints seven repository variables and sets them when `gh` is signed in. `LOCATION`,
    `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
    the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
@@ -62,7 +63,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
 
 ## Playing
 
-Open `https://<address>/lobby` and sign in with the account that ran the bootstrap. Open a table, read each
+Open `https://<address>/admin` and sign in with the account that ran the bootstrap. Open a table, read each
 seat's eight-character code to its player, and they type it at `https://<address>/j/<code>`, or follow the
 seat's link. Nobody but the operator signs in. The pilot page is linked from each table.
 
@@ -74,7 +75,7 @@ comma-separated, and run the workflow again.
 - The app follows `main`: a merge that touches anything the image carries deploys itself.
 - `infra/main.bicep` is the whole of the infrastructure. The workflow compiles and lints it on every pull
   request that touches it; a warning fails the run.
-- Locally: `docker build -t downfall-table .` and `docker run --rm -p 8080:8080 downfall-table` give a lobby
+- Locally: `docker build -t downfall-table .` and `docker run --rm -p 8080:8080 downfall-table` give an admin panel
   on port 8080, with the operator's token in the log.
 
 ## Taking it down
