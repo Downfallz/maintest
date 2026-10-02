@@ -27,8 +27,9 @@ namespace DownfallArena.Application.Agents;
 /// What it does not see is hidden: an enemy's intent is not public until revealed, so an enemy slot that is
 /// still ahead plays what the scorer would play for it, and an ally that has not declared plays the same way.
 /// What has been declared or revealed is read as it is. The round is played on the plain roll, which is what
-/// makes the agent deterministic and the digest replayable; a critical that would change the answer is a
-/// chance, not a reading.
+/// makes a combat move deterministic and the digest replayable; a critical that would change the answer is a
+/// chance, not a reading. A purchase's rollouts do roll, on dice derived from one seed the agent draws when it
+/// is made, so the agent is deterministic for a seed, as the exploring agent is.
 /// </para>
 /// <para>
 /// Adversarial, it is the minimax agent: an enemy slot that is still ahead is not guessed but played as the
@@ -74,12 +75,21 @@ public sealed class LookaheadAgent(
     private readonly PurchaseReading _purchases = purchases ?? PurchaseReading.Default;
 
     /// <summary>
+    /// What every rollout's dice are derived from, drawn once from the source the agent was given: a purchase's
+    /// dice then depend on the board it is made on and nothing the agent did before, so a table rebuilt from
+    /// its decisions (ADR 0091), which does not ask the agent again for the picks it replays, buys afterwards
+    /// what the first host would have.
+    /// </summary>
+    private readonly ulong? _dice = random is null ? null : (ulong)random.NextInt32(0, int.MaxValue);
+
+    /// <summary>
     /// The purchase whose rounds end best (ADR 0094): for each creature that can buy and each package it can
     /// buy, the round's purchases are made -- the side's earlier picks, the candidate, the side's remaining
     /// picks as the agent it is built on would make them, and the enemy's as that agent would make them in the
     /// enemy's seat, since they are face down (ADR 0089) -- and the rounds after are played out, every decision
-    /// in both seats that agent's, on the same dice for every candidate. The minimax agent reads it the same
-    /// way: a worst reply to a purchase would be a worst whole match, which no budget here can search.
+    /// in both seats that agent's, on the same dice for every candidate. A lone candidate is bought unread. The
+    /// minimax agent reads it the same way: a worst reply to a purchase would be a worst whole match, which no
+    /// budget here can search.
     /// <para>
     /// Creatures that differ only by their id are one candidate, which is every creature of a side at round
     /// 1. Ties go to the first candidate, in the options' order. With no dice of its own the agent buys as the
@@ -91,25 +101,34 @@ public sealed class LookaheadAgent(
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(options);
 
-        if (random is null || options.Creatures.Count == 0)
+        if (_dice is not { } dice || options.Creatures.Count == 0)
         {
             return _oneStep.DecideEvolution(board, options);
         }
 
-        var round = board.RoundNumber ?? 1;
         var creatures = Creatures(board).OrderBy(creature => creature.Id.Value).ToList();
+        var candidates = Candidates(creatures, options).ToList();
+        if (candidates.Count == 1)
+        {
+            return EvolutionDecision.Unlock(candidates[0]);
+        }
+
+        var round = board.RoundNumber ?? 1;
         var rollout = new RoundRollout(_oneStep, _scorer, resources, rules);
         var enemy = board.Slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
         var guessed = rollout.Picks(board, creatures, round, enemy, []);
-        var dice = Enumerable.Range(0, _purchases.Rollouts).Select(_ => (ulong)random.NextInt32(0, int.MaxValue)).ToList();
+        // One seed per rollout, the same for every candidate, from the round and the picks already made.
+        var seeds = Enumerable.Range(0, _purchases.Rollouts)
+            .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)board.EvolutionChoices.Count * 1_009UL) + (ulong)index)
+            .ToList();
 
         EvolutionChoice? best = null;
         var bestValue = RolloutValue.Lowest;
-        foreach (var candidate in Candidates(creatures, options))
+        foreach (var candidate in candidates)
         {
             var own = rollout.Picks(board, creatures, round, board.Slot, [.. board.EvolutionChoices, candidate]);
             var bought = Advance.Buy(creatures, [.. own, .. guessed], resources);
-            var value = RolloutValue.Mean([.. dice.Select(seed => rollout.Play(board, bought, _purchases.Rounds, new RolloutDice(seed)))]);
+            var value = RolloutValue.Mean([.. seeds.Select(seed => rollout.Play(board, bought, _purchases.Rounds, new RolloutDice(seed)))]);
             if (value.CompareTo(bestValue) > 0)
             {
                 best = candidate;
@@ -142,9 +161,9 @@ public sealed class LookaheadAgent(
         }
     }
 
-    /// <summary>What two creatures share when one can stand for the other; a creature with a condition stands for none.</summary>
+    /// <summary>What two creatures share when one can stand for the other; a creature with a condition or a stun immunity stands for none.</summary>
     private static string Likeness(CreatureSnapshot creature) =>
-        creature.Conditions.Count > 0 || creature.IsStunned
+        creature.Conditions.Count > 0 || creature.IsStunned || creature.StunImmunityRounds > 0
             ? creature.Id.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : string.Join(
                 '|',

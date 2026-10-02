@@ -236,7 +236,6 @@ public sealed class AdvanceTests
 
         match.DomainEvents.OfType<PurchasesRevealed>().ShouldHaveSingleItem();
         ShouldMatch(match.Snapshots(), bought);
-        bought.Single(creature => creature.Id == One).AcquiredTiers.ShouldBe([Arena.GuardPack]);
     }
 
     [Fact]
@@ -258,6 +257,23 @@ public sealed class AdvanceTests
 
         // Slam requires Guard, which nobody owns.
         Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.SlamPack)], Arena.Resources));
+    }
+
+    [Fact]
+    public void Two_purchases_for_one_creature_are_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        // Guard then Slam would climb two levels in one reveal, which no match reaches (ADR 0066).
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.GuardPack), new EvolutionChoice(Arena.Knight, Arena.SlamPack)], Arena.Resources));
+    }
+
+    [Fact]
+    public void A_purchase_for_a_creature_not_on_the_board_is_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(CreatureId.From(9), Arena.GuardPack)], Arena.Resources));
     }
 
     /// <summary>
@@ -367,6 +383,7 @@ public sealed class AdvanceTests
             creature.IsStunned.ShouldBe(other.IsStunned, $"creature {creature.Id}");
             creature.StunImmunityRounds.ShouldBe(other.StunImmunityRounds, $"creature {creature.Id}");
             creature.KnownSpells.ShouldBe(other.KnownSpells, ignoreOrder: true);
+            creature.AcquiredTiers.ShouldBe(other.AcquiredTiers, ignoreOrder: true);
             creature.Conditions.ShouldBe(other.Conditions, $"creature {creature.Id}");
         }
     }

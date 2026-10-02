@@ -109,8 +109,9 @@ public static class Advance
     /// <summary>
     /// The board after an evolution's purchases are revealed: every package bought at once, both players'
     /// together, through the purchase the match makes (ADR 0089). The picks are the caller's to make legal, as
-    /// they are a player's: a purchase the creature refuses is a bug in the caller, not a rule, and throws
-    /// before anything is bought.
+    /// they are a player's, so a pick the match would have refused -- a creature not on the board, a creature
+    /// picked twice (ADR 0066), an unknown package, or a purchase the creature refuses -- is a bug in the
+    /// caller, not a rule: it throws, and the board handed in is untouched.
     /// </summary>
     public static IReadOnlyList<CreatureSnapshot> Buy(IReadOnlyList<CreatureSnapshot> board, IReadOnlyList<EvolutionChoice> choices, IGameResources resources)
     {
@@ -118,15 +119,24 @@ public static class Advance
         ArgumentNullException.ThrowIfNull(choices);
         ArgumentNullException.ThrowIfNull(resources);
 
-        var creatures = Restore(board, resources);
-        foreach (var choice in choices)
+        if (choices.GroupBy(choice => choice.Creature).FirstOrDefault(picks => picks.Count() > 1) is { } twice)
         {
-            var creature = creatures.Find(candidate => candidate.Id == choice.Creature)
-                ?? throw new InvalidOperationException($"A purchase for creature {choice.Creature}, which is not on the board.");
-            var bought = creature.BuyTier(resources.GetTier(choice.Tier));
+            throw new InvalidOperationException($"Creature {twice.Key} was picked twice in one evolution; a creature buys one package an opportunity.");
+        }
+
+        var creatures = Restore(board, resources);
+        // Every package is looked up and every creature found before anything is bought, as the match's reveal
+        // does: a pick refused halfway would leave a board no match can reach.
+        var purchases = choices.Select(choice => (
+            Creature: creatures.Find(candidate => candidate.Id == choice.Creature)
+                ?? throw new InvalidOperationException($"A purchase for creature {choice.Creature}, which is not on the board."),
+            Tier: resources.TryGetTier(choice.Tier, out var tier) ? tier : throw new InvalidOperationException($"A purchase of {choice.Tier}, which is not in the catalogue."))).ToList();
+        foreach (var (creature, tier) in purchases)
+        {
+            var bought = creature.BuyTier(tier);
             if (bought.IsFailure)
             {
-                throw new InvalidOperationException($"Creature {choice.Creature} refused {choice.Tier}: {bought.Error.Message}");
+                throw new InvalidOperationException($"Creature {creature.Id} refused {tier.Id}: {bought.Error.Message}");
             }
         }
 

@@ -301,17 +301,41 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
-    /// The two creatures of a side are alike at round 1, so the first stands for both: the purchase reads
-    /// each package once, not once per creature, and goes to the first creature offered.
+    /// What ADR 0094 is for: a package worth what it opens. Seed's own spell is a sliver of defense, so the
+    /// one-step reading buys the harder hit; over the rounds after, Seed is what lets the creature buy Bloom
+    /// at the next evolution, and the rollouts see Smite land.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void A_package_worth_what_it_opens_is_bought_for_it(int dice)
+    {
+        var (resources, board, options) = SeedOrPoke();
+
+        new HeuristicAgent(ScoringWeights.Default, resources, Rules).DecideEvolution(board, options).Choice.ShouldNotBeNull().Tier.ShouldBe(PokePack, "Seed's own spell is worth less than Poke's on the spot");
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules, random: new TestRandom((uint)dice)).DecideEvolution(board, options).Choice.ShouldNotBeNull().Tier.ShouldBe(SeedPack);
+    }
+
+    /// <summary>
+    /// The two creatures of a side are alike at round 1, so the first stands for both: each package is read
+    /// once, not once per creature, and the pick goes to the first creature offered. Once one of them is
+    /// scratched they differ, and both are read, which costs the rollouts of a second creature.
     /// </summary>
     [Fact]
     public void Creatures_alike_are_read_as_one()
     {
         var (board, options) = FirstEvolution();
+        var scratched = board with { Allies = [board.Allies[0], board.Allies[1] with { Health = Health.Of(19) }] };
+        var alike = new Counting(new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules));
+        var unlike = new Counting(new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules));
+        var reading = new PurchaseReading(1, 1);
 
-        var decision = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(5), purchases: new PurchaseReading(2, 1)).DecideEvolution(board, options);
+        var decision = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: alike, random: new TestRandom(5), purchases: reading).DecideEvolution(board, options);
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: unlike, random: new TestRandom(5), purchases: reading).DecideEvolution(scratched, options);
 
         decision.Choice.ShouldNotBeNull().Creature.ShouldBe(One);
+        unlike.Speeds.ShouldBeGreaterThan(alike.Speeds);
     }
 
     /// <summary>
@@ -325,6 +349,7 @@ public sealed class LookaheadAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(call => heuristic.DecideEvolution(call.Arg<PlayerBoardState>(), call.Arg<EvolutionOptions>()));
         inner.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
+        inner.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => call.Arg<TieOrderOptions>().AsRolled);
         inner.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
         inner.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => [call.Arg<TargetOptions>().LegalTargets.Candidates[0]]);
         var (board, options) = FirstEvolution();
@@ -333,6 +358,7 @@ public sealed class LookaheadAgentTests
 
         inner.Received().DecideEvolution(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<EvolutionOptions>());
         inner.Received().DecideSpeed(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<CreatureId>());
+        inner.Received().DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>());
         inner.Received().DecideIntent(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player1), Arg.Any<IntentOption>());
         inner.Received().DecideTargets(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<TargetOptions>());
     }
@@ -488,6 +514,66 @@ public sealed class LookaheadAgentTests
             Timeline = [Slot(Two, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
         };
     }
+
+    /// <summary>The agent it wraps, counting the speeds it is asked for: one per creature per round played.</summary>
+    private sealed class Counting(IPlayerAgent inner) : IPlayerAgent
+    {
+        public int Speeds { get; private set; }
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => inner.DecideEvolution(board, options);
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
+        {
+            Speeds++;
+            return inner.DecideSpeed(board, creature);
+        }
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => inner.DecideIntent(board, intentOption);
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+    }
+
+    private static readonly TierId SeedPack = TierId.Parse("tier:seed:v1");
+
+    private static readonly TierId BloomPack = TierId.Parse("tier:bloom:v1");
+
+    private static readonly TierId PokePack = TierId.Parse("tier:poke:v1");
+
+    /// <summary>
+    /// Three packages and nothing else: Seed teaches Husk, one point of defense on the caster; Bloom, behind
+    /// Seed, teaches Smite, twenty damage, a full health; Poke teaches four damage, one more than the Strike
+    /// every creature starts with. A started match's first Evolution, as Player1 is shown it. Played out by
+    /// Greedy on a hundred seeds with the first pick forced, opening Seed won 69 and opening Poke 38: the
+    /// one-step reading's pick is the worse one, on the match and not only on the rollouts. At fifteen damage
+    /// it is the other way round, 29 to 49, which is why Smite one-shoots here.
+    /// </summary>
+    private static (IGameResources Resources, PlayerBoardState Board, EvolutionOptions Options) SeedOrPoke()
+    {
+        var husk = Free("spell:husk:v1", "Husk", TargetOrigin.Self, DefenseBuff.Of(1, Duration.OfRounds(1)));
+        var smite = Free("spell:smite:v1", "Smite", TargetOrigin.Enemy, Damage.Of(20));
+        var poke = Free("spell:poke:v1", "Poke", TargetOrigin.Enemy, Damage.Of(4));
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures],
+            [.. TestContent.Resources.Spells, husk, smite, poke],
+            [.. TestContent.Resources.TalentTrees],
+            [
+                Tier.Create(SeedPack, "Seed", 1, [], [husk.Id], Initiative.Of(1)),
+                Tier.Create(BloomPack, "Bloom", 2, [SeedPack], [smite.Id], Initiative.Of(1)),
+                Tier.Create(PokePack, "Poke", 1, [], [poke.Id], Initiative.Of(1)),
+            ]);
+        var match = Match.Create(MatchId.New(), resources, Rules, new TestRandom(1));
+        match.Join(MatchStore.Alice, MatchStore.Roster(Rules)).IsSuccess.ShouldBeTrue();
+        match.Join(MatchStore.Bob, MatchStore.Roster(Rules)).IsSuccess.ShouldBeTrue();
+        var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+        var offers = board.Allies.Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, resources))).ToList();
+        return (resources, board, new EvolutionOptions(Rules.EvolutionPicksIn(1), offers));
+    }
+
+    private static Spell Free(string id, string name, TargetOrigin origin, Effect effect) =>
+        Spell.Create(SpellId.Parse(id), name, SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None), TargetingSpec.SingleTarget(origin), [effect]);
 
     /// <summary>A started match's first Evolution as Player1 is shown it, with the packages each of its creatures can buy.</summary>
     private static (PlayerBoardState Board, EvolutionOptions Options) FirstEvolution()

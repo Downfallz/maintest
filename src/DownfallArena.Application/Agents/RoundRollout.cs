@@ -17,15 +17,16 @@ namespace DownfallArena.Application.Agents;
 /// <para>
 /// The round is <c>Match.Step</c>'s, walked from the same public rules: the start of a round through
 /// <see cref="Advance.StartOfRound"/>, an evolution's purchases revealed together through
-/// <see cref="Advance.Buy"/>, the speeds, the turn order from <see cref="TimelineBuilder"/> with its ties as
-/// rolled, every intent declared before anything resolves, each slot in turn -- a slot the creature cannot
+/// <see cref="Advance.Buy"/>, the speeds, the turn order from <see cref="TimelineBuilder"/> and the tie
+/// orders each seat gives, every intent declared before anything resolves, each slot in turn -- a slot the creature cannot
 /// take fizzles unasked, as <see cref="ActionRules.CanTakeItsSlot"/> says -- then the cleanup and the outcome.
 /// Every decision is the agent's, asked on the board state its seat would be shown, so a rollout plays the
 /// way that agent plays the match. A sub-phase added to the round has to be added here too.
 /// </para>
 /// <para>
 /// The dice are rolled from the source handed in, never forced plain: a package is often mostly its
-/// criticals, and a plain rollout would price them at their floor.
+/// criticals, and a plain rollout would price them at their floor. They are the rules' dice only: an agent
+/// that decides at random draws from its own source, as it does in the match.
 /// </para>
 /// </summary>
 public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGameResources resources, RuleSet rules)
@@ -132,7 +133,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
             own.Add(new SpeedChoice(creature.Id, player.DecideSpeed(view, creature.Id)));
         }
 
-        var timeline = TimelineBuilder.Build(board, [.. speeds[PlayerSlot.Player1], .. speeds[PlayerSlot.Player2]], random);
+        var timeline = Ordered(origin, board, round, TimelineBuilder.Build(board, [.. speeds[PlayerSlot.Player1], .. speeds[PlayerSlot.Player2]], random), speeds);
         var slots = timeline.Slots;
         var intents = new Dictionary<PlayerSlot, List<CombatIntent>> { [PlayerSlot.Player1] = [], [PlayerSlot.Player2] = [] };
         foreach (var slot in slots)
@@ -174,6 +175,27 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         }
 
         return (board, null);
+    }
+
+    /// <summary>
+    /// The timeline after the TieOrder sub-phase: each seat with a tie among its own creatures is asked how to
+    /// seat them, as the match asks it, and the orders given are applied together (ADR 0063).
+    /// </summary>
+    private CombatTimeline Ordered(PlayerBoardState origin, IReadOnlyList<CreatureSnapshot> board, int round, CombatTimeline timeline, Dictionary<PlayerSlot, List<SpeedChoice>> speeds)
+    {
+        var orders = new Dictionary<PlayerSlot, IReadOnlyList<CreatureId>>();
+        foreach (var seat in speeds.Keys.Where(seat => TieOrderRules.HasTieOrderToGive(timeline, seat)))
+        {
+            var view = Planned(origin, board, seat, round, RoundSubPhase.TieOrder, timeline, speeds[seat], []);
+            var order = player.DecideTieOrder(view, new TieOrderOptions(TieOrderRules.TiesOf(timeline, seat)));
+            // An order the match would refuse is not one a rollout can play; the roll stands in for it.
+            if (TieOrderRules.ValidateOrder(seat, order, timeline).IsSuccess)
+            {
+                orders[seat] = order;
+            }
+        }
+
+        return orders.Count == 0 ? timeline : TieOrderRules.Apply(timeline, orders);
     }
 
     /// <summary>The board state a seat is shown in a sub-phase of a round on a hypothetical board, as the match's projection builds it.</summary>
