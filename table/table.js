@@ -40,7 +40,6 @@ const OrderPause = 9000;
 const QuietKey = 'downfall.table.quiet';
 
 boot(practice);
-void showAdminLink();
 
 // The way back to the admin panel, for the operator only: the host is asked whether the token the panel kept
 // in this browser, or the platform's sign-in cookie, is the operator's. A player's browser has neither, and
@@ -65,6 +64,7 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
 }
 
 function boot(practice) {
+  void showAdminLink();
   const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
