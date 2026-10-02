@@ -253,7 +253,7 @@
       ],
       "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks but for Momentum's 2.6, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
       "knobs": [
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 2, "step": 1 }
       ]

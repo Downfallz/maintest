@@ -20,9 +20,10 @@ first.
     0.88 to 0.84. That was most of the gain.
   - Healing Screech went from 236 casts to 52, which pushed healing onto Rejuvenate and Restorative Gush.
   - Crushing Stomp moved nothing it is read by (33 to 32 casts). It rode in a winning multi-knob proposal.
-- **What the owner kept.** Extort 2 and Noxious Cure 0.33.
+- **What the owner kept.** Noxious Cure 0.33 only.
   - Crushing Stomp stays at 4, and its cost knob now stops at 4.
   - Heavy Strike stays at 3, and its damage knob now stops at 3.
+  - Extort stays at 3, and its damage knob now starts at 3.
   - Healing Screech keeps 3 a round, and its regeneration knob now starts at 3.
   - Shield Bash keeps 3 rounds. No condition may last longer than 3 rounds, so both duration knobs that
     reached 4 now stop at 3, and `check-knobs` refuses a knob past it.
@@ -31,19 +32,19 @@ first.
   action. No immunity follows, so it can happen every round. The agents priced the drain at 0.3 a point,
   0.9 against a stun's 3.0. ADR 0091 now prices a drain that leaves an enemy still to act unable to pay for
   any spell that costs energy as one stun round. The owner raised the spell's cost to 3 and kept the rule.
-- **Measured** on content `4b245ae6` with the new reading, exploring run, same seeds as before (the
+- **Measured** on content `08d030f4` with the new reading, exploring run, same seeds as before (the
   "before" column is ADR 0090's):
 
   | Objective | Before | After |
   | --- | --- | --- |
   | Benchmark seeds | 6.63 | 6.88 |
-  | Confirmation seeds | 3.84 | 3.43 |
-  | Hold-out seeds | 4.47 | 4.20 |
+  | Confirmation seeds | 3.84 | 3.34 |
+  | Hold-out seeds | 4.47 | 3.98 |
 
-  Without Heavy Strike 4 most of the pass's gain is gone, as expected. `tierUsageShare` (0.87 to 0.88) is
+  Without Heavy Strike 4 most of the pass's gain is gone, as expected. `tierUsageShare` (0.86 to 0.88) is
   still the term to move. On the hold-out Soul Devourer was cast 21 times on 13 sides, against 28 on 15:
   dearer, and cast for the lock.
-- **The benchmark digest is regenerated** for content `4b245ae6`.
+- **The benchmark digest is regenerated** for content `08d030f4`.
 
 ## 2026-10-02. `tierDamageSpread` leaves the objective (ADR 0090)
 
