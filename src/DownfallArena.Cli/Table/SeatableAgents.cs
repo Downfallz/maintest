@@ -71,7 +71,7 @@ internal static class SeatableAgents
         try
         {
             var read = JsonSerializer.Deserialize<FeaturedDocument>(File.ReadAllText(path), Options);
-            return [.. (read?.Featured ?? [])
+            return [.. (read?.Entries ?? [])
                 .Where(entry => !string.IsNullOrWhiteSpace(entry.Agent))
                 .Select(entry => new SeatableAgent(entry.Agent!.Trim(), string.IsNullOrWhiteSpace(entry.Label) ? entry.Agent.Trim() : entry.Label.Trim(), Featured: true))];
         }
@@ -83,7 +83,7 @@ internal static class SeatableAgents
         }
     }
 
-    private sealed record FeaturedDocument([property: JsonPropertyName("featured")] IReadOnlyList<FeaturedEntry>? Featured);
+    private sealed record FeaturedDocument([property: JsonPropertyName("featured")] IReadOnlyList<FeaturedEntry>? Entries);
 
     private sealed record FeaturedEntry(string? Agent, string? Label);
 }

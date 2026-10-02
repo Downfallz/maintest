@@ -161,7 +161,7 @@ export function sessionRows(answer) {
     id: session.id,
     when: session.createdAt ? new Date(session.createdAt).toLocaleString() : 'unknown date',
     players: session.player1 && session.player2 ? `${session.player1} vs ${session.player2}` : 'no manifest',
-    state: session.live ? 'live on this host' : session.over ? 'finished' : 'not finished',
+    state: sessionState(session),
     steps: session.steps ?? 0,
     live: session.live === true,
     session: session.session,
@@ -169,6 +169,11 @@ export function sessionRows(answer) {
     export: session.live === true ? null : session.export,
     location: session.location ?? null,
   }));
+}
+
+function sessionState(session) {
+  if (session.live) return 'live on this host';
+  return session.over ? 'finished' : 'not finished';
 }
 
 // What the page says after the host answered an opening. A refusal is the host telling the operator something
