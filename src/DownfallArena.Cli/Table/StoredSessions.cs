@@ -102,7 +102,7 @@ internal sealed class StoredSessions(IArtifactStore store)
                 foreach (var (name, text) in artifacts)
                 {
                     var entry = zip.CreateEntry($"{id}/{name}", CompressionLevel.Optimal);
-                    await using var content = entry.Open();
+                    await using var content = await entry.OpenAsync(cancellationToken);
                     await content.WriteAsync(Encoding.UTF8.GetBytes(text), cancellationToken);
                 }
             }
