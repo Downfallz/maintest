@@ -44,7 +44,14 @@ first.
   Without Heavy Strike 4 most of the pass's gain is gone, as expected. `tierUsageShare` (0.86 to 0.88) is
   still the term to move. On the hold-out Soul Devourer was cast 21 times on 13 sides, against 28 on 15:
   dearer, and cast for the lock.
-- **The benchmark digest is regenerated** for content `08d030f4`.
+- **The owner then set the package initiative bonuses by hand.** No pass has measured them yet:
+  - level 2: Berserker 3, Elementalist 3, Marauder 2, Plague Doctor 2, Shaman 2 (from 0), Ironbound 1,
+    Necromancer 1;
+  - level 3: Ravager 3, Soulreaver 3 (from 5), Warmonger 2, Spiritcaller 2, Dreadnought 1.
+
+  The Scoundrel packages' shared keep now says what stays true: no package outside the line buys more
+  initiative than the line's fastest at its level.
+- **The benchmark digest is regenerated** for the content these leave.
 
 ## 2026-10-02. `tierDamageSpread` leaves the objective (ADR 0090)
 

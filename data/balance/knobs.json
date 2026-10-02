@@ -909,7 +909,7 @@
       "intent": "The Scoundrel's opener, and the fastest of the three, alone again since the owner set Occultist back to 2 (journal, 2026-10-01): the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -918,7 +918,7 @@
       "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Shadowstep, a hit that hastes its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -992,7 +992,7 @@
       "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -1001,7 +1001,7 @@
       "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -1042,13 +1042,13 @@
       "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 5, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
     "tier:spiritcaller": {
       "name": "Spiritcaller",
-      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
