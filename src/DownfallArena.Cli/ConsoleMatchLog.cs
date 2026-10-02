@@ -26,9 +26,9 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
         {
             MatchStarted started => $"Match started (content {started.ContentHash[..Math.Min(8, started.ContentHash.Length)]}).",
             RoundStarted round => $"--- Round {round.RoundId.Number} ---",
-            // A pick and a pass are face down until the reveal (ADR 0089): in `human` mode this log is read by
-            // a seat, so it names no package and no pass before PurchasesRevealed does.
-            EvolutionChoiceSubmitted evolution => $"{evolution.Slot} picks, face down.",
+            // A pick and a pass are face down until the reveal (ADR 0089). In `human` mode this log is read by a
+            // seat, and a line for a pick but none for a pass would tell the two apart, so neither is written:
+            // PurchasesRevealed is the first the log says of an Evolution sub-phase, as with intents and speeds.
             PurchasesRevealed revealed => "Purchases revealed: " + string.Join(", ", revealed.Choices.Select(choice => $"creature {choice.Creature} buys {choice.Tier.Value}")) + ".",
             TimelineBuilt timeline => "Timeline: " + string.Join(", ", timeline.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
             TiesOrdered ordered => "Ties ordered: " + string.Join(", ", ordered.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
