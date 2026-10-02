@@ -24,9 +24,11 @@ namespace DownfallArena.Cli.Table;
 internal sealed class TableSession : IDisposable
 {
     private readonly Action _forget;
+    private readonly TaskCompletionSource _begin;
 
-    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget)
+    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
     {
+        _begin = begin;
         MatchId = matchId;
         Player1 = player1;
         Player2 = player2;
@@ -74,6 +76,16 @@ internal sealed class TableSession : IDisposable
     public bool IsOver => Outcome.IsCompleted;
 
     /// <summary>
+    /// Whether the driver is playing the match: the first question has been asked, or is about to be. A table
+    /// opened for people waits here until every one of them has reached their seat (ADR 0092); before that the
+    /// match exists and its boards read, but nobody is asked anything and no thread is held.
+    /// </summary>
+    public bool HasBegun => _begin.Task.IsCompleted;
+
+    /// <summary>Starts the driver, once. Idempotent: whoever notices the table is full says so, and saying it twice is nothing.</summary>
+    public void Begin() => _begin.TrySetResult();
+
+    /// <summary>
     /// Creates the match and starts playing the seats it is handed. They arrive already occupied, so neither
     /// can be asked a question it has nobody to answer with.
     /// </summary>
@@ -92,6 +104,7 @@ internal sealed class TableSession : IDisposable
         SeatAgent player2,
         Func<MatchId, SeatAgent, IPlayerAgent>? wrap = null,
         MatchId? matchIdWanted = null,
+        bool waitToBegin = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -117,16 +130,40 @@ internal sealed class TableSession : IDisposable
         var concede = gate.Guarding(services.GetRequiredService<ICommandHandler<Concede, Result>>());
         var played1 = wrap?.Invoke(matchId, player1) ?? player1;
         var played2 = wrap?.Invoke(matchId, player2) ?? player2;
-        var outcome = Task.Run(() => driver.PlayAsync(matchId, played1, played2, cancellationToken), cancellationToken);
+
+        // The driver starts when the table is told to begin, which for a table of bots is now. Cancelling the
+        // table while it waits ends the wait the way it ends a seat: without an outcome, which is what an
+        // abandoned table is.
+        var begin = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!waitToBegin)
+        {
+            begin.TrySetResult();
+        }
+
+        var outcome = Task.Run(
+            async () =>
+            {
+                await begin.Task.WaitAsync(cancellationToken);
+                return await driver.PlayAsync(matchId, played1, played2, cancellationToken);
+            },
+            cancellationToken);
 
         // The recorder is optional: only a host that shows a feed registers one.
         var repository = services.GetRequiredService<IMatchRepository>();
         var recorder = services.GetService<MatchTraceRecorder>();
-        return new TableSession(matchId, player1, player2, new TableHandlers(queries, concede), gate, outcome, () =>
-        {
-            recorder?.Forget(matchId);
-            repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();
-        });
+        return new TableSession(
+            matchId,
+            player1,
+            player2,
+            new TableHandlers(queries, concede),
+            gate,
+            outcome,
+            () =>
+            {
+                recorder?.Forget(matchId);
+                repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();
+            },
+            begin);
     }
 
     /// <summary>The seat of a slot, so a caller says which player rather than which field.</summary>

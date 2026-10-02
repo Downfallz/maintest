@@ -91,6 +91,9 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Says the recording is done with, written or not: the closing has run to its end.</summary>
     public void MarkClosed() => Volatile.Write(ref _closed, 1);
 
+    /// <summary>The record being marked closed, once the table is let go of unfinished; complete otherwise.</summary>
+    public Task Closing { get; private set; } = Task.CompletedTask;
+
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
     /// <summary>The round the match has reached, off seat 1's board, or none before the first.</summary>
@@ -120,13 +123,17 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
+        // Read before the cancellation, which can end the match synchronously: a driver still waiting for the
+        // table to begin is let go of inside Cancel itself, and the table would then read as over by the time
+        // it was asked whether it was.
+        var unfinished = !IsOver;
         _stopping.Cancel();
 
         // A table let go of before it finished is closed for good: a host that comes after this one must not
         // rebuild what the operator closed, or what nobody came back to.
-        if (Run is { } run && !IsOver)
+        if (Run is { } run && unfinished)
         {
-            _ = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
         }
 
         Session.Outcome.ContinueWith(

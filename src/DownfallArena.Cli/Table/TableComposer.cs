@@ -157,7 +157,11 @@ internal sealed class TableComposer
                     && (slot == PlayerSlot.Player1 ? seat1.Agent : seat2.Agent).SwapAt(next, round).Taken);
             }
 
-            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, stopping.Token);
+            // A table with a person in it waits for every person to reach their seat before the first question
+            // (ADR 0092). A rebuilt table that had begun -- it has decisions to replay -- begins at once; one
+            // that was still waiting waits again.
+            var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || rebuilding.Value.Journal.Count == 0);
+            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,

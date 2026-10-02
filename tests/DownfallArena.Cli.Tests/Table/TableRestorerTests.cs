@@ -89,7 +89,8 @@ public sealed class TableRestorerTests : IDisposable
         await Finished(finished);
         var closed = await Opened(HostedTables.OnePerson);
         _earlier.Remove(closed.Id).ShouldBeTrue();
-        await Marked(closed.Id, TableRecord.Closed);
+        await closed.Closing.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        (await _before.Stored!.RecordAsync(closed.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Closed);
         await new FileArtifactStore(_runs).Writer("20200101-000000-aaaaaaaa").WriteJsonAsync("manifest.json", new { Matches = 0 }, TestContext.Current.CancellationToken);
         (await _before.Stored!.RecordAsync(finished.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
 
@@ -157,6 +158,13 @@ public sealed class TableRestorerTests : IDisposable
         var table = await _before.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);
         _earlier.TryAdd(table).ShouldBeTrue();
         await table.RecordAsync(_earlier.Codes, TestContext.Current.CancellationToken);
+
+        // Every person reaches their seat, which is what begins the match (ADR 0092).
+        foreach (var seat in table.Seats.Where(seat => seat.Person is not null))
+        {
+            (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+        }
+
         return table;
     }
 
@@ -224,21 +232,6 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         table.IsFinished.ShouldBeTrue();
-    }
-
-    private async Task Marked(string id, string status)
-    {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if ((await _before.Stored!.RecordAsync(id, TestContext.Current.CancellationToken))?.Status == status)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"Session {id} was never marked {status}.");
     }
 
     private sealed class Clock : TimeProvider

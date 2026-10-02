@@ -160,7 +160,7 @@ Plain HTTP, JSON, request and response. Polling, not push.
 | `GET` | `/`, `/table.css`, `/table.js`, ... | The page, from a fixed route table. |
 | `GET` | `/api/session` | The session stamp — engine version, content hash, rule set, seed, session id — the two seat names, and **which seat has a pending decision and of what kind**. No board, no options. |
 | `GET` | `/api/catalogue` | The card faces and the enabled Talent tree (1.3). Seat-independent, read-only, cacheable. |
-| `GET` | `/api/seat/{slot}?since=N` | That seat's `PlayerBoardState`, its `PlayerOptions`, and the events it may see since sequence `N`. |
+| `GET` | `/api/seat/{slot}?since=N` | That seat's `PlayerBoardState`, its `PlayerOptions`, and the events it may see since sequence `N`. Before the match begins, `waiting` names the seats nobody has reached yet, with their join codes and links (ADR 0092); null afterwards. The request is also how the seat's person reaches it: the match begins when every person has. |
 | `POST` | `/api/seat/{slot}/decision` | One decision. `200` with the new seat payload, or `409` with the error code. |
 | `POST` | `/api/notes` | One playtest note. |
 | `GET` | `/session/{id}` | The finished session in the viewer, rendered by `ViewerPage.Render` exactly as the studio serves `/runs/<id>` (`StudioApi.cs:112-126`). A session this host no longer has a table for is read from the store, partial trace included: the replica that played it is gone and the run is what survives. |

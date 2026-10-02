@@ -11,6 +11,7 @@ import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { healthChange, playbackBoard, playbackChanges } from './replay.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
+import { waitingRoom } from './waiting.js';
 import { practice, storage } from './startup.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -1689,6 +1690,28 @@ function recapRow(action) {
   return row;
 }
 
+// One seat still to be reached: its name, its code to read out, and its link to send.
+function waitingSeat(seat) {
+  const box = document.createElement('div');
+  box.className = 'waiting-seat';
+  const name = document.createElement('strong');
+  name.textContent = seat.name;
+  box.append(name);
+  if (seat.code) {
+    const code = document.createElement('span');
+    code.className = 'waiting-code';
+    code.textContent = seat.code;
+    box.append(document.createTextNode(' · code '), code);
+  }
+  if (seat.link) {
+    const link = document.createElement('a');
+    link.href = seat.link;
+    link.textContent = 'join link';
+    box.append(document.createTextNode(' · '), link);
+  }
+  return box;
+}
+
 function renderDecision(state, current) {
   const view = current.view;
   element('planning').dataset.kind = view.waitingFor ?? 'Waiting';
@@ -1719,6 +1742,18 @@ function renderDecision(state, current) {
 
   if (view.playedByBot) {
     asking.textContent = 'A bot plays this seat.';
+    choices.replaceChildren();
+    return;
+  }
+
+  // Before the match begins the seat is a room, not a board: who is still to come, and the code that brings
+  // them (ADR 0092). Drawn in the decision sheet, which is where this seat's attention already is.
+  const room = waitingRoom(view, globalThis.location?.origin ?? '');
+  element('waiting-room').hidden = !room;
+  if (room) {
+    asking.textContent = room.line;
+    element('waiting-detail').textContent = room.detail;
+    element('waiting-seats').replaceChildren(...room.seats.map(seat => waitingSeat(seat)));
     choices.replaceChildren();
     return;
   }

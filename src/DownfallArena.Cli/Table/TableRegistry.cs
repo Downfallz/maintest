@@ -136,6 +136,7 @@ internal sealed class TableRegistry : IDisposable
         }
 
         _byToken[table.Pilot.Token] = table;
+        table.Api.CodeOf = Codes.Of;
         foreach (var seat in table.Seats)
         {
             _byToken[seat.Token] = table;

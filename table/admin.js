@@ -149,6 +149,7 @@ export function tableRows(list) {
 function stateOf(table) {
   if (table.finished) return 'Finished';
   if (table.over) return 'Over, being written';
+  if (table.waiting) return 'Waiting for the players';
   if (Number.isInteger(table.round)) return `Round ${table.round}`;
   return 'Playing';
 }

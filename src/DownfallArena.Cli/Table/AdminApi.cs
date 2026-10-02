@@ -302,6 +302,9 @@ internal sealed class AdminApi
             over = table.IsOver,
             finished = table.IsFinished,
 
+            // Waiting for its people to reach their seats (ADR 0092): no question has been asked yet.
+            waiting = !table.Session.HasBegun && !table.IsOver,
+
             // The round, or null while the match is busy: the page says "playing" of that, never "waiting".
             round = table.Session.IsOver ? null : await RoundNowAsync(table),
             location = table.Run?.Location,
