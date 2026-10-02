@@ -26,7 +26,7 @@ internal sealed class TableSession : IDisposable
     private readonly Action _forget;
     private readonly TaskCompletionSource _begin;
 
-    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
+    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
     {
         _begin = begin;
         MatchId = matchId;
@@ -34,7 +34,7 @@ internal sealed class TableSession : IDisposable
         Player2 = player2;
         Queries = handlers.Queries;
         Concede = handlers.Concede;
-        Gate = gate;
+        Gate = handlers.Gate;
         Outcome = outcome;
         _forget = forget;
     }
@@ -103,8 +103,7 @@ internal sealed class TableSession : IDisposable
         SeatAgent player1,
         SeatAgent player2,
         Func<MatchId, SeatAgent, IPlayerAgent>? wrap = null,
-        MatchId? matchIdWanted = null,
-        bool waitToBegin = false,
+        TableStart? start = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -114,7 +113,7 @@ internal sealed class TableSession : IDisposable
         List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)];
 
         var matchId = Value(await services.GetRequiredService<ICommandHandler<CreateMatch, Result<MatchId>>>()
-            .HandleAsync(new CreateMatch(rules, seed, matchIdWanted), cancellationToken));
+            .HandleAsync(new CreateMatch(rules, seed, start?.MatchIdWanted), cancellationToken));
         var join = services.GetRequiredService<ICommandHandler<JoinMatch, Result<PlayerSlot>>>();
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
@@ -135,7 +134,7 @@ internal sealed class TableSession : IDisposable
         // table while it waits ends the wait the way it ends a seat: without an outcome, which is what an
         // abandoned table is.
         var begin = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        if (!waitToBegin)
+        if (start is not { WaitToBegin: true })
         {
             begin.TrySetResult();
         }
@@ -155,8 +154,7 @@ internal sealed class TableSession : IDisposable
             matchId,
             player1,
             player2,
-            new TableHandlers(queries, concede),
-            gate,
+            new TableHandlers(queries, concede, gate),
             outcome,
             () =>
             {
