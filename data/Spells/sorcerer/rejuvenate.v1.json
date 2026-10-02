@@ -4,7 +4,7 @@
   "spellType": "Defensive",
   "creatureClass": "Sorcerer",
   "energyCost": 2,
-  "criticalChance": 0.22,
+  "criticalChance": 0.27,
   "targeting": {
     "origin": "Ally",
     "scope": "SingleTarget",

@@ -17,7 +17,7 @@
     },
     {
       "kind": "Regeneration",
-      "amountPerRound": 3,
+      "amountPerRound": 2,
       "durationRounds": 2
     }
   ],
