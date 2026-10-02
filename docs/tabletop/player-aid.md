@@ -2,9 +2,9 @@
 
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
 the same engine: Tiers bought on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
-ADR 0066), ties settled by a Roll-off on a d20 (ADR 0063), a Round of Stun immunity after every Stun
-(ADR 0072), and one Activation a slot, each action resolving the moment its targets are named (ADR 0083). The
-section number is beside each rule. Fill the setup table's values in before the first Match.
+ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
+(ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), and one Activation a slot, each action
+resolving the moment its targets are named (ADR 0083). The section number is beside each rule. Fill the setup table's values in before the first Match.
 
 ---
 
@@ -14,7 +14,7 @@ section number is beside each rule. Fill the setup table's values in before the 
 | --- | --- | --- | --- | --- |
 | 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy. | 5.1 |
 | 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
-| 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Players alternate, Player 1 first, each pick buying one Tier, openly. **One Tier a Creature**: your picks go to different Creatures. See below. | 5.3 |
+| 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Tier, **face down**, both Players at once. **One Tier a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** buys them all. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
 | 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
@@ -29,24 +29,26 @@ section number is beside each rule. Fill the setup table's values in before the 
 **When.** A Round whose space on the Round track carries a pick mark (reference: every odd Round). Any other
 Round: skip step 3, nobody passes.
 
-**Pick tokens.** On a pick mark, put all your pick tokens on your mat. Each purchase moves one onto the board
-of the Creature that bought. When the step ends, every pick token comes off the mats and the boards: picks
-never carry over.
+**Pick.** On a pick mark, put all your pick tokens on your mat. A pick lays the Tier's package card **face
+down** with the Creature and moves a pick token onto its board. Nothing else moves. When the step ends, every
+pick token comes off the mats and the boards: picks never carry over.
 
 **Who.** A living Creature **without a pick token on its board**. A Creature buys **at most one Tier an
 opportunity**, so no Creature climbs two levels in one Round. Down to one living Creature, you have one pick.
 
 **What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, and **owns every
-Tier it requires**. Nothing else decides which Tier.
+Tier it requires**. A face-down card is not owned yet. Nothing else decides which Tier.
 
-**How**, one pick:
+Give up the rest with an **Evolution pass**, unannounced. The step ends when neither Player has a pick they
+could use.
 
-1. **Package card** face up with that Creature.
+**Purchase reveal**: turn every face-down package card over together, then buy each, Player 1's then Player
+2's:
+
+1. **Package card** stays face up with that Creature.
 2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows.
 3. **Base initiative** + the Tier's initiative bonus. Once, for the rest of the Match. The only thing that
    moves it.
-
-Give up the rest with an **Evolution pass**. The step ends when neither Player has a pick they could use.
 
 ---
 

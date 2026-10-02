@@ -131,21 +131,12 @@ public sealed class Match : AggregateRoot<MatchId>
             return validated;
         }
 
-        // Resolved before the round records the pick: an unknown id would throw, and half a mutation is worse
-        // than a refusal. Unreachable while ValidateChoice only passes packages the catalogue holds.
-        var tier = _resources.GetTier(choice.Tier);
+        // The pick is face down until the sub-phase ends (ADR 0089): the round records it and nothing on the
+        // board changes, so the other player chooses without seeing it. RevealPurchases buys it.
         var accepted = round.SubmitEvolutionChoice(slot, choice);
         if (accepted.IsFailure)
         {
             return accepted;
-        }
-
-        // The whole package or none of it: BuyTier checks everything before it changes anything, so a refusal
-        // here would mean the validation and the entity disagree, which is a bug rather than a rule.
-        var bought = CreatureOf(choice.Creature).BuyTier(tier);
-        if (bought.IsFailure)
-        {
-            throw new InvalidOperationException($"Creature {choice.Creature} refused a validated purchase: {bought.Error.Message}");
         }
 
         RaiseDomainEvent(new EvolutionChoiceSubmitted(Id, round.Id, slot, choice));
@@ -376,7 +367,7 @@ public sealed class Match : AggregateRoot<MatchId>
         {
             RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, RuleSet)),
             RoundSubPhase.OngoingEffects => ApplyOngoingEffects(round, creatures),
-            RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
+            RoundSubPhase.Evolution => EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance && Automatic(() => RevealPurchases(round)),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
             RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
@@ -498,6 +489,33 @@ public sealed class Match : AggregateRoot<MatchId>
         var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices, _random);
         round.SetTimeline(timeline);
         RaiseDomainEvent(new TimelineBuilt(Id, round.Id, timeline));
+    }
+
+    /// <summary>
+    /// Buys every package picked this round, both players' at once, once neither has a pick left (ADR 0089).
+    /// The picks cannot depend on each other: each creature takes at most one package an opportunity (ADR 0066)
+    /// and a creature's prerequisites are its own, so the order they are bought in changes nothing.
+    /// </summary>
+    private void RevealPurchases(Round round)
+    {
+        List<EvolutionChoice> choices = [.. round.EvolutionChoicesOf(PlayerSlot.Player1), .. round.EvolutionChoicesOf(PlayerSlot.Player2)];
+        if (choices.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var choice in choices)
+        {
+            // The whole package or none of it: BuyTier checks everything before it changes anything, so a
+            // refusal here would mean the validation and the entity disagree, which is a bug rather than a rule.
+            var bought = CreatureOf(choice.Creature).BuyTier(_resources.GetTier(choice.Tier));
+            if (bought.IsFailure)
+            {
+                throw new InvalidOperationException($"Creature {choice.Creature} refused a validated purchase: {bought.Error.Message}");
+            }
+        }
+
+        RaiseDomainEvent(new PurchasesRevealed(Id, round.Id, choices));
     }
 
     private void ApplyTieOrders(Round round)

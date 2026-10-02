@@ -2,16 +2,18 @@
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
-2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28). Phase 4 of
-[plan.md](plan.md).
+2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
+picks face down 2026-10-02). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
 > buys a whole Tier, the picks arrive on the Rule set's schedule, and the Tier pays one initiative bonus
 > ([ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md),
 > [ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). A Creature buys at most one Tier an
-> opportunity, so the picks go to different Creatures (ADR 0066). No Spell carries initiative of its own
-> ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
+> opportunity, so the picks go to different Creatures (ADR 0066). The picks are face down and bought together
+> at the Purchase reveal
+> ([ADR 0089](../adr/0089-pick-packages-face-down-and-reveal-them-together.md)). No Spell carries initiative
+> of its own ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
 > nothing at the table. A tie on the Combat timeline is settled by a Roll-off on a d20 and then by its owners'
 > Tie orders (ADR 0063). A Stun always ends, and the Creature it ends on is immune to Stun for the next Round
 > ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). Combat walks the timeline
@@ -57,9 +59,9 @@ owner chooses its targets on the board as it stands, and it resolves at once, be
 
 Three things make the game:
 
-- **You commit before you see.** Your Speed choices, your Tie orders and your Intents are made face down, at
-  the same time as your opponent's. You choose targets later, when your Creature's turn comes, knowing
-  everything that has already happened this Round.
+- **You commit before you see.** Your Evolution picks, your Speed choices, your Tie orders and your Intents
+  are made face down, at the same time as your opponent's. You choose targets later, when your Creature's
+  turn comes, knowing everything that has already happened this Round.
 - **You grow in packages.** Evolution buys a Tier: a named package of Spells, every one of them at once. The
   Tier also raises that Creature's Base initiative by its bonus, for the rest of the Match. Buying is how a
   Creature gets stronger, and it is also how it gets faster.
@@ -90,7 +92,7 @@ The four pieces this book names constantly, and where they are specified:
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
 stunned Creature cannot be given a Speed card. A Creature board turned to its `Defeated` back has no slots at
 all, so a dead Creature cannot be given Energy, a Condition or an Intent. A pick token lies on the board of a
-Creature that bought a Tier this Round, so it cannot be picked twice ([5.3](#53-evolution)).
+Creature picked for this Round, so it cannot be picked twice ([5.3](#53-evolution)).
 
 There are no target markers. A cast resolves the moment its targets are named
 ([5.7](#57-activation)), so nothing on the table ever points at a Creature for longer than it takes to resolve.
@@ -188,8 +190,8 @@ START OF ROUND
   2  Ongoing effects ...... Energy regeneration, then Regeneration, then Bleed
 
 PLANNING
-  3  Evolution ............ each Player buys Tiers, up to their picks, one a Creature; only on a Round
-                            with a pick mark
+  3  Evolution ............ each Player picks Tiers face down, up to their picks, one a Creature; the
+                            Purchase reveal buys them all at once; only on a Round with a pick mark
   4  Speed ................ Quick or Standard, face down, for every living, unstunned Creature
   5  Turn order resolution  build the Combat timeline: Quick, then Standard; a Roll-off for each tie
                             between the sides
@@ -213,8 +215,8 @@ Four things about this shape are worth holding in your head from the start.
   Player who holds two Places in one tie. Step 3 asks nothing in a Round that offers no opportunity.
 - **The board changes between two slots.** Each action resolves before the next card is flipped, so you
   always choose targets on the board as it is. A Creature killed before its turn never acts.
-- **Of the decisions, only Evolution is open.** A package card goes face up the moment it is bought. Speed,
-  Tie order and Intent are face down, and each is turned over by both Players together.
+- **Every decision before Activation is face down.** Evolution, Speed, Tie order and Intent are each turned
+  over by both Players together.
 - **The Match can end in the middle of a Round.** The moment a Team has no living Creature, on an action or
   on a Bleed at the start of a Round, the Match is over. Nothing after it is played.
 
@@ -269,25 +271,25 @@ there, before Evolution ([7.2](#72-the-end-of-a-match)). Both Teams wiped by the
 
 **Trigger.** Ongoing effects are done, in a Round that offers an Evolution opportunity: the Round marker
 stands on a pick mark.
-**Actor.** Both Players, openly, **one pick each in turn**: Player 1 takes a pick, then Player 2, then Player 1
-again, until both have used or given up their picks.
-**Result.** Each Player may buy Tiers, up to the setup table's Evolution picks per opportunity. One pick buys
+**Actor.** Both Players, at the same time, **face down**, the way Speed cards are laid.
+**Result.** Each Player may pick Tiers, up to the setup table's Evolution picks per opportunity. One pick is
 one Tier for one of that Player's **living** Creatures, and **a Creature buys at most one Tier an
-opportunity**.
+opportunity**. No pick is bought until the Purchase reveal, when every pick of both Players is bought at once.
 
 **Which Rounds.** A Round offers an opportunity when the Round marker stands on a space with a pick mark. The
 marks are the setup table's schedule printed on the track: the first evolution Round, and every whole number
 of intervals after it. In any other Round nobody has a pick, so nobody is asked and nobody passes: go
 straight to Speed. With the reference values, Rounds 1, 3, 5 and every odd Round after carry a mark.
 
-**One Tier a Creature.** A pick must name a Creature that has not bought a Tier this Round. So your picks go
+**One Tier a Creature.** A pick must name a Creature that has not been picked for this Round. So your picks go
 to different Creatures, and no Creature climbs two levels in one Round: the Tier above the one it bought waits
 for the next opportunity. A Player down to one living Creature has one pick.
 
-**Pick tokens.** When the Sub-phase opens on a pick mark, each Player puts all their pick tokens on their mat.
-A purchase moves one from the mat onto the board of the Creature that bought. A Creature board holding a pick
-token cannot be picked again this Round. When the Sub-phase ends, every pick token comes off the mats and the
-boards, so each opportunity starts with a full set and no pick carries over to the next.
+**A pick.** When the Sub-phase opens on a pick mark, each Player puts all their pick tokens on their mat. To
+pick, lay a copy of the Tier's package card **face down** with the Creature, and move a pick token from your
+mat onto that Creature's board. A pick changes nothing else: no Spell card, no rail. A Creature board holding a
+pick token cannot be picked again this Round. When the Sub-phase ends, every pick token comes off the mats and
+the boards, so each opportunity starts with a full set and no pick carries over to the next.
 
 **What a Tier is.** A Tier is a named package of Spells. Its package card shows its name, its level, the Tiers
 it requires, the Spells it teaches and its initiative bonus. A level 1 Tier requires nothing; every other Tier
@@ -295,58 +297,59 @@ requires a Tier exactly one level below it.
 
 **Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it and
 owns every Tier it requires. That is the only rule for which Tier. Any Creature may buy any Tier that requires
-nothing, whatever it already owns, and two Creatures may each buy the same Tier.
+nothing, whatever it already owns, and two Creatures may each buy the same Tier. Read it off the board as the
+Sub-phase opened: a face-down card is not owned yet.
 
-A purchase is three actions, in this order:
-
-1. **Package card.** Put a copy of the Tier's package card face up with that Creature. It is the public record
-   that the Creature owns the Tier and knows its Spells.
-2. **Cards.** Take one card of each Spell the Tier teaches from the library into your hand. If the Creature
-   already knows one of them, take no card for that one; the purchase is still legal.
-3. **Initiative.** Raise that Creature's Base initiative by the Tier's initiative bonus. **This is the only
-   thing that ever moves a Base initiative marker.** It happens once, at the purchase, and lasts for the rest
-   of the Match. No Spell carries initiative of its own, and casting one moves nothing.
-
-The turn order matters and is not a table convention: the engine alternates the same way
-(`MatchDriver.PlayAsync` asks Player 1, then Player 2, once per pass), and a purchase is public the moment it
-happens. So the second Player chooses their first pick already knowing the first Player's, and the first
-Player learns of theirs only when choosing their second. Taking the picks simultaneously would hide from each
-Player a purchase the engine shows them, and the app would then play a different game from the table.
-
-Your first pick never opens anything for your second. A Tier it opens is one only the Creature that bought
+Your first pick never opens anything for your second. A Tier it would open is one only the Creature that picked
 may buy, and that Creature is done for the Round.
 
-A Player who does not want their remaining picks declares an **Evolution pass** and takes the pick tokens
-still on their mat off it.
+A Player who does not want their remaining picks makes an **Evolution pass**: they leave the pick tokens still
+on their mat. Each Player says "done" when they have nothing more to pick, and never why.
 
 **The Sub-phase ends when neither Player has a pick they could use** — because they spent them, passed, or
 have no living Creature left without a pick token and with a Tier available. A Player with nothing to buy does
-not have to pass; the Sub-phase simply ends. Then every pick token comes off the mats and the boards.
+not have to pass.
+
+**The Purchase reveal.** When the Sub-phase ends, both Players turn every face-down package card over
+together. Then every picked Tier is bought, Player 1's and then Player 2's. The order changes nothing: each
+Creature buys one Tier, and what it may buy depends only on what it owns.
+
+A purchase is three actions, in this order:
+
+1. **Package card.** The package card, now face up, stays with that Creature. It is the public record that
+   the Creature owns the Tier and knows its Spells.
+2. **Cards.** Take one card of each Spell the Tier teaches from the library into your hand. If the Creature
+   already knows one of them, take no card for that one; the purchase is still legal.
+3. **Initiative.** Raise that Creature's Base initiative by the Tier's initiative bonus. **This is the only
+   thing that ever moves a Base initiative marker.** It happens once, at the Purchase reveal, and lasts for
+   the rest of the Match. No Spell carries initiative of its own, and casting one moves nothing.
+
+Then every pick token comes off the mats and the boards.
 
 > **Example.** Round 1 offers an opportunity. Every Creature knows Basic Attack, Heavy Strike and Wait, owns no
 > Tier, and has a Base initiative of 5. Each Player has 2 picks.
-> **Player 1, first pick: Brute, for Creature 1.** Brute is level 1 and requires nothing. Its package card goes
-> face up with Creature 1, the Pummel and Guard cards go into Player 1's hand, and the bonus of +1 takes Base
-> initiative to 6. A pick token moves from Player 1's mat onto Creature 1's board.
-> **Player 2, first pick: Prowler, for Creature 4.** Level 1, requires nothing. Poison Slash and Throwing Star
-> go into Player 2's hand, the bonus of +3 takes Base initiative to 8, and a pick token goes onto Creature 4.
-> **Player 1, second pick.** Player 1 wants Marauder for Creature 1. Marauder is level 2 and requires Brute, so
-> it is available to Creature 1 now. But Creature 1 holds a pick token: it has bought this Round, and the pick
-> is refused. Player 1 buys **Occultist for Creature 2** instead. Lightning Bolt and Rejuvenate go into the
-> hand, and the bonus of +2 takes Base initiative to 7.
-> **Player 2, second pick: Brute, for Creature 5.** Creature 1 owning Brute does not stop Creature 5 buying it.
-> Base initiative 6.
-> Both Players have spent their picks, and the Sub-phase ends: the four pick tokens come off the boards.
+> **Player 1, first pick: Brute, for Creature 1.** Brute is level 1 and requires nothing. Player 1 lays a Brute
+> package card face down with Creature 1 and moves a pick token onto Creature 1's board. No Spell card moves,
+> and Base initiative stays at 5.
+> **Player 1, second pick.** Player 1 wants Marauder for Creature 1. Marauder is level 2 and requires Brute.
+> Creature 1 does not own Brute yet: its card is face down. And Creature 1 holds a pick token. The pick is
+> refused twice over. Player 1 picks **Occultist for Creature 2** instead, face down, and says they are done.
+> **Player 2, at the same time:** Prowler for Creature 4, and Brute for Creature 5. Player 2 does not know
+> Player 1's Tiers, and Creature 1's face-down Brute does not stop Creature 5 picking it.
+> **The Purchase reveal.** Both Players turn the four cards over together. Player 1's purchases: Brute for
+> Creature 1, Pummel and Guard into the hand, +1 takes Base initiative to 6; Occultist for Creature 2,
+> Lightning Bolt and Rejuvenate, +2 to 7. Player 2's: Prowler for Creature 4, Poison Slash and Throwing Star,
+> +3 to 8; Brute for Creature 5, Pummel and Guard, +1 to 6. The four pick tokens come off the boards.
 > Marauder waits for Creature 1 until Round 3, since Round 2 offers no opportunity. Warmonger, the level 3 Tier
 > above Marauder, waits until Round 5 at the earliest. Until Round 3, Creature 4 at 8 holds the highest Base
 > initiative on the table, and Creature 2 at 7 is the fastest on Player 1's side.
 >
 > **Example, one Creature left.** Round 7 offers an opportunity. Player 2 has only Creature 6 alive, and it
 > owns Occultist. Player 2 has **one** pick, not two: Creature 6 is the only Creature it can go to. Player 2
-> buys Shaman, level 2 and requiring Occultist, for Creature 6: Healing Screech goes into the hand, and the
-> bonus is +0. Creature 6 now holds a pick token, so Player 2 has no pick they could use and does not pass.
-> Their second pick token stays on the mat, unused, and comes off with the rest when the Sub-phase ends.
-> Player 1, with three living Creatures, still has two picks.
+> picks Shaman, level 2 and requiring Occultist, for Creature 6. Creature 6 now holds a pick token, so Player 2
+> has no pick they could use and does not pass. Their second pick token stays on the mat, unused, and comes
+> off with the rest. Player 1, with three living Creatures, still has two picks. At the Purchase reveal,
+> Healing Screech goes into Player 2's hand, and the bonus is +0.
 
 ### 5.4 Speed
 
@@ -905,8 +908,10 @@ the resolution order of the specification (pay, then roll), and an elimination t
 spot. Every row below names the specification or a declared tabletop
 entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every rule
 traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
-checks out.** The one row that did not, a purchase being public the moment it happens, was what the engine
-did and `game-rules.md` did not say; the specification says it now.
+checks out.** On 2026-10-02 §5.3, its examples, Part 1's "You commit before you see" and step 3 of Part 4
+were re-run against [ADR 0089](../adr/0089-pick-packages-face-down-and-reveal-them-together.md): a pick is
+face down, and every pick of a Round is bought at the Purchase reveal. The row it replaces, a purchase public
+the moment it happens, is gone from the engine and from the specification.
 
 | This book | The specification |
 | --- | --- |
@@ -918,7 +923,7 @@ did and `game-rules.md` did not say; the specification says it now.
 | [5.2](#52-ongoing-effects), a Bleed that wipes a Team | "End of round", 2: `Finalization`, "a Team wiped at upkeep ends the Match before `Evolution`"; "Match lifecycle"; ADR 0083 |
 | [5.3](#53-evolution), the schedule, availability, the purchase, the initiative bonus, the pass | "Planning", 1: `Evolution`; "Planning rules (phase 5)"; ADR 0056, ADR 0057, ADR 0059 |
 | [5.3](#53-evolution), one Tier a Creature an opportunity, a Player down to one living Creature, the end of the Sub-phase | "Planning", 1: `Evolution`, "a Creature buys at most one package an opportunity"; "Planning rules (phase 5)", the effective picks; ADR 0066. The engine refuses the pick with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.HasEvolved`); the pick token on the board is the table's record of that check |
-| [5.3](#53-evolution), a purchase is public the moment it happens | "Planning", 1: `Evolution`, "a purchase is public the moment it is made". The engine applies it at once (`Match.SubmitEvolutionChoice`) and both Players see `CreatureSnapshot.AcquiredTiers` |
+| [5.3](#53-evolution), a pick face down, a pass not shown, and the Purchase reveal | "Planning", 1: `Evolution`, "a pick is face down until the sub-phase ends"; ADR 0089. The engine records the pick (`Match.SubmitEvolutionChoice`), buys every pick at once, Player 1's and then Player 2's, when the Sub-phase completes (`Match.RevealPurchases`), and raises `PurchasesRevealed`; from then on both Players see `CreatureSnapshot.AcquiredTiers` |
 | [5.4](#54-speed), and the stunned Creature | "Planning", 2: `Speed` |
 | [5.5](#55-turn-order-resolution), and [6.6](#66-the-combat-timeline-and-its-tiebreaks) | "Planning", 3: `TurnOrderResolution`, and 4: `TieOrder`; ADR 0036, ADR 0063 |
 | [5.6](#56-intent-selection), and "nor can you change your mind" in it and [6.2](#62-you-choose-targets-not-your-spell) | "Combat", 1: `IntentSelection`; "Combat", 2: `Activation`, which reveals the Intent and binds targets, and nothing else |

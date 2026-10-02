@@ -295,17 +295,18 @@ test('the phase popup recaps both teams packages after the unlock opportunity', 
   served = structuredClone(served);
   served.waitingAsked = 4;
   served.options.evolution.remainingPicks = 1;
-  served.board.allies[0].acquiredTiers = [packages[0].id];
+  // A pick is face down until Evolution ends (ADR 0089): the seat's own choice is listed, nothing is bought.
   served.board.evolutionChoices = [{ creature: 1, tier: packages[0].id }];
   await expect(page.locator('#evolution-budget')).toContainText('1 / 2 team picks remaining');
   served = structuredClone(served);
+  served.board.allies[0].acquiredTiers = [packages[0].id];
   served.board.enemies[0].acquiredTiers = [packages[7].id];
-  await expect(page.locator('#enemies .enemy-packages')).toContainText('East');
   served = { ...served, waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 5,
-    options: view.options, board: { ...served.board, subPhase: 'Speed' } };
+    options: view.options, board: { ...served.board, subPhase: 'Speed', evolutionChoices: [] } };
   await expect(page.locator('#phase-notice-title')).toHaveText('Round 3 · Packages unlocked');
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 1 · yours');
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 2 · opponent');
+  await expect(page.locator('#enemies .enemy-packages')).toContainText('East');
   await page.screenshot({ path: info.outputPath('packages-unlocked.png'), animations: 'disabled' });
 });
 

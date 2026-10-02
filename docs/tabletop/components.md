@@ -330,7 +330,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Speed card, `Quick` or `Standard`, one common back, poker size | **12** = 6 per Player: a Quick and a Standard card for each Creature | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`), hidden until both Players have made theirs (`PlayerBoardStateProjection.cs:38`). A hidden choice of one of two needs both answers behind one back: the Player lays the chosen card face down in the Creature's Speed slot, keeps the other in hand, and both Players turn theirs together. Any Creature may take either Speed, and every Creature may take the same one, so a Player needs `RuleSet.TeamSize` cards of each: 2 Speeds x team size 3 x 2 Players. The Quick card carries the reminder that a Quick Creature rolls no critical that Round (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. Size, back and face: [2.6](#26-the-speed-card). The maintainer's answer to Part 6, question 14. | **VALUE** (team size) x **RULE** (two Speeds, one hidden simultaneous choice) |
 | Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 Roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
 | Tie order chit, `1st`, `2nd`, `3rd`, one common back | **6** = 3 per Player | The Tie order is given by both Players at the same time and hidden until both are in (ADR 0063, "like a Speed choice"), so it needs something that commits face down. A Player lays one chit face down on each of their tied Creatures' boards, and both Players turn them together. A Player orders at most all of their own Creatures, `RuleSet.TeamSize` = 3; two separate ties are each read low number first, so 3 chits cover any Round. This is translation.md's smallest answer ("three ordinal chits a Player"). | **VALUE** (team size) x **RULE** (a hidden, simultaneous Tie order) |
-| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track. A purchase moves one from the mat onto the board of the Creature that bought, and it stays there until the Sub-phase ends: a Creature holding one has bought this opportunity and cannot be picked again (`Planning.CreatureAlreadyEvolved`, ADR 0066). A pass takes the tokens still on the mat off it; the end of the Sub-phase takes every token off the mats and the boards (rulebook §5.3). One token marks one Creature, and a Player's picks go to different Creatures, so 2 a Player still covers every opportunity. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
+| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track. A pick moves one from the mat onto the board of the Creature it was picked for, and it stays there until the Sub-phase ends: a Creature holding one has bought this opportunity and cannot be picked again (`Planning.CreatureAlreadyEvolved`, ADR 0066). A pass takes the tokens still on the mat off it; the end of the Sub-phase takes every token off the mats and the boards (rulebook §5.3). One token marks one Creature, and a Player's picks go to different Creatures, so 2 a Player still covers every opportunity. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
@@ -749,7 +749,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 | The Health rail ending at 30 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
 | The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. The token comes off at the Cleanup that ends the Stun, when the dock's Stun token becomes an Immune token ([3.2](#32-the-condition-dock-and-the-countdown)); nothing goes in the Speed slot for the immunity, since an immune Creature takes a Speed card. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
-| A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
+| A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a pick moves off the mat lies on that Creature's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
 
 **The Speed slot is sized for a card now**, not a token (Part 6, question 14). A Speed card is poker size
@@ -996,7 +996,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
   it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
   Creature's record reads as a list, and the newest card shows whole.
 - **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
-  as an opportunity. A purchase moves one onto the header of the buyer's board ([3.1](#31-the-creature-board)),
+  as an opportunity. A pick moves one onto the header of the board of the Creature it was picked for ([3.1](#31-the-creature-board)),
   where it marks that Creature as done for the opportunity (ADR 0066). A pass takes the tokens still on the
   mat off it, and the end of the Sub-phase takes every token off the mat and the boards.
 - **No target markers.** The mat's header held three per Creature while every cast was targeted before any
@@ -1099,12 +1099,13 @@ easy card to print. The band is two lines at 8 pt, about 10 mm with its rule, so
 
 ### 4.2 How a purchase reaches the hand, and how the bonus is recorded
 
-A purchase moves one pick token from the mat onto the buyer's board and is **three actions in a fixed
-order**, the order of rulebook §5.3:
+A pick lays a copy of the Tier's package card **face down** in that Creature's column and moves one pick
+token from the mat onto its board; nothing else moves (ADR 0089). When the Sub-phase ends, both Players turn
+every face-down card over together, and each becomes a purchase: **three actions in a fixed order**, the order
+of rulebook §5.3:
 
-1. **Package card.** Put a copy of the Tier's package card face up in that Creature's column, on the top of
-   its stagger. This is the public record that the Creature owns the Tier, and it is what the opponent reads
-   instead of the concealed hand.
+1. **Package card.** The card, now face up, goes on the top of that Creature's stagger. This is the public
+   record that the Creature owns the Tier, and it is what the opponent reads instead of the concealed hand.
 2. **Spell cards.** Take one copy of each Spell the package card names from the library into the hand. The
    library is the 216 Spell cards filed by the first package in their head, six copies of each Spell
    together. A Spell the Creature already knows is not taken again (ADR 0056: the grant is idempotent). At
@@ -1119,15 +1120,15 @@ Rules of the sub-phase that the components carry rather than the rulebook:
 
 - **A Creature cannot buy a Tier it owns.** The card is already in its stagger; a second copy there is a
   mistake anyone can see.
-- **A prerequisite is a card.** Every Tier a card `Needs` must already lie with the same Creature. The check
-  is a read down one stagger's bands.
-- **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has bought
-  this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`, ADR 0066). The
-  purchase's card is on the table before the next pick is chosen, so the table is always the board the engine
-  validates against.
-- **A refused purchase changes nothing** (ADR 0056: no half-taught package, no bonus without the Tier). Step 1
-  is the step that can be refused, and it comes first, so a refusal happens before any Spell card or rail
-  moves. The pick token moves with the card, not before it.
+- **A prerequisite is a card.** Every Tier a card `Needs` must already lie face up with the same Creature.
+  The check is a read down one stagger's bands.
+- **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has
+  been picked for this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`,
+  ADR 0066). A face-down card is not owned yet, so the face-up stagger is the board as the Sub-phase opened,
+  which is the board the engine validates against.
+- **A refused pick changes nothing** (ADR 0056: no half-taught package, no bonus without the Tier). It is
+  refused before its card is laid, so no Spell card or rail ever moves for it. The pick token moves with the
+  card, not before it.
 - **The starting kit grants no bonus.** No Tier teaches it, so it has no package card and no `+B`, and a
   Player never adds initiative for it.
 

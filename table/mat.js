@@ -43,14 +43,17 @@ export function classColour(name, palette) {
 }
 
 // Package ownership and legal offers come from the host. Knowing every contained spell does not mean
-// owning its package, and prerequisite satisfaction alone cannot override the one-purchase cap.
-export function talentClasses(catalogue, cards, creature, evolution) {
+// owning its package, and prerequisite satisfaction alone cannot override the one-purchase cap. A pick is
+// face down until the Evolution sub-phase ends (ADR 0089), so a package this seat picked and has not been
+// bought yet is 'picked': the player's own choices, which the host serves to that seat only.
+export function talentClasses(catalogue, cards, creature, evolution, picks = []) {
   const known = new Set(creature?.knownSpells ?? []);
   const owned = new Set(creature?.acquiredTiers ?? []);
   const offered = new Set(evolution?.creatures?.find(one => one.creature === creature?.id)?.availableTiers ?? []);
+  const picked = new Set((picks ?? []).filter(pick => pick.creature === creature?.id).map(pick => pick.tier));
   return (catalogue?.packages ?? []).map(pack => ({
     ...pack,
-    status: owned.has(pack.id) ? 'known' : offered.has(pack.id) ? 'available' : 'future',
+    status: owned.has(pack.id) ? 'known' : picked.has(pack.id) ? 'picked' : offered.has(pack.id) ? 'available' : 'future',
     tiers: [{ tier: pack.level, spells: (pack.spells ?? []).map(spell => ({ spell, status: known.has(spell) ? 'known' : 'future' })) }],
   }));
 }

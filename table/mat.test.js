@@ -85,6 +85,22 @@ test('package progress uses acquired tiers and legal offers, independently of kn
   assert.deepEqual(talentClasses(null, null, null, null), []);
 });
 
+test('a package this seat picked face down reads as picked until the reveal buys it', async () => {
+  const { talentClasses } = await import('./mat.js');
+  const catalogue = { packages: [
+    { id: 'first', name: 'North', level: 1, spells: ['a'], prerequisites: [], initiativeBonus: 3 },
+    { id: 'other', name: 'East', level: 1, spells: ['b'], prerequisites: [], initiativeBonus: 1 },
+  ] };
+  const creature = { id: 1, knownSpells: [], acquiredTiers: [] };
+  const picks = [{ creature: 1, tier: 'first' }, { creature: 2, tier: 'other' }];
+
+  const groups = talentClasses(catalogue, new Map(), creature, null, picks);
+
+  assert.deepEqual(groups.map(group => group.status), ['picked', 'future']);
+  creature.acquiredTiers = ['first'];
+  assert.equal(talentClasses(catalogue, new Map(), creature, null, picks)[0].status, 'known');
+});
+
 test('package hierarchy uses actual prerequisite ids and remains safe for orphaned or invalid edges', async () => {
   const { packageForest } = await import('./mat.js');
   const packages = [

@@ -115,12 +115,12 @@ public sealed class MatchTests
         Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5));
 
         match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
 
         Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(6));
         Table.CreatureNumber(match, 3).CurrentInitiative.ShouldBe(Initiative.Of(6));
 
-        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
-        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.ChooseStandard(match);
 
         var timeline = match.CurrentRound.ShouldNotBeNull().Timeline;
@@ -129,8 +129,13 @@ public sealed class MatchTests
         timeline.Slots[0].Initiative.ShouldBe(Initiative.Of(6));
     }
 
+    /// <summary>
+    /// A pick is face down (ADR 0089): the round records it and the creature does not own the package yet, so
+    /// the other player picks against the board as it was. Both players' picks are bought together when the
+    /// sub-phase ends.
+    /// </summary>
     [Fact]
-    public void An_evolution_choice_buys_the_package_and_the_sub_phase_ends_when_both_players_are_done()
+    public void An_evolution_choice_buys_the_package_when_both_players_are_done_and_not_before()
     {
         var match = Table.Started();
         var knight = CreatureId.From(1);
@@ -139,8 +144,8 @@ public sealed class MatchTests
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).Error.ShouldBe(PlanningErrors.CreatureAlreadyEvolved);
 
-        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeTrue();
-        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeFalse();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeFalse();
         match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.Evolution);
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
@@ -151,8 +156,49 @@ public sealed class MatchTests
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
 
         match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.Speed);
+        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
         match.DomainEvents.OfType<EvolutionChoiceSubmitted>().Single().Choice.ShouldBe(new EvolutionChoice(knight, Arena.GuardPack));
         match.DomainEvents.OfType<EvolutionPassed>().Select(passed => passed.Slot).ShouldBe([PlayerSlot.Player1, PlayerSlot.Player2]);
+        match.DomainEvents.OfType<PurchasesRevealed>().Single().Choices.ShouldBe([new EvolutionChoice(knight, Arena.GuardPack)]);
+    }
+
+    /// <summary>
+    /// Both players' picks are bought in the one reveal, Player 1's first: neither saw the other's, so neither
+    /// is bought before the other is made.
+    /// </summary>
+    [Fact]
+    public void The_reveal_buys_both_players_picks_together()
+    {
+        var match = Table.Started();
+        var knight = CreatureId.From(1);
+        var ghoul = CreatureId.From(3);
+
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+
+        match.DomainEvents.OfType<PurchasesRevealed>().ShouldBeEmpty();
+        Table.CreatureNumber(match, 3).OwnsTier(Arena.GuardPack).ShouldBeFalse();
+
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+
+        match.DomainEvents.OfType<PurchasesRevealed>().Single().Choices.ShouldBe(
+            [new EvolutionChoice(knight, Arena.GuardPack), new EvolutionChoice(ghoul, Arena.GuardPack)]);
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+        Table.CreatureNumber(match, 3).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+    }
+
+    /// <summary>A round where nobody picked has nothing to reveal, and says so by raising nothing.</summary>
+    [Fact]
+    public void A_round_where_both_players_pass_reveals_nothing()
+    {
+        var match = Table.Started();
+
+        Table.PassEvolution(match);
+
+        match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.Speed);
+        match.DomainEvents.OfType<PurchasesRevealed>().ShouldBeEmpty();
     }
 
     /// <summary>
@@ -175,7 +221,9 @@ public sealed class MatchTests
         Table.CreatureNumber(match, 1).BaseInitiative.ShouldBe(initiative, "a refused pick pays no bonus");
         match.DomainEvents.OfType<EvolutionChoiceSubmitted>().Count().ShouldBe(1);
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(2), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.CreatureNumber(match, 2).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeFalse();
     }
 
     /// <summary>
@@ -193,6 +241,7 @@ public sealed class MatchTests
 
         match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(3);
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        Table.PassEvolution(match);
         Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeTrue();
     }
 
