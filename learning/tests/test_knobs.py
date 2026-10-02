@@ -939,19 +939,31 @@ def test_a_package_knob_on_anything_but_its_initiative_bonus_is_refused(tmp_path
     assert any("tier:open/level" in problem and "identity" in problem for problem in problems)
 
 
-def test_a_package_bonus_outside_its_own_bounds_is_reported(tmp_path: Path) -> None:
+def test_a_knob_on_a_package_initiative_bonus_is_refused_because_the_owner_sets_it(tmp_path: Path) -> None:
+    """ADR 0094: which line is fast is the class, so no search may move it.
+
+    The check refuses it, and that check is the preflight of every search.
+    """
+    entry = package_entry(knobs=[{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
+
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    refusal = "tier:open/initiativeBonus: a package's initiative bonus is the owner's, not a knob (ADR 0094)."
+    assert refusal in problems
+
+
+def test_a_package_entry_without_knobs_is_valid(tmp_path: Path) -> None:
     knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
 
-    problems = validate(knobs, packaged(initiativeBonus=9))
-
-    assert "tier:open/initiativeBonus: the content carries 9.0, outside [0.0, 4.0]." in problems
-
-
-def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) -> None:
-    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
-
-    assert "tier:open/initiativeBonus" in {knob.key for knob in knobs}
+    assert not any(knob.key.startswith("tier:open/") for knob in knobs)
     assert validate(knobs, packaged(initiativeBonus=2)) == []
+
+
+def test_no_repository_package_carries_a_knob() -> None:
+    knobs = load_knobs(REPO_ROOT / "data" / "balance" / "knobs.json")
+
+    assert all(not package.knobs for package in knobs.packages.values())
 
 
 def test_the_repository_knobs_cover_every_package_the_repository_sells() -> None:
@@ -969,7 +981,7 @@ def package_entry(**overrides: object) -> dict:
     return {
         "name": "Open",
         "intent": "The opener.",
-        "knobs": [{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}],
+        "knobs": [],
     } | overrides
 
 

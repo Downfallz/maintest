@@ -161,8 +161,8 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await expect(page.locator('#tools-panel')).toBeFocused();
 });
 
-test('balance shows package initiative and spell knobs before editing, with a path to the package entry', async ({ page }, info) => {
-  // The shipped knobs move no package (journal, 2026-10-01); the studio still reads and edits one that does.
+test('balance shows each package\'s initiative as the owner\'s, refuses a knob on it, and offers none to add', async ({ page }, info) => {
+  // The shipped knobs move no package and may move none (ADR 0094); one written in anyway is shown refused.
   const knobbed = structuredClone(catalogue);
   knobbed.balance.packages['tier:prowler'].knobs = [{ path: '/initiativeBonus', min: 1, max: 5, step: 1 }];
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: knobbed } }));
@@ -180,16 +180,15 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   const prowler = sheet.locator('.balance-item');
   await expect(prowler).toHaveCount(1);
   await prowler.locator('summary').click();
-  await expect(prowler).toContainText('/initiativeBonus');
+  await expect(prowler).toContainText('the owner\'s, not a knob');
   await fit(page); await shot(page, info, 'balance-package');
   await prowler.getByRole('button', { name: 'Open content' }).click();
   await expect(page.locator('#detail .balance-value')).toContainText('Initiative +');
   await page.getByRole('button', { name: 'Edit content' }).click();
   await expect(page.locator('#balance-strip')).toContainText('What this package is for');
+  await expect(page.locator('#balance-strip')).toContainText('A package takes no knob');
+  await expect(page.locator('#balance-strip').getByRole('button', { name: 'Add a knob' })).toHaveCount(0);
   await expect(page.locator('#balance-strip .knob .pointer')).toHaveText('/initiativeBonus');
-  await page.getByLabel('Initiative bonus', { exact: true }).fill('99');
-  await expect(page.locator('#balance-strip .knob .value')).toHaveText('99');
-  await expect(page.locator('#balance-strip')).toContainText('outside');
 });
 
 test('reading a spell that is off shows its missing balance entry as a note, not a check', async ({ page }) => {

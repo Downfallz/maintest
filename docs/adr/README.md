@@ -66,7 +66,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
 | [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
 | [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
-| [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
+| [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Superseded by 0094 |
 | [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
 | [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) |
 | [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
@@ -99,3 +99,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Accepted |
 | [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted |
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
+| [0094](0094-a-package-initiative-bonus-is-the-owners-not-a-knob.md) | A package's initiative bonus is the owner's, not a knob | Accepted |

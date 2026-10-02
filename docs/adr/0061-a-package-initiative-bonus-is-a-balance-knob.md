@@ -2,7 +2,7 @@
 
 Date: 2026-09-23
 
-Status: Accepted
+Status: Superseded by [ADR 0094](0094-a-package-initiative-bonus-is-the-owners-not-a-knob.md)
 
 ## Context
 

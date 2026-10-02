@@ -191,7 +191,7 @@ test('a duration knob whose maximum passes three rounds is a disagreement, as ch
   assert.deepEqual(codes(summary), ['durationCeiling']);
 });
 
-test('package entries flag progression knobs and name their initiative bonus', () => {
+test('a package knob is refused, its initiative bonus as the owner\'s and anything else as progression', () => {
   const balance = knobsFile({}, { packages: { 'tier:prowler': { name: 'Prowler', intent: 'Fast.', knobs: [
     { path: '/initiativeBonus', min: 1, max: 5, step: 1 },
     { path: '/level', min: 1, max: 3, step: 1 },
@@ -199,7 +199,8 @@ test('package entries flag progression knobs and name their initiative bonus', (
   const packageRow = { id: 'tier:prowler:v1', name: 'Prowler', path: 'Tiers/prowler.json', document: { initiativeBonus: 3, level: 1 } };
   const rolled = surveyPackages(balance, [packageRow], {});
   assert.equal(rolled.covered, 1);
-  assert.deepEqual(rolled.flagged[0].problems.map(item => item.code), ['packageIdentity']);
+  assert.deepEqual(rolled.rows[0].summary.knobs.map(knob => knob.problems.at(-1).code), ['packageInitiative', 'packageIdentity']);
+  assert.deepEqual(rolled.rows[0].summary.knobs.map(knob => knob.tone), ['bad', 'bad']);
   assert.equal(rolled.rows[0].summary.knobs[0].value, 3);
   assert.equal(rolled.rows[0].summary.knobs[0].path, '/initiativeBonus');
 });

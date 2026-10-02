@@ -350,10 +350,14 @@ export function readings(entry, document) {
  * plus the one line a collapsed strip or a tree node shows instead of all of it.
  */
 export function summarise(entry, document) {
+  // A package carries no knob at all (ADR 0094): what it teaches is the progression, and its initiative bonus
+  // is the owner's. One left in the file is read like any other and refused, the same as `check-knobs` does.
   const knobs = readings(entry, document).map(knob => {
-    if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || knob.path === '/initiativeBonus') return knob;
-    const problems = [...knob.problems, problem('packageIdentity', `Only /initiativeBonus is a package knob; ${knob.path} is progression, not a tuning value.`)];
-    return { ...knob, problems, tone: 'bad' };
+    if (!text(entry?.alias).startsWith(PACKAGE_PREFIX)) return knob;
+    const refusal = knob.path === '/initiativeBonus'
+      ? problem('packageInitiative', 'A package\'s initiative bonus is the owner\'s, not a knob (ADR 0094).')
+      : problem('packageIdentity', `${knob.path} is progression, not a tuning value; a package carries no knob.`);
+    return { ...knob, problems: [...knob.problems, refusal], tone: 'bad' };
   });
   const problems = entry?.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];
   // An entry is only ever `ok` or `bad`: bounds are drawn around what a spell *is*, so a value authored at one

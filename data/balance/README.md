@@ -89,19 +89,21 @@ half that exists strong enough to compensate.
 
 ## What a package entry carries
 
-The same fields as a spell's, without a class, and **one knob at most**: `/initiativeBonus`, what a purchase
-adds to the buyer's Base initiative for the rest of the match (ADR 0056). A package's level, prerequisites and
-spells are the progression itself, and `check-knobs` refuses a knob on any of them.
+The same fields as a spell's, without a class, and **no knob** (ADR 0094). A package's level, prerequisites and
+spells are the progression itself, and its initiative bonus, what a purchase adds to the buyer's Base
+initiative for the rest of the match (ADR 0056), is the owner's to set by hand. `check-knobs` refuses a knob on
+any of them, and so does the preflight of every search.
 
 Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it
 creates a package and prunes it when it deletes one. The 21 bonuses are the sums `scripts/build-tiers.py`
 seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
 
-**No package carries a knob today** (journal, 2026-10-01). The bonuses are set by hand, and a tuning pass moves
-spells only. The entries stay, with their intents, so that putting a knob back is one line and not a
-rediscovery of what each package is for. The reason is older than the decision: initiative is live --
-moving `tier:prowler` from 3 to 5 once moved 54 of the 71 objective metrics -- and it is exactly the lever
-that reaches the seat reading (ADR 0061), so a search buys seat asymmetry with it more easily than balance.
+**No package carries a knob, and none may** (ADR 0094, which supersedes ADR 0061). The bonuses are set by hand
+by the owner, and a tuning pass moves spells only. The entries stay, with their intents, because they say what
+each package is for. The reason is older than the decision: initiative is live -- moving `tier:prowler` from 3
+to 5 once moved 54 of the 71 objective metrics -- and it is exactly the lever that reaches the seat reading
+(ADR 0061), so a search buys seat asymmetry with it more easily than balance. Tuning initiative again would take
+a new record, not a line in this file.
 
 ## The objective
 

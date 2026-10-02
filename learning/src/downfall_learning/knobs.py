@@ -149,9 +149,9 @@ class SpellKnobs:
 class PackageKnobs:
     """The knobs of one package, with the intent its number serves.
 
-    A package has one number worth tuning, its initiative bonus (ADR 0059 moved it here from the spells), so
-    this is a spell entry without a class: which spells it teaches, at what level and behind what is the
-    package's identity, and a tuning pass that moved any of it would be redesigning the progression.
+    A package has no number a search may move (ADR 0094): which spells it teaches, at what level and behind
+    what is the progression, and its initiative bonus is the owner's to set. The entry still says what the
+    package is for and what has to stay true of it, and its knobs are kept only to be refused.
     """
 
     alias: str
@@ -600,8 +600,10 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
     """What makes the packages section and the packages on disk disagree.
 
     The same three questions a spell entry answers -- is every enabled package covered, does every entry name
-    one, does every pointer address a number inside its bounds -- plus one only a package can raise: a knob on
-    anything but the initiative bonus is refused, because the rest of a package is the progression itself.
+    one, does every pointer address a number inside its bounds -- plus one only a package can raise: any knob
+    at all is refused. The rest of a package is the progression itself, and its initiative bonus is the
+    owner's (ADR 0094, which retired ADR 0061's one package knob): a search that moved it would change which
+    line is fast, which is the class and not a tuning value.
     """
     problems = list(content.ambiguous_packages)
     for alias in sorted(set(content.package_documents) - set(knobs.packages)):
@@ -615,10 +617,10 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
         if not package.intent.strip():
             problems.append(f"{alias}: no intent, so nothing says what its number is for.")
         problems.extend(
-            f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
-            f"'{INITIATIVE_BONUS}' may move."
+            f"{knob.key}: a package's initiative bonus is the owner's, not a knob (ADR 0094)."
+            if knob.path == INITIATIVE_BONUS
+            else f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob."
             for knob in package.knobs
-            if knob.path != INITIATIVE_BONUS
         )
         problems.extend(_knob_problems(package, document))
     return problems

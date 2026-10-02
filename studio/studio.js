@@ -1530,8 +1530,10 @@ function knobList(dirty) {
     // question about the other knobs, so changing one pointer changes what two readings say, and neither block
     // may be torn down to say it.
     const readingsOf = [];
-    const scope = state.tab === 'tiers' ? { initiativeBonus: state.draft.initiativeBonus } : state.draft;
-    const free = unclaimedPointer(state.entry, scope);
+    // A package offers nothing to claim (ADR 0094): its initiative bonus is the owner's, and the rest of it is
+    // the progression. A knob already in the file is still shown, with its refusal and a Remove.
+    const packaged = state.tab === 'tiers';
+    const free = packaged ? null : unclaimedPointer(state.entry, state.draft);
     list.replaceChildren(
       ...(knobs.length
         ? [...knobs.keys()].map(index => knobBlock(index, dirty, redraw, readingsOf))
@@ -1540,8 +1542,8 @@ function knobList(dirty) {
         // Offered only while there is a number left to claim. A knob with no pointer refuses every save until
         // it is removed, and the picker cannot be used to fix it: with nothing selected the browser shows the
         // first option, so choosing what is already on screen fires no change at all.
-        free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, scope)); dirty(); redraw(); }) : null,
-        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Initiative already has a knob.' : 'Every number this spell has already has a knob.' }),
+        free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, state.draft)); dirty(); redraw(); }) : null,
+        free ? null : element('span', { className: 'muted', textContent: packaged ? 'A package takes no knob: its initiative bonus is the owner\'s.' : 'Every number this spell has already has a knob.' }),
       ]),
     );
   };
