@@ -106,9 +106,7 @@ internal sealed class TableComposer
             reason = "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record";
         }
 
-        reason ??= ended == replayed && replayed.IsFaulted
-            ? replayed.Exception?.GetBaseException().Message
-            : table.Session.Outcome.IsCompleted ? "the match ended during the replay" : "the replay did not finish in time";
+        reason ??= NotRebuiltBecause(replayed, table.Session.Outcome);
         Console.WriteLine($"  Session {record.Id} was not rebuilt: {reason}");
         table.Dispose();
         return null;
@@ -116,6 +114,44 @@ internal sealed class TableComposer
 
     /// <summary>How long a replay may take: a whole match is milliseconds, and a host must not hang on a record that never catches up.</summary>
     private static readonly TimeSpan ReplayWithin = TimeSpan.FromSeconds(20);
+
+    /// <summary>Why a replay that did not reach a rebuilt table stopped, for the console.</summary>
+    private static string NotRebuiltBecause(Task replayed, Task outcome)
+    {
+        if (replayed.IsFaulted)
+        {
+            return replayed.Exception?.GetBaseException().Message ?? "the record has diverged";
+        }
+
+        return outcome.IsCompleted ? "the match ended during the replay" : "the replay did not finish in time";
+    }
+
+    /// <summary>
+    /// The recording of a table, opened for a table opening now or resumed over what an earlier host wrote,
+    /// and started either way; none for a host told to keep nothing.
+    /// </summary>
+    private async Task<PlaytestRun?> OpenRunAsync(string id, PlaytestSetup setup, MatchTraceRecorder events, IReadOnlyList<JournalEntry>? rebuilding, CancellationToken cancellationToken)
+    {
+        if (_store is not { } store)
+        {
+            return null;
+        }
+
+        if (rebuilding is null)
+        {
+            var opened = PlaytestRun.Open(store, id, setup, events, _clock);
+            await opened.StartAsync(_catalogue, cancellationToken);
+            return opened;
+        }
+
+        var resumed = PlaytestRun.Resume(store, id, setup, events, _clock, rebuilding);
+        await resumed.ResumeAsync(cancellationToken);
+        return resumed;
+    }
+
+    /// <summary>The token a seat had on the earlier host, for a table being rebuilt; null for a fresh one.</summary>
+    private static string? RecordedToken(TableRecord? record, PlayerSlot slot) =>
+        record?.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(slot))?.Token;
 
     private async Task<PlayedTable> BuildAsync(TableRequest request, (TableRecord Record, IReadOnlyList<JournalEntry> Journal)? rebuilding, CancellationToken cancellationToken)
     {
@@ -133,31 +169,19 @@ internal sealed class TableComposer
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
             // this host played before or beside it. A source shared across tables would make every recording
             // depend on the order the host's requests happened to arrive in.
-            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, agents, Source(seed, PlayerSlot.Player1), stopping.Token, rebuilding?.Record.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(PlayerSlot.Player1))?.Token);
-            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, agents, Source(seed, PlayerSlot.Player2), stopping.Token, rebuilding?.Record.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(PlayerSlot.Player2))?.Token);
+            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
+            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
+            (SeatAgent Agent, TableSeat Seat) Of(PlayerSlot slot) => slot == PlayerSlot.Player1 ? seat1 : seat2;
+            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, agents, Source(seed, slot));
 
             var setup = new PlaytestSetup(resources, _rules, seed, Stamped(seat1, request.Player1, request), Stamped(seat2, request.Player2, request));
-            var run = _store is { } store
-                ? rebuilding is { } rebuild ? PlaytestRun.Resume(store, id, setup, events, _clock, rebuild.Journal) : PlaytestRun.Open(store, id, setup, events, _clock)
-                : null;
-            if (run is not null)
-            {
-                if (rebuilding is null)
-                {
-                    await run.StartAsync(_catalogue, cancellationToken);
-                }
-                else
-                {
-                    await run.ResumeAsync(cancellationToken);
-                }
+            var run = await OpenRunAsync(id, setup, events, rebuilding?.Journal, cancellationToken);
 
-                // A swap line is applied as the replay reaches it, through the pilot's own seating.
-                run.Journal.SwapsThrough((slot, wanted, round) =>
-                    Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, request, agents, Source(seed, slot)) is { } next
-                    && (slot == PlayerSlot.Player1 ? seat1.Agent : seat2.Agent).SwapAt(next, round).Taken);
-            }
+            // A swap line is applied as the replay reaches it, through the pilot's own seating.
+            run?.Journal.SwapsThrough((slot, wanted, round) => SeatingOf(slot, wanted) is { } next && Of(slot).Agent.SwapAt(next, round).Taken);
 
-            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, stopping.Token);
+            var start = new TableStart(rebuilding?.Record.MatchId);
+            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,
@@ -169,11 +193,9 @@ internal sealed class TableComposer
             }
 
             var seats = new[] { seat1.Seat, seat2.Seat };
-            var pilot = new TablePilot(
-                rebuilding?.Record.PilotToken ?? Token(),
-                (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, request, agents, Source(seed, slot)));
+            var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
             var api = new TableApi(session, session.Queries, seats, _catalogue, events, run, pilot) { Guide = _guide, Agents = Agents };
-            var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow()), session, api, seats, pilot, run, stopping, request);
+            var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened

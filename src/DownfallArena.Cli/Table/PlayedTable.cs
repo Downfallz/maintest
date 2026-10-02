@@ -22,8 +22,7 @@ internal sealed class PlayedTable : IDisposable
         IReadOnlyList<TableSeat> seats,
         TablePilot pilot,
         PlaytestRun? run,
-        CancellationTokenSource stopping,
-        TableRequest? request = null)
+        CancellationTokenSource stopping)
     {
         ArgumentNullException.ThrowIfNull(opening);
         ArgumentException.ThrowIfNullOrWhiteSpace(opening.Id);
@@ -39,7 +38,7 @@ internal sealed class PlayedTable : IDisposable
         Seats = seats;
         Pilot = pilot;
         Run = run;
-        Request = request;
+        Request = opening.Request;
         _stopping = stopping;
         CreatedAt = opening.At;
         _touched = opening.At.UtcTicks;

@@ -91,7 +91,7 @@ internal sealed class TableSession : IDisposable
         SeatAgent player1,
         SeatAgent player2,
         Func<MatchId, SeatAgent, IPlayerAgent>? wrap = null,
-        MatchId? matchIdWanted = null,
+        TableStart? start = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -101,7 +101,7 @@ internal sealed class TableSession : IDisposable
         List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize)];
 
         var matchId = Value(await services.GetRequiredService<ICommandHandler<CreateMatch, Result<MatchId>>>()
-            .HandleAsync(new CreateMatch(rules, seed, matchIdWanted), cancellationToken));
+            .HandleAsync(new CreateMatch(rules, seed, start?.MatchIdWanted), cancellationToken));
         var join = services.GetRequiredService<ICommandHandler<JoinMatch, Result<PlayerSlot>>>();
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));

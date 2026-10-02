@@ -24,16 +24,16 @@ internal static class TableRestorer
 
         var said = new List<string>();
         var now = clock.GetUtcNow();
-        foreach (var session in await stored.ListAsync(cancellationToken))
+        foreach (var id in (await stored.ListAsync(cancellationToken)).Select(session => session.Id))
         {
             // A table this host already holds is its own, and open: rebuilt beside itself it would be the same
             // match twice, under the same id and the same tokens.
-            if (registry.ById(session.Id) is not null || await stored.RecordAsync(session.Id, cancellationToken) is not { Status: TableRecord.Open } record)
+            if (registry.ById(id) is not null || await stored.RecordAsync(id, cancellationToken) is not { Status: TableRecord.Open } record)
             {
                 continue;
             }
 
-            var journal = await stored.JournalAsync(session.Id, cancellationToken);
+            var journal = await stored.JournalAsync(id, cancellationToken);
             var touched = journal.Count > 0 ? journal[^1].At : record.CreatedAt;
             if (now - touched >= TableRegistry.IdleFor)
             {
