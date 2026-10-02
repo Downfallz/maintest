@@ -51,9 +51,10 @@ worst reply to a purchase is a worst whole match, which no budget here can searc
   response is exploitable. It reads the inner agent's opening, not an equilibrium.
 - Bad: a rollout shorter than the match can mislead. On a test catalogue where a package opens a stronger one,
   four rounds read the opening as even and the whole match reads it as losing 29 to 49. The defaults of
-  `PurchaseReading` are what the journal measured, and a horizon is a cost traded against that error.
+  `PurchaseReading`, four rounds and four rollouts, were chosen for cost and not swept; the journal says so.
 - Neutral: it costs rollouts at every evolution with more than one candidate, about ten times the lookahead's
-  time on the benchmark seeds. An inner agent that decides at random draws from its own source inside the
+  time on the benchmark seeds. Measured there, it lifts the lookahead +0.35 against Greedy and +0.27 against
+  search-19, and changes nothing against search-31, whose opening the guess gets wrong (journal, 2026-10-02). An inner agent that decides at random draws from its own source inside the
   rollouts, as it does in the match; the candidates still share the rules' dice.
 
 ## Alternatives considered
@@ -66,4 +67,5 @@ worst reply to a purchase is a worst whole match, which no budget here can searc
 ## Follow-up
 
 - `docs/learning/agents.md` and the lookahead's doc comment: evolution is the lookahead's own now.
-- The journal entry with the measurement that sets the horizon and the rollout count.
+- A sweep of `PurchaseReading`'s horizon and rollout count, and a guess of the opponent's picks from the
+  packages it has revealed.
