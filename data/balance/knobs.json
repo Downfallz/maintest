@@ -209,7 +209,7 @@
       ],
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 }
+        { "path": "/effects/0/amount", "min": 2, "max": 3, "step": 1 }
       ]
     },
     "spell:pummel": {
@@ -321,7 +321,7 @@
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 4, "step": 1 }
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:full_plate": {
@@ -364,7 +364,7 @@
       ],
       "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 8, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
@@ -525,9 +525,9 @@
         "It takes energy, not only health: that is what makes it a Soul Devourer and not a bigger `parasite_jab`",
         "Heavier than `parasite_jab` on every half -- the hit, the heal, and a drain the opener does not have -- or the opener is the better spell"
       ],
-      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it came back where legacy had it, 2 energy off the target (tune run 9 has since taken it to 3, and the damage 5 to 6), with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.90 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking three off a creature does not cost it three points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it came back where legacy had it, 2 energy off the target (tune run 9 has since taken it to 3, and the damage 5 to 6), with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.90 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking three off a creature does not cost it three points of anything, it costs it the cast it was saving for. Nothing in the scorers read a cast denied until ADR 0091: the agents now price a drain that leaves an enemy still to act unable to pay as a stun round, which is the lock players found, since no immunity follows it. `cast_value` reads a spell without a board and still prices it at the energy rate. The owner raised the cost 2 to **3** on 2026-10-02 so that the lock cannot be cast every round on the income of a round, and the cost bound starts at 3.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
@@ -781,7 +781,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 5, "step": 1 }
       ]
     },
@@ -848,7 +848,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/amountPerRound", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]

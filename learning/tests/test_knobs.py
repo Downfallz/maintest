@@ -367,6 +367,20 @@ def test_an_effect_amount_a_search_could_take_below_one_is_reported(tmp_path: Pa
     assert any("below 1" in problem for problem in validate(knobs, content(**{"spell:attack": ATTACK})))
 
 
+def test_a_duration_a_search_could_take_past_three_rounds_is_reported(tmp_path: Path) -> None:
+    """No condition lasts more than three rounds, the owner's rule of 2026-10-02."""
+    bleed = {"kind": "Bleed", "amountPerRound": 1, "durationRounds": 2}
+    bleeding = {**ATTACK, "effects": [*ATTACK["effects"], bleed]}
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"].append(
+        {"path": "/effects/1/durationRounds", "min": 1, "max": 4, "step": 1}
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": bleeding}))
+    assert any("past 3 rounds" in problem for problem in problems)
+
+
 def test_a_step_that_moves_nothing_is_reported(tmp_path: Path) -> None:
     document = knobs_json()
     document["spells"]["spell:attack"]["knobs"][0]["step"] = 0

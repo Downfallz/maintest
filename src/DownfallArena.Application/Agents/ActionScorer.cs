@@ -257,7 +257,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             {
                 HealOutcome heal => HealTerms(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
-                EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target]),
+                EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target], stillToAct),
                 ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining, creatures),
                 _ => ScoreTerms.Zero,
             };
@@ -393,8 +393,44 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// the grouping rather than this note.
     /// </para>
     /// </summary>
-    private static ScoreTerms EnergyDrainTerms(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
-        -1 * EnergyTerms(actor, target, Math.Min(amount, target.Energy.Value), remainingHealth);
+    private ScoreTerms EnergyDrainTerms(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth, IReadOnlySet<CreatureId>? stillToAct)
+    {
+        var taken = Math.Min(amount, target.Energy.Value);
+        var terms = -1 * EnergyTerms(actor, target, taken, remainingHealth);
+        return Locks(actor, target, taken, remainingHealth, stillToAct) ? terms with { Stun = terms.Stun + 1 } : terms;
+    }
+
+    /// <summary>
+    /// Whether a drain takes this round's action from an enemy, which a stun does too and is priced the same,
+    /// for one round (ADR 0091). An enemy that has still to act and could pay for one of its spells before the
+    /// drain, and can pay for none after it, reaches its slot unable to pay and fizzles: the rules read it as
+    /// unable to act, the way they read a stun. Read per energy price, the same drain was worth a third of a
+    /// point a point of energy, so the lock it buys every round was the one thing about it no agent saw.
+    /// <para>
+    /// It is priced as a stun and is not one: no immunity follows it, and a spell that costs nothing still
+    /// resolves. The enemy's intent is hidden, so the reading is its cheapest spell that costs anything,
+    /// which takes the lock away only when the enemy could not have paid for anything anyway. With no
+    /// <paramref name="stillToAct"/> every enemy counts as still to act, the convention the threat reading
+    /// keeps (ADR 0085).
+    /// </para>
+    /// </summary>
+    private bool Locks(CreatureSnapshot actor, CreatureSnapshot target, int taken, int remainingHealth, IReadOnlySet<CreatureId>? stillToAct)
+    {
+        if (taken == 0 || remainingHealth == 0 || target.Owner == actor.Owner || target.IsStunned
+            || (stillToAct is not null && !stillToAct.Contains(target.Id)))
+        {
+            return false;
+        }
+
+        var costs = target.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).Where(cost => cost > 0).ToList();
+        if (costs.Count == 0)
+        {
+            return false;
+        }
+
+        var cheapest = costs.Min();
+        return target.Energy.Value >= cheapest && target.Energy.Value - taken < cheapest;
+    }
 
     private static ScoreTerms ConditionTerms(
         CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, Dictionary<CreatureId, int> remaining, IReadOnlyList<CreatureSnapshot> creatures)

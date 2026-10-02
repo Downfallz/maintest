@@ -4,6 +4,47 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-02. Tuning pass 22, kept in part; the drain lock is priced as a stun (ADR 0091), Soul Devourer costs 3
+
+- **Tuning pass 22** (`main` at `f86a73d`, 16 rounds of 6, up to 16 knobs) read 6.62 to 0.84 on the search
+  seeds and 3.84 to 1.99 on the confirmation seeds. On the 200 hold-out seeds, replayed locally, it read
+  4.47 to **0.54**. It moved six numbers:
+  - Heavy Strike 3 to 4.
+  - Healing Screech regeneration 3 to 2.
+  - Crushing Stomp cost 4 to 5.
+  - Shield Bash's defense 3 to 4 rounds.
+  - Noxious Cure critical 0.28 to 0.33.
+  - Extort 3 to 2.
+- **What it was doing.** It spread casts inside packages; it did not judge power.
+  - Heavy Strike at 4 pulled casts off Lightning Bolt (2396 to 1933), so Occultist's top share fell from
+    0.88 to 0.84. That was most of the gain.
+  - Healing Screech went from 236 casts to 52, which pushed healing onto Rejuvenate and Restorative Gush.
+  - Crushing Stomp moved nothing it is read by (33 to 32 casts). It rode in a winning multi-knob proposal.
+- **What the owner kept.** Extort 2 and Noxious Cure 0.33.
+  - Crushing Stomp stays at 4, and its cost knob now stops at 4.
+  - Heavy Strike stays at 3, and its damage knob now stops at 3.
+  - Healing Screech keeps 3 a round, and its regeneration knob now starts at 3.
+  - Shield Bash keeps 3 rounds. No condition may last longer than 3 rounds, so both duration knobs that
+    reached 4 now stop at 3, and `check-knobs` refuses a knob past it.
+- **Soul Devourer was a lock the agents did not see.** It drains 3 energy for a cost of 2. With its
+  package's 5 initiative it acts first, so the target's declared spell fizzles, the way a stun takes an
+  action. No immunity follows, so it can happen every round. The agents priced the drain at 0.3 a point,
+  0.9 against a stun's 3.0. ADR 0091 now prices a drain that leaves an enemy still to act unable to pay for
+  any spell that costs energy as one stun round. The owner raised the spell's cost to 3 and kept the rule.
+- **Measured** on content `4b245ae6` with the new reading, exploring run, same seeds as before (the
+  "before" column is ADR 0090's):
+
+  | Objective | Before | After |
+  | --- | --- | --- |
+  | Benchmark seeds | 6.63 | 6.88 |
+  | Confirmation seeds | 3.84 | 3.43 |
+  | Hold-out seeds | 4.47 | 4.20 |
+
+  Without Heavy Strike 4 most of the pass's gain is gone, as expected. `tierUsageShare` (0.87 to 0.88) is
+  still the term to move. On the hold-out Soul Devourer was cast 21 times on 13 sides, against 28 on 15:
+  dearer, and cast for the lock.
+- **The benchmark digest is regenerated** for content `4b245ae6`.
+
 ## 2026-10-02. `tierDamageSpread` leaves the objective (ADR 0090)
 
 - **What it read under ADR 0089**, per package, on the benchmark, confirmation and hold-out seeds:

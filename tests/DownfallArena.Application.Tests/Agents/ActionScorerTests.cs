@@ -175,6 +175,51 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// ADR 0091: a drain that leaves an enemy still to act unable to pay for any of its spells takes its action
+    /// this round, the way a stun does, and is priced as one stun round on top of the energy it takes.
+    /// </summary>
+    [Fact]
+    public void A_drain_that_leaves_an_enemy_still_to_act_unable_to_pay_is_priced_as_a_stun_round()
+    {
+        var creatures = Board(enemyHealth: 20).Select(creature => creature.Id == Three ? Slammer(creature, energy: 2) : creature).ToList();
+
+        Scorer.Score(Drain(Three, 3), creatures, stillToAct: new HashSet<CreatureId> { Three }).ShouldBe(PerEnergy * 2 + 3.0, 1e-9);
+    }
+
+    /// <summary>An enemy that has already acted this round loses only the energy: there is no action left to take.</summary>
+    [Fact]
+    public void A_drain_on_an_enemy_that_has_already_acted_takes_only_its_energy()
+    {
+        var creatures = Board(enemyHealth: 20).Select(creature => creature.Id == Three ? Slammer(creature, energy: 2) : creature).ToList();
+
+        Scorer.Score(Drain(Three, 3), creatures, stillToAct: new HashSet<CreatureId> { Four }).ShouldBe(PerEnergy * 2, 1e-9);
+    }
+
+    /// <summary>An enemy left with enough to pay for its cheapest spell still acts, so the drain is energy alone.</summary>
+    [Fact]
+    public void A_drain_that_leaves_an_enemy_enough_to_pay_is_not_a_stun()
+    {
+        var creatures = Board(enemyHealth: 20).Select(creature => creature.Id == Three ? Slammer(creature, energy: 5) : creature).ToList();
+
+        Scorer.Score(Drain(Three, 3), creatures, stillToAct: new HashSet<CreatureId> { Three }).ShouldBe(PerEnergy * 3, 1e-9);
+    }
+
+    /// <summary>An enemy whose every spell is free acts whatever it holds, so draining it takes no action.</summary>
+    [Fact]
+    public void A_drain_on_an_enemy_whose_spells_are_free_is_not_a_stun()
+    {
+        var creatures = Board(enemyHealth: 20).Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(2) } : creature).ToList();
+
+        Scorer.Score(Drain(Three, 3), creatures, stillToAct: new HashSet<CreatureId> { Three }).ShouldBe(PerEnergy * 2, 1e-9);
+    }
+
+    private static CreatureSnapshot Slammer(CreatureSnapshot creature, int energy) =>
+        creature with { Energy = Energy.Of(energy), KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Slam } };
+
+    private static CombatResolution Drain(CreatureId target, int amount) =>
+        CombatResolution.Resolved(Strike(One, target), [target], [], false, Energy.Of(0), [new EnergyDrainOutcome(target, amount)]);
+
+    /// <summary>
     /// ADR 0088: initiative is worth the turn order it changes, not its points. Hasting an ally past nobody buys
     /// nothing, however many points it adds.
     /// </summary>

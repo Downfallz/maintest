@@ -60,6 +60,9 @@ package and no alias is reported by `check-knobs` rather than guessed at.
 - `path` is a JSON pointer into the spell's own document: `/energyCost`, `/criticalChance`,
   `/effects/0/amount`, `/effects/1/durationRounds`. Not `/initiative`: a spell carries none since ADR 0059,
   and `check-knobs` refuses a knob that addresses a field the spell does not have.
+- An effect's amount and duration have a floor of 1, which the engine enforces, and a duration has a ceiling of
+  **3 rounds**, the owner's rule of 2026-10-02: no condition, on a target or on its caster, lasts longer.
+  `check-knobs` refuses a knob whose bounds reach past either.
 - A move is `step` added to **the value the content carries today**, not to a grid, so a critical chance
   authored at 0.667 can reach 0.717 and 0.617 and stays reachable from itself. Results are rounded to three
   decimals and clamped to `[min, max]`.
