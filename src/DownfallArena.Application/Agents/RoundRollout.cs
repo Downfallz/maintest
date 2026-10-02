@@ -140,7 +140,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         {
             var actor = board.First(creature => creature.Id == slot.Creature);
             var own = intents[slot.Owner];
-            var view = Planned(origin, board, slot.Owner, round, RoundSubPhase.IntentSelection, timeline, speeds[slot.Owner], own);
+            var view = Planned(View(origin, board, slot.Owner, round, RoundSubPhase.IntentSelection), timeline, speeds[slot.Owner], own);
             own.Add(new CombatIntent(actor.Id, player.DecideIntent(view, new IntentOption(actor.Id, Castable(actor)))));
         }
 
@@ -155,7 +155,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
             {
                 var actor = board.First(creature => creature.Id == slot.Creature);
                 var legal = TargetingRules.LegalTargets(actor, resources.GetSpell(intent.Spell), board);
-                var view = Planned(origin, board, slot.Owner, round, RoundSubPhase.Activation, timeline, speeds[slot.Owner], intents[slot.Owner])
+                var view = Planned(View(origin, board, slot.Owner, round, RoundSubPhase.Activation), timeline, speeds[slot.Owner], intents[slot.Owner])
                     with
                 { RevealedActions = [.. revealed], ActivationCursor = index };
                 targets = player.DecideTargets(view, new TargetOptions(actor.Id, intent.Spell, legal));
@@ -186,7 +186,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         var orders = new Dictionary<PlayerSlot, IReadOnlyList<CreatureId>>();
         foreach (var seat in speeds.Keys.Where(seat => TieOrderRules.HasTieOrderToGive(timeline, seat)))
         {
-            var view = Planned(origin, board, seat, round, RoundSubPhase.TieOrder, timeline, speeds[seat], []);
+            var view = Planned(View(origin, board, seat, round, RoundSubPhase.TieOrder), timeline, speeds[seat], []);
             var order = player.DecideTieOrder(view, new TieOrderOptions(TieOrderRules.TiesOf(timeline, seat)));
             // An order the match would refuse is not one a rollout can play; the roll stands in for it.
             if (TieOrderRules.ValidateOrder(seat, order, timeline).IsSuccess)
@@ -222,8 +222,8 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         };
 
     /// <summary>A view once the timeline is built: the seat's own speeds and intents, every slot and roll-off.</summary>
-    private PlayerBoardState Planned(PlayerBoardState origin, IReadOnlyList<CreatureSnapshot> board, PlayerSlot seat, int round, RoundSubPhase subPhase, CombatTimeline timeline, IReadOnlyList<SpeedChoice> speeds, IReadOnlyList<CombatIntent> intents) =>
-        View(origin, board, seat, round, subPhase) with
+    private static PlayerBoardState Planned(PlayerBoardState view, CombatTimeline timeline, IReadOnlyList<SpeedChoice> speeds, IReadOnlyList<CombatIntent> intents) =>
+        view with
         {
             SpeedChoices = [.. speeds],
             Intents = [.. intents],
