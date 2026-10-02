@@ -985,7 +985,10 @@
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
       "knobs": [],
-      "note": "Worth nothing on purchase until 2026-10-02: the one spell it had at the migration carried no per-spell bonus, so the seeded sum was 0. The owner set it to 2, so a healer's package buys some tempo too.",
+      "note": "Worth nothing on purchase until 2026-10-02: the one spell it had at the migration carried no per-spell bonus, so the seeded sum was 0. The owner set it to 2, so a healer's package buys some tempo too."
+    },
+    "tier:blightweaver": {
+      "name": "Blightweaver",
       "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
