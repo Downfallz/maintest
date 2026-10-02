@@ -1283,6 +1283,14 @@ function atlasInspector(state, selected, graph, current, creature) {
   return detail;
 }
 
+// What a package's lane says, by the status talentClasses gives it (ADR 0089 adds 'picked').
+const PACKAGE_STATUS_TEXT = {
+  known: '✓ Package acquired',
+  picked: '◐ Picked face down · bought when Evolution ends',
+  available: '+ Available now · 1 team pick',
+  future: 'Not available this opportunity · check prerequisites and creature eligibility',
+};
+
 function talentLane(state, group, current, creature) {
   const lane = document.createElement('section');
   lane.className = 'talent-lane';
@@ -1296,9 +1304,7 @@ function talentLane(state, group, current, creature) {
   summary.textContent = `↟ ${group.initiativeBonus >= 0 ? '+' : ''}${group.initiativeBonus} initiative on purchase · Requires: ${requires || 'No prerequisite package'}`;
   const status = document.createElement('p');
   status.className = 'talent-status';
-  status.textContent = group.status === 'known' ? '✓ Package acquired' : group.status === 'picked' ? '◐ Picked face down · bought when Evolution ends'
-    : group.status === 'available' ? '+ Available now · 1 team pick'
-    : 'Not available this opportunity · check prerequisites and creature eligibility';
+  status.textContent = PACKAGE_STATUS_TEXT[group.status] ?? PACKAGE_STATUS_TEXT.future;
   lane.append(title, summary, status);
   if (group.status === 'available') {
     const buy = button(`Buy ${group.name} for creature ${creature.id}`, () => buyPackage(state, current, creature.id, group.id));
@@ -2654,6 +2660,13 @@ async function submit(state, current, decision) {
   await refresh(state);
 }
 
+// What a package says of itself, by the status talentClasses gives it (ADR 0089 adds 'picked').
+const TREE_STATUS_TEXT = {
+  known: '✓ Acquired',
+  picked: '◐ Picked · bought at the reveal',
+  available: '+ Buy now · 1 pick',
+};
+
 function treeNode(state, node, classes, creature) {
   const branch = document.createElement('li');
   branch.style.setProperty('--class-color', state.palette?.get(node.key) ?? '#c9c2a8');
@@ -2679,7 +2692,7 @@ function treeNode(state, node, classes, creature) {
   progress.textContent = `Tier ${node.level} · ${node.initiativeBonus >= 0 ? "+" : ""}${node.initiativeBonus} initiative`;
   const status = document.createElement('span');
   status.className = 'tree-offer';
-  status.textContent = known ? '✓ Acquired' : picked ? '◐ Picked · bought at the reveal' : offered ? '+ Buy now · 1 pick' : 'Inspect package';
+  status.textContent = TREE_STATUS_TEXT[group?.status] ?? 'Inspect package';
   pick.append(title, progress, status);
   branch.append(pick);
   if (node.children.length) {

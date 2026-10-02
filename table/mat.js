@@ -53,9 +53,15 @@ export function talentClasses(catalogue, cards, creature, evolution, picks = [])
   const picked = new Set((picks ?? []).filter(pick => pick.creature === creature?.id).map(pick => pick.tier));
   return (catalogue?.packages ?? []).map(pack => ({
     ...pack,
-    status: owned.has(pack.id) ? 'known' : picked.has(pack.id) ? 'picked' : offered.has(pack.id) ? 'available' : 'future',
+    status: packageStatus(pack.id, owned, picked, offered),
     tiers: [{ tier: pack.level, spells: (pack.spells ?? []).map(spell => ({ spell, status: known.has(spell) ? 'known' : 'future' })) }],
   }));
+}
+
+function packageStatus(id, owned, picked, offered) {
+  if (owned.has(id)) return 'known';
+  if (picked.has(id)) return 'picked';
+  return offered.has(id) ? 'available' : 'future';
 }
 
 // Every edge is an authored package prerequisite. Multiple parents are drawn under each parent; levels
