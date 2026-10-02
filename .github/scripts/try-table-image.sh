@@ -86,7 +86,10 @@ expect 201 "a signed-in operator opens a table" \
   -H "X-MS-CLIENT-PRINCIPAL-NAME: operator@example.test" -H "Content-Type: application/json" \
   -d '{"player1":"person","player2":"greedy"}' "$BASE/api/tables"
 
-if ! docker logs "$CONTAINER" 2>&1 | grep -q '^Engine [0-9a-f]\{12\}\.'; then
+# Read the log whole before searching it: `grep -q` stops at the first match, and under pipefail the
+# SIGPIPE that leaves `docker logs` would fail the check on a log that has the stamp.
+log="$(docker logs "$CONTAINER" 2>&1)"
+if ! grep -q '^Engine [0-9a-f]\{12\}\.' <<<"$log"; then
   fail "The engine the image was built from is not stamped on its log."
 fi
 echo "ok: the engine commit is stamped"

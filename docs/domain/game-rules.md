@@ -25,7 +25,8 @@ listed in [spells.md](spells.md).
   this round and an available package, within the picks the rule set's schedule gives that round, and the
   sub-phase completes when no player has an effective pick left (capped by how many of their living creatures
   have not bought yet and can buy something, ADR 0066) -- which is immediately, in a round the schedule offers
-  no opportunity. A speed choice must target an own, living, unstunned creature, and the
+  no opportunity. A pick is recorded face down and bought only when the sub-phase completes, every pick of
+  both players at once (ADR 0089). A speed choice must target an own, living, unstunned creature, and the
   sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
   descending, and rolls off a tie between the two sides on a d20 for the places each side holds; each Player
   then orders their own Creatures among their places in the tie (ADR 0063). A tie order must name every
@@ -100,9 +101,12 @@ listed in [spells.md](spells.md).
       the package rather than to any Spell in it. The Current initiative the timeline orders on is that base
       plus the Creature's active initiative buffs and less its active debuffs, floored at zero (ADR 0036), so
       a Condition can still push a Creature forward or pull it back. A refused purchase changes nothing: no
-      half-taught package, and no bonus without the Tier that paid for it. **A purchase is public the moment
-      it is made**: it applies at once, and both Players see every Creature's Tiers, since the board shows
-      both Teams whole. What a Creature knows is never hidden.
+      half-taught package, and no bonus without the Tier that paid for it. **A pick is face down until the
+      sub-phase ends** (ADR 0089): it changes nothing on the board, and neither it nor a pass is shown to the
+      other Player. When neither Player has a pick left, every package picked that Round is bought at once,
+      Player 1's picks and then Player 2's, which is the same thing in any order, since each Creature takes at
+      most one. From then on both Players see every Creature's Tiers, since the board shows both Teams whole.
+      What a Creature knows is never hidden.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`

@@ -31,7 +31,7 @@ public sealed class SeatVisibilityTests
             .Where(type => type is { IsAbstract: false, IsInterface: false } && typeof(IMatchEvent).IsAssignableFrom(type))
             .ToList();
 
-        events.Count.ShouldBe(18, "the domain has gained or lost an event; classify it in SeatVisibility");
+        events.Count.ShouldBe(19, "the domain has gained or lost an event; classify it in SeatVisibility");
         SeatVisibility.Classified.ShouldBe(events, ignoreOrder: true);
     }
 
@@ -69,17 +69,19 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>
-    /// An unlock is public although the board projection filters it: both teams' snapshots are served whole
-    /// and a snapshot carries `KnownSpells`, so the opponent can already see it. A pass is that same absence.
+    /// A pick is face down until the Evolution sub-phase ends, so the other player chooses without it (ADR 0089),
+    /// and a pass is face down with it: knowing someone has stopped buying is half of knowing what they bought.
     /// </summary>
     [Fact]
-    public void An_unlock_and_a_pass_are_public_because_the_board_already_shows_them()
+    public void A_pick_and_a_pass_are_seen_by_the_seat_that_made_them_and_by_nobody_else()
     {
-        var unlock = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1")));
+        var pick = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1")));
         var passed = new EvolutionPassed(Match, Round, PlayerSlot.Player1);
 
-        SeatVisibility.CanSee(unlock, PlayerSlot.Player2).ShouldBeTrue();
-        SeatVisibility.CanSee(passed, PlayerSlot.Player2).ShouldBeTrue();
+        SeatVisibility.CanSee(pick, PlayerSlot.Player1).ShouldBeTrue();
+        SeatVisibility.CanSee(pick, PlayerSlot.Player2).ShouldBeFalse();
+        SeatVisibility.CanSee(passed, PlayerSlot.Player1).ShouldBeTrue();
+        SeatVisibility.CanSee(passed, PlayerSlot.Player2).ShouldBeFalse();
     }
 
     /// <summary>
@@ -101,8 +103,7 @@ public sealed class SeatVisibilityTests
         new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
         new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),
         new PlayerJoined(Match, PlayerSlot.Player1, PlayerId.New()),
-        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1"))),
-        new EvolutionPassed(Match, Round, PlayerSlot.Player1),
+        new PurchasesRevealed(Match, Round, [new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1"))]),
     ];
 
     public static TheoryData<IMatchEvent> EveryPublicEvent => new(Public);
@@ -130,7 +131,7 @@ public sealed class SeatVisibilityTests
     /// <summary>
     /// The default of the switch, walked by an event the table has never heard of. This is the arm that makes
     /// the classification safe: an event nobody thought about is not served, and the test above is what makes
-    /// that silence loud. The stand-in lives here rather than in the domain, so the count above stays at 15.
+    /// that silence loud. The stand-in lives here rather than in the domain, so the count above stays at 19.
     /// </summary>
     [Fact]
     public void An_event_nobody_classified_is_shown_to_no_seat()
@@ -141,8 +142,9 @@ public sealed class SeatVisibilityTests
         SeatVisibility.CanSee(unheardOf, PlayerSlot.Player2).ShouldBeFalse();
     }
 
-    /// <summary>The two that are not public, named here so the list above cannot quietly grow.</summary>
-    private static IReadOnlyList<Type> Hidden() => [typeof(IntentSubmitted), typeof(SpeedChoiceSubmitted), typeof(TieOrderSubmitted)];
+    /// <summary>The ones that are not public, named here so the list above cannot quietly grow.</summary>
+    private static IReadOnlyList<Type> Hidden() =>
+        [typeof(IntentSubmitted), typeof(SpeedChoiceSubmitted), typeof(TieOrderSubmitted), typeof(EvolutionChoiceSubmitted), typeof(EvolutionPassed)];
 
     private static CombatAction Action => CombatAction.Bind(new CombatIntent(Creature, SpellId.Parse("spell:strike:v1")), [CreatureId.From(3)]);
 

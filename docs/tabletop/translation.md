@@ -152,7 +152,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | --- | --- | --- | --- | --- |
 | An opportunity at Round 1 and every second Round after | `RuleSet.IsEvolutionRound` and `EvolutionPicksIn` (`Matches/RuleSet.cs:80-84`), at 1, 2 and 2 by default (`RuleSet.cs:30`); the one schedule the validation, the gate and the projections all ask (ADR 0056) | 1 look at the Round track a Round, 0 arithmetic if the opportunity Rounds are marked on it. The table's 8 to 14 Rounds ([plan.md](plan.md), ADR 0086) hold 4 to 7 opportunities, and its Round cap of 20 holds 10 | **needs a component** | A Round track with the opportunity Rounds marked. Nothing is lost; every other Round has one step fewer. |
 | Two picks an opportunity, per Player, shared across the Team | `rules.EvolutionPicksIn(round.Number) - round.EvolutionChoicesOf(slot).Count` (`Rules/Planning/EvolutionRules.cs:100-103`), refused past it (`EvolutionRules.cs:49-52`) | 2 tokens moved from a Player's mat onto the boards of the Creatures that bought, on an opportunity Round; the choice is which two Creatures and which Tier for each | **needs a component** | Two pick tokens a Player. Nothing is lost. |
-| The Players pick in turn, Player 1 first | The domain takes the two Players' picks in any order and applies each at once (`Match.cs:116-153`). The order is the driver's: it asks Player 1, then Player 2, for one pick each, every pass (`Application/Matches/Driving/MatchDriver.cs:26-48`), and every host plays through it, the table's included. A purchase is public the moment it lands, since the other Player's board state carries full snapshots of these Creatures (`Application/Matches/Projections/PlayerBoardStateProjection.cs:19-20`) | 1 pick each in turn, at most 4 an opportunity; 0 arithmetic. Player 2 chooses their first pick knowing Player 1's first purchase | **restate** | Nothing at the table, and the rulebook already says it (rulebook.md §5.3). But it is the one place the seat still orders anything since ADR 0063, and it lives in an Application loop, not in the domain: ADR candidate 6. |
+| The Players pick face down, and the picks are bought together | Since ADR 0089 the domain records a pick and changes nothing on the board (`Match.SubmitEvolutionChoice`); neither a pick nor a pass is shown to the other Player (`SeatVisibility`). When the sub-phase completes, `Match.RevealPurchases` buys every pick, Player 1's and then Player 2's, and raises `PurchasesRevealed`. The order changes nothing: a Creature buys one package an opportunity, and its prerequisites are its own. The validation reads what each Creature owned when the sub-phase opened | 1 package card laid face down a pick, at most 4 an opportunity, turned over together like the Speed cards, then the purchase actions; 0 arithmetic | **restate** | Nothing in the rules (rulebook.md §5.3). The table shows a little the engine hides: which Creatures hold a face-down card while the other Player is still choosing. It replaces the pick in turn, Player 1 first, that ADR candidate 6 questioned. |
 | A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 1 or 2 Spell cards taken from the library; 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds, each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
 | Prerequisites are the only rule, and the Talent tree gates nothing | `TierEligibility.AvailableTiers`: a Tier the Creature does not own whose prerequisites it owns (`Rules/Planning/TierEligibility.cs:23-42`), checked by `EvolutionRules.ValidateChoice` (`EvolutionRules.cs:61-73`) and again by `BuyTier` (`Creature.cs:216-219`). No family is closed to a Creature, so multiclassing is free (ADR 0056, ADR 0058) | 0 lookups for the 3 openers; 1 for any other Tier: is the one Tier it names beside this creature board. A Creature chooses from 3 Tiers at Round 1, and from 5 once it owns one opener (the 2 other openers and that opener's 3 level-2 Tiers) | **restate** | Nothing. The prerequisite is one line on the Tier card, and eligibility is read off the board, not computed. The Talent tree mat the first audit asked for is not needed to play; if the box keeps one, it is a map of the families, not a gate. |
 | A Creature buys at most one Tier an opportunity | A choice for a Creature that has already bought this Round is refused with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.cs:56-59`), read off the Round's own choices (`HasEvolved`, `EvolutionRules.cs:128-134`; ADR 0066). The two picks go to two Creatures, so neither depends on the other: a Tier the first opens is one only its buyer may buy, and its buyer is done for the Round. It replaces ADR 0056's sequential picks, under which the greedy mirror put both picks on one Creature in half its opportunities | 1 look a pick, 0 arithmetic: the pick token a purchase moves lies on the buyer's board until the Sub-phase ends, and a board holding one is not picked. The top of a family arrives at Round 5 at the earliest: `tier:brute:v1` at Round 1, `tier:ironbound:v1`, which sells `full_plate`, at Round 3, `tier:dreadnought:v1` at Round 5 | **restate** | Nothing: the pick tokens of the row above carry it, laid on the buyer's board instead of set aside (components.md §1.5). It has to be said, with the one-Creature case, since it is the only thing that ever refuses a pick for a Tier the Creature could otherwise buy. |
@@ -561,18 +561,26 @@ Rounds; a 1-Round Bleed ticks once. The table needs no flag, only the sentence.
 
 ### Candidate 6. Who picks first in an opportunity
 
-**What the table shows.** The domain accepts the two Players' Evolution choices in any order and applies each
-the moment it arrives (`Match.cs:116-153`), and a purchase is public at once: the other Player's board state
-carries these Creatures' full snapshots, their Tiers and Base initiative included
-(`PlayerBoardStateProjection.cs:19-20`). The order is the driver's. `MatchDriver.PlayAsync` asks Player 1,
+> **Settled (2026-10-02) by
+> [ADR 0089](../adr/0089-pick-packages-face-down-and-reveal-them-together.md)**, with the last alternative
+> below. A pick is face down and changes nothing on the board; neither it nor a pass is shown to the other
+> Player. When neither Player has a pick left, `Match.RevealPurchases` buys every pick of the Round, Player 1's
+> and then Player 2's, and `PurchasesRevealed` names them. The seat orders nothing at the table any more. On
+> 800 matches of the exploring self-play, Player 1 won 0.422 under the turn order and 0.512 (± 0.035) after.
+> The rulebook's §5.3 lays the picks face down and turns them over together, like the Speed cards.
+
+**What the table showed.** The domain accepted the two Players' Evolution choices in any order and applied each
+the moment it arrived (`Match.cs:116-153`), and a purchase was public at once: the other Player's board state
+carried these Creatures' full snapshots, their Tiers and Base initiative included
+(`PlayerBoardStateProjection.cs:19-20`). The order was the driver's. `MatchDriver.PlayAsync` asks Player 1,
 then Player 2, for one pick each, every pass (`MatchDriver.cs:26-48`), and every host plays through it — the
-table's seats are agents of the same driver (`Cli/Table/HumanSeat.cs`). So in every Match the engine has
-played, Player 2 chooses a first pick knowing Player 1's first purchase, and Player 1 chooses a second knowing
-Player 2's first. The rulebook copies that order (rulebook.md §5.3), which is the right thing for it to do
-while the engine plays it. Two facts make it a question. It is the one place the seat still orders anything
-since ADR 0063 took the tiebreak from it, and the seat is the asymmetry ADR 0062 and ADR 0063 exist to
-remove. And the rule lives in an Application loop, not in the domain, so a host that took picks in another
-order would play another game without breaking a test.
+table's seats are agents of the same driver (`Cli/Table/HumanSeat.cs`). So in every Match the engine played
+before ADR 0089, Player 2 chose a first pick knowing Player 1's first purchase, and Player 1 chose a second
+knowing Player 2's first. The rulebook copied that order (rulebook.md §5.3), which was the right thing for it
+to do while the engine played it. Two facts made it a question. It was the one place the seat still ordered
+anything since ADR 0063 took the tiebreak from it, and the seat is the asymmetry ADR 0062 and ADR 0063 exist
+to remove. And the rule lived in an Application loop, not in the domain, so a host that took picks in another
+order would have played another game without breaking a test.
 
 **The question.** Who picks first in an opportunity, and where is that rule enforced?
 
@@ -651,8 +659,8 @@ component** row, the 18th. ADR 0078 moved two rows and added none: Part 2's `Ene
 unreachable and went from **needs a component** to **keep as is**, and Part 3's `momentum`, a free strike
 with a caster line now, from **needs a component** to **restate**. That is 45, 37 and 35 before it. The two
 rows that once asked the engine to change still do not: ADR 0041 made the
-stacking one, and the maintainer settled the Energy one the other way. This audit asks the engine for nothing,
-except what Candidate 6 puts to the maintainer as a question.
+stacking one, and the maintainer settled the Energy one the other way. This audit asks the engine for nothing.
+Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |

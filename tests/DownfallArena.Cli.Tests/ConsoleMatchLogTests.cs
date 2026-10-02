@@ -65,6 +65,27 @@ public sealed class ConsoleMatchLogTests
         writer.ToString().ShouldContain("Ties ordered: 2 (Standard), 1 (Standard)");
     }
 
+    /// <summary>
+    /// In `human` mode a seat reads this log, so a face-down pick and a pass both print nothing: a line for one
+    /// and not the other would tell them apart (ADR 0089). The reveal is the first the log says of either.
+    /// </summary>
+    [Fact]
+    public async Task A_face_down_pick_and_a_pass_print_nothing_until_the_reveal_names_every_purchase()
+    {
+        var choice = new EvolutionChoice(Two, TierId.Parse("tier:guard:v1"));
+        var writer = new StringWriter();
+        var log = new ConsoleMatchLog(writer);
+
+        await log.HandleAsync(new EvolutionChoiceSubmitted(MatchId.New(), RoundId.First, PlayerSlot.Player2, choice), TestContext.Current.CancellationToken);
+        await log.HandleAsync(new EvolutionPassed(MatchId.New(), RoundId.First, PlayerSlot.Player2), TestContext.Current.CancellationToken);
+
+        writer.ToString().ShouldBeEmpty();
+
+        await log.HandleAsync(new PurchasesRevealed(MatchId.New(), RoundId.First, [choice]), TestContext.Current.CancellationToken);
+
+        writer.ToString().ShouldContain("Purchases revealed: creature 2 buys tier:guard:v1.");
+    }
+
     private static OngoingEffectsApplied Ongoing(
         IReadOnlyList<BleedTick> bleeds,
         IReadOnlyList<RegenerationTick> regenerations,

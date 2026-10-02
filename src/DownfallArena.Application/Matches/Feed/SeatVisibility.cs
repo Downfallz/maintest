@@ -8,10 +8,11 @@ namespace DownfallArena.Application.Matches.Feed;
 /// </summary>
 /// <remarks>
 /// The raw stream is not safe to hand to a player. The trace keeps every event with <em>both</em> boards on
-/// purpose (<c>MatchTraceRecorder</c>, <c>docs/learning/artifacts.md</c>), and two of the fifteen events are
-/// the game's hidden information — the same two <see cref="Matches.Projections.PlayerBoardStateProjection" />
-/// already filters out of a board. A feed that leaked either would produce a playtest that looks perfectly
-/// normal and is worthless (ADR 0054).
+/// purpose (<c>MatchTraceRecorder</c>, <c>docs/learning/artifacts.md</c>), and five of the nineteen events are
+/// the game's hidden information: the intents, speed choices and evolution picks that
+/// <see cref="Matches.Projections.PlayerBoardStateProjection" /> already filters out of a board, a tie order,
+/// and a pass. A feed that leaked any of them would produce a playtest that looks perfectly normal and is
+/// worthless (ADR 0054).
 ///
 /// Every arm below says why it is where it is. A default-deny table is only worth its test if the reasons are
 /// written down: the next reader has to be able to check the call, not just trust it.
@@ -29,6 +30,7 @@ public static class SeatVisibility
         typeof(SpeedChoiceSubmitted),
         typeof(EvolutionChoiceSubmitted),
         typeof(EvolutionPassed),
+        typeof(PurchasesRevealed),
         typeof(ActionRevealed),
         typeof(CombatActionResolved),
         typeof(ConditionsExpired),
@@ -55,11 +57,12 @@ public static class SeatVisibility
             IntentSubmitted intent => intent.Slot == slot,
             SpeedChoiceSubmitted speed => speed.Slot == slot,
 
-            // Public, although the board projection filters it: both teams' snapshots are served whole and a
-            // snapshot carries KnownSpells, so an unlock is already visible to the opponent. The event says
-            // nothing the board does not — and the same holds for a pass, which is that absence.
-            EvolutionChoiceSubmitted => true,
-            EvolutionPassed => true,
+            // Hidden until the sub-phase ends (ADR 0089): a pick is face down so the other player chooses
+            // without it, and a pass is face down with it, because a pass says how many picks were made. The
+            // Purchase reveal, which PurchasesRevealed records, is public.
+            EvolutionChoiceSubmitted choice => choice.Slot == slot,
+            EvolutionPassed passed => passed.Slot == slot,
+            PurchasesRevealed => true,
 
             // The combat phase is public by construction: a reveal is the reveal, a resolution is what
             // everyone at the table watches happen, and conditions and upkeep are on both boards already.

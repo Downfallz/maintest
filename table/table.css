@@ -177,6 +177,7 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .talent-tier h3 { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .talent-card { margin-bottom: 12px; }
 .talent-card.available { box-shadow: 0 0 0 2px var(--gold); }
+.talent-card.picked { box-shadow: 0 0 0 2px var(--ally); }
 .talent-card.future { background: #29352e; border-color: #566458; color: var(--ink); }
 .talent-card.future .card-meta, .talent-card.future .card-body { color: #c0cbbf; }
 .talent-card.future .card-body { border-color: #526052; }
@@ -229,6 +230,7 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .tree-progress { display: block; color: #cfdbcf; font-size: 10px; margin-top: 8px; }
 .tree-offer { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; }
 .tree-node.unlockable .tree-offer { color: var(--gold); }
+.tree-node.picked .tree-offer { color: var(--ally); }
 .atlas-prompt { text-align: center; padding: 22px; color: var(--muted); border: 1px dashed var(--line); border-radius: 9px; font-size: 12px; }
 .talent-inspector { border-top: 1px solid var(--line); padding-top: 16px; }
 .talent-inspector .talent-lane { margin: 0; }
@@ -918,7 +920,7 @@ body:has(#table) { padding-bottom: 24px; }
   .tree-node { max-width: none; min-height: 0; height: auto; padding: 8px 10px; text-align: left; border-top-width: 1px; border-left-width: 4px; }
   .tree-title { font-size: 15px; overflow-wrap: normal; }
   .tree-progress { margin-top: 3px; }
-  .tree-node:not(.unlockable, .known) .tree-offer { display: none; }
+  .tree-node:not(.unlockable, .known, .picked) .tree-offer { display: none; }
   .atlas-back { display: block; margin: 0 0 10px auto; }
 }
 

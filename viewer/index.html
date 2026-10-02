@@ -396,7 +396,9 @@
         const parts = [gainedEnergy && `Energy regenerations: ${gainedEnergy}`, healed && `Regenerations: ${healed}`, bled && `Bleeds: ${bled}`].filter(Boolean);
         return parts.length ? parts.join('. ') : 'No ongoing effects';
       },
-      EvolutionChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} unlocks ${spellName(event.choice.spell)}`,
+      // A pick is face down until the sub-phase ends (ADR 0089); the reveal is when the packages are bought.
+      EvolutionChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} picks ${spellName(event.choice.tier)}, face down`,
+      PurchasesRevealed: (event, names) => `Purchases revealed: ${event.choices.map(choice => `${names[choice.creature]} buys ${spellName(choice.tier)}`).join(', ')}`,
       EvolutionPassed: (event) => `${event.slot} passes`,
       SpeedChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} goes ${event.choice.speed}`,
       TimelineBuilt: (event, names) => {
