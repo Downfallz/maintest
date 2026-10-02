@@ -504,14 +504,17 @@ public sealed class Match : AggregateRoot<MatchId>
             return;
         }
 
-        foreach (var choice in choices)
+        // Every package is looked up before any is bought: an unknown id would throw, and half a reveal is
+        // worse than none. Unreachable while ValidateChoice only passes packages the catalogue holds.
+        var tiers = choices.Select(choice => (choice.Creature, Tier: _resources.GetTier(choice.Tier))).ToList();
+        foreach (var (creature, tier) in tiers)
         {
             // The whole package or none of it: BuyTier checks everything before it changes anything, so a
             // refusal here would mean the validation and the entity disagree, which is a bug rather than a rule.
-            var bought = CreatureOf(choice.Creature).BuyTier(_resources.GetTier(choice.Tier));
+            var bought = CreatureOf(creature).BuyTier(tier);
             if (bought.IsFailure)
             {
-                throw new InvalidOperationException($"Creature {choice.Creature} refused a validated purchase: {bought.Error.Message}");
+                throw new InvalidOperationException($"Creature {creature} refused a validated purchase: {bought.Error.Message}");
             }
         }
 

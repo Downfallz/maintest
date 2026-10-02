@@ -115,6 +115,7 @@ public sealed class MatchTests
         Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5));
 
         match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5), "a face-down pick moves nothing");
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
 
@@ -187,6 +188,21 @@ public sealed class MatchTests
             [new EvolutionChoice(knight, Arena.GuardPack), new EvolutionChoice(ghoul, Arena.GuardPack)]);
         Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
         Table.CreatureNumber(match, 3).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+    }
+
+    /// <summary>A match conceded with a pick still face down never reaches the reveal, so nothing is bought.</summary>
+    [Fact]
+    public void A_concession_during_evolution_buys_no_face_down_pick()
+    {
+        var match = Table.Started();
+        var knight = CreatureId.From(1);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+
+        match.Concede(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+
+        match.State.ShouldBe(MatchState.Ended);
+        match.DomainEvents.OfType<PurchasesRevealed>().ShouldBeEmpty();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeFalse();
     }
 
     /// <summary>A round where nobody picked has nothing to reveal, and says so by raising nothing.</summary>

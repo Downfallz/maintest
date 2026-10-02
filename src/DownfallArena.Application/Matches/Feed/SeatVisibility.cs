@@ -58,8 +58,8 @@ public static class SeatVisibility
             SpeedChoiceSubmitted speed => speed.Slot == slot,
 
             // Hidden until the sub-phase ends (ADR 0089): a pick is face down so the other player chooses
-            // without it, and a pass is face down with it, since knowing someone is done buying is knowing
-            // what they bought is all there is. The reveal buys every pick at once and is the whole board's.
+            // without it, and a pass is face down with it, because a pass says how many picks were made. The
+            // Purchase reveal, which PurchasesRevealed records, is public.
             EvolutionChoiceSubmitted choice => choice.Slot == slot,
             EvolutionPassed passed => passed.Slot == slot,
             PurchasesRevealed => true,

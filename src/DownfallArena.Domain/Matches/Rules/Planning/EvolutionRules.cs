@@ -11,8 +11,8 @@ namespace DownfallArena.Domain.Matches.Rules.Planning;
 public static class EvolutionRules
 {
     /// <summary>
-    /// Validates a choice without applying it. The aggregate buys the package only after the round accepted
-    /// the choice.
+    /// Validates a choice without applying it. The round records an accepted choice face down, and the aggregate
+    /// buys the package at the Purchase reveal, when the sub-phase ends (ADR 0089).
     /// </summary>
     public static Result ValidateChoice(
         PlayerSlot slot,
@@ -138,7 +138,7 @@ public static class EvolutionRules
             .Where(offer => offer.Tiers.Count > 0)];
     }
 
-    /// <summary>Whether the creature has already bought a package in this round.</summary>
+    /// <summary>Whether the creature has already been picked for a package this round.</summary>
     private static bool HasEvolved(CreatureSnapshot creature, Round round) =>
         round.EvolutionChoicesOf(creature.Owner).Any(choice => choice.Creature == creature.Id);
 }
