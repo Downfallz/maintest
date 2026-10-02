@@ -265,6 +265,40 @@ public sealed class AdminApiTests : IDisposable
         (await admin.HandleAsync("DELETE", "/api/sessions", "not json", OperatorToken, null)).Status.ShouldBe(400);
     }
 
+    /// <summary>
+    /// Deleting a table still being played waits for its match to stop and its files to land before the run is
+    /// removed: a checkpoint still on its way would otherwise bring the run back, after the deletion was reported.
+    /// </summary>
+    [Fact]
+    public async Task Deleting_a_table_being_played_waits_for_it_to_stop_before_its_run_is_removed()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+        var table = _registry.ById(playing).ShouldNotBeNull();
+
+        var answer = await admin.HandleAsync("DELETE", "/api/sessions", $$"""{"ids":["{{playing}}"]}""", OperatorToken, null);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        table.Session.Outcome.IsCompleted.ShouldBeTrue("the deletion returned once the match had stopped");
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, playing)).ShouldBeFalse();
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        Directory.Exists(Path.Combine(_hosted.RunsDirectory, playing)).ShouldBeFalse("nothing landed after the deletion");
+    }
+
+    [Fact]
+    public async Task A_session_still_being_played_is_not_exported()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var playing = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+
+        var one = await admin.HandleAsync("GET", $"/api/sessions/{playing}/export", "", OperatorToken, null);
+        var several = await admin.HandleAsync("POST", "/api/sessions/export", $$"""{"ids":["{{playing}}"]}""", OperatorToken, null);
+
+        one.Status.ShouldBe(409, Text(one));
+        JsonDocument.Parse(Text(one)).RootElement.GetProperty("error").GetString().ShouldBe("Admin.Live");
+        several.Status.ShouldBe(409);
+    }
+
     [Fact]
     public async Task An_export_is_a_zip_of_run_directories_as_the_store_holds_them()
     {
@@ -272,6 +306,7 @@ public sealed class AdminApiTests : IDisposable
         var first = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
         _registry.Remove(first);
         var second = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null));
+        _registry.Remove(second);
 
         var one = await admin.HandleAsync("GET", $"/api/sessions/{first}/export", "", OperatorToken, null);
         var both = await admin.HandleAsync("POST", "/api/sessions/export", $$"""{"ids":["{{first}}","{{second}}","nowhere"]}""", OperatorToken, null);
