@@ -21,7 +21,9 @@ holds, whether or not this host still has its table, deletes one or several (a t
 closed first) and exports one or several as a zip of run directories: unzipped under `runs/`, each is what
 `train-clone`, `export-csv` and the viewer read. A table page shows an **Admin** link in its header to the
 operator's own browser (the panel keeps the token, or the platform's sign-in says so) and to nobody else.
-`/lobby`, the panel's former address, redirects. `--lobby` starts the host with no table at all, which
+`/lobby`, the panel's former address, redirects. A host that starts over a store rebuilds every table the
+host before it left open, from the seed and the decisions it recorded (`decisions.jsonl`, `table.json`,
+ADR 0091): the players' links and codes still reach their seats. `--lobby` starts the host with no table at all, which
 is how it runs in its container, and `--platform-auth` makes the platform's sign-in the operator's door
 instead of a printed token (ADR 0080). The hosted table runs exactly that, on Azure: see
 [infra/README.md](../infra/README.md). From a shell:

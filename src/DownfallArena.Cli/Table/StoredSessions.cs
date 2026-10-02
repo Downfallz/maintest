@@ -113,6 +113,41 @@ internal sealed class StoredSessions(IArtifactStore store)
 
     public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, cancellationToken);
 
+    /// <summary>The table's record, or none when the run was never a table of a host that wrote one (ADR 0091).</summary>
+    public async Task<TableRecord?> RecordAsync(string id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var text = await store.Reader(id).ReadTextAsync(TableRecord.File, cancellationToken);
+            return text is null ? null : JsonSerializer.Deserialize<TableRecord>(text, ArtifactJson.DocumentOptions);
+        }
+        catch (Exception failure) when (failure is JsonException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Every decision the table took, in order; empty when none was written.</summary>
+    public async Task<IReadOnlyList<JournalEntry>> JournalAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var text = await store.Reader(id).ReadTextAsync(DecisionJournal.File, cancellationToken);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var entries = new List<JournalEntry>();
+        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (JsonSerializer.Deserialize<JournalEntry>(line, ArtifactJson.LineOptions) is { } entry)
+            {
+                entries.Add(entry);
+            }
+        }
+
+        return entries;
+    }
+
     private async Task<RunManifest?> ManifestAsync(string id, CancellationToken cancellationToken)
     {
         try

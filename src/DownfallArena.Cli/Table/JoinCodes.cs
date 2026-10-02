@@ -75,6 +75,31 @@ internal sealed class JoinCodes
         }
     }
 
+    /// <summary>
+    /// Mints the code a seat had before this host existed (ADR 0091), so what its player wrote down still
+    /// works; a fresh one when that code is already somebody's, which a rebuilt table and a new one can do.
+    /// </summary>
+    public string? Mint(TableSeat seat, string? wanted)
+    {
+        ArgumentNullException.ThrowIfNull(seat);
+        if (seat.Person is null)
+        {
+            return null;
+        }
+
+        lock (_gate)
+        {
+            if (wanted is { Length: Length } code && !_seats.ContainsKey(code))
+            {
+                _seats[code] = seat;
+                _codes[seat.Token] = code;
+                return code;
+            }
+        }
+
+        return Mint(seat);
+    }
+
     /// <summary>Forgets a seat's code, once its table is gone: a code that still answered would name a seat nobody can play.</summary>
     public void Forget(TableSeat seat)
     {

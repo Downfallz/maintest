@@ -14,7 +14,7 @@ public sealed class CreateMatchHandler(MatchWorkflow workflow, IGameResources re
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var match = Match.Create(MatchId.New(), resources, command.RuleSet, random.Create(command.Seed));
+        var match = Match.Create(command.Id ?? MatchId.New(), resources, command.RuleSet, random.Create(command.Seed));
         await workflow.CommitAsync(match, cancellationToken);
         return Result.Success(match.Id);
     }
