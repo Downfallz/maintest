@@ -29,7 +29,10 @@ writes, as the match is played:
   decision is handed to the engine.
 - `table.json`: the request the table was composed from (agents, initials, handover, seed), the match's id,
   each seat's token and code, the pilot's token, and a status: `open`, `finished` when the run closes, `closed`
-  when the operator closes the table or the host lets it go.
+  when the operator closes the table or the sweep lets go of one nobody is at. A host stopping marks nothing:
+  it lets its tables go open, which is what the host after it rebuilds. A record whose last line ends the
+  match -- the host died after writing it and before marking the table finished -- is rebuilt as a finished
+  table and marked so then.
 
 When a host starts over a store, it reads every run whose record says `open` and whose last decision is more
 recent than the registry would have kept an idle table for (`TableRegistry.IdleFor`, twenty hours), and
@@ -42,8 +45,10 @@ are minted as they were, so what a player wrote down still works, and the links 
 
 A line that does not answer the question the rebuilt match asks -- the content or the engine changed under
 the record -- is a divergence: the replay is refused, the table is let go of, and the run stays in the store
-as it was, listed in the admin panel as not finished. A replay that does not finish in twenty seconds is
-treated the same way. Nothing is guessed at.
+exactly as the earlier host wrote it (the dataset the replay re-records is held back until the replay is
+kept), listed in the admin panel as not finished and still `open`, so a host with the content the record was
+played on rebuilds it. A replay that does not finish in twenty seconds is treated the same way. Nothing is
+guessed at.
 
 `CreateMatch` takes an optional id for this, which is the one change outside the host.
 

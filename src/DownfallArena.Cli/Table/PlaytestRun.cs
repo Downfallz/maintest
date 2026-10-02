@@ -75,9 +75,13 @@ internal sealed class PlaytestRun
         RunStamp stamp,
         TimeProvider clock,
         int seed,
-        IReadOnlyList<JournalEntry>? recorded)
+        IReadOnlyList<JournalEntry>? recorded,
+        TableRecord? record,
+        StagedArtifactWriter? staged)
     {
         Journal = new DecisionJournal(place.Writer, clock, recorded);
+        _record = record;
+        _staged = staged;
         SessionId = place.SessionId;
         Location = place.Location;
         _writer = place.Writer;
@@ -146,21 +150,23 @@ internal sealed class PlaytestRun
     /// name, and a table told <c>--no-record</c> still has to be found by it (ADR 0081).
     /// </summary>
     public static PlaytestRun Open(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock) =>
-        Build(store, id, setup, events, clock, recorded: null);
+        Build(store, id, setup, events, clock, rebuilding: null);
 
     /// <summary>
     /// Opens a session over what an earlier host wrote, to replay it: the journal starts full and the files
     /// are not started over. The dataset files are, because their steps were in the earlier host's memory
-    /// and are re-recorded by the replay; the notes, the catalogue, the record and the journal were written as
-    /// they happened and are kept.
+    /// and are re-recorded by the replay, but not before <see cref="KeepAsync" />: a replay can be refused,
+    /// and a run refused is left as the earlier host wrote it. The notes, the catalogue, the record and the
+    /// journal were written as they happened and are kept; the record is the one marked when this table ends.
     /// </summary>
-    public static PlaytestRun Resume(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, IReadOnlyList<JournalEntry> recorded)
+    public static PlaytestRun Resume(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record, IReadOnlyList<JournalEntry> recorded)
     {
+        ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(recorded);
-        return Build(store, id, setup, events, clock, recorded);
+        return Build(store, id, setup, events, clock, (record, recorded));
     }
 
-    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, IReadOnlyList<JournalEntry>? recorded)
+    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, (TableRecord Record, IReadOnlyList<JournalEntry> Recorded)? rebuilding)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -173,9 +179,10 @@ internal sealed class PlaytestRun
         var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
         // One trace, because a session is one match: the limit is what stops the recorder from being asked for
-        // a second one it never had.
+        // a second one it never had. On a rebuild its writes are held back until the replay is kept.
+        var staged = rebuilding is null ? null : new StagedArtifactWriter(place.Writer);
         var recorder = new RunRecorder(
-            place.Writer,
+            staged ?? place.Writer,
             stamp,
             new ObservationBuilder(schema),
             new ActionEncoder(schema),
@@ -184,7 +191,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, recorded);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding?.Recorded, rebuilding?.Record, staged);
     }
 
     /// <summary>
@@ -199,8 +206,17 @@ internal sealed class PlaytestRun
         await _writer.WriteJsonAsync(CatalogueFile, catalogue, cancellationToken);
     }
 
-    /// <summary>Starts the dataset files over for a replay, and nothing else: see <see cref="Resume" />.</summary>
+    /// <summary>Starts the dataset files over for a replay, and nothing else: see <see cref="Resume" />. Held back until <see cref="KeepAsync" />.</summary>
     public Task ResumeAsync(CancellationToken cancellationToken = default) => _recorder.StartAsync(cancellationToken);
+
+    /// <summary>
+    /// The replay reached the end of the record and the rebuilt match agrees with it: the dataset files it
+    /// re-recorded land now, in the order they were written, and every write from here on lands as it comes.
+    /// Nothing to do for a run opened rather than resumed.
+    /// </summary>
+    public Task KeepAsync(CancellationToken cancellationToken = default) => _staged?.LetThroughAsync(cancellationToken) ?? Task.CompletedTask;
+
+    private readonly StagedArtifactWriter? _staged;
 
     /// <summary>
     /// Whether the match as rebuilt agrees with the trace the earlier host checkpointed: every entry it wrote
@@ -222,7 +238,7 @@ internal sealed class PlaytestRun
             return true;
         }
 
-        var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(_events.EntriesOf(matchId), ArtifactJson.DocumentOptions);
+        var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(Trace(matchId), ArtifactJson.DocumentOptions);
         if (written.GetArrayLength() > rebuilt.GetArrayLength())
         {
             return false;
@@ -476,7 +492,22 @@ internal sealed class PlaytestRun
     /// no longer holds is what makes that impossible rather than merely unlikely.
     /// </remarks>
     /// <summary>How far the trace has got, so a caller can tell when something it set in motion has reached it.</summary>
-    public int TraceLength(MatchId matchId) => _events.Length(matchId);
+    public int TraceLength(MatchId matchId) => Trace(matchId).Count;
+
+    /// <summary>
+    /// The match's trace, live or as closing kept it: a record whose last line ends the match closes the
+    /// session during its own replay, and the recorder forgets the match as it is handed it.
+    /// </summary>
+    private IReadOnlyList<TraceEntry> Trace(MatchId matchId)
+    {
+        if (_kept is { } final)
+        {
+            return final;
+        }
+
+        var live = _events.EntriesOf(matchId);
+        return live.Count > 0 ? live : _kept ?? live;
+    }
 
     /// <summary>
     /// The match's entries from <paramref name="since" /> onwards, whether or not the session has been closed.
@@ -505,7 +536,7 @@ internal sealed class PlaytestRun
     /// </remarks>
     public async Task WaitForTraceAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
     {
-        for (var waited = TimeSpan.Zero; _events.Length(matchId) <= beyond && waited < GrowthWait; waited += GrowthStep)
+        for (var waited = TimeSpan.Zero; TraceLength(matchId) <= beyond && waited < GrowthWait; waited += GrowthStep)
         {
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }

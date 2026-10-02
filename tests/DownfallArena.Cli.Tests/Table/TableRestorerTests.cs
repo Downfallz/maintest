@@ -165,6 +165,117 @@ public sealed class TableRestorerTests : IDisposable
         said.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A host stopping lets its tables go without closing them: the next host rebuilding them is the point.
+    /// Only the operator closing a table, or the sweep, marks a record closed.
+    /// </summary>
+    [Fact]
+    public async Task A_host_that_stops_leaves_its_open_tables_open_for_the_next_one()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntilIntent(table, table.Seats[0].Person!);
+
+        _earlier.Dispose();
+        await Task.WhenAny(table.Session.Outcome);
+
+        (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+        said.ShouldHaveSingleItem().ShouldContain("rebuilt");
+        _later.ById(table.Id).ShouldNotBeNull();
+    }
+
+    /// <summary>A rebuilt table ends like any other: closed by the operator, its record says so, and no third host rebuilds it.</summary>
+    [Fact]
+    public async Task A_rebuilt_table_closed_by_the_operator_marks_its_record_closed()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+
+        _later.Remove(rebuilt.Id).ShouldBeTrue();
+        await rebuilt.Closing.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Closed);
+    }
+
+    /// <summary>A replay refused leaves the run exactly as the earlier host wrote it: its manifest, its dataset, its trace.</summary>
+    [Fact]
+    public async Task A_replay_that_is_refused_leaves_the_run_as_the_earlier_host_wrote_it()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        var store = new FileArtifactStore(_runs);
+        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
+        journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
+        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
+        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, journal, TestContext.Current.CancellationToken);
+        var before = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
+
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        _later.All().ShouldBeEmpty();
+        (await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl")).ShouldBe(before);
+        (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "left as it was, not closed");
+    }
+
+    /// <summary>The host's own table holds its place before the rebuild, so a store full of open tables cannot take it.</summary>
+    [Fact]
+    public async Task A_place_held_before_the_rebuild_is_not_taken_by_it()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntilIntent(table, table.Seats[0].Person!);
+        using var one = new TableRegistry(mostUnderWay: 1);
+        using var held = one.Reserve().ShouldNotBeNull();
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, one, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("as many tables under way as it takes");
+        one.All().ShouldBeEmpty();
+        (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "left for a host with room");
+    }
+
+    /// <summary>
+    /// A host that died after writing the decision that ended the match, and before marking the table finished,
+    /// left a record that ends the match when replayed. That is a finished table recovered, not a replay that
+    /// failed: its links answer, and its record is marked finished so no host rebuilds it again.
+    /// </summary>
+    [Fact]
+    public async Task A_record_whose_last_decision_ends_the_match_is_rebuilt_as_a_finished_table()
+    {
+        var table = await Opened(HostedTables.Bots);
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(table);
+        var record = (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await new FileArtifactStore(_runs).Writer(table.Id).WriteJsonAsync(TableRecord.File, record with { Status = TableRecord.Open }, TestContext.Current.CancellationToken);
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("rebuilt");
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        await rebuilt.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(rebuilt);
+        for (var attempt = 0; attempt < 300 && (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken))?.Status != TableRecord.Finished; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+    }
+
+    private async Task<IReadOnlyList<string?>> Files(string id, params string[] names)
+    {
+        var reader = new FileArtifactStore(_runs).Reader(id);
+        var texts = new List<string?>();
+        foreach (var name in names)
+        {
+            texts.Add(await reader.ReadTextAsync(name, TestContext.Current.CancellationToken));
+        }
+
+        return texts;
+    }
+
     private async Task<PlayedTable> Opened(TableRequest request)
     {
         var table = await _before.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);

@@ -198,7 +198,7 @@ internal sealed class TableRegistry : IDisposable
             Forget(table);
         }
 
-        table.Dispose();
+        table.Close();
         return true;
     }
 
@@ -241,12 +241,16 @@ internal sealed class TableRegistry : IDisposable
 
         foreach (var table in gone)
         {
-            table.Dispose();
+            table.Close();
         }
 
         return [.. gone.Select(table => table.Id)];
     }
 
+    /// <summary>
+    /// Lets every table go, as a host stopping does: without closing any, so that the host after this one
+    /// rebuilds what was being played (ADR 0091).
+    /// </summary>
     public void Dispose()
     {
         List<PlayedTable> all;

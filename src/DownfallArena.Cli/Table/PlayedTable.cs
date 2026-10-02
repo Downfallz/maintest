@@ -90,8 +90,31 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Says the recording is done with, written or not: the closing has run to its end.</summary>
     public void MarkClosed() => Volatile.Write(ref _closed, 1);
 
-    /// <summary>The record being marked closed, once the table is let go of unfinished; complete otherwise.</summary>
+    /// <summary>The record being marked closed, once the table is closed unfinished; complete otherwise.</summary>
     public Task Closing { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Closes the table for good: the operator closed it, or nobody came back to it. Its record is marked
+    /// closed, so a host that comes after this one does not rebuild it, and then it is let go of. The one
+    /// way a record is marked closed: a host stopping lets its tables go without closing them, since the
+    /// next host rebuilding them is the whole point (ADR 0091).
+    /// </summary>
+    public void Close()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
+        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
+        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
+        if (Run is { } run && !IsOver)
+        {
+            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+        }
+
+        Dispose();
+    }
 
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
@@ -127,8 +150,10 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>
     /// Stops the match if it is still being played and lets the session go. A seat waiting on a person is
     /// released with a cancellation, which ends the driver without an outcome; the recording keeps what it
-    /// has, which is what an abandoned session is. Once only: the registry lets a table go and a test holds
-    /// it too, and neither should have to know about the other.
+    /// has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
+    /// what a host does as it stops, and the next host rebuilds what it let go of. Closing a table for good
+    /// is <see cref="Close" />. Once only: the registry lets a table go and a test holds it too, and neither
+    /// should have to know about the other.
     /// </summary>
     /// <remarks>
     /// The session is let go of once the driver has stopped, not now: the driver may be inside a command,
@@ -142,18 +167,7 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
-        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
-        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
-        var unfinished = !IsOver;
         _stopping.Cancel();
-
-        // A table let go of before it finished is closed for good: a host that comes after this one must not
-        // rebuild what the operator closed, or what nobody came back to.
-        if (Run is { } run && unfinished)
-        {
-            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
-        }
-
         Session.Outcome.ContinueWith(
             _ =>
             {

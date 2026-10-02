@@ -88,17 +88,23 @@ internal sealed class TableComposer
 
         var table = await BuildAsync(record.Request(), (record, journal), cancellationToken);
         var replayed = table.Run!.Journal.Exhausted;
-        var ended = await Task.WhenAny(replayed, table.Session.Outcome, Task.Delay(ReplayWithin, cancellationToken));
+        await Task.WhenAny(replayed, table.Session.Outcome, Task.Delay(ReplayWithin, cancellationToken));
         string? reason = null;
-        if (ended == replayed && replayed.IsCompletedSuccessfully && !table.Session.Outcome.IsCompleted)
+
+        // Read on its own rather than as the task that ended the wait: a record whose last line ends the
+        // match -- the earlier host died after writing it and before marking the table finished -- completes
+        // the replay and the outcome together, and is a finished table recovered, not a replay that failed.
+        if (replayed.IsCompletedSuccessfully)
         {
             // The last recorded decision is handed over before the command it causes is applied; the trace
             // growing past it is what says the board has caught up.
             await table.Run.WaitForTraceAsync(table.Session.MatchId, Math.Max(0, table.Run.TraceLength(table.Session.MatchId) - 1), cancellationToken);
             if (await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, cancellationToken))
             {
-                // The rebuilt trace is the whole match again; the checkpoint the replay was held against is
-                // overwritten with it, as every decision from here on will overwrite it.
+                // Kept: the dataset the replay re-recorded lands now. The rebuilt trace is the whole match
+                // again; the checkpoint the replay was held against is overwritten with it, as every decision
+                // from here on will overwrite it.
+                await table.Run.KeepAsync(cancellationToken);
                 await table.Run.CheckpointAsync(table.Session.MatchId, cancellationToken);
                 return table;
             }
@@ -130,21 +136,21 @@ internal sealed class TableComposer
     /// The recording of a table, opened for a table opening now or resumed over what an earlier host wrote,
     /// and started either way; none for a host told to keep nothing.
     /// </summary>
-    private async Task<PlaytestRun?> OpenRunAsync(string id, PlaytestSetup setup, MatchTraceRecorder events, IReadOnlyList<JournalEntry>? rebuilding, CancellationToken cancellationToken)
+    private async Task<PlaytestRun?> OpenRunAsync(string id, PlaytestSetup setup, MatchTraceRecorder events, (TableRecord Record, IReadOnlyList<JournalEntry> Journal)? rebuilding, CancellationToken cancellationToken)
     {
         if (_store is not { } store)
         {
             return null;
         }
 
-        if (rebuilding is null)
+        if (rebuilding is not { } rebuild)
         {
             var opened = PlaytestRun.Open(store, id, setup, events, _clock);
             await opened.StartAsync(_catalogue, cancellationToken);
             return opened;
         }
 
-        var resumed = PlaytestRun.Resume(store, id, setup, events, _clock, rebuilding);
+        var resumed = PlaytestRun.Resume(store, id, setup, events, _clock, rebuild.Record, rebuild.Journal);
         await resumed.ResumeAsync(cancellationToken);
         return resumed;
     }
@@ -175,7 +181,7 @@ internal sealed class TableComposer
             Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, agents, Source(seed, slot));
 
             var setup = new PlaytestSetup(resources, _rules, seed, Stamped(seat1, request.Player1, request), Stamped(seat2, request.Player2, request));
-            var run = await OpenRunAsync(id, setup, events, rebuilding?.Journal, cancellationToken);
+            var run = await OpenRunAsync(id, setup, events, rebuilding, cancellationToken);
 
             // A swap line is applied as the replay reaches it, through the pilot's own seating.
             run?.Journal.SwapsThrough((slot, wanted, round) => SeatingOf(slot, wanted) is { } next && Of(slot).Agent.SwapAt(next, round).Taken);
