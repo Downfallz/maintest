@@ -1,5 +1,5 @@
 import { EFFECT_GROUPS, energyCost, strategyOverview, compactEffect } from './strategy.js';
-import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellLevels, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
+import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellLevels, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
 import { standing } from './value.js';
 
 const h = (tag, className, text) => {
@@ -91,7 +91,7 @@ function spellTile(item, catalogue, open) {
   return append(tile,
     append(h('span', 'spell-tile-top'), rune(family?.tone ?? 0), h('span', 'energy-cost', `${doc.energyCost ?? 0} energy`)),
     h('strong', 'spell-name', item.name), origin(item, catalogue), h('span', 'spell-summary', summary),
-    valueLine(item, catalogue), h('span', 'spell-meta', `${doc.spellType} · ${targetText(doc.targeting)}`));
+    valueLine(item, catalogue), h('span', 'spell-meta', [doc.spellType, targetText(doc.targeting), criticalText(doc)].filter(Boolean).join(' · ')));
 }
 
 function packageTile(item, catalogue, open) {
@@ -213,7 +213,7 @@ function packageReading(view, item, catalogue, open) {
 
 function spellReading(view, item, catalogue, open) {
   const doc = item.document;
-  view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(`${Number(((doc.criticalChance ?? 0) * 100).toFixed(2))}%`, 'critical bonus')));
+  view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(percentText(doc.criticalChance), 'critical bonus')));
   view.append(origin(item, catalogue));
   const value = valueReading(item, catalogue);
   if (value) view.append(value);
@@ -378,7 +378,8 @@ function strategySpell(item, catalogue, open) {
   const heading = append(h('span', 'strategy-spell-heading'), h('strong', '', item.name), h('span', 'energy-cost', costLabel(energyCost(item))));
   const main = (doc.effects ?? []).map(compactEffect).join(' · ') || 'No target effects';
   const caster = (doc.casterEffects ?? []).map(compactEffect).join(' · ');
-  append(summary, heading, origin(item, catalogue), h('span', 'strategy-spell-facts', `${targetText(doc.targeting)}: ${main}`));
+  const facts = [`${targetText(doc.targeting)}: ${main}`, criticalText(doc)].filter(Boolean).join(' · ');
+  append(summary, heading, origin(item, catalogue), h('span', 'strategy-spell-facts', facts));
   const value = valueLine(item, catalogue);
   if (value) summary.append(value);
   if (caster) summary.append(h('span', 'strategy-caster', `Caster: ${caster}`));
@@ -389,7 +390,7 @@ function strategySpell(item, catalogue, open) {
     detail.append(h('h3', 'reader-subtitle', 'On the caster'));
     for (const effect of doc.casterEffects) detail.append(effectRow(effect));
   }
-  if (doc.criticalChance > 0) detail.append(h('p', '', `${Number((doc.criticalChance * 100).toFixed(2))}% critical bonus · Standard speed`));
+  if (doc.criticalChance > 0) detail.append(h('p', '', `${percentText(doc.criticalChance)} critical bonus · Standard speed`));
   const packs = packagesTeaching(item, catalogue);
   if (packs.length) detail.append(h('p', 'strategy-note', 'Taught by'), append(h('div', 'reader-links'), ...packs.map(pack => itemLink(pack, open))));
   detail.append(button('Full spell →', 'codex-link', () => open(item.path)));

@@ -103,6 +103,21 @@ export function effectText(effect) {
   }
 }
 
+/** A chance as a percentage, to the hundredth at most: 0.283 reads 28.3%, never 28.299999999999997%. */
+export function percentText(chance) {
+  return `${Number(((Number(chance) || 0) * 100).toFixed(2))}%`;
+}
+
+/**
+ * A spell's critical chance as its card says it, or nothing when it has none. A bonus, so it is signed: the
+ * spell adds it to the critical chance of whoever casts it, and a card reading "28% crit" would claim the
+ * whole chance.
+ */
+export function criticalText(document) {
+  const chance = Number(document?.criticalChance) || 0;
+  return chance > 0 ? `+${percentText(chance)} crit` : '';
+}
+
 export function targetText(target) {
   if (!target) return 'See targeting in editor';
   if (target.origin === 'Self') return 'Self';

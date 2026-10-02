@@ -91,6 +91,7 @@ coverage.xml
 .sweep.lock
 
 # Browser verification dependencies and output
-node_modules/
+# No trailing slash: a symlink named node_modules is not a directory, and one was committed that way.
+node_modules
 studio/browser/test-results/
 studio/browser/playwright-report/

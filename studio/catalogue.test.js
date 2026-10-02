@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { active, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText } from './catalogue.js';
+import { active, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
 
 const pack = (id, level, prerequisites = [], spells = []) => ({ id, name: id, enabled: true, document: { level, prerequisites, spells } });
 const spell = { id: 'spark:v1', name: 'Spark', document: { spellType: 'Offensive', effects: [{ kind: 'Damage' }], casterEffects: [{ kind: 'Bleed' }] } };
@@ -44,6 +44,14 @@ test('target copy distinguishes self, single and bounded multiple targets', () =
   assert.equal(targetText({ origin: 'Self', scope: 'SingleTarget' }), 'Self');
   assert.equal(targetText({ origin: 'Enemy', scope: 'SingleTarget' }), '1 enemy');
   assert.equal(targetText({ origin: 'Ally', scope: 'Multi', maxTargets: 3 }), 'Up to 3 allies');
+});
+
+test('a spell card shows its critical bonus signed and to the hundredth, and nothing without one', () => {
+  assert.equal(criticalText({ criticalChance: 0.28 }), '+28% crit');
+  assert.equal(criticalText({ criticalChance: 0.283 }), '+28.3% crit');
+  assert.equal(criticalText({ criticalChance: 0 }), '');
+  assert.equal(criticalText({}), '');
+  assert.equal(percentText(0.767), '76.7%');
 });
 
 test('a spell names every package that teaches it, lowest tier first, and the starting kit it belongs to', () => {
