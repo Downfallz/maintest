@@ -43,6 +43,47 @@ public sealed class MatchDriverTests
         (other.Rounds != first.Rounds || other.Resolutions != first.Resolutions || other.Outcome != first.Outcome).ShouldBeTrue();
     }
 
+    /// <summary>
+    /// The two package picks are made face down and revealed together (ADR 0089), so neither has to wait for
+    /// the other: both seats are asked at once (ADR 0092). Each agent here answers only once the other has been
+    /// asked, which a driver asking in turn can never satisfy.
+    /// </summary>
+    [Fact]
+    public async Task Both_players_are_asked_their_package_pick_at_the_same_time()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
+        using var bothAsked = new Barrier(2);
+        var first = new Together(Scripted(TestContent.Strike), bothAsked);
+        var second = new Together(Scripted(TestContent.Strike), bothAsked);
+
+        var outcome = await Driver(store).PlayAsync(match.Id, first, second, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        first.AskedTogether.ShouldBeTrue();
+        second.AskedTogether.ShouldBeTrue();
+    }
+
+    /// <summary>An agent whose package pick waits until the other seat has been asked its own.</summary>
+    private sealed class Together(IPlayerAgent inner, Barrier bothAsked) : IPlayerAgent
+    {
+        public bool AskedTogether { get; private set; }
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+        {
+            AskedTogether = bothAsked.SignalAndWait(TimeSpan.FromSeconds(5));
+            return inner.DecideEvolution(board, options);
+        }
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => inner.DecideSpeed(board, creature);
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => inner.DecideIntent(board, intentOption);
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+    }
+
     [Fact]
     public async Task A_pass_from_an_agent_is_submitted_as_a_pass()
     {
