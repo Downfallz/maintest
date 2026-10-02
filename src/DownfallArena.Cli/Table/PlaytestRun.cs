@@ -75,13 +75,11 @@ internal sealed class PlaytestRun
         RunStamp stamp,
         TimeProvider clock,
         int seed,
-        IReadOnlyList<JournalEntry>? recorded,
-        TableRecord? record,
-        StagedArtifactWriter? staged)
+        Rebuild? rebuild)
     {
-        Journal = new DecisionJournal(place.Writer, clock, recorded);
-        _record = record;
-        _staged = staged;
+        Journal = new DecisionJournal(place.Writer, clock, rebuild?.Recorded);
+        _record = rebuild?.Record;
+        _staged = rebuild?.Staged;
         SessionId = place.SessionId;
         Location = place.Location;
         _writer = place.Writer;
@@ -191,8 +189,11 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding?.Recorded, rebuilding?.Record, staged);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed, rebuilding is { } rebuild ? new Rebuild(rebuild.Record, rebuild.Recorded, staged!) : null);
     }
+
+    /// <summary>What a resumed run is resumed over: the record it will mark, the lines it replays, and the writer that holds the replay's dataset back.</summary>
+    private sealed record Rebuild(TableRecord Record, IReadOnlyList<JournalEntry> Recorded, StagedArtifactWriter Staged);
 
     /// <summary>
     /// Starts the dataset files and writes what this session is playing. The manifest lands with zero counts,
@@ -500,13 +501,10 @@ internal sealed class PlaytestRun
     /// </summary>
     private IReadOnlyList<TraceEntry> Trace(MatchId matchId)
     {
-        if (_kept is { } final)
-        {
-            return final;
-        }
-
+        // The live trace is read first: closing keeps the trace and then hands the match to the recorder,
+        // which forgets it, so what was kept is read after, and is the whole trace whenever it is there.
         var live = _events.EntriesOf(matchId);
-        return live.Count > 0 ? live : _kept ?? live;
+        return _kept ?? live;
     }
 
     /// <summary>
@@ -536,7 +534,9 @@ internal sealed class PlaytestRun
     /// </remarks>
     public async Task WaitForTraceAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
     {
-        for (var waited = TimeSpan.Zero; TraceLength(matchId) <= beyond && waited < GrowthWait; waited += GrowthStep)
+        // Not past the closing either: once the trace is kept, the recorder forgets the match and its length
+        // reads as nothing from then on.
+        for (var waited = TimeSpan.Zero; _events.Length(matchId) <= beyond && _kept is null && waited < GrowthWait; waited += GrowthStep)
         {
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
