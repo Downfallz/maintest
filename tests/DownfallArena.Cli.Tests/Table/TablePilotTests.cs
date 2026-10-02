@@ -46,9 +46,32 @@ public sealed class TablePilotTests : IDisposable
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
-        if (Directory.Exists(_runs))
+        DeleteRuns();
+    }
+
+    /// <summary>
+    /// The runs directory, once the session writing into it has stopped. A released match's driver thread can
+    /// still be writing its last record when the host is disposed, and a delete racing it fails on a file
+    /// created between the listing and the removal (seen in CI). A few short waits let the writer finish; a
+    /// directory still busy after them is a real leak and fails the test.
+    /// </summary>
+    private void DeleteRuns()
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(_runs, recursive: true);
+            try
+            {
+                if (Directory.Exists(_runs))
+                {
+                    Directory.Delete(_runs, recursive: true);
+                }
+
+                return;
+            }
+            catch (IOException) when (attempt < 10)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 

@@ -221,6 +221,61 @@ public sealed class AdvanceTests
         after.Single(creature => creature.Id == Arena.Wraith).Energy.ShouldBe(Energy.Of(0));
     }
 
+    [Fact]
+    public void Buying_on_a_board_lands_where_the_match_reveal_does()
+    {
+        var match = Table.Started();
+        var before = match.Snapshots();
+        EvolutionChoice[] choices = [new(One, Arena.GuardPack), new(Three, Arena.GuardPack)];
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, choices[0]).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, choices[1]).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+
+        var bought = Advance.Buy(before, choices, Arena.Resources);
+
+        match.DomainEvents.OfType<PurchasesRevealed>().ShouldHaveSingleItem();
+        ShouldMatch(match.Snapshots(), bought);
+    }
+
+    [Fact]
+    public void Buying_leaves_the_board_it_was_handed_as_it_was()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        var bought = Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.GuardPack)], Arena.Resources);
+
+        bought.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldContain(Arena.Guard);
+        board.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldNotContain(Arena.Guard);
+        board.Single(creature => creature.Id == Arena.Knight).AcquiredTiers.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_purchase_the_creature_refuses_is_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        // Slam requires Guard, which nobody owns.
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.SlamPack)], Arena.Resources));
+    }
+
+    [Fact]
+    public void Two_purchases_for_one_creature_are_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        // Guard then Slam would climb two levels in one reveal, which no match reaches (ADR 0066).
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.GuardPack), new EvolutionChoice(Arena.Knight, Arena.SlamPack)], Arena.Resources));
+    }
+
+    [Fact]
+    public void A_purchase_for_a_creature_not_on_the_board_is_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(CreatureId.From(9), Arena.GuardPack)], Arena.Resources));
+    }
+
     /// <summary>
     /// Standard speeds, the planned intent per creature on the timeline, and its planned targets when its slot
     /// comes up, every action compared with what <see cref="Advance"/> makes of it.
@@ -328,6 +383,7 @@ public sealed class AdvanceTests
             creature.IsStunned.ShouldBe(other.IsStunned, $"creature {creature.Id}");
             creature.StunImmunityRounds.ShouldBe(other.StunImmunityRounds, $"creature {creature.Id}");
             creature.KnownSpells.ShouldBe(other.KnownSpells, ignoreOrder: true);
+            creature.AcquiredTiers.ShouldBe(other.AcquiredTiers, ignoreOrder: true);
             creature.Conditions.ShouldBe(other.Conditions, $"creature {creature.Id}");
         }
     }

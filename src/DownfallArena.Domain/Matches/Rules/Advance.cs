@@ -9,16 +9,16 @@ namespace DownfallArena.Domain.Matches.Rules;
 
 /// <summary>
 /// Answers what a board of snapshots would be after a step a match has not played: a combat action, the
-/// cleanup that ends a round, the start of the next (ADR 0047). It restores the creatures from the snapshots
-/// and runs the very rules <see cref="Match"/> runs on them -- <see cref="CombatExecution"/>,
-/// <see cref="UpkeepRules"/>, <see cref="WinCondition"/> -- so there is one applier and not a second one to
-/// keep in agreement with it. The snapshots handed in are never changed; the creatures that were restored
-/// never leave.
+/// cleanup that ends a round, the start of the next, the purchases of an evolution (ADR 0047, ADR 0094). It
+/// restores the creatures from the snapshots and runs the very rules <see cref="Match"/> runs on them --
+/// <see cref="CombatExecution"/>, <see cref="UpkeepRules"/>, <see cref="WinCondition"/>,
+/// <see cref="Creature.BuyTier"/> -- so there is one applier and not a second one to keep in agreement with
+/// it. The snapshots handed in are never changed; the creatures that were restored never leave.
 /// <para>
 /// It is a hypothetical board and not a match: no round, no timeline, no event. Whether the match would have
 /// ended after a cleanup is <see cref="Outcome"/>, asked before the start of the next round the way
-/// <see cref="Match"/> asks it. Nor any evolution: a board advanced past a round assumes nobody unlocks a
-/// spell in it, which is the one creature-changing step of a round not offered here.
+/// <see cref="Match"/> asks it. Nor a choice: what an evolution buys is the caller's to pick, and
+/// <see cref="Buy"/> only buys it.
 /// </para>
 /// </summary>
 public static class Advance
@@ -103,6 +103,43 @@ public static class Advance
         var creatures = Restore(board, resources);
         UpkeepRules.EnergyGain(creatures, rules);
         UpkeepRules.OngoingEffects(creatures);
+        return Snapshots(creatures);
+    }
+
+    /// <summary>
+    /// The board after an evolution's purchases are revealed: every package bought at once, both players'
+    /// together, through the purchase the match makes (ADR 0089). The picks are the caller's to make legal, as
+    /// they are a player's, so a pick the match would have refused -- a creature not on the board, a creature
+    /// picked twice (ADR 0066), an unknown package, or a purchase the creature refuses -- is a bug in the
+    /// caller, not a rule: it throws, and the board handed in is untouched.
+    /// </summary>
+    public static IReadOnlyList<CreatureSnapshot> Buy(IReadOnlyList<CreatureSnapshot> board, IReadOnlyList<EvolutionChoice> choices, IGameResources resources)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(choices);
+        ArgumentNullException.ThrowIfNull(resources);
+
+        if (choices.GroupBy(choice => choice.Creature).FirstOrDefault(picks => picks.Count() > 1) is { } twice)
+        {
+            throw new InvalidOperationException($"Creature {twice.Key} was picked twice in one evolution; a creature buys one package an opportunity.");
+        }
+
+        var creatures = Restore(board, resources);
+        // Every package is looked up and every creature found before anything is bought, as the match's reveal
+        // does: a pick refused halfway would leave a board no match can reach.
+        var purchases = choices.Select(choice => (
+            Creature: creatures.Find(candidate => candidate.Id == choice.Creature)
+                ?? throw new InvalidOperationException($"A purchase for creature {choice.Creature}, which is not on the board."),
+            Tier: resources.TryGetTier(choice.Tier, out var tier) ? tier : throw new InvalidOperationException($"A purchase of {choice.Tier}, which is not in the catalogue."))).ToList();
+        foreach (var (creature, tier) in purchases)
+        {
+            var bought = creature.BuyTier(tier);
+            if (bought.IsFailure)
+            {
+                throw new InvalidOperationException($"Creature {creature.Id} refused {tier.Id}: {bought.Error.Message}");
+            }
+        }
+
         return Snapshots(creatures);
     }
 

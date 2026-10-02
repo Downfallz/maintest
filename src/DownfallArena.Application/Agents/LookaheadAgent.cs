@@ -7,6 +7,7 @@ using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
+using DownfallArena.SharedKernel.Randomness;
 
 namespace DownfallArena.Application.Agents;
 
@@ -26,8 +27,9 @@ namespace DownfallArena.Application.Agents;
 /// What it does not see is hidden: an enemy's intent is not public until revealed, so an enemy slot that is
 /// still ahead plays what the scorer would play for it, and an ally that has not declared plays the same way.
 /// What has been declared or revealed is read as it is. The round is played on the plain roll, which is what
-/// makes the agent deterministic and the digest replayable; a critical that would change the answer is a
-/// chance, not a reading.
+/// makes a combat move deterministic and the digest replayable; a critical that would change the answer is a
+/// chance, not a reading. A purchase's rollouts do roll, on dice derived from one seed the agent draws when it
+/// is made, so the agent is deterministic for a seed, as the exploring agent is.
 /// </para>
 /// <para>
 /// Adversarial, it is the minimax agent: an enemy slot that is still ahead is not guessed but played as the
@@ -38,12 +40,20 @@ namespace DownfallArena.Application.Agents;
 /// what the journal measures.
 /// </para>
 /// <para>
-/// Evolution and speed are the heuristic agent's: neither is a combat move, and the round they plan has no
-/// timeline yet to play out. The tie order is this agent's own: it comes once the timeline is built, so the
-/// round each order leads to can be played out like any other move.
+/// Speed is the heuristic agent's: the round it plans has no timeline yet to play out. The tie order is this
+/// agent's own: it comes once the timeline is built, so the round each order leads to can be played out like
+/// any other move. So is a purchase, once the agent has dice to roll (ADR 0094): what a package is worth
+/// shows only over the rounds after it, so those are played out whole, every sub-phase of them.
 /// </para>
 /// </summary>
-public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false, IPlayerAgent? inner = null) : IPlayerAgent
+public sealed class LookaheadAgent(
+    ScoringWeights weights,
+    IGameResources resources,
+    RuleSet rules,
+    bool adversarial = false,
+    IPlayerAgent? inner = null,
+    IRandomSource? random = null,
+    PurchaseReading? purchases = null) : IPlayerAgent
 {
     /// <summary>
     /// The agent that plays every seat this one has to guess: an ally that has not declared as the round is
@@ -62,7 +72,109 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// <summary>Whether enemy slots are played as the worst reply rather than as the guessed one: the minimax agent.</summary>
     public bool IsAdversarial => adversarial;
 
-    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => _oneStep.DecideEvolution(board, options);
+    private readonly PurchaseReading _purchases = purchases ?? PurchaseReading.Default;
+
+    /// <summary>
+    /// What every rollout's dice are derived from, drawn once from the source the agent was given: a purchase's
+    /// dice then depend on the board it is made on and nothing the agent did before, so a table rebuilt from
+    /// its decisions (ADR 0091), which does not ask the agent again for the picks it replays, buys afterwards
+    /// what the first host would have.
+    /// </summary>
+    private readonly ulong? _dice = random is null ? null : (ulong)random.NextInt32(0, int.MaxValue);
+
+    /// <summary>
+    /// The purchase whose rounds end best (ADR 0094): for each creature that can buy and each package it can
+    /// buy, the round's purchases are made -- the side's earlier picks, the candidate, the side's remaining
+    /// picks as the agent it is built on would make them, and the enemy's as that agent would make them in the
+    /// enemy's seat, since they are face down (ADR 0089) -- and the rounds after are played out, every decision
+    /// in both seats that agent's, on the same dice for every candidate. A lone candidate is bought unread. The
+    /// minimax agent reads it the same way: a worst reply to a purchase would be a worst whole match, which no
+    /// budget here can search.
+    /// <para>
+    /// Creatures that differ only by their id are one candidate, which is every creature of a side at round
+    /// 1. Ties go to the first candidate, in the options' order. With no dice of its own the agent buys as the
+    /// agent it is built on would, which is what it did before it had any.
+    /// </para>
+    /// </summary>
+    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (_dice is not { } dice || options.Creatures.Count == 0)
+        {
+            return _oneStep.DecideEvolution(board, options);
+        }
+
+        var creatures = Creatures(board).OrderBy(creature => creature.Id.Value).ToList();
+        var candidates = Candidates(creatures, options).ToList();
+        if (candidates.Count == 1)
+        {
+            return EvolutionDecision.Unlock(candidates[0]);
+        }
+
+        var round = board.RoundNumber ?? 1;
+        var rollout = new RoundRollout(_oneStep, _scorer, resources, rules);
+        var enemy = board.Slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        var guessed = rollout.Picks(board, creatures, round, enemy, []);
+        // One seed per rollout, the same for every candidate, from the round and the picks already made.
+        var seeds = Enumerable.Range(0, _purchases.Rollouts)
+            .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)board.EvolutionChoices.Count * 1_009UL) + (ulong)index)
+            .ToList();
+
+        EvolutionChoice? best = null;
+        var bestValue = RolloutValue.Lowest;
+        foreach (var candidate in candidates)
+        {
+            var own = rollout.Picks(board, creatures, round, board.Slot, [.. board.EvolutionChoices, candidate]);
+            var bought = Advance.Buy(creatures, [.. own, .. guessed], resources);
+            var value = RolloutValue.Mean([.. seeds.Select(seed => rollout.Play(board, bought, _purchases.Rounds, new RolloutDice(seed)))]);
+            if (value.CompareTo(bestValue) > 0)
+            {
+                best = candidate;
+                bestValue = value;
+            }
+        }
+
+        return best is null ? EvolutionDecision.Pass : EvolutionDecision.Unlock(best);
+    }
+
+    /// <summary>
+    /// Every purchase on offer, a creature standing for every creature of its side that differs from it only
+    /// by its id: the same health, energy, defense, initiative, packages and spells, and no condition.
+    /// </summary>
+    private static IEnumerable<EvolutionChoice> Candidates(IReadOnlyList<CreatureSnapshot> creatures, EvolutionOptions options)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var option in options.Creatures)
+        {
+            var creature = creatures.First(candidate => candidate.Id == option.Creature);
+            if (!seen.Add(Likeness(creature)))
+            {
+                continue;
+            }
+
+            foreach (var tier in option.AvailableTiers)
+            {
+                yield return new EvolutionChoice(option.Creature, tier);
+            }
+        }
+    }
+
+    /// <summary>What two creatures share when one can stand for the other; a creature with a condition or a stun immunity stands for none.</summary>
+    private static string Likeness(CreatureSnapshot creature) =>
+        creature.Conditions.Count > 0 || creature.IsStunned || creature.StunImmunityRounds > 0
+            ? creature.Id.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : string.Join(
+                '|',
+                creature.DefinitionId.Value,
+                creature.Health.Value,
+                creature.Energy.Value,
+                creature.TotalDefense.Value,
+                creature.BaseInitiative.Value,
+                creature.CurrentInitiative.Value,
+                string.Join(',', creature.AcquiredTiers.Select(tier => tier.Value).Order(StringComparer.Ordinal)),
+                string.Join(',', creature.KnownSpells.Select(spell => spell.Value).Order(StringComparer.Ordinal)));
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _oneStep.DecideSpeed(board, creature);
 
