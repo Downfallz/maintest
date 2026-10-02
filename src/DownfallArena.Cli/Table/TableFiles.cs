@@ -44,6 +44,7 @@ internal sealed class TableFiles
             ["/feed.js"] = (Path.Combine(tableDirectory, "feed.js"), JavaScript),
             ["/replay.js"] = (Path.Combine(tableDirectory, "replay.js"), JavaScript),
             ["/notes.js"] = (Path.Combine(tableDirectory, "notes.js"), JavaScript),
+            ["/waiting.js"] = (Path.Combine(tableDirectory, "waiting.js"), JavaScript),
 
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
             // same session -- and it is reached only by somebody holding the pilot token, which the console

@@ -38,6 +38,7 @@ internal sealed class PlayedTable : IDisposable
         Seats = seats;
         Pilot = pilot;
         Run = run;
+        Request = opening.Request;
         _stopping = stopping;
         CreatedAt = opening.At;
         _touched = opening.At.UtcTicks;
@@ -57,6 +58,20 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
 
+    /// <summary>What the table was asked to be, seed included, which is what its record writes down (ADR 0091).</summary>
+    public TableRequest? Request { get; }
+
+    /// <summary>
+    /// Writes the table down for a host that comes after this one (ADR 0091): the request, the match id, and
+    /// the tokens and codes its players hold. Called once the registry has minted the codes, which is the
+    /// moment all of it is known. Nothing for a table that records nothing.
+    /// </summary>
+    public Task RecordAsync(JoinCodes codes, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(codes);
+        return Run is { } run && Request is { } request ? run.RecordAsync(TableRecord.Of(this, request, codes), cancellationToken) : Task.CompletedTask;
+    }
+
     public DateTimeOffset CreatedAt { get; }
 
     /// <summary>The last moment a request reached this table, which is what says whether anybody is still at it.</summary>
@@ -75,6 +90,32 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Says the recording is done with, written or not: the closing has run to its end.</summary>
     public void MarkClosed() => Volatile.Write(ref _closed, 1);
 
+    /// <summary>The record being marked closed, once the table is closed unfinished; complete otherwise.</summary>
+    public Task Closing { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Closes the table for good: the operator closed it, or nobody came back to it. Its record is marked
+    /// closed, so a host that comes after this one does not rebuild it, and then it is let go of. The one
+    /// way a record is marked closed: a host stopping lets its tables go without closing them, since the
+    /// next host rebuilding them is the whole point (ADR 0091).
+    /// </summary>
+    public void Close()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
+        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
+        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
+        if (Run is { } run && !IsOver)
+        {
+            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+        }
+
+        Dispose();
+    }
+
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
     /// <summary>
@@ -85,6 +126,10 @@ internal sealed class PlayedTable : IDisposable
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
         await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+
+        // The closed marker is one of the writes to wait for: landing after a deletion, it would be the one
+        // file of a run that was deleted, and the run would be listed again.
+        await Task.WhenAny(Closing, Task.Delay(QuiesceWithin, cancellationToken));
         if (Run is { } run)
         {
             await run.DrainAsync(cancellationToken);
@@ -105,8 +150,10 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>
     /// Stops the match if it is still being played and lets the session go. A seat waiting on a person is
     /// released with a cancellation, which ends the driver without an outcome; the recording keeps what it
-    /// has, which is what an abandoned session is. Once only: the registry lets a table go and a test holds
-    /// it too, and neither should have to know about the other.
+    /// has, which is what an abandoned session is, and its record keeps saying open: letting a table go is
+    /// what a host does as it stops, and the next host rebuilds what it let go of. Closing a table for good
+    /// is <see cref="Close" />. Once only: the registry lets a table go and a test holds it too, and neither
+    /// should have to know about the other.
     /// </summary>
     /// <remarks>
     /// The session is let go of once the driver has stopped, not now: the driver may be inside a command,

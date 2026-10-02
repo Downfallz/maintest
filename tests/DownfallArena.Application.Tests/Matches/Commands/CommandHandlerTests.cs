@@ -12,6 +12,21 @@ namespace DownfallArena.Application.Tests.Matches.Commands;
 
 public sealed class CommandHandlerTests
 {
+    /// <summary>A host rebuilding a match from its record names it as it was, so its trace and notes still name it (ADR 0091).</summary>
+    [Fact]
+    public async Task A_match_may_be_created_under_the_id_it_is_given()
+    {
+        var store = new MatchStore();
+        var handler = new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandomFactory());
+        var wanted = MatchId.New();
+
+        var result = await handler.HandleAsync(new CreateMatch(MatchStore.TwoOnTwo(), 7, wanted), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(wanted);
+        (await store.Repository.FindAsync(wanted, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+    }
+
     [Fact]
     public async Task CreateMatch_stores_a_new_match_with_the_rule_set_and_returns_its_id()
     {

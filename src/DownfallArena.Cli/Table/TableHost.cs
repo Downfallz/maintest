@@ -61,11 +61,29 @@ internal static class TableHost
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
 
+        // The place of the table the command line asks for is held first: the rebuild below fills the host up
+        // to its bound, and a table composed into a full host would be recorded and announced with nothing
+        // answering to its codes. An empty host always has the place.
+        using var place = options.Lobby ? null : registry.Reserve() ?? throw new InvalidOperationException("An empty host has a place for its first table.");
+
+        // The tables an earlier host left unfinished are rebuilt before anybody is served (ADR 0091): a page
+        // polling a seat of one must find it where it left it, not a 403 and then, a moment later, its seat.
+        // And before the table the command line asks for: that one is recorded as open the moment it is, and
+        // rebuilt after itself it would be the same match twice.
+        if (stored is not null)
+        {
+            foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
+            {
+                Console.WriteLine($"  {line}");
+            }
+        }
+
         // The table the command line asks for, unless it asks for the admin panel and nothing else.
-        if (!options.Lobby)
+        if (place is not null)
         {
             var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
-            registry.TryAdd(table);
+            registry.Add(table, place);
+            await table.RecordAsync(registry.Codes, stopping.Token);
             Announce(server, registry, table);
         }
 

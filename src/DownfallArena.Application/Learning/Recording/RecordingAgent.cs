@@ -18,16 +18,21 @@ public sealed class RecordingAgent(
     ICollection<StepRecord> steps,
     Func<PlayerBoardState, Decider>? deciding = null) : IPlayerAgent
 {
+    // The two seats are asked their package picks at once (ADR 0092), and both record through the encoders and
+    // the one list they share. Everything that touches those is done under the list's lock; the decision
+    // itself, which a person may take minutes over, is not.
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(options);
 
         var slots = Slots(board);
-        var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Evolution, SubPhase = board.SubPhase, Evolution = options });
+        var (candidates, candidateTerms) = Shared(() => (
+            actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Evolution, SubPhase = board.SubPhase, Evolution = options }),
+            terms.Evolution(board, options)));
         var (who, named) = Deciding(board);
         var decision = who.DecideEvolution(board, options);
-        Record(board, candidates, terms.Evolution(board, options), decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass(), named);
+        Shared(() => Record(board, candidates, candidateTerms, decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass(), named));
         return decision;
     }
 
@@ -36,17 +41,13 @@ public sealed class RecordingAgent(
         ArgumentNullException.ThrowIfNull(board);
 
         var slots = Slots(board);
-        var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = board.SubPhase, Speed = new SpeedOptions([creature]) });
+        var candidates = Shared(() => actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = board.SubPhase, Speed = new SpeedOptions([creature]) }));
         var (who, named) = Deciding(board);
         var speed = who.DecideSpeed(board, creature);
-        Record(board, candidates, CandidateTerms.Speed(), ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)), named);
+        Shared(() => Record(board, candidates, CandidateTerms.Speed(), ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)), named));
         return speed;
     }
 
-    /// <summary>
-    /// Asked of whoever decides, and not recorded: a dataset step is a candidate the encoder can name, and no
-    /// encoding of a tie order exists yet, so a policy neither learns it nor is asked it (ADR 0063).
-    /// </summary>
     public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -59,10 +60,12 @@ public sealed class RecordingAgent(
         ArgumentNullException.ThrowIfNull(intentOption);
 
         var slots = Slots(board);
-        var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Intent, SubPhase = board.SubPhase, Intent = new IntentOptions([intentOption]) });
+        var (candidates, candidateTerms) = Shared(() => (
+            actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Intent, SubPhase = board.SubPhase, Intent = new IntentOptions([intentOption]) }),
+            terms.Intent(board, intentOption)));
         var (who, named) = Deciding(board);
         var spell = who.DecideIntent(board, intentOption);
-        Record(board, candidates, terms.Intent(board, intentOption), actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)), named);
+        Shared(() => Record(board, candidates, candidateTerms, actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)), named));
         return spell;
     }
 
@@ -72,11 +75,29 @@ public sealed class RecordingAgent(
         ArgumentNullException.ThrowIfNull(options);
 
         var slots = Slots(board);
-        var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Target, SubPhase = board.SubPhase, Target = options });
+        var (candidates, candidateTerms) = Shared(() => (
+            actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Target, SubPhase = board.SubPhase, Target = options }),
+            terms.Targets(board, options)));
         var (who, named) = Deciding(board);
         var targets = who.DecideTargets(board, options);
-        Record(board, candidates, terms.Targets(board, options), actions.Targets(slots, options.Actor, options.Spell, targets), named);
+        Shared(() => Record(board, candidates, candidateTerms, actions.Targets(slots, options.Actor, options.Spell, targets), named));
         return targets;
+    }
+
+    private TValue Shared<TValue>(Func<TValue> read)
+    {
+        lock (steps)
+        {
+            return read();
+        }
+    }
+
+    private void Shared(Action write)
+    {
+        lock (steps)
+        {
+            write();
+        }
     }
 
     private BoardSlots Slots(PlayerBoardState board) => BoardSlots.Of(board, observations.Schema.TeamSize);

@@ -32,7 +32,9 @@ internal sealed class TableRegistry : IDisposable
     /// <summary>
     /// How many tables may be under way at once. The admin panel is behind the operator's login, so this bounds a
     /// mistake rather than an attack: a seat blocks a thread while a person thinks (ADR 0054), and a host
-    /// with hundreds of them is a host that stopped answering.
+    /// with hundreds of them is a host that stopped answering. A table waiting for its players (ADR 0092)
+    /// counts: it holds no thread yet, but it will the moment they arrive, and refusing them then would
+    /// strand two people who have just sat down, while refusing the operator now is one line on their panel.
     /// </summary>
     public const int MostUnderWay = 16;
 
@@ -104,8 +106,28 @@ internal sealed class TableRegistry : IDisposable
         }
     }
 
+    /// <summary>
+    /// Adds a table rebuilt from its record (ADR 0091), with the codes its seats had. False when the host has
+    /// as many under way as it takes, in which case the table is the caller's to let go of.
+    /// </summary>
+    public bool TryRestore(PlayedTable table, IReadOnlyDictionary<string, string?> codes)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(codes);
+        lock (_gate)
+        {
+            if (UnderWay() + _reserved >= Capacity)
+            {
+                return false;
+            }
+
+            Register(table, codes);
+            return true;
+        }
+    }
+
     /// <summary>Under the lock: the table into every map, and a code for every seat a person holds.</summary>
-    private void Register(PlayedTable table)
+    private void Register(PlayedTable table, IReadOnlyDictionary<string, string?>? codes = null)
     {
         // An id names a run's directory and the tokenless session page, so two tables with one id would
         // write into each other and read as each other. Thirty-two random bits a second make this a bug
@@ -116,10 +138,18 @@ internal sealed class TableRegistry : IDisposable
         }
 
         _byToken[table.Pilot.Token] = table;
+        table.Api.CodeOf = Codes.Of;
         foreach (var seat in table.Seats)
         {
             _byToken[seat.Token] = table;
-            Codes.Mint(seat);
+            if (codes is not null)
+            {
+                Codes.Mint(seat, codes.GetValueOrDefault(seat.Name));
+            }
+            else
+            {
+                Codes.Mint(seat);
+            }
         }
     }
 
@@ -168,7 +198,7 @@ internal sealed class TableRegistry : IDisposable
             Forget(table);
         }
 
-        table.Dispose();
+        table.Close();
         return true;
     }
 
@@ -211,12 +241,16 @@ internal sealed class TableRegistry : IDisposable
 
         foreach (var table in gone)
         {
-            table.Dispose();
+            table.Close();
         }
 
         return [.. gone.Select(table => table.Id)];
     }
 
+    /// <summary>
+    /// Lets every table go, as a host stopping does: without closing any, so that the host after this one
+    /// rebuilds what was being played (ADR 0091).
+    /// </summary>
     public void Dispose()
     {
         List<PlayedTable> all;
