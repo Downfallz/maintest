@@ -677,15 +677,15 @@
     "spell:rejuvenate": {
       "name": "Rejuvenate",
       "class": "Sorcerer",
-      "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 4 health for two energy, the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
+      "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 5 health for two energy (4 until the owner raised it on 2026-10-02), the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
       "keep": [
         "No instant heal costs less: only `soothing_chant` is cheaper, and it heals over time",
         "Single target"
       ],
-      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration became worth 0.68 of expected healing, and it is a knob; tune run 6 took it to 0.22, 0.88 today. The heal that sets the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
+      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration became worth 0.68 of expected healing, and it is a knob; tune run 6 took it to 0.22, 1.10 today on a heal of 5. The heal that sets the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },

@@ -71,6 +71,18 @@ first.
   - Dreadnought falls 456 → 323. Elementalist (269 → 311) and Harbinger (488 → 684) rise.
   - The sides that cast Soulreaver's spells won 85% of those casts before and 75% after.
   - Matches run about half a round longer.
+- **Then Rejuvenate's heal went 4 to 5** (its bound to 6). This is the split the objective turns on.
+  - Rejuvenate is cast 1,261 → 1,775 times, Lightning Bolt 9,165 → 9,508.
+  - Occultist's top share goes 0.88 → 0.84.
+  - Matches run 11.0 → 11.3 rounds.
+  - On content `0a515da0`:
+
+    | | Benchmark | Confirmation | Hold-out |
+    | --- | --- | --- | --- |
+    | Objective | 6.45 → **5.98** | 3.56 → **2.18** | 5.19 → **0.83** |
+    | `player1WinShare` | 0.570 → 0.575 | 0.477 → 0.472 | 0.455 → 0.460 |
+
+  - What is left is `tierUsageShare` (0.83 to 0.88) and, on the benchmark seeds alone, Player 1 at 0.575.
 - **The benchmark digest is regenerated** for the content these leave.
 
 ## 2026-10-02. `tierDamageSpread` leaves the objective (ADR 0090)
