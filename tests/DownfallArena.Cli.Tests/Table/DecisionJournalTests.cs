@@ -138,6 +138,48 @@ public sealed class DecisionJournalTests : IDisposable
         replaying.Exhausted.IsFaulted.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// A handover scheduled before either player arrived is a record of swaps and no decision. Nobody is going
+    /// to be asked a question for it to wait on, so it is applied as the seating is handed in, and the record is
+    /// spent at once (ADR 0092 meets ADR 0091).
+    /// </summary>
+    [Fact]
+    public void A_record_of_swaps_alone_is_applied_as_the_seating_is_handed_in()
+    {
+        var recorded = new List<JournalEntry>
+        {
+            JournalEntry.Swap(1, DateTimeOffset.UtcNow, PlayerSlot.Player1, "greedy", 3),
+            JournalEntry.Swap(2, DateTimeOffset.UtcNow, PlayerSlot.Player2, "random", 5),
+        };
+        var replaying = new DecisionJournal(new FileArtifactWriter(Path.Combine(_hosted.RunsDirectory, "swaps-alone")), TimeProvider.System, recorded);
+        var applied = new List<(PlayerSlot Slot, string To, int Round)>();
+
+        replaying.Exhausted.IsCompleted.ShouldBeFalse("nothing is applied before the seating is known");
+        replaying.SwapsThrough((slot, to, round) =>
+        {
+            applied.Add((slot, to, round));
+            return true;
+        });
+
+        applied.ShouldBe([(PlayerSlot.Player1, "greedy", 3), (PlayerSlot.Player2, "random", 5)]);
+        replaying.Exhausted.IsCompletedSuccessfully.ShouldBeTrue();
+        replaying.Replaying.ShouldBeFalse();
+        DecisionJournal.HoldsDecision(recorded).ShouldBeFalse();
+    }
+
+    /// <summary>The same record, when the agent it names is gone: refused where the composer reads refusals, without throwing at it.</summary>
+    [Fact]
+    public void A_record_of_swaps_alone_that_cannot_be_applied_faults_the_replay_quietly()
+    {
+        var recorded = new List<JournalEntry> { JournalEntry.Swap(1, DateTimeOffset.UtcNow, PlayerSlot.Player1, "heuristic:gone.json", 3) };
+        var replaying = new DecisionJournal(new FileArtifactWriter(Path.Combine(_hosted.RunsDirectory, "swaps-gone")), TimeProvider.System, recorded);
+
+        Should.NotThrow(() => replaying.SwapsThrough((_, _, _) => false));
+
+        replaying.Exhausted.IsFaulted.ShouldBeTrue();
+        replaying.Exhausted.Exception!.GetBaseException().Message.ShouldContain("diverged");
+    }
+
     private static async Task<string> Board(TableSession session, PlayerSlot slot)
     {
         var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot), TestContext.Current.CancellationToken);

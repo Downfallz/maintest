@@ -64,6 +64,7 @@ function page() {
     activeElement: null, body: new Element('body'), documentElement: new Element('html'),
     getElementById: id => nodes[id],
     createElement: tag => Object.assign(new Element(tag), { owner: document }),
+    createTextNode: text => Object.assign(new Element('#text'), { owner: document, textContent: text }),
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
@@ -1748,4 +1749,18 @@ test("the next creature's speed or spell question starts its spellbook at the to
   p.view.waitingCreature = 2; p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes['hand-section'].scrollTop, 0);
   assert.equal(p.nodes.planning.scrollTop, 0);
+});
+
+test('a table given up while it waited shows the outcome without the waiting room under it', () => {
+  const p = page();
+  p.view.waiting = { seats: [{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM' }] };
+  p.view.waitingFor = null; p.view.waitingCreature = null;
+  p.draw();
+  assert.equal(p.nodes['waiting-room'].hidden, false);
+  assert.equal(p.nodes['waiting-seats'].children.length, 1);
+  assert.equal(p.nodes['waiting-seats'].children[0].textContent.includes('K7F2Q9XM'), true);
+
+  p.view.over = true; p.view.outcome = { winner: 'player2', reason: 'Concession' };
+  p.draw();
+  assert.equal(p.nodes['waiting-room'].hidden, true);
 });

@@ -74,8 +74,38 @@ internal sealed class DecisionJournal
     /// <summary>Completes once the last recorded line has been handed to the match, which is when the table is live again.</summary>
     public Task Exhausted => _exhausted.Task;
 
-    /// <summary>How a swap line is applied when replay reaches it: the pilot's own seating, handed in by whoever composes the table.</summary>
-    public void SwapsThrough(Func<PlayerSlot, string, int, bool> swapping) => _swapping = swapping;
+    /// <summary>
+    /// How a swap line is applied when replay reaches it: the pilot's own seating, handed in by whoever
+    /// composes the table. A record that holds swaps and no decision -- a handover scheduled before either
+    /// player arrived -- is applied here and now: nobody is going to be asked a question for it to wait on.
+    /// </summary>
+    public void SwapsThrough(Func<PlayerSlot, string, int, bool> swapping)
+    {
+        ArgumentNullException.ThrowIfNull(swapping);
+        lock (_gate)
+        {
+            _swapping = swapping;
+            if (_recorded.Count > 0 && _recorded.TrueForAll(entry => entry.IsSwap))
+            {
+                try
+                {
+                    ApplySwaps(_recorded.Count);
+                    _exhausted.TrySetResult();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Already a fault on Exhausted, which is where whoever rebuilds the table reads the refusal.
+                }
+            }
+        }
+    }
+
+    /// <summary>Whether the record holds a decision, as opposed to swaps alone: a table that had begun.</summary>
+    public static bool HoldsDecision(IReadOnlyList<JournalEntry> recorded)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        return recorded.Any(entry => !entry.IsSwap);
+    }
 
     /// <summary>Writes down a swap the pilot asked for, so a rebuilt table asks for it at the same point.</summary>
     public void SwapAsked(PlayerSlot slot, string to, int atRound)

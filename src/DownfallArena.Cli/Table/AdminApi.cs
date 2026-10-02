@@ -156,7 +156,7 @@ internal sealed class AdminApi
 
     private StudioResponse Full() =>
         StudioResponse.OfJson(
-            new { error = "Admin.Full", message = $"This host has {_registry.Capacity} tables under way, which is as many as it takes. Close one first." },
+            new { error = "Admin.Full", message = $"This host has {_registry.Capacity} tables open, waiting or under way, which is as many as it takes. Close one first." },
             ArtifactJson.LineOptions,
             status: 409);
 

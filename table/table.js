@@ -1730,6 +1730,11 @@ function renderDecision(state, current) {
   element('decision-turn').textContent = turn ? `${turn.planned ? 'Acts' : 'Turn'} ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
   element('decision-turn').hidden = !turn;
   renderStep(state, current);
+  // Before the match begins the seat is a room, not a board: who is still to come, and the code that brings
+  // them (ADR 0092). Decided before any early return below, or a table given up while it waited would keep
+  // the room on screen under the outcome.
+  const room = waitingRoom(view, globalThis.location?.origin ?? '');
+  element('waiting-room').hidden = !room || Boolean(view.over);
   if (state.step) {
     stepHeading(state, current);
     return;
@@ -1746,10 +1751,7 @@ function renderDecision(state, current) {
     return;
   }
 
-  // Before the match begins the seat is a room, not a board: who is still to come, and the code that brings
-  // them (ADR 0092). Drawn in the decision sheet, which is where this seat's attention already is.
-  const room = waitingRoom(view, globalThis.location?.origin ?? '');
-  element('waiting-room').hidden = !room;
+  // The room is drawn in the decision sheet, which is where this seat's attention already is.
   if (room) {
     asking.textContent = room.line;
     element('waiting-detail').textContent = room.detail;
