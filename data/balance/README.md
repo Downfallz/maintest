@@ -122,8 +122,9 @@ stopped being able to tell two catalogues apart ([ADR 0053](../../docs/adr/0053-
 
 `variety` exists because `Greedy` takes an argmax: two spells of near equal value do not split the casts, the
 marginally better one takes nearly all of them, and no content makes the largest share fall below about a
-half (ADR 0029 has the sweep). Seven targets that need a spell to be cast in order to mean anything are read
-there instead — the spread, the uncast counts, and the per-tier hit and win readings. Their bands did not
+half (ADR 0029 has the sweep). Six targets that need a spell to be cast in order to mean anything are read
+there instead — the spread, the uncast counts, and the per-package usage and win readings. ADR 0029 moved
+seven; the seventh, the per-package hit reading, left the objective with ADR 0090. Their bands did not
 change when they moved; the readings did, and two spells every journal entry called never cast turn out to be
 cast the moment a player looks at them. The rate stays at 0.2 because exploration is a dial between measuring
 the content and measuring the dice: a higher rate reads better precisely because the play is more random.
