@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { forget, heldSeats, seatsFromLocation } from './session.js';
+import { OPERATOR_KEY, forget, heldSeats, isOperator, operatorToken, seatsFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -95,4 +95,19 @@ test('a page with no storage at all reads the link and nothing else', () => {
 test('what this browser kept is ignored when it is not a set of seats', () => {
   assert.deepEqual(heldSeats('', storage({ 'downfall.table.seats': 'not json' })), []);
   assert.deepEqual(heldSeats('', storage({ 'downfall.table.seats': '"player1"' })), []);
+});
+
+test('the way back to the admin panel shows only when the host said yes', () => {
+  assert.equal(isOperator({ ok: true, body: { operator: true, admin: '/admin' } }), true);
+  assert.equal(isOperator({ ok: true, body: { operator: false } }), false);
+  assert.equal(isOperator({ ok: false, status: 500, body: null }), false);
+  assert.equal(isOperator(null), false);
+});
+
+test('the operator token is what the admin panel kept, or nothing', () => {
+  const stored = new Map([[OPERATOR_KEY, 'abc']]);
+  assert.equal(operatorToken({ getItem: key => stored.get(key) ?? null }), 'abc');
+  assert.equal(operatorToken({ getItem: () => null }), null);
+  assert.equal(operatorToken({ getItem: () => { throw new Error('private'); } }), null);
+  assert.equal(operatorToken(null), null);
 });

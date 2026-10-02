@@ -459,33 +459,33 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
+    /// Waits for everything on its way into the files to land: every decision being accepted, then a write
+    /// queued behind every write before it, which the writers take in turn. What is deleted or read after this
+    /// is deleted or read after the last write, not beside it. Bounded like every other wait on a thread that
+    /// may not be coming back.
+    /// </summary>
+    public async Task DrainAsync(CancellationToken cancellationToken = default)
+    {
+        for (var waited = TimeSpan.Zero; Volatile.Read(ref _recording) > 0 && waited < DrainWait; waited += GrowthStep)
+        {
+            await Task.Delay(GrowthStep, _clock, cancellationToken);
+        }
+
+        // Appending nothing is a write that lands after every write queued before it, in either store.
+        await _writer.AppendJsonLinesAsync(NotesFile, Array.Empty<PlaytestNote>(), cancellationToken);
+    }
+
+    private static readonly TimeSpan DrainWait = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// The session's files, as the viewer reads them. The trace comes first because the viewer opens on the
     /// first artifact it is handed and the thing two people want the moment they finish is the match they just
     /// played; the dataset files follow. <c>notes.jsonl</c> and <c>catalogue.json</c> are handed over too and
     /// the viewer ignores both today, which is deliberate: it can learn to read them later without the files
     /// having to be invented then.
     /// </summary>
-    public async Task<IReadOnlyList<(string Name, string Text)>> ArtifactsAsync(CancellationToken cancellationToken = default)
-    {
-        List<(string Name, string Text)> artifacts = [];
-        foreach (var trace in await _reader.ListAsync(RunRecorder.TracesDirectory, cancellationToken))
-        {
-            if (trace.EndsWith(".json", StringComparison.Ordinal) && await _reader.ReadTextAsync(trace, cancellationToken) is { } text)
-            {
-                artifacts.Add((trace, text));
-            }
-        }
-
-        foreach (var name in new[] { RunRecorder.ManifestFile, RunRecorder.EpisodesFile, RunRecorder.StepsFile, NotesFile, CatalogueFile })
-        {
-            if (await _reader.ReadTextAsync(name, cancellationToken) is { } text)
-            {
-                artifacts.Add((name, text));
-            }
-        }
-
-        return artifacts;
-    }
+    public Task<IReadOnlyList<(string Name, string Text)>> ArtifactsAsync(CancellationToken cancellationToken = default) =>
+        StoredSessions.ArtifactsOf(_reader, cancellationToken);
 
     /// <summary>
     /// A session id: when it was opened, to the second, so it sorts by when it was played, and four random

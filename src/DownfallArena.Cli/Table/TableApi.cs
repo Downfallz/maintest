@@ -34,6 +34,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 {
     public DecisionGuideProjection? Guide { get; init; }
 
+    /// <summary>The bots the pilot may seat, as the host offers them (<see cref="SeatableAgents" />); the page adds the seat's own person.</summary>
+    public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
+
     public int FeedStart { get; init; }
 
     public const string TokenHeader = "X-Seat-Token";
@@ -705,6 +708,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 round,
                 subPhase,
                 seats = seats.Select(seat => Flying(seat)).ToArray(),
+                agents = Agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
             },
             ArtifactJson.LineOptions);
     }

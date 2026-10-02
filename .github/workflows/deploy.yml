@@ -174,7 +174,7 @@ jobs:
           {
             echo "### The table is at ${url}"
             echo
-            echo "- Lobby: ${url}/lobby"
+            echo "- Admin panel: ${url}/admin"
             echo "- Image: \`${IMAGE}\`"
             echo "- Recordings: $(jq -r .recordings.value "$RUNNER_TEMP/outputs.json")"
             echo

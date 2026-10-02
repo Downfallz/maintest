@@ -14,8 +14,8 @@ namespace DownfallArena.Cli.Table;
 /// <para>
 /// Tables are let go of on a sweep rather than on a timer: a table that is finished and untouched for an
 /// hour, or abandoned (never over, nobody polling) for twenty hours, is disposed and its codes forgotten. The
-/// sweep runs when the lobby is asked anything, which is the one moment memory is about to be spent, and at
-/// most once a minute from any other request, so a host whose lobby nobody opens still lets go.
+/// sweep runs when the admin panel is asked anything, which is the one moment memory is about to be spent, and at
+/// most once a minute from any other request, so a host whose admin panel nobody opens still lets go.
 /// </para>
 /// </remarks>
 internal sealed class TableRegistry : IDisposable
@@ -26,11 +26,11 @@ internal sealed class TableRegistry : IDisposable
     /// <summary>How long a table nobody asks anything of is kept before it is abandoned: an evening, and a night's sleep.</summary>
     public static readonly TimeSpan IdleFor = TimeSpan.FromHours(20);
 
-    /// <summary>How often a request other than the lobby's is allowed to sweep.</summary>
+    /// <summary>How often a request other than the admin panel's is allowed to sweep.</summary>
     public static readonly TimeSpan SweepEvery = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// How many tables may be under way at once. The lobby is behind the operator's login, so this bounds a
+    /// How many tables may be under way at once. The admin panel is behind the operator's login, so this bounds a
     /// mistake rather than an attack: a seat blocks a thread while a person thinks (ADR 0054), and a host
     /// with hundreds of them is a host that stopped answering.
     /// </summary>
@@ -174,7 +174,7 @@ internal sealed class TableRegistry : IDisposable
 
     /// <summary>
     /// <see cref="Sweep" />, at most once every <see cref="SweepEvery" />: what every request may afford, so a
-    /// host whose lobby nobody opens still lets go of the tables nobody is at.
+    /// host whose admin panel nobody opens still lets go of the tables nobody is at.
     /// </summary>
     public IReadOnlyList<string> SweepIfDue(DateTimeOffset now)
     {

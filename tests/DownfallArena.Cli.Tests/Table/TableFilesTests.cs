@@ -43,7 +43,7 @@ public sealed class TableFilesTests
     /// <summary>The operator's pages are routes of this host too (ADR 0081), reached by name rather than by file.</summary>
     [Theory]
     [InlineData("/pilot", "pilot.js")]
-    [InlineData("/lobby", "lobby.js")]
+    [InlineData("/admin", "admin.js")]
     public void The_operator_s_pages_are_served_with_their_own_modules(string page, string module)
     {
         var served = Files.Get(page);

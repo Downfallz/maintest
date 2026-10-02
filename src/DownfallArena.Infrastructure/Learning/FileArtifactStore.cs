@@ -19,6 +19,26 @@ public sealed class FileArtifactStore : IArtifactStore
 
     public IArtifactReader Reader(string run) => new FileArtifactReader(LocationOf(run));
 
+    public Task<IReadOnlyList<string>> RunsAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<string> runs = Directory.Exists(RootDirectory)
+            ? [.. Directory.GetDirectories(RootDirectory).Select(Path.GetFileName).Select(name => name!).Order(StringComparer.Ordinal)]
+            : [];
+        return Task.FromResult(runs);
+    }
+
+    public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default)
+    {
+        var directory = LocationOf(run);
+        if (!Directory.Exists(directory))
+        {
+            return Task.FromResult(false);
+        }
+
+        Directory.Delete(directory, recursive: true);
+        return Task.FromResult(true);
+    }
+
     public string LocationOf(string run)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);

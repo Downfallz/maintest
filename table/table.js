@@ -1,6 +1,6 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
-import { forget, heldSeats } from './session.js';
+import { forget, heldSeats, isOperator, operatorToken } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
@@ -41,7 +41,30 @@ const QuietKey = 'downfall.table.quiet';
 
 boot(practice);
 
+// The way back to the admin panel, for the operator only: the host is asked whether the token the panel kept
+// in this browser, or the platform's sign-in cookie, is the operator's. A player's browser has neither, and
+// the host answers no; the link stays hidden and nothing else on the page knows it exists.
+async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
+  const link = element('admin-link');
+  if (!link || !fetchImpl) return;
+  try {
+    const headers = {};
+    const token = operatorToken(storage);
+    if (token) headers['X-Seat-Token'] = token;
+    const response = await fetchImpl('/api/me', { headers });
+    const text = await response.text();
+    const answer = { ok: response.ok, body: text ? JSON.parse(text) : null };
+    if (isOperator(answer)) {
+      link.href = answer.body.admin ?? '/admin';
+      link.hidden = false;
+    }
+  } catch {
+    // Not knowing is the same as no: the link is for the operator, and a page that cannot ask shows none.
+  }
+}
+
 function boot(practice) {
+  void showAdminLink();
   const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');

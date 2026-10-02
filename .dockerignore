@@ -15,6 +15,7 @@
 !viewer/viewer.css
 !docs/tabletop/playtest.rules.json
 !learning/weights/
+!learning/seatable.json
 !models/
 
 # Inside what is allowed: what a build makes, and what the page does not ship.

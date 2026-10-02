@@ -41,6 +41,7 @@ COPY table/ table/
 COPY viewer/index.html viewer/viewer.css viewer/
 COPY docs/tabletop/playtest.rules.json docs/tabletop/
 COPY learning/weights/ learning/weights/
+COPY learning/seatable.json learning/
 COPY models/ models/
 
 # The .NET images ship an unprivileged user for this; the host binds 8080, which needs no privilege.

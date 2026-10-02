@@ -96,6 +96,28 @@ public sealed class BlobArtifactStoreTests
         store.LocationOf("run-5").ShouldBe($"{store.Uri}/run-5");
     }
 
+    [Fact]
+    public async Task The_runs_are_the_container_s_first_level_prefixes_and_a_deleted_run_is_gone_with_its_blobs()
+    {
+        var store = await Store();
+        var one = $"run-{Guid.NewGuid():N}";
+        var two = $"run-{Guid.NewGuid():N}";
+        await store.Writer(one).WriteJsonAsync("manifest.json", new { Matches = 0 }, TestContext.Current.CancellationToken);
+        await store.Writer(one).WriteJsonAsync("traces/a.json", new { Sequence = 1 }, TestContext.Current.CancellationToken);
+        await store.Writer(two).AppendJsonLinesAsync("notes.jsonl", [new { Kind = "note" }], TestContext.Current.CancellationToken);
+
+        var runs = await store.RunsAsync(TestContext.Current.CancellationToken);
+        runs.ShouldContain(one);
+        runs.ShouldContain(two);
+
+        (await store.DeleteAsync(one, TestContext.Current.CancellationToken)).ShouldBeTrue();
+
+        (await store.RunsAsync(TestContext.Current.CancellationToken)).ShouldNotContain(one);
+        (await store.Reader(one).ReadTextAsync("manifest.json", TestContext.Current.CancellationToken)).ShouldBeNull();
+        (await store.Reader(two).ReadTextAsync("notes.jsonl", TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        (await store.DeleteAsync(one, TestContext.Current.CancellationToken)).ShouldBeFalse();
+    }
+
     private static async Task<BlobArtifactStore> Store()
     {
         if (!await Reachable())

@@ -6,7 +6,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// The <c>table</c> command: a host of tables, each one match with two seats. It composes the table the
-/// command line asks for, if it asks for one, and serves the pages, the lobby and every table's API until
+/// command line asks for, if it asks for one, and serves the pages, the admin panel and every table's API until
 /// someone stops it (ADR 0054, ADR 0081).
 /// </summary>
 internal static class TableHost
@@ -15,6 +15,9 @@ internal static class TableHost
 
     /// <summary>Where a session is written when <c>--record</c> names nowhere else.</summary>
     public const string DefaultRunsDirectory = "runs/playtest";
+
+    /// <summary>Where the weights files are, as an agent spec names them: what the panel offers a seat.</summary>
+    public const string WeightsDirectory = "learning/weights";
 
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules, int seed)
     {
@@ -33,15 +36,17 @@ internal static class TableHost
         // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
-        var composer = new TableComposer(services, rules, store);
+        var agents = SeatableAgents.Read(WeightsDirectory);
+        var composer = new TableComposer(services, rules, store) { Agents = agents };
+        var stored = store is null ? null : new StoredSessions(store);
         using var registry = new TableRegistry();
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
         var described = RuleSetFile.Describe(rules, options.Rules);
-        var lobby = new LobbyApi(registry, composer, gate, clock, described);
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), lobby, clock);
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents);
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored);
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -56,7 +61,7 @@ internal static class TableHost
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
 
-        // The table the command line asks for, unless it asks for a lobby and nothing else.
+        // The table the command line asks for, unless it asks for the admin panel and nothing else.
         if (!options.Lobby)
         {
             var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
@@ -65,8 +70,8 @@ internal static class TableHost
         }
 
         Console.WriteLine(gate.Token is { } token
-            ? $"  Lobby: {server.Url}lobby?token={token}"
-            : $"  Lobby: {server.Url}lobby, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
+            ? $"  Admin: {server.Url}admin?token={token}"
+            : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
 
         Console.WriteLine(server.IsLoopback
             ? $"  Only this machine can reach it.{Elsewhere()}"

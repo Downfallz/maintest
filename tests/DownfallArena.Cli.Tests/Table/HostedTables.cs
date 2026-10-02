@@ -34,10 +34,15 @@ internal sealed class HostedTables : IDisposable
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
             logMatchToConsole: false);
-        Composer = new TableComposer(_host.Services, Rules, store?.Invoke(RunsDirectory));
+        var opened = store?.Invoke(RunsDirectory);
+        Composer = new TableComposer(_host.Services, Rules, opened);
+        Stored = opened is null ? null : new StoredSessions(opened);
     }
 
     public TableComposer Composer { get; }
+
+    /// <summary>The store's sessions, or none for a host that records nothing.</summary>
+    public StoredSessions? Stored { get; }
 
     /// <summary>Where a recording host writes its runs: one directory per table opened.</summary>
     public string RunsDirectory { get; } = Path.Combine(Path.GetTempPath(), $"downfall-lobby-{Guid.NewGuid():N}");

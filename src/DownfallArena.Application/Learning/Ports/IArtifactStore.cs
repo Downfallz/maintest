@@ -15,4 +15,10 @@ public interface IArtifactStore
 
     /// <summary>Where that run is, said to a person: a path on this machine or a URL.</summary>
     string LocationOf(string run);
+
+    /// <summary>The name of every run the store holds, in ordinal order; empty when nothing was ever written.</summary>
+    Task<IReadOnlyList<string>> RunsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a run and everything written under it. False when there was no such run.</summary>
+    Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default);
 }

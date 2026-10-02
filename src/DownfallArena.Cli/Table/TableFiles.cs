@@ -52,12 +52,12 @@ internal sealed class TableFiles
             ["/pilot.css"] = (Path.Combine(tableDirectory, "pilot.css"), Css),
             ["/pilot.js"] = (Path.Combine(tableDirectory, "pilot.js"), JavaScript),
 
-            // The operator's lobby: the tables this host is playing and the form that opens one (ADR 0081). A
-            // route of this host for the same reason the pilot is, and fenced the same way: by what the
-            // request carries, not by the page being secret.
-            ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
-            ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
-            ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
+            // The operator's admin panel: the tables this host is playing, the form that opens one, and the
+            // sessions its store holds (ADR 0081). A route of this host for the same reason the pilot is, and
+            // fenced the same way: by what the request carries, not by the page being secret.
+            ["/admin"] = (Path.Combine(tableDirectory, "admin.html"), StudioResponse.Html),
+            ["/admin.css"] = (Path.Combine(tableDirectory, "admin.css"), Css),
+            ["/admin.js"] = (Path.Combine(tableDirectory, "admin.js"), JavaScript),
         };
     }
 

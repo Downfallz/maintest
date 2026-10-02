@@ -57,3 +57,23 @@ function remember(storage, held) {
     // A browser that keeps nothing still plays; it just needs the link again after a reload.
   }
 }
+
+// The operator's token, kept by the admin panel when a link brought it there (admin.js): what the table page
+// sends to ask the host whether this browser is the operator's. Nothing for a player's browser, which is the
+// ordinary case, and nothing in a browser that keeps nothing.
+export const OPERATOR_KEY = 'downfall.table.operator';
+
+export function operatorToken(storage) {
+  try {
+    return storage?.getItem(OPERATOR_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+// Whether the host said this browser is the operator's, from its answer alone: a `yes` is the one thing that
+// shows the way back to the admin panel. Anything else, an error included, shows nothing -- a player's page
+// must not grow a link to a page that would refuse them.
+export function isOperator(answer) {
+  return answer?.ok === true && answer.body?.operator === true;
+}

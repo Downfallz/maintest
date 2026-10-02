@@ -163,12 +163,17 @@ Plain HTTP, JSON, request and response. Polling, not push.
 | `GET` | `/api/seat/{slot}?since=N` | That seat's `PlayerBoardState`, its `PlayerOptions`, and the events it may see since sequence `N`. |
 | `POST` | `/api/seat/{slot}/decision` | One decision. `200` with the new seat payload, or `409` with the error code. |
 | `POST` | `/api/notes` | One playtest note. |
-| `GET` | `/session/{id}` | The finished session in the viewer, rendered by `ViewerPage.Render` exactly as the studio serves `/runs/<id>` (`StudioApi.cs:112-126`). |
+| `GET` | `/session/{id}` | The finished session in the viewer, rendered by `ViewerPage.Render` exactly as the studio serves `/runs/<id>` (`StudioApi.cs:112-126`). A session this host no longer has a table for is read from the store, partial trace included: the replica that played it is gone and the run is what survives. |
 | `GET` | `/pilot`, `/pilot.css`, `/pilot.js` | The operator's own page (§ the roadmap's stage 6), from the same fixed route table. It is served to anybody who asks; what it can read is fenced by the token it is opened with, not by the page being secret. |
 | `GET` | `/api/pilot` | The session, the two seats, who is playing each one, which seat is being asked and for what kind of decision, and the swap each seat is waiting to make. **No board, no hand, no Intent** — the operator is usually one of the two players. |
 | `POST` | `/api/pilot/seats/{slot}` | `{"agent": "greedy", "round": 7}`: who plays that seat from the top of a round the match has not reached. `200` with the swap, or `409` with the code (`Table.SwapMidRound`, `Table.NoSuchAgent`, `Table.MatchOver`). |
-| `GET` | `/lobby`, `/lobby.css`, `/lobby.js` | The operator's lobby (ADR 0081): the tables this host is playing and the form that opens one. Served to anybody; what it can do is fenced by what the request carries. |
-| `GET` | `/api/tables` | Every table: where it is, who is in each seat, the codes, the pilot link, where the session is written. Behind the operator's door: the token the console printed, or the platform's sign-in (`--platform-auth`), which answers a stranger `401` with where to sign in. |
+| `GET` | `/admin`, `/admin.css`, `/admin.js` | The operator's admin panel (ADR 0081): the tables this host is playing, the form that opens one, and the sessions its store holds. Served to anybody; what it can do is fenced by what the request carries. `/lobby`, its former address, redirects here with its query. |
+| `GET` | `/api/me` | Whether the request is the operator's (the token the panel kept in the browser, or the platform's sign-in): `{"operator": true, "admin": "/admin"}`. Open to anybody and says nothing else; the table page asks it to show the way back to the panel. |
+| `GET` | `/api/sessions` | Every run the store holds, newest first, with what its manifest says (players, seed, matches, steps) and whether this host still has its table. Behind the operator's door. `404` on a host that records nothing. |
+| `DELETE` | `/api/sessions` | `{"ids": [...]}`: removes the runs named, closing a table still being played first. Answers `{"deleted": [...], "missing": [...]}`. |
+| `GET` | `/api/sessions/{id}/export` | One run as a zip: `<id>/manifest.json`, `steps.jsonl`, `episodes.jsonl`, `notes.jsonl`, `catalogue.json`, `traces/*.json`. Unzipped under `runs/`, what `train-clone` and the viewer read. |
+| `POST` | `/api/sessions/export` | `{"ids": [...]}`: several runs as one zip, a directory each. |
+| `GET` | `/api/tables` | Every table: where it is, who is in each seat, the codes, the pilot link, where the session is written; and `agents`, the bots a seat is offered (`learning/seatable.json` first, then every weights file), which the pilot's view carries too. Behind the operator's door: the token the console printed, or the platform's sign-in (`--platform-auth`), which answers a stranger `401` with where to sign in. |
 | `POST` | `/api/tables` | `{"player1": "person", "player2": "greedy", "who": "mk", "handover": 7}`: opens a table, the same request the command line composes. `201` with the table as the listing shows it. |
 | `DELETE` | `/api/tables/{id}` | Closes a table: its match stopped, its codes forgotten, its recording kept as far as it got. |
 
@@ -530,7 +535,7 @@ person tests the app itself between playtests.
 2. **Two sessions at once.** ~~One host, one session, is the assumption everywhere above. Two tables at a
    playtest evening means either two ports or a session id in every route.~~ Settled by ADR 0081: neither.
    A seat token already names its seat uniquely, so it names its table too, and the host is a registry of
-   tables found by their tokens. Tables are opened from `/lobby`, behind the operator's door.
+   tables found by their tokens. Tables are opened from `/admin`, the operator's admin panel, behind the operator's door.
 3. **Who the players were.** A seat name is free text in the stamp. Whether a playtest wants a person's name in
    a committed artifact is a question for the first playtest, not for this document.
 

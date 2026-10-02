@@ -327,7 +327,7 @@ public sealed class TablePilotTests : IDisposable
         using var document = JsonDocument.Parse(served);
         Fields(document.RootElement).ShouldBe(
             [
-                "matchId", "over", "outcome", "round", "subPhase", "seats",
+                "matchId", "over", "outcome", "round", "subPhase", "seats", "agents",
                 "slot", "seated", "hasPerson", "waitingFor", "waitingCreature", "pending",
             ],
             ignoreOrder: true);

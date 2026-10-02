@@ -40,6 +40,10 @@ public sealed class TableComposerTests
 
         public string LocationOf(string run) => inner.LocationOf(run);
 
+        public Task<IReadOnlyList<string>> RunsAsync(CancellationToken cancellationToken = default) => inner.RunsAsync(cancellationToken);
+
+        public Task<bool> DeleteAsync(string run, CancellationToken cancellationToken = default) => inner.DeleteAsync(run, cancellationToken);
+
         private sealed class Refusing(IArtifactWriter inner) : IArtifactWriter
         {
             public Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default) =>

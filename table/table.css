@@ -33,6 +33,7 @@ button, [role="button"] { touch-action: manipulation; }
 .brand-mark, .pass-emblem { color: var(--gold); border: 1px solid #a9915e; width: 43px; height: 49px; display: grid; place-items: center; font: 31px Georgia, serif; border-radius: 12px 3px; }
 .brand .eyebrow { display: block; margin-bottom: 4px; }
 .session-state { margin-left: auto; text-align: right; }
+.admin-link { display: inline-block; margin-top: 6px; padding: 4px 10px; border: 1px solid var(--gold); border-radius: 9px; color: var(--gold); text-decoration: none; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
 .seat-label { color: var(--gold); font-size: 12px; }
 #phase { margin-top: 5px; font-size: 13px; }
 #shape { position: relative; z-index: 30; font-size: 12px; }

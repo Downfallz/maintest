@@ -4,6 +4,13 @@ Date: 2026-09-27
 
 Status: Accepted
 
+Amended 2026-10-02: the lobby is the **admin panel**, at `/admin` (`/lobby` redirects). The game is not open,
+so the page is what its one operator does with the host rather than a room players wait in: it opens tables,
+offers the bots `learning/seatable.json` puts forward (read by the host, not written into a page), lists every
+recorded session the store holds, deletes sessions and exports them as zips of run directories. `/api/me`
+tells a table page whether its browser is the operator's, which is the one thing a player's page may ask.
+Tables still live in memory and are still let go of; persisting one is a later record.
+
 ## Context
 
 The table is one match per process ([ADR 0054](0054-a-table-for-two-people-at-one-screen.md)): the command
