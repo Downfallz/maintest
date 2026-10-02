@@ -55,7 +55,8 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
 
     /// <summary>
     /// A searching agent (ADR 0047), on the weights its path names or on the built-in ones, and playing the
-    /// seats it has to guess as the agent its path names instead when it names one (ADR 0055):
+    /// seats it has to guess as the agent its path names instead when it names one (ADR 0055), rolling its
+    /// purchase rollouts on the match's agent dice so a seeded match replays (ADR 0094):
     /// <c>lookahead:policy:models/clone/ci-138/policy.json</c> is the loop's own last output with a round
     /// played out on top of it, which is the operator a loop needs to climb past what it imitates. A bare
     /// path stays a weights file, so every spec written before this reads the same.
@@ -64,10 +65,10 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     {
         if (Searched(spec) is { } searched)
         {
-            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random));
+            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random);
         }
 
-        return new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial);
+        return new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial, random: random);
     }
 
     /// <summary>

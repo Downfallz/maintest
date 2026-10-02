@@ -221,6 +221,45 @@ public sealed class AdvanceTests
         after.Single(creature => creature.Id == Arena.Wraith).Energy.ShouldBe(Energy.Of(0));
     }
 
+    [Fact]
+    public void Buying_on_a_board_lands_where_the_match_reveal_does()
+    {
+        var match = Table.Started();
+        var before = match.Snapshots();
+        EvolutionChoice[] choices = [new(One, Arena.GuardPack), new(Three, Arena.GuardPack)];
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, choices[0]).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, choices[1]).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+
+        var bought = Advance.Buy(before, choices, Arena.Resources);
+
+        match.DomainEvents.OfType<PurchasesRevealed>().ShouldHaveSingleItem();
+        ShouldMatch(match.Snapshots(), bought);
+        bought.Single(creature => creature.Id == One).AcquiredTiers.ShouldBe([Arena.GuardPack]);
+    }
+
+    [Fact]
+    public void Buying_leaves_the_board_it_was_handed_as_it_was()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        var bought = Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.GuardPack)], Arena.Resources);
+
+        bought.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldContain(Arena.Guard);
+        board.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldNotContain(Arena.Guard);
+        board.Single(creature => creature.Id == Arena.Knight).AcquiredTiers.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_purchase_the_creature_refuses_is_a_bug_in_the_caller()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        // Slam requires Guard, which nobody owns.
+        Should.Throw<InvalidOperationException>(() => Advance.Buy(board, [new EvolutionChoice(Arena.Knight, Arena.SlamPack)], Arena.Resources));
+    }
+
     /// <summary>
     /// Standard speeds, the planned intent per creature on the timeline, and its planned targets when its slot
     /// comes up, every action compared with what <see cref="Advance"/> makes of it.

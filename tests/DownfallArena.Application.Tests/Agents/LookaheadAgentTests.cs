@@ -8,6 +8,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
@@ -270,7 +271,7 @@ public sealed class LookaheadAgentTests
     }
 
     [Fact]
-    public void Evolution_and_speed_are_the_heuristic_agents()
+    public void Without_dice_of_its_own_evolution_and_speed_are_the_heuristic_agents()
     {
         var heuristic = new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
         var board = FourAboutToKillTwo();
@@ -280,6 +281,60 @@ public sealed class LookaheadAgentTests
         Agent.DecideSpeed(board, One).ShouldBe(heuristic.DecideSpeed(board, One));
         Agent.DecideSpeed(board, One).ShouldBe(Speed.Quick);
         Agent.Weights.ShouldBe(ScoringWeights.Default);
+    }
+
+    /// <summary>
+    /// ADR 0094: a purchase is read over the rounds after it, rolled on the agent's own dice, so the same dice
+    /// buy the same package again: a seeded match still replays.
+    /// </summary>
+    [Fact]
+    public void With_dice_the_same_seed_buys_the_same_package()
+    {
+        var (board, options) = FirstEvolution();
+
+        var first = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(5)).DecideEvolution(board, options);
+        var again = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(5)).DecideEvolution(board, options);
+
+        var choice = first.Choice.ShouldNotBeNull();
+        again.Choice.ShouldBe(choice);
+        options.Creatures.Single(option => option.Creature == choice.Creature).AvailableTiers.ShouldContain(choice.Tier);
+    }
+
+    /// <summary>
+    /// The two creatures of a side are alike at round 1, so the first stands for both: the purchase reads
+    /// each package once, not once per creature, and goes to the first creature offered.
+    /// </summary>
+    [Fact]
+    public void Creatures_alike_are_read_as_one()
+    {
+        var (board, options) = FirstEvolution();
+
+        var decision = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(5), purchases: new PurchaseReading(2, 1)).DecideEvolution(board, options);
+
+        decision.Choice.ShouldNotBeNull().Creature.ShouldBe(One);
+    }
+
+    /// <summary>
+    /// The rollouts' decisions are the agent it is built on, in both seats: the enemy's face-down picks and
+    /// the side's own remaining ones are what that agent would buy, and every round after is that agent's play.
+    /// </summary>
+    [Fact]
+    public void With_dice_the_agent_it_is_built_on_plays_the_rounds_after_a_purchase()
+    {
+        var heuristic = new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(call => heuristic.DecideEvolution(call.Arg<PlayerBoardState>(), call.Arg<EvolutionOptions>()));
+        inner.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
+        inner.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
+        inner.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => [call.Arg<TargetOptions>().LegalTargets.Candidates[0]]);
+        var (board, options) = FirstEvolution();
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: inner, random: new TestRandom(5), purchases: new PurchaseReading(1, 1)).DecideEvolution(board, options);
+
+        inner.Received().DecideEvolution(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<EvolutionOptions>());
+        inner.Received().DecideSpeed(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<CreatureId>());
+        inner.Received().DecideIntent(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player1), Arg.Any<IntentOption>());
+        inner.Received().DecideTargets(Arg.Is<PlayerBoardState>(seen => seen.Slot == PlayerSlot.Player2), Arg.Any<TargetOptions>());
     }
 
     [Fact]
@@ -432,6 +487,15 @@ public sealed class LookaheadAgentTests
             RoundNumber = 1,
             Timeline = [Slot(Two, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
         };
+    }
+
+    /// <summary>A started match's first Evolution as Player1 is shown it, with the packages each of its creatures can buy.</summary>
+    private static (PlayerBoardState Board, EvolutionOptions Options) FirstEvolution()
+    {
+        var match = new MatchStore().Started(Rules, new TestRandom(1));
+        var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+        var offers = board.Allies.Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, TestContent.Resources))).ToList();
+        return (board, new EvolutionOptions(Rules.EvolutionPicksIn(1), offers));
     }
 
     private static ActivationSlot Slot(CreatureId creature, PlayerSlot owner) =>

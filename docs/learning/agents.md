@@ -7,7 +7,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
-| Lookahead | `lookahead[:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Evolution, speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). It orders its own ties by playing each seating out. See [the round played out](#the-round-played-out). |
+| Lookahead | `lookahead[:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). It orders its own ties by playing each seating out, and prices a purchase by playing the rounds after it out (ADR 0094). See [the round played out](#the-round-played-out). |
 | Minimax | `minimax[:<weights file>\|:<agent>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. It orders its ties as the lookahead does. Deterministic. See [the worst reply](#the-worst-reply). |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 | Exploring | `explore:<rate>[:<agent>]` | Another agent, except that the given share of decisions is taken uniformly at random (ADR 0014). Bare, it wraps Greedy; a second colon names the agent it deviates from instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`, or a bare path as the shorthand for a weights file. For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
@@ -129,8 +129,18 @@ the match's own rules on them, so the agent can put a move on the board and keep
   The one-step score that breaks a tie, the targets each creature is taken to pick at its slot, and the spell
   an enemy is guessed to declare are all read at that speed, so an enemy that chose Quick is guessed to cast
   what it can roll rather than a critical it cannot.
-- **Speed and evolution** are the heuristic agent's: neither is a combat move, and the round they plan has no
-  timeline yet to play out.
+- **Speed** is the heuristic agent's: the round it plans has no timeline yet to play out.
+- **Evolution** is its own once it has dice (ADR 0094), which every agent the factory seats has: what a package
+  is worth shows only over the rounds after it, so each purchase on offer is bought on a hypothetical board
+  and those rounds are played out whole, every sub-phase of them, by `RoundRollout`. The side's earlier picks
+  of the round, its remaining ones and the enemy's face-down ones (ADR 0089) are what the agent it is built
+  on would buy, and every decision of the rounds after is that agent's, in both seats. The dice are rolled,
+  not forced plain, from the match's agent dice, and every candidate is read on the same rolls; the
+  candidate whose rollouts end best wins, by the share of matches they win, then by the scorer's sum over
+  their actions. Creatures alike but for their id are one candidate. `PurchaseReading` sets how many rounds a
+  rollout plays and how many rollouts a candidate is averaged over. A rollout plays the match the match plays:
+  rolled from the first Speed sub-phase on dice that roll what the match's did, it ends where the match ends
+  with the same sum (`RoundRolloutTests`). The minimax agent reads a purchase the same way.
 - **Tie order** is its own, because it comes once the timeline is built; the agent it is built on is not
   asked (ADR 0067). Every seating of its tied creatures in the places its side holds is played out from the first slot,
   with no intent declared on either side: each ally plays what the agent it is built on would declare, each
