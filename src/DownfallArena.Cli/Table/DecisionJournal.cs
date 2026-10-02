@@ -158,16 +158,24 @@ internal sealed class DecisionJournal
         }
     }
 
-    /// <summary>Under the lock: applies and removes the swap lines among the first <paramref name="before" /> entries, in their order.</summary>
+    /// <summary>
+    /// Under the lock: applies and removes the swap lines among the first <paramref name="before" /> entries,
+    /// in their order. A swap that cannot be applied -- the agent it names is not on this host any more, or
+    /// the seat refuses the round -- is a divergence like a decision that does not fit: the record says a seat
+    /// changed hands, and a table rebuilt without it would let the wrong occupant decide, which no checkpoint
+    /// of the boards can notice.
+    /// </summary>
     private void ApplySwaps(int before)
     {
         var swaps = _recorded.Take(Math.Min(before, _recorded.Count)).Where(entry => entry.IsSwap).ToList();
         foreach (var entry in swaps)
         {
             _recorded.Remove(entry);
-            if (_swapping is { } swapping && entry.To is { } to && entry.AtRound is { } round)
+            if (_swapping is { } swapping && entry.To is { } to && entry.AtRound is { } round && !swapping(entry.PlayerSlot, to, round))
             {
-                swapping(entry.PlayerSlot, to, round);
+                _recorded.Clear();
+                _exhausted.TrySetException(new InvalidOperationException($"The record has diverged: line {entry.Seq} seats '{to}' in {entry.Slot} from round {round}, and nobody of that name can sit there now."));
+                throw new InvalidOperationException($"The record of this table cannot be replayed at line {entry.Seq}: the swap it names cannot be applied.");
             }
         }
     }

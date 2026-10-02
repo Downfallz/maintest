@@ -157,6 +157,8 @@ test('a recorded session reads as live, finished or not finished, with its playe
   assert.equal(rows[0].state, 'live on this host');
   assert.equal(rows[0].players, 'human:mk vs Greedy');
   assert.equal(rows[0].live, true);
+  assert.equal(rows[0].export, null, 'a session being written is not offered for export');
+  assert.equal(rows[1].export, '/api/sessions/b/export');
   assert.equal(rows[0].location, 'runs/playtest/a');
   assert.equal(rows[1].state, 'finished');
   assert.equal(rows[1].steps, 40);

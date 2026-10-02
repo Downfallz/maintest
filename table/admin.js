@@ -165,7 +165,8 @@ export function sessionRows(answer) {
     steps: session.steps ?? 0,
     live: session.live === true,
     session: session.session,
-    export: session.export,
+    // Exportable once it is no longer being written: the host refuses a live one.
+    export: session.live === true ? null : session.export,
     location: session.location ?? null,
   }));
 }
@@ -283,14 +284,17 @@ function sessionItem(row, transport) {
   const links = document.createElement('div');
   links.className = 'session-links';
   links.append(anchor(row.session, 'viewer'));
-  const save = document.createElement('a');
-  save.href = row.export;
-  save.textContent = 'export zip';
-  save.addEventListener('click', async event => {
-    event.preventDefault();
-    await saveZip(await transport.exportSession(row.id));
-  });
-  links.append(save);
+  // A session being played is still being written, and the host refuses to export it: no link to a 409.
+  if (!row.live) {
+    const save = document.createElement('a');
+    save.href = row.export;
+    save.textContent = 'export zip';
+    save.addEventListener('click', async event => {
+      event.preventDefault();
+      await saveZip(await transport.exportSession(row.id));
+    });
+    links.append(save);
+  }
   if (row.location) links.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: row.location }));
   body.append(id, facts, links);
   item.append(check, body);

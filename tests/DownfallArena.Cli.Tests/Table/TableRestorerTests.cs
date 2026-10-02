@@ -100,6 +100,18 @@ public sealed class TableRestorerTests : IDisposable
         _later.All().ShouldBeEmpty();
     }
 
+    /// <summary>The host's own table is recorded as open the moment it is; rebuilt beside itself it would be the same match twice.</summary>
+    [Fact]
+    public async Task A_table_this_host_already_holds_is_not_rebuilt_beside_itself()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+
+        var said = await TableRestorer.RestoreAsync(_before.Stored!, _before.Composer, _earlier, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldBeEmpty();
+        _earlier.All().ShouldHaveSingleItem().ShouldBeSameAs(table);
+    }
+
     [Fact]
     public async Task A_table_nobody_has_been_at_for_longer_than_the_host_would_keep_it_is_left_as_it_was()
     {

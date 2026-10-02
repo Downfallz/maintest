@@ -96,6 +96,26 @@ internal sealed class PlayedTable : IDisposable
 
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
+    /// <summary>
+    /// After the table is let go of: waits for its driver to stop and for every write of its recording to
+    /// land, so what is done to its run next is done after the match and not beside it. Bounded: a driver
+    /// that is not coming back must not hold the operator's request.
+    /// </summary>
+    public async Task QuiesceAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+
+        // The closed marker is one of the writes to wait for: landing after a deletion, it would be the one
+        // file of a run that was deleted, and the run would be listed again.
+        await Task.WhenAny(Closing, Task.Delay(QuiesceWithin, cancellationToken));
+        if (Run is { } run)
+        {
+            await run.DrainAsync(cancellationToken);
+        }
+    }
+
+    private static readonly TimeSpan QuiesceWithin = TimeSpan.FromSeconds(5);
+
     /// <summary>The round the match has reached, off seat 1's board, or none before the first.</summary>
     public async Task<int?> RoundAsync()
     {
@@ -123,9 +143,8 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
-        // Read before the cancellation, which can end the match synchronously: a driver still waiting for the
-        // table to begin is let go of inside Cancel itself, and the table would then read as over by the time
-        // it was asked whether it was.
+        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
+        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
         var unfinished = !IsOver;
         _stopping.Cancel();
 
