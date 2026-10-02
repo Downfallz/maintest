@@ -44,13 +44,33 @@ first.
   Without Heavy Strike 4 most of the pass's gain is gone, as expected. `tierUsageShare` (0.86 to 0.88) is
   still the term to move. On the hold-out Soul Devourer was cast 21 times on 13 sides, against 28 on 15:
   dearer, and cast for the lock.
-- **The owner then set the package initiative bonuses by hand.** No pass has measured them yet:
+- **The owner then set the package initiative bonuses by hand.** Measured below:
   - level 2: Berserker 3, Elementalist 3, Marauder 2, Plague Doctor 2, Shaman 2 (from 0), Ironbound 1,
     Necromancer 1;
   - level 3: Ravager 3, Soulreaver 3 (from 5), Warmonger 2, Spiritcaller 2, Dreadnought 1.
 
   The Scoundrel packages' shared keep now says what stays true: no package outside the line buys more
   initiative than the line's fastest at its level.
+
+  The measurements, exploring run on the same three seed files, before and after (contents `08d030f4` and
+  `5cd8048a`):
+
+  | | Benchmark | Confirmation | Hold-out |
+  | --- | --- | --- | --- |
+  | Objective | 6.88 → 6.45 | 3.34 → 3.56 | 3.98 → 5.19 |
+  | `player1WinShare` | 0.585 → 0.570 | 0.460 → 0.477 | 0.550 → 0.455 |
+  | `averageRounds` | 10.2 → 11.1 | 10.6 → 10.9 | 10.7 → 11.0 |
+  | `tierWinSpread` | 0.058 → 0.036 | 0.180 → 0.070 | 0.034 → 0.041 |
+
+  Over the 800 matches pooled:
+  - The objective totals 14.2 before and 15.2 after, a difference inside what one seed file moves.
+  - Player 1 wins about 0.51 before and 0.50 after.
+  - What moves the objective is still Occultist's split, Lightning Bolt against Rejuvenate, which no bonus
+    touches: 10,426 casts at a top share of 0.88.
+  - Shaman is cast 1,595 → 2,718 times, and Spiritcaller 88 → 195 behind it.
+  - Dreadnought falls 456 → 323. Elementalist (269 → 311) and Harbinger (488 → 684) rise.
+  - The sides that cast Soulreaver's spells won 85% of those casts before and 75% after.
+  - Matches run about half a round longer.
 - **The benchmark digest is regenerated** for the content these leave.
 
 ## 2026-10-02. `tierDamageSpread` leaves the objective (ADR 0090)
