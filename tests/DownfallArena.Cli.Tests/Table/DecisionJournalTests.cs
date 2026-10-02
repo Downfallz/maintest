@@ -41,7 +41,7 @@ public sealed class DecisionJournalTests : IDisposable
             HostedTables.Bots.Seed!.Value,
             seat1,
             seat2,
-            (_, seat) => journal.Around(seat, ReferenceEquals(seat, seat1) ? PlayerSlot.Player1 : PlayerSlot.Player2),
+            new TableStart((_, seat) => journal.Around(seat, ReferenceEquals(seat, seat1) ? PlayerSlot.Player1 : PlayerSlot.Player2)),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var again = await replayed.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
@@ -72,7 +72,7 @@ public sealed class DecisionJournalTests : IDisposable
             HostedTables.Bots.Seed!.Value,
             seat1,
             seat2,
-            (_, seat) => journal.Around(seat, ReferenceEquals(seat, seat1) ? PlayerSlot.Player1 : PlayerSlot.Player2),
+            new TableStart((_, seat) => journal.Around(seat, ReferenceEquals(seat, seat1) ? PlayerSlot.Player1 : PlayerSlot.Player2)),
             cancellationToken: TestContext.Current.CancellationToken);
 
         await Task.WhenAny(replayed.Outcome).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);

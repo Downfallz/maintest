@@ -184,8 +184,8 @@ internal sealed class TableComposer
             // (ADR 0092). A rebuilt table that had begun -- it has decisions to replay -- begins at once; one
             // that was still waiting waits again, whatever handover the pilot had scheduled meanwhile.
             var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || !DecisionJournal.HoldsDecision(rebuilding.Value.Journal));
-            var start = new TableStart(rebuilding?.Record.MatchId, waits);
-            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, start, stopping.Token);
+            var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits);
+            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,
