@@ -180,8 +180,8 @@ internal sealed class TableComposer
             // A swap line is applied as the replay reaches it, through the pilot's own seating.
             run?.Journal.SwapsThrough((slot, wanted, round) => SeatingOf(slot, wanted) is { } next && Of(slot).Agent.SwapAt(next, round).Taken);
 
-            var start = new TableStart(rebuilding?.Record.MatchId);
-            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, start, stopping.Token);
+            var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId);
+            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,

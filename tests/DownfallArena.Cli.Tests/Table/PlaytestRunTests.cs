@@ -339,7 +339,7 @@ public sealed class PlaytestRunTests : IDisposable
             seed: 7,
             seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), player1Agent)),
             new SeatAgent(new Occupant(Bot(resources), "greedy")),
-            run.Wrap,
+            new TableStart(run.Wrap),
             cancellationToken: _stopping.Token);
 
         return (run, session);

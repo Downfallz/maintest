@@ -77,20 +77,13 @@ internal sealed class TableSession : IDisposable
     /// Creates the match and starts playing the seats it is handed. They arrive already occupied, so neither
     /// can be asked a question it has nobody to answer with.
     /// </summary>
-    /// <param name="wrap">
-    /// What the driver plays for a seat, given the match the seat is in. It exists because the match id is
-    /// created here and a recorder needs it to wrap a seat (<c>docs/tabletop/app-roadmap.md</c>, stage 5), and
-    /// because the wrapping has to go <em>around</em> the seat: a <c>RecordingAgent</c> seated inside one
-    /// would be swapped out by the next handover, and the recording would stop without saying so. The default
-    /// plays the seat itself, which is every caller that records nothing.
-    /// </param>
+    /// <param name="start">How the session is started beyond its seats (<see cref="TableStart" />); the default records nothing and keeps nothing.</param>
     public static async Task<TableSession> StartAsync(
         IServiceProvider services,
         RuleSet rules,
         int seed,
         SeatAgent player1,
         SeatAgent player2,
-        Func<MatchId, SeatAgent, IPlayerAgent>? wrap = null,
         TableStart? start = null,
         CancellationToken cancellationToken = default)
     {
@@ -115,8 +108,8 @@ internal sealed class TableSession : IDisposable
         var queries = gate.Around(services.GetRequiredService<MatchQueryHandlers>());
         var driver = new MatchDriver(gate.Around(services.GetRequiredService<MatchCommandHandlers>()), queries);
         var concede = gate.Guarding(services.GetRequiredService<ICommandHandler<Concede, Result>>());
-        var played1 = wrap?.Invoke(matchId, player1) ?? player1;
-        var played2 = wrap?.Invoke(matchId, player2) ?? player2;
+        var played1 = start?.Wrap?.Invoke(matchId, player1) ?? player1;
+        var played2 = start?.Wrap?.Invoke(matchId, player2) ?? player2;
         var outcome = Task.Run(() => driver.PlayAsync(matchId, played1, played2, cancellationToken), cancellationToken);
 
         // The recorder is optional: only a host that shows a feed registers one.
