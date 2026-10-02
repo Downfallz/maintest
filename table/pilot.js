@@ -7,20 +7,20 @@
 
 const POLL_MS = 900;
 
-// What a pilot may seat. `person` is the seat's own player, which only a seat that has one can be handed back
-// to; the rest are agent specs the CLI understands, chosen for what the journal measured rather than for what
-// sounds hard -- `lookahead` and `minimax` read like the difficult setting and neither beats Greedy
-// (docs/learning/journal.md, 2026-09-16). This list is not the whole of what the host accepts: any spec the CLI
-// parses works through `POST /api/pilot/seats/<slot>`, including a weights or policy path a page cannot know is
-// on disk.
-export const SEATABLE = [
-  { value: 'person', label: 'the person whose seat it is' },
-  { value: 'greedy', label: 'Greedy — the baseline' },
-  { value: 'random', label: 'Random' },
-  { value: 'heuristic:learning/weights/search-4.json', label: 'search-4 — the strongest general weights' },
-  { value: 'heuristic:learning/weights/stun-first.json', label: 'stun-first — beats Greedy every match' },
-  { value: 'heuristic:learning/weights/kill-first.json', label: 'kill-first — beats Greedy every match' },
-];
+// What a pilot may seat: `person` is the seat's own player, which only a seat that has one can be handed back
+// to; the rest are the bots the host offers, read off its weights directory and carried in the view, so a new
+// search is offered the day it lands and this page names none. Before the host has answered, or on a host
+// that offers nothing, the two bots every build has. This list is not the whole of what the host accepts: any
+// spec the CLI parses works through `POST /api/pilot/seats/<slot>`, including a weights or policy path a page
+// cannot know is on disk.
+export const PERSON = { value: 'person', label: 'the person whose seat it is' };
+
+export function seatable(view) {
+  const offered = Array.isArray(view?.agents) && view.agents.length > 0
+    ? view.agents
+    : [{ value: 'greedy', label: 'Greedy — the baseline' }, { value: 'random', label: 'Random' }];
+  return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.label ?? agent.value }))];
+}
 
 // One factory, so a test hands the page a stub instead of a network. It speaks for the pilot and nothing else:
 // the pilot token is not a seat's, and the host refuses it on every seat route.
@@ -213,7 +213,17 @@ async function start() {
   }
 
   const transport = pilotTransport(token);
-  element('swap-agent').replaceChildren(...SEATABLE.map(seat => option(seat.value, seat.label)));
+  let offered = null;
+  function fillAgents(view) {
+    const list = seatable(view);
+    const key = list.map(agent => agent.value).join('|');
+    if (key === offered) return;
+    offered = key;
+    const kept = element('swap-agent').value;
+    element('swap-agent').replaceChildren(...list.map(agent => option(agent.value, agent.label)));
+    if (list.some(agent => agent.value === kept)) element('swap-agent').value = kept;
+  }
+  fillAgents(null);
 
   let latest = null;
   element('swap').addEventListener('click', async () => {
@@ -253,6 +263,7 @@ async function start() {
 
     element('problem').hidden = true;
     latest = answer.body;
+    fillAgents(latest);
     draw(latest);
   }
 

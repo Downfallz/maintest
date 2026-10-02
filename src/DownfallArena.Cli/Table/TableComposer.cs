@@ -17,7 +17,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// Composes a table from a request: seats a person or a bot in each slot, opens the recording, starts the
 /// match, and hands back the one object the host keeps (ADR 0081). It is the composition root of a table,
-/// pulled out of the command so the table the command line asks for and the tables the lobby asks for are
+/// pulled out of the command so the table the command line asks for and the tables the admin panel asks for are
 /// built by the same code.
 /// </summary>
 /// <remarks>
@@ -54,6 +54,9 @@ internal sealed class TableComposer
     }
 
     public bool Records => _store is not null;
+
+    /// <summary>The bots the pilot is offered for a seat, in the order they are offered; empty offers only what the page knows.</summary>
+    public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
     /// <summary>
     /// Composes and starts a table. The recording is opened before the match, so the files exist before
@@ -108,7 +111,7 @@ internal sealed class TableComposer
             var pilot = new TablePilot(
                 Token(),
                 (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, request, agents, Source(seed, slot)));
-            var api = new TableApi(session, session.Queries, seats, _catalogue, events, run, pilot) { Guide = _guide };
+            var api = new TableApi(session, session.Queries, seats, _catalogue, events, run, pilot) { Guide = _guide, Agents = Agents };
             var table = new PlayedTable(new TableOpening(id, _clock.GetUtcNow()), session, api, seats, pilot, run, stopping);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps

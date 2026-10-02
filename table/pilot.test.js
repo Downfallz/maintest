@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SEATABLE, earliestRound, newestFirst, pilotTransport, said, seatRows, swapAsked, whereItIs } from './pilot.js';
+import { earliestRound, newestFirst, pilotTransport, said, seatRows, seatable, swapAsked, whereItIs } from './pilot.js';
 
 const view = {
   round: 3,
@@ -98,10 +98,19 @@ test('a pilot page without a token refuses to be built rather than polling a 403
   assert.throws(() => pilotTransport(''), /token the host printed/);
 });
 
-test('what a pilot may seat names the person first and the exploits last', () => {
-  assert.equal(SEATABLE[0].value, 'person');
-  assert.ok(SEATABLE.some(seat => seat.value === 'greedy'));
-  assert.ok(SEATABLE.some(seat => seat.value.includes('search-4')));
+test('what a pilot may seat names the person first and then the bots the host offers, in its order', () => {
+  const view = { agents: [{ value: 'heuristic:learning/weights/search-19.json', label: 'search-19 — the strongest' }, { value: 'greedy', label: 'Greedy' }] };
+
+  const offered = seatable(view);
+
+  assert.equal(offered[0].value, 'person');
+  assert.deepEqual(offered.slice(1).map(agent => agent.value), ['heuristic:learning/weights/search-19.json', 'greedy']);
+  assert.equal(offered[1].label, 'search-19 — the strongest');
+});
+
+test('before the host has answered the pilot still offers the person and the two bots every build has', () => {
+  assert.deepEqual(seatable(null).map(agent => agent.value), ['person', 'greedy', 'random']);
+  assert.deepEqual(seatable({ agents: [] }).map(agent => agent.value), ['person', 'greedy', 'random']);
 });
 
 // The page polls on a timer and asks for its own view the moment a swap lands, so two are in flight at once
