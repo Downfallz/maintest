@@ -62,6 +62,12 @@ ENERGY_COST = "/energyCost"
 #: hands the search content that cannot load, found one candidate at a time (journal, 2026-09-30).
 AT_LEAST_ONE = re.compile(r"^/(effects|casterEffects)/\d+/(amount|amountPerRound|durationRounds)$")
 
+#: The longest a condition may last, in rounds: the owner's rule of 2026-10-02, so that no effect, on its
+#: target or its caster, outlives a few rounds of play. A duration knob whose maximum is above it would let a
+#: search write content the owner has ruled out.
+MOST_ROUNDS = 3
+DURATION = re.compile(r"^/(effects|casterEffects)/\d+/durationRounds$")
+
 #: The one number a package carries that a tuning pass may move: what a purchase adds to Base initiative
 #: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
 INITIATIVE_BONUS = "/initiativeBonus"
@@ -652,6 +658,11 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
             problems.append(
                 f"{knob.key}: a search could take it below 1, which the engine refuses for an effect's "
                 "amount or duration."
+            )
+        if DURATION.match(knob.path) and knob.maximum > MOST_ROUNDS:
+            problems.append(
+                f"{knob.key}: a search could take it past {MOST_ROUNDS} rounds, "
+                "the longest a condition may last."
             )
         if _inert_critical(knob, document):
             problems.append(

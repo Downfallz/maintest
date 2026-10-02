@@ -209,7 +209,7 @@
       ],
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 }
+        { "path": "/effects/0/amount", "min": 2, "max": 3, "step": 1 }
       ]
     },
     "spell:pummel": {
@@ -253,7 +253,7 @@
       ],
       "note": "Authored at 4.5 a round in the check-knobs reading, the bottom of the tier-2 attacks but for Momentum's 2.6, because that reading prices energy at 0.3 and cannot see a big spell pushed back a round. No evaluation has measured it yet.",
       "knobs": [
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 2, "step": 1 }
       ]
@@ -321,7 +321,7 @@
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 4, "step": 1 }
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:full_plate": {
@@ -364,7 +364,7 @@
       ],
       "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 8, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
@@ -525,9 +525,9 @@
         "It takes energy, not only health: that is what makes it a Soul Devourer and not a bigger `parasite_jab`",
         "Heavier than `parasite_jab` on every half -- the hit, the heal, and a drain the opener does not have -- or the opener is the better spell"
       ],
-      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it came back where legacy had it, 2 energy off the target (tune run 9 has since taken it to 3, and the damage 5 to 6), with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.90 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking three off a creature does not cost it three points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it came back where legacy had it, 2 energy off the target (tune run 9 has since taken it to 3, and the damage 5 to 6), with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.90 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.3 a point (ADR 0037, 0.2 before it), and taking three off a creature does not cost it three points of anything, it costs it the cast it was saving for. Nothing in the scorers read a cast denied until ADR 0093: the agents now price a drain that leaves an enemy still to act unable to pay as a stun round, which is the lock players found, since no immunity follows it. `cast_value` reads a spell without a board and still prices it at the energy rate. The owner raised the cost 2 to **3** on 2026-10-02 so that the lock cannot be cast every round on the income of a round, and the cost bound starts at 3.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
@@ -677,15 +677,15 @@
     "spell:rejuvenate": {
       "name": "Rejuvenate",
       "class": "Sorcerer",
-      "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 4 health for two energy, the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
+      "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 5 health for two energy (4 until the owner raised it on 2026-10-02), the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
       "keep": [
         "No instant heal costs less: only `soothing_chant` is cheaper, and it heals over time",
         "Single target"
       ],
-      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration became worth 0.68 of expected healing, and it is a knob; tune run 6 took it to 0.22, 0.88 today. The heal that sets the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
+      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration became worth 0.68 of expected healing, and it is a knob; tune run 6 took it to 0.22, 1.10 today on a heal of 5. The heal that sets the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -781,7 +781,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 5, "step": 1 }
       ]
     },
@@ -848,7 +848,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/amountPerRound", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
@@ -909,7 +909,7 @@
       "intent": "The Scoundrel's opener, and the fastest of the three, alone again since the owner set Occultist back to 2 (journal, 2026-10-01): the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -918,13 +918,13 @@
       "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Shadowstep, a hit that hastes its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
     "tier:berserker": {
       "name": "Berserker",
-      "intent": "The Berserker's opener: Enraged Charge, one swing on the highest critical chance, and Reckless Swing, the every-round hit paid in blood. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Berserker's opener: Enraged Charge, one swing on the highest critical chance, and Reckless Swing, the every-round hit paid in blood. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -932,7 +932,7 @@
     },
     "tier:elementalist": {
       "name": "Elementalist",
-      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies, and Frostbite, the cheap slowing hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies, and Frostbite, the cheap slowing hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -948,7 +948,7 @@
     },
     "tier:marauder": {
       "name": "Marauder",
-      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger, and Extort, the hit that skims energy. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger, and Extort, the hit that skims energy. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -972,7 +972,7 @@
     },
     "tier:plague_doctor": {
       "name": "Plague Doctor",
-      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team at a point of poison. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team at a point of poison. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -980,19 +980,19 @@
     },
     "tier:shaman": {
       "name": "Shaman",
-      "intent": "The Shaman's opener: Healing Screech, a heal that keeps healing, and Soothing Chant, the team regeneration of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 0 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Shaman's opener: Healing Screech, a heal that keeps healing, and Soothing Chant, the team regeneration of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 0, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
       "knobs": [],
-      "note": "Worth nothing on purchase: the one spell it had at the migration carried no per-spell bonus, so the seeded sum is 0. A package that buys no tempo at all may be right for a healer and may be an accident of the migration; with no initiative knob since 2026-10-01, finding out is a hand edit and a measurement, not a tuning pass."
+      "note": "Worth nothing on purchase until 2026-10-02: the one spell it had at the migration carried no per-spell bonus, so the seeded sum was 0. The owner set it to 2, so a healer's package buys some tempo too."
     },
     "tier:blightweaver": {
       "name": "Blightweaver",
       "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
@@ -1001,13 +1001,13 @@
       "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
     "tier:dreadnought": {
       "name": "Dreadnought",
-      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 1 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -1031,7 +1031,7 @@
     },
     "tier:ravager": {
       "name": "Ravager",
-      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -1039,16 +1039,16 @@
     },
     "tier:soulreaver": {
       "name": "Soulreaver",
-      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 5, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
-        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+        "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
       ],
       "knobs": []
     },
     "tier:spiritcaller": {
       "name": "Spiritcaller",
-      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -1056,7 +1056,7 @@
     },
     "tier:warmonger": {
       "name": "Warmonger",
-      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the eleventh tuning pass moved it to 3 (journal, 2026-09-24).",
+      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],

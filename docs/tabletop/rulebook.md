@@ -349,7 +349,7 @@ Then every pick token comes off the mats and the boards.
 > picks Shaman, level 2 and requiring Occultist, for Creature 6. Creature 6 now holds a pick token, so Player 2
 > has no pick they could use and does not pass. Their second pick token stays on the mat, unused, and comes
 > off with the rest. Player 1, with three living Creatures, still has two picks. At the Purchase reveal,
-> Healing Screech goes into Player 2's hand, and the bonus is +0.
+> Healing Screech goes into Player 2's hand, and the bonus of +2 raises Creature 6's Base initiative.
 
 ### 5.4 Speed
 
