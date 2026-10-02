@@ -210,6 +210,33 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
+    /// Four acts first and is guessed to Rest, which leaves it the two energy Slam costs. When One's slot comes,
+    /// Four has already acted, so draining it takes energy and no action (ADR 0091): Steady's three damage is the
+    /// better cast. Played out as if every enemy were still to act, the drain read as a stun round and won.
+    /// </summary>
+    [Fact]
+    public void A_drain_on_an_enemy_that_has_already_acted_this_round_is_not_played_out_as_a_stun()
+    {
+        var sapper = CreatureDefinitionId.Parse("creature:sapper:v1");
+        var rester = CreatureDefinitionId.Parse("creature:rester:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(sapper, Sap.Id, Steady.Id), Definition(rester, Rest.Id)],
+            [.. TestContent.Resources.Spells, Sap, Steady, Rest],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { DefinitionId = sapper, KnownSpells = new HashSet<SpellId> { Sap.Id, Steady.Id } };
+        var four = (Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = rester, KnownSpells = new HashSet<SpellId> { Rest.Id } }).Bought(TestContent.SlamPack);
+        var board = Boards.Board(PlayerSlot.Player1, [one], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
+        };
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules).DecideIntent(board, new IntentOption(One, [Sap.Id, Steady.Id])).ShouldBe(Steady.Id);
+    }
+
+    /// <summary>
     /// Four chose Quick, and a Quick cast never crits, so Gamble is two damage to it and Steady three: the
     /// greedy agent playing Four casts Steady. Guessed at Standard, Gamble reads four and the lookahead
     /// would be playing the round out against a spell Four is not going to cast.

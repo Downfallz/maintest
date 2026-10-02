@@ -185,6 +185,12 @@ test('an effect knob whose minimum permits zero is a disagreement even when its 
   assert.deepEqual(codes(summary), ['effectMinimum']);
 });
 
+test('a duration knob whose maximum passes three rounds is a disagreement, as check-knobs reads it', () => {
+  const bleeding = { ...pummel(), effects: [{ kind: 'Damage', amount: 2 }, { kind: 'Bleed', amountPerRound: 1, durationRounds: 2 }] };
+  const summary = of(withKnobs([{ path: '/effects/1/durationRounds', min: 1, max: 4, step: 1 }]), 'spell:pummel', bleeding);
+  assert.deepEqual(codes(summary), ['durationCeiling']);
+});
+
 test('package entries flag progression knobs and name their initiative bonus', () => {
   const balance = knobsFile({}, { packages: { 'tier:prowler': { name: 'Prowler', intent: 'Fast.', knobs: [
     { path: '/initiativeBonus', min: 1, max: 5, step: 1 },

@@ -352,7 +352,10 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical, board.Timeline[index].Speed);
             stopped |= creature == actor && Stops(advanced.Resolution.FizzleReason);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
-            value += sign * _scorer.Score(advanced.Resolution, ahead);
+            // The slots after this one are the creatures still to act, so a drain on one that has already acted
+            // is not priced as the action it takes away (ADR 0091).
+            var stillToAct = board.Timeline.Skip(index + 1).Select(slot => slot.Creature).ToHashSet();
+            value += sign * _scorer.Score(advanced.Resolution, ahead, stillToAct: stillToAct);
             ahead = advanced.Board;
             if (Advance.Elimination(ahead) is { } wiped)
             {

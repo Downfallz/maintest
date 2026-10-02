@@ -23,6 +23,9 @@ export const KNOBS_VERSION = 'knobs:v1';
 const CRITICAL_CHANCE = '/criticalChance';
 const CRITTABLE = new Set(['Damage', 'Heal']);
 const EFFECT_AMOUNT = /^\/(effects|casterEffects)\/\d+\/(amount|amountPerRound|durationRounds)$/;
+/** No condition lasts more than three rounds, the owner's rule of 2026-10-02, mirrored from check-knobs. */
+const DURATION = /^\/(effects|casterEffects)\/\d+\/durationRounds$/;
+const MOST_ROUNDS = 3;
 
 /** 0.667 plus 0.05 does not land on 0.717, and a value authored at a band edge must not read as outside it. */
 const EPSILON = 1e-9;
@@ -276,6 +279,10 @@ export function knobReading(knob, document, { duplicate = false } = {}) {
 
   if (EFFECT_AMOUNT.test(path) && shape.minimum < 1) {
     problems.push(problem('effectMinimum', 'A tuning pass could take this effect below 1, which the engine refuses.'));
+  }
+
+  if (DURATION.test(path) && shape.maximum > MOST_ROUNDS) {
+    problems.push(problem('durationCeiling', `A tuning pass could take this duration past ${MOST_ROUNDS} rounds, the longest a condition may last.`));
   }
 
   if (path === CRITICAL_CHANCE && !crittable(document)) {
