@@ -156,7 +156,7 @@ internal sealed class AdminApi
 
     private StudioResponse Full() =>
         StudioResponse.OfJson(
-            new { error = "Admin.Full", message = $"This host has {_registry.Capacity} tables under way, which is as many as it takes. Close one first." },
+            new { error = "Admin.Full", message = $"This host has {_registry.Capacity} tables open, waiting or under way, which is as many as it takes. Close one first." },
             ArtifactJson.LineOptions,
             status: 409);
 
@@ -319,6 +319,9 @@ internal sealed class AdminApi
             createdAt = table.CreatedAt,
             over = table.IsOver,
             finished = table.IsFinished,
+
+            // Waiting for its people to reach their seats (ADR 0092): no question has been asked yet.
+            waiting = !table.Session.HasBegun && !table.IsOver,
 
             // The round, or null while the match is busy: the page says "playing" of that, never "waiting".
             round = table.Session.IsOver ? null : await RoundNowAsync(table),

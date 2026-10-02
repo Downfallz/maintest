@@ -180,7 +180,11 @@ internal sealed class TableComposer
             // A swap line is applied as the replay reaches it, through the pilot's own seating.
             run?.Journal.SwapsThrough((slot, wanted, round) => SeatingOf(slot, wanted) is { } next && Of(slot).Agent.SwapAt(next, round).Taken);
 
-            var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId);
+            // A table with a person in it waits for every person to reach their seat before the first question
+            // (ADR 0092). A rebuilt table that had begun -- it has decisions to replay -- begins at once; one
+            // that was still waiting waits again, whatever handover the pilot had scheduled meanwhile.
+            var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || !DecisionJournal.HoldsDecision(rebuilding.Value.Journal));
+            var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits);
             session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A

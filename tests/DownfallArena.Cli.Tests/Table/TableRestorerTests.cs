@@ -170,6 +170,13 @@ public sealed class TableRestorerTests : IDisposable
         var table = await _before.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);
         _earlier.TryAdd(table).ShouldBeTrue();
         await table.RecordAsync(_earlier.Codes, TestContext.Current.CancellationToken);
+
+        // Every person reaches their seat, which is what begins the match (ADR 0092).
+        foreach (var seat in table.Seats.Where(seat => seat.Person is not null))
+        {
+            (await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token)).Status.ShouldBe(200);
+        }
+
         return table;
     }
 
