@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Table;
@@ -117,6 +118,24 @@ public sealed class DecisionJournalTests : IDisposable
         replayed.DecideSpeed(BoardIn(1), CreatureId.From(1)).ShouldBe(Speed.Quick);
         applied.Count.ShouldBe(1);
         replaying.Exhausted.IsCompletedSuccessfully.ShouldBeTrue();
+    }
+
+    /// <summary>A recorded swap that cannot be applied any more is a divergence: the record says a seat changed hands.</summary>
+    [Fact]
+    public void A_swap_that_can_no_longer_be_applied_is_a_divergence()
+    {
+        var recorded = new List<JournalEntry>
+        {
+            JournalEntry.Swap(1, DateTimeOffset.UtcNow, PlayerSlot.Player1, "heuristic:gone.json", 3),
+            JournalEntry.Of(2, DateTimeOffset.UtcNow, PlayerSlot.Player1, PlayerDecision.Pass),
+        };
+        var replaying = new DecisionJournal(new FileArtifactWriter(Path.Combine(_hosted.RunsDirectory, "refused")), TimeProvider.System, recorded);
+        replaying.SwapsThrough((_, _, _) => false);
+        var replayed = replaying.Around(new Never(), PlayerSlot.Player1);
+
+        Should.Throw<InvalidOperationException>(() => replayed.DecideEvolution(BoardIn(1), new EvolutionOptions(0, [])));
+
+        replaying.Exhausted.IsFaulted.ShouldBeTrue();
     }
 
     private static async Task<string> Board(TableSession session, PlayerSlot slot)

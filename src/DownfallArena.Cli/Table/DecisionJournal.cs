@@ -144,23 +144,49 @@ internal sealed class DecisionJournal
         }
     }
 
+    /// <summary>
+    /// Under the lock: applies the swap lines at the head of the record. A swap that cannot be applied -- the
+    /// agent it names is not on this host any more, or the seat refuses the round -- is a divergence like a
+    /// decision that does not fit: the record says a seat changed hands, and a table rebuilt without it would
+    /// let the wrong occupant decide, which no checkpoint of the boards can notice.
+    /// </summary>
     private void ApplySwaps()
     {
         while (_recorded.TryPeek(out var head) && head.IsSwap)
         {
             _recorded.Dequeue();
-            if (_swapping is { } swapping && head.To is { } to && head.AtRound is { } round)
+            if (_swapping is { } swapping && head.To is { } to && head.AtRound is { } round && !swapping(head.PlayerSlot, to, round))
             {
-                swapping(head.PlayerSlot, to, round);
+                _recorded.Clear();
+                _exhausted.TrySetException(new InvalidOperationException($"The record has diverged: line {head.Seq} seats '{to}' in {head.Slot} from round {round}, and nobody of that name can sit there now."));
+                throw new InvalidOperationException($"The record of this table cannot be replayed at line {head.Seq}: the swap it names cannot be applied.");
             }
         }
     }
 
+    /// <summary>
+    /// Writes a decision down and waits for the line to land before the decision goes to the engine. On the
+    /// driver's own thread, which a person blocks for minutes at a time: a few milliseconds to a file, or one
+    /// round trip to a blob, is what makes "the decision reached the store" a fact rather than a hope -- a host
+    /// that died in between asks the question again instead of rebuilding a match a move ahead of its record.
+    /// A write that fails is a line on the console; the match goes on without it.
+    /// </summary>
     private void Record(PlayerSlot slot, PlayerDecision decision)
     {
+        Task written;
         lock (_gate)
         {
             Append(JournalEntry.Of(++_seq, _clock.GetUtcNow(), slot, decision));
+            written = _writing;
+        }
+
+        try
+        {
+            written.GetAwaiter().GetResult();
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            // Already said on the console by the continuation below; the decision stands.
         }
     }
 

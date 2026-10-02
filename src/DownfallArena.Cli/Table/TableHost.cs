@@ -61,6 +61,18 @@ internal static class TableHost
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
 
+        // The tables an earlier host left unfinished are rebuilt before anybody is served (ADR 0091): a page
+        // polling a seat of one must find it where it left it, not a 403 and then, a moment later, its seat.
+        // And before the table the command line asks for: that one is recorded as open the moment it is, and
+        // rebuilt after itself it would be the same match twice.
+        if (stored is not null)
+        {
+            foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
+            {
+                Console.WriteLine($"  {line}");
+            }
+        }
+
         // The table the command line asks for, unless it asks for the admin panel and nothing else.
         if (!options.Lobby)
         {
@@ -68,16 +80,6 @@ internal static class TableHost
             registry.TryAdd(table);
             await table.RecordAsync(registry.Codes, stopping.Token);
             Announce(server, registry, table);
-        }
-
-        // The tables an earlier host left unfinished are rebuilt before anybody is served (ADR 0091): a page
-        // polling a seat of one must find it where it left it, not a 403 and then, a moment later, its seat.
-        if (stored is not null)
-        {
-            foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
-            {
-                Console.WriteLine($"  {line}");
-            }
         }
 
         Console.WriteLine(gate.Token is { } token

@@ -91,6 +91,9 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Says the recording is done with, written or not: the closing has run to its end.</summary>
     public void MarkClosed() => Volatile.Write(ref _closed, 1);
 
+    /// <summary>The record being marked closed, once the table is let go of unfinished; complete otherwise.</summary>
+    public Task Closing { get; private set; } = Task.CompletedTask;
+
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
     /// <summary>
@@ -101,6 +104,10 @@ internal sealed class PlayedTable : IDisposable
     public async Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
         await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+
+        // The closed marker is one of the writes to wait for: landing after a deletion, it would be the one
+        // file of a run that was deleted, and the run would be listed again.
+        await Task.WhenAny(Closing, Task.Delay(QuiesceWithin, cancellationToken));
         if (Run is { } run)
         {
             await run.DrainAsync(cancellationToken);
@@ -136,13 +143,16 @@ internal sealed class PlayedTable : IDisposable
             return;
         }
 
+        // Read before the cancellation, which can end the match synchronously: a driver let go of inside
+        // Cancel itself leaves the table reading as over by the time it is asked whether it was.
+        var unfinished = !IsOver;
         _stopping.Cancel();
 
         // A table let go of before it finished is closed for good: a host that comes after this one must not
         // rebuild what the operator closed, or what nobody came back to.
-        if (Run is { } run && !IsOver)
+        if (Run is { } run && unfinished)
         {
-            _ = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+            Closing = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
         }
 
         Session.Outcome.ContinueWith(

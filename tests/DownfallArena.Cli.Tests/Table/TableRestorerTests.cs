@@ -89,7 +89,8 @@ public sealed class TableRestorerTests : IDisposable
         await Finished(finished);
         var closed = await Opened(HostedTables.OnePerson);
         _earlier.Remove(closed.Id).ShouldBeTrue();
-        await Marked(closed.Id, TableRecord.Closed);
+        await closed.Closing.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        (await _before.Stored!.RecordAsync(closed.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Closed);
         await new FileArtifactStore(_runs).Writer("20200101-000000-aaaaaaaa").WriteJsonAsync("manifest.json", new { Matches = 0 }, TestContext.Current.CancellationToken);
         (await _before.Stored!.RecordAsync(finished.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
 
@@ -97,6 +98,18 @@ public sealed class TableRestorerTests : IDisposable
 
         said.ShouldBeEmpty();
         _later.All().ShouldBeEmpty();
+    }
+
+    /// <summary>The host's own table is recorded as open the moment it is; rebuilt beside itself it would be the same match twice.</summary>
+    [Fact]
+    public async Task A_table_this_host_already_holds_is_not_rebuilt_beside_itself()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+
+        var said = await TableRestorer.RestoreAsync(_before.Stored!, _before.Composer, _earlier, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldBeEmpty();
+        _earlier.All().ShouldHaveSingleItem().ShouldBeSameAs(table);
     }
 
     [Fact]
@@ -224,21 +237,6 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         table.IsFinished.ShouldBeTrue();
-    }
-
-    private async Task Marked(string id, string status)
-    {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if ((await _before.Stored!.RecordAsync(id, TestContext.Current.CancellationToken))?.Status == status)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"Session {id} was never marked {status}.");
     }
 
     private sealed class Clock : TimeProvider
