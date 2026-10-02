@@ -653,6 +653,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // already left.
         var seat = session.Seat(slot);
         var outcome = seat.SwapAt(next, round);
+        if (outcome.Taken)
+        {
+            // Written where it was asked, so a rebuilt table asks for it at the same point of the match.
+            run?.Journal.SwapAsked(slot, wanted, round);
+        }
+
         if (!outcome.Taken)
         {
             var floor = outcome.Reached is { } reached ? reached + 1 : 1;

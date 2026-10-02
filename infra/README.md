@@ -15,10 +15,11 @@ on GitHub Pages (ADR 0023).
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
 The app scales to zero a few minutes after the last request. An open page polls, so a table being played
-keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. **A match
-lives in memory**: a table nobody has open for long enough is gone when the replica goes. The recording is
-what survives: the admin panel lists every recorded session, links to it in the viewer and exports it, whether or
-not the replica that played it is still there.
+keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. A match
+lives in memory, but the replica that starts next **rebuilds every table left open** from its seed and its
+recorded decisions, under the same links and codes (ADR 0091); only a table nobody has touched for twenty
+hours is left as it was. The recording is what survives either way: the admin panel lists every recorded
+session, links to it in the viewer and exports it.
 
 The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/deploy.yml` from the
 `Dockerfile` at the root and tried both ways before it is pushed (`.github/scripts/try-table-image.sh`).

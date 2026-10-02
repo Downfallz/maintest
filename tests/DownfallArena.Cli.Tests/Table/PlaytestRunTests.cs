@@ -48,7 +48,7 @@ public sealed class PlaytestRunTests : IDisposable
     /// later has to carry the cards its Spell ids meant and what the players said about them.
     /// </summary>
     [Fact]
-    public async Task A_played_session_leaves_the_six_files_it_is_read_from()
+    public async Task A_played_session_leaves_the_seven_files_it_is_read_from()
     {
         var (run, session) = await Started();
         var outcome = await session.Outcome;
@@ -56,7 +56,7 @@ public sealed class PlaytestRunTests : IDisposable
         await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
 
         Directory.GetFiles(run.Location).Select(Path.GetFileName).ShouldBe(
-            ["catalogue.json", "episodes.jsonl", "manifest.json", "notes.jsonl", "steps.jsonl"],
+            ["catalogue.json", "decisions.jsonl", "episodes.jsonl", "manifest.json", "notes.jsonl", "steps.jsonl"],
             ignoreOrder: true);
         File.Exists(Path.Combine(run.Location, "traces", $"{session.MatchId}.json")).ShouldBeTrue();
     }
@@ -340,7 +340,7 @@ public sealed class PlaytestRunTests : IDisposable
             seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), player1Agent)),
             new SeatAgent(new Occupant(Bot(resources), "greedy")),
             run.Wrap,
-            _stopping.Token);
+            cancellationToken: _stopping.Token);
 
         return (run, session);
     }

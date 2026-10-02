@@ -22,7 +22,8 @@ internal sealed class PlayedTable : IDisposable
         IReadOnlyList<TableSeat> seats,
         TablePilot pilot,
         PlaytestRun? run,
-        CancellationTokenSource stopping)
+        CancellationTokenSource stopping,
+        TableRequest? request = null)
     {
         ArgumentNullException.ThrowIfNull(opening);
         ArgumentException.ThrowIfNullOrWhiteSpace(opening.Id);
@@ -38,6 +39,7 @@ internal sealed class PlayedTable : IDisposable
         Seats = seats;
         Pilot = pilot;
         Run = run;
+        Request = request;
         _stopping = stopping;
         CreatedAt = opening.At;
         _touched = opening.At.UtcTicks;
@@ -56,6 +58,20 @@ internal sealed class PlayedTable : IDisposable
 
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
+
+    /// <summary>What the table was asked to be, seed included, which is what its record writes down (ADR 0091).</summary>
+    public TableRequest? Request { get; }
+
+    /// <summary>
+    /// Writes the table down for a host that comes after this one (ADR 0091): the request, the match id, and
+    /// the tokens and codes its players hold. Called once the registry has minted the codes, which is the
+    /// moment all of it is known. Nothing for a table that records nothing.
+    /// </summary>
+    public Task RecordAsync(JoinCodes codes, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(codes);
+        return Run is { } run && Request is { } request ? run.RecordAsync(TableRecord.Of(this, request, codes), cancellationToken) : Task.CompletedTask;
+    }
 
     public DateTimeOffset CreatedAt { get; }
 
@@ -105,6 +121,14 @@ internal sealed class PlayedTable : IDisposable
         }
 
         _stopping.Cancel();
+
+        // A table let go of before it finished is closed for good: a host that comes after this one must not
+        // rebuild what the operator closed, or what nobody came back to.
+        if (Run is { } run && !IsOver)
+        {
+            _ = run.MarkAsync(TableRecord.Closed, CancellationToken.None);
+        }
+
         Session.Outcome.ContinueWith(
             _ =>
             {

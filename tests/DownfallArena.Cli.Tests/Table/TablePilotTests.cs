@@ -424,7 +424,7 @@ public sealed class TablePilotTests : IDisposable
             new SeatAgent(new Occupant(asked, "Greedy")),
             new SeatAgent(new Occupant(new GreedyAgent(resources, Rules), "Greedy")),
             run.Wrap,
-            _stopping.Token);
+            cancellationToken: _stopping.Token);
 
         var pilot = new TablePilot(PilotToken, (slot, wanted) => wanted switch
         {

@@ -104,8 +104,28 @@ internal sealed class TableRegistry : IDisposable
         }
     }
 
+    /// <summary>
+    /// Adds a table rebuilt from its record (ADR 0091), with the codes its seats had. False when the host has
+    /// as many under way as it takes, in which case the table is the caller's to let go of.
+    /// </summary>
+    public bool TryRestore(PlayedTable table, IReadOnlyDictionary<string, string?> codes)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(codes);
+        lock (_gate)
+        {
+            if (UnderWay() + _reserved >= Capacity)
+            {
+                return false;
+            }
+
+            Register(table, codes);
+            return true;
+        }
+    }
+
     /// <summary>Under the lock: the table into every map, and a code for every seat a person holds.</summary>
-    private void Register(PlayedTable table)
+    private void Register(PlayedTable table, IReadOnlyDictionary<string, string?>? codes = null)
     {
         // An id names a run's directory and the tokenless session page, so two tables with one id would
         // write into each other and read as each other. Thirty-two random bits a second make this a bug
@@ -119,7 +139,14 @@ internal sealed class TableRegistry : IDisposable
         foreach (var seat in table.Seats)
         {
             _byToken[seat.Token] = table;
-            Codes.Mint(seat);
+            if (codes is not null)
+            {
+                Codes.Mint(seat, codes.GetValueOrDefault(seat.Name));
+            }
+            else
+            {
+                Codes.Mint(seat);
+            }
         }
     }
 

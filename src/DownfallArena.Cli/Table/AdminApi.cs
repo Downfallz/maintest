@@ -149,6 +149,7 @@ internal sealed class AdminApi
         }
 
         _registry.Add(table, reservation);
+        await table.RecordAsync(_registry.Codes);
         Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : $"code {_registry.Codes.Of(seat)}")}"))}");
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
