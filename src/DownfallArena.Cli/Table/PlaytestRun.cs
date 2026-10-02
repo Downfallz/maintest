@@ -459,6 +459,25 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
+    /// Waits for everything on its way into the files to land: every decision being accepted, then a write
+    /// queued behind every write before it, which the writers take in turn. What is deleted or read after this
+    /// is deleted or read after the last write, not beside it. Bounded like every other wait on a thread that
+    /// may not be coming back.
+    /// </summary>
+    public async Task DrainAsync(CancellationToken cancellationToken = default)
+    {
+        for (var waited = TimeSpan.Zero; Volatile.Read(ref _recording) > 0 && waited < DrainWait; waited += GrowthStep)
+        {
+            await Task.Delay(GrowthStep, _clock, cancellationToken);
+        }
+
+        // Appending nothing is a write that lands after every write queued before it, in either store.
+        await _writer.AppendJsonLinesAsync(NotesFile, Array.Empty<PlaytestNote>(), cancellationToken);
+    }
+
+    private static readonly TimeSpan DrainWait = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// The session's files, as the viewer reads them. The trace comes first because the viewer opens on the
     /// first artifact it is handed and the thing two people want the moment they finish is the match they just
     /// played; the dataset files follow. <c>notes.jsonl</c> and <c>catalogue.json</c> are handed over too and

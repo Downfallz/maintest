@@ -212,9 +212,16 @@ internal sealed class AdminApi
         var missing = new List<string>();
         foreach (var id in ids)
         {
-            // A table still being played is closed first: its match is stopped and its codes stop answering,
-            // so the run is not written into again after it is gone.
+            // A table still being played is closed first: its match is stopped and its codes stop answering.
+            // And then waited for: a checkpoint or a note still on its way would otherwise land after the
+            // deletion and bring the run back, on the blob store as a prefix and here as a directory.
+            var table = _registry.ById(id);
             var closed = _registry.Remove(id);
+            if (closed && table is not null)
+            {
+                await table.QuiesceAsync();
+            }
+
             var removed = await stored.DeleteAsync(id);
             (closed || removed ? deleted : missing).Add(id);
         }
@@ -227,11 +234,22 @@ internal sealed class AdminApi
         return StudioResponse.OfJson(new { deleted, missing }, ArtifactJson.LineOptions);
     }
 
-    private static async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name)
+    private async Task<StudioResponse> ExportAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string name)
     {
         if (problem is not null)
         {
             return StudioResponse.OfPlainText(400, problem);
+        }
+
+        // A run being written is not a run to export: a checkpoint half written, or a line half appended,
+        // would travel as a file. It is exportable once its match is over, or once its table is closed.
+        var live = ids.Where(id => _registry.ById(id) is { IsOver: false }).ToList();
+        if (live.Count > 0)
+        {
+            return StudioResponse.OfJson(
+                new { error = "Admin.Live", message = $"Still being played, so not exported: {string.Join(", ", live)}. Wait for the match to end, or close the table first." },
+                ArtifactJson.LineOptions,
+                status: 409);
         }
 
         var (zip, exported, missing) = await stored.ZipAsync(ids);

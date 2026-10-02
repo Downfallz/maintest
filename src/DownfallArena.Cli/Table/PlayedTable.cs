@@ -77,6 +77,22 @@ internal sealed class PlayedTable : IDisposable
 
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
 
+    /// <summary>
+    /// After the table is let go of: waits for its driver to stop and for every write of its recording to
+    /// land, so what is done to its run next is done after the match and not beside it. Bounded: a driver
+    /// that is not coming back must not hold the operator's request.
+    /// </summary>
+    public async Task QuiesceAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.WhenAny(Session.Outcome, Task.Delay(QuiesceWithin, cancellationToken));
+        if (Run is { } run)
+        {
+            await run.DrainAsync(cancellationToken);
+        }
+    }
+
+    private static readonly TimeSpan QuiesceWithin = TimeSpan.FromSeconds(5);
+
     /// <summary>The round the match has reached, off seat 1's board, or none before the first.</summary>
     public async Task<int?> RoundAsync()
     {
