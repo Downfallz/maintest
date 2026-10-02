@@ -37,6 +37,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// <summary>The bots the pilot may seat, as the host offers them (<see cref="SeatableAgents" />); the page adds the seat's own person.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
+    /// <summary>
+    /// The join code of a seat, once the registry has minted them: what a seat waiting for the other player is
+    /// shown so it can be passed on (ADR 0092). Null until the table is registered, which is before any page
+    /// can reach it.
+    /// </summary>
+    public Func<TableSeat, string?>? CodeOf { get; set; }
+
     public int FeedStart { get; init; }
 
     public const string TokenHeader = "X-Seat-Token";
@@ -95,6 +102,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TokenHeader}'.");
         }
+
+        Arrived(holder);
 
         if (path == "/api/session" && method == "GET")
         {
@@ -173,8 +182,39 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// <summary>What both seats may know: whose match this is, and whether it is over.</summary>
     private StudioResponse Session() =>
         StudioResponse.OfJson(
-            new { matchId = session.MatchId, over = session.IsOver, outcome = Decided },
+            new { matchId = session.MatchId, over = session.IsOver, begun = session.HasBegun, outcome = Decided },
             ArtifactJson.LineOptions);
+
+    /// <summary>
+    /// A request on a seat is its person reaching it. The match begins when every person has (ADR 0092): a
+    /// bot's seat needs nobody, and a table of bots began when it was composed.
+    /// </summary>
+    private void Arrived(TableSeat holder)
+    {
+        holder.Person?.Arrive();
+        if (!session.HasBegun && seats.All(seat => seat.Person is null || seat.Person.HasArrived))
+        {
+            session.Begin();
+        }
+    }
+
+    /// <summary>
+    /// Who the table is still waiting for, while it is: every seat whose person has not reached it, with the
+    /// code and the link that reach it, so the player who is here can pass them on. Null once the match has
+    /// begun. The code is the seat's key, and showing it to the other player is what inviting them is.
+    /// </summary>
+    private object? WaitingRoom() =>
+        session.HasBegun || session.IsOver
+            ? null
+            : new
+            {
+                seats = seats.Where(seat => seat.Person is { HasArrived: false }).Select(seat => new
+                {
+                    slot = seat.Name,
+                    code = CodeOf?.Invoke(seat),
+                    join = CodeOf?.Invoke(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                }).ToArray(),
+            };
 
     /// <summary>
     /// The sequence number a page has already seen everything below, off <c>?since=N</c>. Anything that is not
@@ -288,6 +328,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
 
+                // Who the table is waiting for before it begins, or null: the page shows a room rather than a
+                // board nobody is asked anything on (ADR 0092).
+                waiting = WaitingRoom(),
+
                 // Over on the board as well as on the driver: a concession ends the match on the board first,
                 // and the driver says so only once the seat it was asking has let it go (ADR 0087).
                 over = session.IsOver || board.State == MatchState.Ended,
@@ -356,6 +400,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             held.Person?.Release();
         }
+
+        // A table given up while it waited for its players begins now, so the driver reads the end and the
+        // session closes; it would otherwise wait for a player who is never coming to a match that is over.
+        session.Begin();
 
         await NoteConcessionAsync(seat.Slot, round, subPhase);
         return StudioResponse.OfJson(Outcome(new MatchOutcome(Other(seat.Slot), MatchEndReason.Concession)), ArtifactJson.LineOptions);
@@ -653,6 +701,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // already left.
         var seat = session.Seat(slot);
         var outcome = seat.SwapAt(next, round);
+        if (outcome.Taken)
+        {
+            // Written where it was asked, so a rebuilt table asks for it at the same point of the match.
+            run?.Journal.SwapAsked(slot, wanted, round);
+        }
+
         if (!outcome.Taken)
         {
             var floor = outcome.Reached is { } reached ? reached + 1 : 1;
@@ -704,6 +758,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             {
                 matchId = session.MatchId,
                 over = session.IsOver,
+                begun = session.HasBegun,
                 outcome = Decided,
                 round,
                 subPhase,

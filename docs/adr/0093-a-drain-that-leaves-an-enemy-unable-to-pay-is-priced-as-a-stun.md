@@ -1,4 +1,4 @@
-# 0091. A drain that leaves an enemy unable to pay is priced as a stun
+# 0093. A drain that leaves an enemy unable to pay is priced as a stun
 
 Date: 2026-10-02
 Status: Accepted

@@ -211,7 +211,7 @@ public sealed class LookaheadAgentTests
 
     /// <summary>
     /// Four acts first and is guessed to Rest, which leaves it the two energy Slam costs. When One's slot comes,
-    /// Four has already acted, so draining it takes energy and no action (ADR 0091): Steady's three damage is the
+    /// Four has already acted, so draining it takes energy and no action (ADR 0093): Steady's three damage is the
     /// better cast. Played out as if every enemy were still to act, the drain read as a stun round and won.
     /// </summary>
     [Fact]

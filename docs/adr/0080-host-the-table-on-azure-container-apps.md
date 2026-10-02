@@ -59,6 +59,8 @@ Actions.**
 - Bad: a container scaled to zero takes some seconds to answer the first request. The first player waits.
 - Bad: a match is only as durable as the replica. Two people who close their pages for an hour come back to
   no match. Persisting one is a memento of the aggregate and of its random source, and is left open here.
+  *Settled by [ADR 0091](0091-a-table-survives-the-host-that-played-it.md): a table is rebuilt from its seed
+  and its recorded decisions when the next replica starts.*
 - Bad: `HttpHost` now accepts the wildcard address outside Windows. On Windows it still refuses it, for the
   reason ADR 0054 gave (a URL reservation), so a laptop playtest is unchanged.
 - Neutral: the seat tokens travel over TLS now, which is better than the home-network HTTP they were designed

@@ -402,7 +402,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// Whether a drain takes this round's action from an enemy, which a stun does too and is priced the same,
-    /// for one round (ADR 0091). An enemy that has still to act and could pay for one of its spells before the
+    /// for one round (ADR 0093). An enemy that has still to act and could pay for one of its spells before the
     /// drain, and can pay for none after it, reaches its slot unable to pay and fizzles: the rules read it as
     /// unable to act, the way they read a stun. Read per energy price, the same drain was worth a third of a
     /// point a point of energy, so the lock it buys every round was the one thing about it no agent saw.

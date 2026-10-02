@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-10-02. Tuning pass 22, kept in part; the drain lock is priced as a stun (ADR 0091), Soul Devourer costs 3
+## 2026-10-02. Tuning pass 22, kept in part; the drain lock is priced as a stun (ADR 0093), Soul Devourer costs 3
 
 - **Tuning pass 22** (`main` at `f86a73d`, 16 rounds of 6, up to 16 knobs) read 6.62 to 0.84 on the search
   seeds and 3.84 to 1.99 on the confirmation seeds. On the 200 hold-out seeds, replayed locally, it read
@@ -30,7 +30,7 @@ first.
 - **Soul Devourer was a lock the agents did not see.** It drains 3 energy for a cost of 2. With its
   package's 5 initiative it acts first, so the target's declared spell fizzles, the way a stun takes an
   action. No immunity follows, so it can happen every round. The agents priced the drain at 0.3 a point,
-  0.9 against a stun's 3.0. ADR 0091 now prices a drain that leaves an enemy still to act unable to pay for
+  0.9 against a stun's 3.0. ADR 0093 now prices a drain that leaves an enemy still to act unable to pay for
   any spell that costs energy as one stun round. The owner raised the spell's cost to 3 and kept the rule.
 - **Measured** on content `08d030f4` with the new reading, exploring run, same seeds as before (the
   "before" column is ADR 0090's):

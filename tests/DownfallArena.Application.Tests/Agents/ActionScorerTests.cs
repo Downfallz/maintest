@@ -175,7 +175,7 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// ADR 0091: a drain that leaves an enemy still to act unable to pay for any of its spells takes its action
+    /// ADR 0093: a drain that leaves an enemy still to act unable to pay for any of its spells takes its action
     /// this round, the way a stun does, and is priced as one stun round on top of the energy it takes.
     /// </summary>
     [Fact]

@@ -24,6 +24,11 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         while (true)
         {
             var progressed = false;
+            if (await EvolveTogetherAsync(matchId, player1, player2, cancellationToken))
+            {
+                continue;
+            }
+
             foreach (var (slot, agent) in new[] { (PlayerSlot.Player1, player1), (PlayerSlot.Player2, player2) })
             {
                 var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(matchId, slot), cancellationToken);
@@ -53,6 +58,45 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
                 throw new InvalidOperationException($"Match {matchId} is in progress but no player can act.");
             }
         }
+    }
+
+    /// <summary>
+    /// Both players' package picks, asked at once when both are being asked (ADR 0092). The picks are made face
+    /// down and revealed together (ADR 0089), so neither board shows the other's choice and the two questions
+    /// are independent: asking them in turn only made the second player wait for the first. The answers are
+    /// still submitted in seat order, so the engine sees exactly the commands it saw before. False when the
+    /// match is not at that moment, and the loop below plays the seats in turn as it always did.
+    /// </summary>
+    private async Task<bool> EvolveTogetherAsync(MatchId matchId, IPlayerAgent player1, IPlayerAgent player2, CancellationToken cancellationToken)
+    {
+        var first = await AskingAsync(matchId, PlayerSlot.Player1, cancellationToken);
+        var second = await AskingAsync(matchId, PlayerSlot.Player2, cancellationToken);
+        if (first is not { } one || second is not { } two)
+        {
+            return false;
+        }
+
+        var decisions = await Task.WhenAll(
+            Task.Run(() => player1.DecideEvolution(one.Board, one.Options), cancellationToken),
+            Task.Run(() => player2.DecideEvolution(two.Board, two.Options), cancellationToken));
+        await SubmitEvolutionAsync(matchId, PlayerSlot.Player1, decisions[0], cancellationToken);
+        await SubmitEvolutionAsync(matchId, PlayerSlot.Player2, decisions[1], cancellationToken);
+        return true;
+    }
+
+    /// <summary>A seat's board and its evolution options, when a package pick is what it is being asked for; null otherwise.</summary>
+    private async Task<(PlayerBoardState Board, EvolutionOptions Options)?> AskingAsync(MatchId matchId, PlayerSlot slot, CancellationToken cancellationToken)
+    {
+        var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(matchId, slot), cancellationToken);
+        if (board.IsFailure || board.Value.State != MatchState.InProgress)
+        {
+            return null;
+        }
+
+        var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(matchId, slot), cancellationToken);
+        return options.IsSuccess && options.Value.Kind == PlayerOptionsKind.Evolution && options.Value.Evolution is { } evolution
+            ? (board.Value, evolution)
+            : null;
     }
 
     private async Task<bool> ActAsync(MatchId matchId, PlayerSlot slot, IPlayerAgent agent, PlayerBoardState board, PlayerOptions options, CancellationToken cancellationToken)
@@ -97,9 +141,11 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         }
     }
 
-    private async Task EvolveAsync(MatchId matchId, PlayerSlot slot, IPlayerAgent agent, PlayerBoardState board, EvolutionOptions options, CancellationToken cancellationToken)
+    private Task EvolveAsync(MatchId matchId, PlayerSlot slot, IPlayerAgent agent, PlayerBoardState board, EvolutionOptions options, CancellationToken cancellationToken) =>
+        SubmitEvolutionAsync(matchId, slot, agent.DecideEvolution(board, options), cancellationToken);
+
+    private async Task SubmitEvolutionAsync(MatchId matchId, PlayerSlot slot, EvolutionDecision decision, CancellationToken cancellationToken)
     {
-        var decision = agent.DecideEvolution(board, options);
         if (decision.Choice is { } choice)
         {
             Accept(await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(matchId, slot, choice.Creature, choice.Tier), cancellationToken));

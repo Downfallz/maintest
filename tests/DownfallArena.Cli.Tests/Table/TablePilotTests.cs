@@ -327,7 +327,7 @@ public sealed class TablePilotTests : IDisposable
         using var document = JsonDocument.Parse(served);
         Fields(document.RootElement).ShouldBe(
             [
-                "matchId", "over", "outcome", "round", "subPhase", "seats", "agents",
+                "matchId", "over", "begun", "outcome", "round", "subPhase", "seats", "agents",
                 "slot", "seated", "hasPerson", "waitingFor", "waitingCreature", "pending",
             ],
             ignoreOrder: true);
@@ -423,8 +423,8 @@ public sealed class TablePilotTests : IDisposable
             seed: 7,
             new SeatAgent(new Occupant(asked, "Greedy")),
             new SeatAgent(new Occupant(new GreedyAgent(resources, Rules), "Greedy")),
-            run.Wrap,
-            _stopping.Token);
+            new TableStart(run.Wrap),
+            cancellationToken: _stopping.Token);
 
         var pilot = new TablePilot(PilotToken, (slot, wanted) => wanted switch
         {

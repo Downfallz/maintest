@@ -96,4 +96,6 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0088](0088-price-initiative-by-the-turn-order-it-changes.md) | Price initiative by the turn order it changes | Accepted |
 | [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
 | [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |
-| [0091](0091-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
+| [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Accepted |
+| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted |
+| [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |

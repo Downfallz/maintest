@@ -353,7 +353,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             stopped |= creature == actor && Stops(advanced.Resolution.FizzleReason);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             // The slots after this one are the creatures still to act, so a drain on one that has already acted
-            // is not priced as the action it takes away (ADR 0091).
+            // is not priced as the action it takes away (ADR 0093).
             var stillToAct = board.Timeline.Skip(index + 1).Select(slot => slot.Creature).ToHashSet();
             value += sign * _scorer.Score(advanced.Resolution, ahead, stillToAct: stillToAct);
             ahead = advanced.Board;
