@@ -95,3 +95,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0087](0087-a-player-may-concede.md) | A player may concede | Accepted |
 | [0088](0088-price-initiative-by-the-turn-order-it-changes.md) | Price initiative by the turn order it changes | Accepted |
 | [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
+| [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |

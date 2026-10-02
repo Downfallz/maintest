@@ -154,10 +154,14 @@ agent A is read as a panel: agent B is the opponent it is measured against, and 
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
 
-Most targets read a metric of the whole run. Three read a **package** instead — the spells one evolution pick
+Most targets read a metric of the whole run. Two read a **package** instead — the spells one evolution pick
 buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
-report the worst package: `tierUsageShare` (do its casts all go to one of them), `tierDamageSpread` (do its
-attacks hit comparably hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often).
+report the worst package: `tierUsageShare` (do its casts all go to one of them) and `tierWinSpread` (do they
+win comparably often). A third, `tierDamageSpread` (do its attacks hit comparably hard, per target of a landed
+cast), is still reported and no longer scored
+([ADR 0090](../../docs/adr/0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md)): a
+ratio of raw hits cannot see a spell's cost, reach or riders, so it read a free filler beside a spender, a
+two-target throw beside a one-target bleed, and a drain beside a sacrifice as packages to fix.
 They exist because the catalogue-wide reading hides a package that sold its pick short: on the catalogue of
 #171 `spellUsageShare` read 0.297 while `tierUsageShare` read 0.928, because `tier:prowler:v1` split 1813
 casts of `poison_slash` against 140 of `throwing_star`.
