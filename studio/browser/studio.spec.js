@@ -101,6 +101,18 @@ test('browsing spells shows the tier and package each one is learned from, and f
   await fit(page);
 });
 
+test('a spell card shows its critical bonus, collapsed in both libraries, and a spell without one says nothing', async ({ page }) => {
+  await page.locator('#spells-view').click();
+  const search = page.getByRole('searchbox', { name: 'Search spells', exact: true });
+  await search.fill('ice spear');
+  await expect(page.locator('.spell-tile .spell-meta')).toContainText('+50% crit');
+  await search.fill('bone ward');
+  await expect(page.locator('.spell-tile .spell-meta')).not.toContainText('crit');
+  await search.fill('ice spear');
+  await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
+  await expect(page.locator('.strategy-spell').filter({ hasText: 'Ice Spear' }).locator('.strategy-spell-facts')).toContainText('+50% crit');
+});
+
 test('a spell shows its value a round next to its tier, and the reader says what the estimate leaves out', async ({ page }, info) => {
   await page.locator('#spells-view').click();
   await page.getByRole('searchbox', { name: 'Search spells', exact: true }).fill('protective slam');
