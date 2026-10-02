@@ -15,4 +15,8 @@ namespace DownfallArena.Cli.Table;
 /// An earlier host's match id (ADR 0091), so every token and page that named the match still does; null lets
 /// the match take a fresh one.
 /// </param>
-internal sealed record TableStart(Func<MatchId, SeatAgent, IPlayerAgent>? Wrap = null, MatchId? MatchIdWanted = null);
+/// <param name="WaitToBegin">
+/// Whether the session asks nobody anything until it is told to begin (ADR 0092): the table's people have to
+/// reach their seats first. False starts the driver at once, which is what a table of bots does.
+/// </param>
+internal sealed record TableStart(Func<MatchId, SeatAgent, IPlayerAgent>? Wrap = null, MatchId? MatchIdWanted = null, bool WaitToBegin = false);

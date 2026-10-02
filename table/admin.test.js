@@ -60,6 +60,7 @@ test('a table reads as its round while it is played, and as finished once writte
       { id: 'b', over: true, finished: true, seats: [], pilot: '/pilot?token=q', session: '/session/b', location: 'runs/playtest/b' },
       { id: 'c', over: true, finished: false, seats: [], pilot: '/pilot?token=r', session: '/session/c' },
       { id: 'd', over: false, finished: false, seats: [], pilot: '/pilot?token=s', session: '/session/d' },
+      { id: 'e', over: false, finished: false, waiting: true, seats: [], pilot: '/pilot?token=t', session: '/session/e' },
     ],
   });
 
@@ -73,6 +74,7 @@ test('a table reads as its round while it is played, and as finished once writte
   assert.equal(rows[1].closable, false);
   assert.equal(rows[2].state, 'Over, being written');
   assert.equal(rows[3].state, 'Playing');
+  assert.equal(rows[4].state, 'Waiting for the players');
 });
 
 test('an empty or missing list draws nothing', () => {

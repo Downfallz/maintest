@@ -71,6 +71,7 @@ function asking(seat) {
 export function whereItIs(view) {
   if (!view) return 'Connecting…';
   if (view.over) return 'The match is over.';
+  if (view.begun === false) return 'Waiting for the players to reach their seats.';
   if (!view.round) return 'Waiting for the first round.';
 
   const sub = view.subPhase ? ` · ${view.subPhase}` : '';

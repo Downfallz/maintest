@@ -94,6 +94,11 @@ test('the pilot speaks for the pilot: its token, its two routes, and nothing of 
   assert.deepEqual(JSON.parse(asked[1].body), { agent: 'greedy', round: 7 });
 });
 
+test('a table that has not begun reads as waiting for its players', () => {
+  assert.equal(whereItIs({ begun: false, over: false, round: null }), 'Waiting for the players to reach their seats.');
+  assert.equal(whereItIs({ begun: true, over: false, round: null }), 'Waiting for the first round.');
+});
+
 test('a pilot page without a token refuses to be built rather than polling a 403 for ever', () => {
   assert.throws(() => pilotTransport(''), /token the host printed/);
 });

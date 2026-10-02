@@ -23,8 +23,12 @@ namespace DownfallArena.Cli.Table;
 /// table carry on from where the earlier host left them.
 /// </para>
 /// <para>
-/// The driver asks the two seats in a fixed order and the engine is deterministic from the seed, so the order
-/// of the lines is the order of the questions; one queue is enough, and a line out of place is a divergence.
+/// A line is matched to the seat it belongs to rather than to its place in the file: the two seats pick their
+/// packages at once (ADR 0092), so which of them answered first is not a fact the record can promise to
+/// repeat. Within a seat the order is the order of its questions, and a line that does not answer the
+/// question its seat is asked is a divergence. A swap line is applied when the next decision after it is
+/// answered, whichever seat that is: a swap names a round the match has not reached, so where exactly it is
+/// applied before that round makes no difference to where it lands.
 /// </para>
 /// </remarks>
 internal sealed class DecisionJournal
@@ -34,7 +38,7 @@ internal sealed class DecisionJournal
     private readonly IArtifactWriter _writer;
     private readonly TimeProvider _clock;
     private readonly Lock _gate = new();
-    private readonly Queue<JournalEntry> _recorded;
+    private readonly List<JournalEntry> _recorded;
     private readonly TaskCompletionSource _exhausted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Func<PlayerSlot, string, int, bool>? _swapping;
     private long _seq;
@@ -47,7 +51,7 @@ internal sealed class DecisionJournal
         ArgumentNullException.ThrowIfNull(clock);
         _writer = writer;
         _clock = clock;
-        _recorded = new Queue<JournalEntry>(recorded ?? []);
+        _recorded = [.. recorded ?? []];
         _seq = recorded?.Count > 0 ? recorded[^1].Seq : 0;
         if (_recorded.Count == 0)
         {
@@ -70,8 +74,38 @@ internal sealed class DecisionJournal
     /// <summary>Completes once the last recorded line has been handed to the match, which is when the table is live again.</summary>
     public Task Exhausted => _exhausted.Task;
 
-    /// <summary>How a swap line is applied when replay reaches it: the pilot's own seating, handed in by whoever composes the table.</summary>
-    public void SwapsThrough(Func<PlayerSlot, string, int, bool> swapping) => _swapping = swapping;
+    /// <summary>
+    /// How a swap line is applied when replay reaches it: the pilot's own seating, handed in by whoever
+    /// composes the table. A record that holds swaps and no decision -- a handover scheduled before either
+    /// player arrived -- is applied here and now: nobody is going to be asked a question for it to wait on.
+    /// </summary>
+    public void SwapsThrough(Func<PlayerSlot, string, int, bool> swapping)
+    {
+        ArgumentNullException.ThrowIfNull(swapping);
+        lock (_gate)
+        {
+            _swapping = swapping;
+            if (_recorded.Count > 0 && _recorded.TrueForAll(entry => entry.IsSwap))
+            {
+                try
+                {
+                    ApplySwaps(_recorded.Count);
+                    _exhausted.TrySetResult();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Already a fault on Exhausted, which is where whoever rebuilds the table reads the refusal.
+                }
+            }
+        }
+    }
+
+    /// <summary>Whether the record holds a decision, as opposed to swaps alone: a table that had begun.</summary>
+    public static bool HoldsDecision(IReadOnlyList<JournalEntry> recorded)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        return recorded.Any(entry => !entry.IsSwap);
+    }
 
     /// <summary>Writes down a swap the pilot asked for, so a rebuilt table asks for it at the same point.</summary>
     public void SwapAsked(PlayerSlot slot, string to, int atRound)
@@ -118,13 +152,20 @@ internal sealed class DecisionJournal
     {
         lock (_gate)
         {
-            ApplySwaps();
             if (_recorded.Count == 0)
             {
                 return null;
             }
 
-            var next = _recorded.Dequeue();
+            var index = _recorded.FindIndex(entry => !entry.IsSwap && entry.PlayerSlot == slot);
+            if (index < 0)
+            {
+                // Nothing left for this seat while lines remain for the other: the other seat is asked next,
+                // or the record no longer fits and the rebuild times out waiting for it to be spent.
+                return null;
+            }
+
+            var next = _recorded[index];
             if (!next.Answers(slot, kind, creature))
             {
                 _recorded.Clear();
@@ -132,9 +173,12 @@ internal sealed class DecisionJournal
                 throw new InvalidOperationException($"The record of this table does not match the match being rebuilt at line {next.Seq}.");
             }
 
-            // Swaps asked after the last decision are applied with it, or they would wait for a question that
-            // is answered live and apply late.
-            ApplySwaps();
+            // Every swap asked before this decision is applied with it; so is every swap asked right after it,
+            // or a swap asked after the last decision would wait for a question that is answered live.
+            ApplySwaps(index);
+            _recorded.Remove(next);
+            var following = _recorded.FindIndex(entry => !entry.IsSwap);
+            ApplySwaps(following >= 0 ? following : _recorded.Count);
             if (_recorded.Count == 0)
             {
                 _exhausted.TrySetResult();
@@ -145,21 +189,23 @@ internal sealed class DecisionJournal
     }
 
     /// <summary>
-    /// Under the lock: applies the swap lines at the head of the record. A swap that cannot be applied -- the
-    /// agent it names is not on this host any more, or the seat refuses the round -- is a divergence like a
-    /// decision that does not fit: the record says a seat changed hands, and a table rebuilt without it would
-    /// let the wrong occupant decide, which no checkpoint of the boards can notice.
+    /// Under the lock: applies and removes the swap lines among the first <paramref name="before" /> entries,
+    /// in their order. A swap that cannot be applied -- the agent it names is not on this host any more, or
+    /// the seat refuses the round -- is a divergence like a decision that does not fit: the record says a seat
+    /// changed hands, and a table rebuilt without it would let the wrong occupant decide, which no checkpoint
+    /// of the boards can notice.
     /// </summary>
-    private void ApplySwaps()
+    private void ApplySwaps(int before)
     {
-        while (_recorded.TryPeek(out var head) && head.IsSwap)
+        var swaps = _recorded.Take(Math.Min(before, _recorded.Count)).Where(entry => entry.IsSwap).ToList();
+        foreach (var entry in swaps)
         {
-            _recorded.Dequeue();
-            if (_swapping is { } swapping && head.To is { } to && head.AtRound is { } round && !swapping(head.PlayerSlot, to, round))
+            _recorded.Remove(entry);
+            if (_swapping is { } swapping && entry.To is { } to && entry.AtRound is { } round && !swapping(entry.PlayerSlot, to, round))
             {
                 _recorded.Clear();
-                _exhausted.TrySetException(new InvalidOperationException($"The record has diverged: line {head.Seq} seats '{to}' in {head.Slot} from round {round}, and nobody of that name can sit there now."));
-                throw new InvalidOperationException($"The record of this table cannot be replayed at line {head.Seq}: the swap it names cannot be applied.");
+                _exhausted.TrySetException(new InvalidOperationException($"The record has diverged: line {entry.Seq} seats '{to}' in {entry.Slot} from round {round}, and nobody of that name can sit there now."));
+                throw new InvalidOperationException($"The record of this table cannot be replayed at line {entry.Seq}: the swap it names cannot be applied.");
             }
         }
     }

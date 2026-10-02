@@ -27,6 +27,16 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
     private long _asked;
 
+    /// <summary>
+    /// Whether the person has reached their seat: a request carrying its token has arrived (ADR 0092). The
+    /// match begins once every person has, which is what a table waiting for its players waits for.
+    /// </summary>
+    public bool HasArrived => Volatile.Read(ref _arrived) != 0;
+
+    private int _arrived;
+
+    public void Arrive() => Volatile.Write(ref _arrived, 1);
+
     /// <summary>What this seat is waiting for, or <c>null</c> when the match is not asking it anything.</summary>
     public Question? Waiting
     {
