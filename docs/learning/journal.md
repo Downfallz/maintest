@@ -39,16 +39,25 @@ first.
   energy given to another creature, the spell it then reaches that it could not without the gift. On the 200
   benchmark seeds, both sides reading without the terms and then both with them, Greedy against `search-19`
   went from 0.000 to **0.110 ± 0.041**, against `search-31` from 0.003 to **0.155 ± 0.046**, and against
-  Random stayed at 1.000: the terms lift the plainer weights more than the searched ones. Greedy plays the four
-  evaluations in 118 s instead of 51, and the lookahead 30 matches against Greedy in about 190 s instead of
-  64. A first version that priced only gifts against doing nothing moved nothing measurable; the commoner
-  case is the actor choosing between a cheap spell now and a dear one next round.
+  Random stayed at 1.000. A first version that priced only gifts against doing nothing moved nothing
+  measurable.
+- **The gain is the purchase reading's.** The review asked for the purchase to be read without the terms,
+  since the buyer the reading funds makes its purse next round partly an artefact. Read that way Greedy
+  scored 0.000 against both again. With the terms in the purchase, Greedy buys dear packages and waits for
+  them: against `search-19` its casts went from Lightning Bolt 2400, Bone Ward 1644, Poison Slash 1563 and
+  Wait 800 to Wait 2394, Summon Minions 2247, Lightning Bolt 1602 and Guard 1323. Without them it keeps the
+  cheap packages and has nothing to save for, so the combat terms find nothing to read. The purchase keeps
+  the terms.
+- **Pace.** Greedy plays the four evaluations in 118 s instead of 51, and the lookahead 30 matches against
+  Greedy in about 190 s instead of 64: its rollouts are Greedy's decisions, which is where the time goes.
 - **Plague Doctor on the new scorer.** Forced against Greedy on the confirmation seeds, against Prowler alone
-  (casts are intents of Adrenaline Tonic and Noxious Cure):
+  (casts are intents of Adrenaline Tonic and Noxious Cure). The variants were read before the review's fix
+  (an ally that has already acted spends nothing more this round); the first and last rows are read again
+  after it:
 
   | Variant, new scorer | Plague Doctor | Tonic | Cure |
   | --- | --- | --- | --- |
-  | As it is on `main` | -0.074 ± 0.036 | 591 | 233 |
+  | As it is on `main`, after the fix | -0.071 ± 0.037 | 403 | 234 |
   | Tonic at 2 energy | -0.047 ± 0.038 | | |
   | Tonic 2, cure 6, initiative 3 | -0.044 ± 0.033 | | |
   | Same, tonic free | -0.042 ± 0.032 | | |
@@ -56,7 +65,8 @@ first.
   | Tonic 2 without its bleed, cure 6, initiative 3 | -0.025 ± 0.032 | | |
   | Same, shred 1 | -0.046 ± 0.027 | | |
   | Same, initiative 4 | +0.071 ± 0.039 | | |
-  | **Tonic 2 without its bleed, cure 7, initiative 3 (kept)** | **-0.015 ± 0.023** | 889 | 1425 |
+  | Tonic 2 without its bleed, cure 7, initiative 3 | -0.015 ± 0.023 | 889 | 1425 |
+  | **The same, after the fix (kept)** | **-0.018 ± 0.023** | 618 | 1651 |
 
   The agents cast the tonic now, and its bleed on the allies it feeds was what kept it below Prowler: the
   poison is gone, and so is its knob. Initiative 4 overshoots. Noxious Cure heals 7 (knob 3 to 8), its
