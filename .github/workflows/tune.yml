@@ -13,8 +13,8 @@ on:
         description: "Search seed (the same seed on the same content returns the same moves)"
         default: "0"
       iterations:
-        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 2 is about one to two hours at 31 to 53 minutes a candidate since ADR 0096, plus at most one confirmation"
-        default: "2"
+        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 2 is about one to two hours at 31 to 53 minutes a candidate since ADR 0096, plus at most one confirmation; more than 1 does not fit the six hours with the hold-out"
+        default: "1"
       neighbours:
         description: "Candidates played per round"
         default: "2"
@@ -155,11 +155,11 @@ jobs:
     #
     # ADR 0096 made a candidate about 31 to 53 minutes, so it came down again, to
     #
-    #   the catalogue + 2 rounds of 2 + about 5 confirmation candidates = about 10 candidates = 5 to 9 hours
+    #   the catalogue + 1 round of 2 + about 3 confirmation candidates = about 6 candidates = 3 to 5.5 hours
     #
-    # whose slow end does not fit: a run that wants the room asks for 1 round. The search writes its leader
-    # after every round, so a run killed late still leaves one. Neither budget leaves much room for the hold-out
-    # and the gate. Tune 10 ran 24
+    # plus the hold-out's two evaluations, about four hours at the usual pace. Two rounds would be 5 to 9 hours
+    # before the hold-out, and a job cancelled at its limit skips the hold-out, the gate and the proposal. The
+    # search writes its leader after every round, so a run killed late still leaves one, but nothing pushes it. Tune 10 ran 24
     # rounds with the paired opening on and was killed at the ceiling **with nothing to show**; the search now
     # writes its leader after the opening pass and after every round, so a run killed late still leaves one.
     #

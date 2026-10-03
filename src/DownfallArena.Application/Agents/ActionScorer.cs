@@ -32,7 +32,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     private readonly bool _priceUnlocks = true;
 
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double)> Spells)>> _spells = [];
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
     /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
     private const int BoardsKept = 4;
@@ -207,7 +207,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var known = Spells(actor, creatures);
         var spells = actor.KnownSpells.Contains(spellId)
             ? known
-            : [.. known, (spellId, bought, spell.Stats.Cost.Value, weights.Apply(bought))];
+            : [.. known, (spellId, bought, spell.Stats.Cost.Value, weights.Apply(bought), 0)];
         var ordered = spells.OrderBy(entry => entry.Id.Value, StringComparer.Ordinal).ToList();
         return found.Terms + Gained(Affordable(ordered, purse).Terms, Affordable(ordered, rules.EnergyPerRound).Terms);
     }
@@ -466,9 +466,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// What energy given to another creature buys beyond its price per point: the spell it lets that creature
-    /// afford next round and could not have without it (ADR 0096). The creature is taken to spend this round on
-    /// the best spell it can pay for now when it is still to act, or when the round's order is not read; one
-    /// that has acted, or is stunned, spends nothing more this round. Energy given this round cannot pay for a
+    /// afford next round and could not have without it (ADR 0096). The creature is taken to cast this round the
+    /// best spell it can pay for now when it is still to act, or when the round's order is not read, and to wait
+    /// when nothing it can pay for is worth anything (<see cref="Spent"/>); one that has acted, or is stunned,
+    /// spends nothing more this round. Energy given this round cannot pay for a
     /// spell this round, since every intent is declared before anything resolves. Signed like every other
     /// term: on an enemy it counts against. What the actor gives itself is read by <see cref="NextPurse"/>,
     /// not here. Each energy outcome is read alone, so a spell giving one creature energy twice would be
@@ -481,17 +482,43 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return ScoreTerms.Zero;
         }
 
-        if (!Unlocks(target, rules.EnergyPerRound, target.Energy.Value + rules.EnergyPerRound + amount))
+        var spends = !target.IsStunned && (stillToAct is null || stillToAct.Contains(target.Id));
+        if (!Unlocks(target, rules.EnergyPerRound, target.Energy.Value + rules.EnergyPerRound + amount + (spends ? MostGained(target) : 0)))
         {
             return ScoreTerms.Zero;
         }
 
-        var spends = !target.IsStunned && (stillToAct is null || stillToAct.Contains(target.Id));
-        var purse = target.Energy.Value - (spends ? Affordable(target, target.Energy.Value, creatures).Cost : 0) + rules.EnergyPerRound;
+        var purse = target.Energy.Value - (spends ? Spent(target, creatures) : 0) + rules.EnergyPerRound;
         return Unlocks(target, purse, purse + amount)
             ? -Sign(actor, target) * Gained(Affordable(target, purse + amount, creatures).Terms, Affordable(target, purse, creatures).Terms)
             : ScoreTerms.Zero;
     }
+
+    /// <summary>
+    /// What a creature still to act takes out of its energy this round, net of what its spell gives it back: the
+    /// best spell it can pay for, or, when none is worth anything, the free one that gives it the most energy, as
+    /// Wait does. A creature with nothing worth casting waits; it does not stand still.
+    /// </summary>
+    private int Spent(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var affordable = Spells(creature, creatures).Where(spell => spell.Cost <= creature.Energy.Value).ToList();
+        (SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)? best = null;
+        foreach (var spell in affordable.Where(spell => spell.Score > 0 && (best is null || spell.Score > best.Value.Score)))
+        {
+            best = spell;
+        }
+
+        return best is { } cast ? cast.Cost - cast.Gain : -affordable.Select(spell => spell.Gain - spell.Cost).DefaultIfEmpty(0).Max();
+    }
+
+    /// <summary>The most energy any spell the creature can pay for now could give it back, read without a board.</summary>
+    private int MostGained(CreatureSnapshot creature) =>
+        creature.KnownSpells
+            .Select(resources.GetSpell)
+            .Where(spell => spell.Stats.Cost.Value <= creature.Energy.Value && spell.Targeting.Origin is TargetOrigin.Self or TargetOrigin.Ally)
+            .Select(spell => spell.Effects.OfType<EnergyGain>().Sum(effect => effect.Amount))
+            .DefaultIfEmpty(0)
+            .Max();
 
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of
@@ -519,11 +546,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private (ScoreTerms Terms, int Cost) Affordable(CreatureSnapshot creature, int purse, IReadOnlyList<CreatureSnapshot> creatures) =>
         Affordable(Spells(creature, creatures), purse);
 
-    private static (ScoreTerms Terms, int Cost) Affordable(IEnumerable<(SpellId Id, ScoreTerms Terms, int Cost, double Score)> spells, int purse)
+    private static (ScoreTerms Terms, int Cost) Affordable(IEnumerable<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> spells, int purse)
     {
         var best = (Terms: ScoreTerms.Zero, Cost: 0);
         var bestScore = 0.0;
-        foreach (var (_, terms, cost, score) in spells)
+        foreach (var (_, terms, cost, score, _) in spells)
         {
             if (cost <= purse && score > bestScore)
             {
@@ -543,7 +570,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// being the same snapshots in the same order: every action of a decision reads the same board, and a
     /// rollout's speed, intent and targets each build a new list of the same snapshots.
     /// </summary>
-    private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score)> Spells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
+    private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> Spells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
     {
         var kept = _spells.GetValue(creature, _ => []);
         lock (kept)
@@ -589,18 +616,19 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return true;
     }
 
-    private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score)> ReadSpells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
+    private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> ReadSpells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
     {
         var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
         var funded = creature with { Energy = Energy.Of(Math.Max(creature.Energy.Value, dearest)) };
         var board = creatures.Select(other => other.Id == creature.Id ? funded : other).ToList();
-        List<(SpellId, ScoreTerms, int, double)> spells = [];
+        List<(SpellId, ScoreTerms, int, double, int)> spells = [];
         foreach (var spell in creature.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             if (_flat.Value.BestTerms(funded, spell, board) is { } found)
             {
                 var terms = found.Terms with { Energy = 0 };
-                spells.Add((spell, terms, resources.GetSpell(spell).Stats.Cost.Value, weights.Apply(terms)));
+                var gain = found.Targets.Contains(creature.Id) ? resources.GetSpell(spell).Effects.OfType<EnergyGain>().Sum(effect => effect.Amount) : 0;
+                spells.Add((spell, terms, resources.GetSpell(spell).Stats.Cost.Value, weights.Apply(terms), gain));
             }
         }
 

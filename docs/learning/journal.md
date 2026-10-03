@@ -55,7 +55,7 @@ first.
   seeds) took **2648 s instead of 581**, 40 minutes of it `variety`. Played with exploring Greedy instead,
   `variety` costs a candidate 261 s and reads `tierUsageShare` at 0.906 (9.03 in all) against the lookahead's
   0.828 (0.64), so the lookahead stays. `tune.yml` plays the sweep in sixty-four slices, and the search's
-  default budget is 2 rounds of 2.
+  default budget is 1 round of 2.
 - **Plague Doctor on the new scorer.** Forced against Greedy on the confirmation seeds, against Prowler alone
   (casts are intents of Adrenaline Tonic and Noxious Cure). The variants were read before the review's fix
   (an ally that has already acted spends nothing more this round); the first and last rows are read again

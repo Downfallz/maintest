@@ -296,8 +296,8 @@ rounds of 4 and their confirmations: about 20 candidates, about two hours twenty
 
 **ADR 0096 priced energy by the spell it unlocks**, and a candidate went from 581 to 2648 seconds locally,
 40 minutes of it `variety`: about 31 to 53 minutes on the runner. The sweep plays in sixty-four slices of
-about 4, and the search's default budget is the catalogue, 2 rounds of 2 and their confirmations, about 10
-candidates, five to nine hours: a run that has to fit asks for 1 round. Played with exploring Greedy instead,
+about 4, and the search's default budget is the catalogue, 1 round of 2 and their confirmations, about 6
+candidates and the hold-out, about four hours: 2 rounds would not fit the six hours a job gets. Played with exploring Greedy instead,
 `variety` costs a candidate 261 seconds and reads `tierUsageShare` at 0.906 against the lookahead's 0.828.
 
 Tune 10 was killed at the ceiling with nothing to show, since the proposal is only written when the search

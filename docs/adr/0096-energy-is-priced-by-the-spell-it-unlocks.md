@@ -24,8 +24,9 @@ priced the other half of energy, a drain that leaves an enemy unable to pay, as 
   itself, and an action that leaves nothing over reads zero.
 - **Unlocked**: energy given to another creature is worth the spell it lets that creature pay for next
   round and could not without it. A creature still to act, or one whose turn order is not read, is taken to
-  spend this round on the best spell it can pay for now; one that has acted, or is stunned, spends nothing
-  more. Energy given this round cannot pay for a spell declared before it resolves. Signed like every other
+  cast this round the best spell it can pay for now, net of the energy that spell gives it back, and to wait
+  when nothing it can pay for is worth anything: every creature knows Wait, so a creature with no energy has
+  four next round without the gift. One that has acted, or is stunned, spends nothing more. Energy given this round cannot pay for a spell declared before it resolves. Signed like every other
   term: energy given to an enemy counts against.
 
 A spell is read at its best target set on the current board, by the same scorer without these two terms, and
@@ -50,7 +51,7 @@ who dies.
   buyer whose energy covers the spell twice over, the spell bought is also next round's spell.
 - Bad: Greedy plays about 1.7 times slower, and the lookahead, whose rollouts are Greedy's decisions, about
   2.4 times on 10 seeds. A tuner candidate went from 581 to 2648 seconds locally, so `tune.yml` plays the
-  sweep in sixty-four slices and the search's default budget is 2 rounds of 2 (journal, 2026-10-03).
+  sweep in sixty-four slices and the search's default budget is 1 round of 2 (journal, 2026-10-03).
 - Bad: one level deep, on today's board. A spell is priced against enemies the team may already be killing
   this round (`gone` is not read), and the energy the unlocked spell would itself keep is not read. Each
   energy outcome is read alone, so a spell that gave one creature energy twice would be credited twice; none
