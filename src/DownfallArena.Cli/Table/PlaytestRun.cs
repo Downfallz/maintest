@@ -44,6 +44,10 @@ internal sealed class PlaytestRun
     private static readonly TimeSpan GrowthWait = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan GrowthStep = TimeSpan.FromMilliseconds(5);
 
+    // How long a rebuilt match may take to reach the checkpoint it is held against: the bots deciding past the
+    // last recorded decision, each as slow as it is. Long against a bot's decision, short against a host start.
+    private static readonly TimeSpan CatchUpWait = TimeSpan.FromSeconds(10);
+
     private readonly IArtifactWriter _writer;
     private readonly IArtifactReader _reader;
     private readonly RunRecorder _recorder;
@@ -237,6 +241,14 @@ internal sealed class PlaytestRun
         if (!checkpoint.RootElement.TryGetProperty("entries", out var written) || written.ValueKind != System.Text.Json.JsonValueKind.Array)
         {
             return true;
+        }
+
+        // The checkpoint can run past the last recorded decision: a bot that decided after it, and whose line the
+        // earlier host did not live to write, is asked again here and decides live. That takes as long as the
+        // bot takes, so the rebuilt trace is given the time to reach the checkpoint before it is held against it.
+        for (var waited = TimeSpan.Zero; _events.Length(matchId) < written.GetArrayLength() && _kept is null && waited < CatchUpWait; waited += GrowthStep)
+        {
+            await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
 
         var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(Trace(matchId), ArtifactJson.DocumentOptions);
