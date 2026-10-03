@@ -23,26 +23,35 @@ priced the other half of energy, a drain that leaves an enemy unable to pay, as 
   difference is not positive. Every action of a decision shares the baseline, so it moves no choice by
   itself, and an action that leaves nothing over reads zero.
 - **Unlocked**: energy given to another creature is worth the spell it lets that creature pay for next
-  round and could not without it. The creature is taken to spend this round on the best spell it can pay
-  for now, since energy given this round cannot pay for a spell declared before it resolves. Signed like
-  every other term: energy given to an enemy counts against.
+  round and could not without it. A creature still to act, or one whose turn order is not read, is taken to
+  spend this round on the best spell it can pay for now; one that has acted, or is stunned, spends nothing
+  more. Energy given this round cannot pay for a spell declared before it resolves. Signed like every other
+  term: energy given to an enemy counts against.
 
 A spell is read at its best target set on the current board, by the same scorer without these two terms, and
 without the energy it would leave (the price per point already counts that). Each creature's spells are read
-once per board and a purse only filters them, and neither term is read unless a spell's cost falls between
-the two purses. The lookahead's rollouts (ADR 0094) and `Foresight` (ADR 0039) read without the terms: a
-rollout plays the next round and sees what the energy bought there, and `Foresight` only asks who dies.
+once per board list and a purse only filters them, and neither term is read unless a spell's cost falls
+between the two purses. The purchase reading (ADR 0056) sees the terms too, on the buyer it funds to cast the
+spell: that is how a dear package is told from a cheap one. The lookahead's rollouts (ADR 0094) and
+`Foresight` (ADR 0039) read without them: a rollout plays the next round and sees what the energy bought
+there, and `Foresight` only asks who dies.
 
 ## Consequences
 
 - Good: on the 200 benchmark seeds, both sides reading the terms, Greedy scores 0.110 against `search-19`
-  instead of 0.000 and 0.155 against `search-31` instead of 0.003, and still beats Random in every match. A creature now waits a round
-  for a four-energy spell when it is worth more than two rounds of the cheap one, and an ally's energy gift
-  is cast for the spell it reaches.
+  instead of 0.000 and 0.155 against `search-31` instead of 0.003, and still beats Random in every match. It
+  buys dear packages (Summon Minions, Guard, Full Plate) and waits for them: Wait goes from 800 casts to
+  2394 against `search-19`. An ally's energy gift is cast for the spell it reaches: Adrenaline Tonic went
+  from never cast to 889 intents in a forced Plague Doctor.
+- Bad: the gain is the purchase reading's. With the purchase read without the terms Greedy keeps its cheap
+  packages, has nothing to save for, and scores 0.000 against both again. The purchase reading is crude: on a
+  buyer whose energy covers the spell twice over, the spell bought is also next round's spell.
 - Bad: Greedy plays about 2.3 times slower, and the lookahead, whose rollouts are Greedy's decisions, about
   3 times. The tuner's candidate costs what the journal measures (2026-10-03).
-- Bad: one level deep. A spell is priced on today's board and not next round's, and the energy the unlocked
-  spell would itself keep is not read.
+- Bad: one level deep, on today's board. A spell is priced against enemies the team may already be killing
+  this round (`gone` is not read), and the energy the unlocked spell would itself keep is not read. Each
+  energy outcome is read alone, so a spell that gave one creature energy twice would be credited twice; none
+  does.
 - Neutral: the weights files and the learned policies were fitted without these terms, and the terms a
   dataset records per candidate (ADR 0051) include them now. The benchmark digest changes.
 

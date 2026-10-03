@@ -179,6 +179,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Energy = Energy.Of(Math.Max(actor.Energy.Value, spell.Stats.Cost.Value)),
         };
         var board = creatures.Select(creature => creature.Id == actor.Id ? hypothetical : creature).ToList();
+        // Read with the unlock terms (ADR 0096): what the buyer's purse reaches next round is how a dear package
+        // is told from a cheap one. Read without them, Greedy kept buying cheap packages it never saves for, and
+        // the terms bought it nothing.
         return BestTerms(hypothetical, spellId, board)?.Terms ?? ScoreTerms.Zero;
     }
 
@@ -250,7 +253,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null) =>
         weights.Apply(Terms(resolution, creatures, gone, stillToAct));
 
-    /// <summary>The terms of one resolution, each signed: what it does to enemies counts for, to allies against.</summary>
+    /// <summary>
+    /// The terms of one resolution, each signed: what it does to enemies counts for, to allies against. What
+    /// the creatures' spells are worth on <paramref name="creatures"/> is kept for as long as that list lives
+    /// (ADR 0096), so a list must not be changed once it has been scored: a new board is a new list.
+    /// </summary>
     public ScoreTerms Terms(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         ArgumentNullException.ThrowIfNull(resolution);
@@ -280,7 +287,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             {
                 HealOutcome heal => HealTerms(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target])
-                    + Unlocked(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target], creatures),
+                    + Unlocked(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target], creatures, stillToAct),
                 EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target], stillToAct),
                 ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining, creatures),
                 _ => ScoreTerms.Zero,
@@ -435,12 +442,14 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>
     /// What energy given to another creature buys beyond its price per point: the spell it lets that creature
     /// afford next round and could not have without it (ADR 0096). The creature is taken to spend this round on
-    /// the best spell it can pay for now, which is what it does if it has not acted yet; energy given this round
-    /// cannot pay for a spell this round, since every intent is declared before anything resolves. Signed like
-    /// every other term: on an enemy it counts against. What the actor gives itself is read by
-    /// <see cref="NextPurse"/>, not here.
+    /// the best spell it can pay for now when it is still to act, or when the round's order is not read; one
+    /// that has acted, or is stunned, spends nothing more this round. Energy given this round cannot pay for a
+    /// spell this round, since every intent is declared before anything resolves. Signed like every other
+    /// term: on an enemy it counts against. What the actor gives itself is read by <see cref="NextPurse"/>,
+    /// not here. Each energy outcome is read alone, so a spell giving one creature energy twice would be
+    /// credited the unlock twice; no spell does.
     /// </summary>
-    private ScoreTerms Unlocked(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
+    private ScoreTerms Unlocked(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? stillToAct)
     {
         if (!_priceUnlocks || amount <= 0 || remainingHealth == 0 || target.Id == actor.Id)
         {
@@ -452,7 +461,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return ScoreTerms.Zero;
         }
 
-        var purse = target.Energy.Value - Affordable(target, target.Energy.Value, creatures).Cost + rules.EnergyPerRound;
+        var spends = !target.IsStunned && (stillToAct is null || stillToAct.Contains(target.Id));
+        var purse = target.Energy.Value - (spends ? Affordable(target, target.Energy.Value, creatures).Cost : 0) + rules.EnergyPerRound;
         return Unlocks(target, purse, purse + amount)
             ? -Sign(actor, target) * Gained(Affordable(target, purse + amount, creatures).Terms, Affordable(target, purse, creatures).Terms)
             : ScoreTerms.Zero;

@@ -85,7 +85,9 @@ Decisions:
   the part of the cost the actor cannot cover (ADR 0026); unlock the highest, pass only when nothing can be
   unlocked. Only that part is charged here: the value is read on an energy raised to at least the spell's
   cost, so a creature that could not afford it keeps nothing either way and the difference cancels, while
-  above the cost the energy the actor keeps already prices every point.
+  above the cost the energy the actor keeps already prices every point. The value includes the unlock terms
+  (ADR 0096), so a dear package is read with what the buyer's purse reaches next round: that is what moves
+  Greedy off cheap packages it never saves for.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
