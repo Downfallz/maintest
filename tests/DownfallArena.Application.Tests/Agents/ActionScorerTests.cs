@@ -1009,4 +1009,78 @@ public sealed class ActionScorerTests
         };
         return [actor, Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) }];
     }
+
+    /// <summary>
+    /// ADR 0096: two energy for an ally that spends two a round on Strike bring it to Smite, a four-energy spell
+    /// it could not otherwise pay for next round, so the gift is worth what Smite does over Strike. The ally
+    /// knows Gift too, which is the energy spell every reading of an unlock reads again, as Wait is in play.
+    /// </summary>
+    [Fact]
+    public void Energy_that_brings_an_ally_to_a_spell_it_cannot_afford_is_worth_that_spell()
+    {
+        var board = Hoarders(allyEnergy: 0);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(10 - 3);
+        terms.Energy.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Energy_that_unlocks_nothing_is_worth_its_points_alone()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(0, "two energy and a round's two already pay for Smite");
+        terms.Energy.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// ADR 0096: an ally that keeps its two energy this round, here by casting the free Gift, has four next
+    /// round and can smite; one that spent them would strike. What it keeps is worth what Smite does over Strike.
+    /// </summary>
+    [Fact]
+    public void Energy_kept_for_a_dearer_spell_next_round_is_worth_that_spell()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(Two, Gift.Id), [One]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(10 - 3);
+    }
+
+    /// <summary>Ten damage for four energy: what saving up is for.</summary>
+    private static Spell Smite { get; } = Spell.Create(
+        SpellId.Parse("spell:smite:v1"), "Smite", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(4), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(10)]);
+
+    /// <summary>Two energy for an ally, free.</summary>
+    private static Spell Gift { get; } = Spell.Create(
+        SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
+
+    private static ActionScorer Unlocking { get; } = new(
+        GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures],
+            [.. TestContent.Resources.Spells, Smite, Gift],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]),
+        MatchStore.TwoOnTwo(),
+        ScoringWeights.Default);
+
+    /// <summary>One gives; Two strikes for three and could smite for ten with four energy; neither can crit.</summary>
+    private static List<CreatureSnapshot> Hoarders(int allyEnergy)
+    {
+        var giver = Boards.Creature(1, PlayerSlot.Player1) with { CriticalChance = CriticalChance.Of(0), KnownSpells = new HashSet<SpellId> { Gift.Id } };
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with
+        {
+            CriticalChance = CriticalChance.Of(0),
+            Energy = Energy.Of(allyEnergy),
+            KnownSpells = new HashSet<SpellId> { TestContent.Strike, Smite.Id, Gift.Id },
+        };
+        return [giver, ally, Boards.Creature(3, PlayerSlot.Player2), Boards.Creature(4, PlayerSlot.Player2)];
+    }
 }

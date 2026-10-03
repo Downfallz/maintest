@@ -23,6 +23,29 @@ namespace DownfallArena.Application.Agents;
 /// </summary>
 public sealed class ActionScorer(IGameResources resources, RuleSet rules, ScoringWeights weights)
 {
+    /// <summary>
+    /// The same scorer without <see cref="Unlocked"/>, which is what <see cref="Unlocked"/> prices an ally's
+    /// spells with: Wait gives energy and every creature knows it, so reading the unlock with the unlock in it
+    /// would never end. One level is the reading: what the energy lets the ally afford, not what that buys.
+    /// </summary>
+    private readonly Lazy<ActionScorer> _flat = new(() => new ActionScorer(resources, rules, weights, priceUnlocks: false));
+
+    private readonly bool _priceUnlocks = true;
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<IReadOnlyList<CreatureSnapshot>, System.Collections.Concurrent.ConcurrentDictionary<CreatureId, List<(ScoreTerms, int, double)>>> _spells = [];
+
+    private ActionScorer(IGameResources resources, RuleSet rules, ScoringWeights weights, bool priceUnlocks)
+        : this(resources, rules, weights)
+    {
+        _priceUnlocks = priceUnlocks;
+    }
+
+    /// <summary>
+    /// This scorer without the unlock terms (ADR 0096), for a reading that plays the next round out and so
+    /// sees what saved energy buys there, or that only asks which targets a spell would kill.
+    /// </summary>
+    public ActionScorer WithoutUnlocks => _priceUnlocks ? _flat.Value : this;
+
     /// <summary>How many rounds a permanent condition is worth in the score.</summary>
     public const int PermanentConditionRounds = 3;
 
@@ -256,7 +279,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             terms += outcome switch
             {
                 HealOutcome heal => HealTerms(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
-                EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
+                EnergyOutcome energy => EnergyTerms(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target])
+                    + Unlocked(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target], creatures),
                 EnergyDrainOutcome drain => EnergyDrainTerms(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target], stillToAct),
                 ConditionOutcome condition => ConditionTerms(actor, Target(condition.Target, creatures), condition.Effect, remaining, creatures),
                 _ => ScoreTerms.Zero,
@@ -264,6 +288,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         terms += DefensiveTerms(actor, resolution, creatures, remaining, stillToAct);
+        terms += NextPurse(actor, resolution, creatures, remaining[actor.Id]);
 
         // What the actor keeps; what a spell hands out is priced per outcome above.
         return terms with { Energy = terms.Energy + (actor.Energy.Value - resolution.EnergySpent.Value) };
@@ -380,6 +405,128 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// </summary>
     private static ScoreTerms EnergyTerms(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         remainingHealth == 0 ? ScoreTerms.Zero : ScoreTerms.Zero with { Energy = -Sign(actor, target) * amount };
+
+    /// <summary>
+    /// What the actor's own energy buys next round (ADR 0096): the best spell its purse will pay for then, read
+    /// on this board, less the best one the round's gain alone pays for. A creature that spends two a round on
+    /// two-energy spells never reaches a spell that costs four; one that waits a round, or spends on a cheaper
+    /// spell, does. Read for every action, so the choice between a two-energy spell now and a four-energy one
+    /// next round is a choice between the two rounds and not between this round's hit and nothing.
+    /// <para>
+    /// The purse is the energy the actor has, less what this action costs, plus what it gives itself, plus a
+    /// round's gain. The baseline is what a creature that spent everything would pay for, which every action
+    /// shares, so it moves no choice and keeps the term at zero for an action that leaves nothing over.
+    /// </para>
+    /// </summary>
+    private ScoreTerms NextPurse(CreatureSnapshot actor, CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, int remainingHealth)
+    {
+        if (!_priceUnlocks || remainingHealth == 0)
+        {
+            return ScoreTerms.Zero;
+        }
+
+        var given = resolution.Outcomes.OfType<EnergyOutcome>().Where(outcome => outcome.Target == actor.Id).Sum(outcome => outcome.Amount);
+        var purse = actor.Energy.Value - resolution.EnergySpent.Value + given + rules.EnergyPerRound;
+        return Unlocks(actor, rules.EnergyPerRound, purse)
+            ? Gained(Affordable(actor, purse, creatures).Terms, Affordable(actor, rules.EnergyPerRound, creatures).Terms)
+            : ScoreTerms.Zero;
+    }
+
+    /// <summary>
+    /// What energy given to another creature buys beyond its price per point: the spell it lets that creature
+    /// afford next round and could not have without it (ADR 0096). The creature is taken to spend this round on
+    /// the best spell it can pay for now, which is what it does if it has not acted yet; energy given this round
+    /// cannot pay for a spell this round, since every intent is declared before anything resolves. Signed like
+    /// every other term: on an enemy it counts against. What the actor gives itself is read by
+    /// <see cref="NextPurse"/>, not here.
+    /// </summary>
+    private ScoreTerms Unlocked(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (!_priceUnlocks || amount <= 0 || remainingHealth == 0 || target.Id == actor.Id)
+        {
+            return ScoreTerms.Zero;
+        }
+
+        if (!Unlocks(target, rules.EnergyPerRound, target.Energy.Value + rules.EnergyPerRound + amount))
+        {
+            return ScoreTerms.Zero;
+        }
+
+        var purse = target.Energy.Value - Affordable(target, target.Energy.Value, creatures).Cost + rules.EnergyPerRound;
+        return Unlocks(target, purse, purse + amount)
+            ? -Sign(actor, target) * Gained(Affordable(target, purse + amount, creatures).Terms, Affordable(target, purse, creatures).Terms)
+            : ScoreTerms.Zero;
+    }
+
+    /// <summary>
+    /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of
+    /// <paramref name="poorer"/> does not. When it does not, the best spell either pays for is the same one and
+    /// the difference is nothing, which is most boards: a creature whose spells all cost what a round gives
+    /// has nothing to save for. Read before anything is resolved, because the reading it spares is not cheap.
+    /// </summary>
+    private bool Unlocks(CreatureSnapshot creature, int poorer, int richer) =>
+        richer > poorer && creature.KnownSpells.Any(spell => resources.GetSpell(spell).Stats.Cost.Value is var cost && cost > poorer && cost <= richer);
+
+    /// <summary>
+    /// The difference between two spells' terms, without the energy each would leave: the points given are
+    /// priced once, per point, by <see cref="EnergyTerms"/> and the energy kept.
+    /// </summary>
+    private ScoreTerms Gained(ScoreTerms with, ScoreTerms without)
+    {
+        var gained = (with + (-1 * without)) with { Energy = 0 };
+        return weights.Apply(gained) > 0 ? gained : ScoreTerms.Zero;
+    }
+
+    /// <summary>
+    /// The best spell a creature knows and could pay for with <paramref name="purse"/>, read without unlocks,
+    /// and what it costs.
+    /// </summary>
+    private (ScoreTerms Terms, int Cost) Affordable(CreatureSnapshot creature, int purse, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var best = (Terms: ScoreTerms.Zero, Cost: 0);
+        var bestScore = 0.0;
+        foreach (var (terms, cost, score) in Spells(creature, creatures))
+        {
+            if (cost <= purse && score > bestScore)
+            {
+                best = (terms, cost);
+                bestScore = score;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Every spell a creature knows, each at its best target set on this board, read without unlocks and
+    /// without the energy it would leave, in ordinal id order. The creature is funded for the dearest of them,
+    /// since a spell it cannot pay for does not resolve; past that, nothing a spell resolves to reads the
+    /// caster's energy, so a purse only filters this list. It is read once per creature and board, and every
+    /// action of a decision reads the same board.
+    /// </summary>
+    private List<(ScoreTerms Terms, int Cost, double Score)> Spells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var memo = _spells.GetValue(creatures, _ => new System.Collections.Concurrent.ConcurrentDictionary<CreatureId, List<(ScoreTerms, int, double)>>());
+        return memo.GetOrAdd(creature.Id, _ => ReadSpells(creature, creatures));
+    }
+
+    private List<(ScoreTerms Terms, int Cost, double Score)> ReadSpells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
+        var funded = creature with { Energy = Energy.Of(Math.Max(creature.Energy.Value, dearest)) };
+        var board = creatures.Select(other => other.Id == creature.Id ? funded : other).ToList();
+        List<(ScoreTerms, int, double)> spells = [];
+        foreach (var spell in creature.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        {
+            if (_flat.Value.BestTerms(funded, spell, board) is { } found)
+            {
+                var terms = found.Terms with { Energy = 0 };
+                spells.Add((terms, resources.GetSpell(spell).Stats.Cost.Value, weights.Apply(terms)));
+            }
+        }
+
+        return spells;
+    }
 
     /// <summary>
     /// Energy taken is energy given with the sign turned over, clamped to what the target has because

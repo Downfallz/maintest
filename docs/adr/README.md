@@ -101,3 +101,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
 | [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
 | [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
+| [0096](0096-energy-is-priced-by-the-spell-it-unlocks.md) | Energy is priced by the spell it unlocks | Proposed |
