@@ -17,9 +17,9 @@
         "reads": "Playing well still beats playing at random. A change that closes this gap has removed the decisions instead of balancing them."
       },
       "variety": {
-        "p1": "explore:0.2",
-        "p2": "explore:0.2",
-        "reads": "Whether the content offers a choice, which is a different question from whether a greedy bot takes one. Both sides play greedily four decisions in five and draw uniformly the fifth (ADR 0014), so a spell the argmax always passes over still gets cast and can be read. Every target that needs a spell to be cast in order to mean anything is read here rather than on the mirrored run."
+        "p1": "explore:0.2:lookahead",
+        "p2": "explore:0.2:lookahead",
+        "reads": "Whether the content offers a choice, which is a different question from whether a greedy bot takes one. Both sides play greedily four decisions in five and draw uniformly the fifth (ADR 0014), so a spell the argmax always passes over still gets cast and can be read. Every target that needs a spell to be cast in order to mean anything is read here rather than on the mirrored run. Since ADR 0095 both sides wrap the lookahead rather than Greedy (`explore:0.2:lookahead`): the readings here judge the packages by how they are bought and cast, and Greedy's own purchases (Occultist on 88 % of opening picks, Lightning Bolt 2409 casts to Rejuvenate's 438) put four of the five packages it held over the usage band there, where the lookahead holds one."
       },
       "exploit": {
         "p1": [

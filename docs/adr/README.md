@@ -100,3 +100,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted |
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
 | [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
+| [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
