@@ -1092,6 +1092,21 @@ public sealed class ActionScorerTests
         terms.Energy.ShouldBe(2);
     }
 
+    /// <summary>
+    /// ADR 0096: a creature with four energy that buys Lunge casts it for two and keeps four for next round,
+    /// enough for the Smite it knows, so the purchase is worth the lunge and what Smite does over Lunge.
+    /// </summary>
+    [Fact]
+    public void A_spell_bought_with_energy_to_spare_is_worth_the_dearer_spell_its_purse_reaches()
+    {
+        var board = Hoarders(allyEnergy: 4);
+        var buyer = board[1] with { KnownSpells = new HashSet<SpellId> { Smite.Id, Gift.Id } };
+
+        var terms = Unlocking.EstimateTerms(buyer, Lunge.Id, [board[0], buyer, board[2], board[3]]);
+
+        terms.Damage.ShouldBe(5 + (10 - 5));
+    }
+
     /// <summary>Ten damage for four energy: what saving up is for.</summary>
     private static Spell Smite { get; } = Spell.Create(
         SpellId.Parse("spell:smite:v1"), "Smite", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(4), CriticalChance.None),
