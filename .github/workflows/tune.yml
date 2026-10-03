@@ -62,7 +62,9 @@ jobs:
   #
   # ADR 0095 seated the lookahead on `variety`, which took a candidate from about 88 seconds to about 410 on
   # the runner (124 to 581 locally, the ratio applied to the runner's 88): six slices of 44 would be five hours
-  # each. Twelve slices of about 22 are about two and a half hours each, under the four-hour limit below.
+  # each. Twelve slices of about 22 were meant to be about two and a half hours each; tune 23 read 238
+  # catalogues in twelve slices of 1h54 to 3h48, the slowest twelve minutes from the four-hour limit below, so
+  # the sweep plays in sixteen slices of about 15, under three hours at the slowest pace measured.
   sweep:
     name: Sweep slice ${{ matrix.shard }}
     runs-on: ubuntu-latest
@@ -71,7 +73,7 @@ jobs:
       # One slice missing is a sweep the search would have to play whole, so the first failure stops them all.
       fail-fast: true
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

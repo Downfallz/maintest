@@ -271,7 +271,7 @@ and 263 legal single steps**, and about **88 seconds** a candidate (tune 16 play
 opening sweep alone is **6h26 of a six-hour job**. Tune 17 was killed inside it with nothing to show
 (journal, 2026-10-01).
 
-So the workflow plays the sweep in **slices side by side**, each its own job (six until ADR 0095, twelve since): `tune-content
+So the workflow plays the sweep in **slices side by side**, each its own job (six until ADR 0095, twelve after it, sixteen since tune 23): `tune-content
 --sweep-shard I/N` plays every N-th catalogue of the sweep from the I-th, and writes what it measured to
 `swept-I.json`. The search job then runs `tune-content --swept <every slice>` and takes those metrics instead
 of playing the sweep again. The engine is deterministic, so the moves, the leader and the proposal are the
@@ -290,7 +290,7 @@ sweep again in the job it was taken out of.
 **ADR 0095 seated the lookahead on `variety`**, so it is Greedy's purchases no longer that the per-package
 readings judge. A candidate went from 124 to 581 seconds locally, which is **about 410 seconds** on the
 runner at the same ratio. The sweep went to twelve slices of about 22 (about two and a half hours each, under
-a four-hour limit), and the search's default budget came down to the catalogue, 3 rounds of 4 and their
+a four-hour limit); tune 23's slowest took 3h48 of the four, so it is sixteen slices of about 15 now, and the search's default budget came down to the catalogue, 3 rounds of 4 and their
 confirmations: about 20 candidates, about two hours twenty. The table above is the 88-second pace it replaced.
 
 Tune 10 was killed at the ceiling with nothing to show, since the proposal is only written when the search

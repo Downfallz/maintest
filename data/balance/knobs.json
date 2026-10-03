@@ -598,16 +598,15 @@
     "spell:adrenaline_tonic": {
       "name": "Adrenaline Tonic",
       "class": "Trickster",
-      "intent": "The Plague Doctor's stimulant: a point of energy for up to three allies, with a point of poison in the same dose. It is Noxious Cure's idea turned to energy -- the remedy that costs something -- and its point is where the energy goes, not how much: across three allies it nets the team what Wait would, so it never out-earns waiting, but it brings three creatures to their next threshold a round early.",
+      "intent": "The Plague Doctor's stimulant: two points of energy for up to three allies, for one. Its point is where the energy goes: it brings three creatures to a spell they could not pay for a round early. It used to carry a point of poison in the same dose and to be held at or under what Wait gives across the team, which kept it a spell nobody cast; the owner lifted both on 2026-10-03, once the agents priced energy by the spell it unlocks (ADR 0096, journal).",
       "keep": [
-        "Never out-earns Wait: the energy it spreads, less its price, stays at or under the two Wait gives",
-        "Always poisons what it feeds: every ally it reaches takes the bleed"
+        "Energy for allies: it never reaches an enemy"
       ],
-      "note": "Authored at -1.5 a round in the check-knobs reading, which prices the bleed on an ally as a cost at 0.8 and the energy at 0.3; the greedy agents are unlikely ever to cast it, so an evaluation will say little about it. A spell for human players until the energy weight says otherwise.",
+      "note": "Authored at -1.5 a round in the check-knobs reading, which priced the bleed on an ally as a cost at 0.8 and the energy at 0.3, and Greedy cast it zero times at one, two or three energy, at a cost of one or none, with the bleed or without it (Plague Doctor forced against Greedy on the 400 confirmation seeds, 2026-10-03): a point of energy for an ally was worth 0.3 against three to five for a hit. Since ADR 0096 the agents price it by the spell it lets an ally afford next round, and they cast it: 889 intents to Noxious Cure's 1425 on the same seeds. `check-knobs` still prices energy per point, so it still reads this spell low; the evaluations are the reading that counts.",
       "knobs": [
-        { "path": "/effects/1/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 },
-        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
+        { "path": "/energyCost", "min": 0, "max": 2, "step": 1 }
       ]
     },
     "spell:noxious_cure": {
@@ -619,12 +618,11 @@
         "It always shreds the allies it heals: the price is paid by the cured, which is what makes it noxious",
         "The shred runs out: a cure that costs the team its armour for good is not a cure"
       ],
-      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `ActionScorer`'s `HealTerms` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size.",
+      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `ActionScorer`'s `HealTerms` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size. On 2026-10-03 the heal went from 4 to 7 and its bound from 5 to 8: Plague Doctor forced against Greedy read -0.074 against Prowler alone, the weakest tier-2 package, and 7 with the package's initiative at 3 and Adrenaline Tonic rebuilt read -0.015 (journal). The shred's duration is no longer a knob. Tuning pass 23 lengthened it to two rounds, which weakened the one spell of the package the agents cast so that Adrenaline Tonic's share of its casts would rise, and took the package to -0.090: a pass that cannot make the other spell earn its place must not make this one worse instead.",
       "knobs": [
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 8, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -972,11 +970,13 @@
     },
     "tier:plague_doctor": {
       "name": "Plague Doctor",
-      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team at a point of poison. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
+      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the owner set it to 2 on 2026-10-02 and to 3 on 2026-10-03, with Noxious Cure's heal at 7 and Adrenaline Tonic rebuilt, which took the package from the weakest tier 2 to even (journal). At 4 it reads +0.071, over the top.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
-      "knobs": []
+      "knobs": [
+        { "path": "/initiativeBonus", "min": 1, "max": 4, "step": 1 }
+      ]
     },
     "tier:shaman": {
       "name": "Shaman",

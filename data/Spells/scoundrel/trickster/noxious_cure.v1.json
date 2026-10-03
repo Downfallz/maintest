@@ -13,7 +13,7 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 4
+      "amount": 7
     },
     {
       "kind": "DefenseDebuff",
