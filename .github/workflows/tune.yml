@@ -13,11 +13,11 @@ on:
         description: "Search seed (the same seed on the same content returns the same moves)"
         default: "0"
       iterations:
-        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 6 is about 9 minutes at 88 seconds a candidate, plus at most one confirmation"
-        default: "6"
+        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 4 is about 27 minutes at about 410 seconds a candidate since ADR 0095, plus at most one confirmation"
+        default: "3"
       neighbours:
         description: "Candidates played per round"
-        default: "6"
+        default: "4"
       max_changes:
         description: "Knobs one proposal may move at once"
         default: "12"
@@ -59,15 +59,19 @@ jobs:
   # in the search, and the search takes these metrics instead of playing them again: the moves, the leader
   # and the proposal are the ones a single job would have reached. Six slices of about 44 candidates are about
   # 65 minutes each; the count is the matrix below and nothing else needs to change with it.
+  #
+  # ADR 0095 seated the lookahead on `variety`, which took a candidate from about 88 seconds to about 410 on
+  # the runner (124 to 581 locally, the ratio applied to the runner's 88): six slices of 44 would be five hours
+  # each. Twelve slices of about 22 are about two and a half hours each, under the four-hour limit below.
   sweep:
     name: Sweep slice ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       # One slice missing is a sweep the search would have to play whole, so the first failure stops them all.
       fail-fast: true
       matrix:
-        shard: [0, 1, 2, 3, 4, 5]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -137,7 +141,12 @@ jobs:
     #
     #   the catalogue + 6 rounds of 6 + about 14 confirmation candidates = about 51 candidates = about 1h15
     #
-    # which leaves room for the hold-out, the gate, and many more rounds than the default. Tune 10 ran 24
+    # at 88 seconds a candidate. ADR 0095 made a candidate about 410 seconds by seating the lookahead on
+    # `variety`, at which those 51 are the whole six hours, so the default budget came down to
+    #
+    #   the catalogue + 3 rounds of 4 + about 7 confirmation candidates = about 20 candidates = about 2h20
+    #
+    # which leaves room for the hold-out and the gate. Tune 10 ran 24
     # rounds with the paired opening on and was killed at the ceiling **with nothing to show**; the search now
     # writes its leader after the opening pass and after every round, so a run killed late still leaves one.
     #
