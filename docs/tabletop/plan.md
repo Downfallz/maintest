@@ -21,6 +21,11 @@ The board game is not a spin-off. It is a forcing function: a rule that is unbea
 usually a rule that is hard to explain, and several of the engine's open questions
 (`docs/domain/game-rules.md`, `docs/domain/spells.md`) are exactly those rules.
 
+A third presentation is planned separately, because it is an opponent rather than a rule: the Automa, a
+procedure a person executes from printed components so the printed game can be played alone
+([automa.md](automa.md)). It is a seat, not a rule set entry, so it costs this plan nothing and waits on
+nothing in it.
+
 ## The one rule of this effort
 
 **One engine, one truth.** A difference between what the engine does and what the table does is never left
