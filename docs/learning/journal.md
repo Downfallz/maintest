@@ -17,8 +17,7 @@ first.
   -0.049 to **-0.090** against Prowler alone; Elementalist read +0.065 and +0.070, so Frostbite's move
   changed nothing anyone can measure. The pass is not kept.
 - **Pace on the runner.** The twelve sweep slices took 1h54 to 3h48 for 238 catalogues, the slowest twelve
-  minutes from their four-hour limit; the search took 3h08 against the 2h20 estimated. The sweep now plays in
-  sixteen slices.
+  minutes from their four-hour limit; the search took 3h08 against the 2h20 estimated.
 - **Adrenaline Tonic was not a number problem.** Forced the same way, Greedy cast it **zero** times at one,
   two or three energy, at a cost of one or none, with its bleed or without. The scorer priced a point of
   energy given to an ally at 0.3 against three to five for a hit, so no number on the spell made a greedy
@@ -38,8 +37,9 @@ first.
   the best spell the actor's purse pays for next round less the best a round's gain alone pays for, and for
   energy given to another creature, the spell it then reaches that it could not without the gift. On the 200
   benchmark seeds, both sides reading without the terms and then both with them, Greedy against `search-19`
-  went from 0.000 to **0.110 ± 0.041**, against `search-31` from 0.003 to **0.155 ± 0.046**, and against
-  Random stayed at 1.000. A first version that priced only gifts against doing nothing moved nothing
+  went from 0.000 to **0.095 ± 0.039**, against `search-31` from 0.003 to **0.128 ± 0.043**, and against
+  Random stayed at 1.000 (0.110 and 0.155 before the reading was made cheaper, which reads a purchase's purse
+  from the spells the buyer already knows and moves a few purchases). A first version that priced only gifts against doing nothing moved nothing
   measurable.
 - **The gain is the purchase reading's.** The review asked for the purchase to be read without the terms,
   since the buyer the reading funds makes its purse next round partly an artefact. Read that way Greedy
@@ -48,8 +48,14 @@ first.
   Wait 800 to Wait 2394, Summon Minions 2247, Lightning Bolt 1602 and Guard 1323. Without them it keeps the
   cheap packages and has nothing to save for, so the combat terms find nothing to read. The purchase keeps
   the terms.
-- **Pace.** Greedy plays the four evaluations in 118 s instead of 51, and the lookahead 30 matches against
-  Greedy in about 190 s instead of 64: its rollouts are Greedy's decisions, which is where the time goes.
+- **Pace.** Greedy plays the four evaluations in 86 s instead of 51. The lookahead pays more, since its
+  rollouts are Greedy's decisions: `explore:0.2:lookahead` in both seats on 10 seeds took 45 s before, 202 s
+  with the first version, and 110 s once a creature's spells were kept per snapshot and board and a
+  purchase read its purse from the spells the buyer knows. A tuner candidate (`score-content` on the benchmark
+  seeds) took **2648 s instead of 581**, 40 minutes of it `variety`. Played with exploring Greedy instead,
+  `variety` costs a candidate 261 s and reads `tierUsageShare` at 0.906 (9.03 in all) against the lookahead's
+  0.828 (0.64), so the lookahead stays. `tune.yml` plays the sweep in sixty-four slices, and the search's
+  default budget is 2 rounds of 2.
 - **Plague Doctor on the new scorer.** Forced against Greedy on the confirmation seeds, against Prowler alone
   (casts are intents of Adrenaline Tonic and Noxious Cure). The variants were read before the review's fix
   (an ally that has already acted spends nothing more this round); the first and last rows are read again

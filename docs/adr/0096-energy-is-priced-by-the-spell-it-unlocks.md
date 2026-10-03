@@ -30,24 +30,27 @@ priced the other half of energy, a drain that leaves an enemy unable to pay, as 
 
 A spell is read at its best target set on the current board, by the same scorer without these two terms, and
 without the energy it would leave (the price per point already counts that). Each creature's spells are read
-once per board list and a purse only filters them, and neither term is read unless a spell's cost falls
-between the two purses. The purchase reading (ADR 0056) sees the terms too, on the buyer it funds to cast the
-spell: that is how a dear package is told from a cheap one. The lookahead's rollouts (ADR 0094) and
-`Foresight` (ADR 0039) read without them: a rollout plays the next round and sees what the energy bought
-there, and `Foresight` only asks who dies.
+once per snapshot and board, a board being the same snapshots in the same order, and a purse only filters
+them; neither term is read unless a spell's cost falls between the two purses. The purchase reading
+(ADR 0056) sees the terms too, on the buyer it funds to cast the spell: that is how a dear package is told
+from a cheap one. It reads the bought spell alone and the purse from the spells the buyer already knows, and a
+spell that gives energy whole. The lookahead's rollouts (ADR 0094) and `Foresight` (ADR 0039) read without
+the terms: a rollout plays the next round and sees what the energy bought there, and `Foresight` only asks
+who dies.
 
 ## Consequences
 
-- Good: on the 200 benchmark seeds, both sides reading the terms, Greedy scores 0.110 against `search-19`
-  instead of 0.000 and 0.155 against `search-31` instead of 0.003, and still beats Random in every match. It
+- Good: on the 200 benchmark seeds, both sides reading the terms, Greedy scores 0.095 against `search-19`
+  instead of 0.000 and 0.128 against `search-31` instead of 0.003, and still beats Random in every match. It
   buys dear packages (Summon Minions, Guard, Full Plate) and waits for them: Wait goes from 800 casts to
   2394 against `search-19`. An ally's energy gift is cast for the spell it reaches: Adrenaline Tonic went
   from never cast to 889 intents in a forced Plague Doctor.
 - Bad: the gain is the purchase reading's. With the purchase read without the terms Greedy keeps its cheap
   packages, has nothing to save for, and scores 0.000 against both again. The purchase reading is crude: on a
   buyer whose energy covers the spell twice over, the spell bought is also next round's spell.
-- Bad: Greedy plays about 2.3 times slower, and the lookahead, whose rollouts are Greedy's decisions, about
-  3 times. The tuner's candidate costs what the journal measures (2026-10-03).
+- Bad: Greedy plays about 1.7 times slower, and the lookahead, whose rollouts are Greedy's decisions, about
+  2.4 times on 10 seeds. A tuner candidate went from 581 to 2648 seconds locally, so `tune.yml` plays the
+  sweep in sixty-four slices and the search's default budget is 2 rounds of 2 (journal, 2026-10-03).
 - Bad: one level deep, on today's board. A spell is priced against enemies the team may already be killing
   this round (`gone` is not read), and the energy the unlocked spell would itself keep is not read. Each
   energy outcome is read alone, so a spell that gave one creature energy twice would be credited twice; none
