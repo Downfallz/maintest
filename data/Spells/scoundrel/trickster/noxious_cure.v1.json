@@ -18,7 +18,7 @@
     {
       "kind": "DefenseDebuff",
       "amount": 2,
-      "durationRounds": 1
+      "durationRounds": 2
     }
   ],
   "enabled": true
