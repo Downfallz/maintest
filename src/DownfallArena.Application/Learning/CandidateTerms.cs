@@ -30,7 +30,7 @@ namespace DownfallArena.Application.Learning;
 public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
 {
     private readonly ActionScorer _scorer = new(resources, rules, ScoringWeights.Default);
-    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, ScoringWeights.Default));
+    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, ScoringWeights.Default).WithoutUnlocks);
 
     /// <summary>The name of each term, in the order every vector below lists them: the weight names.</summary>
     public static IReadOnlyList<string> Names => ScoreTerms.Names;

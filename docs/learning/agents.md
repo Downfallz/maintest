@@ -54,6 +54,8 @@ The score of one resolution, with the weights `w`:
 | `w.initiative` x order changed x rounds | an InitiativeDebuff (a permanent condition counts three). The order it changes is how many living creatures of the other side the target falls behind, a tie counting half since a d20 decides it, read down to zero initiative (ADR 0088) | a debuff on an enemy counts for, on an ally against |
 | `w.initiative` x order changed x rounds | an InitiativeBuff (a permanent condition counts three): how many living creatures of the other side the target gets ahead of, a tie counting half (ADR 0088). The same price as the debuff above: one price for one place in the order whether it is given or taken (ADR 0036) | a buff on an ally counts for, on an enemy against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
+| the unlocked spell's terms | next purse: the best spell the actor's purse next round pays for (its energy, less the cost, plus what the action gives itself, plus a round's gain) less the best a round's gain alone pays for, when positive; each spell at its best target set on this board, read without these two terms and without the energy it leaves (ADR 0096) | always |
+| the unlocked spell's terms | energy given to another creature: the best spell it then pays for next round that it could not without the gift, the creature taken to spend this round on the best spell it can pay for now (ADR 0096) | on an ally for, on an enemy against |
 
 Decisions:
 
@@ -83,7 +85,9 @@ Decisions:
   the part of the cost the actor cannot cover (ADR 0026); unlock the highest, pass only when nothing can be
   unlocked. Only that part is charged here: the value is read on an energy raised to at least the spell's
   cost, so a creature that could not afford it keeps nothing either way and the difference cancels, while
-  above the cost the energy the actor keeps already prices every point.
+  above the cost the energy the actor keeps already prices every point. The value includes the unlock terms
+  (ADR 0096), so a dear package is read with what the buyer's purse reaches next round: that is what moves
+  Greedy off cheap packages it never saves for.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.

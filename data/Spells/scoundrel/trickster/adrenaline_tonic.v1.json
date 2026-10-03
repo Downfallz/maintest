@@ -13,12 +13,7 @@
   "effects": [
     {
       "kind": "EnergyGain",
-      "amount": 1
-    },
-    {
-      "kind": "Bleed",
-      "amountPerRound": 1,
-      "durationRounds": 1
+      "amount": 2
     }
   ],
   "enabled": true

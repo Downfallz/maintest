@@ -13,11 +13,11 @@ on:
         description: "Search seed (the same seed on the same content returns the same moves)"
         default: "0"
       iterations:
-        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 4 is about 27 minutes at about 410 seconds a candidate since ADR 0095, plus at most one confirmation"
-        default: "3"
+        description: "Rounds of neighbours after the opening sweep. The sweep is played by the sweep jobs, so the search job spends its six hours on these alone: a round of 2 is about one to two hours at 31 to 53 minutes a candidate since ADR 0096, plus at most one confirmation; more than 1 does not fit the six hours with the hold-out"
+        default: "1"
       neighbours:
         description: "Candidates played per round"
-        default: "4"
+        default: "2"
       max_changes:
         description: "Knobs one proposal may move at once"
         default: "12"
@@ -62,7 +62,14 @@ jobs:
   #
   # ADR 0095 seated the lookahead on `variety`, which took a candidate from about 88 seconds to about 410 on
   # the runner (124 to 581 locally, the ratio applied to the runner's 88): six slices of 44 would be five hours
-  # each. Twelve slices of about 22 are about two and a half hours each, under the four-hour limit below.
+  # each. Twelve slices of about 22 were meant to be about two and a half hours each; tune 23 read 238
+  # catalogues in twelve slices of 1h54 to 3h48, the slowest twelve minutes from the four-hour limit below, so
+  # the sweep would play in sixteen slices of about 15, under three hours at the slowest pace measured.
+  #
+  # ADR 0096 priced energy by the spell it unlocks, and a candidate went from 581 to 2648 seconds locally,
+  # most of it the lookahead's `variety` (40 minutes of the 44). At tune 23's slowest pace that is about 53
+  # minutes a candidate on the runner, so sixty-four slices of about 4, under three and a half hours each. A
+  # run queues them in waves when the account runs fewer jobs at once.
   sweep:
     name: Sweep slice ${{ matrix.shard }}
     runs-on: ubuntu-latest
@@ -71,7 +78,7 @@ jobs:
       # One slice missing is a sweep the search would have to play whole, so the first failure stops them all.
       fail-fast: true
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -146,7 +153,13 @@ jobs:
     #
     #   the catalogue + 3 rounds of 4 + about 7 confirmation candidates = about 20 candidates = about 2h20
     #
-    # which leaves room for the hold-out and the gate. Tune 10 ran 24
+    # ADR 0096 made a candidate about 31 to 53 minutes, so it came down again, to
+    #
+    #   the catalogue + 1 round of 2 + about 3 confirmation candidates = about 6 candidates = 3 to 5.5 hours
+    #
+    # plus the hold-out's two evaluations, about four hours at the usual pace. Two rounds would be 5 to 9 hours
+    # before the hold-out, and a job cancelled at its limit skips the hold-out, the gate and the proposal. The
+    # search writes its leader after every round, so a run killed late still leaves one, but nothing pushes it. Tune 10 ran 24
     # rounds with the paired opening on and was killed at the ceiling **with nothing to show**; the search now
     # writes its leader after the opening pass and after every round, so a run killed late still leaves one.
     #

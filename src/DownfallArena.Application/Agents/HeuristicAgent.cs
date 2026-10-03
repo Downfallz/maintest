@@ -16,7 +16,7 @@ namespace DownfallArena.Application.Agents;
 public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resources, RuleSet rules) : IPlayerAgent
 {
     private readonly ActionScorer _scorer = new(resources, rules, weights);
-    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, weights));
+    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, weights).WithoutUnlocks);
 
     public ScoringWeights Weights => weights;
 

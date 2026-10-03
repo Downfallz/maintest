@@ -114,7 +114,7 @@ public sealed class LookaheadAgent(
         }
 
         var round = board.RoundNumber ?? 1;
-        var rollout = new RoundRollout(_oneStep, _scorer, resources, rules);
+        var rollout = new RoundRollout(_oneStep, _scorer.WithoutUnlocks, resources, rules);
         var enemy = board.Slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
         var guessed = rollout.Picks(board, creatures, round, enemy, []);
         // One seed per rollout, the same for every candidate, from the round and the picks already made.

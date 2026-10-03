@@ -1009,4 +1009,150 @@ public sealed class ActionScorerTests
         };
         return [actor, Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) }];
     }
+
+    /// <summary>
+    /// ADR 0096: an ally with two energy lunges with them this round and has two next round; two more bring it
+    /// to Smite, a four-energy spell it could not otherwise pay for, so the gift is worth what Smite does over
+    /// Lunge.
+    /// </summary>
+    [Fact]
+    public void Energy_that_brings_an_ally_to_a_spell_it_cannot_afford_is_worth_that_spell()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(10 - 5);
+        terms.Energy.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Energy_for_an_ally_that_has_already_acted_unlocks_nothing_it_would_not_reach_anyway()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick, stillToAct: new HashSet<CreatureId>());
+
+        terms.Damage.ShouldBe(0, "its two and a round's two already pay for Smite: it has nothing left to spend this round");
+        terms.Energy.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Energy_for_an_ally_with_nothing_worth_casting_unlocks_nothing_it_would_not_reach_by_resting()
+    {
+        var board = Hoarders(allyEnergy: 0);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick, stillToAct: new HashSet<CreatureId> { Two });
+
+        terms.Damage.ShouldBe(0, "it rests for two this round, and a round's two more already pay for Smite");
+        terms.Energy.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Energy_that_brings_an_enemy_to_a_spell_counts_against()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Bribe.Id), [Three]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(-(10 - 5));
+    }
+
+    /// <summary>
+    /// ADR 0096: an ally that rests keeps its two energy and gains two, so it can smite next round; one that
+    /// spent them would lunge. What it keeps is worth what Smite does over Lunge.
+    /// </summary>
+    [Fact]
+    public void Energy_kept_for_a_dearer_spell_next_round_is_worth_that_spell()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(Two, Rest.Id), [Two]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(10 - 5);
+    }
+
+    [Fact]
+    public void Spending_everything_keeps_nothing_to_unlock()
+    {
+        var board = Hoarders(allyEnergy: 2);
+
+        var terms = Unlocking.ExpectedTerms(CombatAction.Bind(new CombatIntent(Two, Lunge.Id), [Three]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(5, "the lunge's own damage, and nothing for next round");
+    }
+
+    [Fact]
+    public void A_scorer_without_unlocks_prices_energy_by_the_point_alone()
+    {
+        var board = Hoarders(allyEnergy: 0);
+
+        var terms = Unlocking.WithoutUnlocks.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Gift.Id), [Two]), board, speed: Speed.Quick);
+
+        terms.Damage.ShouldBe(0);
+        terms.Energy.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// ADR 0096: a creature with four energy that buys Lunge casts it for two and keeps four for next round,
+    /// enough for the Smite it knows, so the purchase is worth the lunge and what Smite does over Lunge.
+    /// </summary>
+    [Fact]
+    public void A_spell_bought_with_energy_to_spare_is_worth_the_dearer_spell_its_purse_reaches()
+    {
+        var board = Hoarders(allyEnergy: 4);
+        var buyer = board[1] with { KnownSpells = new HashSet<SpellId> { Smite.Id, Gift.Id } };
+
+        var terms = Unlocking.EstimateTerms(buyer, Lunge.Id, [board[0], buyer, board[2], board[3]]);
+
+        terms.Damage.ShouldBe(5 + (10 - 5));
+    }
+
+    /// <summary>Ten damage for four energy: what saving up is for.</summary>
+    private static Spell Smite { get; } = Spell.Create(
+        SpellId.Parse("spell:smite:v1"), "Smite", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(4), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(10)]);
+
+    /// <summary>Five damage for two energy: what a round's gain pays for.</summary>
+    private static Spell Lunge { get; } = Spell.Create(
+        SpellId.Parse("spell:lunge:v1"), "Lunge", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(2), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(5)]);
+
+    /// <summary>Two energy for an ally, free.</summary>
+    private static Spell Gift { get; } = Spell.Create(
+        SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
+
+    /// <summary>Two energy for the caster, free: Wait, as every creature knows it.</summary>
+    private static Spell Rest { get; } = Spell.Create(
+        SpellId.Parse("spell:rest:v1"), "Rest", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Self), [EnergyGain.Of(2)]);
+
+    /// <summary>Two energy for an enemy, free: a gift on the wrong side.</summary>
+    private static Spell Bribe { get; } = Spell.Create(
+        SpellId.Parse("spell:bribe:v1"), "Bribe", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [EnergyGain.Of(2)]);
+
+    private static ActionScorer Unlocking { get; } = new(
+        GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures],
+            [.. TestContent.Resources.Spells, Smite, Lunge, Gift, Bribe, Rest],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]),
+        MatchStore.TwoOnTwo(),
+        ScoringWeights.Default);
+
+    /// <summary>
+    /// One gives; Two and Three each lunge for five on a round's two energy, could smite for ten with four, and
+    /// rest for two when nothing is worth casting; Three holds two energy; nobody can crit.
+    /// </summary>
+    private static List<CreatureSnapshot> Hoarders(int allyEnergy)
+    {
+        HashSet<SpellId> saver = [Lunge.Id, Smite.Id, Rest.Id];
+        var giver = Boards.Creature(1, PlayerSlot.Player1) with { CriticalChance = CriticalChance.Of(0), KnownSpells = new HashSet<SpellId> { Gift.Id, Bribe.Id } };
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { CriticalChance = CriticalChance.Of(0), Energy = Energy.Of(allyEnergy), KnownSpells = saver };
+        var enemy = Boards.Creature(3, PlayerSlot.Player2) with { CriticalChance = CriticalChance.Of(0), Energy = Energy.Of(2), KnownSpells = saver };
+        return [giver, ally, enemy, Boards.Creature(4, PlayerSlot.Player2)];
+    }
 }
