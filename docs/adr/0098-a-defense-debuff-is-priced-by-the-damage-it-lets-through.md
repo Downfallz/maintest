@@ -26,7 +26,8 @@ Noxious Cure's debuff on the allies it heals. A debuff on a creature with no def
 
 - Good: Greedy against itself on the 200 benchmark seeds declared Infectious Blast 2 times instead of 32 and
   Noxious Cure 137 times instead of 70, at the same score. Greedy's scores against search-19, search-31 and Random
-  did not move.
+  did not move. The lookahead on search-19's weights against Greedy, both reading the new price, declared it
+  216 times instead of 861 and scored 0.532 instead of 0.440, +0.092 ± 0.049 seed by seed.
 - Bad: a permanent debuff also cancels defense the target gains later, and that is not read. Against a team that
   will buff, the debuff is cheaper than it is. Like the buff, the reading is today's board one round deep.
 - Neutral: the weights files and the policies were fitted under the old price. The terms a dataset records
