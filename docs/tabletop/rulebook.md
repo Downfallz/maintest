@@ -3,7 +3,8 @@
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
-picks face down 2026-10-02). Phase 4 of [plan.md](plan.md).
+picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04). Phase 4 of
+[plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -262,10 +263,10 @@ otherwise have killed it. Doing it the other way round kills Creatures the rules
 there, before Evolution ([7.2](#72-the-end-of-a-match)). Both Teams wiped by the same pass is a draw.
 
 > **Example.** Creature 5 is at 1 Health, carries a Regeneration 3 a Round from **Healing Screech**, and a
-> Bleed 1 a Round from **Toxic Waves**. Its Defense rails read buffs 3, debuffs 0.
-> Energy regeneration: none. Regeneration: heal 3, to 4 Health. Bleed: 1 damage, and its Defense of 3 does
-> not apply, to 3 Health. Creature 5 survives the Round.
-> In the other order it would have taken 1 from 1 Health, died at 0, and never been healed.
+> Bleed 3 a Round from **Toxic Waves**. Its Defense rails read buffs 3, debuffs 0.
+> Energy regeneration: none. Regeneration: heal 3, to 4 Health. Bleed: 3 damage, and its Defense of 3 does
+> not apply, to 1 Health. Creature 5 survives the Round.
+> In the other order it would have taken 3 from 1 Health, died at 0, and never been healed.
 
 ### 5.3 Evolution
 
@@ -322,7 +323,8 @@ A purchase is three actions, in this order:
    already knows one of them, take no card for that one; the purchase is still legal.
 3. **Initiative.** Raise that Creature's Base initiative by the Tier's initiative bonus. **This is the only
    thing that ever moves a Base initiative marker.** It happens once, at the Purchase reveal, and lasts for
-   the rest of the Match. No Spell carries initiative of its own, and casting one moves nothing.
+   the rest of the Match. No Spell carries initiative of its own, and casting one moves no Base initiative
+   marker.
 
 Then every pick token comes off the mats and the boards.
 
@@ -349,7 +351,8 @@ Then every pick token comes off the mats and the boards.
 > picks Shaman, level 2 and requiring Occultist, for Creature 6. Creature 6 now holds a pick token, so Player 2
 > has no pick they could use and does not pass. Their second pick token stays on the mat, unused, and comes
 > off with the rest. Player 1, with three living Creatures, still has two picks. At the Purchase reveal,
-> Healing Screech goes into Player 2's hand, and the bonus of +2 raises Creature 6's Base initiative.
+> Healing Screech and Soothing Chant go into Player 2's hand, and the bonus of +2 raises Creature 6's Base
+> initiative.
 
 ### 5.4 Speed
 
@@ -405,20 +408,23 @@ Quick always beats Standard. A Quick Creature with Current initiative 0 still ac
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
 
 > **Example.** Round 4, which offers no Evolution opportunity. In Rounds 1 and 3 both Players spent their four
-> picks alike: Creature 1 owns Brute and Ironbound, Creature 4 owns Brute and Marauder, and Creatures 2, 3, 5
-> and 6 each own Brute and Berserker. Brute, Ironbound, Marauder and Berserker are +1 each, so every Base
-> initiative reads 7. **Two sides that buy alike tie everywhere.**
-> In Round 3, Creature 4 hit Creature 2 with **Protective Slam**: `Initiative -2, 2 rounds`. Creature 2's
-> Current initiative is 7 - 2 = 5. Every other Creature's is 7.
+> picks alike. Round 1: Occultist for their first and second Creatures. Round 3: Elementalist for their first
+> Creature, and Occultist for their third. Occultist is +2 and Elementalist +3, so Creatures 1 and 4 read a Base
+> initiative of 10, and the other four read 7. **Two sides that buy alike tie everywhere.**
+> In Round 3, Creature 4 hit Creature 2 with **Frostbite**, which Elementalist teaches:
+> `Initiative -3, 1 round`. It landed after Round 3's timeline was built, so this is the first Round it
+> changes ([6.6](#66-the-combat-timeline-and-its-tiebreaks)). Creature 2's Current initiative is 7 - 3 = 4.
+> Every other Creature's is its Base initiative.
 > Creatures 1 and 4 chose Quick; the rest chose Standard. The divider goes after the second slot.
-> Quick band: Creature 1 and Creature 4 are tied at 7, so they hold a Roll-off: 8 for Creature 1, 15 for
+> Quick band: Creature 1 and Creature 4 are tied at 10, so they hold a Roll-off: 8 for Creature 1, 15 for
 > Creature 4. 4, then 1.
 > Standard band: Creatures 3, 5 and 6 are tied at 7 and roll 11, 11 and 2. Creature 6 is last of the three;
 > both sides rolled 11, so Creatures 3 and 5 roll again, 4 and 17. The Places go Player 2, Player 1, Player 2.
 > Player 2 holds two of them and wants Creature 6 to act first, so lays `1st` face down on Creature 6 and
 > `2nd` on Creature 5. Player 1 holds one Place in the tie and lays nothing. The chits turn: 6 takes Player
-> 2's first Place and 5 the third. 6, then 3, then 5. Creature 2 at 5 is last and rolls nothing.
+> 2's first Place and 5 the third. 6, then 3, then 5. Creature 2 at 4 is last and rolls nothing.
 > The timeline is **4, 1, 6, 3, 5, 2**.
+> Cleanup of Round 4 takes the Initiative debuff token off lane `1`: from Round 5, Creature 2 reads 7 again.
 
 ### 5.6 Intent selection
 
@@ -441,7 +447,7 @@ Energy rails stay face up.
 > Crushing Stomp (cost 4). It may declare Meteor. It may not declare Crushing Stomp: 3 is less than 4.
 > Player 2 can see the 3 on the rail, so they know Crushing Stomp is not under that card. They do not know
 > whether Meteor is.
-> Later this Round, Creature 5 acts before Creature 1 and casts **Soul Devourer** on it: `Damage 6` and
+> Later this Round, Creature 5 acts before Creature 1 and casts **Soul Devourer** on it: `Damage 7` and
 > **`Energy -3`**. Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Meteor's 3:
 > its card is flipped with no targets and Fizzles. See [6.1](#61-the-fizzle-and-every-cause-of-it).
 
@@ -483,9 +489,9 @@ Choose targets to satisfy the card's targeting line:
 > **Slot 3, Creature 6.** Its card is **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
-> **Slot 4, Creature 3.** Player 1 declared **Meteor** (`Up to 3 enemies`, `Damage 2`) when three enemies
-> stood. Two stand now, so Meteor may name Creature 4, Creature 6, or both. Creature 3 may not switch to
-> another Spell.
+> **Slot 4, Creature 3.** Player 1 declared **Meteor** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
+> 1 round`) when three enemies stood. Two stand now, so Meteor may name Creature 4, Creature 6, or both, and
+> each one it names takes the Damage and a Bleed token. Creature 3 may not switch to another Spell.
 > **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
 > chooses nothing.
 > **Slot 6, Creature 2** acts the same way. Every slot has had its turn, and the Round goes on to Cleanup.
@@ -567,9 +573,10 @@ rail stays where it is.
 > alive, so an Immune token takes its place in lane `1`, and the Stun token comes out of the Speed slot.
 > Round 8: Creature 4 takes a Speed card again. **A two-Round Stun costs two whole Rounds**, and it also cost
 > Creature 4 its activation in Round 5 if its slot had not yet come up.
-> Also in Round 8, Creature 2 casts **Tranquilizer Dart** on Creature 4: `Damage 2` and `Stun, 2 rounds`. The
-> Damage lands. The Stun is ignored, because Creature 4 is immune: no token goes anywhere, and if Creature 4's
-> slot comes later in the Round, its action does not Fizzle. Cleanup of Round 8: the Immune token leaves lane
+> Also in Round 8, Creature 2 casts **Tranquilizer Dart** on Creature 4: `Damage 2`, `Stun, 1 round` and
+> `Bleed 1 a round, 2 rounds`. The Damage and the Bleed land. The Stun is ignored, because Creature 4 is
+> immune: no Stun token goes anywhere, and if Creature 4's slot comes later in the Round, its action does not
+> Fizzle. Cleanup of Round 8: the Immune token leaves lane
 > `1` and is removed. From Round 9 a Stun lands on Creature 4 again.
 
 ### 5.10 Finalization
@@ -607,9 +614,9 @@ first one that applies ends the action.
 | # | Cause | How it happens at a table |
 | --- | --- | --- |
 | 1 | **The Creature is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
-| 2 | **The Creature is stunned.** | A **Crushing Stomp** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
+| 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Protective Slam**, an **Ice Spear** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
 | 3 | **The Creature no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
-| 4 | **The Creature cannot afford the cost now.** | A **Soul Devourer** in an earlier slot drained its Energy below the cost. It is the only Spell in the catalogue that takes Energy. |
+| 4 | **The Creature cannot afford the cost now.** | An **Extort**, a **Night Raid** or a **Soul Devourer** in an earlier slot drained its Energy below the cost. They are the only Spells in the catalogue that take Energy. |
 | 5 | **The Spell has no legal target.** | Nothing on the board is a target its card allows. With today's cards this cannot happen: an `Ally` or `Self` Spell always has its living caster, and an `Enemy` Spell runs out of targets only when the other Team is wiped, which has already ended the Match ([7.2](#72-the-end-of-a-match)). |
 
 Causes 1, 2 and 4 are the ones you will see. Causes 3 and 5 exist in the rules and cannot be reached with
@@ -627,8 +634,8 @@ choice: choose again.
 **Result.** You keep the Spell you declared and choose its targets among the Creatures standing now. You
 cannot swap the card for another.
 
-> **Example.** Player 1 declared **Toxic Waves** for Creature 2: cost 3, up to three enemies, `Damage 3` and
-> `Bleed 1 a round, 1 round` on each. Before Creature 2's slot comes up, Creature 1 kills Creature 6.
+> **Example.** Player 1 declared **Toxic Waves** for Creature 2: cost 3, up to three enemies, `Damage 4` and
+> `Bleed 3 a round, 2 rounds` on each. Before Creature 2's slot comes up, Creature 1 kills Creature 6.
 > Creature 2 may name Creatures 4 and 5, or either of them. It pays 3 Energy, and each Creature it names takes
 > the damage and gets a Bleed token in its `new` lane.
 > Player 1 would rather cast **Guard** now. They cannot: the card in the intent slot is the Spell.
@@ -752,7 +759,7 @@ A Quick Creature never rolls ([5.4](#54-speed)), and a Fizzle never reaches the 
 > faithful way to roll such a card on a d20, and does not invent one; the snap is the fix.
 
 **A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
-rolled: you add nothing to it. A Spell printed at zero never rolls at all — fifteen of the thirty-six never
+rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty of the forty-five never
 touch the die.
 
 A critical multiplies, by the setup table's critical multiplier, dropping any fraction:
@@ -773,15 +780,15 @@ the example in [5.8](#58-resolving-an-action).
 > **Example, a Heal.** Creature 2 casts **Restorative Gush** on Creature 3: `One ally`, `Heal 7`,
 > `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
 > Creature 3 goes to 30. Two of the fourteen are wasted, because a Heal is capped by the Health missing.
-> **Example, what is not multiplied.** Creature 5 casts **Hateful Sacrifice** on Creature 1: `Damage 10` and
-> `Caster: Damage 4`, `Critical 50%  d20: 11+`. The d20 shows 11, a hit. Creature 1 takes 10 x 2 = 20, less
-> its total Defense. Creature 5 takes exactly **4**, less its own total Defense — the `Caster:` line is never
-> multiplied. At 4 Health or less and no Defense, Creature 5 kills itself with its own Spell.
+> **Example, what is not multiplied.** Creature 5 casts **Hateful Sacrifice** on Creature 1: `Damage 11` and
+> `Caster: Damage 3`, `Critical 50%  d20: 11+`. The d20 shows 11, a hit. Creature 1 takes 11 x 2 = 22, less
+> its total Defense. Creature 5 takes exactly **3**, less its own total Defense — the `Caster:` line is never
+> multiplied. At 3 Health or less and no Defense, Creature 5 kills itself with its own Spell.
 > **Example, no roll.** Creature 4 casts **Throwing Star**: `Critical 0%`. Do not pick the die up.
 
 ### 6.8 Two more things every card assumes
 
-**A multi-target Spell may take fewer targets than its maximum.** It is not printed on the 36 cards because it
+**A multi-target Spell may take fewer targets than its maximum.** It is not printed on the 45 cards because it
 is true of all of them. It is a real choice: **Meteor** on one enemy is legal.
 
 **`Ally` includes the caster.** A Creature can cast **Guard**, **Rejuvenate** or **Revenant Guards** on
@@ -810,7 +817,7 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
-| **Initiative buff** | Raises Current initiative | Read once, at Turn order resolution | Stacks | Condition dock |
+| **Initiative buff** | Raises Current initiative. No Spell in the current catalogue applies it | Read once, at Turn order resolution | Stacks | Condition dock |
 | **Initiative debuff** | Lowers Current initiative | The same | Stacks | Condition dock |
 
 Two sums, and both floor at zero **after** the subtraction, never before:
@@ -845,8 +852,8 @@ Two ways to end, each checked at its own moment:
 
 **An elimination does not wait for the end of the Round.** The action that kills a Team's last Creature is the
 last thing that happens: no further slot comes up, and Cleanup does not run. So one cast can wipe both Teams
-at once — **Hateful Sacrifice** deals `Damage 10` to its target and then `Caster: Damage 4` to itself, so a
-Creature at 4 Health or less that kills the last enemy with it wipes its own Team too. That is a draw.
+at once — **Hateful Sacrifice** deals `Damage 11` to its target and then `Caster: Damage 3` to itself, so a
+Creature at 3 Health or less that kills the last enemy with it wipes its own Team too. That is a draw.
 
 > **Example.** Round 11. Player 2 has only Creature 4 left, at 3 Health, and Player 1 has Creatures 1 and 2.
 > The timeline is 2, 4, 1. In slot 1, Creature 2 casts **Heavy Strike** on Creature 4: `Damage 3`, and
@@ -874,7 +881,7 @@ writing around it. Each one is faithful to the engine; each one is longer than a
    wrong, and it is the part that cannot be moved onto the card.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
-   may take fewer) are deliberately not printed on any of the 36 cards because they are true of all of them.
+   may take fewer) are deliberately not printed on any of the 45 cards because they are true of all of them.
    The card is missing the two rules a new player most needs.
 4. **The Duration** ([6.5](#65-the-first-countdown-after-an-application-does-not-count)). The rule the engine
    states is "the first countdown after an application does not count", which is a mechanism. What a Player
@@ -911,7 +918,10 @@ traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is che
 checks out.** On 2026-10-02 §5.3, its examples, Part 1's "You commit before you see" and step 3 of Part 4
 were re-run against [ADR 0089](../adr/0089-pick-packages-face-down-and-reveal-them-together.md): a pick is
 face down, and every pick of a Round is bought at the Purchase reveal. The row it replaces, a purchase public
-the moment it happens, is gone from the engine and from the specification.
+the moment it happens, is gone from the engine and from the specification. On 2026-10-04 every Spell and
+Tier named in a worked example, and every count of the catalogue, was re-read against `data/Spells/` and
+`data/Tiers/` at content `e6f72578`; §5.5's example moved from Protective Slam, which no longer touches
+initiative, to Frostbite.
 
 | This book | The specification |
 | --- | --- |
