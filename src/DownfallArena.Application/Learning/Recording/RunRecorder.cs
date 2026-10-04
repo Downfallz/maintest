@@ -26,9 +26,7 @@ namespace DownfallArena.Application.Learning.Recording;
 public sealed class RunRecorder(
     IArtifactWriter writer,
     RunStamp stamp,
-    ObservationBuilder observations,
-    ActionEncoder actions,
-    CandidateTerms terms,
+    StepEncoding encoding,
     TimeProvider timeProvider,
     MatchTraceRecorder? traces = null,
     int traceLimit = int.MaxValue) : IMatchRecorder
@@ -118,7 +116,7 @@ public sealed class RunRecorder(
             _steps[matchId] = steps;
         }
 
-        return new RecordingAgent(agent, observations, actions, terms, steps, deciding);
+        return new RecordingAgent(agent, encoding.Observations, encoding.Actions, encoding.Terms, steps, deciding);
     }
 
     public async Task MatchPlayedAsync(MatchId matchId, int seed, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
@@ -161,9 +159,9 @@ public sealed class RunRecorder(
             {
                 Stamp = Stamp,
                 CreatedAt = _createdAt,
-                SchemaId = observations.Schema.Id,
-                SchemaVersion = observations.Schema.Version,
-                FeatureNames = observations.Schema.FeatureNames,
+                SchemaId = encoding.Observations.Schema.Id,
+                SchemaVersion = encoding.Observations.Schema.Version,
+                FeatureNames = encoding.Observations.Schema.FeatureNames,
                 CandidateTermNames = CandidateTerms.Names,
                 Matches = Matches,
                 Steps = Steps,

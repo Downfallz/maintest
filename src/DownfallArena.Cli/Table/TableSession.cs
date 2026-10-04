@@ -26,13 +26,12 @@ internal sealed class TableSession : IDisposable
     private readonly Action _forget;
     private readonly TaskCompletionSource _begin;
 
-    private TableSession(MatchId matchId, RuleSet rules, SeatAgent player1, SeatAgent player2, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
+    private TableSession(MatchId matchId, RuleSet rules, (SeatAgent Player1, SeatAgent Player2) seats, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
     {
         _begin = begin;
         MatchId = matchId;
         Rules = rules;
-        Player1 = player1;
-        Player2 = player2;
+        (Player1, Player2) = seats;
         Queries = handlers.Queries;
         Concede = handlers.Concede;
         Gate = handlers.Gate;
@@ -153,8 +152,7 @@ internal sealed class TableSession : IDisposable
         return new TableSession(
             matchId,
             rules,
-            player1,
-            player2,
+            (player1, player2),
             new TableHandlers(queries, concede, gate),
             outcome,
             () =>

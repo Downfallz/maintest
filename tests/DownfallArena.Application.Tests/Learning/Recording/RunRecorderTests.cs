@@ -214,7 +214,7 @@ public sealed class RunRecorderTests
     }
 
     private static RunRecorder Recorder(MemoryArtifactWriter writer, MatchTraceRecorder? traces, int traceLimit = int.MaxValue) =>
-        new(writer, Stamp, new ObservationBuilder(Schema), new ActionEncoder(Schema), new CandidateTerms(TestContent.Resources, Rules), new FixedTimeProvider(FixedTimeProvider.Default), traces, traceLimit);
+        new(writer, Stamp, StepEncoding.For(Schema, TestContent.Resources, Rules), new FixedTimeProvider(FixedTimeProvider.Default), traces, traceLimit);
 
     private static SimulationScenario Scenario(int matches) => new()
     {

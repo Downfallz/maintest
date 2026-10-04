@@ -101,9 +101,7 @@ public sealed class ViewerSamplesTests
         var recorder = new RunRecorder(
             new FileArtifactWriter(runDirectory),
             RunStamp.Create(new EngineVersion("abc123def456", false), resources, rules, schema, "Random", "Random", 1),
-            new ObservationBuilder(schema),
-            new ActionEncoder(schema),
-            new CandidateTerms(resources, rules),
+            StepEncoding.For(schema, resources, rules),
             TimeProvider.System,
             provider.GetRequiredService<MatchTraceRecorder>());
         var roster = Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize).ToList();

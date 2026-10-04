@@ -123,6 +123,9 @@ jobs:
       # same room. ADR 0054 took that trade explicitly when it took leaving the loopback address, and named the
       # fence it keeps instead: a seat token on every route, held by `TableApiTests`. Scoped to the one file
       # that writes a prefix; anything else in this repository that reaches for `http://` still gets the rule.
+      # The pattern starts at `**/` because the scanner for .NET analyses each project as a module and matches
+      # a file's path from its project's folder: written from the repository root it matched nothing, and the
+      # two issues stayed open on `main` while every pull request, which reads only its diff, was green.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -140,7 +143,7 @@ jobs:
           /d:sonar.issue.ignore.multicriteria.e1.ruleKey="python:S1244"
           /d:sonar.issue.ignore.multicriteria.e1.resourceKey="learning/tests/**/*.py"
           /d:sonar.issue.ignore.multicriteria.e2.ruleKey="csharpsquid:S5332"
-          /d:sonar.issue.ignore.multicriteria.e2.resourceKey="src/DownfallArena.Cli/Hosting/HttpHost.cs"
+          /d:sonar.issue.ignore.multicriteria.e2.resourceKey="**/Hosting/HttpHost.cs"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release

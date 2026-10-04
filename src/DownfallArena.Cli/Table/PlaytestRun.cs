@@ -186,9 +186,7 @@ internal sealed class PlaytestRun
         var recorder = new RunRecorder(
             staged ?? place.Writer,
             stamp,
-            new ObservationBuilder(schema),
-            new ActionEncoder(schema),
-            new CandidateTerms(setup.Resources, setup.Rules),
+            StepEncoding.For(schema, setup.Resources, setup.Rules),
             clock,
             events,
             traceLimit: 1);
