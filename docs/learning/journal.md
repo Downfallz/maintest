@@ -26,15 +26,21 @@ first.
   | Night Raid 3 / 1 / 2 | | 30 | 594 |
   | Night Raid 2 / 1 / 1 | | 19 | 587 |
   | Night Raid 1 / 2 / 1 | | 52 | 584 |
-  | **Night Raid 2 / 2 / 2 (kept)** | | **169** (821 energy drained) | 538 |
+  | Night Raid 2 / 2 / 2 | | 169 (821 energy drained) | 538 |
+  | **Night Raid 2 / 2 / 3 (kept)** | | **102** (547 drained) | 537 |
+  | Night Raid 2 / 2 / 2, two targets | | 78 (268 drained) | 564 |
+
+  The owner asked whether a raid cast every round could lock a whole team, as Soul Devourer did one creature
+  (ADR 0093). It could: at a cost of 2, the round's income, the enemy team's fizzles went from 1363 to 1742.
+  At 3 they are 1617, at 2 targets 1497. It costs 3, as Soul Devourer does, and its keep says why.
 
   Assassinate and Fan of Knives were cast but would have been a fourth stun and a second Toxic Waves. A
   support spell beside Mortal Wound and Momentum is never the best single action, which is what the agents
   read, so only a shape with enough of a hit or a drain that locks (ADR 0093) is ever declared. Night Raid
-  at 2 / 2 / 2 is the one team-wide drain in the catalogue; it moved the forced Deathstalker path +0.019 ±
-  0.010 against Death Squad, the only shape that moved it at all. It takes Death Squad's place in the
-  package and the talent tree under a new id, `spell:night_raid:v1`; its knobs are the cost (1 to 3), the
-  damage (1 to 3) and the drain (1 to 2, never more than a round's income). Content `8c056bc0`, benchmark digest
+  is the one team-wide drain in the catalogue; at 2 / 2 / 3 it moves the forced Deathstalker path +0.013 ±
+  0.009 against Death Squad. It takes Death Squad's place in the
+  package and the talent tree under a new id, `spell:night_raid:v1`; its knobs are the cost (3 to 4), the
+  damage (1 to 3) and the drain (1 to 2, never more than a round's income). Content `5708132d`, benchmark digest
   regenerated.
 
 ## 2026-10-04. Six tier-3 spells raised by hand

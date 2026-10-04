@@ -566,15 +566,16 @@
     "spell:night_raid": {
       "name": "Night Raid",
       "class": "Assassin",
-      "intent": "The Deathstalker's raid: a light cut on up to three enemies that takes two energy from each, the only drain in the game that reaches a whole team. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
+      "intent": "The Deathstalker's raid: a light cut on up to three enemies that takes two energy from each, for three, the only drain in the game that reaches a whole team. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
       "keep": [
         "Reaches up to three enemies: the only team-wide drain",
         "Takes energy and a little health, never a big hit: Mortal Wound is the package's finisher",
-        "The drain stays at or under what a creature earns in a round, so a raid slows a team without locking it for good"
+        "The drain stays at or under what a creature earns in a round, so a raid slows a team without locking it for good",
+        "It costs more than a round's income, so it cannot be cast every round on income alone: the lock Soul Devourer was, on a whole team"
       ],
-      "note": "Measured with the Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, as one spell next to Mortal Wound. A drain of 1 was never cast at any damage or cost tried; a drain of 2 is what the agents read, because ADR 0093 prices a drain that leaves an enemy unable to pay as the stun it is. At 2 damage, 2 drained and a cost of 2 it was declared 169 times and drained 821 points, Mortal Wound went from 589 declarations to 538, and the forced path read +0.019 ± 0.010 against Death Squad.",
+      "note": "Measured with the Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, as one spell next to Mortal Wound. A drain of 1 was never cast at any damage or cost tried; a drain of 2 is what the agents read, because ADR 0093 prices a drain that leaves an enemy unable to pay as the stun it is. At 2 damage, 2 drained and a cost of 2 it was declared 169 times and drained 821 points, Mortal Wound went from 589 declarations to 538, and the forced path read +0.019 ± 0.010 against Death Squad. At a cost of 2 it could be cast every round on income alone, and the enemy team's fizzles went from 1363 to 1742; at 3 it is declared 102 times, drains 547, the fizzles are 1617 and the path reads +0.013 ± 0.009, so it costs 3, as Soul Devourer does for the same reason.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
       ]
