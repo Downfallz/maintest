@@ -285,7 +285,7 @@
       "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 15, both at the same depth, `hateful_sacrifice` beats it at 11 on one, and `engulfing_flames` and `psycho_rush` tie it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
@@ -412,7 +412,7 @@
       "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it read 10.64; tune run 9 then took its critical chance 0.33 to 0.38 and #246 its damage 4 to 5, and it reads 13.80 today. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turned the spell into what was then a cheaper `meteor` (3 damage on three targets): the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -812,7 +812,7 @@
       "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
-        { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/effects/0/amount", "min": 4, "max": 8, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
@@ -857,12 +857,12 @@
       "keep": [
         "Hands on most of what it costs: the energy it gives stays below its price, so it is never free tempo",
         "Single target",
-        "It trades heal for energy point for point against `restorative_gush`, whatever the weights say the trade is worth"
+        "It heals as much as `restorative_gush` and adds energy on top, for one more energy: the owner's call on 2026-10-04, where it used to trade heal for energy point for point"
       ],
       "note": "**3.60 a round against a tier-3 band of 8 to 14, with a ceiling of 5.70** -- the lowest reading at tier 3 now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal went 3 to **4** then, the top of its box at the time, 2.80 to **3.60** at the price of the day; #246 has since raised it to **6**, the top of today's box, so against `restorative_gush`'s 7 the trade is 1 heal for 2 energy at one more energy to cast, still 3.60 a round, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 7, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },

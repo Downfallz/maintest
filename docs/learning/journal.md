@@ -4,6 +4,25 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-04. Six tier-3 spells raised by hand
+
+- **What the owner changed**, from the same usage readings: the tier-3 spells landed least on the exploring
+  run, and the packages Greedy does not buy.
+
+  | Spell | Package | Was | Now |
+  | --- | --- | --- | --- |
+  | Tornado | Ravager | Damage 5 to up to 3 | Damage 6 |
+  | Toxic Waves | Spiritcaller | Damage 3, bleed 1 for 1 round | Damage 4, bleed 2 for 2 rounds |
+  | Chain Slash | Warmonger | Damage 5 to up to 2 | Damage 7 |
+  | Restorative Burst | Spiritcaller | Heal 6, 2 energy | Heal 7, 2 energy |
+  | Crazed Specter | Lich | Damage 6 to up to 3 | Damage 8 |
+  | Revenant Guards | Lich | 33 % crit, defense +4 for 1 round | No crit, defense +4 for 2 rounds |
+
+  Four damage and heal knobs reached their old top and now reach the new value. Revenant Guards' crit did
+  nothing a defensive spell could use. Restorative Burst now heals as much as Restorative Gush and adds its
+  energy on top, for one more energy, so its keep says so instead of the point-for-point trade it was.
+  Content `fa149991`, benchmark digest regenerated.
+
 ## 2026-10-04. Seven spells the agents left on the shelf are raised by hand
 
 - **What the owner changed**, after the spell usage page (exploring run on content `2fe1a207`) listed the
