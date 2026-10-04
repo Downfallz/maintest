@@ -116,12 +116,12 @@ test('a spell card shows its critical bonus, collapsed in both libraries, and a 
 test('a spell shows its value a round next to its tier, and the reader says what the estimate leaves out', async ({ page }, info) => {
   await page.locator('#spells-view').click();
   await page.getByRole('searchbox', { name: 'Search spells', exact: true }).fill('protective slam');
-  await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 9\.0 a round · Tier 2 attacks \d+\.\d–9\.0$/);
+  await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 6\.3 a round · Tier 2 attacks \d+\.\d–\d+\.\d$/);
   await page.locator('.spell-tile').click();
   const reading = page.locator('.value-reading');
-  await expect(reading.locator('summary')).toHaveText('Value 9.0 a round · 13.5 a cast');
+  await expect(reading.locator('summary')).toHaveText('Value 6.3 a round · 9.4 a cast');
   await reading.locator('summary').click();
-  await expect(reading).toContainText('This one is the highest of that range.');
+  await expect(reading).toContainText('This one is inside that range.');
   await expect(reading).toContainText('Played matches decide balance');
   await fit(page); await shot(page, info, 'spell-value');
 });

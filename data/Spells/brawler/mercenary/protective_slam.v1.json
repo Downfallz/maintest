@@ -13,12 +13,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 4
+      "amount": 5
     },
     {
-      "kind": "InitiativeDebuff",
-      "amount": 2,
-      "durationRounds": 2
+      "kind": "Stun",
+      "durationRounds": 1
     }
   ],
   "enabled": true

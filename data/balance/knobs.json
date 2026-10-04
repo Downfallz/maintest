@@ -261,18 +261,16 @@
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
-      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
+      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy loses its next action -- which is the one protective thing that can be said to an enemy. It slowed its target until the owner made it a stun on 2026-10-04: the slow was never enough to be bought. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stun, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
-        "Protection through tempo, never armour: it always carries an initiative debuff",
+        "Protection through tempo, never armour: it always stuns what it hits, for one round",
         "Reads as a trade, not a nuke",
-        "The stagger is the point; the damage only has to be worth the activation"
+        "The stun is the point; the damage only has to be worth the activation"
       ],
-      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half.",
+      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half. On 2026-10-04 the owner revisited it: the second half is a one-round stun, read at the stun weight, and the debuff knobs went with the debuff.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -287,7 +285,7 @@
       "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 15, both at the same depth, `hateful_sacrifice` beats it at 11 on one, and `engulfing_flames` and `psycho_rush` tie it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
@@ -414,7 +412,7 @@
       "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it read 10.64; tune run 9 then took its critical chance 0.33 to 0.38 and #246 its damage 4 to 5, and it reads 13.80 today. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turned the spell into what was then a cheaper `meteor` (3 damage on three targets): the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
@@ -476,6 +474,7 @@
       ],
       "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). On #245's content the confirmation seeds' exploring run split the Parasite's casts 43/35 between its two spells; the stacking has not been measured on its own.",
       "knobs": [
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
@@ -495,7 +494,7 @@
       "note": "The reading that matters is not in the numbers: `ActionScorer`'s `HealTerms` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.35 against `lightning_bolt`'s 6.00 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.75 where play reads between 4.35 and 6.75.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 }
       ]
@@ -533,27 +532,26 @@
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
       ]
     },
-    "spell:shadowstep": {
-      "name": "Shadowstep",
+    "spell:ambush": {
+      "name": "Ambush",
       "class": "Assassin",
-      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A strike that leaves its caster moving first next round, because the branch is about getting there first rather than hitting hardest -- the one-creature version of what Death Squad gives the whole team at tier 3.",
+      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A heavy strike paid for in initiative: its caster is slowed next round. The Assassin is the creature with the most initiative to spend, so this is the one spell that spends it, beside the ones paid in health (Reckless Swing, Hateful Sacrifice) or in defense (Psycho Rush). It replaced Shadowstep, a hit that hastened its caster, on 2026-10-04: the owner found the haste uninteresting on the class that is fastest anyway. It hits for 8 at a 35 % crit: 7 at 50 % averaged the same and was strictly worse than Enraged Charge, 8 at 50 % was judged too strong for tier 2, and 6 left the bots casting it less than Shadowstep (journal, 2026-10-04).",
       "keep": [
-        "Tempo on the caster, never bleed: the heavy bleed is Mortal Wound's at tier 3",
-        "A tier-2 price, beside Enraged Charge rather than above it: part of its value is the initiative, not the hit"
+        "Paid in initiative, on the caster and for the next round: the price is the point of the spell, and a version without it is a plain hit",
+        "A tier-2 hit, beside Enraged Charge rather than above it: a bigger hit with a smaller crit, never a third of a creature's health in one cast before the crit",
+        "No bleed: the heavy bleed is Mortal Wound's at tier 3"
       ],
-      "note": "Authored at 7.8 a round in the check-knobs reading; the reading cannot see the energy Momentum feeds it, and no evaluation has measured it yet.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.7, "step": 0.05 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 2, "step": 1 }
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 7, "max": 8, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.45, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 3, "max": 5, "step": 1 }
       ]
     },
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more.",
+      "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more. The owner raised the hit from 2 to 3 on 2026-10-04: a match is nine or ten rounds, and the spell is cast for its energy more than its hit.",
       "keep": [
         "Free: it costs no energy, which is the whole point of the spell",
         "An attack on one enemy, and the energy lands on its caster in the same cast",
@@ -564,19 +562,21 @@
         { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
-    "spell:death_squad": {
-      "name": "Death Squad",
+    "spell:night_raid": {
+      "name": "Night Raid",
       "class": "Assassin",
-      "intent": "The whole squad moves first. One activation buys the team a round of haste, which is what legacy wrote and what ADR 0036 finally made sayable: the Assassin does not out-damage anyone, it gets there first.",
+      "intent": "The Deathstalker's raid: a light cut on up to three enemies that takes two energy from each, for three, the only drain in the game that reaches a whole team. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
       "keep": [
-        "Team-wide, or it is one creature's initiative and the Assassin has no reason to own it",
-        "One round: haste that lasts is a stat change, not a play",
-        "No damage and no energy: it buys tempo and only tempo"
+        "Reaches up to three enemies: the only team-wide drain",
+        "Takes energy and a little health, never a big hit: Mortal Wound is the package's finisher",
+        "The drain stays at or under what a creature earns in a round, so a raid slows a team without locking it for good",
+        "It costs more than a round's income, so it cannot be cast every round on income alone: the lock Soul Devourer was, on a whole team"
       ],
-      "note": "It was **cast 0 times in 400 matches** and its own bounds reached 1.20 a round against a tier-3 band of 8 to 14, so `check-knobs` reported it as a spell no move could make a choice -- correctly, because the numbers were never what was wrong with it. Legacy gave the team +10 initiative and +100% critical for a round; neither was expressible, so it was substituted into the tempo it was meant to *buy*, one energy an ally, and energy was 0.2 a point at the time (0.3 since ADR 0037, which would have read 0.90 -- the same dead spell). As the haste it always was it reads **12.60**. The critical half is still out and is a different shape, not a mirror (ADR 0036). Measured, it goes **0 declarations to 182**, of which 162 land, and applies 288 hastes. But greedy takes it to a **0.333 win share over 36 sides** while the exploring agent reads **0.463 over 54** -- the signature of a spell the scorer overvalues rather than a bad spell, the same shape `infectious_blast` showed from the other side. `mortal_wound` drops 104 declarations to 69 beside it, so the class is being crowded out of its own win condition by its support spell. At an amount of 1 it reads 6.30, below the band, and only 12 sides pick it up -- too few to read, which is why 2 ships. What this really names is the initiative weight: ADR 0032 swept 2.1 on content whose only initiative effect was a *debuff on one enemy*, and this entry asked whether the same price holds for a *buff on three allies*. ADR 0037 re-swept it over eleven points on content that carries this spell, and 2.1 won again -- so the price survives the buff, though it is a narrow minimum rather than a flat step and the question is answered rather than closed. There is no duration knob, because the first keep above says one round and a knob that can spend it is not a bound on the spell, it is a way out of its own identity. The amount stops at 3, whose corner reads **18.90** -- above the band on purpose, so the tuner has somewhere to go, and not a target: initiative is the dearest weight *per point* at 2.1 -- kill at 5.0 and stun at 3.0 are larger numbers, but neither multiplies an authored amount -- which makes this the easiest spell in the catalogue to over-tune.",
+      "note": "Measured with the Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, as one spell next to Mortal Wound. A drain of 1 was never cast at any damage or cost tried; a drain of 2 is what the agents read, because ADR 0093 prices a drain that leaves an enemy unable to pay as the stun it is. At 2 damage, 2 drained and a cost of 2 it was declared 169 times and drained 821 points, Mortal Wound went from 589 declarations to 538, and the forced path read +0.019 ± 0.010 against Death Squad. At a cost of 2 it could be cast every round on income alone, and the enemy team's fizzles went from 1363 to 1742; at 3 it is declared 102 times, drains 547, the fizzles are 1617 and the path reads +0.013 ± 0.009, so it costs 3, as Soul Devourer does for the same reason.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:mortal_wound": {
@@ -813,7 +813,7 @@
       "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
-        { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/effects/0/amount", "min": 4, "max": 9, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
@@ -858,12 +858,12 @@
       "keep": [
         "Hands on most of what it costs: the energy it gives stays below its price, so it is never free tempo",
         "Single target",
-        "It trades heal for energy point for point against `restorative_gush`, whatever the weights say the trade is worth"
+        "It heals more than `restorative_gush` and adds energy on top, for one more energy: the owner's call on 2026-10-04, where it used to trade heal for energy point for point"
       ],
       "note": "**3.60 a round against a tier-3 band of 8 to 14, with a ceiling of 5.70** -- the lowest reading at tier 3 now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal went 3 to **4** then, the top of its box at the time, 2.80 to **3.60** at the price of the day; #246 has since raised it to **6**, the top of today's box, so against `restorative_gush`'s 7 the trade is 1 heal for 2 energy at one more energy to cast, still 3.60 a round, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 9, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
@@ -913,7 +913,7 @@
     },
     "tier:assassin": {
       "name": "Assassin",
-      "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Shadowstep, a hit that hastes its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Ambush, a heavy strike that slows its caster next round. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
@@ -998,7 +998,7 @@
     },
     "tier:deathstalker": {
       "name": "Deathstalker",
-      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Assassin's close: the raid that drains a whole team and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"

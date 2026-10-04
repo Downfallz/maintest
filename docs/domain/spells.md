@@ -77,6 +77,9 @@ Each is a rule to decide, not an oversight:
   critical half is still out**, and is the one thing here that is not a mirror: `CriticalChance` belongs to a
   creature and a spell, is read once at resolution, and is a probability rather than a quantity. A condition
   that changes it is a new shape, and so a decision of its own.
+  **Death Squad is gone since 2026-10-04**: no agent cast the team haste in any shape tried, and the owner
+  replaced it with **Night Raid**, 2 damage and a drain of 2 on up to three enemies for 3 energy, the one
+  team-wide drain.
 - **Minions**, ~~and what spending one costs~~. Half recovered. The Necromancer banked minions and spent them
   on Revenant Guards and Crazed Specter; legacy carries `MinionsCost = 1` on both, and the port dropped it.
   There is still no minion **bank** — nothing counts them, and a cast never runs out — but what spending one
@@ -104,8 +107,8 @@ Two more places where the model forced a hand:
   effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. Momentum was first
   `EnergyRegeneration`, the kind ADR 0020 added and named it for: Wait's opposite trade, energy built over the
   next few rounds. At 0.3 a point that tops out around 2.40 an activation against an attack's 6 and up, and no
-  agent cast it. **Since ADR 0078 Momentum is a free strike that gathers energy**: no cost, Damage 2 on one
-  enemy and `EnergyGain` 2 on its caster, Wait with a blade in it. No spell carries `EnergyRegeneration`
+  agent cast it. **Since ADR 0078 Momentum is a free strike that gathers energy**: no cost, Damage 3 on one
+  enemy (2 until 2026-10-04) and `EnergyGain` 2 on its caster, Wait with a blade in it. No spell carries `EnergyRegeneration`
   now; the kind stays in the engine.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,

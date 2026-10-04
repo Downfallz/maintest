@@ -13,13 +13,13 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 3
+      "amount": 4
     }
   ],
   "casterEffects": [
     {
       "kind": "Heal",
-      "amount": 3
+      "amount": 4
     }
   ],
   "enabled": true

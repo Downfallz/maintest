@@ -1,10 +1,10 @@
 {
-  "id": "spell:shadowstep:v1",
-  "name": "Shadowstep",
+  "id": "spell:ambush:v1",
+  "name": "Ambush",
   "spellType": "Offensive",
   "creatureClass": "Assassin",
   "energyCost": 3,
-  "criticalChance": 0.5,
+  "criticalChance": 0.35,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -13,14 +13,14 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 5
+      "amount": 8
     }
   ],
   "enabled": true,
   "casterEffects": [
     {
-      "kind": "InitiativeBuff",
-      "amount": 2,
+      "kind": "InitiativeDebuff",
+      "amount": 5,
       "durationRounds": 1
     }
   ]
