@@ -686,7 +686,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return target.Energy.Value >= cheapest && target.Energy.Value - taken < cheapest;
     }
 
-    private static ScoreTerms ConditionTerms(
+    private ScoreTerms ConditionTerms(
         CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, Dictionary<CreatureId, int> remaining, IReadOnlyList<CreatureSnapshot> creatures)
     {
         var remainingHealth = remaining[target.Id];
@@ -706,17 +706,30 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
             InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
             InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },
-            // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
-            // debuff actually lets through, the way `DefensiveTerms` reads what a buff prevents (ADR 0035).
-            // That costs the bot more than precision. `DefensiveTerms` is the only term that reads the threat
-            // a creature faces, and only a DefenseBuff reaches it, so nothing here can see that lowering a
-            // defense raises what the next hit takes -- neither an enemy's, which is the point of the debuff,
-            // nor its own caster's, which is the cost of `psycho_rush`'s recoil. The price is right in shape
-            // and the decision it feeds is blind; a spell that needs that seen needs `DefensiveTerms` to read
-            // both kinds, which is a change to the one function every defensive spell is scored by.
-            DefenseDebuff debuff => ScoreTerms.Zero with { Defense = sign * debuff.Amount * rounds },
+            DefenseDebuff debuff => DefenseDebuffTerms(sign, target, debuff.Amount, rounds, creatures),
             _ => ScoreTerms.Zero,
         };
+    }
+
+    /// <summary>
+    /// What a defense debuff is worth: the damage it lets through, the mirror of what <see cref="DefensiveTerms"/>
+    /// reads a buff to prevent (ADR 0097). It takes off at most the defense the target holds, since total defense
+    /// floors at zero, and the difference is the threat on the target with that defense gone over the threat on
+    /// it now, over the debuff's rounds, shared across the target's living team the way a buff's is. A debuff on
+    /// a creature with no defense lets nothing through and is worth nothing; on the actor's own side the same
+    /// reading is the cost of `psycho_rush`'s recoil.
+    /// </summary>
+    private ScoreTerms DefenseDebuffTerms(int sign, CreatureSnapshot target, int amount, int rounds, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var removed = Math.Min(amount, target.TotalDefense.Value);
+        if (removed <= 0)
+        {
+            return ScoreTerms.Zero;
+        }
+
+        var team = creatures.Count(creature => creature.Owner == target.Owner && creature.IsAlive);
+        var letThrough = ThreatOn(target, creatures, -removed) - ThreatOn(target, creatures, 0);
+        return ScoreTerms.Zero with { Defense = sign * letThrough * rounds / Math.Max(1, team) };
     }
 
     /// <summary>
