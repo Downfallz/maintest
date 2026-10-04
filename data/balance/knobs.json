@@ -535,7 +535,7 @@
     "spell:shadowstep": {
       "name": "Shadowstep",
       "class": "Assassin",
-      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A strike that leaves its caster moving first next round, because the branch is about getting there first rather than hitting hardest -- the one-creature version of what Death Squad gives the whole team at tier 3.",
+      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A strike that leaves its caster moving first next round, because the branch is about getting there first rather than hitting hardest -- the one-creature version of what Death Squad gave the whole team at tier 3, until Night Raid replaced it on 2026-10-04.",
       "keep": [
         "Tempo on the caster, never bleed: the heavy bleed is Mortal Wound's at tier 3",
         "A tier-2 price, beside Enraged Charge rather than above it: part of its value is the initiative, not the hit"
@@ -563,19 +563,20 @@
         { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
-    "spell:death_squad": {
-      "name": "Death Squad",
+    "spell:night_raid": {
+      "name": "Night Raid",
       "class": "Assassin",
-      "intent": "The whole squad moves first. One activation buys the team a round of haste, which is what legacy wrote and what ADR 0036 finally made sayable: the Assassin does not out-damage anyone, it gets there first.",
+      "intent": "The Deathstalker's raid: a light cut on up to three enemies that takes two energy from each, the only drain in the game that reaches a whole team. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
       "keep": [
-        "Team-wide, or it is one creature's initiative and the Assassin has no reason to own it",
-        "One round: haste that lasts is a stat change, not a play",
-        "No damage and no energy: it buys tempo and only tempo"
+        "Reaches up to three enemies: the only team-wide drain",
+        "Takes energy and a little health, never a big hit: Mortal Wound is the package's finisher",
+        "The drain stays at or under what a creature earns in a round, so a raid slows a team without locking it for good"
       ],
-      "note": "It was **cast 0 times in 400 matches** and its own bounds reached 1.20 a round against a tier-3 band of 8 to 14, so `check-knobs` reported it as a spell no move could make a choice -- correctly, because the numbers were never what was wrong with it. Legacy gave the team +10 initiative and +100% critical for a round; neither was expressible, so it was substituted into the tempo it was meant to *buy*, one energy an ally, and energy was 0.2 a point at the time (0.3 since ADR 0037, which would have read 0.90 -- the same dead spell). As the haste it always was it reads **12.60**. The critical half is still out and is a different shape, not a mirror (ADR 0036). Measured, it goes **0 declarations to 182**, of which 162 land, and applies 288 hastes. But greedy takes it to a **0.333 win share over 36 sides** while the exploring agent reads **0.463 over 54** -- the signature of a spell the scorer overvalues rather than a bad spell, the same shape `infectious_blast` showed from the other side. `mortal_wound` drops 104 declarations to 69 beside it, so the class is being crowded out of its own win condition by its support spell. At an amount of 1 it reads 6.30, below the band, and only 12 sides pick it up -- too few to read, which is why 2 ships. What this really names is the initiative weight: ADR 0032 swept 2.1 on content whose only initiative effect was a *debuff on one enemy*, and this entry asked whether the same price holds for a *buff on three allies*. ADR 0037 re-swept it over eleven points on content that carries this spell, and 2.1 won again -- so the price survives the buff, though it is a narrow minimum rather than a flat step and the question is answered rather than closed. There is no duration knob, because the first keep above says one round and a knob that can spend it is not a bound on the spell, it is a way out of its own identity. The amount stops at 3, whose corner reads **18.90** -- above the band on purpose, so the tuner has somewhere to go, and not a target: initiative is the dearest weight *per point* at 2.1 -- kill at 5.0 and stun at 3.0 are larger numbers, but neither multiplies an authored amount -- which makes this the easiest spell in the catalogue to over-tune.",
+      "note": "Measured with the Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, as one spell next to Mortal Wound. A drain of 1 was never cast at any damage or cost tried; a drain of 2 is what the agents read, because ADR 0093 prices a drain that leaves an enemy unable to pay as the stun it is. At 2 damage, 2 drained and a cost of 2 it was declared 169 times and drained 821 points, Mortal Wound went from 589 declarations to 538, and the forced path read +0.019 ± 0.010 against Death Squad.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:mortal_wound": {
@@ -997,7 +998,7 @@
     },
     "tier:deathstalker": {
       "name": "Deathstalker",
-      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Assassin's close: the raid that drains a whole team and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"

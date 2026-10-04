@@ -4,6 +4,39 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-04. Death Squad is replaced by Night Raid
+
+- **Why.** Death Squad (+2 initiative to up to three allies for a round) was declared zero times with the
+  Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, and no reshaping of it
+  changed that (+3 for 1 energy: 27; two rounds: 8). The owner asked for a second spell the rest of the
+  catalogue does not already have.
+- **What was tried in its place**, the same forced path, declarations of the new spell next to Mortal Wound:
+
+  | Spell | Shape | Declared | Mortal Wound |
+  | --- | --- | --- | --- |
+  | Death Squad | +2 initiative, up to 3 allies | 0 | 589 |
+  | Assassinate | 6 damage and a stun, cost 4 | 48 | 542 |
+  | Fan of Knives | 2 damage and bleed 2 for 2 rounds, up to 3 | 143 | 473 |
+  | Smoke Screen | +3 defense and +2 initiative, up to 3 allies | 19 | 587 |
+  | Death Mark | 3 damage and -3 defense for 2 rounds | 18 | 582 |
+  | Smoke Bomb | -3 initiative, up to 3 enemies | 0 | 589 |
+  | Garrote | bleed 2 for 2 rounds and a drain of 2 | 24 | 583 |
+  | Night Raid 1 / 1 / 2 | damage / drain / cost, up to 3 enemies | 0 | 589 |
+  | Night Raid 2 / 1 / 2 | | 8 | 588 |
+  | Night Raid 3 / 1 / 2 | | 30 | 594 |
+  | Night Raid 2 / 1 / 1 | | 19 | 587 |
+  | Night Raid 1 / 2 / 1 | | 52 | 584 |
+  | **Night Raid 2 / 2 / 2 (kept)** | | **169** (821 energy drained) | 538 |
+
+  Assassinate and Fan of Knives were cast but would have been a fourth stun and a second Toxic Waves. A
+  support spell beside Mortal Wound and Momentum is never the best single action, which is what the agents
+  read, so only a shape with enough of a hit or a drain that locks (ADR 0093) is ever declared. Night Raid
+  at 2 / 2 / 2 is the one team-wide drain in the catalogue; it moved the forced Deathstalker path +0.019 ±
+  0.010 against Death Squad, the only shape that moved it at all. It takes Death Squad's place in the
+  package and the talent tree under a new id, `spell:night_raid:v1`; its knobs are the cost (1 to 3), the
+  damage (1 to 3) and the drain (1 to 2, never more than a round's income). Content `8c056bc0`, benchmark digest
+  regenerated.
+
 ## 2026-10-04. Six tier-3 spells raised by hand
 
 - **What the owner changed**, from the same usage readings: the tier-3 spells landed least on the exploring

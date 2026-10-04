@@ -1,0 +1,24 @@
+{
+  "id": "spell:night_raid:v1",
+  "name": "Night Raid",
+  "spellType": "Offensive",
+  "creatureClass": "Assassin",
+  "energyCost": 2,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "Multi",
+    "maxTargets": 3
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 2
+    },
+    {
+      "kind": "EnergyDrain",
+      "amount": 2
+    }
+  ],
+  "enabled": true
+}

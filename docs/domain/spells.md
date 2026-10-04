@@ -77,6 +77,8 @@ Each is a rule to decide, not an oversight:
   critical half is still out**, and is the one thing here that is not a mirror: `CriticalChance` belongs to a
   creature and a spell, is read once at resolution, and is a probability rather than a quantity. A condition
   that changes it is a new shape, and so a decision of its own.
+  **Death Squad is gone since 2026-10-04**: no agent cast the team haste in any shape tried, and the owner
+  replaced it with **Night Raid**, 2 damage and a drain of 2 on up to three enemies, the one team-wide drain.
 - **Minions**, ~~and what spending one costs~~. Half recovered. The Necromancer banked minions and spent them
   on Revenant Guards and Crazed Specter; legacy carries `MinionsCost = 1` on both, and the port dropped it.
   There is still no minion **bank** — nothing counts them, and a cast never runs out — but what spending one
