@@ -489,9 +489,9 @@ Choose targets to satisfy the card's targeting line:
 > **Slot 3, Creature 6.** Its card is **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
-> **Slot 4, Creature 3.** Player 1 declared **Meteor** (`Up to 3 enemies`, `Damage 2`) when three enemies
-> stood. Two stand now, so Meteor may name Creature 4, Creature 6, or both. Creature 3 may not switch to
-> another Spell.
+> **Slot 4, Creature 3.** Player 1 declared **Meteor** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
+> 1 round`) when three enemies stood. Two stand now, so Meteor may name Creature 4, Creature 6, or both, and
+> each one it names takes the Damage and a Bleed token. Creature 3 may not switch to another Spell.
 > **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
 > chooses nothing.
 > **Slot 6, Creature 2** acts the same way. Every slot has had its turn, and the Round goes on to Cleanup.
