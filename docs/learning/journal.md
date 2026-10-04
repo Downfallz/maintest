@@ -41,6 +41,10 @@ first.
   `tierUsageShare` on Deathstalker: Mortal Wound 35 landed casts to Death Squad's 1, read now on more casts,
   so the bound sits further over 0.8 (0.858). That is the dead spell the owner has set aside, more visible,
   and nothing these seven changes did to it.
+- **Protective Slam as a stun**, read the same way on content `85423648`: the exploring run landed it 351 times
+  where the slow landed 136, and Marauder's casts went from 214 to 486, with the Brute opener that leads to it
+  from 1158 to 1582. Greedy still never buys Marauder. The objective read 1.209, all of it Deathstalker again
+  (0.839).
 
 ## 2026-10-04. Momentum hits for 3
 
