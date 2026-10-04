@@ -40,7 +40,10 @@ first.
   is the one team-wide drain in the catalogue; at 2 / 2 / 3 it moves the forced Deathstalker path +0.013 ±
   0.009 against Death Squad. It takes Death Squad's place in the
   package and the talent tree under a new id, `spell:night_raid:v1`; its knobs are the cost (3 to 4), the
-  damage (1 to 3) and the drain (1 to 2, never more than a round's income). Content `5708132d`, benchmark digest
+  damage (1 to 3) and the drain (1 to 2, never more than a round's income).
+- **The tuner's reading** on content `5708132d`, the benchmark seeds: the objective stays at **0.000**. On the
+  exploring run Night Raid landed 11 times to Mortal Wound's 9, the first time Deathstalker's casts are split
+  at all (its usage bound 0.34); Greedy cast Mortal Wound 62 times and Night Raid none. Matches 10.8 rounds. Content `5708132d`, benchmark digest
   regenerated.
 
 ## 2026-10-04. Six tier-3 spells raised by hand
