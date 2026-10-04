@@ -269,6 +269,15 @@ when its feature schema still applies (numeric edits keep the schema; adding a s
 changes it, and the report then says the frozen policy could not run and only the baselines compare). The
 retrained policy is a third row, read against those two.
 
+## What the loop does not measure
+
+The loop runs in the engine's default format, and takes no format of its own (ADR 0097). A
+`FeatureSchema`'s id holds one Creature block per slot, so a policy is bound to its format by construction
+and none transfers; and every reading a turn produces -- the baselines, the frozen previous policy, the
+digest, the journal line -- would have to exist once per format. One ladder, one set of baselines. The
+formats that are not measured are played by the rule-based agents, which need no training: `greedy`,
+`heuristic`, `lookahead` and `minimax` read whatever board they are handed.
+
 ## What the content needs from us
 
 The current spells are placeholders (three base attacks, one class node each). The loop works on them, but

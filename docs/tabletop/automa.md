@@ -141,7 +141,7 @@ exactly one row, each with a verdict.
 - The **glossary entries** (`docs/domain/glossary.md`): Automa, Automa deck, Automa card, Selector, Priority
   chain, Purchase track, Automa tape. The repository's words are its ubiquitous language; a procedure with no
   word is a procedure three documents will name differently.
-- **ADR candidates**, numbered from 0096: the Automa is a seat and costs no fidelity; the deck names selectors
+- **ADR candidates**, numbered from the next free one: the Automa is a seat and costs no fidelity; the deck names selectors
   rather than Spells; where the file lives and what hashes it; whether the benchmark digest gains an Automa
   row.
 
@@ -243,7 +243,7 @@ three.
 
 ## Decisions to make before phase C
 
-Four, each the maintainer's, each an ADR from 0096.
+Four, each the maintainer's, each its own ADR.
 
 1. **The word.** `Automa` is the hobby's term and is unambiguous in this repository, where `Agent` already
    means the code-side seat. The alternative is a name of our own. Everything downstream — glossary, file path,
