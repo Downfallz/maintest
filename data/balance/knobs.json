@@ -553,7 +553,7 @@
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more.",
+      "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more. The owner raised the hit from 2 to 3 on 2026-10-04: a match is nine or ten rounds, and the spell is cast for its energy more than its hit.",
       "keep": [
         "Free: it costs no energy, which is the whole point of the spell",
         "An attack on one enemy, and the energy lands on its caster in the same cast",
