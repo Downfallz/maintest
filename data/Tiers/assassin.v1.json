@@ -7,7 +7,7 @@
   ],
   "spells": [
     "spell:momentum:v1",
-    "spell:shadowstep:v1"
+    "spell:ambush:v1"
   ],
   "initiativeBonus": 3
 }

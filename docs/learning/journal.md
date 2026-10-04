@@ -4,6 +4,209 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-04. Seven tier-3 spells raised again by hand
+
+- **What.** The owner's call, read off the tuner's spell usage on content `6d8838c0`:
+
+  | Spell | Was | Now |
+  | --- | --- | --- |
+  | Soul Devourer | 6 damage | 7 |
+  | Revenant Guards | +2 defense, permanent | +3 |
+  | Crazed Specter | 8 damage | 9 |
+  | Night Raid | 2 damage on each | 3 |
+  | Mortal Wound | 4 damage up front | 5 |
+  | Restorative Burst | heals 7 | 9 |
+  | Toxic Waves | bleed 2 a round for 2 rounds | 3 |
+
+  Crazed Specter's damage knob and Restorative Burst's heal knob had their tops raised to the new values, and
+  Restorative Burst's keep now says it heals more than `restorative_gush`, not as much. `check-knobs` finds no
+  new strictly better pair.
+- **The tuner's reading** on the benchmark seeds: the objective is back to **0.000**. The Ravager's
+  `tierWinSpread`, 0.189 on `6d8838c0`, reads 0.026 (Psycho Rush's sides won 0.78 of their matches, Tornado's 0.53). Every one of the
+  seven was declared more on the exploring run: Restorative Burst 1 to 18, Toxic Waves 24 to 74, Mortal Wound
+  12 to 31, Soul Devourer 16 to 25, Revenant Guards 12 to 24, Crazed Specter 20 to 29, Night Raid 16 to 18.
+  Greedy against itself cast Restorative Burst 142 times instead of 34; it still never casts Night Raid, and
+  seven spells stay at zero there as before. Matches 11.0 rounds on the exploring run, 10.6 mirrored.
+- **Content `e6f72578`**, benchmark digest regenerated.
+
+## 2026-10-04. Shadowstep is replaced by Ambush
+
+- **Why.** Shadowstep (5 damage, +2 initiative on its caster for a round) was cast, but the owner found the
+  haste uninteresting on the Assassin, which is the fastest creature anyway. Ambush spends that initiative
+  instead: a heavy hit, and its caster is slowed next round. It is the one spell paid for in initiative,
+  beside the ones paid in health (Reckless Swing, Hateful Sacrifice) or in defense (Psycho Rush).
+- **What was tried**, the Assassin line forced against Greedy on the 400 confirmation seeds; declarations
+  count both sides, since Greedy buys the Assassin too:
+
+  | Spell | Shape | Declared | Mortal Wound | Rounds |
+  | --- | --- | --- | --- | --- |
+  | Shadowstep | 5 damage, crit 0.5, +2 initiative, cost 3 | 360 | 537 | 10.5 |
+  | Ambush | 8 damage, crit 0.5, -5 initiative, cost 3 | 887 | 395 | 10.3 |
+  | Ambush | 7 damage, crit 0.5, -5 initiative, cost 3 | 534 | 310 | 10.3 |
+  | Ambush | 7 damage, crit 0.35, -5 initiative, cost 3 | 260 | 341 | 10.3 |
+  | Ambush | 6 damage, crit 0.5, -5 initiative, cost 3 | 219 | 222 | 10.4 |
+  | **Ambush (kept)** | **8 damage, crit 0.35, -5 initiative, cost 3** | **578** | 349 | 10.4 |
+  | Ambush | 6 damage, crit 0.5, -5 initiative, cost 2 | 884 | 229 | 10.1 |
+  | Lethal Lunge | 12 damage, crit 0.5, stuns its caster, cost 3 | 1376 | 67 | 9.6 |
+  | Vanish | 4 damage, crit 0.5, +6 defense on its caster, cost 2 | 2199 | 689 | 11.1 |
+
+  The owner judged 8 at a 0.5 crit too strong for tier 2. Lethal Lunge made Greedy take the Assassin every
+  match and emptied Mortal Wound, and a caster just out of a stun is immune to its own (ADR 0072), so it
+  would cost nothing then. Vanish is Shield Bash made shorter. 7 at 0.5 was cast more than Shadowstep, but
+  `check-knobs` read it as strictly worse than Enraged Charge (7 damage, crit 0.8, cost 3, no price), which
+  any creature can buy at tier 2. 8 at 0.35 averages the same hit, is no longer dominated, and is cast as
+  much; at a cost of 2 Ambush is paid from a round's income and Momentum fell from 594 declarations to 104.
+  `check-knobs` reads Ambush at 3.53 a round at the top of its bounds, because it prices the initiative it
+  costs; the agents, which play the turn order out (ADR 0088), cast it anyway.
+- **Content `6d8838c0`**, benchmark digest regenerated. It takes Shadowstep's place in the package under a
+  new id, `spell:ambush:v1`; its knobs are the cost (3 to 4), the damage (7 to 8), the crit (0.3 to 0.45)
+  and the initiative it costs (3 to 5).
+- **The tuner's reading** on content `6d8838c0`, the benchmark seeds: on the exploring run Ambush was declared
+  125 times to Shadowstep's 64 and its sides won 0.605 to 0.476; on the mirrored Greedy run 143 to 101, winning
+  0.408 to 0.290. The objective rose from 0.000 to **0.148**, and not on the Assassin: `tierWinSpread` reads
+  0.189 against its 0.15, on the Ravager, where Psycho Rush's sides won 0.885 of 52 and Tornado's 0.500 of 34.
+  The same pair read 0.101 on `5708132d` (0.821 of 56 against 0.542 of 48), so the Ravager was already the
+  package nearest the bound. Matches 10.8 rounds.
+
+## 2026-10-04. Death Squad is replaced by Night Raid
+
+- **Why.** Death Squad (+2 initiative to up to three allies for a round) was declared zero times with the
+  Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, and no reshaping of it
+  changed that (+3 for 1 energy: 27; two rounds: 8). The owner asked for a second spell the rest of the
+  catalogue does not already have.
+- **What was tried in its place**, the same forced path, declarations of the new spell next to Mortal Wound:
+
+  | Spell | Shape | Declared | Mortal Wound |
+  | --- | --- | --- | --- |
+  | Death Squad | +2 initiative, up to 3 allies | 0 | 589 |
+  | Assassinate | 6 damage and a stun, cost 4 | 48 | 542 |
+  | Fan of Knives | 2 damage and bleed 2 for 2 rounds, up to 3 | 143 | 473 |
+  | Smoke Screen | +3 defense and +2 initiative, up to 3 allies | 19 | 587 |
+  | Death Mark | 3 damage and -3 defense for 2 rounds | 18 | 582 |
+  | Smoke Bomb | -3 initiative, up to 3 enemies | 0 | 589 |
+  | Garrote | bleed 2 for 2 rounds and a drain of 2 | 24 | 583 |
+  | Night Raid 1 / 1 / 2 | damage / drain / cost, up to 3 enemies | 0 | 589 |
+  | Night Raid 2 / 1 / 2 | | 8 | 588 |
+  | Night Raid 3 / 1 / 2 | | 30 | 594 |
+  | Night Raid 2 / 1 / 1 | | 19 | 587 |
+  | Night Raid 1 / 2 / 1 | | 52 | 584 |
+  | Night Raid 2 / 2 / 2 | | 169 (821 energy drained) | 538 |
+  | **Night Raid 2 / 2 / 3 (kept)** | | **102** (547 drained) | 537 |
+  | Night Raid 2 / 2 / 2, two targets | | 78 (268 drained) | 564 |
+
+  The owner asked whether a raid cast every round could lock a whole team, as Soul Devourer did one creature
+  (ADR 0093). It could: at a cost of 2, the round's income, the enemy team's fizzles went from 1363 to 1742.
+  At 3 they are 1617, at 2 targets 1497. It costs 3, as Soul Devourer does, and its keep says why.
+
+  Assassinate and Fan of Knives were cast but would have been a fourth stun and a second Toxic Waves. A
+  support spell beside Mortal Wound and Momentum is never the best single action, which is what the agents
+  read, so only a shape with enough of a hit or a drain that locks (ADR 0093) is ever declared. Night Raid
+  is the one team-wide drain in the catalogue; at 2 / 2 / 3 it moves the forced Deathstalker path +0.013 ±
+  0.009 against Death Squad. It takes Death Squad's place in the
+  package and the talent tree under a new id, `spell:night_raid:v1`; its knobs are the cost (3 to 4), the
+  damage (1 to 3) and the drain (1 to 2, never more than a round's income).
+- **The tuner's reading** on content `5708132d`, the benchmark seeds: the objective stays at **0.000**. On the
+  exploring run Night Raid landed 11 times to Mortal Wound's 9, the first time Deathstalker's casts are split
+  at all (its usage bound 0.34); Greedy cast Mortal Wound 62 times and Night Raid none. Matches 10.8 rounds. Content `5708132d`, benchmark digest
+  regenerated.
+
+## 2026-10-04. Six tier-3 spells raised by hand
+
+- **What the owner changed**, from the same usage readings: the tier-3 spells landed least on the exploring
+  run, and the packages Greedy does not buy.
+
+  | Spell | Package | Was | Now |
+  | --- | --- | --- | --- |
+  | Tornado | Ravager | Damage 5 to up to 3 | Damage 6 |
+  | Toxic Waves | Spiritcaller | Damage 3, bleed 1 for 1 round | Damage 4, bleed 2 for 2 rounds |
+  | Chain Slash | Warmonger | Damage 5 to up to 2 | Damage 7 |
+  | Restorative Burst | Spiritcaller | Heal 6, 2 energy | Heal 7, 2 energy |
+  | Crazed Specter | Lich | Damage 6 to up to 3 | Damage 8 |
+  | Revenant Guards | Lich | 33 % crit, defense +4 for 1 round | No crit, defense +4 for 2 rounds |
+
+  Four damage and heal knobs reached their old top and now reach the new value. Revenant Guards' crit did
+  nothing a defensive spell could use. Restorative Burst now heals as much as Restorative Gush and adds its
+  energy on top, for one more energy, so its keep says so instead of the point-for-point trade it was.
+  Content `fa149991`, benchmark digest regenerated.
+- **What the agents read**, the tuner's reading on the benchmark seeds, landed casts on the exploring run (and
+  in the Greedy mirror), before and after:
+
+  | Spell | Package | Exploring | Share of its package | Greedy |
+  | --- | --- | --- | --- | --- |
+  | Tornado | Ravager | 23 → 55 | 18 % → 42 % | 0 → 1 |
+  | Toxic Waves | Spiritcaller | 3 → 22 | 27 % → 92 % | 49 → 136 |
+  | Restorative Burst | Spiritcaller | 8 → 2 | 73 % → 8 % | 70 → 28 |
+  | Chain Slash | Warmonger | 28 → 87 | 32 % → 69 % | 0 → 0 |
+  | Crazed Specter | Lich | 15 → 26 | 50 % → 60 % | 4 → 2 |
+  | Revenant Guards | Lich | 15 → 17 | 50 % → 40 % | 2 → 0 |
+
+  The objective reads **0.000**, every measurement inside its band, for the first time since ADR 0095. Some of
+  that is Deathstalker bought less (12 landed casts, so its usage bound falls to 0.65), not Death Squad
+  cast more: it is still the spell nobody casts. Ravager is split instead of crushed (Psycho Rush 82 % to
+  58 %), but Spiritcaller tipped the other way, Toxic Waves taking 92 % of its few casts. Matches are
+  shorter, 11.6 to 10.9 rounds on the exploring run, still inside the 10-15 band.
+
+## 2026-10-04. Seven spells the agents left on the shelf are raised by hand
+
+- **What the owner changed**, after the spell usage page (exploring run on content `2fe1a207`) listed the
+  spells that are barely cast or sit in packages Greedy does not buy:
+
+  | Spell | Package | Was | Now |
+  | --- | --- | --- | --- |
+  | Reckless Swing | Berserker | Damage 5 | Damage 6 |
+  | Meteor | Elementalist | Bleed 1/round | Bleed 2/round |
+  | Frostbite | Elementalist | Initiative -2 | Initiative -3 |
+  | Protective Slam | Marauder | Damage 4, initiative -2 | Damage 5, stuns 1 round |
+  | Extort | Marauder | Damage 3 | Damage 4 |
+  | Parasite Jab | Parasite | Damage 3, heals its caster 3 | Damage 4, heals 4 |
+  | Latch | Parasite | Bleed and regeneration | Plus an instant 1 damage |
+
+  Protective Slam first went to initiative -3, then the owner made it a one-round stun instead; its two
+  initiative knobs are gone. Every other value sits inside its knob but two: Parasite Jab's damage knob now reaches 4, and Latch's new damage
+  is a knob of 1 to 2. On that run Greedy bought Marauder zero times, and Extort, Meteor and Parasite Jab were
+  among the least cast spells of their tier. Content `85423648`, benchmark digest regenerated; the reading below is on `b914e82a`, with the slow.
+- **What the agents read**, the tuner's own reading (`score-content` on the benchmark seeds) before and after,
+  landed casts on the exploring run and in the Greedy mirror:
+
+  | Spell | Exploring | Greedy |
+  | --- | --- | --- |
+  | Reckless Swing | 118 → 176 | 10 → 19 |
+  | Meteor | 41 → 77 | 1 → 51 |
+  | Frostbite | 50 → 60 | 188 → 630 |
+  | Protective Slam | 81 → 136 | 0 → 0 |
+  | Extort | 47 → 78 | 0 → 0 |
+  | Parasite Jab | 57 → 185 | 20 → 90 |
+  | Latch | 90 → 89 | 41 → 36 |
+
+  Every package touched is cast more on the exploring run, and Elementalist and Parasite are bought far more
+  by Greedy; Marauder still never is. The objective went from 0.017 to 2.749, all of it but 0.03 from
+  `tierUsageShare` on Deathstalker: Mortal Wound 35 landed casts to Death Squad's 1, read now on more casts,
+  so the bound sits further over 0.8 (0.858). That is the dead spell the owner has set aside, more visible,
+  and nothing these seven changes did to it.
+- **Protective Slam as a stun**, read the same way on content `85423648`: the exploring run landed it 351 times
+  where the slow landed 136, and Marauder's casts went from 214 to 486, with the Brute opener that leads to it
+  from 1158 to 1582. Greedy still never buys Marauder. The objective read 1.209, all of it Deathstalker again
+  (0.839).
+
+## 2026-10-04. Momentum hits for 3
+
+- **What the owner changed.** Momentum deals 3 instead of 2, the top of its own knob; it still costs nothing
+  and gives its caster 2 energy. A match is nine or ten rounds, and the spell is cast for its energy more than
+  for its hit.
+- **What the agents read**, Greedy with the Assassin line forced on the 400 confirmation seeds against Greedy
+  (forced Prowler alone as the baseline, as for Plague Doctor on 2026-10-03):
+
+  | | Damage 2 | Damage 3 |
+  | --- | --- | --- |
+  | Assassin against Prowler alone | +0.036 ± 0.033 | -0.044 ± 0.025 |
+  | Momentum intents, Prowler arm | 272 (240 sides) | 433 (389 sides) |
+  | Average rounds, Prowler arm | 10.48 | 10.48 |
+
+  Not a strong package made stronger: Greedy now buys the Assassin line on its own often enough that forcing
+  it no longer gains anything, and the match length does not move. Deathstalker read -0.013 ± 0.009 and
+  Death Squad was declared zero times, as the owner found at the table; it is the next thing to look at.
+  Content `2fe1a207`, benchmark digest regenerated.
+
 ## 2026-10-03. The agents price energy by the spell it unlocks (ADR 0096); Plague Doctor is rebuilt on it
 
 - **Tuning pass 23**, the first on ADR 0095's objective (`main` at `9b414fa`, 3 rounds of 4), read 3.14 to

@@ -4,7 +4,7 @@
   "spellType": "Defensive",
   "creatureClass": "Necromancer",
   "energyCost": 3,
-  "criticalChance": 0.33,
+  "criticalChance": 0,
   "targeting": {
     "origin": "Ally",
     "scope": "Multi",
@@ -13,13 +13,13 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 2,
+      "amount": 3,
       "permanent": true
     },
     {
       "kind": "DefenseBuff",
       "amount": 4,
-      "durationRounds": 1
+      "durationRounds": 2
     }
   ],
   "enabled": true,
