@@ -147,7 +147,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 | Parasite Jab | Leech | Offensive | 2 | 0.5 | Enemy | Damage 2 |
 | Hateful Sacrifice | Leech | Offensive | 3 | 0.5 | Enemy | Damage 10 |
 | Soul Devourer | Leech | Offensive | 3 | — | Enemy | Damage 3 |
-| Momentum † | Assassin | Offensive | 0 | — | Enemy | Damage 3; caster: EnergyGain 2 |
+| Momentum † | Assassin | Offensive | 0 | — | Enemy | Damage 2; caster: EnergyGain 2 |
 | Death Squad | Assassin | Defensive | 2 | — | up to 3 allies | EnergyGain 1 |
 | Mortal Wound | Assassin | Offensive | 3 | 0.5 | Enemy | Damage 4, Bleed 4/r for 2r |
 | Noxious Cure | Trickster | Defensive | 2 | 0.33 | up to 3 allies | Heal 3 |
