@@ -13,8 +13,11 @@ hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md)
 ## Many tables, one host
 
 The host plays as many tables as an evening needs (ADR 0081). Open `/admin?token=<the operator token the
-console prints>` -- the admin panel -- to see them and to open more: choose who sits in each seat, read each
-seat's code to its player, and follow the pilot link to hand a seat over. The bots a seat is offered are the
+console prints>` -- the admin panel -- to see them and to open more: choose who sits in each seat and the
+format the table plays, read each seat's code to its player, and follow the pilot link to hand a seat over.
+The format is each table's own, so a 1v1 and a 3v3 run side by side on one host; the chooser opens on the
+host's own, which is what its `--rules` file and `--format` said, and the formats it offers come from the
+host rather than from the page. The bots a seat is offered are the
 ones `learning/seatable.json` puts forward, then every weights file under `learning/weights/`, read by the
 host so a new search is offered without a page change. The panel also lists every recorded session the store
 holds, whether or not this host still has its table, deletes one or several (a table still being played is

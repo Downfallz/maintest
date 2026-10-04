@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
 using DownfallArena.Application.Agents;
@@ -21,17 +22,19 @@ namespace DownfallArena.Cli.Table;
 /// built by the same code.
 /// </summary>
 /// <remarks>
-/// What is shared between tables is shared on purpose. The catalogue and the guide are built once from the
-/// resources and the rule set, because they are the same for every match this host plays and a tuning pass is
-/// a rebuild and a restart (ADR 0054). The store is one, and each table is one run under it. The trace
-/// recorder is the host's and keeps entries by match, so two tables reading their feeds read their own.
+/// What is shared between tables is shared on purpose. The catalogue and the guide are built from the
+/// resources and the rule set and kept per rule set, because a tuning pass is a rebuild and a restart
+/// (ADR 0054) while the format is a table's own: two tables of the same format share one catalogue, and a 2v2
+/// opened beside a 3v3 gets its own rather than the other's. The store is one, and each table is one run
+/// under it. The trace recorder is the host's and keeps entries by match, so two tables reading their feeds
+/// read their own.
 /// </remarks>
 internal sealed class TableComposer
 {
     private readonly IServiceProvider _services;
     private readonly RuleSet _rules;
-    private readonly CatalogueView _catalogue;
-    private readonly DecisionGuideProjection _guide;
+    private readonly ConcurrentDictionary<RuleSet, CatalogueView> _catalogues = new();
+    private readonly ConcurrentDictionary<RuleSet, DecisionGuideProjection> _guides = new();
     private readonly IArtifactStore? _store;
     private readonly TimeProvider _clock;
 
@@ -46,14 +49,37 @@ internal sealed class TableComposer
         _store = store;
         _clock = services.GetRequiredService<TimeProvider>();
 
-        // Built once, from the resources this host is playing: a card the page prints is the card the engine
-        // resolves, and a tuning pass is a rebuild and a restart rather than a change to the page (ADR 0054).
-        var resources = services.GetRequiredService<IGameResources>();
-        _catalogue = CatalogueProjection.Build(resources, rules);
-        _guide = new DecisionGuideProjection(resources, rules);
+        // The host's own format is built now, so the ordinary case costs nothing at the first opening: a card
+        // the page prints is the card the engine resolves, and a tuning pass is a rebuild and a restart rather
+        // than a change to the page (ADR 0054).
+        _ = Catalogue(rules);
     }
 
     public bool Records => _store is not null;
+
+    /// <summary>
+    /// The rule set this host opens a table on when the request names no format: the engine default, the file
+    /// <c>--rules</c> named, or either of them in the format <c>--format</c> named.
+    /// </summary>
+    public RuleSet Rules => _rules;
+
+    /// <summary>
+    /// The rule set a table plays: this host's, in the format the request asked for. Only the team size moves;
+    /// the energy, the schedule, the round cap and the critical multiplier stay the host's, so a format is a
+    /// choice about the match and never a second rule set to keep in agreement with this one.
+    /// </summary>
+    public RuleSet RulesFor(TableRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Format is { } format ? _rules.InFormat(format) : _rules;
+    }
+
+    /// <summary>The cards and the round shape of one rule set, built once per rule set this host plays.</summary>
+    private CatalogueView Catalogue(RuleSet rules) =>
+        _catalogues.GetOrAdd(rules, one => CatalogueProjection.Build(_services.GetRequiredService<IGameResources>(), one));
+
+    private DecisionGuideProjection Guide(RuleSet rules) =>
+        _guides.GetOrAdd(rules, one => new DecisionGuideProjection(_services.GetRequiredService<IGameResources>(), one));
 
     /// <summary>The bots the pilot is offered for a seat, in the order they are offered; empty offers only what the page knows.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
@@ -146,7 +172,10 @@ internal sealed class TableComposer
         if (rebuilding is not { } rebuild)
         {
             var opened = PlaytestRun.Open(store, id, setup, events, _clock);
-            await opened.StartAsync(_catalogue, cancellationToken);
+
+            // The catalogue of the rule set this table plays, so a 2v2 session is stamped with the game it
+            // played rather than with the host's default.
+            await opened.StartAsync(Catalogue(setup.Rules), cancellationToken);
             return opened;
         }
 
@@ -171,16 +200,21 @@ internal sealed class TableComposer
             var seed = request.Seed ?? throw new InvalidOperationException("A table is built with a seed.");
             var id = rebuilding?.Record.Id ?? PlaytestRun.NewId(_clock);
 
+            // Resolved once, and then every seat, the setup, the session and the page read the same one: a
+            // bot created against another rule set than the match plays would score a board that is not the
+            // board, and a rebuilt table has to come back in the format it was recorded in (ADR 0091).
+            var rules = RulesFor(request);
+
             // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
             // this host played before or beside it. A source shared across tables would make every recording
             // depend on the order the host's requests happened to arrive in.
-            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
-            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
+            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
+            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
             (SeatAgent Agent, TableSeat Seat) Of(PlayerSlot slot) => slot == PlayerSlot.Player1 ? seat1 : seat2;
-            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, agents, Source(seed, slot));
+            Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, rules, agents, Source(seed, slot));
 
-            var setup = new PlaytestSetup(resources, _rules, seed, Stamped(seat1, request.Player1, request), Stamped(seat2, request.Player2, request));
+            var setup = new PlaytestSetup(resources, rules, seed, Stamped(seat1, request.Player1, request), Stamped(seat2, request.Player2, request));
             var run = await OpenRunAsync(id, setup, events, rebuilding, cancellationToken);
 
             // A swap line is applied as the replay reaches it, through the pilot's own seating.
@@ -191,7 +225,7 @@ internal sealed class TableComposer
             // that was still waiting waits again, whatever handover the pilot had scheduled meanwhile.
             var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || !DecisionJournal.HoldsDecision(rebuilding.Value.Journal));
             var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits);
-            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
+            session = await TableSession.StartAsync(_services, rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,
@@ -204,7 +238,7 @@ internal sealed class TableComposer
 
             var seats = new[] { seat1.Seat, seat2.Seat };
             var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
-            var api = new TableApi(session, session.Queries, seats, _catalogue, events, run, pilot) { Guide = _guide, Agents = Agents };
+            var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents };
             var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
@@ -328,7 +362,7 @@ internal sealed class TableComposer
     /// of that name can sit here" rather than as a broken host: the match is fine and the next attempt is one
     /// line away.
     /// </remarks>
-    private Occupant? Seating(TableSeat seat, string wanted, TableRequest request, IAgentFactory agents, IRandomSource random)
+    private static Occupant? Seating(TableSeat seat, string wanted, TableRequest request, RuleSet rules, IAgentFactory agents, IRandomSource random)
     {
         if (string.Equals(wanted, TableRequest.Person, StringComparison.OrdinalIgnoreCase))
         {
@@ -344,7 +378,7 @@ internal sealed class TableComposer
             // does to the agents named at startup, so a seat taken mid-match is named the same way as one
             // seated at the start.
             var spec = agents.Resolve(AgentSpec.Parse(wanted));
-            return new Occupant(agents.Create(spec, _rules, random), spec.ToString());
+            return new Occupant(agents.Create(spec, rules, random), spec.ToString());
         }
         catch (Exception failure) when (failure is ArgumentException or IOException or JsonException or InvalidDataException)
         {
@@ -362,10 +396,11 @@ internal sealed class TableComposer
     private static string PersonName(TableRequest request) => request.Who is { Length: > 0 } who ? $"human:{who}" : "human";
 
     /// <param name="token">The token the seat had on an earlier host, for a table being rebuilt; a fresh one otherwise.</param>
-    private (SeatAgent Agent, TableSeat Seat) Seat(
+    private static (SeatAgent Agent, TableSeat Seat) Seat(
         PlayerSlot slot,
         AgentSpec? named,
         TableRequest request,
+        RuleSet rules,
         IAgentFactory agents,
         IRandomSource random,
         CancellationToken cancellation,
@@ -373,7 +408,7 @@ internal sealed class TableComposer
     {
         // A seat no agent was named for is a person's. Until a handover it is played by the understudy.
         var spec = named ?? Understudy;
-        var bot = new Occupant(agents.Create(spec, _rules, random), spec.ToString());
+        var bot = new Occupant(agents.Create(spec, rules, random), spec.ToString());
         if (named is not null)
         {
             return (new SeatAgent(bot), new TableSeat(slot, token ?? Token(), Person: null));

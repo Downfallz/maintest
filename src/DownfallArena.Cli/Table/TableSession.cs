@@ -26,10 +26,11 @@ internal sealed class TableSession : IDisposable
     private readonly Action _forget;
     private readonly TaskCompletionSource _begin;
 
-    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
+    private TableSession(MatchId matchId, RuleSet rules, SeatAgent player1, SeatAgent player2, TableHandlers handlers, Task<Result<MatchOutcome>> outcome, Action forget, TaskCompletionSource begin)
     {
         _begin = begin;
         MatchId = matchId;
+        Rules = rules;
         Player1 = player1;
         Player2 = player2;
         Queries = handlers.Queries;
@@ -40,6 +41,12 @@ internal sealed class TableSession : IDisposable
     }
 
     public MatchId MatchId { get; }
+
+    /// <summary>
+    /// The rule set this match is playing, the table's own rather than the host's: the format is chosen per
+    /// table (ADR 0081), so anything naming the game a table plays asks it here.
+    /// </summary>
+    public RuleSet Rules { get; }
 
     /// <summary>
     /// The read side to ask, and the only one a host may use: these go through the same lock as the driver's
@@ -145,6 +152,7 @@ internal sealed class TableSession : IDisposable
         var recorder = services.GetService<MatchTraceRecorder>();
         return new TableSession(
             matchId,
+            rules,
             player1,
             player2,
             new TableHandlers(queries, concede, gate),

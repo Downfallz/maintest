@@ -33,6 +33,50 @@ public sealed class CliOptionsTests
             .Message.ShouldContain("between 1 and 65535");
     }
 
+    [Theory]
+    [InlineData("3v3", 3)]
+    [InlineData("2v2", 2)]
+    [InlineData("1v1", 1)]
+    [InlineData("1", 1)]
+    public void A_command_plays_the_format_it_is_given(string text, int teamSize) =>
+        CliOptions.Parse(["play", "--format", text]).Format!.Value.TeamSize.ShouldBe(teamSize);
+
+    /// <summary>
+    /// The option absent is not 3v3: it is "play the rule set as it stands", which for a table is the file
+    /// <c>--rules</c> named. Every command line written before the option existed keeps its meaning.
+    /// </summary>
+    [Fact]
+    public void A_command_given_no_format_plays_the_rule_set_as_it_stands() =>
+        CliOptions.Parse(["play"]).Format.ShouldBeNull();
+
+    [Theory]
+    [InlineData("3v2")]
+    [InlineData("0v0")]
+    [InlineData("four")]
+    public void A_format_that_is_not_a_side_against_itself_is_refused_while_parsing(string text) =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--format", text]))
+            .Message.ShouldContain("not a match format");
+
+    /// <summary>
+    /// The digest is committed per content hash (ADR 0013, decision I), so a benchmark of another format would
+    /// be verified against 3v3's and read as an engine change. Refused by name rather than compared.
+    /// </summary>
+    [Fact]
+    public void The_benchmark_refuses_a_format_because_its_digest_is_per_content_hash() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["benchmark", "--format", "2v2"]))
+            .Message.ShouldContain("digest is committed per content hash");
+
+    [Fact]
+    public void The_studio_refuses_a_format_because_it_plays_no_match() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["studio", "--format", "2v2"]))
+            .Message.ShouldContain("plays no match of its own");
+
+    /// <summary>Practice supplies its own rules, and a format is one of them.</summary>
+    [Fact]
+    public void Practice_refuses_a_format_with_the_rest_of_what_it_supplies_itself() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--practice", "--format", "2v2"]))
+            .Message.ShouldContain("--practice");
+
     [Fact]
     public void An_unknown_option_names_itself()
     {

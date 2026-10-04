@@ -66,7 +66,10 @@ internal sealed record RuleSetFile
         ArgumentNullException.ThrowIfNull(rules);
         var where = path is { Length: > 0 } ? path : "the engine default, no --rules given";
         var cadence = rules.EvolutionInterval == 1 ? "every round" : $"every {rules.EvolutionInterval} rounds from {rules.FirstEvolutionRound}";
-        return $"Rules {rules.TeamSize} creatures, {rules.EnergyPerRound} energy, {rules.EvolutionPicksPerOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit ({where})";
+
+        // The usable picks, not the allowance: in 1v1 the allowance is two and one is all a side can take
+        // (ADR 0066), and a line that read "2 picks" of a game that gives one would be the wrong line.
+        return $"Rules {rules.Format}, {rules.EnergyPerRound} energy, {rules.EvolutionPicksUsableInAnOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit ({where})";
     }
 
     private static RuleSetFile Parse(string path)

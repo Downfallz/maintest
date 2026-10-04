@@ -76,7 +76,18 @@ public sealed class RuleSetFileTests : IDisposable
     {
         var described = RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 2), "tabletop.json");
 
-        described.ShouldBe("Rules 4 creatures, 3 energy, 1 picks every 2 rounds from 1, 12 rounds, x1.5 crit (tabletop.json)");
+        described.ShouldBe("Rules 4v4, 3 energy, 1 picks every 2 rounds from 1, 12 rounds, x1.5 crit (tabletop.json)");
+    }
+
+    /// <summary>
+    /// A side smaller than the allowance can only use as many picks as it has creatures (ADR 0066), so the
+    /// line prints the picks a player gets rather than the allowance a player is refused.
+    /// </summary>
+    [Fact]
+    public void A_one_against_one_says_the_one_pick_it_gives_rather_than_the_allowance()
+    {
+        RuleSetFile.Describe(RuleSet.Create(1, 2, 2, 12, 2.0, 1, 2), "solo.json")
+            .ShouldBe("Rules 1v1, 2 energy, 1 picks every 2 rounds from 1, 12 rounds, x2 crit (solo.json)");
     }
 
     /// <summary>A rule set that offers a pick every round says so in words rather than in an interval of 1.</summary>
@@ -84,7 +95,7 @@ public sealed class RuleSetFileTests : IDisposable
     public void A_rule_set_that_offers_every_round_says_every_round()
     {
         RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 1), "every.json")
-            .ShouldBe("Rules 4 creatures, 3 energy, 1 picks every round, 12 rounds, x1.5 crit (every.json)");
+            .ShouldBe("Rules 4v4, 3 energy, 1 picks every round, 12 rounds, x1.5 crit (every.json)");
     }
 
     /// <summary>Playing the default is allowed; not saying so is not.</summary>

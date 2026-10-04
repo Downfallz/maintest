@@ -1,6 +1,7 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Hosting;
+using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli;
 
@@ -104,6 +105,13 @@ internal sealed record CliOptions
     public int? Handover { get; init; }
 
     /// <summary>
+    /// How many creatures a side brings: <c>3v3</c>, <c>2v2</c>, <c>1v1</c>. None plays the rule set as it
+    /// stands -- the engine default, or what <c>--rules</c> named -- so every command line written before this
+    /// option existed plays the same game it did.
+    /// </summary>
+    public MatchFormat? Format { get; init; }
+
+    /// <summary>
     /// Where <c>studio --export</c> writes what the read-only routes answer, for a studio served without this
     /// host behind it (ADR 0023). Null serves the page instead.
     /// </summary>
@@ -117,7 +125,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -132,14 +140,16 @@ internal sealed record CliOptions
 
     private const string PlatformAuthOption = "--platform-auth";
 
+    private const string FormatOption = "--format";
+
     private static readonly string[] Known =
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who",
+        "--who", FormatOption,
     ];
 
-    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2"];
+    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption];
 
     /// <summary>What describes the table a host starts with, which a lobby host starts without.</summary>
     private static readonly string[] LobbyConflicts = [SeedOption, HandoverOption, "--p1", "--p2", "--who"];
@@ -170,6 +180,7 @@ internal sealed record CliOptions
             Player1Named = values.ContainsKey("--p1"),
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue(HandoverOption, out var handover) ? ParseHandover(handover) : null,
+            Format = values.TryGetValue(FormatOption, out var format) ? MatchFormat.Parse(format) : null,
             Rules = values.GetValueOrDefault("--rules"),
             Who = values.GetValueOrDefault("--who"),
             Recording = !flags.Contains("--no-record") && !flags.Contains(PracticeOption),
@@ -206,6 +217,19 @@ internal sealed record CliOptions
         if (flags.Contains(PlatformAuthOption) && command != "table")
         {
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        // The digest is committed per content hash and nothing else (ADR 0013, decision I), so a benchmark of
+        // another format would be checked against 3v3's digest and read as an engine change. Refused by name
+        // rather than compared: the detector is only worth having while it cannot cry wolf.
+        if (values.ContainsKey(FormatOption) && command is "benchmark")
+        {
+            return "'--format' is not for benchmark: the digest is committed per content hash, so every format would be verified against the same one. Measure a format with 'evaluate --format'.";
+        }
+
+        if (values.ContainsKey(FormatOption) && command is "studio")
+        {
+            return "'--format' is not for studio: the studio authors content and plays no match of its own.";
         }
 
         return flags.Contains("--no-record") && values.ContainsKey(RecordOption)

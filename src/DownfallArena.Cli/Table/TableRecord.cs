@@ -46,6 +46,15 @@ internal sealed record TableRecord
 
     public int? Handover { get; init; }
 
+    /// <summary>
+    /// The format the table <em>played</em> (<c>2v2</c>), which is the resolved one and not the one the request
+    /// named: a request that named none played the host's own, and recording that as nothing would rebuild the
+    /// table in whatever the host's default has become since. A rebuilt table has to come back in the format it
+    /// was recorded in, because the replay feeds it the decisions of a match with that many creatures
+    /// (ADR 0091). Null only in a record written before this field existed.
+    /// </summary>
+    public string? Format { get; init; }
+
     public required IReadOnlyList<RecordedSeat> Seats { get; init; }
 
     public required string PilotToken { get; init; }
@@ -67,6 +76,7 @@ internal sealed record TableRecord
             Player2 = request.Player2?.ToString(),
             Who = request.Who,
             Handover = request.Handover,
+            Format = table.Session.Rules.Format.ToString(),
             Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
             PilotToken = table.Pilot.Token,
             Status = Open,
@@ -75,7 +85,13 @@ internal sealed record TableRecord
 
     /// <summary>The request the table was composed from, to compose it again.</summary>
     public TableRequest Request() =>
-        new(Player1 is null ? null : Application.Agents.AgentSpec.Parse(Player1), Player2 is null ? null : Application.Agents.AgentSpec.Parse(Player2), Who, Handover, Seed);
+        new(
+            Player1 is null ? null : Application.Agents.AgentSpec.Parse(Player1),
+            Player2 is null ? null : Application.Agents.AgentSpec.Parse(Player2),
+            Who,
+            Handover,
+            Seed,
+            Domain.Matches.MatchFormat.TryParse(Format, out var format) ? format : null);
 }
 
 /// <summary>One seat as the record keeps it: its token, the code its person types, and whether there is one.</summary>

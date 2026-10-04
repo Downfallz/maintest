@@ -11,6 +11,10 @@
   <ItemGroup>
     <Content Include="..\..\viewer\index.html" Link="viewer\index.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\viewer\viewer.css" Link="viewer\viewer.css" CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- The artifacts the viewer ships as its own fixtures, so a contract test can hold the page against the
+         shapes it is expected to open. Their stamps are older than several renames, which is the point. -->
+    <Content Include="..\..\viewer\samples\*.json;..\..\viewer\samples\*.jsonl" Link="viewer\samples\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\index.html" Link="studio\index.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\studio.css" Link="studio\studio.css" CopyToOutputDirectory="PreserveNewest" />
     <!-- Every module beside the page, by pattern rather than by name: a list per file is a list that goes stale,

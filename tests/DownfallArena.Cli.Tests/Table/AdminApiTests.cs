@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -351,6 +352,91 @@ public sealed class AdminApiTests : IDisposable
         answer.Status.ShouldBe(201, Text(answer));
         return JsonDocument.Parse(Text(answer)).RootElement.GetProperty("id").GetString()!;
     }
+
+    /// <summary>
+    /// The formats a chooser offers come from the host, for the same reason the bots do: a page that listed
+    /// them itself would hold a rule about the game (ADR 0054). This host plays 2v2, so that is what its
+    /// chooser opens on.
+    /// </summary>
+    [Fact]
+    public async Task The_panel_is_told_which_formats_it_may_offer_and_which_one_this_host_plays()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null))).RootElement;
+
+        listed.GetProperty("format").GetString().ShouldBe("2v2", "the host's own rule set");
+        var offered = listed.GetProperty("formats").EnumerateArray()
+            .Select(format => (Value: format.GetProperty("value").GetString(), Picks: format.GetProperty("picks").GetInt32()))
+            .ToList();
+
+        // The picks each format leaves, not the allowance: this host allows one, so every format gives one.
+        offered.ShouldBe([("1v1", 1), ("2v2", 1), ("3v3", 1)]);
+    }
+
+    /// <summary>
+    /// A format is a table's, not a host's: the panel opens one per table (ADR 0081), and the host's own rule
+    /// set is only the default its chooser opens on.
+    /// </summary>
+    [Fact]
+    public async Task A_table_is_opened_in_the_format_it_was_asked_for()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", OneOnOne, OperatorToken, null))).RootElement;
+
+        opened.GetProperty("format").GetString().ShouldBe("1v1");
+
+        var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null))).RootElement;
+        listed.GetProperty("tables").EnumerateArray().Single().GetProperty("format").GetString().ShouldBe("1v1");
+        listed.GetProperty("format").GetString().ShouldBe("2v2", "the host's default is untouched by a table that asked for another format");
+    }
+
+    [Fact]
+    public async Task A_table_asked_for_in_no_format_plays_this_host_s_own()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", NoFormat, OperatorToken, null))).RootElement;
+
+        opened.GetProperty("format").GetString().ShouldBe("2v2");
+    }
+
+    [Fact]
+    public async Task A_format_that_is_not_a_side_against_itself_is_refused_with_the_name_that_was_typed()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        var answer = await admin.HandleAsync("POST", "/api/tables", Asymmetric, OperatorToken, null);
+
+        answer.Status.ShouldBe(400);
+        Text(answer).ShouldContain("3v2");
+    }
+
+    /// <summary>
+    /// A record keeps the format the table <em>played</em>, not the one the request named. A request naming
+    /// none played the host's own, and a record saying nothing would rebuild the table in whatever the host's
+    /// default has become since -- a roster of another size than the decisions being replayed into it
+    /// (ADR 0091).
+    /// </summary>
+    [Fact]
+    public async Task A_table_opened_in_no_particular_format_records_the_one_it_played()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", NoFormat, OperatorToken, null))).RootElement;
+        var id = opened.GetProperty("id").GetString().ShouldNotBeNull();
+
+        var record = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        record.Format.ShouldBe("2v2", "the host's own, resolved, rather than the nothing the request named");
+        record.Request().Format.ShouldBe(MatchFormat.Parse("2v2"));
+    }
+
+    private const string OneOnOne = """{"player1":"person","player2":"greedy","format":"1v1"}""";
+
+    private const string NoFormat = """{"player1":"person","player2":"greedy"}""";
+
+    private const string Asymmetric = """{"player1":"person","player2":"greedy","format":"3v2"}""";
 
     private AdminApi Admin(OperatorGate gate, IReadOnlyList<SeatableAgent>? agents = null) =>
         new(_registry, _hosted.Composer, gate, TimeProvider.System, "Rules 2 creatures (a test)", _hosted.Stored, agents);

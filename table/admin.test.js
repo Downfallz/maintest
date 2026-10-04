@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, defaultOpponent, deletionSaid, filenameOf, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formatToShow, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -183,4 +183,80 @@ test('the operator token comes from the link and is kept, or from what was kept,
   assert.equal(operatorToken('', storage), 'abc');
   assert.equal(operatorToken('', null), null);
   assert.equal(operatorToken('?token=def', { getItem: () => { throw new Error('private'); }, setItem: () => { throw new Error('private'); } }), 'def');
+});
+
+test('the formats a chooser offers come from the host, labelled with the picks each one leaves', () => {
+  const answer = { format: '2v2', formats: [{ value: '1v1', teamSize: 1, picks: 1 }, { value: '2v2', teamSize: 2, picks: 2 }] };
+
+  assert.deepEqual(formats(answer), [
+    { value: '1v1', label: '1v1 — 1 pick an opportunity' },
+    { value: '2v2', label: '2v2 — 2 picks an opportunity' },
+  ]);
+  assert.equal(defaultFormat(answer), '2v2', "the host's own");
+});
+
+test('before the host answers, the chooser offers the three formats every build has and opens on 3v3', () => {
+  assert.deepEqual(formats(null).map(format => format.value), ['1v1', '2v2', '3v3']);
+  assert.equal(defaultFormat(null), '3v3');
+});
+
+// A host playing something its shortlist does not name must not have its own format silently replaced by 3v3.
+test('a format the host names but does not offer is not what the chooser opens on', () => {
+  assert.equal(defaultFormat({ format: '4v4', formats: [{ value: '1v1', picks: 1 }] }), '3v3');
+  assert.equal(defaultFormat({ format: '4v4', formats: [{ value: '4v4', picks: 2 }] }), '4v4');
+});
+
+test('the format reaches the host only when one was chosen', () => {
+  assert.deepEqual(openAsked({ player1: 'person', player2: 'greedy', format: '1v1' }), { player1: 'person', player2: 'greedy', format: '1v1' });
+  assert.deepEqual(openAsked({ player1: 'person', player2: 'greedy', format: '  ' }), { player1: 'person', player2: 'greedy' });
+  assert.deepEqual(openAsked({ player1: 'person', player2: 'greedy' }), { player1: 'person', player2: 'greedy' });
+});
+
+test('a row names the format its table is playing, which is not necessarily the host default', () => {
+  const rows = tableRows({ tables: [{ id: 'a', format: '1v1', seats: [] }, { id: 'b', seats: [] }] });
+
+  assert.equal(rows[0].format, '1v1');
+  assert.equal(rows[1].format, null, 'a host that answers no format says nothing rather than guessing');
+});
+
+// The page paints formats(null) before the host answers; the host then answers the same three values. Keyed on
+// the values alone, the early return skipped the host's default and an operator who never touched the chooser
+// opened 3v3 tables at a 1v1 host, invalidating the playtest.
+test('the chooser follows the host even when the fallback list was painted first', () => {
+  const host = { format: '1v1', formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 1 }] };
+
+  assert.equal(formatToShow(host), '1v1', "the host's own, not the fallback's 3v3");
+  assert.equal(formatToShow(null), '3v3', 'before the host answers');
+});
+
+test('once the operator has picked a format, a redraw leaves it alone', () => {
+  const host = { format: '1v1', formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }] };
+
+  assert.equal(formatToShow(host, '2v2'), '2v2');
+  assert.equal(formatToShow(host, '9v9'), '1v1', 'a pick the host no longer offers falls back to its default');
+});
+
+// A host whose allowance leaves fewer picks offers the same three formats worded differently, so the option
+// list has to be rebuilt on the labels and not only on the values.
+test('the formats the host offers are told apart by their labels too', () => {
+  const key = answer => formats(answer).map(format => `${format.value}:${format.label}`).join('|');
+
+  assert.notEqual(key(null), key({ formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 1 }] }));
+});
+
+// A rule set may allow no evolution pick at all (RuleSet.Create refuses a negative allowance, not a zero
+// one), so a host playing one answers picks: 0. Read for truthiness, the label silently dropped to the bare
+// format name and the operator lost the one thing worth knowing about that game before opening a table.
+test('a format that gives no pick at all says so', () => {
+  const labels = formats({ formats: [{ value: '1v1', picks: 0 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 2 }] }).map(format => format.label);
+
+  assert.deepEqual(labels, [
+    '1v1 — 0 picks an opportunity',
+    '2v2 — 1 pick an opportunity',
+    '3v3 — 2 picks an opportunity',
+  ]);
+});
+
+test('a format the host sends no pick count for is named on its own', () => {
+  assert.deepEqual(formats({ formats: [{ value: '4v4' }] }).map(format => format.label), ['4v4']);
 });

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Application.Agents;
+using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Table;
 
@@ -13,7 +14,11 @@ namespace DownfallArena.Cli.Table;
 /// <param name="Who">The people's initials, for the run stamp (<c>human:mk</c>), or none.</param>
 /// <param name="Handover">The round the people take over on, both seats bots until then, or none.</param>
 /// <param name="Seed">The match seed. None lets the host draw one.</param>
-internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, string? Who, int? Handover, int? Seed)
+/// <param name="Format">
+/// How many creatures a side brings. None plays the host's own rule set, which is the default the panel's
+/// chooser opens on; a format named here plays that rule set in that format and nothing else of it changes.
+/// </param>
+internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, string? Who, int? Handover, int? Seed, MatchFormat? Format = null)
 {
     /// <summary>The word the admin panel uses for a seat a person plays; anything else names an agent.</summary>
     public const string Person = "person";
@@ -27,7 +32,8 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
             options.Player2Named ? options.Player2 : null,
             options.Who,
             options.Handover,
-            seed);
+            seed,
+            options.Format);
     }
 
     /// <summary>
@@ -40,7 +46,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         TableRequestBody? posted;
         try
         {
-            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody(null, null, null, null, null) : JsonSerializer.Deserialize<TableRequestBody>(body, Web);
+            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody(null, null, null, null, null, null) : JsonSerializer.Deserialize<TableRequestBody>(body, Web);
         }
         catch (JsonException exception)
         {
@@ -60,6 +66,18 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
             return Nothing;
         }
 
+        MatchFormat? format = null;
+        if (!string.IsNullOrWhiteSpace(posted.Format))
+        {
+            if (!MatchFormat.TryParse(posted.Format, out var wanted))
+            {
+                problem = $"'{posted.Format.Trim()}' is not a match format. It is a side against itself ('3v3', '2v2', '1v1') or the team size alone ('3').";
+                return Nothing;
+            }
+
+            format = wanted;
+        }
+
         var player1 = Seat(posted.Player1, "player1", ref problem);
         var player2 = Seat(posted.Player2, "player2", ref problem);
         if (problem is not null)
@@ -68,7 +86,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
 
         var who = string.IsNullOrWhiteSpace(posted.Who) ? null : posted.Who.Trim();
-        return new TableRequest(player1, player2, who, posted.Handover, posted.Seed);
+        return new TableRequest(player1, player2, who, posted.Handover, posted.Seed, format);
     }
 
     private static readonly TableRequest Nothing = new(null, null, null, null, null);
@@ -95,5 +113,5 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
     }
 
     /// <summary>The JSON the admin panel posts.</summary>
-    private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed);
+    private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed, string? Format);
 }

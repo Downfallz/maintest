@@ -53,7 +53,8 @@ docs/
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, the spell catalogue, and a planned change with
                 the audit it is measured against (tier-evolution-plan.md, tier-evolution-inventory.md).
-  tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook).
+  tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook),
+                plus the plan for the Automa, the opponent a person executes from printed components (automa.md).
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.
@@ -70,6 +71,7 @@ dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to
 node --test studio/*.test.js table/*.test.js   # the static pages' own tests (ADR 0024); needs no install
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --format 1v1   # the same, 1 creature a side; --format takes 3v3|2v2|1v1 (or the team size alone) on play, human, simulate, evaluate and table, and moves nothing but the team size. Not on benchmark: its digest is committed per content hash, so every format would be verified against the same one
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces (--traces N caps the traces; 0 keeps none)
