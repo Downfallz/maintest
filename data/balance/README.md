@@ -388,8 +388,8 @@ tops out at 5.40 a round, and `lightning_bolt` at 6.47 today can come down to 1.
 
 The reading is coarse on purpose — no board, no defense, no cap at a target's health, no threat
 behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
-what the scorer does with one, and a `DefenseDebuff` is the same stand-in the other way, blind in the same
-way to the damage the shred lets through), no kill term, which is the largest weight in the game and a threshold so it
+what the scorer does with one, and a `DefenseDebuff` reads zero, because the scorer prices it by the
+damage it lets through and this reading holds no defense to take off, ADR 0098), no kill term, which is the largest weight in the game and a threshold so it
 rewards a reliable hit over a bigger average one, and not the energy cost that `ActionScorer` prices when it
 picks a package.
 

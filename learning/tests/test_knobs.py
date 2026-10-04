@@ -1059,9 +1059,9 @@ def test_a_harmful_effect_aimed_at_a_friend_is_a_price_and_not_a_gift() -> None:
     assert cast_value(heal_and_slow, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
 
 
-def test_a_drain_and_a_shred_are_harmful_and_priced_by_the_weight_of_what_they_move() -> None:
-    """ADR 0035 prices the two new kinds with the weights that already exist: the shred like the buff it
-    mirrors, and the drain like the gain. On a friend both are a price, the same as any other harmful kind."""
+def test_a_drain_is_priced_like_the_gain_and_a_shred_takes_nothing_off_a_reading_with_no_defense() -> None:
+    """ADR 0035 prices the drain like the gain. The shred is worth the damage it lets through (ADR 0098),
+    and this reading holds no defense, so it is worth nothing on an enemy and costs nothing on a friend."""
     draining = spell(criticalChance=0, effects=[{"kind": "EnergyDrain", "amount": 2}])
     shredding = spell(criticalChance=0, effects=[{"kind": "DefenseDebuff", "amount": 2, "durationRounds": 3}])
     healing_and_shredding = spell(
@@ -1074,8 +1074,8 @@ def test_a_drain_and_a_shred_are_harmful_and_priced_by_the_weight_of_what_they_m
     )
 
     assert cast_value(draining, WEIGHTS) == pytest.approx(0.2 * 2)
-    assert cast_value(shredding, WEIGHTS) == pytest.approx(0.5 * 2 * 3)
-    assert cast_value(healing_and_shredding, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
+    assert cast_value(shredding, WEIGHTS) == pytest.approx(0)
+    assert cast_value(healing_and_shredding, WEIGHTS) == pytest.approx(0.8 * 4 * 3)
 
 
 def _authored_kinds() -> list[str]:
@@ -1108,6 +1108,11 @@ def test_every_authored_effect_kind_is_priced_by_cast_value(kind: str) -> None:
     on_caster = cast_value({"criticalChance": 0, "effects": [hit], "casterEffects": [effect]}, WEIGHTS)
     plain = cast_value({"criticalChance": 0, "effects": [hit]}, WEIGHTS)
 
+    if kind == "DefenseDebuff":
+        # Zero on purpose, and pinned so: it is worth the damage it lets through (ADR 0098), and this
+        # reading holds no defense for it to take off.
+        assert (on_target, on_caster) == (0, plain)
+        return
     assert on_target != 0, f"'{kind}' prices zero as a target effect"
     assert on_caster != plain, f"'{kind}' prices zero as a caster effect (ADR 0031)"
 
@@ -1140,7 +1145,7 @@ def test_a_critical_chance_does_not_reach_a_drain_or_a_shred() -> None:
     }
 
     assert cast_value(draining, WEIGHTS) == pytest.approx(0.2 * 2)
-    assert cast_value(shredding, WEIGHTS) == pytest.approx(0.5 * 2 * 1)
+    assert cast_value(shredding, WEIGHTS) == pytest.approx(0)
 
 
 def test_a_harmful_effect_aimed_at_an_enemy_is_still_the_point_of_the_spell() -> None:
@@ -1676,7 +1681,7 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
     [
         ("protective_slam", 13.53, 9.02),
         ("full_plate", 5.85, 5.85),
-        ("noxious_cure", 8.39, 8.39),
+        ("noxious_cure", 12.29, 12.29),
         ("summon_minions", 12.4, 8.27),
         ("meteor", 10.5, 7.0),
         ("pummel", 3.53, 3.53),

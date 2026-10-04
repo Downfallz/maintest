@@ -391,8 +391,10 @@ public sealed class ActionScorerTests
 
         // Hurt, because a heal over time on a target at full health is worth nothing however long it runs --
         // correctly, and it would make this ask the wrong question of Regeneration.
+        // Hurt, and holding 2 defense, so that a defense debuff has some to take off and a buff some threat to
+        // take off (ADR 0098).
         var board = Board(enemyHealth: 20);
-        var hurt = board[1] with { Health = Health.Of(10) };
+        var hurt = board[1] with { Health = Health.Of(10), TotalDefense = Defense.Of(2) };
         var creatures = new List<CreatureSnapshot> { board[0], hurt, board[2] };
         var action = Strike(One, hurt.Id);
 
@@ -503,19 +505,76 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// A defense debuff is priced like the buff it mirrors — <c>defense x amount x rounds</c> — and not through
-    /// <see cref="ActionScorer"/>'s reading of damage prevented (ADR 0035). A permanent one is priced over the
-    /// same horizon every permanent condition is, not forever.
+    /// ADR 0098: a defense debuff is worth the damage it lets through, and a creature with no defense has none to
+    /// lose, so the debuff is worth nothing however large or long it is.
     /// </summary>
     [Fact]
-    public void A_defense_debuff_is_priced_per_round_and_counts_against_whoever_carries_it()
+    public void A_defense_debuff_on_an_enemy_without_defense_is_worth_nothing()
     {
         var board = Board(enemyHealth: 20);
         var action = Strike(One, Three);
 
-        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(0.65 * 2 * 3, 1e-9);
-        Scorer.Score(Cast(action, One, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(-0.65 * 2 * 3, 1e-9);
-        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(1, Duration.Permanent)), board).ShouldBe(0.65 * 1 * 3, 1e-9);
+        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(3, Duration.Permanent)), board).ShouldBe(0, 1e-9);
+    }
+
+    /// <summary>
+    /// Three holds 2 defense, so the actor's Strike (3, a 0.05 crit for 6) lands 1.15 a round on it, and 3.15
+    /// once the debuff takes the 2 away: 2 more a round, over 3 rounds, shared between Three and Four.
+    /// </summary>
+    [Fact]
+    public void A_defense_debuff_on_a_defended_enemy_is_priced_by_the_damage_it_lets_through()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { TotalDefense = Defense.Of(2) };
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(0.65 * 2 * 3 / 2, 1e-9);
+    }
+
+    /// <summary>Total defense floors at zero, so a debuff of 3 on a creature holding 1 takes off 1 and no more.</summary>
+    [Fact]
+    public void A_defense_debuff_takes_off_no_more_than_the_defense_the_target_holds()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { TotalDefense = Defense.Of(1) };
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(3, Duration.Permanent)), board).ShouldBe(0.65 * 1 * 3 / 2, 1e-9);
+    }
+
+    /// <summary>
+    /// The recoil reading: on the actor's own creature the debuff lets the enemies' hits through, and counts
+    /// against. Three and Four each Strike, so 2 defense taken off One lets 4 more through a round, and One is
+    /// alone on its side.
+    /// </summary>
+    [Fact]
+    public void A_defense_debuff_on_the_actor_counts_against_for_the_damage_it_lets_through()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { TotalDefense = Defense.Of(2) };
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, One, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(-0.65 * 4 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A lethal recoil: the cast kills Three and takes 2 defense off One. Three no longer attacks, so only Four's
+    /// Strike gets 2 more through a round, where both would have got 4.
+    /// </summary>
+    [Fact]
+    public void A_defense_debuff_on_the_actor_is_not_charged_for_an_enemy_the_same_cast_kills()
+    {
+        var board = Board(enemyHealth: 3);
+        board[0] = board[0] with { TotalDefense = Defense.Of(2) };
+        var action = Strike(One, Three);
+        var kill = new DamageOutcome(Three, 3, Critical: false);
+
+        var killOnly = Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill]), board);
+        var withRecoil = Scorer.Score(
+            CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill, new ConditionOutcome(One, DefenseDebuff.Of(2, Duration.OfRounds(3)))]),
+            board);
+
+        (withRecoil - killOnly).ShouldBe(-0.65 * 2 * 3, 1e-9);
     }
 
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>

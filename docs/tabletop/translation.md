@@ -7,14 +7,13 @@ already stunned or immune to Stun is ignored, and a Stun that ends leaves a Roun
 `momentum` reaches re-read for [ADR 0078](../adr/0078-momentum-is-a-free-strike-that-gathers-energy.md) on
 2026-09-25, and the Base initiative row of 1.3 re-read for tune run 11 the same day; the combat rows of 1.8,
 1.9 and 1.11 annotated, not re-audited, for
-[ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md) on 2026-09-28). Phase 1 of
-[plan.md](plan.md).
+[ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md) on 2026-09-28; spell rows
+re-read for the content of 2026-10-04 (`e6f72578`)). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
-- **Part 1, Part 4 and Part 5 are read at content `4ab506fa`** — the hash
-  `dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst` writes today — with the engine of
-  this branch. They were re-audited at `4d7a841c`, which differs only in a Creature's base Health, 20 there
+- **Part 1, Part 4 and Part 5 are read at content `4ab506fa`**, except what the last point below re-reads at
+  `e6f72578`, with the engine of this branch. They were re-audited at `4d7a841c`, which differs only in a Creature's base Health, 20 there
   and 30 here ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)); no count in them reads it.
   That engine includes
   [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md) (a pick buys a whole Tier; two picks at
@@ -36,33 +35,37 @@ already stunned or immune to Stun is ignored, and a Stun that ends leaves a Roun
   (`UpkeepRules.cs`, `ConditionSet.cs`, `Condition.cs`, the other Combat rules) were not re-checked line by
   line: the file and the method they name are right, and a few line numbers have drifted since the first
   audit (`ConditionSet.cs` and `Condition.cs` among them).
-- **Parts 2 and 3 are still read at content `938bef5e`**, what
+- **Until 2026-10-04, Parts 2 and 3 were read at content `938bef5e`**, what
   [ADR 0043](../adr/0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md) left in `data/` after tune
-  run 8, and are left there on purpose: re-reading them is a re-measurement of card text that
-  [components.md](components.md) §2.3 owns, and it should be done once, with it. The rules they describe have
-  not changed; the catalogue has. Tune run 9 and #172 moved ten Spells since, and on this document's own
-  counting rule the differences at `4ab506fa` are these. Part 2: `EnergyDrain` is 3, not 2 (`soul_devourer`,
-  whose damage is 6); `InitiativeDebuff` is 1 for 1 Round (`ice_spear`) and 2 for 2 Rounds
-  (`protective_slam`), so "every `InitiativeDebuff` is exactly 2" no longer holds; `mortal_wound`'s Bleed 4
-  lasts 1 Round; `pummel` deals 2. Part 3: `throwing_star` is Multi, up to 2 enemies, at cost 2, so it costs
-  7 operations and moves from the trivially playable table to the middle one (17, 12 and 7 instead of 18, 11
-  and 7), where its **keep as is** is to be re-read, since a second target is a choice a card must show;
-  `ice_spear` costs 2 and `revenant_guards` 3; four Critical chances moved
-  (`healing_screech` 0.55, `meteor` 0.35, `parasite_jab` 0.45, `tornado` 0.38), so 13 distinct chances are
-  rolled instead of 11, still with 15 Spells at zero. No effect kind gained or lost a Spell.
-- **The rows `momentum` reaches are read at content `813bb91b`**, which is `0f036b75` with that one Spell
-  redesigned (ADR 0078): it costs 0, targets one enemy, deals `Damage 2` and gives its caster `EnergyGain 2`,
-  where it was a Self cast of `EnergyRegeneration` 2 a Round for 3 Rounds. No Spell authors
-  `EnergyRegeneration` now. Unlike the differences above, this one moves verdicts, since a component leaves
-  the box ([components.md](components.md) §1.4), so its rows are re-read in place rather than listed: in
-  Part 1 the targeting counts of 1.8 and the notes on the two rows of 1.2 that name Energy regeneration; in
-  Part 2 the `Damage`, `EnergyGain` and `EnergyRegeneration` rows and the Effect count; in Part 3 the
-  `momentum` row; Candidate 2; and the tallies of Part 5. `Damage` and `EnergyGain` gain `momentum`,
-  `EnergyRegeneration` loses it, and nothing else in those rows differs between `938bef5e` and `813bb91b`.
-- **One row of 1.3 is read at `813bb91b` too**: "A purchase raises Base initiative", whose bonus ranges and
-  ceiling tune run 11 moved (Occultist 2 to 3, Warmonger 4 to 3; PR #208). Level 1 now pays 1 or 3, and the
-  most one Creature reaches in 20 Rounds is 34, not 33 ([components.md](components.md) §3.4). Its verdict does
-  not move. The rest of Part 1 is read where the two points above put it.
+  run 8. They were left there on purpose, so that their card text would be re-measured once, with
+  [components.md](components.md) §2.3. The rows `momentum` reaches were read at `813bb91b` (ADR 0078: a Self
+  cast of `EnergyRegeneration` became a free strike with a caster `EnergyGain`, which moved two verdicts), and
+  the bonus row of 1.3 at `813bb91b` too (tune run 11, PR #208). The point below supersedes all three.
+- **Every row that names a Spell, counts Spells, or gives an effect kind's amounts is read at `e6f72578`**,
+  the content of 2026-10-04 and the hash `dotnet run --project tools/DownfallArena.DataBuilder -- data
+  data/dst` writes today, against which components.md was re-read the same day. That is all of Parts 2
+  and 3. In Part 1 it is the board this audit assumes, the Tier card and bonus rows of 1.3, the targeting
+  counts of 1.8, the critical, Damage and Caster effect rows of 1.9, and the Stun immunity row of 1.10. In
+  Part 4 it is the figures Candidates 3, 4 and 5 quote, and in Part 5 the Spell and verdict tallies. The rules
+  did not change; the catalogue did, and these are its moves that matter here:
+  - **45 Spells, not 36.** PR #245 added nine at level 2, so every level-2 Tier teaches two. Since then
+    `night_raid` replaced `death_squad` and `ambush` replaced `shadowstep`, one of the nine. A gone Spell has
+    no row: `death_squad`'s became `night_raid`'s, and `shadowstep` never had one. Part 3 gains ten rows:
+    `adrenaline_tonic`, `ambush`, `bone_ward`, `extort`, `frostbite`, `latch`, `night_raid`,
+    `reckless_swing`, `shield_bash` and `soothing_chant`.
+  - **No Spell authors an `InitiativeBuff`.** The kind goes from **needs a component** to **keep as is**, as
+    `EnergyRegeneration` did ([components.md](components.md) §1.4). `InitiativeDebuff` is `frostbite`'s -3 on
+    an enemy and `ambush`'s -5 on its own caster. `Stun` has four Spells: `protective_slam` and `ice_spear`
+    stun where they lowered Initiative.
+  - **In Part 3**, `meteor` places three Bleeds and goes from **restate** to **needs a component**.
+    `throwing_star`'s second target, flagged for a re-read since #172, makes it **restate**, like
+    `chain_slash`. `tranquilizer_dart` and `throwing_star` move to the middle table, and `infectious_blast`,
+    which deals 2 now, to the expensive one.
+  - **The Tier bonuses moved** since tune run 11, the last of them on 2026-10-04: 1 to 3 at levels 1 and 2,
+    1 to 5 at level 3, and the most one Creature reaches in 20 Rounds is 35 ([components.md](components.md) §3.4). Its
+    verdict does not move.
+
+  Rows that name no Spell are read where the first point puts them.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -96,11 +99,11 @@ value off another component. Whether a count is too high is a playtest reading, 
 2 Evolution picks an opportunity, the first opportunity at Round 1 and one every second Round after, a
 30-Round cap, a critical multiplier of 2.0. One Creature definition, `data/Creatures/main.v1.json`: Health
 30, Energy 0, Defense 0, Base initiative 5, Critical chance 0 (ADR 0042), knowing `basic_attack`,
-`heavy_strike` and `wait`. 21 Tiers in `data/Tiers` (ADR 0057): 3 at level 1 that require nothing and sell 2
-Spells each, 9 at level 2 that sell 1 each, 9 at level 3 that sell 2 each, every one of levels 2 and 3
-requiring exactly one Tier a level below. That is three families of seven: each level-1 Tier opens one, with
-three level-2 Tiers on it and one level-3 Tier on each of those. The 33 Spells outside the starting kit are
-each sold by exactly one Tier. The enabled Talent tree,
+`heavy_strike` and `wait`. 21 Tiers in `data/Tiers` (ADR 0057): 3 at level 1 that require nothing, 9 at
+level 2 and 9 at level 3, each selling 2 Spells at `e6f72578` (a level-2 Tier sold 1 until PR #245), every one
+of levels 2 and 3 requiring exactly one Tier a level below. That is three families of seven: each level-1 Tier
+opens one, with three level-2 Tiers on it and one level-3 Tier on each of those. The 42 Spells outside the
+starting kit are each sold by exactly one Tier. The enabled Talent tree,
 `data/TalentTrees/talent_tree.v1.json`, is still loaded, but it gates nothing a pick buys (ADR 0056,
 ADR 0058). So six identical Creatures start a Match, each knowing the same three Spells, each free to buy
 into any family.
@@ -153,10 +156,10 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | An opportunity at Round 1 and every second Round after | `RuleSet.IsEvolutionRound` and `EvolutionPicksIn` (`Matches/RuleSet.cs:80-84`), at 1, 2 and 2 by default (`RuleSet.cs:30`); the one schedule the validation, the gate and the projections all ask (ADR 0056) | 1 look at the Round track a Round, 0 arithmetic if the opportunity Rounds are marked on it. The table's 8 to 14 Rounds ([plan.md](plan.md), ADR 0086) hold 4 to 7 opportunities, and its Round cap of 20 holds 10 | **needs a component** | A Round track with the opportunity Rounds marked. Nothing is lost; every other Round has one step fewer. |
 | Two picks an opportunity, per Player, shared across the Team | `rules.EvolutionPicksIn(round.Number) - round.EvolutionChoicesOf(slot).Count` (`Rules/Planning/EvolutionRules.cs:100-103`), refused past it (`EvolutionRules.cs:49-52`) | 2 tokens moved from a Player's mat onto the boards of the Creatures that bought, on an opportunity Round; the choice is which two Creatures and which Tier for each | **needs a component** | Two pick tokens a Player. Nothing is lost. |
 | The Players pick face down, and the picks are bought together | Since ADR 0089 the domain records a pick and changes nothing on the board (`Match.SubmitEvolutionChoice`); neither a pick nor a pass is shown to the other Player (`SeatVisibility`). When the sub-phase completes, `Match.RevealPurchases` buys every pick, Player 1's and then Player 2's, and raises `PurchasesRevealed`. The order changes nothing: a Creature buys one package an opportunity, and its prerequisites are its own. The validation reads what each Creature owned when the sub-phase opened | 1 package card laid face down a pick, at most 4 an opportunity, turned over together like the Speed cards, then the purchase actions; 0 arithmetic | **restate** | Nothing in the rules (rulebook.md §5.3). The table shows a little the engine hides: which Creatures hold a face-down card while the other Player is still choosing. It replaces the pick in turn, Player 1 first, that ADR candidate 6 questioned. |
-| A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 1 or 2 Spell cards taken from the library; 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds, each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
+| A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 2 Spell cards taken from the library (1 or 2 until PR #245 gave every level-2 Tier a second Spell); 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds, each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
 | Prerequisites are the only rule, and the Talent tree gates nothing | `TierEligibility.AvailableTiers`: a Tier the Creature does not own whose prerequisites it owns (`Rules/Planning/TierEligibility.cs:23-42`), checked by `EvolutionRules.ValidateChoice` (`EvolutionRules.cs:61-73`) and again by `BuyTier` (`Creature.cs:216-219`). No family is closed to a Creature, so multiclassing is free (ADR 0056, ADR 0058) | 0 lookups for the 3 openers; 1 for any other Tier: is the one Tier it names beside this creature board. A Creature chooses from 3 Tiers at Round 1, and from 5 once it owns one opener (the 2 other openers and that opener's 3 level-2 Tiers) | **restate** | Nothing. The prerequisite is one line on the Tier card, and eligibility is read off the board, not computed. The Talent tree mat the first audit asked for is not needed to play; if the box keeps one, it is a map of the families, not a gate. |
 | A Creature buys at most one Tier an opportunity | A choice for a Creature that has already bought this Round is refused with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.cs:56-59`), read off the Round's own choices (`HasEvolved`, `EvolutionRules.cs:128-134`; ADR 0066). The two picks go to two Creatures, so neither depends on the other: a Tier the first opens is one only its buyer may buy, and its buyer is done for the Round. It replaces ADR 0056's sequential picks, under which the greedy mirror put both picks on one Creature in half its opportunities | 1 look a pick, 0 arithmetic: the pick token a purchase moves lies on the buyer's board until the Sub-phase ends, and a board holding one is not picked. The top of a family arrives at Round 5 at the earliest: `tier:brute:v1` at Round 1, `tier:ironbound:v1`, which sells `full_plate`, at Round 3, `tier:dreadnought:v1` at Round 5 | **restate** | Nothing: the pick tokens of the row above carry it, laid on the buyer's board instead of set aside (components.md §1.5). It has to be said, with the one-Creature case, since it is the only thing that ever refuses a pick for a Tier the Creature could otherwise buy. |
-| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers` at `813bb91b`, after tune run 11 moved Occultist from 2 to 3 and Warmonger from 4 to 3: 1 or 3 at level 1; 0 to 3 at level 2; 2 to 5 at level 3; a level-3 Tier and the two it stands on add 4 to 11 together. The largest Base initiative the content can produce is 52: 5, plus all 21 bonuses, for a Creature sold every Tier. At one Tier an opportunity (ADR 0066), the table's Round cap of 20 sells one Creature at most 10, and the most they can reach is 34 ([components.md](components.md) §3.4; 33 at `4ab506fa`) | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
+| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers` at `e6f72578`: 1, 2 or 3 at level 1; 1 to 3 at level 2; 1 to 5 at level 3; a level-3 Tier and the two it stands on add 3 to 11 together. The largest Base initiative the content can produce is 55: 5, plus all 21 bonuses (50), for a Creature sold every Tier. At one Tier an opportunity (ADR 0066), the table's Round cap of 20 sells one Creature at most 10, and the most they can reach is 35 ([components.md](components.md) §3.4; 34 at `813bb91b`, 33 at `4ab506fa`) | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
 | The starting kit raises nothing | The definition's `baseInitiative` is where a Creature starts (`Creature.cs:38`); the three starting Spells belong to no Tier (ADR 0058) | 0 | **keep as is** | Nothing. The asymmetry the first audit reported is gone: every other Spell is sold by exactly one Tier, so two Creatures that know the same Spells own the same Tiers and carry the same Base initiative. |
 | A Spell already known is granted, not refused | `Creature.Learn` is idempotent (`Creature.cs:236-240`), so a Tier selling a known Spell is still bought (`Creature.cs:221-225`) | 0. Unreachable with this content: no Spell is sold by two Tiers, and no Tier sells a starting Spell | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable. |
 | A refused purchase changes nothing | `BuyTier` checks a dead Creature, a Tier already owned and a missing prerequisite before it changes anything (`Creature.cs:206-219`); `ValidateChoice` has already refused all three (`EvolutionRules.cs:31-73`) | 0 | **keep as is** | Nothing. |
@@ -213,7 +216,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- |
 | Reveal in timeline order, bind targets at reveal | The reveal cursor walks the timeline; targets are chosen after seeing what came before (`Rules/Combat/ActionRules.cs:16-52`) | 1 card flip and 1 to 3 target markers per Activation slot; 6 slots a Round | **needs a component** | Target markers, one set per Player. Nothing is lost; this is the other mechanic that translates for free. |
-| Targeting spec: origin, scope, count | Origin `Self`, `Ally` or `Enemy`; scope single or multi; at most `maxTargets` (`Rules/Combat/TargetingRules.cs:40-50`) | 1 lookup on the card, then a count | **restate** | Nothing. In `data/` at `813bb91b`: 25 Enemy, 9 Ally, 2 Self (`momentum` went from Self to one enemy, ADR 0078); 25 single-target, 11 multi (9 at 3, 2 at 2). |
+| Targeting spec: origin, scope, count | Origin `Self`, `Ally` or `Enemy`; scope single or multi; at most `maxTargets` (`Rules/Combat/TargetingRules.cs:40-50`) | 1 lookup on the card, then a count | **restate** | Nothing. In `data/` at `e6f72578`: 32 Enemy, 11 Ally, 2 Self; 32 single-target, 13 multi (11 at 3, 2 at 2). At `813bb91b` it was 25, 9 and 2, and 25 and 11. |
 | A Multi Spell may take fewer targets | `LegalTargets` returns a minimum of 1 (`TargetingRules.cs:49`) | 1 decision per multi-target cast | **restate** | Nothing, but it is a real choice — hitting one enemy with `meteor` is legal — and nothing on the card says so today. |
 | Ally includes the caster | `creature.Owner == actor.Owner`, the actor included (`TargetingRules.cs:43`) | 0 | **restate** | Nothing. A Creature can `guard` itself; the card does not say it. |
 | No duplicate targets | `targets.Distinct().Count() != targets.Count` (`TargetingRules.cs:68`) | 0, physically impossible with one marker per target | **keep as is** | Nothing: the components enforce it. |
@@ -233,17 +236,17 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | --- | --- | --- | --- | --- |
 | Fizzle | A dead or stunned actor, one that no longer knows or can afford the Spell, a global targeting failure, or no target left (`ResolutionRules.cs:37-55`; ADR 0038 for the word) | 1 to 4 checks per cast, before anything moves | **restate** | Nothing. The rulebook owes one clear paragraph; it is the rule most likely to be played wrong. |
 | A Fizzle costs nothing | `CombatResolution.Fizzle` spends no Energy and applies no outcome (`Rules/Combat/CombatResolution.cs:49-54`, `CombatExecution.cs:22-25`) | 0 | **keep as is** | Nothing. |
-| One critical roll a cast | `random.NextDouble() < CriticalChanceOf(actor, spell, speed)`, the Creature's chance plus the Spell's (`ResolutionRules.cs:59,80-86`) | 1 die roll and 1 lookup, on a `Standard` cast of one of the 21 Spells that print a chance; the Creature's own chance is 0 since ADR 0042, so the 15 Spells at zero never roll | **needs a component** | A die, settled by fork B. At most six rolls a Round and often fewer. See Part 3 for what the snap has to cover. |
+| One critical roll a cast | `random.NextDouble() < CriticalChanceOf(actor, spell, speed)`, the Creature's chance plus the Spell's (`ResolutionRules.cs:59,80-86`) | 1 die roll and 1 lookup, on a `Standard` cast of one of the 25 Spells that print a chance at `e6f72578`; the Creature's own chance is 0 since ADR 0042, so the 20 Spells at zero never roll | **needs a component** | A die, settled by fork B. At most six rolls a Round and often fewer. See Part 3 for what the snap has to cover. |
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
 | A critical reaches nothing else | Not a lasting Effect, not a Caster effect, not Energy (`ResolutionRules.cs:68,93-95`, ADR 0033, ADR 0031, ADR 0035) | 0, once the boundary is taught as one sentence | **restate** | Nothing. "What the cast puts on a target's Health now" is the whole rule. |
-| Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 20 | **restate** | Nothing. |
+| Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 22 at `e6f72578` (`hateful_sacrifice`'s 11, doubled) | **restate** | Nothing. |
 | Total Defense is base plus buffs less debuffs, floored at zero | `Creature.cs:95-97` (ADR 0035) | 1 sum over the Condition tokens per target, per cast | **needs a component** | A Defense track holding the running total, so the sum is done once when a Condition lands and not once per cast. |
 | The energy cost is spent | `actor.SpendEnergy(resolution.EnergySpent)` (`CombatExecution.cs:28`) | 1 token move | **keep as is** | Nothing. |
 | A Heal is capped by Health missing | `Creature.cs:271` | 1 comparison | **keep as is** | Nothing. |
 | An Energy drain takes at most what the target has | `Creature.cs:295-307` (ADR 0035) | 1 comparison | **keep as is** | Nothing. |
-| Caster effects resolve once per cast, unmultiplied, never on a Fizzle | `ResolutionRules.cs:68` (ADR 0031) | 1 to 2 operations on the caster's own board | **restate** | Nothing. Seven Spells in `data/` carry one; the card face must show it as a separate line or it will be read as a target effect. |
+| Caster effects resolve once per cast, unmultiplied, never on a Fizzle | `ResolutionRules.cs:68` (ADR 0031) | 1 to 2 operations on the caster's own board | **restate** | Nothing. Fourteen Spells in `data/` carry one at `e6f72578` (seven when this row was first read); the card face must show it as a separate line or it will be read as a target effect. |
 | Damage is capped by the Health left, and an Outcome that changed nothing is dropped | `CombatExecution.cs:53-71` | 1 comparison | **keep as is** | Nothing. |
 | A lasting Effect attaches as a Condition per its Stacking policy | `Creature.Apply` through `ConditionSet.Apply` (`Creatures/ConditionSet.cs:26-43`) | 1 token placed with an amount and a Duration | **needs a component** | Condition tokens, in eight kinds, with a Duration dial. Nothing is lost. |
 | A Stun on a Creature already stunned or immune to Stun is ignored | `Creature.Apply` refuses a Stun when `!CanBeStunned`, which is stunned or immune (`Creatures/Creature.cs:342-357`), whatever the Stun's Stacking policy; `ResolutionRules.Lands` drops that Stun line before it becomes an Outcome, and the cast's other effects still land (`ResolutionRules.cs:64,97`); the Stun family's default is `Ignore` (`Resources/Effects/Stun.cs`, ADR 0072). ADR 0041's restart is retired | 1 look per Stun line at the target's Speed slot and lane `1`: a Stun token or an Immune token there means no token is placed. 0 arithmetic | **restate** | Nothing. "Conditions add up; a Stun never lands on a stunned or immune Creature" is one sentence and it is the whole rule since ADR 0072. The Stun is ignored, not the cast: it is not a Fizzle. See ADR candidate 1. |
@@ -256,7 +259,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Every Condition counts one Round down and expires at zero | `UpkeepRules.Cleanup` calls `Creature.TickConditions` (`UpkeepRules.cs:173-188`, `ConditionSet.cs:48-58`) | 1 dial turn per token on the board | **needs a component** | A Duration dial on the Condition token. Nothing is lost. |
 | The first countdown after an application does not count | A `_fresh` flag skips the first tick (`Condition.cs:12,53-59`) | 0, **if** the rule is restated: every Condition in `data/` is applied in Combat, after that Round's ticks, so `durationRounds: N` is exactly "N of the following Rounds" | **restate** | Nothing today. The mechanism is not the rule; see ADR candidate 5 for whether the engine should say it that way. |
 | A permanent Condition never counts down | `RemainingRounds` is null (`Condition.cs:34-36`, `Duration.cs:20-22`) | 0 | **keep as is** | Nothing, but it is what makes ADR candidate 3 unbounded. |
-| A Creature whose Stun ends is immune to Stun for the next Round | `Creature.TickConditions` counts the immunity down first, then ticks the Conditions, and sets one Round of immunity when a Stun expires on a living Creature (`Creatures/Creature.cs:363`), so it runs through the next Round and ends at the next Cleanup; `Match` raises `StunImmunityGained` for those Creatures after `ConditionsExpired` (ADR 0072). A state of the Creature, not a Condition: no source, no Duration of its own | 1 token swap per Stun that ends (the dock's Stun token for an Immune token in lane `1`, and the Speed slot's Stun token off), and 1 removal at the next Cleanup, done by the dock's own slide. At most 6 a Cleanup, and with 2 Stun Spells in the catalogue usually 0 | **needs a component** | An Immune token, one a Creature: 6 ([components.md](components.md) §1.5). Nothing is lost. It is the one thing in the dock that is not a Condition, and the rulebook must say so, or a Player will look for a Spell that applied it. |
+| A Creature whose Stun ends is immune to Stun for the next Round | `Creature.TickConditions` counts the immunity down first, then ticks the Conditions, and sets one Round of immunity when a Stun expires on a living Creature (`Creatures/Creature.cs:363`), so it runs through the next Round and ends at the next Cleanup; `Match` raises `StunImmunityGained` for those Creatures after `ConditionsExpired` (ADR 0072). A state of the Creature, not a Condition: no source, no Duration of its own | 1 token swap per Stun that ends (the dock's Stun token for an Immune token in lane `1`, and the Speed slot's Stun token off), and 1 removal at the next Cleanup, done by the dock's own slide. At most 6 a Cleanup. The catalogue has 4 Stun Spells at `e6f72578`, not 2; how often a Cleanup has one to swap is the tabletop-mathematician's measurement | **needs a component** | An Immune token, one a Creature: 6 ([components.md](components.md) §1.5). Nothing is lost. It is the one thing in the dock that is not a Condition, and the rulebook must say so, or a Player will look for a Spell that applied it. |
 | A refresh also resets the free tick | `Condition.Refresh` sets `_fresh = true` (`Condition.cs:50`). Reachable only by a content file that authors `stacking: refresh` on a kind other than Stun, and none does: since ADR 0072 no Condition in `data/` refreshes | 0. Unreachable with this content | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable; it said it while a Stun refreshed. |
 
 ### 1.11 `Finalization` (End of round)
@@ -278,9 +281,9 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 ## Part 2. The twelve effect kinds
 
 The closed taxonomy of ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035 and ADR 0036. Counts and value
-ranges are computed from `data/Spells/**` with a Python pass over the 36 files, counting a Spell once per
-kind whether the Effect sits in `effects` or in `casterEffects`. The counts are therefore Spells and not
-Effects: the 36 files author 57 Effects in all (58 at `813bb91b`, where `momentum` authors two), and a Spell
+ranges are computed from `data/Spells/**` at `e6f72578` with a Python pass over the 45 files, counting a
+Spell once per kind whether the Effect sits in `effects` or in `casterEffects`. The counts are therefore
+Spells and not Effects: the 45 files author 80 Effects in all (58 in 36 files at `813bb91b`), and a Spell
 carrying two `DefenseBuff`s counts once. No file
 in `data/Spells/**` authors a `stacking` key, so every Condition uses its family default, and since ADR 0041
 that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` since ADR 0072 (it kept
@@ -291,73 +294,77 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 
 | Effect kind | Spells in `data/` | Values used | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
-| `Damage` | 24 at `813bb91b` (23 on targets, `momentum` the newest; 2 on the caster, `hateful_sacrifice` and `summon_minions`) | amounts 2, 3, 4, 5, 6, 7, 10 | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
-| `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 3, 4, 7 | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
-| `EnergyGain` | 3 at `813bb91b` (2 on targets: `wait`, `restorative_burst`; 1 on the caster: `momentum`) | amount 2 | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
-| `EnergyDrain` | 1 (`soul_devourer`) | amount 2 | Takes at most what the target has (`Creature.cs:295-307`, ADR 0035) | 1 comparison, 1 token move | **keep as is** | Nothing. |
+| `Damage` | 32 (31 on targets; 3 on the caster: `hateful_sacrifice`, `reckless_swing`, `summon_minions`, the last on the caster only) | amounts 1 to 11, every one of them; 11 is `hateful_sacrifice` | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
+| `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 4, 5, 7, 9 | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
+| `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`) and 2 | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
+| `EnergyDrain` | 3 (`extort`, `night_raid`, `soul_devourer`) | amounts 1, 2, 3; `night_raid`'s 2 on up to 3 enemies | Takes at most what the target has (`Creature.cs:295-307`, ADR 0035) | 1 comparison, 1 token move | **keep as is** | Nothing. |
 
 ### Lasting effects (they become Conditions)
 
 | Effect kind | Spells in `data/` | Values used | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
-| `Bleed` | 6 (4 on targets: `mortal_wound`, `poison_slash`, `summon_minions`, `toxic_waves`; 2 on the caster: `crazed_specter`, `revenant_guards`) | 1, 2, 3 or 4 a Round for 1, 2 or 3 Rounds | Damage at the start of each of the Creature's Rounds, ignoring Defense (`UpkeepRules.cs:62-70`); `Stack` (ADR 0041) | 1 token with an amount and a dial per application; 1 sum over the tokens and 1 subtraction a Round | **needs a component** | A Bleed token that shows both numbers, and enough of them: since ADR 0041 a second Bleed is a second token, so one Creature can carry several. |
-| `Regeneration` | 1 (`healing_screech`) | 3 a Round for 2 Rounds | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | A Regeneration token. Nothing is lost. |
+| `Bleed` | 10 (7 on targets: `latch`, `meteor`, `mortal_wound`, `poison_slash`, `summon_minions`, `toxic_waves`, `tranquilizer_dart`; 3 on the caster: `bone_ward`, `crazed_specter`, `revenant_guards`) | 1, 2, 3 or 4 a Round for 1, 2 or 3 Rounds | Damage at the start of each of the Creature's Rounds, ignoring Defense (`UpkeepRules.cs:62-70`); `Stack` (ADR 0041) | 1 token with an amount and a dial per application; 1 sum over the tokens and 1 subtraction a Round | **needs a component** | A Bleed token that shows both numbers, and enough of them: since ADR 0041 a second Bleed is a second token, so one Creature can carry several. |
+| `Regeneration` | 3 (2 on targets: `healing_screech`, `soothing_chant`; 1 on the caster: `latch`) | 3 a Round for 2 Rounds, 2 for 2, 1 for 3 | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | Regeneration tokens in three faces, where there was one. Nothing is lost. |
 | `EnergyRegeneration` | 0 at `813bb91b` (`momentum` until ADR 0078) | none; `momentum`'s was 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Energy regeneration token) while `momentum` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
-| `Stun` | 2 (`crushing_stomp`, `tranquilizer_dart`) | 2 Rounds, both | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a 2-Round Stun removes a third of a Team for two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
-| `DefenseBuff` | 4 (`full_plate`, `guard`, `revenant_guards`, `thundering_seal`) | amounts 1, 2, 3; Durations 1 Round, 2 Rounds, **permanent** | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. All four carry a permanent Defense buff — three of them beside a timed one — and it stacks without a bound: ADR candidate 3. |
-| `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | amount 2; Durations 1 Round and **permanent** | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
-| `InitiativeBuff` | 1 (`death_squad`) | amount 2 for 1 Round | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 1 token and 1 marker move, read once when the timeline is built | **needs a component** | An Initiative track. Nothing is lost. |
-| `InitiativeDebuff` | 2 (`ice_spear`, `protective_slam`) | amount 2 for 1 or 2 Rounds | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | The same track. |
+| `Stun` | 4 (`crushing_stomp`, `ice_spear`, `protective_slam`, `tranquilizer_dart`) | 2 Rounds (`crushing_stomp`); 1 Round for the other three | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 1 or 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a Stun removes a third of a Team for one or two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
+| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 1 or 3; timed 1, 3 or 4, for 2 or 3 Rounds | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. Four of the six carry a permanent Defense buff — three of them beside a timed one — and it stacks without a bound: ADR candidate 3. `bone_ward` and `shield_bash` are timed only. |
+| `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
+| `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
+| `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
 
-Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 24 of 36 Spells,
-five kinds are in one or two, and one, `EnergyRegeneration`, is in none since ADR 0078 (it was 23, and seven
-kinds in one or two). Second, the authored values are already small and repetitive — every
-`DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` in the catalogue has an amount of exactly 2, and
-Durations are only ever 1, 2, 3 or permanent. A token set is therefore small, which is good news for phase 3.
+Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 32 of 45 Spells,
+one kind, `InitiativeDebuff`, is in two, and two, `EnergyRegeneration` and `InitiativeBuff`, are in none (at
+`938bef5e` it was 23 of 36, seven kinds in one or two, and none in none). Second, the authored values are
+still small and repetitive, though less than they were: every timed `DefenseDebuff` is 2, an
+`InitiativeDebuff` is 3 or 5, and Durations are only ever 1, 2, 3 or permanent. At `938bef5e` every
+`DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` was exactly 2. A token set is therefore small:
+[components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds.
 
 ---
 
 ## Part 3. The Spell catalogue
 
-All 36 files under `data/Spells/**`, read from `data/` and not from [spells.md](../domain/spells.md).
+All 45 files under `data/Spells/**` at `e6f72578`, read from `data/` and not from
+[spells.md](../domain/spells.md).
 
 **Tracking cost** is counted for one cast at the Spell's maximum target count. *Ops* counts: the critical
-roll (1 when the Spell prints a Critical chance, 0 for the fifteen that print zero, because the Creature's
+roll (1 when the Spell prints a Critical chance, 0 for the twenty that print zero, because the Creature's
 own chance is 0 since ADR 0042), paying the energy cost (1 when the cost is above zero), then per target 3
 for a `Damage`, 2 for a `Heal`, 1 for an `EnergyGain`, `EnergyDrain` or a
 lasting Effect, plus the Caster effects at 2 for a self-`Damage` and 1 for anything else. *Tokens* counts
 Condition tokens placed. *Targets* is `maxTargets`. *Tier* is the level of the Tier in `data/Tiers` that sells
 the Spell, 0 for the starting kit ([ADR 0058](../adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)).
-The first audit read ADR 0034's depth in the Talent tree instead; the two agree on all 36 Spells, so no row's
-number moved when the definition did.
+The first audit read ADR 0034's depth in the Talent tree instead; the two agreed on all 36 Spells it read, so
+no row's number moved when the definition did.
 
 **Critical chances the die has to cover.** The Creature's own chance is 0 (ADR 0042), so a Spell's printed
-bonus *is* the chance rolled and the fifteen Spells at zero never roll at all. Twelve distinct bonuses are
-authored: 0 (15 Spells), 0.22, 0.28, 0.283, 0.33 (4 Spells), 0.38, 0.45 (2 Spells), 0.5 (7 Spells), 0.617,
-0.75, 0.767, 0.8 — so eleven distinct chances are ever rolled. Four of the eleven sit on a 1-in-20 grid
-(0.45, 0.5, 0.75, 0.8) and one on a 1-in-6 grid (0.5); three of them (0.283, 0.617, 0.767) are not even
-multiples of 0.05. `data/balance/knobs.json` declares `/criticalChance` a knob on 21 Spells with a step of
-0.05 (one of them `throwing_star`, which prints 0), so a d20 snap is inside the declared search space and a d6
-snap is not. The die is settled since, a d20 ([d20-criticals.md](d20-criticals.md), not built); the error each
-candidate die costs is measured in components.md §1.6, and the per-Spell snapped values are the maintainer's.
+bonus *is* the chance rolled and the twenty Spells at zero never roll at all. At `e6f72578` fourteen distinct
+bonuses are authored: 0 (20 Spells), 0.22, 0.283, 0.3, 0.33 (3 Spells), 0.35 (3), 0.38 (2), 0.4, 0.45 (2),
+0.5 (7), 0.55, 0.75, 0.767, 0.8 — so thirteen distinct chances are rolled, by 25 Spells. Eight of the
+thirteen sit on a 1-in-20 grid (0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.75, 0.8) and one on a 1-in-6 grid (0.5);
+the other five (0.22, 0.283, 0.33, 0.38, 0.767) are on neither, and two of them carry a third decimal.
+`data/balance/knobs.json` declares `/criticalChance` a knob on 26 Spells with a step of 0.05, so a d20 snap is
+inside the declared search space and a d6 snap is not. The die is settled since, a d20
+([d20-criticals.md](d20-criticals.md), not built); the error each candidate die costs is measured in
+components.md §1.6 (a d20 moves 8 of the 25 at `e6f72578`), and the per-Spell snapped values are the
+maintainer's.
 
 **Card text.** The statline every card must carry — cost, targets, effects with amounts and Durations,
-caster effects, critical chance — was generated for all 36 and measured. The measurement also carried an
-unlock initiative, which no Spell has since ADR 0059: that number is on the Tier card now (1.3), so at
-`938bef5e` every Spell statline is shorter than measured. The Spells that moved since, `throwing_star`'s
-second target among them, are listed at the top of this document and re-measured with components.md §2.3.
-`revenant_guards` is the longest and no Spell overflows a card on its statline alone. The figures this row
-once printed are not repeated: they came from a rendering whose join was never defined, so they could not be
-reproduced. [components.md](components.md) §2.3 defines both strings, measures them with a command that prints what it
-measures, and is the number to quote. The flag below marks the seven whose statline is over 110 characters
-*and* which need a second sentence the rulebook cannot carry for them (a Caster effect line, or two
-Conditions of the same kind on one target): `revenant_guards`, `crazed_specter`, `psycho_rush`,
-`summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. Those counts were measured on the previous
-content; the only two statlines the current one moves are `mortal_wound` and `meteor`, one character longer
-each (a Critical chance of 0.5 became 0.45), and the flagged seven are unchanged, `revenant_guards` included.
-ADR 0042 can only shorten a card: the fifteen Spells at zero need print no Critical chance line at all.
-Whether that fits is the component-designer's measurement in phase 3, against a real card size and a real
-type size; this document only reports the character counts and which rows carry an extra rule.
+caster effects, critical chance — was generated for the first 36 and measured. That measurement also carried
+an unlock initiative, which no Spell has since ADR 0059: that number is on the Tier card now (1.3). Its
+figures are not repeated: they came from a rendering whose join was never defined, so they could not be
+reproduced. [components.md](components.md) §2.3 defines both strings, measures them with a command that
+prints what it measures, at `e6f72578`, and is the number to quote. The flag below marks the seven the first
+measurement found over 110 characters *and* needing a second sentence the rulebook cannot carry for them (a
+Caster effect line, or two Conditions of the same kind on one target): `revenant_guards`, `crazed_specter`,
+`psycho_rush`, `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. components.md §2.4 lays them
+out one effect to a line, and at `e6f72578` names nine more Spells with a Caster effect that take the same
+rule: `ambush`, `bone_ward`, `extort`, `hateful_sacrifice`, `latch`, `momentum`, `parasite_jab`,
+`reckless_swing` and `shield_bash`. Their rows below say the caster line needs its own line on the card,
+which is the same requirement without the old character count. `latch` is the one card whose body needs a
+fifth line. ADR 0042 can only shorten a card: the twenty Spells at zero need print no Critical chance line at
+all. Whether that fits is the component-designer's measurement, against a real card size and a real type
+size; this document only reports which rows carry an extra rule.
 
 ### Trivially playable — 5 operations or fewer and at most 2 tokens: 18 Spells
 
@@ -365,50 +372,59 @@ type size; this document only reports the character counts and which rows carry 
 | --- | --- | --- | --- | --- | --- | --- |
 | `wait` | 0 | self | 1 | 0 | **keep as is** | Nothing. |
 | `full_plate` | 2 | self | 2 | 1 | **needs a component** | A permanent Defense token; it is ADR candidate 3's worst case. |
-| `rejuvenate` | 1 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
-| `restorative_gush` | 3 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
 | `guard` | 1 | 1 ally | 3 | 2 | **needs a component** | Two Defense tokens from one cast, one permanent and one timed. Flagged for card text. |
 | `thundering_seal` | 3 | 1 ally | 3 | 2 | **needs a component** | The same, at amount 3. Flagged for card text. |
+| `bone_ward` | 2 | 1 ally | 3 | 2 | **needs a component** | A Defense buff token at +3 for 2 Rounds, and a Bleed 1 on its own caster; the caster line needs its own line on the card. New since PR #245. |
 | `basic_attack` | 0 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
 | `heavy_strike` | 0 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
-| `throwing_star` | 1 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
-| `momentum` | 2 | 1 enemy | 4 | 0 | **restate** | Nothing; the caster Energy needs its own line on the card, or the 2 Energy read as the target's. Read at `813bb91b` (ADR 0078): it was a Self cast at 1 operation and 1 token, **needs a component**, an Energy regeneration token. |
-| `pummel` | 1 | 1 enemy | 5 | 0 | **keep as is** | Nothing; its 0.767 is a snap job, not a rule. |
-| `lightning_bolt` | 1 | 1 enemy | 5 | 0 | **keep as is** | Nothing; 0.617 likewise. |
-| `enraged_charge` | 2 | 1 enemy | 5 | 0 | **keep as is** | Nothing. |
-| `engulfing_flames` | 3 | 1 enemy | 5 | 0 | **keep as is** | Nothing. |
+| `momentum` | 2 | 1 enemy | 4 | 0 | **restate** | Nothing; the caster Energy needs its own line on the card, or the 2 Energy read as the target's. It deals 3 at `e6f72578`. Read at `813bb91b` (ADR 0078): it was a Self cast at 1 operation and 1 token, **needs a component**, an Energy regeneration token. |
+| `adrenaline_tonic` | 2 | 3 allies | 4 | 0 | **keep as is** | Nothing; three Energy moves and no arithmetic. It inherits the unbounded track of the "Energy has no maximum" row in 1.1. New since PR #245. |
+| `rejuvenate` | 1 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
+| `restorative_gush` | 3 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
 | `restorative_burst` | 3 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
+| `enraged_charge` | 2 | 1 enemy | 5 | 0 | **keep as is** | Nothing. |
+| `pummel` | 1 | 1 enemy | 5 | 0 | **keep as is** | Nothing; its 0.767 is a snap job, not a rule. |
+| `lightning_bolt` | 1 | 1 enemy | 5 | 0 | **keep as is** | Nothing; its 0.5 is on the d20's grid already (it printed 0.617). |
+| `engulfing_flames` | 3 | 1 enemy | 5 | 0 | **keep as is** | Nothing. |
 | `healing_screech` | 2 | 1 ally | 5 | 1 | **needs a component** | A Regeneration token. |
 | `poison_slash` | 1 | 1 enemy | 5 | 1 | **needs a component** | A Bleed token. Since ADR 0041 a second Bleed is a second token, not a lost amount. |
-| `tranquilizer_dart` | 3 | 1 enemy | 5 | 1 | **needs a component** | A Stun token; two Rounds lost. |
 
-### A component, or a second reading — 6 or 7 operations, or 3 tokens: 11 Spells
+### A component, or a second reading — 6 or 7 operations, or 3 tokens: 18 Spells
 
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
-| `death_squad` | 3 | 3 allies | 4 | 3 | **needs a component** | Three Initiative buff tokens, read once when the timeline is built. |
-| `hateful_sacrifice` | 3 | 1 enemy | 7 | 0 | **restate** | Nothing; 10 damage and 4 back on the caster, which can kill it. Two Health tracks move. |
-| `protective_slam` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token. |
-| `ice_spear` | 3 | 1 enemy | 6 | 1 | **needs a component** | The same. |
-| `mortal_wound` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Bleed token at 4 a Round, the largest in the catalogue. |
-| `crushing_stomp` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Stun token, on top of 7 damage at cost 4, the only cost-4 Spell. |
-| `psycho_rush` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Defense debuff on its own caster. Flagged for card text. |
+| `soothing_chant` | 2 | 3 allies | 4 | 3 | **needs a component** | Up to three Regeneration tokens at 2 a Round, from one cast at cost 1. New since PR #245. |
 | `parasite_jab` | 2 | 1 enemy | 6 | 0 | **restate** | Nothing; the caster Heal needs its own line on the card. |
-| `infectious_blast` | 3 | 3 enemies | 4 | 3 | **needs a component** | Three permanent Defense debuff tokens from one cast at cost 1. |
-| `summon_minions` | 2 | 3 enemies | 6 | 3 | **needs a component** | Three Bleed tokens and 2 self-damage; the only Spell with no immediate effect on a target. Flagged for card text. |
 | `soul_devourer` | 3 | 1 enemy | 6 | 0 | **restate** | Nothing, but it is three economies in one cast: Health, Energy and the caster's Health. Flagged for card text. |
+| `psycho_rush` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Defense debuff on its own caster. Flagged for card text. |
+| `protective_slam` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Stun token; one Round lost. It placed an Initiative debuff token until 2026-10-04: the verdict holds, the token changes. |
+| `crushing_stomp` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Stun token, on top of 7 damage at cost 4, the only cost-4 Spell; two Rounds lost, the longest Stun. |
+| `ice_spear` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Stun token; one Round lost. It placed an Initiative debuff token until PR #245: the verdict holds, the token changes. |
+| `shield_bash` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Defense buff token at +3 for 3 Rounds on its own caster; the caster line needs its own line on the card. New since PR #245. |
+| `ambush` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 5 on its own caster, for 1 Round. It is applied in Combat, so the Round it lasts is the next one (Candidate 5), and the caster line must say the caster slows itself, not its target. It replaced `shadowstep`, which raised its caster's initiative and had no row here. |
+| `mortal_wound` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Bleed token at 4 a Round for 2 Rounds, the largest Bleed placed on a target. |
+| `frostbite` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 3, for 1 Round. New since PR #245. |
+| `latch` | 2 | 1 enemy | 6 | 2 | **needs a component** | A Bleed 1 token on the target and a Regeneration 1 token on its own caster, both for 3 Rounds, beside a Damage 1. Its caster line wraps: the one card whose body needs a fifth line (components.md §2.4). New since PR #245. |
+| `tranquilizer_dart` | 3 | 1 enemy | 6 | 2 | **needs a component** | A Stun token and a Bleed 1 token; one Round lost, where it was two. It was in the first table, at 5 operations and 1 token, until PR #245 reworked it. |
+| `summon_minions` | 2 | 3 enemies | 6 | 3 | **needs a component** | Three Bleed tokens and 2 self-damage; the only Spell aimed at enemies that deals them no Damage on the cast. Flagged for card text. |
+| `reckless_swing` | 2 | 1 enemy | 7 | 0 | **restate** | Nothing; 6 damage and 2 back on the caster. Two Health tracks move, and the caster line needs its own line on the card. New since PR #245. |
+| `extort` | 2 | 1 enemy | 7 | 0 | **restate** | Nothing; Damage 4 and an Energy drain of 1 on the target, Energy +1 on the caster. The caster line needs its own line on the card, or the gain reads as the target's. New since PR #245. |
+| `hateful_sacrifice` | 3 | 1 enemy | 7 | 0 | **restate** | Nothing; 11 damage, the largest in the catalogue, and 3 back on the caster, which can kill it. Two Health tracks move. |
+| `throwing_star` | 1 | 2 enemies | 7 | 0 | **restate** | Nothing; 2 targets, 3 operations each, and the card must show that the second is optional (1.8). It was **keep as is** at 1 enemy, in the first table, until #172 gave it a second target. |
 
-### Expensive — 8 operations or more: 7 Spells
+### Expensive — 8 operations or more: 9 Spells
 
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
 | `chain_slash` | 3 | 2 enemies | 8 | 0 | **restate** | Nothing; 2 targets, 3 operations each. |
-| `revenant_guards` | 3 | 3 allies | 9 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 2. The heaviest cast in the catalogue and the longest card text (components.md §2.3). Flagged. |
-| `meteor` | 2 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. |
-| `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | The same. |
+| `revenant_guards` | 3 | 3 allies | 8 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 3. The most tokens of any cast, and four lines of card text (components.md §2.4). Flagged. |
+| `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. |
 | `noxious_cure` | 2 | 3 allies | 11 | 3 | **needs a component** | Three Heals and three Defense debuff tokens; the cure shreds the cured. |
 | `crazed_specter` | 3 | 3 enemies | 12 | 1 | **needs a component** | 9 operations of damage plus a Bleed on its own caster. Flagged for card text. |
-| `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | The most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |
+| `night_raid` | 3 | 3 enemies | 13 | 0 | **restate** | Nothing; 9 operations of damage and 3 Energy drains, each a comparison and a token move, in one Activation slot. It replaced `death_squad`, whose row sat in the middle table: 3 allies, 4 operations, 3 Initiative buff tokens, **needs a component**. |
+| `infectious_blast` | 3 | 3 enemies | 13 | 3 | **needs a component** | Three permanent Defense debuff tokens at 3 from one cast at cost 1, and 2 damage on each. It was in the middle table, at 4 operations, until PR #247 gave it its Damage. |
+| `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | With `meteor`, the most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |
+| `meteor` | 2 | 3 enemies | 14 | 3 | **needs a component** | Three Bleed tokens at 2 for 1 Round, beside 9 operations of damage at 2 a target. It was **restate** at 11 operations and no token until PR #245 gave it the Bleed: the content moved this verdict. |
 
 ---
 
@@ -496,17 +512,20 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > ADR 0066 it takes two opportunities, Rounds 1 and 3; `full_plate`'s cost and amount are unchanged, and so
 > are the other three Defense buff Spells' amounts, so the reading below stands two Rounds later. ADR 0041
 > does not touch it — `DefenseBuff` already defaulted to `Stack`.
+>
+> Re-read at content `e6f72578`: `full_plate` is unchanged, but the largest hit is 11 now, so the Round below
+> is 10, not 9, and `revenant_guards`' permanent half is +3, not +2. Two timed-only Defense buff Spells
+> arrived, `bone_ward` and `shield_bash`; neither feeds the line.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above
 (`Creature.cs:95-97`). `full_plate` is Self-targeted, costs 1, gives +3 permanent, and is castable from
 Round 3: an Evolution pick buys `tier:brute:v1` in Round 1 and another `tier:ironbound:v1` in Round 3, and
 the Creature gains 2 Energy every Round. Cast every Round from Round 3, its Defense is 3(k - 2) after Round k.
-The largest single hit in the catalogue is 10 (`psycho_rush`, `engulfing_flames`, `hateful_sacrifice`);
-doubled by a critical that is 20. From Round 9 the Creature takes zero from every attack in the game except a
-Bleed, which ignores Defense. `thundering_seal`
-does the same for an ally at +3, `guard` at +1 and `revenant_guards` for the whole Team at +2 a cast: all
-four Defense buff Spells carry a permanent half. The plan
+The largest single hit in the catalogue is 11 (`hateful_sacrifice`); doubled by a critical that is 22. From
+Round 10 the Creature takes zero from every attack in the game except a Bleed, which ignores Defense.
+`thundering_seal` does the same for an ally at +3, `guard` at +1 and `revenant_guards` for the whole Team at
++3 a cast: four of the six Defense buff Spells carry a permanent half. The plan
 already calls this "probably not what anyone wants"; the table gives the round number.
 
 **The question.** What bounds a permanent stat buff?
@@ -518,7 +537,7 @@ already calls this "probably not what anyone wants"; the table gives the round n
   digest move, and four Spells lose their re-cast value entirely — `full_plate` becomes a once-a-Match cast,
   which is closer to the `Passive` it is authored as.
 - *Remove permanent Durations from the taxonomy and give those halves a long finite Duration.* Costs: a
-  content change on the four Defense buff Spells — five, if `infectious_blast`'s permanent Defense debuff
+  content change on the four Defense buff Spells with a permanent half — five, if `infectious_blast`'s permanent Defense debuff
   goes with them — and a new content hash; the arc of a Match loses its only permanent gain.
 
 ### Candidate 4. A Condition remembers the Spell that applied it
@@ -535,7 +554,7 @@ objective's `damagePerCast` and for `spellOutcomes`.
 - *Drop it.* Costs: `damagePerCast` goes back to reading half a Condition Spell's output, which ADR 0027
   exists to fix, and `tune-content` scores become incomparable again. Nothing is gained at the table.
 - *Keep it, and make it visible.* Costs: a Condition token would have to name the Spell that placed it —
-  six Spells can place a Bleed alone — which is a component cost for a reading no player uses.
+  ten Spells can place a Bleed alone at `e6f72578` — which is a component cost for a reading no player uses.
 
 The evidence points one way, which is why this is raised as a question with a cheap answer rather than a
 problem.
@@ -556,8 +575,8 @@ Rounds; a 1-Round Bleed ticks once. The table needs no flag, only the sentence.
 - *Store the Round the Condition expires at, instead of a countdown.* Costs: a change to `Condition`,
   `ConditionSnapshot` and the Cleanup rule, with no behaviour change for any content that exists; the
   Condition needs to know the Round number, which it does not today.
-- *Drop the flag and author every Duration one higher.* Costs: a content change on all 18 timed lasting
-  Effects and a new content hash, to say the same thing with a worse number on the card.
+- *Drop the flag and author every Duration one higher.* Costs: a content change on all 26 timed lasting
+  Effects at `e6f72578` and a new content hash, to say the same thing with a worse number on the card.
 
 ### Candidate 6. Who picks first in an opportunity
 
@@ -631,23 +650,30 @@ section, in the enum's order (`RoundSubPhase.cs:8-18`): `EnergyGain`, `OngoingEf
 
 **Effect kinds.** All twelve of the taxonomy appear, each as exactly one row in Part 2: `Damage`, `Heal`,
 `EnergyGain`, `EnergyDrain`, `Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`,
-`DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff`. 12 of 12, and every one but `EnergyRegeneration` has
-at least one Spell in `data/` using it; that one lost its only Spell, `momentum`, to ADR 0078, and keeps its
+`DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff`. 12 of 12, and at `e6f72578` every one but
+`EnergyRegeneration` and `InitiativeBuff` has at least one Spell in `data/` using it. The first lost its only
+Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04. Both keep their
 row because the engine keeps the kind.
 
-**Spells.** All 36 files under `data/Spells/**` appear, each as exactly one row in Part 3: 18 trivially
-playable, 11 needing a component or a second reading, 7 expensive, at `938bef5e`. 18 + 11 + 7 = 36; at
-`4ab506fa` it would be 17 + 12 + 7, `throwing_star` moving (see the top of this document). By Tier level:
-3 at 0 (the starting kit), 6 at 1, 9 at 2, 18 at 3, which is what the 21 Tiers sell: 3 x 2, 9 x 1 and 9 x 2.
+**Spells.** All 45 files under `data/Spells/**` at `e6f72578` appear, each as exactly one row in Part 3: 18
+trivially playable, 18 needing a component or a second reading, 9 expensive. 18 + 18 + 9 = 45. At
+`938bef5e` it was 18 + 11 + 7 = 36. `death_squad` and `shadowstep` are gone from `data/` and have no row. By
+Tier level: 3 at 0 (the starting kit), 6 at 1, 18 at 2, 18 at 3, which is what the 21 Tiers sell: 3 x 2,
+9 x 2 and 9 x 2 (a level-2 Tier sold 1 until PR #245).
 
 **Tiers.** All 21 files under `data/Tiers` are read by the Evolution rows of 1.3, which count them by level,
 Spells sold, prerequisite and initiative bonus; no Tier needs a row of its own, because they differ only in
 numbers the card prints.
 
-**Verdicts.** 117 rows carry exactly one verdict each: 69 in Part 1, 12 in Part 2, 36 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 43, **keep as is** 38, **restate** 36,
-**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. Before this
-re-audit they were 105 rows, 42, 33 and 30. In Part 1, Evolution went from 8 rows to 12, the timeline from 3
+**Verdicts.** 126 rows carry exactly one verdict each: 69 in Part 1, 12 in Part 2, 45 in Part 3. The totals,
+counted over the file rather than recalled: **needs a component** 48, **keep as is** 39, **restate** 39,
+**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. Before the
+re-read for `e6f72578` they were 117 rows, 43, 38 and 36, and before the package re-audit 105 rows, 42, 33
+and 30. The `e6f72578` re-read moved no Part 1 verdict. In Part 2, `InitiativeBuff` went from **needs a
+component** to **keep as is**. In Part 3 it added nine rows net (ten new, `death_squad` gone): **needs a
+component** gained 7 new Spells and `meteor` and lost `death_squad`, 18 to 24; **restate** gained
+`reckless_swing`, `extort`, `night_raid` and `throwing_star` and lost `meteor`, 7 to 10; **keep as is** gained
+`adrenaline_tonic` and lost `throwing_star`, and stays at 11. The history of the package re-audit follows. In Part 1, Evolution went from 8 rows to 12, the timeline from 3
 to 6, `TieOrder` is 3 new rows, and `ActionResolution` gained the `Quick` critical row: 57 + 4 + 3 + 3 + 1 =
 68. Its **needs a component** rows went from 15 to 17: it lost 4 (picks a Round, the Talent tree's
 prerequisites, the Spell's unlock initiative, the printed tiebreak number) and gained 6 (the Round track, pick
@@ -664,11 +690,11 @@ Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
-| keep as is | 23 | 4 | 11 | 38 |
-| restate | 28 | 1 | 7 | 36 |
-| needs a component | 18 | 7 | 18 | 43 |
+| keep as is | 23 | 5 | 11 | 39 |
+| restate | 28 | 1 | 10 | 39 |
+| needs a component | 18 | 6 | 24 | 48 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
-| **Total** | **69** | **12** | **36** | **117** |
+| **Total** | **69** | **12** | **45** | **126** |
 
 **ADR candidates.** Six raised, four excluded with a reason.
