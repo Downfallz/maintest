@@ -25,6 +25,13 @@ first.
   The lookahead's gain is +0.092 ± 0.049 read seed by seed. Declarations count both sides. Against
   `search-19` and `search-31` the count rises, since those weights were fitted to the old price and a debuff is
   now cast where it takes defense off. Matches with the lookahead run 12.0 rounds instead of 11.6.
+- **`check-knobs` and the studio** read a spell with no board and no defense, so a defense debuff now reads
+  zero there too. Infectious Blast went from 23.55 a round to **6.00**, its 2 damage on three enemies, and
+  Noxious Cure from 18.44 to 22.34, the largest reading at tier 2 now that its debuff on its allies costs nothing.
+- **The weights fitted for the lookahead** (`lookahead-5`, `lookahead-20`, `lookahead-30`) are removed from
+  `learning/weights/`. The table offered them as heuristic players under their file names, so a seat named
+  `lookahead-20` played Greedy's reading with weights fitted for another one, and every one of them had collapsed
+  on the content it was last measured on. The lookahead itself is still offered, on `search-19`'s weights.
 - Benchmark digest regenerated on `e6f72578`.
 
 ## 2026-10-04. Seven tier-3 spells raised again by hand

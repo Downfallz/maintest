@@ -32,8 +32,9 @@ Noxious Cure's debuff on the allies it heals. A debuff on a creature with no def
 - Bad: a permanent debuff also cancels defense the target gains later, and that is not read. Against a team that
   will buff, the debuff is cheaper than it is. Like the buff, the reading is today's board one round deep.
 - Neutral: the weights files and the policies were fitted under the old price. The terms a dataset records
-  per candidate (ADR 0051) change, and so does the benchmark digest. `check-knobs` keeps its board-free
-  reading, so it still reads Infectious Blast at its old price.
+  per candidate (ADR 0051) change, and so does the benchmark digest. `check-knobs` and the studio's value
+  reading hold no board and no defense, so a debuff is worth zero there: Infectious Blast reads 6.00 a round,
+  its damage alone, instead of 23.55, and Noxious Cure's debuff on its allies no longer costs it anything.
 
 ## Alternatives considered
 

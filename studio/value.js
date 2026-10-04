@@ -34,7 +34,9 @@ export function effectValue(effect, weights, critFactor = 1) {
     case 'Regeneration': return w('heal') * perRound * rounds;
     case 'EnergyRegeneration': return w('energy') * perRound * rounds;
     case 'Stun': return w('stun') * rounds;
-    case 'DefenseBuff': case 'DefenseDebuff': return w('defense') * amount * rounds;
+    case 'DefenseBuff': return w('defense') * amount * rounds;
+    // Worth the damage it lets through (ADR 0098), and a reading with no defense lets nothing through.
+    case 'DefenseDebuff': return 0;
     case 'InitiativeBuff': case 'InitiativeDebuff': return w('initiative') * amount * rounds;
     default: return 0;
   }

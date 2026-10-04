@@ -16,7 +16,7 @@ test('the value a round matches what check-knobs prints for the same documents',
   const expected = {
     'spell:protective_slam:v1': [13.53, 9.02], // crit, and an initiative debuff over two rounds
     'spell:full_plate:v1': [5.85, 5.85], // permanent reads as three rounds
-    'spell:noxious_cure:v1': [8.39, 8.39], // a debuff aimed at allies is a price
+    'spell:noxious_cure:v1': [12.29, 12.29], // its debuff on the allies it heals takes no defense off: no defense here (ADR 0098)
     'spell:summon_minions:v1': [12.4, 8.27], // three targets, and damage on the caster subtracted once
     'spell:meteor:v1': [10.5, 7], // a bleed on every target it reaches
     'spell:pummel:v1': [3.53, 3.53], // one energy costs a whole round, like two

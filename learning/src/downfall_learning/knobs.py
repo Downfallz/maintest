@@ -1065,7 +1065,8 @@ def _effect_value(effect: Mapping[str, object], weights: Mapping[str, float], cr
         "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
         "Stun": weights.get("stun", 0) * rounds,
         "DefenseBuff": weights.get("defense", 0) * amount * rounds,
-        "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
+        # Worth the damage it lets through (ADR 0098), and a reading with no defense lets nothing through.
+        "DefenseDebuff": 0.0,
         "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
         "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
     }.get(kind, 0.0)
@@ -1135,8 +1136,8 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
       plays, which is how the strongest spell in the catalogue passed every check;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
       ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one. A
-      `DefenseDebuff` is the same stand-in the other way, and wrong the same way: it does not read the damage
-      the shred lets through (ADR 0035);
+      `DefenseDebuff` is worth nothing here: `ActionScorer` prices it by the damage it lets through, at most
+      the defense the target holds (ADR 0098), and this reading holds no defense, so it takes nothing off;
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
     - no energy cost, which `ActionScorer` prices when it picks a package, so a spell whose intent rests on

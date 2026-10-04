@@ -5,7 +5,7 @@ question 14, 2026-09-23, to one package a Creature an opportunity the same day, 
 day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
 `momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day; to one Activation a slot,
 2026-09-28; to the content of 2026-10-04: Night Raid, Ambush, Protective Slam's stun, and the hand-tuned
-amounts). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+amounts; to Regeneration printed as `Regen` on the card, 2026-10-04). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -81,8 +81,10 @@ What is current, exactly:
   pieces from 242 to **248**, still on 2 sheets ([1.4](#14-condition-tokens)). The Base initiative ceiling
   goes from 34 to **35**, and the Current initiative ceiling from 40 down to the same **35**
   ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)); no rail moves. `latch`'s
-  `Caster: Regeneration 1 a round, 3 rounds` is 40 characters and wraps, so the body box takes a fifth line
-  ([2.3](#23-the-measurement)). And the largest Damage is 11, past the 10 the Defense rails were sized on
+  `Caster: Regeneration 1 a round, 3 rounds` was 40 characters and wrapped, so the body box took a fifth
+  line, until the maintainer's decision of the same day that the card body prints the Condition as `Regen`
+  ([2.2](#22-the-words)): `Caster: Regen 1 a round, 3 rounds` is 33, no line wraps, and the box is 4
+  lines again ([2.3](#23-the-measurement)). And the largest Damage is 11, past the 10 the Defense rails were sized on
   (Part 6, question 16).
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
@@ -534,10 +536,21 @@ a Multi Spell may take fewer targets than its maximum (`TargetingRules.cs:49`), 
 
 ### 2.2 The words
 
-The effect lines use the glossary's terms unchanged: `Damage`, `Heal`, `Energy`, `Bleed`, `Regeneration`,
-`Energy regeneration`, `Stun`, `Defense`, `Initiative`, `Caster`, `permanent`. A per-Round effect reads
-"N a round", which is the glossary's phrasing for a Bleed tick. A Duration reads "N rounds" or "permanent",
-which is the Duration entry's own vocabulary.
+The effect lines use the glossary's terms unchanged, with one abbreviation: `Damage`, `Heal`, `Energy`,
+`Bleed`, `Regen`, `Energy regeneration`, `Stun`, `Defense`, `Initiative`, `Caster`, `permanent`. A per-Round
+effect reads "N a round", which is the glossary's phrasing for a Bleed tick. A Duration reads "N rounds" or
+"permanent", which is the Duration entry's own vocabulary.
+
+**The card body prints the Regeneration Condition as `Regen`** (the maintainer's decision, 2026-10-04), on
+every card that places one: at `e6f72578`, `latch` (`Caster: Regen 1 a round, 3 rounds`), `soothing_chant`
+(`Regen 2 a round, 2 rounds`) and `healing_screech` (`Regen 3 a round, 2 rounds`). The constraint it answers
+is the line: with the full word, `latch`'s caster line is 40 characters, two over the 38 a line holds at 8 pt
+([2.3](#23-the-measurement)), so it wrapped and the body box needed a fifth line for one card. Abbreviated it is
+33, every body line in the catalogue is within 38, and no line wraps. The abbreviation is the card body's
+alone: the Condition is still `Regeneration` in the rules, the glossary, the rulebook and on its token
+([1.4](#14-condition-tokens)), where the room is not a 38-character line. The generator applies it when it
+renders the effect line, so it is part of the spec and not a hand edit. The table app's screen face
+(`EffectLine.cs`) prints the full word, because a screen line is not 53.5 mm at 8 pt; Part 6, question 12.
 
 | Effect kind | Printed as |
 | --- | --- |
@@ -545,8 +558,8 @@ which is the Duration entry's own vocabulary.
 | `Heal` | `Heal 4` |
 | `EnergyGain` / `EnergyDrain` | `Energy +2` / `Energy -2` |
 | `Bleed` | `Bleed 4 a round, 2 rounds` |
-| `Regeneration` | `Regeneration 3 a round, 2 rounds` |
-| `EnergyRegeneration` | `Energy regeneration 2 a round, 3 rounds` (no card prints it at `813bb91b` or since; the line stays because the schema still admits the kind, and the generator prints what the build hands it) |
+| `Regeneration` | `Regen 3 a round, 2 rounds` (the abbreviation above; the full word was `Regeneration 3 a round, 2 rounds`) |
+| `EnergyRegeneration` | `Energy regeneration 2 a round, 3 rounds` (no card prints it at `813bb91b` or since; the line stays because the schema still admits the kind, and the generator prints what the build hands it). It is 39 characters, so a Spell that authored one again would wrap and fail the build ([5.6](#56-how-it-is-tested)); whether it then prints `Energy regen` is the maintainer's to decide, not this document's. |
 | `Stun` | `Stun, 2 rounds` |
 | `DefenseBuff` / `DefenseDebuff` | `Defense +3, permanent` / `Defense -2, 1 round` |
 | `InitiativeBuff` / `InitiativeDebuff` | `Initiative +2, 1 round` / `Initiative -3, 1 round` (no card prints an Initiative buff at `e6f72578`; the line stays for the same reason) |
@@ -560,12 +573,12 @@ The card is a **standard poker card, 63.5 x 88.9 mm**. Which print constraint ea
 - **5 mm margins**, so the text area is **53.5 mm** wide. 5mm is what survives a home printer's drift and a
   hand-held guillotine.
 - **8 pt body text**, which is about **38 characters a line** at 53.5 mm in a humanist face.
-- **5 lines of body text**, 17.5 mm. It was 4 lines, 14 mm, which was what was left after the head, the
-  foot and the rule above the caster line. The foot is shorter than it was: the `Unlock` line and the one or
-  two lines of `Requires` are gone. The body box kept its 4 lines while every card fitted in 4. At
-  `e6f72578` one does not: `latch` has four body lines, and its caster line wraps, so it prints five. The
-  fifth line is taken from the room the foot gave back, and the rest of that room is still margin. A smaller
-  type would keep 4 lines, at the cost of every card's legibility for the sake of one.
+- **4 lines of body text**, 14 mm, which is what is left after the head, the foot and the rule above the
+  caster line. The foot is shorter than it was: the `Unlock` line and the one or two lines of `Requires` are
+  gone, and that room is margin. Every card fits in 4 lines with no line wrapped. For one reading of
+  `e6f72578` the box was 5 lines, 17.5 mm: `latch` has four body lines and its caster line, printed with the
+  full word `Regeneration`, wrapped to a fifth. Printing the Condition as `Regen` on the card
+  ([2.2](#22-the-words)) took the wrap away, and the box went back to 4.
 
 Measured against the real catalogue, rendering every card face from `data/`. Two of the four readings measure
 a **joined string**, so the join is part of the measurement and is stated here rather than left to a reader to
@@ -585,7 +598,7 @@ def dur(e): return 'permanent' if e.get('permanent') else str(e['durationRounds'
 def eff(e):
   k,a,ap=e['kind'],e.get('amount'),e.get('amountPerRound')
   return {'Damage':f'Damage {a}','Heal':f'Heal {a}','EnergyGain':f'Energy +{a}','EnergyDrain':f'Energy -{a}'}.get(k) or {
-   'Bleed':f'Bleed {ap} a round, {dur(e)}','Regeneration':f'Regeneration {ap} a round, {dur(e)}',
+   'Bleed':f'Bleed {ap} a round, {dur(e)}','Regeneration':f'Regen {ap} a round, {dur(e)}',   # 2.2: Regen on the card
    'EnergyRegeneration':f'Energy regeneration {ap} a round, {dur(e)}','Stun':f'Stun, {dur(e)}',
    'DefenseBuff':f'Defense +{a}, {dur(e)}','DefenseDebuff':f'Defense -{a}, {dur(e)}',
    'InitiativeBuff':f'Initiative +{a}, {dur(e)}','InitiativeDebuff':f'Initiative -{a}, {dur(e)}'}[k]
@@ -600,17 +613,17 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
 def r(t,v): print(t,'max',max(v),'median',statistics.median(x[0] for x in v),'min',min(v))
 print('widest line',max(W),' lines per card',sorted(collections.Counter(L).items()))
 r('body    ',B);r('statline',S)"
-# widest line (40, 'latch')  lines per card [(2, 15), (3, 25), (4, 5)]
+# widest line (33, 'latch')  lines per card [(2, 15), (3, 25), (4, 5)]
 # body     max (96, 'revenant_guards') median 40 min (16, 'wait')
 # statline max (124, 'revenant_guards') median 68 min (41, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
-| Body lines per card | 2, 3 or 4 | 15 cards at 2, 25 at 3, 5 at 4 (`extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`). With `latch`'s wrap, `latch` prints 5, which is why the box holds 5. `momentum` went from 2 lines to 3 with ADR 0078. |
-| Widest single line | **40 characters** (`latch`: `Caster: Regeneration 1 a round, 3 rounds`) | Two over the 38 a line holds, so **one line in the catalogue wraps**, with a 3 mm hanging indent so the second half does not read as a line of its own. The next widest are 32 (`Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, and three more). The one line that wrapped before, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
-| Whole body, one string | max **96** characters (`revenant_guards`), median **40**, min **16** (`wait`) | 96 characters is under three full lines. No card is tight on the body alone; `latch` is tight on its line count, not its length (91). |
-| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 5-line box. |
+| Body lines per card | 2, 3 or 4 | 15 cards at 2, 25 at 3, 5 at 4 (`extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`). No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078. |
+| Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, and `Caster: Bleed 1 a round, 1 round` on `bone_ward`. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
+| Whole body, one string | max **96** characters (`revenant_guards`), median **40**, min **16** (`wait`) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49); none of the three is the max, the median or the min, so those three figures did not move with the abbreviation. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -620,7 +633,7 @@ must not be read as a target effect, or **two Conditions of one kind** on the sa
 read as one. Here is every one of them, line by line, with the character count of each line against the 38 a
 line holds:
 
-| Spell | Body lines | Longest line | Lines used of 5 |
+| Spell | Body lines | Longest line | Lines used of 4 |
 | --- | --- | --- | --- |
 | `revenant_guards` | `Up to 3 allies` (14) / `Defense +3, permanent` (21) / `Defense +4, 2 rounds` (20) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | **4** |
 | `crazed_specter` | `Up to 3 enemies` (15) / `Damage 9` (8) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | 3 |
@@ -640,9 +653,10 @@ use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damag
 `Caster: Energy +2` (17): three lines, and the rule is what says the 2 Energy go to the Assassin that struck
 and not to the enemy it struck. `ambush` reads `One enemy` (9) / `Damage 8` (8) /
 `Caster: Initiative -5, 1 round` (30), and the rule is what says the Assassin slows itself, not its victim.
-`latch` is the one card that needs the fifth line: `One enemy` (9) / `Bleed 1 a round, 3 rounds` (25) /
-`Damage 1` (8) / `Caster: Regeneration 1 a round, 3 rounds` (40), its caster line wrapped under its own
-indent.
+`latch` reads `One enemy` (9) / `Bleed 1 a round, 3 rounds` (25) / `Damage 1` (8) /
+`Caster: Regen 1 a round, 3 rounds` (33): four lines, the widest line in the catalogue, and no wrap. It is the
+card the `Regen` abbreviation was made for ([2.2](#22-the-words)): with the full word its caster line was 40
+and took a fifth line.
 
 ### 2.5 Three card faces, written out
 
@@ -1149,7 +1163,7 @@ print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
 
 The widest line on any package card is 23 characters (`level 3 . +2 initiative`, and every band's second
 line is as long) against the 38 a line holds at 8 pt, and a body is 3 lines, a `Needs` line and two Spells,
-of the 5 the Spell card's body box holds. The package card is the
+of the 4 the Spell card's body box holds. The package card is the
 easy card to print. The band is two lines at 8 pt, about 10 mm with its rule, so a stagger costs 10 mm a card.
 
 ### 4.2 How a purchase reaches the hand, and how the bonus is recorded
@@ -1287,13 +1301,14 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | --- | --- |
 | A catalogue of N Spells produces exactly N faces, and no face for a Spell the catalogue does not have | The deck is the catalogue, including what `"enabled": false` pruned. |
 | A face carries cost, targeting, every effect with its amount and Duration, every caster effect, the printed critical chance and its d20 threshold when it has one, and the package that teaches it with its level | This is Part 2 as an assertion. A missing Duration is a card that cannot be resolved. |
+| A Regeneration effect prints as `Regen N a round, ...` on a Spell card face, and the Regeneration token's face keeps the word `Regeneration` | [2.2](#22-the-words): the abbreviation is the card body's, made to keep every line within 38 characters, and is not a second name for the Condition. |
 | **No face carries an initiative or a prerequisite**, and none carries the talent tree's class | ADR 0059 and ADR 0056. A card that prints a rule the engine stopped applying is a card a table plays. |
 | A package's level is its own `level`, and a starting Spell's is 0 | ADR 0058 superseded the tree depth of ADR 0034. A depth computed from the tree is a number the game does not consult. |
 | A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none) and every Spell it teaches, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses. |
 | The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
 | The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
 | The Round track has one space per Round up to the rule set's Round cap (20 in `playtest.rules.json`), and the pick marks are exactly the Rounds on it that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. A track shorter than the cap leaves the Round cap marker nowhere to go. |
-| Rendering fails, loudly, when a body exceeds 5 printed lines, wrapped lines counted, or a line wraps more than once, on either kind of card | The measurements in 2.3 and 4.1 hold for today's content, where one line wraps once (`latch`). A tuning pass that lengthens a Duration or adds an effect, or an author who puts a fourth Spell in a package, must break the build rather than clip the card. |
+| Rendering fails, loudly, when a body exceeds 4 printed lines, or any line wraps (is over the 38 characters a line holds), on either kind of card | The measurements in 2.3 and 4.1 hold for today's content, where no line wraps since the card prints `Regen` ([2.2](#22-the-words)) and the widest is 33 (`latch`). While the full word made `latch`'s caster line wrap, the test allowed 5 lines and one wrap. A tuning pass that lengthens a Duration or adds an effect, or an author who puts a fourth Spell in a package, must break the build rather than clip the card. |
 | Every emitted sheet carries the hash, and a missing or mismatched hash produces no output at all | The invariant of 5.5, as a property over the whole output. |
 | 9 cards a sheet, cards abutting, marks only in the outer margin, and a short last sheet padded with blanks rather than a wrapped card | A card split across two sheets is 270 cards of waste. |
 
@@ -1456,7 +1471,9 @@ cells, to cover 45.
 
 [5.1](#51-inputs) reads `game.schema.json`. The table host already renders the same content into card words
 (`CatalogueProjection`, `CardFace`, `PackageCard`), stamped with the hash and the rule set. Two renderers of
-the same words will drift; the head line of question 10 is a drift that has already happened. Should the
+the same words will drift; the head line of question 10 is a drift that has already happened, and `Regen`
+([2.2](#22-the-words)) is a second, deliberate one: the print abbreviates where the screen's `EffectLine`
+does not. Should the
 generator read the host's catalogue, so the screen and the print cannot disagree, at the price of needing a
 running host to print?
 
