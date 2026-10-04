@@ -36,6 +36,12 @@ first.
 - **Content `6d8838c0`**, benchmark digest regenerated. It takes Shadowstep's place in the package under a
   new id, `spell:ambush:v1`; its knobs are the cost (3 to 4), the damage (7 to 8), the crit (0.3 to 0.45)
   and the initiative it costs (3 to 5).
+- **The tuner's reading** on content `6d8838c0`, the benchmark seeds: on the exploring run Ambush was declared
+  125 times to Shadowstep's 64 and its sides won 0.605 to 0.476; on the mirrored Greedy run 143 to 101, winning
+  0.408 to 0.290. The objective rose from 0.000 to **0.148**, and not on the Assassin: `tierWinSpread` reads
+  0.189 against its 0.15, on the Ravager, where Psycho Rush's sides won 0.885 of 52 and Tornado's 0.500 of 34.
+  The same pair read 0.101 on `5708132d` (0.821 of 56 against 0.542 of 48), so the Ravager was already the
+  package nearest the bound. Matches 10.8 rounds.
 
 ## 2026-10-04. Death Squad is replaced by Night Raid
 
