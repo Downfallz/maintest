@@ -135,7 +135,7 @@ Creature is ignored.**
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
 | **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
-| **Initiative buff / debuff** | Read once, at Turn order resolution |
+| **Initiative buff / debuff** | Read once, at Turn order resolution *(no card applies a buff today)* |
 
 **Cleanup, in two moves (§5.9):**
 
@@ -159,7 +159,7 @@ A **permanent** Condition moves a rail and takes no token. It never counts down.
 2. At the **Round cap**, checked at **Finalization** only: the higher **total remaining Health** wins.
 3. **Equal totals is a draw.**
 
-One cast can wipe both Teams — **Hateful Sacrifice**, `Damage 10` then `Caster: Damage 4` — and that is a draw.
+One cast can wipe both Teams — **Hateful Sacrifice**, `Damage 11` then `Caster: Damage 3` — and that is a draw.
 
 ---
 
