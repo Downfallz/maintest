@@ -392,7 +392,7 @@ public sealed class ActionScorerTests
         // Hurt, because a heal over time on a target at full health is worth nothing however long it runs --
         // correctly, and it would make this ask the wrong question of Regeneration.
         // Hurt, and holding 2 defense, so that a defense debuff has some to take off and a buff some threat to
-        // take off (ADR 0097).
+        // take off (ADR 0098).
         var board = Board(enemyHealth: 20);
         var hurt = board[1] with { Health = Health.Of(10), TotalDefense = Defense.Of(2) };
         var creatures = new List<CreatureSnapshot> { board[0], hurt, board[2] };
@@ -505,7 +505,7 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// ADR 0097: a defense debuff is worth the damage it lets through, and a creature with no defense has none to
+    /// ADR 0098: a defense debuff is worth the damage it lets through, and a creature with no defense has none to
     /// lose, so the debuff is worth nothing however large or long it is.
     /// </summary>
     [Fact]

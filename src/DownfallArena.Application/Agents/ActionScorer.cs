@@ -713,7 +713,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// What a defense debuff is worth: the damage it lets through, the mirror of what <see cref="DefensiveTerms"/>
-    /// reads a buff to prevent (ADR 0097). It takes off at most the defense the target holds, since total defense
+    /// reads a buff to prevent (ADR 0098). It takes off at most the defense the target holds, since total defense
     /// floors at zero, and the difference is the threat on the target with that defense gone over the threat on
     /// it now, over the debuff's rounds, shared across the target's living team the way a buff's is. A debuff on
     /// a creature with no defense lets nothing through and is worth nothing; on the actor's own side the same

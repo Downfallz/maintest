@@ -103,3 +103,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
 | [0096](0096-energy-is-priced-by-the-spell-it-unlocks.md) | Energy is priced by the spell it unlocks | Proposed |
 | [0097](0097-the-learning-loop-measures-one-format.md) | Measure one format, and let the others be played | Proposed |
+| [0098](0098-a-defense-debuff-is-priced-by-the-damage-it-lets-through.md) | A defense debuff is priced by the damage it lets through | Proposed |
