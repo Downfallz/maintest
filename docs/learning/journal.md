@@ -4,6 +4,25 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-04. Seven tier-3 spells raised again by hand
+
+- **What.** The owner's call, read off the tuner's spell usage on content `6d8838c0`:
+
+  | Spell | Was | Now |
+  | --- | --- | --- |
+  | Soul Devourer | 6 damage | 7 |
+  | Revenant Guards | +2 defense, permanent | +3 |
+  | Crazed Specter | 8 damage | 9 |
+  | Night Raid | 2 damage on each | 3 |
+  | Mortal Wound | 4 damage up front | 5 |
+  | Restorative Burst | heals 7 | 9 |
+  | Toxic Waves | bleed 2 a round for 2 rounds | 3 |
+
+  Crazed Specter's damage knob and Restorative Burst's heal knob had their tops raised to the new values, and
+  Restorative Burst's keep now says it heals more than `restorative_gush`, not as much. `check-knobs` finds no
+  new strictly better pair.
+- **Content `e6f72578`**, benchmark digest regenerated.
+
 ## 2026-10-04. Shadowstep is replaced by Ambush
 
 - **Why.** Shadowstep (5 damage, +2 initiative on its caster for a round) was cast, but the owner found the
