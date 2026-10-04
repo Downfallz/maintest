@@ -1556,7 +1556,8 @@ the rule beside the count, so it is the maintainer's call. The counts in Part 1 
 
 Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
 are translation.md's as it reads on this branch after its package re-audit, its ADR 0072 re-read and its
-ADR 0078 re-read: 18 from Part 1, 7 from Part 2, 18 from Part 3; 43 of 43. ADR 0078 took two rows out, the
+ADR 0078 re-read, and its spell rows re-read for the content of 2026-10-04: 18 from Part 1, 6 from Part 2, 24
+from Part 3; 48 of 48. ADR 0078 took two rows out, the
 `EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
 and their verdicts are no longer **needs a component** ([1.4](#14-condition-tokens)). The re-audit was
 written alongside this document, so if a row name has moved since, the component beside it has not. ADR 0083
@@ -1597,7 +1598,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | `Stun` | 12 tokens, two a Creature: a Stun on a stunned Creature is ignored, so a Creature carries one, and it needs a token in the Speed slot and one in the dock. Plus 6 Immune tokens, one a Creature, for the Round of Stun immunity after it ([1.5](#15-the-rest-of-the-pieces)) |
 | `DefenseBuff` | 30 timed tokens (6 at +1, 6 at +3, 18 at +4); a permanent buff moves the rail and needs none |
 | `DefenseDebuff` | 18 timed tokens at -2; a permanent debuff moves the rail |
-| `InitiativeBuff` | **No token** since the content of 2026-10-04: no Spell places one, so the 18 at +2 left the box ([1.4](#14-condition-tokens)). The rule stays, read with the Base rails, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one). translation.md's row still names `death_squad`. |
+| `InitiativeBuff` | **No token** since the content of 2026-10-04: no Spell places one, so the 18 at +2 left the box ([1.4](#14-condition-tokens)). The rule stays, read with the Base rails, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one). translation.md's row reads **keep as is** since its re-read of 2026-10-04. |
 | `InitiativeDebuff` | 12 tokens: 6 at -3, 6 at -5 |
 
 ### The 18 spells
@@ -1628,8 +1629,8 @@ move a rail and place nothing. `momentum` was the 19th until ADR 0078: it places
 | `toxic_waves` | Up to 3 Bleeds 3 (2 rounds) |
 
 The Spells that place a token and are not among the audit's 18, because they were authored or reworked after
-it (PR #245 and the content of 2026-10-04). translation.md has no row for six of them, and reads `meteor` as
-it was before it placed a Bleed. The components that answer them are the ones above.
+it (PR #245 and the content of 2026-10-04). translation.md has rows for all of them since its re-read of
+2026-10-04. The components that answer them are the ones above.
 
 | Spell | What a cast places |
 | --- | --- |
