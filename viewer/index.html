@@ -218,8 +218,12 @@
     // The picks an opportunity actually gives: the allowance, or the team size when that is smaller, because a
     // creature buys at most one package an opportunity (ADR 0066). A 1v1 run gives one however many the rule
     // set allows, and a stamp read as "2" would describe a game nobody played.
+    //
+    // Both spellings of the allowance are read. The stamp writes evolutionPicksPerOpportunity, but artifacts
+    // recorded before that rename carry evolutionPicksPerRound -- this repository's own viewer/samples among
+    // them -- and the viewer opens old runs as readily as new ones.
     function picksAnOpportunity(rules) {
-      const allowance = rules.evolutionPicksPerOpportunity;
+      const allowance = rules.evolutionPicksPerOpportunity ?? rules.evolutionPicksPerRound;
       if (!Number.isInteger(allowance)) return '-';
       return Number.isInteger(rules.teamSize) ? Math.min(allowance, rules.teamSize) : allowance;
     }

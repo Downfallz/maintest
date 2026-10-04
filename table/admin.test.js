@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formatToShow, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -217,4 +217,29 @@ test('a row names the format its table is playing, which is not necessarily the 
 
   assert.equal(rows[0].format, '1v1');
   assert.equal(rows[1].format, null, 'a host that answers no format says nothing rather than guessing');
+});
+
+// The page paints formats(null) before the host answers; the host then answers the same three values. Keyed on
+// the values alone, the early return skipped the host's default and an operator who never touched the chooser
+// opened 3v3 tables at a 1v1 host, invalidating the playtest.
+test('the chooser follows the host even when the fallback list was painted first', () => {
+  const host = { format: '1v1', formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 1 }] };
+
+  assert.equal(formatToShow(host), '1v1', "the host's own, not the fallback's 3v3");
+  assert.equal(formatToShow(null), '3v3', 'before the host answers');
+});
+
+test('once the operator has picked a format, a redraw leaves it alone', () => {
+  const host = { format: '1v1', formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }] };
+
+  assert.equal(formatToShow(host, '2v2'), '2v2');
+  assert.equal(formatToShow(host, '9v9'), '1v1', 'a pick the host no longer offers falls back to its default');
+});
+
+// A host whose allowance leaves fewer picks offers the same three formats worded differently, so the option
+// list has to be rebuilt on the labels and not only on the values.
+test('the formats the host offers are told apart by their labels too', () => {
+  const key = answer => formats(answer).map(format => `${format.value}:${format.label}`).join('|');
+
+  assert.notEqual(key(null), key({ formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 1 }] }));
 });

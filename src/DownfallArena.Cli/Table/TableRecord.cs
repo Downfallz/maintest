@@ -47,10 +47,11 @@ internal sealed record TableRecord
     public int? Handover { get; init; }
 
     /// <summary>
-    /// The format the table was opened in (<c>2v2</c>), or <c>null</c> for the host's own. A rebuilt table has
-    /// to come back in the format it was recorded in: the replay feeds it the decisions of a match with that
-    /// many creatures, and a host whose default moved meanwhile would otherwise rebuild another game
-    /// (ADR 0091).
+    /// The format the table <em>played</em> (<c>2v2</c>), which is the resolved one and not the one the request
+    /// named: a request that named none played the host's own, and recording that as nothing would rebuild the
+    /// table in whatever the host's default has become since. A rebuilt table has to come back in the format it
+    /// was recorded in, because the replay feeds it the decisions of a match with that many creatures
+    /// (ADR 0091). Null only in a record written before this field existed.
     /// </summary>
     public string? Format { get; init; }
 
@@ -75,7 +76,7 @@ internal sealed record TableRecord
             Player2 = request.Player2?.ToString(),
             Who = request.Who,
             Handover = request.Handover,
-            Format = request.Format?.ToString(),
+            Format = table.Session.Rules.Format.ToString(),
             Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
             PilotToken = table.Pilot.Token,
             Status = Open,

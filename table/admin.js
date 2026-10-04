@@ -47,6 +47,13 @@ export function defaultFormat(answer) {
   return formats(answer).some(format => format.value === wanted) ? wanted : '3v3';
 }
 
+// What the chooser should show: the operator's own pick when they have made one and the host still offers it,
+// and otherwise the host's default. Pure, and separate from the chooser it fills, because "an operator at a
+// 1v1 host silently opens 3v3 tables" is a bug worth a test that needs no browser.
+export function formatToShow(answer, chosen = null) {
+  return chosen !== null && formats(answer).some(format => format.value === chosen) ? chosen : defaultFormat(answer);
+}
+
 // The bot a new table's second seat is opened with when the operator has not chosen: the first the host puts
 // forward, which is what the journal measured as worth playing against.
 export function defaultOpponent(answer) {
@@ -360,17 +367,24 @@ async function start() {
   const problem = element('problem');
   let offered = null;
   let offeredFormats = null;
+  let formatChosen = false;
 
-  // The chooser is filled from the host's answer and keeps whatever the operator had selected, so a redraw
-  // between opening two tables does not quietly put the format back to the host's.
   function fillFormats(answer) {
     const list = formats(answer);
-    const key = list.map(format => format.value).join('|');
-    if (key === offeredFormats) return;
-    offeredFormats = key;
-    const kept = element('format').value;
-    element('format').replaceChildren(...list.map(format => option(format.value, format.label)));
-    element('format').value = list.some(format => format.value === kept) ? kept : defaultFormat(answer);
+
+    // Keyed on the labels and not only the values: a host whose allowance leaves fewer picks offers the same
+    // three formats worded differently, and a key of values alone would keep the fallback's wording.
+    const key = list.map(format => `${format.value}:${format.label}`).join('|');
+    const chosen = formatChosen ? element('format').value : null;
+    if (key !== offeredFormats) {
+      offeredFormats = key;
+      element('format').replaceChildren(...list.map(format => option(format.value, format.label)));
+    }
+
+    // Applied on every answer rather than only when the list changed: the list is painted once before the host
+    // has answered, and a host that then offers the same three formats would otherwise leave a 1v1 host's
+    // panel on the fallback's 3v3 and open 3v3 tables.
+    element('format').value = formatToShow(answer, chosen);
   }
 
   function fillPickers(answer) {
@@ -462,6 +476,9 @@ async function start() {
     await redraw();
     await redrawSessions();
   });
+
+  // From here the chooser is the operator's: a redraw stops moving it, including back to the host's default.
+  element('format').addEventListener('change', () => { formatChosen = true; });
 
   element('sessions').addEventListener('change', armTools);
   element('sessions-all').addEventListener('change', () => {

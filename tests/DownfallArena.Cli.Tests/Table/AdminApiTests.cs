@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -410,6 +411,25 @@ public sealed class AdminApiTests : IDisposable
 
         answer.Status.ShouldBe(400);
         Text(answer).ShouldContain("3v2");
+    }
+
+    /// <summary>
+    /// A record keeps the format the table <em>played</em>, not the one the request named. A request naming
+    /// none played the host's own, and a record saying nothing would rebuild the table in whatever the host's
+    /// default has become since -- a roster of another size than the decisions being replayed into it
+    /// (ADR 0091).
+    /// </summary>
+    [Fact]
+    public async Task A_table_opened_in_no_particular_format_records_the_one_it_played()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", NoFormat, OperatorToken, null))).RootElement;
+        var id = opened.GetProperty("id").GetString().ShouldNotBeNull();
+
+        var record = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+
+        record.Format.ShouldBe("2v2", "the host's own, resolved, rather than the nothing the request named");
+        record.Request().Format.ShouldBe(MatchFormat.Parse("2v2"));
     }
 
     private const string OneOnOne = """{"player1":"person","player2":"greedy","format":"1v1"}""";
