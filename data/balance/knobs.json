@@ -532,21 +532,20 @@
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
       ]
     },
-    "spell:shadowstep": {
-      "name": "Shadowstep",
+    "spell:ambush": {
+      "name": "Ambush",
       "class": "Assassin",
-      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A strike that leaves its caster moving first next round, because the branch is about getting there first rather than hitting hardest -- the one-creature version of what Death Squad gave the whole team at tier 3, until Night Raid replaced it on 2026-10-04.",
+      "intent": "The Assassin's spender: Momentum banks energy for free, and this is where it goes. A heavy strike paid for in initiative: its caster is slowed next round. The Assassin is the creature with the most initiative to spend, so this is the one spell that spends it, beside the ones paid in health (Reckless Swing, Hateful Sacrifice) or in defense (Psycho Rush). It replaced Shadowstep, a hit that hastened its caster, on 2026-10-04: the owner found the haste uninteresting on the class that is fastest anyway. It hits for 8 at a 35 % crit: 7 at 50 % averaged the same and was strictly worse than Enraged Charge, 8 at 50 % was judged too strong for tier 2, and 6 left the bots casting it less than Shadowstep (journal, 2026-10-04).",
       "keep": [
-        "Tempo on the caster, never bleed: the heavy bleed is Mortal Wound's at tier 3",
-        "A tier-2 price, beside Enraged Charge rather than above it: part of its value is the initiative, not the hit"
+        "Paid in initiative, on the caster and for the next round: the price is the point of the spell, and a version without it is a plain hit",
+        "A tier-2 hit, beside Enraged Charge rather than above it: a bigger hit with a smaller crit, never a third of a creature's health in one cast before the crit",
+        "No bleed: the heavy bleed is Mortal Wound's at tier 3"
       ],
-      "note": "Authored at 7.8 a round in the check-knobs reading; the reading cannot see the energy Momentum feeds it, and no evaluation has measured it yet.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.7, "step": 0.05 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 2, "step": 1 }
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 7, "max": 8, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.45, "step": 0.05 },
+        { "path": "/casterEffects/0/amount", "min": 3, "max": 5, "step": 1 }
       ]
     },
     "spell:momentum": {
@@ -914,7 +913,7 @@
     },
     "tier:assassin": {
       "name": "Assassin",
-      "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Shadowstep, a hit that hastes its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
+      "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Ambush, a heavy strike that slows its caster next round. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "No package outside the Scoundrel line buys more initiative than the line's fastest at its level; a pass that makes another line the faster one has changed what the class is, not tuned it"
