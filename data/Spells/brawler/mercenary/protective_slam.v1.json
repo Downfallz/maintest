@@ -16,9 +16,8 @@
       "amount": 5
     },
     {
-      "kind": "InitiativeDebuff",
-      "amount": 3,
-      "durationRounds": 2
+      "kind": "Stun",
+      "durationRounds": 1
     }
   ],
   "enabled": true

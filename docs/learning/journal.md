@@ -14,14 +14,15 @@ first.
   | Reckless Swing | Berserker | Damage 5 | Damage 6 |
   | Meteor | Elementalist | Bleed 1/round | Bleed 2/round |
   | Frostbite | Elementalist | Initiative -2 | Initiative -3 |
-  | Protective Slam | Marauder | Damage 4, initiative -2 | Damage 5, initiative -3 |
+  | Protective Slam | Marauder | Damage 4, initiative -2 | Damage 5, stuns 1 round |
   | Extort | Marauder | Damage 3 | Damage 4 |
   | Parasite Jab | Parasite | Damage 3, heals its caster 3 | Damage 4, heals 4 |
   | Latch | Parasite | Bleed and regeneration | Plus an instant 1 damage |
 
-  Every value sits inside its knob but two: Parasite Jab's damage knob now reaches 4, and Latch's new damage
+  Protective Slam first went to initiative -3, then the owner made it a one-round stun instead; its two
+  initiative knobs are gone. Every other value sits inside its knob but two: Parasite Jab's damage knob now reaches 4, and Latch's new damage
   is a knob of 1 to 2. On that run Greedy bought Marauder zero times, and Extort, Meteor and Parasite Jab were
-  among the least cast spells of their tier. Content `b914e82a`, benchmark digest regenerated.
+  among the least cast spells of their tier. Content `85423648`, benchmark digest regenerated; the reading below is on `b914e82a`, with the slow.
 - **What the agents read**, the tuner's own reading (`score-content` on the benchmark seeds) before and after,
   landed casts on the exploring run and in the Greedy mirror:
 

@@ -261,18 +261,16 @@
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
-      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
+      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy loses its next action -- which is the one protective thing that can be said to an enemy. It slowed its target until the owner made it a stun on 2026-10-04: the slow was never enough to be bought. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stun, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
-        "Protection through tempo, never armour: it always carries an initiative debuff",
+        "Protection through tempo, never armour: it always stuns what it hits, for one round",
         "Reads as a trade, not a nuke",
-        "The stagger is the point; the damage only has to be worth the activation"
+        "The stun is the point; the damage only has to be worth the activation"
       ],
-      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half.",
+      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half. On 2026-10-04 the owner revisited it: the second half is a one-round stun, read at the stun weight, and the debuff knobs went with the debuff.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
