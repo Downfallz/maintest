@@ -706,7 +706,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
             InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
             InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },
-            DefenseDebuff debuff => DefenseDebuffTerms(sign, target, debuff.Amount, rounds, creatures),
+            DefenseDebuff debuff => DefenseDebuffTerms(sign, target, debuff.Amount, rounds, creatures, remaining),
             _ => ScoreTerms.Zero,
         };
     }
@@ -717,9 +717,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// floors at zero, and the difference is the threat on the target with that defense gone over the threat on
     /// it now, over the debuff's rounds, shared across the target's living team the way a buff's is. A debuff on
     /// a creature with no defense lets nothing through and is worth nothing; on the actor's own side the same
-    /// reading is the cost of `psycho_rush`'s recoil.
+    /// reading is the cost of `psycho_rush`'s recoil. A creature this resolution kills, or one already expected
+    /// gone, neither attacks the target afterwards nor shares its team's load, so a lethal Psycho Rush pays its
+    /// recoil only against the enemies left standing.
     /// </summary>
-    private ScoreTerms DefenseDebuffTerms(int sign, CreatureSnapshot target, int amount, int rounds, IReadOnlyList<CreatureSnapshot> creatures)
+    private ScoreTerms DefenseDebuffTerms(
+        int sign, CreatureSnapshot target, int amount, int rounds, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining)
     {
         var removed = Math.Min(amount, target.TotalDefense.Value);
         if (removed <= 0)
@@ -727,8 +730,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return ScoreTerms.Zero;
         }
 
-        var team = creatures.Count(creature => creature.Owner == target.Owner && creature.IsAlive);
-        var letThrough = ThreatOn(target, creatures, -removed) - ThreatOn(target, creatures, 0);
+        var standing = creatures.Where(creature => remaining[creature.Id] > 0).ToList();
+        var team = standing.Count(creature => creature.Owner == target.Owner);
+        var letThrough = ThreatOn(target, standing, -removed) - ThreatOn(target, standing, 0);
         return ScoreTerms.Zero with { Defense = sign * letThrough * rounds / Math.Max(1, team) };
     }
 

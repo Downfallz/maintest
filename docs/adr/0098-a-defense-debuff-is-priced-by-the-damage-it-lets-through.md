@@ -17,7 +17,8 @@ was its blind mirror.
 
 A defense debuff is priced by the damage it lets through, the mirror of the buff. It takes off at most the
 defense the target holds. Its value is the threat on the target with that defense gone, less the threat on it
-now, read from the target's enemies as the buff's is. That difference is counted over the debuff's rounds and
+now, read from the target's enemies as the buff's is. A creature the same cast kills, or one already expected
+gone, neither attacks nor shares the load. That difference is counted over the debuff's rounds and
 shared across the target's living team, the way a buff's prevented damage is. It is signed like every other term:
 for on an enemy, against on the actor's own side, which is also the price of Psycho Rush's recoil and of
 Noxious Cure's debuff on the allies it heals. A debuff on a creature with no defense is worth nothing.

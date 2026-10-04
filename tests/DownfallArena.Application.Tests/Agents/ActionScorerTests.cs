@@ -557,6 +557,26 @@ public sealed class ActionScorerTests
         Scorer.Score(Cast(action, One, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(-0.65 * 4 * 3, 1e-9);
     }
 
+    /// <summary>
+    /// A lethal recoil: the cast kills Three and takes 2 defense off One. Three no longer attacks, so only Four's
+    /// Strike gets 2 more through a round, where both would have got 4.
+    /// </summary>
+    [Fact]
+    public void A_defense_debuff_on_the_actor_is_not_charged_for_an_enemy_the_same_cast_kills()
+    {
+        var board = Board(enemyHealth: 3);
+        board[0] = board[0] with { TotalDefense = Defense.Of(2) };
+        var action = Strike(One, Three);
+        var kill = new DamageOutcome(Three, 3, Critical: false);
+
+        var killOnly = Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill]), board);
+        var withRecoil = Scorer.Score(
+            CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill, new ConditionOutcome(One, DefenseDebuff.Of(2, Duration.OfRounds(3)))]),
+            board);
+
+        (withRecoil - killOnly).ShouldBe(-0.65 * 2 * 3, 1e-9);
+    }
+
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>
         CombatResolution.Resolved(action, [target], [], false, Energy.Of(0), [new ConditionOutcome(target, effect)]);
 
