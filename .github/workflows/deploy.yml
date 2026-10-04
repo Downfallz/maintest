@@ -22,6 +22,7 @@ on:
       - viewer/index.html
       - viewer/viewer.css
       - learning/weights/**
+      - learning/seatable.json
       - models/**
       - docs/tabletop/playtest.rules.json
       - global.json
@@ -42,6 +43,7 @@ on:
       - viewer/index.html
       - viewer/viewer.css
       - learning/weights/**
+      - learning/seatable.json
       - models/**
       - docs/tabletop/playtest.rules.json
       - global.json
