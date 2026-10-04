@@ -5,7 +5,7 @@
       "commandLineArgs": "table --practice",
       "workingDirectory": "../.."
     },
-    "table (lobby — open tables from /lobby, as the container does)": {
+    "table (lobby \u2014 open tables from /lobby, as the container does)": {
       "commandName": "Project",
       "commandLineArgs": "table --lobby --rules docs/tabletop/playtest.rules.json",
       "workingDirectory": "../.."
@@ -20,17 +20,27 @@
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --who mk",
       "workingDirectory": "../.."
     },
-    "table (hard: stun-first — wins every match, and fast)": {
+    "table (2v2 against Greedy)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --format 2v2 --p2 greedy --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (1v1 against Greedy \u2014 one pick an opportunity)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --format 1v1 --p2 greedy --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (hard: stun-first \u2014 wins every match, and fast)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/stun-first.json --who mk",
       "workingDirectory": "../.."
     },
-    "table (hard: kill-first — wins every match, most one-sided)": {
+    "table (hard: kill-first \u2014 wins every match, most one-sided)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/kill-first.json --who mk",
       "workingDirectory": "../.."
     },
-    "table (hard: search-4 — the strongest general weights)": {
+    "table (hard: search-4 \u2014 the strongest general weights)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/search-4.json --who mk",
       "workingDirectory": "../.."
@@ -40,7 +50,7 @@
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --handover 3 --who mk",
       "workingDirectory": "../.."
     },
-    "table (on a phone — put this machine's address in --bind)": {
+    "table (on a phone \u2014 put this machine's address in --bind)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --who mk --bind 192.168.1.42",
       "workingDirectory": "../.."
@@ -58,6 +68,21 @@
     "play (bot against bot)": {
       "commandName": "Project",
       "commandLineArgs": "play --seed 1",
+      "workingDirectory": "../.."
+    },
+    "play (1v1 bot against bot)": {
+      "commandName": "Project",
+      "commandLineArgs": "play --seed 1 --format 1v1",
+      "workingDirectory": "../.."
+    },
+    "play (2v2 bot against bot)": {
+      "commandName": "Project",
+      "commandLineArgs": "play --seed 1 --format 2v2",
+      "workingDirectory": "../.."
+    },
+    "evaluate (Greedy against Random, 2v2)": {
+      "commandName": "Project",
+      "commandLineArgs": "evaluate --p1 greedy --p2 random --format 2v2 --seeds benchmarks/benchmark-seeds.json",
       "workingDirectory": "../.."
     },
     "human (you against a random bot)": {

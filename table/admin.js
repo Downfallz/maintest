@@ -25,6 +25,28 @@ export function seatable(answer) {
   return [PERSON, ...offered.map(agent => ({ value: agent.value, label: agent.label ?? agent.value, featured: agent.featured === true }))];
 }
 
+// The formats a chooser offers, read off the host's answer: how many creatures a side brings, and how many
+// evolution picks that leaves an opportunity (one in 1v1, whatever the allowance says -- ADR 0066). Nothing
+// here names a format itself, for the same reason nothing here names a bot: the game's values are the host's.
+export function formats(answer) {
+  const offered = Array.isArray(answer?.formats) && answer.formats.length > 0 ? answer.formats : FORMATS_EVERY_BUILD_HAS;
+  return offered.map(format => ({
+    value: format.value,
+    label: format.picks ? `${format.value} — ${format.picks} pick${format.picks === 1 ? '' : 's'} an opportunity` : format.value,
+  }));
+}
+
+// What a chooser falls back to before the host has answered. The host always answers its own, so this is read
+// once, on the first paint.
+const FORMATS_EVERY_BUILD_HAS = [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 2 }, { value: '3v3', picks: 2 }];
+
+// The format a new table opens in when the operator has not chosen: the host's own, which is what its
+// --rules file and --format said.
+export function defaultFormat(answer) {
+  const wanted = answer?.format;
+  return formats(answer).some(format => format.value === wanted) ? wanted : '3v3';
+}
+
 // The bot a new table's second seat is opened with when the operator has not chosen: the first the host puts
 // forward, which is what the journal measured as worth playing against.
 export function defaultOpponent(answer) {
@@ -105,11 +127,13 @@ export function signInNeeded(answer) {
 
 // What the form asks for, or the reason it is not asked at all. The host checks all of this again; this is so
 // a typo reads as a sentence rather than as a 400.
-export function openAsked({ player1, player2, who, handover }) {
+export function openAsked({ player1, player2, who, handover, format }) {
   if (!player1 || !player2) return { problem: 'Choose who sits in each seat.' };
   if (player1 !== 'person' && player2 !== 'person') return { problem: 'At least one seat is a person: two bots need no table.' };
 
   const asked = { player1, player2 };
+  const wanted = (format ?? '').trim();
+  if (wanted) asked.format = wanted;
   const initials = (who ?? '').trim();
   if (initials) asked.who = initials;
 
@@ -129,6 +153,7 @@ export function tableRows(list) {
   return (list?.tables ?? []).map(table => ({
     id: table.id,
     state: stateOf(table),
+    format: table.format ?? null,
     seats: (table.seats ?? []).map(seat => ({
       slot: seat.slot,
       seated: seat.seated ?? 'nobody',
@@ -245,6 +270,7 @@ function card(row, transport, redraw) {
   state.textContent = row.state;
 
   const list = document.createElement('dl');
+  if (row.format) list.append(...line('Format', document.createTextNode(row.format)));
   for (const seat of row.seats) {
     const shown = seat.code
       ? [document.createTextNode(`${seat.seated} · code `), Object.assign(document.createElement('strong'), { className: 'code', textContent: seat.code }), document.createTextNode(' · '), anchor(seat.join, 'join link')]
@@ -333,8 +359,22 @@ async function start() {
   const transport = adminTransport(token);
   const problem = element('problem');
   let offered = null;
+  let offeredFormats = null;
+
+  // The chooser is filled from the host's answer and keeps whatever the operator had selected, so a redraw
+  // between opening two tables does not quietly put the format back to the host's.
+  function fillFormats(answer) {
+    const list = formats(answer);
+    const key = list.map(format => format.value).join('|');
+    if (key === offeredFormats) return;
+    offeredFormats = key;
+    const kept = element('format').value;
+    element('format').replaceChildren(...list.map(format => option(format.value, format.label)));
+    element('format').value = list.some(format => format.value === kept) ? kept : defaultFormat(answer);
+  }
 
   function fillPickers(answer) {
+    fillFormats(answer);
     const list = seatable(answer);
     const key = list.map(agent => agent.value).join('|');
     if (key === offered) return;
@@ -406,6 +446,7 @@ async function start() {
       player2: element('seat-2').value,
       who: element('who').value,
       handover: element('handover').value,
+      format: element('format').value,
     });
     const told = element('said');
     if (asking.problem) {

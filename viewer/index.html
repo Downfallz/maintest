@@ -209,12 +209,28 @@
       state.charts.push(new Chart(canvas, config));
     }
 
+    // The format a run played, named the way players name it, from the team size the stamp carries. The run
+    // stamp holds the rule set's values and not this label, so the label is derived in one place here.
+    function format(rules) {
+      return Number.isInteger(rules.teamSize) ? `${rules.teamSize}v${rules.teamSize}` : '-';
+    }
+
+    // The picks an opportunity actually gives: the allowance, or the team size when that is smaller, because a
+    // creature buys at most one package an opportunity (ADR 0066). A 1v1 run gives one however many the rule
+    // set allows, and a stamp read as "2" would describe a game nobody played.
+    function picksAnOpportunity(rules) {
+      const allowance = rules.evolutionPicksPerOpportunity;
+      if (!Number.isInteger(allowance)) return '-';
+      return Number.isInteger(rules.teamSize) ? Math.min(allowance, rules.teamSize) : allowance;
+    }
+
     function stampList(stamp, changed = new Set()) {
       if (!stamp) return el('p', { class: 'muted' }, 'No run stamp (open the manifest too).');
       const rules = stamp.ruleSet || {};
       const rows = [
         ['Engine', stamp.engineVersion, 'engine'], ['Content', stamp.contentHash, 'content'],
-        ['Rules', `team ${rules.teamSize}, energy ${rules.energyPerRound}, picks ${rules.evolutionPicksPerRound}, cap ${rules.roundCap}, crit x${rules.criticalMultiplier}`, 'rules'],
+        ['Format', format(rules), 'rules'],
+        ['Rules', `energy ${rules.energyPerRound}, picks ${picksAnOpportunity(rules)}, cap ${rules.roundCap}, crit x${rules.criticalMultiplier}`, 'rules'],
         ['Schema', stamp.featureSchema, 'schema'], ['Agents', `${stamp.player1Agent} vs ${stamp.player2Agent}`, 'agents'], ['Base seed', stamp.baseSeed, 'seed'],
       ];
       const list = el('dl', { class: 'stamp' });

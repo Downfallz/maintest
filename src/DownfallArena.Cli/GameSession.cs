@@ -27,14 +27,14 @@ namespace DownfallArena.Cli;
 /// </summary>
 internal sealed class GameSession
 {
-    /// <summary>The rule set every command plays, and the one anything reading the content must assume.</summary>
+    /// <summary>The rule set a command plays when it is told nothing: the engine default, 3v3.</summary>
     public static RuleSet Rules { get; } = RuleSet.Default;
 
     private readonly IServiceProvider _services;
     private readonly CliOptions _options;
     private readonly int _seed;
     private readonly IGameResources _resources;
-    private readonly RuleSet _rules = Rules;
+    private readonly RuleSet _rules;
     private readonly FeatureSchema _schema;
 
     public GameSession(IServiceProvider services, CliOptions options, int seed)
@@ -45,6 +45,12 @@ internal sealed class GameSession
         _options = options with { Player1 = agents.Resolve(options.Player1), Player2 = agents.Resolve(options.Player2) };
         _seed = seed;
         _resources = services.GetRequiredService<IGameResources>();
+
+        // The format is the one rule set value a command line may move, so it is applied once, here, and every
+        // command below reads the result: the roster is sized from it, the feature schema describes it, and the
+        // run stamp carries it. A command that took the default while the match played another would stamp a
+        // dataset with the wrong board.
+        _rules = options.Format is { } format ? Rules.InFormat(format) : Rules;
         _schema = FeatureSchema.Build(_resources, _rules);
     }
 
@@ -90,7 +96,7 @@ internal sealed class GameSession
     public void PrintStamp()
     {
         var seed = UsesSessionSeed ? $" Seed {_seed}." : string.Empty;
-        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}.{seed}");
+        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Format {_rules.Format}, {_rules.EvolutionPicksUsableInAnOpportunity} pick(s) an opportunity.{seed}");
     }
 
     private bool UsesSessionSeed => !_options.Practice && _options.Command is not "benchmark" && (_options.Command is not "evaluate" || _options.Seeds is null);
@@ -120,11 +126,23 @@ internal sealed class GameSession
                 // The table is the one command that plays a rule set of its own: the board game is balanced
                 // for 10 to 15 rounds, not for the engine's thirty (docs/tabletop/plan.md). It falls back to the
                 // same default as every other command, and says so out loud rather than defaulting silently.
-                return await Table.TableHost.RunAsync(_services, _options, _options.Rules is { } rules ? Table.RuleSetFile.Read(rules) : _rules, _seed);
+                // --format still wins over the file's team size, so one rule set file plays every format.
+                return await Table.TableHost.RunAsync(_services, _options, TableRules(), _seed);
             default:
                 await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
                 return 2;
         }
+    }
+
+    /// <summary>
+    /// The rule set a table host starts with: the file <c>--rules</c> named or the engine default, in the
+    /// format <c>--format</c> named when it named one. The admin panel then asks per table (ADR 0081), and
+    /// this is the default its chooser opens on.
+    /// </summary>
+    private RuleSet TableRules()
+    {
+        var rules = _options.Rules is { } path ? Table.RuleSetFile.Read(path) : Rules;
+        return _options.Format is { } format ? rules.InFormat(format) : rules;
     }
 
     public IPlayerAgent Agent(AgentSpec spec, int slot) =>

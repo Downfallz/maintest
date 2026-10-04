@@ -31,10 +31,28 @@ public sealed record RuleSet
 
     public int TeamSize { get; }
 
+    /// <summary>
+    /// The format this rule set plays, as players name it: <c>3v3</c>, <c>2v2</c>, <c>1v1</c>. Asked here so
+    /// that no client spells the label out of the team size itself (<see cref="MatchFormat" />).
+    /// </summary>
+    public MatchFormat Format => MatchFormat.OfTeamSize(TeamSize);
+
     public int EnergyPerRound { get; }
 
     /// <summary>How many packages a player may buy in a round that offers an opportunity.</summary>
     public int EvolutionPicksPerOpportunity { get; }
+
+    /// <summary>
+    /// The picks a player can actually use in an opportunity: the allowance, or the team size when that is
+    /// smaller. A Creature buys at most one package an opportunity (ADR 0066), so a side of one has one pick
+    /// however many the allowance names -- which is why 1v1 needs no rule of its own.
+    /// </summary>
+    /// <remarks>
+    /// This is the number to print and to size a component by. The Evolution gate does not read it: it counts
+    /// the Creatures a pick can still go to, which is this bound and then some (a dead Creature, or one with
+    /// nothing left to buy, narrows it further), and the two must not both claim to be the cap.
+    /// </remarks>
+    public int EvolutionPicksUsableInAnOpportunity => Math.Min(EvolutionPicksPerOpportunity, TeamSize);
 
     /// <summary>
     /// The round after which the match ends by the health tiebreak (ADR 0011).
@@ -59,6 +77,7 @@ public sealed record RuleSet
         int evolutionInterval = 2)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(teamSize, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(teamSize, MatchFormat.MaxTeamSize);
         ArgumentOutOfRangeException.ThrowIfNegative(energyPerRound);
         ArgumentOutOfRangeException.ThrowIfNegative(evolutionPicksPerOpportunity);
         ArgumentOutOfRangeException.ThrowIfLessThan(roundCap, 1);
@@ -71,6 +90,16 @@ public sealed record RuleSet
 
         return new RuleSet(teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound, evolutionInterval);
     }
+
+    /// <summary>
+    /// The same rule set played in another format: every value kept, the team size the format's. What a
+    /// command line, an admin panel or a workflow input asks for when it names 2v2 -- never a second rule set
+    /// authored beside this one, which would drift from it on the next tuning pass.
+    /// </summary>
+    public RuleSet InFormat(MatchFormat format) =>
+        format.TeamSize == TeamSize
+            ? this
+            : Create(format.TeamSize, EnergyPerRound, EvolutionPicksPerOpportunity, RoundCap, CriticalMultiplier, FirstEvolutionRound, EvolutionInterval);
 
     /// <summary>
     /// Whether this round offers an evolution opportunity. This is the schedule, and it is asked here by the

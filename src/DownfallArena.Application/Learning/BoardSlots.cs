@@ -1,4 +1,5 @@
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Learning;
@@ -9,8 +10,12 @@ namespace DownfallArena.Application.Learning;
 /// </summary>
 public sealed class BoardSlots
 {
-    /// <summary>The largest team size a board supports, so that a target mask holds one bit per slot in an <c>int</c>.</summary>
-    public const int MaxTeamSize = 16;
+    /// <summary>
+    /// The largest team size a board supports, so that a target mask holds one bit per slot in an <c>int</c>.
+    /// The domain's, because how big a side may be is a rule about the game and not about this encoding: a
+    /// second constant here would let a rule set name a format no observation can hold.
+    /// </summary>
+    public const int MaxTeamSize = MatchFormat.MaxTeamSize;
 
     private readonly Dictionary<CreatureId, int> _slots;
 

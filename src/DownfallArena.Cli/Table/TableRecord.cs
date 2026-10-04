@@ -46,6 +46,14 @@ internal sealed record TableRecord
 
     public int? Handover { get; init; }
 
+    /// <summary>
+    /// The format the table was opened in (<c>2v2</c>), or <c>null</c> for the host's own. A rebuilt table has
+    /// to come back in the format it was recorded in: the replay feeds it the decisions of a match with that
+    /// many creatures, and a host whose default moved meanwhile would otherwise rebuild another game
+    /// (ADR 0091).
+    /// </summary>
+    public string? Format { get; init; }
+
     public required IReadOnlyList<RecordedSeat> Seats { get; init; }
 
     public required string PilotToken { get; init; }
@@ -67,6 +75,7 @@ internal sealed record TableRecord
             Player2 = request.Player2?.ToString(),
             Who = request.Who,
             Handover = request.Handover,
+            Format = request.Format?.ToString(),
             Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
             PilotToken = table.Pilot.Token,
             Status = Open,
@@ -75,7 +84,13 @@ internal sealed record TableRecord
 
     /// <summary>The request the table was composed from, to compose it again.</summary>
     public TableRequest Request() =>
-        new(Player1 is null ? null : Application.Agents.AgentSpec.Parse(Player1), Player2 is null ? null : Application.Agents.AgentSpec.Parse(Player2), Who, Handover, Seed);
+        new(
+            Player1 is null ? null : Application.Agents.AgentSpec.Parse(Player1),
+            Player2 is null ? null : Application.Agents.AgentSpec.Parse(Player2),
+            Who,
+            Handover,
+            Seed,
+            Domain.Matches.MatchFormat.TryParse(Format, out var format) ? format : null);
 }
 
 /// <summary>One seat as the record keeps it: its token, the code its person types, and whether there is one.</summary>

@@ -14,6 +14,9 @@ on:
       seeds:
         description: "Seed file"
         default: benchmarks/benchmark-seeds.json
+      format:
+        description: "How many creatures a side brings: 3v3, 2v2 or 1v1"
+        default: 3v3
 
 permissions:
   contents: read
@@ -25,7 +28,7 @@ env:
 
 jobs:
   evaluate:
-    name: Evaluate ${{ inputs.p1 }} against ${{ inputs.p2 }}
+    name: Evaluate ${{ inputs.p1 }} against ${{ inputs.p2 }} (${{ inputs.format }})
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,7 +55,8 @@ jobs:
           AGENT_A: ${{ inputs.p1 }}
           AGENT_B: ${{ inputs.p2 }}
           SEEDS: ${{ inputs.seeds }}
-        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "$AGENT_A" --p2 "$AGENT_B" --seeds "$SEEDS" --out evaluation.json
+          FORMAT: ${{ inputs.format }}
+        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "$AGENT_A" --p2 "$AGENT_B" --seeds "$SEEDS" --format "$FORMAT" --out evaluation.json
 
       - name: Upload the evaluation
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

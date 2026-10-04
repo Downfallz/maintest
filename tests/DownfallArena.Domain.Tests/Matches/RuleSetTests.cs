@@ -18,6 +18,51 @@ public sealed class RuleSetTests
     }
 
     /// <summary>
+    /// A format moves the team size and nothing else: the energy, the schedule, the round cap and the
+    /// critical multiplier are the game's, not the format's, so a 2v2 is the same rules on another value.
+    /// </summary>
+    [Fact]
+    public void A_format_moves_the_team_size_and_leaves_every_other_value_alone()
+    {
+        var twoOnTwo = RuleSet.Default.InFormat(MatchFormat.Parse("2v2"));
+
+        twoOnTwo.TeamSize.ShouldBe(2);
+        twoOnTwo.Format.ToString().ShouldBe("2v2");
+        twoOnTwo.ShouldBe(RuleSet.Create(
+            teamSize: 2,
+            energyPerRound: RuleSet.Default.EnergyPerRound,
+            evolutionPicksPerOpportunity: RuleSet.Default.EvolutionPicksPerOpportunity,
+            roundCap: RuleSet.Default.RoundCap,
+            criticalMultiplier: RuleSet.Default.CriticalMultiplier,
+            firstEvolutionRound: RuleSet.Default.FirstEvolutionRound,
+            evolutionInterval: RuleSet.Default.EvolutionInterval));
+    }
+
+    [Fact]
+    public void The_format_a_rule_set_already_plays_leaves_it_as_it_is() =>
+        RuleSet.Default.InFormat(MatchFormat.ThreeOnThree).ShouldBeSameAs(RuleSet.Default);
+
+    /// <summary>
+    /// A creature buys at most one package an opportunity (ADR 0066), so a side of one has one pick however
+    /// many the allowance names. This is the number to print; the gate counts creatures.
+    /// </summary>
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    [InlineData(3, 2)]
+    public void A_side_smaller_than_the_allowance_caps_the_picks_it_can_use(int teamSize, int usable) =>
+        RuleSet.Default.InFormat(MatchFormat.OfTeamSize(teamSize)).EvolutionPicksUsableInAnOpportunity.ShouldBe(usable);
+
+    [Fact]
+    public void A_team_size_the_engine_cannot_encode_is_refused() =>
+        Should.Throw<ArgumentOutOfRangeException>(() => RuleSet.Create(
+            teamSize: MatchFormat.MaxTeamSize + 1,
+            energyPerRound: 2,
+            evolutionPicksPerOpportunity: 2,
+            roundCap: 30,
+            criticalMultiplier: 2.0));
+
+    /// <summary>
     /// The schedule, which is one question asked of the rule set rather than a rule each caller works out:
     /// two picks at round 1, none at round 2, two at round 3 (ADR 0056).
     /// </summary>

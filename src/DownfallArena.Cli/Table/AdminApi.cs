@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Table;
@@ -114,11 +115,23 @@ internal sealed class AdminApi
             new
             {
                 rules = _rules,
+
+                // The formats a chooser offers and the one it opens on, answered here for the same reason the
+                // bots are: a page that listed them itself would be a page holding a rule about the game
+                // (ADR 0054). The host's own is in the list whether or not it is one of the three offered.
+                formats = Formats().Select(format => new { value = format.ToString(), teamSize = format.TeamSize, picks = _composer.Rules.InFormat(format).EvolutionPicksUsableInAnOpportunity }).ToArray(),
+                format = _composer.Rules.Format.ToString(),
                 recording = _composer.Records,
                 agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
                 tables = await Task.WhenAll(_registry.All().Select(DescribedAsync)),
             },
             ArtifactJson.LineOptions);
+
+    /// <summary>The formats a chooser is offered: the shortlist, and this host's own when it is not on it.</summary>
+    private IEnumerable<MatchFormat> Formats() =>
+        MatchFormat.Offered.Contains(_composer.Rules.Format)
+            ? MatchFormat.Offered
+            : [.. MatchFormat.Offered, _composer.Rules.Format];
 
     private async Task<StudioResponse> OpenAsync(string body, string operatorName)
     {
@@ -319,6 +332,10 @@ internal sealed class AdminApi
             createdAt = table.CreatedAt,
             over = table.IsOver,
             finished = table.IsFinished,
+
+            // The format this table is playing, which is not necessarily the host's: the panel opens one per
+            // table, so a row that showed the host's would name the wrong game.
+            format = table.Session.Rules.Format.ToString(),
 
             // Waiting for its people to reach their seats (ADR 0092): no question has been asked yet.
             waiting = !table.Session.HasBegun && !table.IsOver,
