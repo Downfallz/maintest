@@ -32,7 +32,10 @@ export function formats(answer) {
   const offered = Array.isArray(answer?.formats) && answer.formats.length > 0 ? answer.formats : FORMATS_EVERY_BUILD_HAS;
   return offered.map(format => ({
     value: format.value,
-    label: format.picks ? `${format.value} — ${format.picks} pick${format.picks === 1 ? '' : 's'} an opportunity` : format.value,
+    // Read as a number rather than for truthiness: a rule set may allow no evolution pick at all, and a host
+    // playing one answers `picks: 0`. Shown as "0 picks an opportunity", because "no evolution in this game"
+    // is the one thing about such a format an operator most needs to see before opening the table.
+    label: Number.isInteger(format.picks) ? `${format.value} — ${format.picks} pick${format.picks === 1 ? '' : 's'} an opportunity` : format.value,
   }));
 }
 

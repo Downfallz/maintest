@@ -243,3 +243,20 @@ test('the formats the host offers are told apart by their labels too', () => {
 
   assert.notEqual(key(null), key({ formats: [{ value: '1v1', picks: 1 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 1 }] }));
 });
+
+// A rule set may allow no evolution pick at all (RuleSet.Create refuses a negative allowance, not a zero
+// one), so a host playing one answers picks: 0. Read for truthiness, the label silently dropped to the bare
+// format name and the operator lost the one thing worth knowing about that game before opening a table.
+test('a format that gives no pick at all says so', () => {
+  const labels = formats({ formats: [{ value: '1v1', picks: 0 }, { value: '2v2', picks: 1 }, { value: '3v3', picks: 2 }] }).map(format => format.label);
+
+  assert.deepEqual(labels, [
+    '1v1 — 0 picks an opportunity',
+    '2v2 — 1 pick an opportunity',
+    '3v3 — 2 picks an opportunity',
+  ]);
+});
+
+test('a format the host sends no pick count for is named on its own', () => {
+  assert.deepEqual(formats({ formats: [{ value: '4v4' }] }).map(format => format.label), ['4v4']);
+});
