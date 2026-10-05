@@ -8,16 +8,16 @@
   "targeting": {
     "origin": "Enemy",
     "scope": "Multi",
-    "maxTargets": 3
+    "maxTargets": 2
   },
   "effects": [
     {
       "kind": "Damage",
-      "amount": 3
+      "amount": 4
     },
     {
       "kind": "EnergyDrain",
-      "amount": 2
+      "amount": 3
     }
   ],
   "enabled": true

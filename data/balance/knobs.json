@@ -565,18 +565,18 @@
     "spell:night_raid": {
       "name": "Night Raid",
       "class": "Assassin",
-      "intent": "The Deathstalker's raid: a light cut on up to three enemies that takes two energy from each, for three, the only drain in the game that reaches a whole team. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
+      "intent": "The Deathstalker's raid: a cut on two enemies that takes three energy from each, more than a round's income, for three, the only drain in the game that reaches more than one. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
       "keep": [
-        "Reaches up to three enemies: the only team-wide drain",
+        "Reaches two enemies: the only drain that takes from more than one",
         "Takes energy and a little health, never a big hit: Mortal Wound is the package's finisher",
-        "The drain stays at or under what a creature earns in a round, so a raid slows a team without locking it for good",
+        "The drain takes more than a round's income from each target, so a raid sets two enemies a turn behind; it reaches two and not the whole team, so it cannot lock a team",
         "It costs more than a round's income, so it cannot be cast every round on income alone: the lock Soul Devourer was, on a whole team"
       ],
       "note": "Measured with the Assassin line forced to Deathstalker against Greedy on the 400 confirmation seeds, as one spell next to Mortal Wound. A drain of 1 was never cast at any damage or cost tried; a drain of 2 is what the agents read, because ADR 0093 prices a drain that leaves an enemy unable to pay as the stun it is. At 2 damage, 2 drained and a cost of 2 it was declared 169 times and drained 821 points, Mortal Wound went from 589 declarations to 538, and the forced path read +0.019 ± 0.010 against Death Squad. At a cost of 2 it could be cast every round on income alone, and the enemy team's fizzles went from 1363 to 1742; at 3 it is declared 102 times, drains 547, the fizzles are 1617 and the path reads +0.013 ± 0.009, so it costs 3, as Soul Devourer does for the same reason.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 }
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/1/amount", "min": 2, "max": 3, "step": 1 }
       ]
     },
     "spell:mortal_wound": {
@@ -804,7 +804,7 @@
     "spell:crazed_specter": {
       "name": "Crazed Specter",
       "class": "Necromancer",
-      "intent": "The heaviest sweep in the game, and the Necromancer bleeds for it: against a whole team it is the single biggest swing anywhere, and four health off the caster every time it is thrown. Reach is what this class inherits from its opener; paying for it is the other half.",
+      "intent": "The heaviest sweep in the game, dealt over time, and the Necromancer bleeds for it: a light hit on the whole enemy team that leaves each of them bleeding four a round for two rounds, and four health off the caster every time it is thrown. Since 2026-10-05 it has no critical chance: its weight is in the bleed, which a critical never reached. Reach is what this class inherits from its opener; paying for it is the other half.",
       "keep": [
         "The heaviest sweep",
         "The minion it costs is paid in the summoner's health, the currency `summon_minions` set",
@@ -813,9 +813,9 @@
       "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
-        { "path": "/effects/0/amount", "min": 4, "max": 9, "step": 1 },
-        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
+        { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 2, "max": 5, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 }
       ]
     },
     "spell:soothing_chant": {

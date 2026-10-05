@@ -79,7 +79,7 @@ Each is a rule to decide, not an oversight:
   that changes it is a new shape, and so a decision of its own.
   **Death Squad is gone since 2026-10-04**: no agent cast the team haste in any shape tried, and the owner
   replaced it with **Night Raid**, 2 damage and a drain of 2 on up to three enemies for 3 energy, the one
-  team-wide drain.
+  team-wide drain; since 2026-10-05 it is 4 damage and a drain of 3 on up to two.
 - **Minions**, ~~and what spending one costs~~. Half recovered. The Necromancer banked minions and spent them
   on Revenant Guards and Crazed Specter; legacy carries `MinionsCost = 1` on both, and the port dropped it.
   There is still no minion **bank** — nothing counts them, and a cast never runs out — but what spending one
@@ -163,7 +163,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 | Ice Spear | Wizard | Offensive | 2 | 0.5 | Enemy | Damage 4, InitiativeDebuff 2 (1r) |
 | Summon Minions | Necromancer | Defensive | 2 | — | Self | EnergyGain 3 |
 | Revenant Guards | Necromancer | Defensive | 2 | 0.33 | up to 3 allies | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
-| Crazed Specter | Necromancer | Offensive | 3 | 0.33 | up to 3 enemies | Damage 6 |
+| Crazed Specter | Necromancer | Offensive | 3 | — | up to 3 enemies | Damage 4, Bleed 4/r for 2r; caster: Bleed 4/r for 1r |
 | Healing Screech | Shaman | Defensive | 2 | 0.5 | Ally | Heal 2, Regeneration 2/r for 1r |
 | Toxic Waves | Shaman | Offensive | 3 | 0.33 | up to 3 enemies | Damage 3, Bleed 2/r for 1r |
 | Restorative Burst | Shaman | Defensive | 2 | — | Ally | Heal 3, EnergyGain 2 |
