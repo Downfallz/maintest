@@ -79,7 +79,7 @@ echo "::endgroup::"
 ISSUES_JSON="$(api "issues/search?componentKeys=$PROJECT_KEY&$SCOPE&issueStatuses=OPEN,CONFIRMED&ps=500")"
 echo "::group::Open issues on new code: $(jq -r '.total' <<< "$ISSUES_JSON")"
 jq -r '.issues[]
-  | "  [\(.severity)] \(.rule) \(.component | sub("^[^:]*:"; "")):\(.line // 0) \(.message)"' <<< "$ISSUES_JSON"
+  | "  [\(.severity) \(.type)\([.impacts[]? | " \(.softwareQuality):\(.severity)"] | join(""))] \(.rule) \(.component | sub("^[^:]*:"; "")):\(.line // 0) \(.message)"' <<< "$ISSUES_JSON"
 echo "::endgroup::"
 
 HOTSPOTS_JSON="$(api "hotspots/search?projectKey=$PROJECT_KEY&$SCOPE&status=TO_REVIEW&ps=500")"

@@ -200,7 +200,7 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 }
 
 /* A movable reference, with the battlefield and its decision still behind it. */
-.talent-window { position: fixed; z-index: 30; left: 24px; top: 96px; width: min(1280px, calc(100vw - 48px)); height: min(800px, calc(100dvh - 120px)); min-width: 480px; min-height: 320px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); display: flex; flex-direction: column; background: #15201d; border: 1px solid #7c8165; border-radius: 13px; box-shadow: 0 20px 80px #000b; overflow: hidden; resize: both; }
+.talent-window { margin: 0; padding: 0; color: inherit; position: fixed; z-index: 30; left: 24px; top: 96px; width: min(1280px, calc(100vw - 48px)); height: min(800px, calc(100dvh - 120px)); min-width: 480px; min-height: 320px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); display: flex; flex-direction: column; background: #15201d; border: 1px solid #7c8165; border-radius: 13px; box-shadow: 0 20px 80px #000b; overflow: hidden; resize: both; }
 .window-bar { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-bottom: 1px solid #505e4b; background: #25332b; flex: none; }
 .window-bar button { background: transparent; border: 0; padding: 7px 12px; font-size: 20px; }
 #talent-grip { flex: 1; text-align: left; cursor: grab; touch-action: none; }
@@ -565,7 +565,7 @@ body:has(#upkeep[open]) .round-recap { visibility: hidden; }
 .card-stat[data-stat="critical"] { color: #715019; }
 .card-line-target { font-weight: 650; padding-bottom: 5px; }
 .card-line-requires { margin-top: 6px; font-size: 11px; opacity: .85; }
-.card.future .card-stat { color: #e3d9bf; background: #ffffff08; border-color: #7d897344; }
+.card.future .card-stat { color: #e3d9bf; background: #2d3832; border-color: #7d897344; }
 @media (max-width: 760px) {
   #phase-dock { grid-template-columns: 1fr auto; }
   #phase-round { grid-column: 1; }
