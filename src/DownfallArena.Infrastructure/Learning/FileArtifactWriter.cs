@@ -99,8 +99,11 @@ public sealed class FileArtifactWriter : IArtifactWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
 
-        var fullPath = Path.GetFullPath(Path.Combine(RootDirectory, relativePath));
-        if (Path.IsPathRooted(relativePath) || !fullPath.StartsWith(RootDirectory + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        // The canonical path is checked against the very prefix it was built from, the shape the path traversal
+        // analysis (S2083) reads as a guard; checking it against a prefix built separately reads as no guard at all.
+        var root = Path.EndsInDirectorySeparator(RootDirectory) ? RootDirectory : RootDirectory + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(Path.Combine(root, relativePath));
+        if (Path.IsPathRooted(relativePath) || !fullPath.StartsWith(root, StringComparison.Ordinal))
         {
             throw new ArgumentException($"Artifact path '{relativePath}' leaves the run directory.", nameof(relativePath));
         }
