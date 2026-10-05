@@ -1,10 +1,11 @@
 {
-  "why": "The heuristic's rung on content e6f72578, after ADR 0096 (energy priced by the spell it unlocks), ADR 0098 (a defense debuff priced by the damage it lets through) and the content of 2026-10-04 (Night Raid, Ambush, Protective Slam's stun and the hand raises). Every weights file was searched under the old scorer. A round robin of the nine on the 200 benchmark seeds mirrored ranks search-23 first at 0.648 mean against the other eight, then pressure-floor 0.609, mixture-mean 0.600 and greedy 0.566; search-19, the old leader, is last at 0.332 and loses every match to greedy and mixture-mean (journal, 2026-10-04). The table is a cycle: pressure-floor beats search-23 1.000, search-23 beats mixture-mean 0.988, mixture-mean beats pressure-floor 0.995. So the rung starts from search-23 against six of the others, all under the start's floor, so that a set cannot climb by giving back one corner of the cycle. The lookahead is left out: since ADR 0096 it costs about 2.4 times what it did, and seated even on 50 seeds it would push the search past the job's three hours. search-19 is the hold-out's check, an opponent the search never played. 3 rounds of 8, seed 0: the first run of this file, 5 rounds of 8 against seven, hit the job's three hours before it finished (search 32), because the scorer of ADR 0096 makes every match dearer. mixture-mean left the panel for the same reason: search-23 beats it 0.988, so it was the seat that said least. What would make it a rung: a set that beats search-23 on seeds it never saw without falling below it against any of the seven.",
-  "initial": "learning/weights/search-23.json",
-  "opponent": "greedy,heuristic:learning/weights/pressure-floor.json,heuristic:learning/weights/kill-first.json,heuristic:learning/weights/search-21.json,heuristic:learning/weights/search-31.json,heuristic:learning/weights/stun-first.json",
-  "check_opponent": "heuristic:learning/weights/search-19.json",
-  "kind": "heuristic",
+  "why": "The lookahead's own weights, searched with the lookahead playing every candidate (--kind lookahead), now that a search may run six hours (#280). The lookahead plays best on the built-in weights: 0.933 against Greedy and 0.933 against search-23 on 60 unseen seeds, where the set a local search found on 20 seeds lost 0.133 against Greedy (journal, 2026-10-04). So this one starts from the built-in weights, against Greedy and search-23, the two the lookahead was measured against, on learning/experiments/lookahead-seeds.json: the first 30 benchmark seeds, because the hold-out replays both agents on as many unseen seeds as the file holds, and on 200 it alone would take over three hours with the lookahead. 3 rounds of 5, seed 0, about 4.5 hours by the local rate of 15 seconds a seed against one opponent. No check opponent, for the same budget. What would make it a rung: a set that beats the built-in weights on the unseen seeds against both, and holds when replayed on 60 more.",
+  "initial": "none",
+  "opponent": "greedy,heuristic:learning/weights/search-23.json",
+  "check_opponent": "none",
+  "kind": "lookahead",
+  "seeds": "learning/experiments/lookahead-seeds.json",
   "iterations": 3,
-  "population": 8,
+  "population": 5,
   "seed": 0
 }
