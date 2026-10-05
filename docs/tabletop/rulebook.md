@@ -3,7 +3,8 @@
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
-picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04). Phase 4 of
+picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04 and again for the content of
+2026-10-05). Phase 4 of
 [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
@@ -759,8 +760,8 @@ A Quick Creature never rolls ([5.4](#54-speed)), and a Fizzle never reaches the 
 > faithful way to roll such a card on a d20, and does not invent one; the snap is the fix.
 
 **A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
-rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty of the forty-five never
-touch the die.
+rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty-one of the forty-five
+never touch the die.
 
 A critical multiplies, by the setup table's critical multiplier, dropping any fraction:
 
@@ -921,7 +922,11 @@ face down, and every pick of a Round is bought at the Purchase reveal. The row i
 the moment it happens, is gone from the engine and from the specification. On 2026-10-04 every Spell and
 Tier named in a worked example, and every count of the catalogue, was re-read against `data/Spells/` and
 `data/Tiers/` at content `e6f72578`; §5.5's example moved from Protective Slam, which no longer touches
-initiative, to Frostbite.
+initiative, to Frostbite. On 2026-10-05 the same re-read ran at content `ad3e4d00`, which changed two Spells:
+Night Raid reaches 2 enemies for `Damage 4` and `Energy -3`, and Crazed Specter deals `Damage 4`, places a
+`Bleed 4 a round, 2 rounds` on each target and has no Critical chance. No worked example uses either. §6.1's
+cause 4 still holds, since Night Raid still takes Energy, and §6.7's count of Spells that never roll went from
+twenty to twenty-one.
 
 | This book | The specification |
 | --- | --- |

@@ -5,7 +5,8 @@ question 14, 2026-09-23, to one package a Creature an opportunity the same day, 
 day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
 `momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day; to one Activation a slot,
 2026-09-28; to the content of 2026-10-04: Night Raid, Ambush, Protective Slam's stun, and the hand-tuned
-amounts; to Regeneration printed as `Regen` on the card, 2026-10-04). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Night
+Raid on two enemies, and Crazed Specter's Bleed on its targets). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -21,8 +22,10 @@ What is current, exactly:
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
-- **Every count is read at content `e6f72578`** (the last point below), and the schedule in
-  `docs/tabletop/playtest.rules.json`. Re-run the commands when the hash moves. Until then they were read at
+- **Every count is read at content `ad3e4d00`** (the last point below), and the schedule in
+  `docs/tabletop/playtest.rules.json`. Re-run the commands when the hash moves. `ad3e4d00` changed two Spells
+  from `e6f72578`, so a line that still names `e6f72578` was re-read at `ad3e4d00` and did not move; the
+  lines that moved name `ad3e4d00`. Before `e6f72578` they were read at
   `4ab506fa`, except the ones `momentum`'s redesign and tune run 11 moved (read at `813bb91b`).
   `4ab506fa` is `4d7a841c` with a Creature's base Health at 30 rather than 20
   ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the Health rail
@@ -86,6 +89,17 @@ What is current, exactly:
   ([2.2](#22-the-words)): `Caster: Regen 1 a round, 3 rounds` is 33, no line wraps, and the box is 4
   lines again ([2.3](#23-the-measurement)). And the largest Damage is 11, past the 10 the Defense rails were sized on
   (Part 6, question 16).
+- **The content of 2026-10-05, `ad3e4d00`.** `night_raid` reaches up to 2 enemies, not 3, deals Damage 4, not
+  3, and drains 3 Energy, not 2; it still costs 3 and rolls no critical. `crazed_specter` deals Damage 4, not 9,
+  places a Bleed of 4 a Round for 2 Rounds on each target, which it did not, and rolls no critical, where it
+  printed 0.38; it still reaches up to 3 enemies, costs 3, and bleeds its caster 4 for a Round. What moved:
+  a cast of `crazed_specter` places 4 Bleed-4 tokens, 3 on its targets and 1 on its caster, so the Bleed-4
+  supply goes from 6 to **24** (6 slots x 4), the Condition tokens from 150 to **168**, still in 6 kinds, and
+  the token pieces from 248 to **266**, still on 2 sheets; the paper stays 55 ([1.4](#14-condition-tokens)).
+  Its card body goes from 3 lines to 4, inside the 4-line box, and no line wraps ([2.3](#23-the-measurement),
+  [2.4](#24-the-seven-that-need-a-second-sentence)). 24 Spells roll, not 25, so a d20 moves 7 of them, not 8,
+  and the critical chance knob is declared on 25 Spells, not 26 ([1.6](#16-dice)). `night_raid` moves no
+  count: its Damage and its drain move rails already on the board ([1.7](#17-the-energy-track-what-ends-it)).
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -167,7 +181,7 @@ Totals first, then the derivation of each line.
 | Package cards | 126 |
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
-| Condition tokens | 150 in 6 kinds |
+| Condition tokens | 168 in 6 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
@@ -175,7 +189,7 @@ Totals first, then the derivation of each line.
 
 The paper: 30 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
 sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
-tokens (248 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 55. Card backs would
+tokens (266 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 55. Card backs would
 add 46 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -208,6 +222,9 @@ leave the box, the token pieces go from 260 to **242**, still on 2 sheets, and t
 ([1.5](#15-the-rest-of-the-pieces)). The content of 2026-10-04 moved three: 45 Spells make **270** Spell
 cards and the paper **55** sheets ([1.1](#11-spell-cards-and-package-cards)), and the Condition tokens go from
 144 to **150**, so the token pieces from 242 to **248**, still on 2 sheets ([1.4](#14-condition-tokens)).
+The content of 2026-10-05 moved one: `crazed_specter` places a Bleed of 4 on its targets as well as on its
+caster, so the Condition tokens go from 150 to **168** and the token pieces from 248 to **266**, still on 2
+sheets, and the paper stays 55 ([1.4](#14-condition-tokens)).
 
 ### 1.1 Spell cards and package cards
 
@@ -310,7 +327,7 @@ for s in S:
 | Bleed | 1 a Round | 6 | `latch` and `tranquilizer_dart` on one enemy, `bone_ward` on its own caster; one each; 6 slots x 1 | **VALUE** (content) |
 | Bleed | 2 a Round | 18 | `summon_minions` and `meteor`, each on up to 3 targets; 6 slots x 3 = 18 | **VALUE** (content) |
 | Bleed | 3 a Round | 18 | `toxic_waves`, up to 3 targets (`poison_slash` places one); 6 slots x 3 = 18 | **VALUE** |
-| Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
+| Bleed | 4 a Round | 24 | `crazed_specter` on up to 3 enemies and on its own caster, 4 a cast; `mortal_wound` on a target and `revenant_guards` on its own caster place one each; 6 slots x 4 = 24 | **VALUE** |
 | Regeneration | 1 a Round | 6 | `latch` on its own caster; 6 slots x 1 | **VALUE** |
 | Regeneration | 2 a Round | 18 | `soothing_chant`, up to 3 allies; 6 slots x 3 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
@@ -321,7 +338,7 @@ for s in S:
 | Defense debuff | -2 | 18 | `noxious_cure` on up to 3 allies; 6 x 3. `psycho_rush`'s caster debuff is the same face. | **VALUE** |
 | Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
-| **Total** | | **150** | | |
+| **Total** | | **168** | | |
 
 Every timed amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 1,
 2 or 3; a timed Defense buff is 1, 3 or 4; every timed Defense debuff is 2; an Initiative debuff is 3 or 5.
@@ -331,7 +348,9 @@ read 144 in 7 kinds; what moved it to 150 in 6 is content alone. The Bleed faces
 where they were 18, 18, 6, 6) and still total 48; the Regeneration 1 and 2 faces arrive with `latch` and
 `soothing_chant` (+24); the timed Defense buffs are +1, +3 and +4 where they were +1, +2 and +3, and still
 total 30; the Initiative debuffs are -3 and -5 where they were -1 and -2, and still total 12; and the
-Initiative buff leaves (-18, below).
+Initiative buff leaves (-18, below). At `ad3e4d00` it reads 168, still in 6 kinds, and content alone moved
+it again: `crazed_specter` places its Bleed of 4 on up to 3 enemies for 2 Rounds as well as on its caster for
+1, so the most one slot places on that face goes from 1 to 4, and the Bleed-4 supply from 6 to 24 (+18).
 
 **No Energy regeneration token.** At `813bb91b`, and still at `e6f72578`, no Spell authors an
 `EnergyRegeneration`, so the command above prints none and no cast can place one: `momentum`, the only Spell
@@ -361,6 +380,17 @@ cap either way, so the rulebook carries the standard supply escape: **a supply t
 blank token with the value written on it; the game has no maximum.** 20 blanks are in the box for that, which
 is 16 short of that ceiling. Part 6, question 5.
 
+**The Bleed-4 face reaches 48, over two Rounds** (`ad3e4d00`). All six Creatures cast `crazed_specter` on all
+three enemies two Rounds running. A Condition stays until the Cleanup after its last countdown
+(`Condition.Tick` skips the first one), so in the second Round each Creature carries the 3 target Bleeds of
+the first, the first Round's caster Bleed, which leaves at that Round's Cleanup, and 4 new ones: 8 each, 48
+in all, which is the face's supply times its longest Duration, 24 x 2. With no healing, it needs every
+Creature at 2 Defense or more: by the end of the second Round each has taken 6 casts of `Damage 4` less its
+Defense, and 16 in ticks, out of 30. A third Round cannot happen: its Start ticks 7 Bleeds of 4, 28, on
+Creatures with at most 14 Health left, and nothing placed before the first of the two Rounds heals that much
+then. 48 is 24 past the supply, and the 20 blanks cover 20 of them. That is a smaller gap than the Bleed-2 one
+above, and the two cannot happen together: a slot casts one Spell.
+
 ### 1.5 The rest of the pieces
 
 | Component | Count | The rule beside the count | Follows |
@@ -374,7 +404,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, and that of 2026-10-05 makes it 266 again. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -393,14 +423,15 @@ python3 -c "
 import json,glob,collections
 v=collections.Counter(json.load(open(p))['criticalChance'] for p in glob.glob('data/Spells/**/*.json',recursive=True))
 print(sorted(v.items()))"
-# [(0, 20), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 2), (0.4, 1), (0.45, 2), (0.5, 7),
+# [(0, 21), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 1), (0.4, 1), (0.45, 2), (0.5, 7),
 #  (0.55, 1), (0.75, 1), (0.767, 1), (0.8, 1)]
 ```
 
-**25 of 45 Spells roll. 20 never touch a die.** Thirteen distinct chances are printed at content `e6f72578`,
-and the die's grid has to carry them. The table below is a reading, not a constant — the maintainer is tuning,
-so re-run the command rather than trusting the cells. What each candidate costs, snapping each of the 25 to
-the nearest face:
+**24 of 45 Spells roll. 21 never touch a die.** Thirteen distinct chances are printed at content `ad3e4d00`,
+and the die's grid has to carry them. It was 25 and 20 at `e6f72578`: `crazed_specter` printed 0.38 and
+prints 0 since 2026-10-05, and `tornado` keeps 0.38 on the list. The table below is a reading, not a
+constant — the maintainer is tuning, so re-run the command rather than trusting the cells. What each
+candidate costs, snapping each of the 24 to the nearest face:
 
 ```bash
 python3 -c "
@@ -414,21 +445,22 @@ for d in (6,8,10,12,20,100):
 
 | Die | Spells whose chance moves | Worst move | Mean move | On the declared knob grid (step 0.05)? | What else it costs |
 | --- | --- | --- | --- | --- | --- |
-| d6 | 18 of 25 | 0.0833 | 0.0276 | **No.** 1/6 is not a multiple of 0.05 | Six faces for thirteen distinct chances, the largest mean error of the five, and a finest distinction of 16.7 points |
-| d8 | 17 | 0.05 | 0.0230 | **No** | Two more moves than the d10 for the same worst move and a slightly larger mean, off the grid the d10 is on; and a die many households do not have |
-| d10 | 15 | 0.05 | 0.0220 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for thirteen chances, and it cannot express 0.75, where `crushing_stomp` sits today |
-| d12 | 17 | 0.0367 | 0.0159 | **No** | Values no declared knob can reach, and it no longer buys the smallest mean error either |
-| **d20** | **8** | **0.02** (`tornado` 0.38 to 0.40, and five others by the same amount) | **0.0062** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
+| d6 | 17 of 24 | 0.0833 | 0.0268 | **No.** 1/6 is not a multiple of 0.05 | Six faces for thirteen distinct chances, the largest mean error of the five, and a finest distinction of 16.7 points |
+| d8 | 16 | 0.05 | 0.0238 | **No** | Two more moves than the d10 for the same worst move and a slightly larger mean, off the grid the d10 is on; and a die many households do not have |
+| d10 | 14 | 0.05 | 0.0221 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for thirteen chances, and it cannot express 0.75, where `crushing_stomp` sits today |
+| d12 | 16 | 0.0367 | 0.0150 | **No** | Values no declared knob can reach, and it no longer buys the smallest mean error either |
+| **d20** | **7** | **0.02** (`tornado` 0.38 to 0.40, and four others by the same amount) | **0.0056** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
 | d100 (2 dice) | 2 | 0.003 | 0.0002 | No, 0.01 | Two dice and a percentile read per cast, and it keeps the arbitrary precision fork B exists to remove |
 
 **Settled: a d20** ([d20-criticals.md](d20-criticals.md)), **and the card prints both the chance and the
 threshold** ("Critical 50% - d20: 11+",
 which is seven Spells as the catalogue stands). The recommendation survives tune run 8, and on better terms
-than it was made: the d20 now wins the error as well. It moves the fewest Spells (8 of 25 at `e6f72578`), has
-the smallest worst move (0.02) and, since run 8 pulled `crazed_specter` and `protective_slam` off the d12
-grid, the smallest mean error of the five single dice. The load-bearing reason is still the grid rather than the error,
+than it was made: the d20 now wins the error as well. It moves the fewest Spells (7 of 24 at `ad3e4d00`, 8 of
+25 at `e6f72578`), has the smallest worst move (0.02) and, since run 8 pulled `crazed_specter` and
+`protective_slam` off the d12 grid, the smallest mean error of the five single dice. `crazed_specter` rolls no
+critical since 2026-10-05, and the d20 still has the smallest mean error without it. The load-bearing reason is still the grid rather than the error,
 because the error moves with every tuning pass and the grid does not: `data/balance/knobs.json` already
-declares `/criticalChance` a knob with a **step of 0.05 on 26 Spells**, so a d20 snap is inside the search
+declares `/criticalChance` a knob with a **step of 0.05 on 25 Spells**, so a d20 snap is inside the search
 space a tuning pass already has, and d6, d8, d12 and d100 are not.
 
 ```bash
@@ -436,22 +468,23 @@ python3 -c "
 import json,collections
 k=json.load(open('data/balance/knobs.json'))['spells']
 s=[(n,b) for n,e in k.items() for b in e.get('knobs',[]) if 'criticalChance' in b['path']]
-print(len(s), collections.Counter(b['step'] for _,b in s))"   # 26 Counter({0.05: 26})
+print(len(s), collections.Counter(b['step'] for _,b in s))"   # 25 Counter({0.05: 25})
 ```
 
-One of the 26 is `throwing_star`, which prints 0 today; the other 25 are every Spell that rolls.
+One of the 25 is `throwing_star`, which prints 0 today; the other 24 are every Spell that rolls. It was 26
+until 2026-10-05, when `crazed_specter` lost its chance and its critical chance knob together.
 
 One finding the maintainer owns before the snap is authored, not this document's to decide. A second, that
 `revenant_guards` printed 0.33 and had no critical chance knob, is gone: it prints 0 since 2026-10-04.
 
-- **Nine of the 26 knobbed Spells are off their own declared grid**: their printed value is not their
-  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `crazed_specter` and
-  `tornado` at 0.38, `engulfing_flames`, `noxious_cure` and `toxic_waves` at 0.33, `rejuvenate` 0.22, and
-  `lightning_bolt` 0.5 in a band of `[0.17, 0.8]`. Eight of the nine sit on a band whose `min` **is** a
-  multiple of 0.05, so a d20 snap fixes them outright; they are the 8 the d20 moves. The ninth is
-  `lightning_bolt`, whose 0.5 is already a twentieth, but whose band floor 0.17 is the only knob band off its
-  own grid, and it leaves the band itself to be moved: 0.17 plus multiples of 0.05 never lands on a multiple
-  of 0.05.
+- **Eight of the 25 knobbed Spells are off their own declared grid**: their printed value is not their
+  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `tornado` 0.38,
+  `engulfing_flames`, `noxious_cure` and `toxic_waves` at 0.33, `rejuvenate` 0.22, and `lightning_bolt` 0.5
+  in a band of `[0.17, 0.8]`. Seven of the eight sit on a band whose `min` **is** a multiple of 0.05, so a d20
+  snap fixes them outright; they are the 7 the d20 moves. The eighth is `lightning_bolt`, whose 0.5 is already
+  a twentieth, but whose band floor 0.17 is the only knob band off its own grid, and it leaves the band itself
+  to be moved: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
+  the ninth until 2026-10-05.
 
 ### 1.7 The energy track: what ends it
 
@@ -475,11 +508,17 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   for e in d['effects']+d.get('casterEffects',[]):
     if 'Energy' in e['kind']: print(d['id'].split(':')[1], e)"
 # wait EnergyGain 2 | restorative_burst EnergyGain 2 | adrenaline_tonic EnergyGain 2 | momentum EnergyGain 2
-# extort EnergyDrain 1, EnergyGain 1 | night_raid EnergyDrain 2 | soul_devourer EnergyDrain 3
+# extort EnergyDrain 1, EnergyGain 1 | night_raid EnergyDrain 3 | soul_devourer EnergyDrain 3
 ```
 
 `momentum`'s `EnergyGain` is its caster effect: it lands on the Creature that casts it, not on the enemy it
 hits (ADR 0078). `extort`'s is too: it drains 1 from the enemy and gives 1 to its caster.
+
+A drain only moves a marker down the same rail. `night_raid` takes 3 from each of up to 2 enemies since
+2026-10-05 (2 from each of up to 3 before), more than the 2 a Round gives, and `soul_devourer` takes 3 from
+one. A drain takes at most what the target has (`Creature.LoseEnergy`, ADR 0035), so a marker stops at 0 and
+the rail needs no cell below it. One raid takes at most 6 Energy in all, 3 from each of 2, as it did before
+at 2 from each of 3. No drain adds a component.
 
 The most one Creature can gain in one Round is **8**: 2 from the Round, 4 from its two allies each casting
 `restorative_burst` or `adrenaline_tonic` on it, and 2 from its own Activation slot, spent on `wait`, on
@@ -613,17 +652,17 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
 def r(t,v): print(t,'max',max(v),'median',statistics.median(x[0] for x in v),'min',min(v))
 print('widest line',max(W),' lines per card',sorted(collections.Counter(L).items()))
 r('body    ',B);r('statline',S)"
-# widest line (33, 'latch')  lines per card [(2, 15), (3, 25), (4, 5)]
+# widest line (33, 'latch')  lines per card [(2, 15), (3, 24), (4, 6)]
 # body     max (96, 'revenant_guards') median 40 min (16, 'wait')
 # statline max (124, 'revenant_guards') median 68 min (41, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
-| Body lines per card | 2, 3 or 4 | 15 cards at 2, 25 at 3, 5 at 4 (`extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`). No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078. |
+| Body lines per card | 2, 3 or 4 | 15 cards at 2, 24 at 3, 6 at 4 (`crazed_specter`, `extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`), read at `ad3e4d00`. No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078, and `crazed_specter` from 3 to 4 with its target Bleed on 2026-10-05; `night_raid` stays at 3. |
 | Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, and `Caster: Bleed 1 a round, 1 round` on `bone_ward`. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
-| Whole body, one string | max **96** characters (`revenant_guards`), median **40**, min **16** (`wait`) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49); none of the three is the max, the median or the min, so those three figures did not move with the abbreviation. |
-| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. |
+| Whole body, one string | max **96** characters (`revenant_guards`), median **40**, min **16** (`wait`) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49); none of the three is the max, the median or the min, so those three figures did not move with the abbreviation. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; the three figures read the same. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and the three figures read the same. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -636,17 +675,21 @@ line holds:
 | Spell | Body lines | Longest line | Lines used of 4 |
 | --- | --- | --- | --- |
 | `revenant_guards` | `Up to 3 allies` (14) / `Defense +3, permanent` (21) / `Defense +4, 2 rounds` (20) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | **4** |
-| `crazed_specter` | `Up to 3 enemies` (15) / `Damage 9` (8) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | 3 |
+| `crazed_specter` | `Up to 3 enemies` (15) / `Damage 4` (8) / `Bleed 4 a round, 2 rounds` (25) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | **4** |
 | `psycho_rush` | `One enemy` (9) / `Damage 10` (9) / `Caster: Defense -2, 1 round` (27) | 27 | 3 |
 | `summon_minions` | `Up to 3 enemies` (15) / `Bleed 2 a round, 3 rounds` (25) / `Caster: Damage 2` (16) | 25 | 3 |
 | `soul_devourer` | `One enemy` (9) / `Damage 7` (8) / `Energy -3` (9) / `Caster: Heal 4` (14) | 14 | **4** |
 | `thundering_seal` | `One ally` (8) / `Defense +3, permanent` (21) / `Defense +3, 2 rounds` (20) | 21 | 3 |
 | `guard` | `One ally` (8) / `Defense +1, permanent` (21) / `Defense +1, 2 rounds` (20) | 21 | 3 |
 
-Two of the seven use four lines, and none of their lines is over 32 characters. **The layout that fits
-them is one effect to a line.** Not prose: a line per effect, each with its own Duration, and a 0.3 pt rule
-above the caster line. That is what makes `revenant_guards`' four separate things - two Defense Conditions on
-up to three allies and a Bleed on itself - four things on the card instead of one sentence to parse. Nine
+Three of the seven use four lines (`crazed_specter` since 2026-10-05, read at `ad3e4d00`), and none of their
+lines is over 32 characters. **The layout that fits them is one effect to a line.** Not prose: a line per
+effect, each with its own Duration, and a 0.3 pt rule above the caster line. That is what makes
+`revenant_guards`' four separate things - two Defense Conditions on up to three allies and a Bleed on itself -
+four things on the card instead of one sentence to parse. `crazed_specter` prints the same Condition twice,
+`Bleed 4 a round, 2 rounds` above the rule and `Caster: Bleed 4 a round, 1 round` below it: one token face,
+two Durations, two different Creatures. The rule is what says each target bleeds for two Rounds and the
+Necromancer for one. Nine
 more Spells carry a Caster effect at `e6f72578` and are not among the audit's seven: `bone_ward`, `extort`,
 `hateful_sacrifice`, `latch`, `momentum`, `ambush`, `parasite_jab`, `reckless_swing` and `shield_bash`. They
 use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damage 3` (8) /
@@ -660,11 +703,12 @@ and took a fifth line.
 
 ### 2.5 Three card faces, written out
 
-Real Spells, generated from `data/`. `[ ]` marks a printed zone. `e6f725` is the first six characters of
+Real Spells, generated from `data/`. `[ ]` marks a printed zone. `ad3e4d` is the first six characters of
 the content hash this working tree builds (`cat data/dst/game.schema.sha256`); the generator prints
 whatever the build it was handed says, and refuses to print when there is nothing to say.
 
-**`revenant_guards`** - the longest body in the catalogue, and the heaviest cast.
+**`revenant_guards`** - the longest body in the catalogue, and the heaviest cast, tied with `crazed_specter`
+since 2026-10-05 ([Part 7](#part-7-coverage-the-needs-a-component-rows)).
 
 ```
 +--------------------------------------+
@@ -679,12 +723,12 @@ whatever the build it was handed says, and refuses to print when there is nothin
 |--------------------------------------|
 | No critical roll                     |   the chance as authored: 0 since 2026-10-04
 |                                      |
-| spell:revenant_guards:v1     e6f725  |   versioned id, content hash prefix
+| spell:revenant_guards:v1     ad3e4d  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
 `revenant_guards` printed `Critical 33%` until 2026-10-04, with the threshold blank because 0.33 is not a
-whole number of twentieths. Eight Spells still print a chance off the twentieths (`toxic_waves` 33%, for one),
+whole number of twentieths. Seven Spells still print a chance off the twentieths (`toxic_waves` 33%, for one),
 and their threshold stays blank until the catalogue is snapped ([1.6](#16-dice)); on a d20 `toxic_waves`
 becomes 35% and `d20: 14+`. This is exactly the case the generator exists for: the card is reprinted from the
 build, not corrected by hand.
@@ -702,7 +746,7 @@ build, not corrected by hand.
 |--------------------------------------|
 | Critical 75%  d20: 6+                |
 |                                      |
-| spell:crushing_stomp:v1      e6f725  |
+| spell:crushing_stomp:v1      ad3e4d  |
 +--------------------------------------+
 ```
 
@@ -720,7 +764,7 @@ over.
 |--------------------------------------|
 | No critical roll                     |
 |                                      |
-| spell:wait:v1                e6f725  |
+| spell:wait:v1                ad3e4d  |
 +--------------------------------------+
 ```
 
@@ -742,7 +786,7 @@ from `data/`: its two faces are the two Speeds of the glossary, and its count is
 | Acts before every Standard Creature.               |
 | No critical roll this Round.                       |   the reminder: CriticalChanceOf is 0 for Quick
 |                                                    |
-| Speed card                                 e6f725  |   what it is, content hash prefix
+| Speed card                                 ad3e4d  |   what it is, content hash prefix
 +----------------------------------------------------+
 
 +----------------------------------------------------+
@@ -751,7 +795,7 @@ from `data/`: its two faces are the two Speeds of the glossary, and its count is
 | Acts after every Quick Creature.                   |
 | Critical as printed on the Spell.                  |
 |                                                    |
-| Speed card                                 e6f725  |
+| Speed card                                 ad3e4d  |
 +----------------------------------------------------+
 ```
 
@@ -1125,7 +1169,7 @@ nothing a cast needs:
 | Crushing Stomp                       |
 |                                      |
 |                                      |
-| tier:dreadnought:v1          e6f725  |   versioned id, content hash prefix
+| tier:dreadnought:v1          ad3e4d  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
@@ -1338,9 +1382,9 @@ answered elsewhere, question 14 by the maintainer, and each says so. Question 16
 ### 1. Which die
 
 **Answered: a d20** ([d20-criticals.md](d20-criticals.md), settled, not built), for the reason in
-[1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 26 Spells,
-d10 and d20, and the d20 is the finer of the two: it moves 8 of the 25 Spells that roll where the d10 moves
-15, its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
+[1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 25 Spells,
+d10 and d20, and the d20 is the finer of the two: it moves 7 of the 24 Spells that roll where the d10 moves
+14 (8 of 25 and 15 at `e6f72578`), its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
 second use on the same die, the Roll-off. The question stays here for what is left with it:
 `lightning_bolt`'s knob band starts at 0.17, so its own grid contains no multiple of 0.05. That is a content
 change with a journal entry and a new hash. (`revenant_guards`, which printed a chance with no critical
@@ -1380,10 +1424,12 @@ accept the punch-out?
 The supplies in [1.4](#14-condition-tokens) are **one Round at the maximum rate**. The rule's own ceiling is up
 to three times that for the Durations over one Round - 54 Bleed-2 tokens - which 20 Health made
 unreachable and 30 does not ([1.4](#14-condition-tokens)), though only if both Players play for it. The
-20 blanks cover 20 of the 36 tokens past that supply. Three answers: print one Round's worth and carry the
+20 blanks cover 20 of the 36 tokens past that supply. Since 2026-10-05 a second face goes past its supply:
+`crazed_specter` takes the Bleed-4 face to 48, 24 past it, over two Rounds ([1.4](#14-condition-tokens)), and
+the same 20 blanks cover 20 of those. Three answers: print one Round's worth and carry the
 blank-token escape (this manifest); print the rule's ceiling - each face's supply times its own longest
-Duration, which is 294 condition tokens at `e6f72578` (204 at `813bb91b`), the Stun's 12 counted once since
-it cannot stack - and one more sheet; or bound the rule, which is an engine change and
+Duration, which is 330 condition tokens at `ad3e4d00` (294 at `e6f72578`, 204 at `813bb91b`), the Stun's 12
+counted once since it cannot stack - and one more sheet; or bound the rule, which is an engine change and
 belongs to ADR candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
@@ -1556,7 +1602,8 @@ the rule beside the count, so it is the maintainer's call. The counts in Part 1 
 
 Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
 are translation.md's as it reads on this branch after its package re-audit, its ADR 0072 re-read and its
-ADR 0078 re-read, and its spell rows re-read for the content of 2026-10-04: 18 from Part 1, 6 from Part 2, 24
+ADR 0078 re-read, its spell rows re-read for the content of 2026-10-04, and its `night_raid` and
+`crazed_specter` rows for that of 2026-10-05: 18 from Part 1, 6 from Part 2, 24
 from Part 3; 48 of 48. ADR 0078 took two rows out, the
 `EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
 and their verdicts are no longer **needs a component** ([1.4](#14-condition-tokens)). The re-audit was
@@ -1584,7 +1631,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.8 Reveal in timeline order, bind targets at reveal | **No component since ADR 0083.** It was 18 target markers and the `Targeted by` row. The reveal and the resolution are one turn of `Activation` now, so the Spell card turned face up in its intent slot and the targets named aloud are the whole of it, [3.8](#38-how-a-cast-is-declared-and-resolved-in-components). translation.md keeps the row as it measured it, with a note. |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 150 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 168 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
@@ -1593,7 +1640,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 
 | Effect kind | Token, and its supply |
 | --- | --- |
-| `Bleed` | 48 tokens: 6 at 1, 18 at 2, 18 at 3, 6 at 4 |
+| `Bleed` | 66 tokens: 6 at 1, 18 at 2, 18 at 3, 24 at 4 (6 at 4 until 2026-10-05) |
 | `Regeneration` | 30 tokens: 6 at 1, 18 at 2, 6 at 3 |
 | `Stun` | 12 tokens, two a Creature: a Stun on a stunned Creature is ignored, so a Creature carries one, and it needs a token in the Speed slot and one in the dock. Plus 6 Immune tokens, one a Creature, for the Round of Stun immunity after it ([1.5](#15-the-rest-of-the-pieces)) |
 | `DefenseBuff` | 30 timed tokens (6 at +1, 6 at +3, 18 at +4); a permanent buff moves the rail and needs none |
@@ -1605,7 +1652,10 @@ them now, and the Spells that place a token but are not among the audit's rows f
 
 Each of the 18 Spells the audit sent to phase 3, and what one cast of it puts on the table. Permanent halves
 move a rail and place nothing. `momentum` was the 19th until ADR 0078: it places nothing now, and its
-`Damage 3` and `Caster: Energy +2` move two rails that are already on the board. Read at `e6f72578`.
+`Damage 3` and `Caster: Energy +2` move two rails that are already on the board. Read at `ad3e4d00`, where
+the `night_raid` and `crazed_specter` rows moved. translation.md re-reads those two rows at `ad3e4d00` and
+keeps both verdicts: `crazed_specter` still **needs a component**, now four Bleed tokens a cast, and
+`night_raid` is still **restate**.
 
 | Spell | What a cast places |
 | --- | --- |
@@ -1613,7 +1663,7 @@ move a rail and place nothing. `momentum` was the 19th until ADR 0078: it places
 | `guard` | 1 Defense buff +1 (2 rounds); +1 on the rail, permanent |
 | `thundering_seal` | 1 Defense buff +3 (2 rounds); +3 on the rail, permanent |
 | `healing_screech` | 1 Regeneration 3 (2 rounds) |
-| `death_squad` | **Gone** since 2026-10-04. `night_raid` took its place in Deathstalker and places nothing: its `Damage 3` and `Energy -2` on up to 3 enemies move rails already on the board |
+| `death_squad` | **Gone** since 2026-10-04. `night_raid` took its place in Deathstalker and places nothing: its `Damage 4` and `Energy -3` on up to 2 enemies move rails already on the board (`Damage 3` and `Energy -2` on up to 3 until 2026-10-05) |
 | `poison_slash` | 1 Bleed 3 (1 round) |
 | `protective_slam` | 1 Stun (1 round), two tokens: one in the Speed slot, one in the dock. It placed an Initiative debuff -2 until 2026-10-04 |
 | `ice_spear` | 1 Stun (1 round), two tokens. It placed an Initiative debuff until PR #245 |
@@ -1623,9 +1673,9 @@ move a rail and place nothing. `momentum` was the 19th until ADR 0078: it places
 | `psycho_rush` | 1 Defense debuff -2 on its own caster |
 | `infectious_blast` | Nothing. -3 on up to 3 enemy Defense debuff rails, permanent |
 | `summon_minions` | Up to 3 Bleeds 2 (3 rounds), one of the longest Durations in the game |
-| `revenant_guards` | Up to 3 Defense buffs +4 (2 rounds) and 1 Bleed 4 on its own caster; +3 on up to 3 rails, permanent. The heaviest cast: 4 tokens and 3 rail moves |
+| `revenant_guards` | Up to 3 Defense buffs +4 (2 rounds) and 1 Bleed 4 on its own caster; +3 on up to 3 rails, permanent. The heaviest cast, with `crazed_specter`: 4 tokens and 3 rail moves |
 | `noxious_cure` | Up to 3 Defense debuffs -2 |
-| `crazed_specter` | 1 Bleed 4 on its own caster |
+| `crazed_specter` | Up to 3 Bleeds 4 (2 rounds), and 1 Bleed 4 on its own caster (1 round); up to 3 Health rail moves for its `Damage 4`. 4 tokens and 3 rail moves, as heavy as `revenant_guards`. Until 2026-10-05 it placed the caster's Bleed alone |
 | `toxic_waves` | Up to 3 Bleeds 3 (2 rounds) |
 
 The Spells that place a token and are not among the audit's 18, because they were authored or reworked after

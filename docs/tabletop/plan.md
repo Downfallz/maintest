@@ -48,7 +48,7 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 | --- | --- | --- |
 | Match, two players, team of 3 | `RuleSet.Default`: 3 creatures, 30-round cap | Two player areas of three creature boards |
 | Creature | Health 30 (ADR 0068), Energy 0, Defense 0, Initiative 5, Crit 0.05 | A creature board with four tracks and a hand of spell cards |
-| Spell catalogue | 45 spells in `data/Spells`, 3 base + 42 class (the content of 2026-10-04) | ~45 cards, generated from the built content |
+| Spell catalogue | 45 spells in `data/Spells`, 3 base + 42 class (the content of 2026-10-05, `ad3e4d00`) | ~45 cards, generated from the built content |
 | Talent tree | `data/TalentTrees`, `allOf`/`anyOf` prerequisites, 3 tiers under 3 classes | A tech-tree mat per class, or prerequisites printed on the card |
 | Evolution | 2 unlocks per player per round, raises base initiative (ADR 0017) | Draw the unlocked card into the creature's hand, move its initiative marker |
 | Speed | Quick or Standard per creature | A two-sided speed token per creature |
@@ -126,7 +126,8 @@ What the rest of the plan therefore takes as given, and what it must not hard-co
   critical multiplier: these are `RuleSet` and content values a balancing pass moves. Components state which
   of their counts follow a value and which follow a rule, so a rebalanced game reprints rather than redesigns.
 - **The Creature's base Critical chance is zero** (ADR 0042): a Spell's printed chance is the chance rolled,
-  and the twenty Spells at zero never roll (the content of 2026-10-04).
+  and the twenty-one Spells at zero never roll (the content of 2026-10-05, `ad3e4d00`; twenty at
+  `e6f72578`, before Crazed Specter lost its chance).
 - **A Condition stacks, except a Stun** (ADR 0041): one application is one token. A Stun on a Creature already
   stunned or immune to Stun is ignored, and a Stun that ends leaves a Round of Stun immunity (ADR 0072).
 

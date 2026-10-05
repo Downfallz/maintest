@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Necromancer",
   "energyCost": 3,
-  "criticalChance": 0.38,
+  "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
     "scope": "Multi",
@@ -13,7 +13,12 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 9
+      "amount": 4
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 4,
+      "durationRounds": 2
     }
   ],
   "enabled": true,
