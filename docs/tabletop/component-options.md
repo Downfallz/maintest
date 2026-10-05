@@ -95,7 +95,7 @@ track from Round 18, 19 or 20 (20 is a multiple of 4: moss, then amber again).
 | --- | --- | --- | --- |
 | Dock lanes | 4 a Creature | Longest Duration + 1 | **VALUE** (content) |
 | Round track | 20 spaces in 5 cycles, 10 pick marks | The table's cap; the schedule (components 3.6) | **VALUE** |
-| Condition tokens | 150 in 6 kinds, unchanged | One Round at the maximum rate (components 1.4) | **VALUE** |
+| Condition tokens | 168 in 6 kinds at `ad3e4d00` (150 at `e6f72578`), unchanged by the dock | One Round at the maximum rate (components 1.4) | **VALUE** |
 | Immune tokens | 6, unchanged | One a Creature (ADR 0072) | **RULE** x **VALUE** |
 
 **A glyph beside each colour**, on the track and on the lane: a home print is often greyscale, where teal and
@@ -330,7 +330,7 @@ director.
 | Speed cards (poker) | 12 | 12 | 8 |
 | **Cards** | **408** | **144** | **96** |
 | Dials, with split pins | 0 | 6 | 4 |
-| Condition tokens | 150 | 150 | **80**: a Multi Spell reaches at most 2 |
+| Condition tokens | 168 | 168 | **88**: a Multi Spell reaches at most 2, plus Crazed Specter's caster |
 | Immune tokens, tie order chits | 6, 6 | 6, 6 | 4, 4 |
 | Ordering discs, ladder discs | 6, 0 | 6, 6 | 4, 4 |
 | Stat markers | 36 | 0, and 6 Health clips | 4 clips |
@@ -342,10 +342,11 @@ director.
 | **Paper**, A4 or Letter | **55** | **26** | **18** |
 
 The 26: 138 poker cards on 16 sheets (126 alone is exactly 14), 6 Creature cards on 2, dials on about 3 (two
-90 mm discs and a 50 mm one each), the middle on 2, about 214 token pieces on 2 (one sheet holds about 185 at
+90 mm discs and a 50 mm one each), the middle on 2, about 232 token pieces on 2 (one sheet holds about 185 at
 15 mm), the player aid on 1. **The brief's "144 cards" holds, on 18 sheets of cards, not 21; the whole box is
 about 26.** At 2v2 every per-Creature count falls by a third, and the Condition supply by more: 4 slots x 2
-targets for the Multi faces. The middle and the dial's rings do not change.
+targets for the Multi faces, plus the caster for Crazed Specter's Bleed 4 (168 to 88: components 1.4 at
+`ad3e4d00` counts its 24 Bleed-4 faces as 6 slots x 3 targets and the caster; at 2v2 that is 4 x 3 = 12). The middle and the dial's rings do not change.
 
 ---
 
@@ -386,7 +387,7 @@ Everything in Part 3 works with either.
 
 | | Dial (B) | Deck (A) |
 | --- | --- | --- |
-| Cards | 144 | About 160: 126 package, 12 to 18 starting, 12 Speed, 6 Creature; and 60 markers |
+| Cards | 144 | 162: 126 package, 18 starting (3 a Creature, 6 Creatures), 12 Speed, 6 Creature; and 60 markers |
 | Where a Player reads their Spells | The face-up cascade, the opponent's view too | Their hand; the opponent reads names on the tree |
 | Declaring an Intent | Two settings, one face-down dial | One card face down, the right way round |
 | The reveal | A lookup, Tier and letter to the cascade | None: the card is the Spell |
@@ -404,7 +405,10 @@ cards. Settled by a prototype (Part 8, question 3).
 
 ## 5. Package copies
 
-Six copies exist **only** because an Intent is played face down from a hand. The most Creatures sharing one
+Six copies of a **package card** are needed because a bought card lies face up with its Creature as the record
+that it owns the Tier (3.6), and any of the six Creatures may own the same Tier (ADR 0056). That holds with the
+dial as with the deck. Six copies of a **Spell card** are needed only because an Intent is played face down from
+a hand, which is what the dial removes: it takes out the 270 Spell cards, not the package copies. The most Creatures sharing one
 taught Spell, at the end of a match, dead or alive (each Spell is taught by exactly one Tier, so this is also
 the most copies of one package card in use):
 
