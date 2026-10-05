@@ -65,6 +65,13 @@ public sealed class LookaheadAgent(
     /// </summary>
     private readonly IPlayerAgent _oneStep = inner ?? new HeuristicAgent(weights, resources, rules);
 
+    /// <summary>
+    /// Whether the purchase rollouts may run side by side: only when every decision in them is the heuristic's,
+    /// which holds no state and draws no dice. An inner agent that explores or plays at random draws from one
+    /// shared source, and rollouts racing for it would take their draws in whatever order the threads ran.
+    /// </summary>
+    private readonly bool _rolloutsInParallel = inner is null or HeuristicAgent or GreedyAgent;
+
     private readonly ActionScorer _scorer = new(resources, rules, weights);
 
     public ScoringWeights Weights => weights;
@@ -124,16 +131,17 @@ public sealed class LookaheadAgent(
 
         // Every rollout is its own hypothetical board on its own dice, so they are played side by side and read
         // back in the candidates' order: the decision is the one the loop below would take played one by one,
-        // and a person waiting at the table waits for the slowest rollout rather than for all of them.
+        // and a person waiting at the table waits for the slowest rollout rather than for all of them. One at a
+        // time, in order, when the agent the rollouts are played by draws dice of its own.
         var bought = new IReadOnlyList<CreatureSnapshot>[candidates.Count];
-        Parallel.For(0, candidates.Count, candidate =>
+        Each(candidates.Count, candidate =>
         {
             var own = rollout.Picks(board, creatures, round, board.Slot, [.. board.EvolutionChoices, candidates[candidate]]);
             bought[candidate] = Advance.Buy(creatures, [.. own, .. guessed], resources);
         });
 
         var played = new RolloutValue[candidates.Count, seeds.Count];
-        Parallel.For(0, candidates.Count * seeds.Count, index =>
+        Each(candidates.Count * seeds.Count, index =>
         {
             var (candidate, seed) = Math.DivRem(index, seeds.Count);
             played[candidate, seed] = rollout.Play(board, bought[candidate], _purchases.Rounds, new RolloutDice(seeds[seed]));
@@ -152,6 +160,21 @@ public sealed class LookaheadAgent(
         }
 
         return best is null ? EvolutionDecision.Pass : EvolutionDecision.Unlock(best);
+    }
+
+    /// <summary>The body for every index below the count: side by side when the rollouts may be, else in order.</summary>
+    private void Each(int count, Action<int> body)
+    {
+        if (_rolloutsInParallel)
+        {
+            Parallel.For(0, count, body);
+            return;
+        }
+
+        for (var index = 0; index < count; index++)
+        {
+            body(index);
+        }
     }
 
     /// <summary>
