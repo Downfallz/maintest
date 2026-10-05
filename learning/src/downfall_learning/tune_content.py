@@ -22,7 +22,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from itertools import combinations
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import numpy as np
 
@@ -893,7 +893,8 @@ class _Confirmer:
         if self._evaluator is None or candidate.confirmed is not None:
             return candidate
         metrics = self._evaluator.evaluate(apply_moves(self._content.documents, candidate.moves))
-        return replace(candidate, confirmed=self._objective.score(metrics))
+        # `replace` is typed through a TypeVar that Sonar reads as its bound, DataclassInstance.
+        return cast(Candidate, replace(candidate, confirmed=self._objective.score(metrics)))
 
     def leader(self, leader: Candidate, played: Sequence[Candidate], iteration: int) -> Candidate:
         """The leader after a round: the best of ``played`` if it beats ``leader`` on both seed blocks.

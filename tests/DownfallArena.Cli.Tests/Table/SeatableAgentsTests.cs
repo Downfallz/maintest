@@ -58,6 +58,18 @@ public sealed class SeatableAgentsTests : IDisposable
         offered.Select(agent => agent.Value).ShouldBe(["greedy", "random", $"heuristic:{Spec("stun-first.json")}"]);
     }
 
+    /// <summary>A set searched for the lookahead lives in a folder of its own: offered as a heuristic it plays another reading.</summary>
+    [Fact]
+    public void A_weights_file_in_a_folder_of_its_own_is_not_offered_as_a_heuristic()
+    {
+        Directory.CreateDirectory(Path.Combine(_directory, "lookahead"));
+        File.WriteAllText(Path.Combine(_directory, "lookahead", "lookahead-34.json"), "{}");
+
+        var offered = SeatableAgents.Read(_directory, featuredFile: null);
+
+        offered.Select(agent => agent.Value).ShouldBe(["greedy", "random"]);
+    }
+
     [Fact]
     public void A_featured_file_that_does_not_parse_puts_nothing_forward_and_stops_nothing()
     {

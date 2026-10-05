@@ -95,7 +95,7 @@ function start(seats, holder = null, practicing = false) {
     stepSeen: new Map(), stepAuto: null, quietKey: seats.map(seat => seat.token).join('/'),
   };
   state.quiet = quietTables().includes(state.quietKey);
-  load(state);
+  void load(state);
   setupTalentWindow(state);
   setupPhaseControls(state);
   setupConcede(state);
@@ -141,7 +141,7 @@ function start(seats, holder = null, practicing = false) {
     }
   });
 
-  refresh(state);
+  void refresh(state);
   setInterval(() => refresh(state), 700);
 }
 
@@ -2566,7 +2566,7 @@ function targetButtons(state, current) {
 
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
     confirm.disabled = true;
-    castTargets(state, current);
+    void castTargets(state, current);
   });
   confirm.disabled = !canCastTargets(state, current.view);
   return [context, targetRemovals(state, current), help, confirm];
@@ -2911,7 +2911,7 @@ function keyboardDecision(state, event) {
     if (view.waitingFor === 'Target') {
       const candidates = view.options.target?.legalTargets?.candidates ?? [];
       const id = candidates[number];
-      if (id !== undefined && !state.picked.includes(id)) pick(state, current, id);
+      if (id !== undefined && !state.picked.includes(id)) void pick(state, current, id);
     }
     return;
   }

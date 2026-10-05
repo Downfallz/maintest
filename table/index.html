@@ -10,7 +10,7 @@
   <body>
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></div>
-      <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" role="status">Connecting…</p><a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>
+      <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" aria-live="polite">Connecting…</p><a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>
       <details id="shape">
         <summary>Round guide</summary>
         <div class="guide-body"><p id="rules" class="muted"></p><ol id="sub-phases"></ol><ul id="orderings"></ul></div>
@@ -38,12 +38,12 @@
 
     <main id="table" hidden>
         <aside id="phase-dock" aria-label="Round progress">
-          <div id="phase-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <div id="phase-notice" aria-live="polite" aria-atomic="true" hidden>
             <span id="phase-notice-context" class="eyebrow">Phase update</span>
             <strong id="phase-notice-title"></strong>
             <p id="phase-notice-detail"></p>
             <div id="phase-notice-changes" class="notice-changes" hidden></div>
-            <div class="notice-controls"><button id="phase-notice-next" type="button" hidden>Next effect →</button><button id="phase-notice-skip" type="button" hidden title="Upkeep keeps the full list">Skip ▸▸</button><button id="phase-notice-mute" type="button" title="Phase changes stay listed under Announcements">Mute phase pop-ups</button><button id="phase-notice-pin" type="button">Keep open</button><button id="phase-notice-close" type="button" aria-label="Close announcement">Close ×</button></div>
+            <div class="notice-controls"><button id="phase-notice-next" type="button" hidden>Next effect →</button><button id="phase-notice-skip" type="button" hidden title="Upkeep keeps the full list">Skip ▸▸</button><button id="phase-notice-mute" type="button" title="Phase changes stay listed under Announcements">Mute phase pop-ups</button><button id="phase-notice-pin" type="button">Keep open</button><button id="phase-notice-close" type="button" title="Close announcement">Close ×</button></div>
           </div>
           <div class="phase-primary"><strong id="phase-round"></strong><strong id="phase-current"></strong><span id="phase-turn"></span><button id="board-toggle" type="button" class="board-toggle" aria-controls="board" aria-pressed="false">Battlefield</button></div>
           <p id="combat-line" class="combat-line" aria-live="polite" hidden></p>
@@ -65,7 +65,7 @@
           <details id="order" hidden>
             <summary id="order-label">Turn order</summary>
             <section id="order-panel" aria-labelledby="order-title">
-              <h2 id="order-title"></h2>
+              <h2 id="order-title">Speeds revealed</h2>
               <p id="order-theirs" class="order-side enemy"></p>
               <p id="order-mine" class="order-side ally"></p>
               <ol id="order-list" aria-label="Turn order, first to last"></ol>
@@ -76,7 +76,7 @@
           <details id="upkeep" hidden>
             <summary id="upkeep-label">Upkeep</summary>
             <section id="upkeep-panel" aria-label="This round's upkeep">
-              <h2 id="upkeep-title"></h2>
+              <h2 id="upkeep-title">Upkeep applied</h2>
               <p id="upkeep-energy"></p>
               <p class="upkeep-order">Energy → healing → damage over time. Healing happens first; ongoing damage ignores defense.</p>
               <div id="upkeep-effects"></div>
@@ -90,7 +90,7 @@
           <ol id="recap-actions"></ol>
         </details>
           </div>
-          <div id="mini-board" class="mini-board" role="group" aria-label="Battlefield at a glance"><div id="mini-enemies" class="mini-row"></div><div id="mini-allies" class="mini-row"></div></div>
+          <section id="mini-board" class="mini-board" aria-label="Battlefield at a glance"><div id="mini-enemies" class="mini-row"></div><div id="mini-allies" class="mini-row"></div></section>
         </aside>
       <div class="play-area">
         <nav class="tabs" aria-label="Table views">
@@ -133,7 +133,7 @@
         </section>
         <section id="playback" class="sheet" aria-labelledby="playback-title" hidden>
           <p class="eyebrow">Round replay · action by action</p>
-          <h2 id="playback-title"></h2>
+          <h2 id="playback-title">Playback</h2>
           <p id="playback-count" class="muted"></p>
           <ol id="playback-action" aria-live="polite"></ol>
           <div id="playback-controls"></div>
@@ -155,7 +155,7 @@
             <div id="allies" class="team-grid"></div>
           </section>
         </section>
-        <section id="talent-window" class="talent-window" role="dialog" aria-modal="false" aria-labelledby="talent-title" hidden>
+        <dialog id="talent-window" class="talent-window" aria-labelledby="talent-title" open hidden>
           <header class="window-bar">
             <button id="talent-grip" type="button" title="Drag to move; arrow keys move the window"><span id="talent-title">Talent atlas</span><span class="window-hint">Drag to move · arrows also work</span></button>
             <button id="talent-reset" type="button" aria-label="Reset window position" title="Reset position">↺</button>
@@ -163,7 +163,7 @@
             <button id="talent-close" type="button" aria-label="Close talent atlas" title="Close (Escape)">×</button>
           </header>
           <section id="mat" aria-label="Talent catalogue"></section>
-        </section>
+        </dialog>
         <section id="notes" class="notes" hidden>
           <h2>Playtest notes</h2>
           <div id="note-buttons" class="note-buttons"></div>
@@ -172,7 +172,7 @@
             <textarea id="comment-text" rows="3"></textarea>
             <button id="comment-save" type="button">Save it with the session</button>
           </div>
-          <p id="noted" class="muted" role="status" hidden></p>
+          <p id="noted" class="muted" aria-live="polite" hidden></p>
         </section>
         <details id="log"><summary>Match activity <span class="muted">Latest events</span></summary><ol id="feed"></ol></details>
 
