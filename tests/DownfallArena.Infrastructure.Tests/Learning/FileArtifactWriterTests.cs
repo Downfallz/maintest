@@ -25,6 +25,17 @@ public sealed class FileArtifactWriterTests
     }
 
     [Fact]
+    public async Task A_root_named_with_a_trailing_separator_still_takes_writes()
+    {
+        using var directory = new ContentDirectory();
+        var writer = new FileArtifactWriter(directory.Path + Path.DirectorySeparatorChar);
+
+        await writer.WriteJsonAsync("manifest.json", new { Matches = 1 }, TestContext.Current.CancellationToken);
+
+        File.Exists(Path.Combine(directory.Path, "manifest.json")).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Writing_a_document_again_replaces_it()
     {
         using var directory = new ContentDirectory();
