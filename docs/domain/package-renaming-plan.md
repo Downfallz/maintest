@@ -107,6 +107,8 @@ Preferred player-facing name:
 - **Mutation Tree**
 - **Arbre des Mutations**
 
+It names the **Tier prerequisite graph** (the three families and their Tier 1 → Tier 2 → Tier 3 paths above), not the authored `Talent tree`, which groups a Creature definition's Spells and no longer decides what Evolution may buy (ADR 0056). The glossary carries it as an `open` term until the rename is implemented.
+
 Reason: `Evolution Tree` feels more natural/progressive, while `Ascension Tree` skews mystical or positive. `Mutation` best matches the fiction that an elite mage forcibly reshapes creatures during combat.
 
 ## Implementation plan
