@@ -75,7 +75,9 @@ jobs:
   search:
     name: Search the scoring weights
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # The most a GitHub-hosted job may run. A lookahead candidate costs several times a heuristic one since
+    # ADR 0096, and search 32 hit the three hours this was before.
+    timeout-minutes: 360
     steps:
       # A report-only run keeps no credential on disk, the way this workflow always did. An applying run keeps
       # the one the checkout sets up and lets git use it, because the alternative is a token inside a remote

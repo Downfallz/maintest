@@ -122,16 +122,31 @@ public sealed class LookaheadAgent(
             .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)board.EvolutionChoices.Count * 1_009UL) + (ulong)index)
             .ToList();
 
+        // Every rollout is its own hypothetical board on its own dice, so they are played side by side and read
+        // back in the candidates' order: the decision is the one the loop below would take played one by one,
+        // and a person waiting at the table waits for the slowest rollout rather than for all of them.
+        var bought = new IReadOnlyList<CreatureSnapshot>[candidates.Count];
+        Parallel.For(0, candidates.Count, candidate =>
+        {
+            var own = rollout.Picks(board, creatures, round, board.Slot, [.. board.EvolutionChoices, candidates[candidate]]);
+            bought[candidate] = Advance.Buy(creatures, [.. own, .. guessed], resources);
+        });
+
+        var played = new RolloutValue[candidates.Count, seeds.Count];
+        Parallel.For(0, candidates.Count * seeds.Count, index =>
+        {
+            var (candidate, seed) = Math.DivRem(index, seeds.Count);
+            played[candidate, seed] = rollout.Play(board, bought[candidate], _purchases.Rounds, new RolloutDice(seeds[seed]));
+        });
+
         EvolutionChoice? best = null;
         var bestValue = RolloutValue.Lowest;
-        foreach (var candidate in candidates)
+        for (var candidate = 0; candidate < candidates.Count; candidate++)
         {
-            var own = rollout.Picks(board, creatures, round, board.Slot, [.. board.EvolutionChoices, candidate]);
-            var bought = Advance.Buy(creatures, [.. own, .. guessed], resources);
-            var value = RolloutValue.Mean([.. seeds.Select(seed => rollout.Play(board, bought, _purchases.Rounds, new RolloutDice(seed)))]);
+            var value = RolloutValue.Mean([.. Enumerable.Range(0, seeds.Count).Select(seed => played[candidate, seed])]);
             if (value.CompareTo(bestValue) > 0)
             {
-                best = candidate;
+                best = candidates[candidate];
                 bestValue = value;
             }
         }
