@@ -100,6 +100,8 @@ jobs:
       # leave empty. The searched set goes next to greedy.json under its own name (docs/learning/agents.md),
       # and weights searched for a reading other than the one-step one carry that reading's name, because
       # they are only meaningful played by it: `lookahead-12.json` is for `lookahead:`, not for `heuristic:`.
+      # They go in a folder named after that reading too, because the table offers every file directly under
+      # learning/weights/ as a heuristic seat, which is how `lookahead-20` came to be played by the wrong agent.
       - name: Read the experiment
         env:
           IN_OPPONENT: ${{ inputs.opponent }}
@@ -132,8 +134,10 @@ jobs:
           kind="$(knob kind "$IN_KIND" heuristic)"
           if [[ "$kind" == heuristic ]]; then
             name=search
+            folder=learning/weights
           else
             name="$kind"
+            folder="learning/weights/$kind"
           fi
           resolved="$(
             printf 'OPPONENT=%s\n' "$(knob opponent "$IN_OPPONENT" greedy)"
@@ -144,7 +148,7 @@ jobs:
             printf 'ITERATIONS=%s\n' "$(knob iterations "$IN_ITERATIONS" 10)"
             printf 'POPULATION=%s\n' "$(knob population "$IN_POPULATION" 16)"
             printf 'SEED=%s\n' "$(knob seed "$IN_SEED" 0)"
-            printf 'FOUND=learning/weights/%s-%s.json\n' "$name" "$GITHUB_RUN_NUMBER"
+            printf 'FOUND=%s/%s-%s.json\n' "$folder" "$name" "$GITHUB_RUN_NUMBER"
           )"
           # The experiment's own paragraph, on one line so it survives the environment file, printed in the
           # summary under the parameters. A dispatch has nowhere to type one, so this comes from the file only.
@@ -399,6 +403,7 @@ jobs:
       - name: Add the weights and run the gate
         if: steps.found.outputs.applied == 'true'
         run: |
+          mkdir -p "$(dirname "$FOUND")"
           cp "$OUT/weights.json" "$FOUND"
           dotnet build --no-restore --configuration Release
           dotnet test --no-build --configuration Release
