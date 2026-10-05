@@ -15,6 +15,8 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   (ADR 0059): the content hash is taken over that document, so dropping a member from it is a break an older
   engine has to be told about rather than left to read as a bad hash. The game plays them: a pick buys one,
   and its `initiativeBonus` is the initiative a purchase is worth.
+  Player-facing package identities use the controlled vocabulary in `docs/domain/package-identity-tags.md`;
+  those tags are design/presentation metadata and are not part of the match schema.
 - `aliases.json`: unversioned ids (`spell:pummel`) to their current versioned id (`spell:pummel:v1`).
 
 References between items (starting spells, talent prerequisites) may use either form; the data builder resolves
