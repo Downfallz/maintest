@@ -5,8 +5,9 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// The bots a host offers a seat to, read off the weights directory rather than written into a page: the ones
-/// <c>learning/seatable.json</c> puts forward, in its order and with its words, then every weights file under
-/// <c>learning/weights/</c>, by name. The admin panel and the pilot both ask the host for this list, so a search that lands a new
+/// <c>learning/seatable.json</c> puts forward, in its order and with its words, then every weights file directly under
+/// <c>learning/weights/</c>, by name, as a heuristic. A set searched for another reading sits in a folder named after it
+/// (<c>learning/weights/lookahead/</c>) and is not offered here, because played as a heuristic it would be another agent. The admin panel and the pilot both ask the host for this list, so a search that lands a new
 /// file is offered the day it lands, and the two pages cannot drift apart on which bot is "the strongest".
 /// </summary>
 /// <remarks>

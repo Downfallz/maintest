@@ -47,6 +47,8 @@ public sealed class FileArtifactStore : IArtifactStore
             throw new ArgumentException($"'{run}' is not a run name: a run is one directory under the root.", nameof(run));
         }
 
-        return Path.Combine(RootDirectory, run);
+        // The checks above already make `run` a bare name, so GetFileName returns it unchanged; it is here so a
+        // path built from a request reads as one name under the root to the analysis that follows it (S2083).
+        return Path.Combine(RootDirectory, Path.GetFileName(run));
     }
 }

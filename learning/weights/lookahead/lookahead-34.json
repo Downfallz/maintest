@@ -1,0 +1,11 @@
+{
+  "damage": 1.0,
+  "kill": 4.857,
+  "heal": 1.006,
+  "stun": 3.166,
+  "bleed": 0.561,
+  "defense": 0.734,
+  "energy": 0.538,
+  "initiative": 2.5,
+  "pressure": 0.001
+}

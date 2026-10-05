@@ -1,10 +1,11 @@
 {
-  "why": "The heuristic's rung on content 9659f610, after the catalogue moved: nine new tier-2 spells, Meteor, Ice Spear and Tranquilizer Dart reworked, Soothing Chant, five tier-3 spells raised and the 8-to-14-round target (ADR 0086), Infectious Blast and the Revenant Guards' ward (#245 to #247). Every weights file was searched on older content. On the 200 benchmark seeds mirrored, search-19 still leads the heuristics at 0.846 mean against the other five, but kill-first is close at 0.728 and holds search-19 to 0.557 head to head; greedy is last at 0.060. lookahead-30 collapsed again (0.464 mean, 0.160 against search-19, 0.020 against kill-first), while the lookahead played with search-19's weights leads everything at 0.907 and beats search-19 0.705 (journal, 2026-09-30). So the rung starts from search-19 against greedy, kill-first, search-21, stun-first and pressure-floor, all under the start's floor, with the lookahead on search-19's weights seated on the first 50 seeds only, the way search 27 seated lookahead-20: it is the one opponent search-19 does not beat, and it costs several heuristics. 5 rounds of 8, seed 0, as search 27 ran; the engine is about 40 % faster since #242, which pays for the longer matches of this catalogue. What would make it a rung: a set that beats search-19 on seeds it never saw against kill-first and the lookahead without falling below it against the rest.",
-  "initial": "learning/weights/search-19.json",
-  "opponent": "greedy,heuristic:learning/weights/kill-first.json,heuristic:learning/weights/search-21.json,heuristic:learning/weights/stun-first.json,heuristic:learning/weights/pressure-floor.json,lookahead:learning/weights/search-19.json@50",
+  "why": "The lookahead's own weights, searched with the lookahead playing every candidate (--kind lookahead), now that a search may run six hours (#280). The lookahead plays best on the built-in weights: 0.933 against Greedy and 0.933 against search-23 on 60 unseen seeds, where the set a local search found on 20 seeds lost 0.133 against Greedy (journal, 2026-10-04). So this one starts from the built-in weights, against Greedy and search-23, the two the lookahead was measured against, on learning/experiments/lookahead-seeds.json: the first 30 benchmark seeds, because the hold-out replays both agents on as many unseen seeds as the file holds, and on 200 it alone would take over three hours with the lookahead. 3 rounds of 5, seed 0, about 4.5 hours by the local rate of 15 seconds a seed against one opponent. No check opponent, for the same budget. What would make it a rung: a set that beats the built-in weights on the unseen seeds against both, and holds when replayed on 60 more.",
+  "initial": "none",
+  "opponent": "greedy,heuristic:learning/weights/search-23.json",
   "check_opponent": "none",
-  "kind": "heuristic",
-  "iterations": 5,
-  "population": 8,
+  "kind": "lookahead",
+  "seeds": "learning/experiments/lookahead-seeds.json",
+  "iterations": 3,
+  "population": 5,
   "seed": 0
 }

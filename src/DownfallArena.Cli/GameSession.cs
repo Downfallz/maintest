@@ -278,9 +278,7 @@ internal sealed class GameSession
         new(
             new FileArtifactWriter(runDirectory),
             Stamp(scenario.Player1Agent.ToString(), scenario.Player2Agent.ToString()),
-            new ObservationBuilder(_schema),
-            new ActionEncoder(_schema),
-            new CandidateTerms(_resources, _rules),
+            StepEncoding.For(_schema, _resources, _rules),
             TimeProvider.System,
             _options.Traces == 0 ? null : _services.GetRequiredService<MatchTraceRecorder>(),
             _options.Traces ?? int.MaxValue);

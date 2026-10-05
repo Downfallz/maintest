@@ -22,7 +22,7 @@ public sealed class JsonScoringWeightsSourceTests
     public void Every_committed_weights_file_loads()
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "weights");
-        var files = Directory.GetFiles(directory, "*.json");
+        var files = Directory.GetFiles(directory, "*.json", SearchOption.AllDirectories);
         var source = new JsonScoringWeightsSource();
 
         files.ShouldNotBeEmpty();

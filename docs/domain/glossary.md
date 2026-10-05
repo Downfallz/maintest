@@ -49,9 +49,27 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Content studio | The local page that browses, edits, versions and disables the authored content, and plays a match or an evaluation on it (ADR 0015). | decided |
 | Enabled | The authoring-only switch on an authored item: `"enabled": false` keeps it out of the build, and references to a disabled Spell are pruned (ADR 0015). | decided |
 | Talent tree | The authored tree that groups a Creature definition's Spells into families, with `allOf`/`anyOf` prerequisites per node. It no longer decides what Evolution may buy: Tier prerequisites do (ADR 0056), and the content tools still read the tree. | decided |
+| Mutation Tree | The player-facing name proposed for the Tier prerequisite graph: the 21 Tiers in three families, each opened by a level-1 Tier and branching into level-2 to level-3 paths. It names what Evolution buys from, not the Talent tree, which groups a Creature definition's Spells and no longer gates a purchase (ADR 0056). French: Arbre des Mutations. A display name only: no id, type or file is renamed by it (see [package-renaming-plan.md](package-renaming-plan.md)). | open |
 | Game resources | The static, versioned catalogue of Creature definitions, Spells, and Talent trees. | decided |
 | Content hash | The SHA-256 of the consolidated Game resources; stamped on every match and simulation result as the resources version (ADR 0009). | decided |
 | Versioned id | A content identifier in the form `kind:name:vN` (`spell:pummel:v1`). Aliases without a version resolve to the latest at build time. | decided |
+| Package identity tag | One of the controlled player-facing words that summarizes the play pattern a Tier promises before its exact Spell text is read. Two are preferred; a third is used only when it adds a distinct dimension. Package names carry fantasy, these tags carry gameplay meaning. Each tag has its own entry as `<Name> tag`, so a tag never shadows the game term of the same word (the Energy tag is not Energy). See [package-identity-tags.md](package-identity-tags.md). | decided |
+| Damage tag | An identity tag for a package whose promise includes dealing direct damage, without implying how concentrated, explosive or widespread it is. | decided |
+| Heal tag | An identity tag for restoring Health directly or through regeneration; unlike Sustain, it names the recovery tool itself rather than the package's ability to stay effective over time. | decided |
+| Pressure tag | An identity tag for repeated offensive threat that steadily forces answers; unlike Burst, it is not defined by one short high-impact window. | decided |
+| Burst tag | An identity tag for unusually high immediate impact in a short window, usually through concentrated damage or a sharp swing; unlike Pressure, it is about the spike rather than repeated threat. | decided |
+| AoE tag | An identity tag for reaching multiple creatures with one cast or package pattern; it says nothing by itself about whether that reach is damage, healing or control. | decided |
+| Control tag | An identity tag for directly reducing an opponent's options, timing or ability to act, such as stun or initiative manipulation; unlike Debuff, it is about constraining decisions or turns rather than weakening a stat. | decided |
+| Defense tag | An identity tag for preventing or reducing incoming damage through protection effects, especially Defense buffs; unlike Sustain, it names protection rather than long-term staying power as a whole. | decided |
+| Sustain tag | An identity tag for remaining effective over a long fight through recovery, mitigation or recurring value; unlike Heal or Defense, it describes endurance as the package outcome rather than one tool. | decided |
+| Bleed tag | An identity tag for making damage over time a meaningful part of the package's plan. | decided |
+| Energy tag | An identity tag for materially gaining, preserving, granting or otherwise shaping Energy as part of the package's plan. | decided |
+| Drain tag | An identity tag for taking a resource from an opponent while denying or converting it for advantage; use it where theft or siphoning is the play pattern, not merely because an EnergyDrain effect appears once. | decided |
+| Sacrifice tag | An identity tag for gaining power by paying a meaningful cost on the caster or its side, such as self-damage or another deliberate drawback. | decided |
+| Support tag | An identity tag for primarily improving allies or enabling their actions; unlike Heal or Defense, it is the broader ally-enabling role when no narrower tag alone captures the package. | decided |
+| Debuff tag | An identity tag for weakening an opponent's stats or state over time; unlike Control, it does not primarily remove options or turns. | decided |
+| Tempo tag | An identity tag for creating a short-term advantage in action timing, initiative, Energy or sequencing that can be exploited before the opponent recovers. | decided |
+| Focus tag | An identity tag for concentrating a package's value on one target rather than spreading it across several; it describes concentration, not necessarily damage. | decided |
 
 ## Rounds and phases
 

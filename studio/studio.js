@@ -2895,7 +2895,7 @@ for (const card of document.querySelectorAll('.launch-go')) {
 $('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
 $('token-forget').addEventListener('click', () => useToken(''));
 renderToken();
-$('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') loadWeights(); }));
+$('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') void loadWeights(); }));
 $('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
 $('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));
 // Nothing to load: the knobs ride in on the catalogue, so opening this sheet is drawing what the page has.

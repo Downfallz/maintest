@@ -3,12 +3,20 @@
 import json
 from dataclasses import replace
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 
 from conftest import FEATURE_NAMES, SCHEMA_ID, SPELL_A, SPELL_B, TERM_NAMES, stamp_json, write_run
-from downfall_learning.artifacts import ArtifactError, MixedStampsError, build_dataset, load_run, load_runs
+from downfall_learning.artifacts import (
+    ArtifactError,
+    Dataset,
+    MixedStampsError,
+    build_dataset,
+    load_run,
+    load_runs,
+)
 from downfall_learning.mean_policy import mean_policy
 from downfall_learning.policy import Policy
 from downfall_learning.stamps import RunStamp
@@ -201,7 +209,7 @@ def test_cloning_without_terms_cannot_learn_that_rule(tmp_path: Path) -> None:
     """The observation is random and the action follows the terms: without them there is nothing to fit."""
     run = write_run(tmp_path / "run", matches=80, with_terms=True, rule_on_terms=True)
     dataset = build_dataset([load_run(run)], kinds=["Intent"])
-    blind = replace(dataset, term_names=(), candidate_terms=())
+    blind = cast(Dataset, replace(dataset, term_names=(), candidate_terms=()))
 
     policy = train_clone(blind, CloneOptions(epochs=5, alpha=1e-3, seed=1))
 

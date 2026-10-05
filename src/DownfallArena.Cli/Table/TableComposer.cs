@@ -209,8 +209,8 @@ internal sealed class TableComposer
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
             // this host played before or beside it. A source shared across tables would make every recording
             // depend on the order the host's requests happened to arrive in.
-            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
-            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
+            var seat1 = Seat(PlayerSlot.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
+            var seat2 = Seat(PlayerSlot.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
             (SeatAgent Agent, TableSeat Seat) Of(PlayerSlot slot) => slot == PlayerSlot.Player1 ? seat1 : seat2;
             Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, rules, agents, Source(seed, slot));
 
@@ -398,7 +398,6 @@ internal sealed class TableComposer
     /// <param name="token">The token the seat had on an earlier host, for a table being rebuilt; a fresh one otherwise.</param>
     private static (SeatAgent Agent, TableSeat Seat) Seat(
         PlayerSlot slot,
-        AgentSpec? named,
         TableRequest request,
         RuleSet rules,
         IAgentFactory agents,
@@ -407,6 +406,7 @@ internal sealed class TableComposer
         string? token = null)
     {
         // A seat no agent was named for is a person's. Until a handover it is played by the understudy.
+        var named = slot == PlayerSlot.Player1 ? request.Player1 : request.Player2;
         var spec = named ?? Understudy;
         var bot = new Occupant(agents.Create(spec, rules, random), spec.ToString());
         if (named is not null)

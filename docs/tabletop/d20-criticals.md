@@ -1,8 +1,8 @@
 # Every critical chance is a twentieth
 
 Status: **Draft, settled, not built** (2026-09-17; the tables and the counts re-read on 2026-10-04 against
-content `e6f72578`). Every question this document opened has an answer; what is left is the work. Not a
-numbered ADR: this branch claims no ADR number. When the rule is settled and built, this text moves into
+content `e6f72578`, and on 2026-10-05 against `ad3e4d00`). Every question this document opened has an
+answer; what is left is the work. Not a numbered ADR: this branch claims no ADR number. When the rule is settled and built, this text moves into
 `docs/adr/` with the next free number.
 
 ## The rule, in one sentence
@@ -16,13 +16,13 @@ buildable.
 A player rolls a die. The die the catalogue can afford is a d20 — that is measured, not assumed
 ([components.md](components.md) §1.6): over the 21 Spells that rolled when it was measured, a d20 moves the
 fewest of them, has the smallest worst move and the smallest mean error, and it is the only grid
-`data/balance/knobs.json` already declares, at a step of 0.05 on 21 Spells then and 26 now.
+`data/balance/knobs.json` already declares, at a step of 0.05 on 21 Spells then and 25 now.
 
 But the reason to make it a **rule** rather than a one-off tuning pass is not the table. It is that the
-catalogue cannot stay on a grid it is not held to. Eight of the 45 Spells are off the twentieths today (ten
+catalogue cannot stay on a grid it is not held to. Seven of the 45 Spells are off the twentieths today (ten
 of 36 when this was first written), and none of them got there by a balance pass choosing an odd number:
 
-The table below is a **reading of content `e6f72578`** (2026-10-04), not a constant: the maintainer is
+The table below is a **reading of content `ad3e4d00`** (2026-10-05), not a constant: the maintainer is
 tuning, and a pass moves these values. Regenerate it rather than trusting it, with
 
 ```bash
@@ -42,11 +42,15 @@ now sits on 0.50, and Revenant Guards is authored at 0, so the zeroing below has
 from 0.28 to 0.33 and still snaps. Ambush (0.35) and Night Raid (0), new since the last reading, are on the
 grid; Shadowstep and Death Squad, which they replace, were too.
 
+**Re-read on 2026-10-05, at content `ad3e4d00`.** Seven Spells move. One row is gone: Crazed Specter is
+authored at 0 and rolls no critical, where it printed 0.38, and its critical chance knob went with it. Its
+weight is in the Bleed it now leaves on each target, which a critical never reaches (ADR 0033). Night Raid
+changed its reach, its Damage and its drain, and is still at 0.
+
 | Spell | Now | Snapped | Move |
 | --- | --- | --- | --- |
 | Tornado | 0.38 | 0.40 | 0.020 |
 | Noxious Cure | 0.33 | 0.35 | 0.020 |
-| Crazed Specter | 0.38 | 0.40 | 0.020 |
 | Rejuvenate | 0.22 | 0.20 | 0.020 |
 | Toxic Waves | 0.33 | 0.35 | 0.020 |
 | Engulfing Flames | 0.33 | 0.35 | 0.020 |
@@ -57,17 +61,19 @@ Read the values, not the table: 0.33, 0.667 and 0.717 are the legacy prototype's
 port (`docs/domain/spells.md`). A knob moves a value **by** its step, from wherever the value already is. So a
 step of 0.05 on a start of 0.33 gives 0.28 and 0.38; on 0.717 it gives 0.767; on 0.17 it gives 0.22. **The
 step did not create the offset — it preserves it, and every tuning pass carries it forward.** Nineteen of the
-twenty declared bands were on the grid at the first reading, and twenty-five of the twenty-six are at
-`e6f72578`; the values that walk them are not, and never will be.
+twenty declared bands were on the grid at the first reading, and twenty-four of the twenty-five are at
+`ad3e4d00` (twenty-five of twenty-six at `e6f72578`, before Crazed Specter's band left); the values that walk
+them are not, and never will be.
 
 That is what makes this a rule and not a chore. Snap once and the offset is gone for good, because a knob that
 starts on the grid and moves in twentieths stays on it.
 
 ## What it costs
 
-- **Eight Spells are snapped** (nine at the first reading), by 0.02 at most and 0.019 on average over the
-  eight. **Revenant Guards was the tenth and is not a snap**: it went from 0.33 to 0, a move of 0.33, because
-  a critical cannot reach anything it does. The content of 2026-10-04 made that move; the rest of this bullet
+- **Seven Spells are snapped** (nine at the first reading, eight at `e6f72578`), by 0.02 at most and 0.019
+  on average over the seven. Crazed Specter was one of the eight until 2026-10-05; it left the list by going
+  to 0, not by a snap. **Revenant Guards was the tenth and is not a snap**: it went from 0.33 to 0, a move
+  of 0.33, because a critical cannot reach anything it does. The content of 2026-10-04 made that move; the rest of this bullet
   is what it cost. Do not average the two together — the snap's cost and the zeroing's cost are different
   decisions and the journal entry has to price them apart. The zeroing also moves what the engine *records*, even though
   it moves no board: `CombatResolution.IsCritical` is false where it used to be true one cast in three, so the
@@ -108,7 +114,7 @@ cannot produce what validation would reject.
 
 ## Settled
 
-**Rounding: to the nearest twentieth, and a tie rounds up.** None of the eight moves is a tie, so the rule costs
+**Rounding: to the nearest twentieth, and a tie rounds up.** None of the seven moves is a tie, so the rule costs
 nothing today and exists so that the next pass cannot ask. One warning for whoever builds it: `round()` in
 both Python and .NET rounds a tie to even, so `round(0.025 * 20) / 20` is `0.0`, not `0.05`. The rule is
 `floor(x * 20 + 0.5) / 20`.
@@ -133,8 +139,9 @@ off the content, not written into the client (stage 3 of [app-roadmap.md](app-ro
 
 ### What the catalogue looks like afterwards
 
-Re-read on 2026-10-04 at content `e6f72578`. Twenty of the 45 Spells never touch the die, and the twenty-five
-that do carry **nine distinct chances**, each a clean threshold:
+Re-read on 2026-10-05 at content `ad3e4d00`. Twenty-one of the 45 Spells never touch the die, and the
+twenty-four that do carry **nine distinct chances**, each a clean threshold (twenty and twenty-five at
+`e6f72578`; Crazed Specter's 0.38 would have snapped to 0.40, a row Tornado still fills):
 
 | Chance | Faces | Card |
 | --- | --- | --- |
@@ -166,7 +173,7 @@ since ADR 0083, and the audit keeps its old name).
 
 ## Still open
 
-Nothing. What is left is the work: snap the eight Spells (Revenant Guards' zeroing landed with the content
-of 2026-10-04), move `lightning_bolt`'s band floor, teach the data
+Nothing. What is left is the work: snap the seven Spells (Revenant Guards' zeroing landed with the content
+of 2026-10-04, and Crazed Specter's with that of 2026-10-05), move `lightning_bolt`'s band floor, teach the data
 builder and `check-knobs` the grid, and pay the usual price of a content change — a new hash, a regenerated
 digest, a journal entry, and the four readings saying what the snap cost.

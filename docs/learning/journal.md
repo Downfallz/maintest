@@ -4,6 +4,121 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-05. The refit (`ci-247`): a clone that copies search-23 to 97 % and loses to Greedy
+
+- **The turn.**
+  - Teacher and baseline: `heuristic:learning/weights/search-23.json`.
+  - Data: 2000 matches on each of three seeds (1, 5001, 10001), no exploring dataset.
+  - Content and schema: `ad3e4d00`, `features:v8`.
+  - The champion bar could not be read, because `models/clone/ci-69` is under `features:v5`.
+  - The first try, `ci-245`, recorded 5000 matches with the exploring dataset. Seed 1's two recordings took 93
+    minutes, and the runner was shut down two minutes into the first fit.
+- **What it measured** (min, median and max over the three seeds):
+
+  | policy | against Greedy | against search-23 | against Random |
+  |---|---|---|---|
+  | clone | 0.005 / 0.018 / 0.229 | 0.394 / 0.433 / 0.440 | 0.998 / 1.000 / 1.000 |
+  | value | 0.000 on every seed | 0.000 on every seed | 0.308 / 0.964 / 0.965 |
+
+  search-23 itself takes 0.973 from Greedy on the same seeds.
+- **The clone.** It copies its teacher's decisions at 97 % on held-out steps, and it plays its teacher close to
+  even (0.39 to 0.44). Against Greedy it loses almost every match, and the matches run long (16.6 to 18.4 rounds,
+  where search-23 against Greedy takes 12.9). So the 3 % it misses are the decisions that beat Greedy. A clone
+  of a heuristic has landed near its teacher on every earlier turn; this one lands near its teacher only
+  head to head. That is the outcome the experiment named before the run: the features under `features:v8` lose
+  something the scorer reads. Which decisions those are is not measured yet. The purchases are the first
+  suspect, since ADR 0096 and 0098 changed what the scorer reads in them.
+- **The value policy** loses every match to Greedy and to search-23 on all three seeds. Against Random it reads
+  0.31 on one seed and 0.96 on the other two. A value fit has never cleared Greedy on a pure dataset;
+  without the exploring dataset it has nothing to compare against.
+- Nothing cleared the bar and nothing was committed. Main's loop no longer fails at its baseline step.
+
+## 2026-10-05. Night Raid on two, Crazed Specter over time
+
+- **The owner's change, by hand.**
+  - **Night Raid** reaches two enemies rather than three, and hits them for 4 rather than 3 while draining 3
+    rather than 2. That is more than a round's income, so each target ends the raid a turn behind.
+  - **Crazed Specter** deals 4 rather than 9 and leaves each target bleeding 4 a round for 2 rounds. It has no
+    critical chance (0.38 before), and its caster still bleeds 4 for a round.
+- **Knobs.**
+  - Night Raid's damage now ranges 2 to 4 and its drain 2 to 3.
+  - Crazed Specter's damage ranges 2 to 6. Its new bleed has a knob from 2 to 5, and the critical-chance knob
+    is gone.
+  - `check-knobs` passes. It reads Night Raid at 6.53 a round at most, as it read the old raid low: a drain
+    is worth little on a board-free reading.
+- Content `ad3e4d00`, benchmark digest regenerated. The policy refit of #284 is played on this content, and the
+  exploit panel was measured on `e6f72578`, the content just before.
+
+## 2026-10-05. Search 34: the lookahead's own weights hold on unseen seeds against search-23, and tie Greedy
+
+- **The run.** `search.yml` with `kind: lookahead`, from the built-in weights, against Greedy and `search-23` on
+  the first 30 benchmark seeds (`learning/experiments/lookahead-seeds.json`), three rounds of five, no check
+  opponent (#281). It took 3h33 of the six hours #280 allowed. The best of 32 evaluations scored 0.9167 where
+  the built-in weights scored 0.9042, which is one or two matches out of 120, chosen as the best of 32.
+- **What it moved.** `initiative` 2.1 to 2.5, `energy` 0.3 to 0.538, `heal` 0.8 to 1.006, `stun` 3.0 to 3.166,
+  `defense` 0.65 to 0.734, `bleed` 0.8 to 0.561, `kill` 5.0 to 4.857, `pressure` 0 to 0.001. Damage unchanged.
+- **Replayed on 60 seeds nothing had played** (the unseen block from 995377), both seats, against the bare
+  `lookahead` on the same seeds, read with `paired`:
+
+  | against | built-in | search 34 | paired difference |
+  |---|---|---|---|
+  | Greedy | 0.883 | 0.892 | +0.008 (−0.074 to +0.091) |
+  | `search-23` | 0.896 | 0.967 | +0.071 (+0.007 to +0.135) |
+
+  Even with Greedy, measurably above against `search-23`, which it beats 116 matches of 120 where the
+  built-in weights take 107. The lower bound is close to zero: this is one replay of one search, not a margin.
+- **Kept as `learning/weights/lookahead/lookahead-34.json`**, the values rounded to three decimals as replayed.
+  A folder of its own because the table offers every file directly under `learning/weights/` as a heuristic
+  seat, which is how `lookahead-20` came to be played by Greedy's reading; `search.yml` now writes a set for
+  another reading into a folder named after it. The table seats the lookahead on these weights first, and the
+  lookahead on its built-in weights second (`learning/seatable.json`).
+- Content `e6f72578`, unchanged; no digest change.
+
+## 2026-10-05. The lookahead plays its purchase rollouts side by side, and a search may run six hours
+
+- **Where the lookahead's time goes.** A CPU trace of two matches against Greedy: the purchase reading of ADR
+  0094 is nearly all of it, the rollouts of each candidate package played out with Greedy's decisions, which
+  since ADR 0096 price the unlock terms. Its combat decisions are under a percent.
+- **What changed.** Each candidate's purchases are made once, then every candidate's rollouts are played in
+  parallel and read back in the candidates' order. Every rollout is its own hypothetical board on its own dice,
+  so the decisions are the ones the loop made one by one: on 12 benchmark seeds every pair's score and every
+  spell's declarations are the same. Four seeds took 26.4 seconds and take 11.2, the same CPU. A person at the
+  table waits about a third as long; a search, whose matches already fill every core, barely moves (30.6 seconds
+  against 32.8 for 12 seeds).
+- **`search.yml` may run six hours**, the most a GitHub-hosted job is given, where search 32 hit three.
+
+## 2026-10-04. Search 32 finds nothing above search-23, the lookahead's own search is refused, and the table seats the plain lookahead
+
+- **Search 32** (#277): `search-weights --kind heuristic` from `search-23` against Greedy, `pressure-floor`,
+  `kill-first`, `search-21`, `search-31` and `stun-first`, all under the start's floor, 3 rounds of 8, seed 0, on
+  content `e6f72578`. The first run of the file, 5 rounds of 8 against seven, hit the job's three hours; this one
+  took 2h44. No candidate beat the start without falling below it against one of the six, so there was nothing
+  to replay. `search-23` stays the strongest one-step weights, as search 26 found on older content.
+- **A lookahead search**, run locally because a lookahead candidate costs too much for the job: `--kind
+  lookahead` from the built-in weights against Greedy and `search-23`, on the first 20 benchmark seeds, 3 rounds
+  of 5, seed 0. It reported 0.900 to 0.925, with initiative 2.1 to 3.0 and energy 0.3 to 0.68. Replayed on 60
+  seeds it never saw, seed by seed against the built-in weights: **-0.133 ± 0.093** against Greedy (0.800 to
+  0.933) and +0.013 ± 0.062 against `search-23`. Refused: twenty seeds picked a winner by chance.
+- **Which weights the lookahead plays best with**, on the first 60 benchmark seeds, against Greedy and against
+  `search-23`: its built-in weights 0.900 and 0.896, `search-23`'s 0.800 and 1.000, `mixture-mean`'s 0.875 and
+  0.742, `search-19`'s 0.508 and 0.833, `pressure-floor`'s 0.467 and 0.967. On the 60 unseen seeds the built-in
+  weights scored 0.933 against both.
+- **What changes.** `learning/seatable.json` seats the plain lookahead first, in place of the lookahead on
+  `search-19`, and puts forward the heuristics the round robin ranks first (`search-23`, `pressure-floor`,
+  `mixture-mean`, `kill-first`) in place of `search-19`, `search-31` and `search-21`.
+
+## 2026-10-04. The weights files under ADR 0096 and 0098: a cycle, search-23 first, search-19 last
+
+- **What ran.** Every heuristic weights file against every other on the 200 benchmark seeds, mirrored, content
+  `e6f72578`, under the scorer of ADR 0096 and ADR 0098. Every file was searched before both.
+- **Mean against the other eight:** search-23 0.648, pressure-floor 0.609, mixture-mean 0.600, Greedy 0.566,
+  kill-first 0.490, search-21 0.442, search-31 0.407, stun-first 0.406, search-19 0.332.
+- **What it says.** The table is a cycle, not a ladder: pressure-floor beats search-23 1.000, search-23 beats
+  mixture-mean 0.988, mixture-mean beats pressure-floor 0.995. Many pairings are 0 or 1, so a pair plays the
+  same way on every seed. search-19, the leader since 2026-09-30, loses every match to Greedy and to
+  mixture-mean, and Greedy is fourth. The next search starts from search-23 against the seven others but
+  search-19, all under the start's floor, with search-19 kept for the hold-out (`learning/experiments/search.json`).
+
 ## 2026-10-04. A defense debuff is priced by the damage it lets through (ADR 0098)
 
 - **Why.** The owner saw Greedy and the lookahead cast Infectious Blast on a team with no defense and energy to
