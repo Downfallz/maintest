@@ -25,7 +25,8 @@ first.
 - **Kept as `learning/weights/lookahead/lookahead-34.json`**, the values rounded to three decimals as replayed.
   A folder of its own because the table offers every file directly under `learning/weights/` as a heuristic
   seat, which is how `lookahead-20` came to be played by Greedy's reading; `search.yml` now writes a set for
-  another reading into a folder named after it. The table still seats the bare lookahead first.
+  another reading into a folder named after it. The table seats the lookahead on these weights first, and the
+  lookahead on its built-in weights second (`learning/seatable.json`).
 - Content `e6f72578`, unchanged; no digest change.
 
 ## 2026-10-05. The lookahead plays its purchase rollouts side by side, and a search may run six hours
