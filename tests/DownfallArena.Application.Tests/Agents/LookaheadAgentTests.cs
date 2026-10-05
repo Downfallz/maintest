@@ -515,6 +515,73 @@ public sealed class LookaheadAgentTests
         };
     }
 
+    /// <summary>
+    /// An agent the lookahead is built on may draw dice of its own (`lookahead:random`, `lookahead:explore:...`),
+    /// and rollouts played side by side would take those draws in whatever order the threads ran, so the same
+    /// seed would no longer buy the same package. Only the heuristic's rollouts run side by side; any other
+    /// agent is asked one rollout at a time.
+    /// </summary>
+    [Fact]
+    public void An_agent_it_is_built_on_other_than_the_heuristic_is_never_asked_from_two_rollouts_at_once()
+    {
+        var inner = new Exclusive(new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules));
+        var (board, options) = FirstEvolution();
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: inner, random: new TestRandom(5), purchases: new PurchaseReading(1, 4)).DecideEvolution(board, options);
+
+        inner.MostAtOnce.ShouldBe(1);
+    }
+
+    /// <summary>The agent it wraps, recording the most calls it was ever inside at once.</summary>
+    private sealed class Exclusive(IPlayerAgent inner) : IPlayerAgent
+    {
+        private int _inside;
+        private int _most;
+
+        public int MostAtOnce => _most;
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Inside(() => inner.DecideEvolution(board, options));
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Inside(() => inner.DecideSpeed(board, creature));
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => Inside(() => inner.DecideTieOrder(board, options));
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Inside(() => inner.DecideIntent(board, intentOption));
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Inside(() => inner.DecideTargets(board, options));
+
+        private T Inside<T>(Func<T> decide)
+        {
+            var now = Interlocked.Increment(ref _inside);
+            InterlockedMax(ref _most, now);
+            try
+            {
+                // Long enough that two rollouts asking at once overlap here rather than slip past each other.
+                Thread.Sleep(1);
+                return decide();
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _inside);
+            }
+        }
+
+        private static void InterlockedMax(ref int target, int value)
+        {
+            var seen = Volatile.Read(ref target);
+            while (value > seen)
+            {
+                var previous = Interlocked.CompareExchange(ref target, value, seen);
+                if (previous == seen)
+                {
+                    return;
+                }
+
+                seen = previous;
+            }
+        }
+    }
+
     /// <summary>The agent it wraps, counting the speeds it is asked for: one per creature per round played.</summary>
     private sealed class Counting(IPlayerAgent inner) : IPlayerAgent
     {
