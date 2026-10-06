@@ -131,7 +131,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 
 | Spell | Class | Type | Energy | Crit | Targets | Effects |
 | --- | --- | --- | --- | --- | --- | --- |
-| Wait | Creature | Defensive | 0 | — | Self | EnergyGain 1 |
+| Wait | Creature | Defensive | 0 | — | Self | EnergyGain 2 |
 | Heavy Strike | Creature | Offensive | 2 | — | Enemy | Damage 3 |
 | Pummel | Brawler | Offensive | 1 | 0.667 | Enemy | Damage 2 |
 | Guard | Brawler | Defensive | 1 | — | Ally | DefenseBuff 1 (permanent), DefenseBuff 1 (2r) |

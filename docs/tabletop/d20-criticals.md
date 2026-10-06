@@ -1,7 +1,8 @@
 # Every critical chance is a twentieth
 
 Status: **Draft, settled, not built** (2026-09-17; the tables and the counts re-read on 2026-10-04 against
-content `e6f72578`, and on 2026-10-05 against `ad3e4d00`). Every question this document opened has an
+content `e6f72578`, on 2026-10-05 against `ad3e4d00`, and on 2026-10-06 against `3c9eb083`). Every question
+this document opened has an
 answer; what is left is the work. Not a numbered ADR: this branch claims no ADR number. When the rule is settled and built, this text moves into
 `docs/adr/` with the next free number.
 
@@ -19,10 +20,10 @@ fewest of them, has the smallest worst move and the smallest mean error, and it 
 `data/balance/knobs.json` already declares, at a step of 0.05 on 21 Spells then and 25 now.
 
 But the reason to make it a **rule** rather than a one-off tuning pass is not the table. It is that the
-catalogue cannot stay on a grid it is not held to. Seven of the 45 Spells are off the twentieths today (ten
+catalogue cannot stay on a grid it is not held to. Seven of the 44 Spells are off the twentieths today (ten
 of 36 when this was first written), and none of them got there by a balance pass choosing an odd number:
 
-The table below is a **reading of content `ad3e4d00`** (2026-10-05), not a constant: the maintainer is
+The table below is a **reading of content `3c9eb083`** (2026-10-06), not a constant: the maintainer is
 tuning, and a pass moves these values. Regenerate it rather than trusting it, with
 
 ```bash
@@ -47,6 +48,9 @@ authored at 0 and rolls no critical, where it printed 0.38, and its critical cha
 weight is in the Bleed it now leaves on each target, which a critical never reaches (ADR 0033). Night Raid
 changed its reach, its Damage and its drain, and is still at 0.
 
+**Re-read on 2026-10-06, at content `3c9eb083`.** The same seven Spells move. Basic Attack is gone from the
+catalogue. It was authored at 0 and had no critical chance knob, so no row and no band moved with it.
+
 | Spell | Now | Snapped | Move |
 | --- | --- | --- | --- |
 | Tornado | 0.38 | 0.40 | 0.020 |
@@ -62,7 +66,7 @@ port (`docs/domain/spells.md`). A knob moves a value **by** its step, from where
 step of 0.05 on a start of 0.33 gives 0.28 and 0.38; on 0.717 it gives 0.767; on 0.17 it gives 0.22. **The
 step did not create the offset — it preserves it, and every tuning pass carries it forward.** Nineteen of the
 twenty declared bands were on the grid at the first reading, and twenty-four of the twenty-five are at
-`ad3e4d00` (twenty-five of twenty-six at `e6f72578`, before Crazed Specter's band left); the values that walk
+`ad3e4d00` and `3c9eb083` (twenty-five of twenty-six at `e6f72578`, before Crazed Specter's band left); the values that walk
 them are not, and never will be.
 
 That is what makes this a rule and not a chore. Snap once and the offset is gone for good, because a knob that
@@ -139,9 +143,10 @@ off the content, not written into the client (stage 3 of [app-roadmap.md](app-ro
 
 ### What the catalogue looks like afterwards
 
-Re-read on 2026-10-05 at content `ad3e4d00`. Twenty-one of the 45 Spells never touch the die, and the
-twenty-four that do carry **nine distinct chances**, each a clean threshold (twenty and twenty-five at
-`e6f72578`; Crazed Specter's 0.38 would have snapped to 0.40, a row Tornado still fills):
+Re-read on 2026-10-06 at content `3c9eb083`. Twenty of the 44 Spells never touch the die, and the
+twenty-four that do carry **nine distinct chances**, each a clean threshold (twenty-one of 45 never touched it
+at `ad3e4d00`, before Basic Attack, which never rolled, left; twenty and twenty-five at `e6f72578`; Crazed
+Specter's 0.38 would have snapped to 0.40, a row Tornado still fills):
 
 | Chance | Faces | Card |
 | --- | --- | --- |
