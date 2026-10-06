@@ -59,7 +59,7 @@ The page opens on **Explore**: the current package families and their tiers, der
 with every prerequisite and included spell one tap away. Class trees remain authoring content and do not
 supply the progression display. **Spells** offers search by name, effect, package and tier, plus type and tier
 filters (*Any tier*, each authored level, *Starting kit*). Every spell card, compact row and reader names where the
-spell is learned: each enabled package that teaches it with its tier, lowest first (`Tier 2 · Frenzied`), and
+spell is learned: each enabled package that teaches it with its tier, lowest first (`Tier 2 · Berserker`), and
 *Starting kit* when an enabled creature begins with it. A spell with neither says it is not taught by any package.
 
 Each spell also shows its **value a round** next to the range of its tier (its shallowest package, or the starting

@@ -23,27 +23,27 @@ Avoid adding a synonym when one of these already communicates the same idea.
 
 | Family | Package | Identity |
 | --- | --- | --- |
-| Colossus | Colossus | **Pressure · Defense** |
-| Colossus | Frenzied | **Burst · Sacrifice** |
-| Colossus | Ravager | **AoE · Burst · Sacrifice** |
-| Colossus | Ironhide | **Defense · Sustain** |
-| Colossus | Dreadnought | **Defense · Control** |
-| Colossus | Conqueror | **Control · Energy** |
-| Colossus | Crusher | **AoE · Defense** |
-| Predator | Predator | **Bleed · Pressure** |
-| Predator | Deathmarked | **Tempo · Burst · Energy** |
-| Predator | Deathstalker | **Burst · Control · Bleed** |
-| Predator | Parasite | **Drain · Sustain** |
-| Predator | Soulreaver | **Drain · Sacrifice · Burst** |
-| Predator | Blighted | **Support · Energy** |
-| Predator | Blightweaver | **Debuff · Control** |
-| Warped | Warped | **Damage · Heal · Control** |
-| Warped | Stormborn | **AoE · Control** |
-| Warped | Cataclysm | **Burst · Control · Focus** |
-| Warped | Necrotic | **Sacrifice · Defense · Bleed** |
-| Warped | Revenant | **AoE · Bleed · Sacrifice** |
-| Warped | Ethereal | **Heal · Sustain** |
-| Warped | Transcendent | **Heal · Energy · AoE** |
+| Brute | Brute | **Pressure · Defense** |
+| Brute | Berserker | **Burst · Sacrifice** |
+| Brute | Ravager | **AoE · Burst · Sacrifice** |
+| Brute | Ironbound | **Defense · Sustain** |
+| Brute | Dreadnought | **Defense · Control** |
+| Brute | Marauder | **Control · Energy** |
+| Brute | Warmonger | **AoE · Defense** |
+| Prowler | Prowler | **Bleed · Pressure** |
+| Prowler | Assassin | **Tempo · Burst · Energy** |
+| Prowler | Deathstalker | **Burst · Control · Bleed** |
+| Prowler | Parasite | **Drain · Sustain** |
+| Prowler | Soulreaver | **Drain · Sacrifice · Burst** |
+| Prowler | Plague Doctor | **Support · Energy** |
+| Prowler | Blightweaver | **Debuff · Control** |
+| Occultist | Occultist | **Damage · Heal · Control** |
+| Occultist | Elementalist | **AoE · Control** |
+| Occultist | Harbinger | **Burst · Control · Focus** |
+| Occultist | Necromancer | **Sacrifice · Defense · Bleed** |
+| Occultist | Lich | **AoE · Bleed · Sacrifice** |
+| Occultist | Shaman | **Heal · Sustain** |
+| Occultist | Spiritcaller | **Heal · Energy · AoE** |
 
 ## Design test
 

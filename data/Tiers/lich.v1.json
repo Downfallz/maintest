@@ -1,6 +1,6 @@
 {
   "id": "tier:lich:v1",
-  "name": "Revenant",
+  "name": "Lich",
   "level": 3,
   "prerequisites": [
     "tier:necromancer:v1"

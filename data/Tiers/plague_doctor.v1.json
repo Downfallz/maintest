@@ -1,6 +1,6 @@
 {
   "id": "tier:plague_doctor:v1",
-  "name": "Blighted",
+  "name": "Plague Doctor",
   "level": 2,
   "prerequisites": [
     "tier:prowler:v1"

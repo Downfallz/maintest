@@ -1,6 +1,6 @@
 {
   "id": "tier:ironbound:v1",
-  "name": "Ironhide",
+  "name": "Ironbound",
   "level": 2,
   "prerequisites": [
     "tier:brute:v1"

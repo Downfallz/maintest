@@ -10,13 +10,6 @@
     },
     "spells": [
       {
-        "id": "spell:basic_attack",
-        "prerequisites": {
-          "allOf": [],
-          "anyOf": []
-        }
-      },
-      {
         "id": "spell:heavy_strike",
         "prerequisites": {
           "allOf": [],
@@ -37,7 +30,6 @@
         "name": "Brawler",
         "prerequisites": {
           "allOf": [
-            "spell:basic_attack",
             "spell:heavy_strike",
             "spell:wait"
           ],
@@ -66,7 +58,6 @@
         "name": "Scoundrel",
         "prerequisites": {
           "allOf": [
-            "spell:basic_attack",
             "spell:heavy_strike",
             "spell:wait"
           ],
@@ -95,7 +86,6 @@
         "name": "Sorcerer",
         "prerequisites": {
           "allOf": [
-            "spell:basic_attack",
             "spell:heavy_strike",
             "spell:wait"
           ],

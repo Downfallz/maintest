@@ -1,6 +1,6 @@
 {
   "id": "tier:harbinger:v1",
-  "name": "Cataclysm",
+  "name": "Harbinger",
   "level": 3,
   "prerequisites": [
     "tier:elementalist:v1"

@@ -47,8 +47,8 @@ test('real packages drive the mobile guide and its linked spell details', async 
   }
   await expect(page.locator('.tier-section')).toHaveCount(3);
   await fit(page); await shot(page, info, 'explore');
-  await page.locator('.family-pick').filter({ hasText: 'Warped' }).click();
-  await expect(page.locator('.package-name').first()).toHaveText('Warped');
+  await page.locator('.family-pick').filter({ hasText: 'Occultist' }).click();
+  await expect(page.locator('.package-name').first()).toHaveText('Occultist');
   await page.locator('.package-tile').first().click();
   await expect(page.getByRole('heading', { name: 'Included spells' })).toBeVisible();
   await fit(page); await shot(page, info, 'package');
@@ -59,7 +59,7 @@ test('real packages drive the mobile guide and its linked spell details', async 
   await page.reload();
   await expect(page.locator('.reader-heading h2')).toHaveText(name);
   await page.getByRole('button', { name: '← Back', exact: true }).click();
-  await expect(page.locator('.reader-heading h2')).toHaveText('Warped');
+  await expect(page.locator('.reader-heading h2')).toHaveText('Occultist');
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Find your next move.' })).toBeVisible();
 });
@@ -138,7 +138,7 @@ test('editing is explicit and cancelling a navigation preserves the draft', asyn
   await fit(page); await shot(page, info, 'editor');
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Back to reading', exact: true }).click();
-  await expect(page.locator('.reader-heading h2')).toHaveText('Colossus');
+  await expect(page.locator('.reader-heading h2')).toHaveText('Brute');
 });
 
 test('catalogue sheets and tools fit the viewport and leave the current reader intact', async ({ page }, info) => {
@@ -149,7 +149,7 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await expect(page.locator('#new')).toContainText('New spell');
   await fit(page); await shot(page, info, 'catalogue');
   await page.locator('#nav-close').click();
-  await expect(page.locator('.reader-heading h2')).toHaveText('Colossus');
+  await expect(page.locator('.reader-heading h2')).toHaveText('Brute');
   await page.getByRole('button', { name: 'Edit content' }).click();
   await expect(page.getByLabel('Level', { exact: true })).toBeVisible();
   await page.locator('#tools-panel').click();
@@ -176,7 +176,7 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
   await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
-  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Predator');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Prowler');
   const prowler = sheet.locator('.balance-item');
   await expect(prowler).toHaveCount(1);
   await prowler.locator('summary').click();
@@ -194,7 +194,7 @@ test('balance shows package initiative and spell knobs before editing, with a pa
 
 test('reading a spell that is off shows its missing balance entry as a note, not a check', async ({ page }) => {
   const resting = structuredClone(catalogue);
-  const spell = resting.spells.find(item => item.id === 'spell:basic_attack:v1');
+  const spell = resting.spells.find(item => item.id === 'spell:heavy_strike:v1');
   spell.enabled = false; spell.document.enabled = false;
   delete resting.balance.spells[aliasOfSpell(spell.id, resting.aliases)];
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: resting } }));
@@ -212,9 +212,9 @@ test('reading a spell that is off shows its missing balance entry as a note, not
 
 test('reading a version no alias reaches shows its missing balance entry as a note, not a check', async ({ page }) => {
   const superseded = structuredClone(catalogue);
-  const current = superseded.spells.find(item => item.id === 'spell:basic_attack:v1');
+  const current = superseded.spells.find(item => item.id === 'spell:heavy_strike:v1');
   const older = structuredClone(current);
-  older.id = 'spell:basic_attack:v0'; older.document.id = older.id; older.path = 'Spells/base/basic_attack.v0.json';
+  older.id = 'spell:heavy_strike:v0'; older.document.id = older.id; older.path = 'Spells/base/heavy_strike.v0.json';
   superseded.spells.push(older);
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: superseded } }));
   await page.goto(`/#entry=${encodeURIComponent(older.path)}`);
@@ -222,13 +222,13 @@ test('reading a version no alias reaches shows its missing balance entry as a no
   const card = page.locator('#detail .balance-item');
   await expect(card).toHaveCount(1);
   await expect(card).not.toHaveClass(/tone-bad/);
-  await expect(card).toContainText('No alias points at spell:basic_attack:v0');
+  await expect(card).toContainText('No alias points at spell:heavy_strike:v0');
 });
 
 test('a spell two aliases point at is two rows of the overview, one per entry', async ({ page }) => {
   const doubled = structuredClone(catalogue);
-  doubled.aliases['spell:jab'] = 'spell:basic_attack:v1';
-  doubled.balance.spells['spell:jab'] = { name: 'Basic Attack', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
+  doubled.aliases['spell:jab'] = 'spell:heavy_strike:v1';
+  doubled.balance.spells['spell:jab'] = { name: 'Heavy Strike', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: doubled } }));
   await page.reload();
   await page.locator('#tools-panel').click();
@@ -237,7 +237,7 @@ test('a spell two aliases point at is two rows of the overview, one per entry', 
   await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('spell:jab');
   await expect(sheet.locator('.balance-item')).toHaveCount(1);
   await expect(sheet.locator('.balance-item')).toContainText('read by another name');
-  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Basic Attack');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Heavy Strike');
   await expect(sheet.locator('.balance-item')).toHaveCount(2);
 });
 
@@ -254,35 +254,35 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   await expect(page.locator('.family-pick')).toHaveCount(3);
   await expect(page.locator('.hero-stats')).toContainText('21packages');
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
-  await expect(page.locator('.strategy-spell')).toHaveCount(45);
+  await expect(page.locator('.strategy-spell')).toHaveCount(44);
   await expect(page.locator('.strategy-spell .spell-value').first()).toContainText('a round');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Energy & effects', exact: true })).toBeVisible();
   await page.locator('#explore-view').click();
   await page.locator('.package-tile').first().click();
-  await expect(page.locator('.reader-heading h2')).toHaveText('Colossus');
+  await expect(page.locator('.reader-heading h2')).toHaveText('Brute');
 });
 
 test('energy overview exposes gaps without a wide table and retains filters after reading', async ({ page }, info) => {
   await page.locator('#spells-view').click();
   await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
   await expect(page).toHaveURL(/#strategy$/);
-  await expect(page.locator('.strategy-spell')).toHaveCount(45);
+  await expect(page.locator('.strategy-spell')).toHaveCount(44);
   await page.getByRole('button', { name: '1 energy', exact: true }).click();
-  await expect(page.locator('.strategy-spell')).toHaveCount(10);
+  await expect(page.locator('.strategy-spell')).toHaveCount(9);
   await expect(page.getByRole('button', { name: 'Control 0', exact: true })).toBeVisible();
   await fit(page); await shot(page, info, 'energy-overview');
   await page.getByRole('button', { name: 'Control 0', exact: true }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(0);
   await expect(page.getByText('No spells in this combination.', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: 'All effects 10', exact: true }).click();
+  await page.getByRole('button', { name: 'All effects 9', exact: true }).click();
   const pummel = page.locator('.strategy-spell').filter({ hasText: 'Pummel' });
   await pummel.locator('summary').click();
   await pummel.getByRole('button', { name: 'Full spell →' }).click();
   await expect(page.locator('.reader-heading h2')).toHaveText('Pummel');
   await page.getByRole('button', { name: '← Back', exact: true }).click();
   await expect(page.getByRole('button', { name: '1 energy', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.strategy-spell')).toHaveCount(10);
+  await expect(page.locator('.strategy-spell')).toHaveCount(9);
   await page.locator('.strategy-spell').last().scrollIntoViewIfNeeded();
   const sticky = await page.locator('.strategy-sticky').boundingBox();
   expect(sticky.y).toBeGreaterThanOrEqual(0);
@@ -300,10 +300,10 @@ test('package comparison combines distinct spells and separates caster effects',
   await page.getByLabel('Add a package', { exact: true }).selectOption('tier:occultist:v1');
   await expect(page.locator('.strategy-spell')).toHaveCount(4);
   await page.getByLabel('Include starting kit').check();
-  await expect(page.locator('.strategy-spell')).toHaveCount(7);
+  await expect(page.locator('.strategy-spell')).toHaveCount(6);
   await fit(page); await shot(page, info, 'package-comparison');
-  await page.getByRole('button', { name: 'Remove Colossus', exact: true }).click();
-  await expect(page.locator('.strategy-spell')).toHaveCount(5);
+  await page.getByRole('button', { name: 'Remove Brute', exact: true }).click();
+  await expect(page.locator('.strategy-spell')).toHaveCount(4);
   await page.getByLabel('Spell scope', { exact: true }).selectOption('all');
   await page.getByText('Compare packages', { exact: true }).click();
   await page.getByRole('button', { name: '0 energy', exact: true }).click();

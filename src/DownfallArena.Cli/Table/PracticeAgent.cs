@@ -115,7 +115,7 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
         }
         if (board.Slot == PlayerSlot.Player2)
         {
-            return index == 0 ? "pummel" : "basic_attack";
+            return index == 0 ? "pummel" : "heavy_strike";
         }
         if (index > 1)
         {

@@ -1,6 +1,6 @@
 {
   "id": "tier:marauder:v1",
-  "name": "Conqueror",
+  "name": "Marauder",
   "level": 2,
   "prerequisites": [
     "tier:brute:v1"

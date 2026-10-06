@@ -304,7 +304,7 @@ replay. `--bind <your LAN IPv4 address>` and `--port N` also work for a phone.
 | Scenario | Starting point | Try |
 | --- | --- | --- |
 | Choose your target | Round 1, Lightning Bolt targets | Compare targets and the energy left after cost |
-| Build a multiclass creature | Round 3, evolution | Add a different level-1 package to Colossus or take a level-2 upgrade |
+| Build a multiclass creature | Round 3, evolution | Add a different level-1 package to Brute or take a level-2 upgrade |
 | Interrupt an action | Round 5, Tranquilizer Dart targets | Stun before an enemy acts; follow skipped actions and later immunity |
 | Read a layered resolution | Round 5, Toxic Waves targets | Follow multiple targets, bleed and Psycho Rush's caster effect |
 

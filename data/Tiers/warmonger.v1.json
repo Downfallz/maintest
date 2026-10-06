@@ -1,6 +1,6 @@
 {
   "id": "tier:warmonger:v1",
-  "name": "Crusher",
+  "name": "Warmonger",
   "level": 3,
   "prerequisites": [
     "tier:marauder:v1"
