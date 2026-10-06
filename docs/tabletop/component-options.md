@@ -5,7 +5,9 @@ decided about the physical box, what he is still choosing between, and the evide
 pass on [components.md](components.md) and [rulebook.md](rulebook.md) can be made from it. Read at content
 `e6f72578` and the table's rule set (`docs/tabletop/playtest.rules.json`). The counts of the catalogue and the
 starting kit are re-read at `3c9eb083` (2026-10-06), where Basic Attack is gone and every Creature starts
-with Heavy Strike and Wait; each line that moved says so. The bot matches were not re-run: they are read at
+with Strike and Focus; each line that moved says so. Packages and Spells carry the names of `9419f935`
+throughout ([package-renaming-plan.md](../domain/package-renaming-plan.md)), also in readings at earlier
+content: the ids did not move, and the lines a name's length moves are re-read there. The bot matches were not re-run: they are read at
 `e6f72578`, with Basic Attack in every hand.
 
 ## 1. Status and scope
@@ -60,7 +62,7 @@ Creature's **Condition dock** has four lanes, one a colour, printed in the same 
 
 The rulebook's own examples, replayed. **Crushing Stomp** in Round 5 (amber), `Stun, 2 rounds`: plum
 (Round 7). Stunned in Rounds 6 and 7; plum is emptied at Cleanup 7; the Immune token goes in moss (Round 8)
-and leaves at Cleanup 8. **Summon Minions** in Round 5, `Bleed 2 a round, 3 rounds`: moss (Round 8); it ticks
+and leaves at Cleanup 8. **Infestation** in Round 5, `Bleed 2 a round, 3 rounds`: moss (Round 8); it ticks
 at the start of Rounds 6, 7 and 8 and leaves at Cleanup 8. Both are what §5.9 and §6.5 say today.
 
 ### 2.2 Why it is exact
@@ -239,7 +241,7 @@ numbered discs**, **VALUE** (team size), moved only at a Purchase reveal, at mos
 | Choice | The constraint it answers |
 | --- | --- |
 | In the middle | No room on the card; and a pick is chosen on where a purchase puts a Creature against the enemies (ADR 0088, 0089), which a ladder shows for all six at once |
-| 5 to 39 | Base starts at the definition's 5 and only grows; 39 keeps the reach of today's rails, so Plague Doctor's bonus at its knob `max` (ceiling 36, components 3.4) reprints nothing. **VALUE** |
+| 5 to 39 | Base starts at the definition's 5 and only grows; 39 keeps the reach of today's rails, so Blighted's bonus at its knob `max` (ceiling 36, components 3.4) reprints nothing. **VALUE** |
 | 35 cells of 22 x 33 mm, 5 rows of 7, 154 x 165 mm, its own sheet | A cell holds six 10 mm discs: all six Creatures start on 5 |
 
 Current initiative is the ladder less the Initiative debuff tokens, read once at Turn order resolution, as
@@ -247,7 +249,7 @@ today. The ordering track keeps its own 6 discs (3.8).
 
 ### 3.5 The starting Spells
 
-**2**, **VALUE** (`startingSpellIds`): Heavy Strike, Wait. It was 3, with Basic Attack, until 2026-10-06.
+**2**, **VALUE** (`startingSpellIds`): Strike, Focus. It was 3, with Basic Attack, until 2026-10-06.
 The maintainer wants them on the Creature card; next to its live state they do not fit (3.1). All six
 Creatures play one Creature definition, so the two are the same everywhere. Two places that cost nothing: **the back of every dial** (identical on
 all six, so it hides nothing, 4.1), or the player aid. With the deck fork an Intent is a card, so the
@@ -261,9 +263,10 @@ Spell text, so it prints **both Spells in full**.
 
 **It fits.** A Spell is a head line (name, cost, critical), a targeting line and 1 to 3 effect lines: 14, 24
 and 6 Spells at `3c9eb083` (15, 25 and 5 at `e6f72578`; the brief's 15, 26, 4 is `9659f610`). A card is a 2-line band and two Spells: **8 to 11 lines,
-at most 38.5 mm of the 78.9 mm** inside 5 mm margins. The widest line is a head line at exactly the 38
-characters a line holds (`Restorative Burst (3)` with `No critical roll`); moving the critical to the
-targeting line or an icon (6.2) leaves no line tight.
+at most 38.5 mm of the 78.9 mm** inside 5 mm margins. The widest line is a head line of 36
+characters, two under the 38 a line holds (`Paralyzing Barb (2)` with `No critical roll`, at `9419f935`). It
+was exactly 38 before the Spells were renamed (`Restorative Burst (3)`, now Renewal Burst); moving the critical
+to the targeting line or an icon (6.2) leaves no line tight either way.
 
 ```bash
 python3 -c "
@@ -273,8 +276,9 @@ print(sorted({2+sum(n(S[x]) for x in t['spells']) for t in G['tiers']}))"   # [8
 ```
 
 **What a cascade band can carry.** A whole Spell on one line, in the card's words (components 2.2), is 46 to
-137 characters, median 77.5: **0 of 44 fit** a portrait line of 38, 7 of 44 a landscape line of 56, at
-`3c9eb083` (median 76, and 0 and 7 of 45, at `e6f72578`). A 10 mm band
+133 characters, median 74.5: **0 of 44 fit** a portrait line of 38, 9 of 44 a landscape line of 56, at
+`9419f935` (46 to 137, median 77.5, and 7 of 44 at `3c9eb083`, before the Spells were renamed; median 76, and
+0 and 7 of 45, at `e6f72578`). A 10 mm band
 can name the Spells, not state them. To read every Spell without lifting a card, the cascade steps by
 **half a card, about 45 mm**, the band and both Spells printed in the top half:
 
@@ -286,7 +290,7 @@ can name the Spells, not state them. To read every Spell without lifting a card,
 testing. A package can instead expose a **20 to 25 mm summary band** while most of its rules text remains
 under the next card. The band should be enough to scan the build at a glance:
 
-`RAVAGER · AoE / Burst / Sacrifice · +3 Init · A Tornado · B Psycho Rush`
+`RAVAGER · AoE / Burst / Sacrifice · +3 Init · A Whirlwind · B Deranged Charge`
 
 The full text of both Spells remains on the same package card below the band and can be exposed when exact
 wording is needed. This deliberately trades "every line of every Spell visible at all times" for a much
@@ -348,7 +352,7 @@ director.
 | Speed cards (poker) | 12 | 12 | 8 |
 | **Cards** | **402** (408) | **144** | **96** |
 | Dials, with split pins | 0 | 6 | 4 |
-| Condition tokens | 168 | 168 | **88**: a Multi Spell reaches at most 2, plus Crazed Specter's caster |
+| Condition tokens | 168 | 168 | **88**: a Multi Spell reaches at most 2, plus Death Wail's caster |
 | Immune tokens, tie order chits | 6, 6 | 6, 6 | 4, 4 |
 | Ordering discs, ladder discs | 6, 0 | 6, 6 | 4, 4 |
 | Stat markers | 36 | 0, and 6 Health clips | 4 clips |
@@ -363,7 +367,7 @@ The 26: 138 poker cards on 16 sheets (126 alone is exactly 14), 6 Creature cards
 90 mm discs and a 50 mm one each), the middle on 2, about 232 token pieces on 2 (one sheet holds about 185 at
 15 mm), the player aid on 1. **The brief's "144 cards" holds, on 18 sheets of cards, not 21; the whole box is
 about 26.** At 2v2 every per-Creature count falls by a third, and the Condition supply by more: 4 slots x 2
-targets for the Multi faces, plus the caster for Crazed Specter's Bleed 4 (168 to 88: components 1.4 at
+targets for the Multi faces, plus the caster for Death Wail's Bleed 4 (168 to 88: components 1.4 at
 `ad3e4d00` counts its 24 Bleed-4 faces as 6 slots x 3 targets and the caster; at 2v2 that is 4 x 3 = 12). The middle and the dial's rings do not change.
 
 ---
@@ -404,13 +408,13 @@ them**. The cascade itself becomes the legend:
 - and so on, up to the maximum 10 purchases a Creature can make in 20 Rounds.
 
 The outer ring then needs only **`S / 1 / 2 / ... / 10`**. The inner ring is **A / B**.
-`S` points to the common starting kit: `SA = Heavy Strike`, `SB = Wait`.
+`S` points to the common starting kit: `SA = Strike`, `SB = Focus`.
 The starting kit and every package teach exactly two Spells, so both letters are legal on `S` and on every
 package the Creature owns. Until 2026-10-06 the ring was **A / B / C**, with `SA = Basic Attack`, and `C` was legal on
 `S` alone.
 
 Example: if package 3 in this Creature's cascade is Ravager, **`3B` means Ravager's Spell B,
-Psycho Rush**. Another Creature can have a different package in slot 3; the dial is an address into that
+Deranged Charge**. Another Creature can have a different package in slot 3; the dial is an address into that
 Creature's visible spellbook, not a global catalogue.
 
 **Why prototype it:**
@@ -497,7 +501,7 @@ reaches 6 at every level). The search-31 mirror reaches 6 at levels 1 and 2 in n
 | **1. Copies by level**: 6 a level-1 Tier, 3 a level-2 or level-3; a blank card with the Tier written on it when a supply runs out (the escape components 1.4 uses for tokens) | 3 x 6 + 18 x 3 = **72** | 2 x 6 + 6 x 6 + 36 x 3 = 156 Spell cards; **240** in all (162 and 246 with three starting Spells) | 3 copies are exceeded at level 2 in 4% of realistic matches, 84% of greedy-mirror and all stun-mirror ones; at level 3 in 4.5% of greedy-mirror and 88.5% of stun-mirror ones. The blank keeps it legal, so no rule moves; a playtest box, not a general answer. It does not split into two private libraries (3.9) |
 | **2. Separate the Intent from the card** | 126 | 0 with the dial | Part 4 |
 | **3. A design limit**: a Tier owned by at most 2 Creatures of a Team | 21 x 2 x 2 = **84** | | A rule: the `boardgame-director`'s (Part 8) |
-| **4. Mini cards**, 44 x 63 mm | 126 on 8 sheets | | **The text does not fit**: about 25 characters a line at 8 pt, against 33 for the widest Spell line and 38 for a head line. It fits only at 5 to 6 pt |
+| **4. Mini cards**, 44 x 63 mm | 126 on 8 sheets | | **The text does not fit**: about 25 characters a line at 8 pt, against 33 for the widest Spell line and 36 for a head line (38 before the Spells were renamed). It fits only at 5 to 6 pt |
 
 **At team size 2**: package cards 21 x 4 = **84**, and every Creature can still own every Tier (6
 purchases for a Team of 2 to own a level-3 Tier on both, inside the 20 a Player makes); today's Spell cards
@@ -522,9 +526,9 @@ a defence band on every card, colour-coded categories.
 2. **A fixed icon row on every Spell**: target, cost, critical threshold, and whether it ignores Defense (only
    Bleed does). A card-face change, not a rule, and what brings a Spell nearer one line (3.6). Icons replace
    words, which components 2.2 makes the maintainer's decision (the `Regen` precedent).
-3. **Colour by Tier family.** Three families of seven: **Brute** (Berserker-Ravager, Ironbound-Dreadnought,
-   Marauder-Warmonger), **Occultist** (Elementalist-Harbinger, Necromancer-Lich, Shaman-Spiritcaller),
-   **Prowler** (Assassin-Deathstalker, Parasite-Soulreaver, Plague Doctor-Blightweaver). A hue a family makes
+3. **Colour by Tier family.** Three families of seven: **Brute** (Frenzied-Ravager, Ironhide-Colossus,
+   Oppressor-Tyrant), **Warped** (Stormborn-Cataclysm, Necrotic-Revenant, Ethereal-Transcendent),
+   **Predator** (Deathmarked-Deathstalker, Parasite-Soulreaver, Blighted-Blightweaver). A hue a family makes
    a cascade readable across the table and groups the dial's ring. **Not** the dock's four colours, or "the
    plum card" and "the plum lane" collide; and a glyph each, for greyscale.
 

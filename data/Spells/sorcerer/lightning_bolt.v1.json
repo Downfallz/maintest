@@ -1,6 +1,6 @@
 {
   "id": "spell:lightning_bolt:v1",
-  "name": "Lightning Bolt",
+  "name": "Shock",
   "spellType": "Offensive",
   "creatureClass": "Sorcerer",
   "energyCost": 2,

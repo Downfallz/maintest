@@ -1,6 +1,6 @@
 {
   "id": "spell:protective_slam:v1",
-  "name": "Protective Slam",
+  "name": "Crash",
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
   "energyCost": 3,

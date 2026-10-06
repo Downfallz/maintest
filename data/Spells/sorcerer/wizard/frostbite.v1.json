@@ -1,6 +1,6 @@
 {
   "id": "spell:frostbite:v1",
-  "name": "Frostbite",
+  "name": "Ice Grip",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "energyCost": 1,

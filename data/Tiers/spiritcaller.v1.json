@@ -1,6 +1,6 @@
 {
   "id": "tier:spiritcaller:v1",
-  "name": "Spiritcaller",
+  "name": "Transcendent",
   "level": 3,
   "prerequisites": [
     "tier:shaman:v1"

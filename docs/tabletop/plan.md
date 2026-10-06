@@ -127,7 +127,7 @@ What the rest of the plan therefore takes as given, and what it must not hard-co
   of their counts follow a value and which follow a rule, so a rebalanced game reprints rather than redesigns.
 - **The Creature's base Critical chance is zero** (ADR 0042): a Spell's printed chance is the chance rolled,
   and the twenty Spells at zero never roll (the content of 2026-10-06, `3c9eb083`; twenty-one at `ad3e4d00`,
-  before Basic Attack left, and twenty at `e6f72578`, before Crazed Specter lost its chance).
+  before Basic Attack left, and twenty at `e6f72578`, before Death Wail lost its chance).
 - **A Condition stacks, except a Stun** (ADR 0041): one application is one token. A Stun on a Creature already
   stunned or immune to Stun is ignored, and a Stun that ends leaves a Round of Stun immunity (ADR 0072).
 

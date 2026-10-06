@@ -1,6 +1,6 @@
 {
   "id": "spell:toxic_waves:v1",
-  "name": "Toxic Waves",
+  "name": "Void Pulse",
   "spellType": "Offensive",
   "creatureClass": "Shaman",
   "energyCost": 3,

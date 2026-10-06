@@ -1,6 +1,6 @@
 {
   "id": "spell:psycho_rush:v1",
-  "name": "Psycho Rush",
+  "name": "Deranged Charge",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
   "energyCost": 3,

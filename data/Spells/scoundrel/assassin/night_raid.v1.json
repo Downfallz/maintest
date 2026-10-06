@@ -1,6 +1,6 @@
 {
   "id": "spell:night_raid:v1",
-  "name": "Night Raid",
+  "name": "Blood Hunt",
   "spellType": "Offensive",
   "creatureClass": "Assassin",
   "energyCost": 3,

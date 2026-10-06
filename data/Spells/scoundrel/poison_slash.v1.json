@@ -1,6 +1,6 @@
 {
   "id": "spell:poison_slash:v1",
-  "name": "Poison Slash",
+  "name": "Venom Claw",
   "spellType": "Offensive",
   "creatureClass": "Scoundrel",
   "energyCost": 2,

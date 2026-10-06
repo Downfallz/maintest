@@ -1,6 +1,6 @@
 {
   "id": "spell:summon_minions:v1",
-  "name": "Summon Minions",
+  "name": "Infestation",
   "spellType": "Offensive",
   "creatureClass": "Necromancer",
   "energyCost": 3,

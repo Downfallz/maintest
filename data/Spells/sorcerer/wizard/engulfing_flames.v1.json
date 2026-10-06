@@ -1,6 +1,6 @@
 {
   "id": "spell:engulfing_flames:v1",
-  "name": "Engulfing Flames",
+  "name": "Incinerate",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "energyCost": 3,

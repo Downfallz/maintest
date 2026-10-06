@@ -1,6 +1,6 @@
 {
   "id": "spell:meteor:v1",
-  "name": "Meteor",
+  "name": "Emberstorm",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "energyCost": 3,

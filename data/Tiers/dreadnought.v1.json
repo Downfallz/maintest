@@ -1,6 +1,6 @@
 {
   "id": "tier:dreadnought:v1",
-  "name": "Dreadnought",
+  "name": "Colossus",
   "level": 3,
   "prerequisites": [
     "tier:ironbound:v1"

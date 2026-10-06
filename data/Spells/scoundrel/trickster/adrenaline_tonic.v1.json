@@ -1,6 +1,6 @@
 {
   "id": "spell:adrenaline_tonic:v1",
-  "name": "Adrenaline Tonic",
+  "name": "Overdrive",
   "spellType": "Defensive",
   "creatureClass": "Trickster",
   "energyCost": 1,

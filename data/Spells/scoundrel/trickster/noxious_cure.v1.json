@@ -1,6 +1,6 @@
 {
   "id": "spell:noxious_cure:v1",
-  "name": "Noxious Cure",
+  "name": "Toxic Mend",
   "spellType": "Defensive",
   "creatureClass": "Trickster",
   "energyCost": 2,

@@ -159,7 +159,7 @@ A **permanent** Condition moves a rail and takes no token. It never counts down.
 2. At the **Round cap**, checked at **Finalization** only: the higher **total remaining Health** wins.
 3. **Equal totals is a draw.**
 
-One cast can wipe both Teams — **Hateful Sacrifice**, `Damage 11` then `Caster: Damage 3` — and that is a draw.
+One cast can wipe both Teams — **Blood Price**, `Damage 11` then `Caster: Damage 3` — and that is a draw.
 
 ---
 
