@@ -126,6 +126,16 @@ jobs:
       # The pattern starts at `**/` because the scanner for .NET analyses each project as a module and matches
       # a file's path from its project's folder: written from the repository root it matched nothing, and the
       # two issues stayed open on `main` while every pull request, which reads only its diff, was green.
+      #
+      # The third, `roslyn.sonaranalyzer.security.cs:S2083` (path traversal) on `FileArtifactWriter.cs` alone,
+      # is a false positive, and the report's flow shows why. The flow runs from the table token a request
+      # carries (`TableServer`), through the table that token finds, to a note a player typed
+      # (`TableApi.NoteAsync`). From there `PlaytestRun` appends it to the run's `notes.jsonl`. The player's text
+      # is the *content* of that line. The path is the constant `NotesFile`, and the analysis reaches
+      # `Resolve` only because it taints the whole session object the request found. `Resolve` still refuses
+      # any path that leaves the run (`FileArtifactWriterTests`), and `FileArtifactStore` refuses a run name
+      # that is not one directory. Rewriting the guard twice into the shape the rule documents (#282, #283)
+      # did not clear it, because the guard was never what the flow lacked.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -139,11 +149,13 @@ jobs:
           /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,scripts/**"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
-          /d:sonar.issue.ignore.multicriteria="e1,e2"
+          /d:sonar.issue.ignore.multicriteria="e1,e2,e3"
           /d:sonar.issue.ignore.multicriteria.e1.ruleKey="python:S1244"
           /d:sonar.issue.ignore.multicriteria.e1.resourceKey="learning/tests/**/*.py"
           /d:sonar.issue.ignore.multicriteria.e2.ruleKey="csharpsquid:S5332"
           /d:sonar.issue.ignore.multicriteria.e2.resourceKey="**/Hosting/HttpHost.cs"
+          /d:sonar.issue.ignore.multicriteria.e3.ruleKey="roslyn.sonaranalyzer.security.cs:S2083"
+          /d:sonar.issue.ignore.multicriteria.e3.resourceKey="**/Learning/FileArtifactWriter.cs"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release
