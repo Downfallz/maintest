@@ -52,7 +52,7 @@ What is current, exactly:
   gain in a Round ([1.7](#17-the-energy-track-what-ends-it)), the widest card line
   ([2.3](#23-the-measurement)), the Spells with a caster line ([2.1](#21-what-is-printed-and-where-it-comes-from),
   [2.4](#24-the-seven-that-need-a-second-sentence)), and Part 7. Those readings are at `813bb91b`.
-- **Tune run 11 moved two package bonuses**, Warped from +2 to +3 and Crusher from +4 to +3 (PR #208,
+- **Tune run 11 moved two package bonuses**, Occultist (now Warped) from +2 to +3 and Warmonger (now Crusher) from +4 to +3 (PR #208,
   journal 2026-09-24; it is what lies between `4ab506fa` and `0f036b75`). The bonuses still sum to 47 and
   still run 0 to 5, but the 10 packages one Creature can own now pay 29, not 28. So the Base initiative
   ceiling goes from 33 to **34** and the Current initiative ceiling from 39 to **40**
@@ -260,9 +260,9 @@ print('most Base initiative one Creature buys',f(bb,C))"
 ```
 
 That output is read at `e6f72578`. At `813bb91b` the last two lines read 34 and 29, and at `4ab506fa` the
-last read 28: tune run 11's Warped +3 and Crusher +3 moved it to 29. Since then the level-2 packages
+last read 28: tune run 11's Occultist +3 and Warmonger +3 (now Warped and Crusher) moved it to 29. Since then the level-2 packages
 gained their second Spell (PR #245), which moved the first line, and several bonuses moved; the last of them,
-Blighted's from 2 to 3 on 2026-10-04, took the second line from 29 to 30.
+Plague Doctor's (now Blighted's) from 2 to 3 on 2026-10-04, took the second line from 29 to 30.
 
 6 Creatures x 3 starting Spells = 18 cards in hands at setup. The command reads the Rounds 1 to 20, the
 Round track's spaces. A 20-Round Match offers 10 opportunities, so a Player makes at most 20 purchases, and one
@@ -941,7 +941,7 @@ print(max(e['amount'] for p in glob.glob('data/Spells/**/*.json',recursive=True)
 
 Base initiative only ever grows, by the `initiativeBonus` of every package bought, once a purchase
 (ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 20-Round Match is
-the last line of the command in [1.1](#11-spell-cards-and-package-cards): **30** at `e6f72578`.
+the last line of the command in [1.1](#11-spell-cards-and-package-cards): **30** at `66964555`, as at `e6f72578`.
 
 A Player makes 2 picks at each of 10 opportunities: 20 purchases. A Creature buys at most one package an
 opportunity (ADR 0066), so **10 of them at most land on one Creature**. The 21 packages' bonuses sum to 50,
@@ -950,7 +950,7 @@ it. The 10 prerequisite-closed packages that pay the most pay 30, and four sets 
 Predator, Deathmarked, Deathstalker, Blighted and Blightweaver (18), and Warped and Stormborn (5);
 the last three are Ethereal, Transcendent and Cataclysm; Parasite, Soulreaver and Cataclysm; Colossus, Frenzied
 and Ravager; or Colossus, Frenzied and Cataclysm (7 each). At `813bb91b` it was 29, from one set; several bonuses
-have moved since, and the last, Blighted's from 2 to 3, took it to 30. So **Base initiative tops out at
+have moved since, and the last, Plague Doctor's (now Blighted's) from 2 to 3, took it to 30. So **Base initiative tops out at
 5 + 30 = 35.**
 
 **Current initiative tops out at the same 35.** It is Base plus the Initiative buffs less the debuffs, and at
@@ -971,7 +971,7 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
 
 A line that read `InitiativeBuff` would raise the Current ceiling above the Base one. While `death_squad`
 placed +2 for a Round on up to 3 allies, three of them could land on the Creature at the Base ceiling, so the
-Current ceiling was 6 above it: 40 at `813bb91b`, 39 before tune run 11 (Warped +2, Crusher +4, at
+Current ceiling was 6 above it: 40 at `813bb91b`, 39 before tune run 11 (Occultist +2 and Warmonger +4, now Warped and Crusher, at
 `4ab506fa`), where the Base ceiling was 34 and 33. In a 16-Round Match they were 29 and 35. While two packages
 could land on one Creature an opportunity (ADR 0056, before ADR 0066), they were 44 and 46 in 16 Rounds;
 under one Spell a pick, twice every Round, 52 and 58.
@@ -983,7 +983,7 @@ board's 95 mm of usable width; the rule is the ceiling of 35, which the rails' 0
 the units rail, sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE**: the bonuses are content, and a tuning pass may move the ones
-`data/balance/knobs.json` declares as knobs (ADR 0061). At `e6f72578` it declares one, Blighted's, from 1
+`data/balance/knobs.json` declares as knobs (ADR 0061). At `66964555`, as at `e6f72578`, it declares one, Blighted's, from 1
 to 4. At that `max` the 1.1 command reads a ceiling of 5 + 31 = 36, inside the rails' 39, so no pass inside
 the declared bounds reprints the rail. Part 6, question 11.
 
@@ -1184,14 +1184,14 @@ What each piece of the layout answers:
 | Choice | Why |
 | --- | --- |
 | The top band, two lines: name, then `level N . +B initiative` | A Creature's cards lie in a stagger, each covering the last but for its band ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The band alone must say which Tier it is, how deep, and what it paid. |
-| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; no package has one at `e6f72578` (`Ethereal` did). |
+| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; no package has one at `66964555` (`Shaman`, now `Ethereal`, once did). |
 | A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature. A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `e6f72578` (the widest line read the same at `813bb91b` and at `4ab506fa`, where it was
-Crusher's `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one
-Spell):
+The measurement, at `66964555` (the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa`
+too; at `4ab506fa` it was Warmonger's `level 3 . +4 initiative`; the body lines read `[2, 3]` while the
+level-2 packages taught one Spell):
 
 ```bash
 python3 -c "
@@ -1506,7 +1506,7 @@ The tens rail runs 0 to 3 because the most Base initiative one Creature can buy 
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 10 packages, one an opportunity (ADR 0066).
 A package's `initiativeBonus` may be a balance knob (ADR 0061), with a declared `max` in
 `data/balance/knobs.json`. At `813bb91b` every package had one, and at every `max` the ceiling was
-5 + 48 = 53. At `e6f72578` only Blighted's is declared, 1 to 4, and at its `max` the ceiling is
+5 + 48 = 53. At `66964555`, as at `e6f72578`, only Blighted's is declared, 1 to 4, and at its `max` the ceiling is
 5 + 31 = 36, inside the rail. Tune run 11 was the first pass to test the first answer: it raised the
 ceiling by one, and the rail to 3 absorbed it with 5 left; the content of 2026-10-04 raised it by one more,
 with 4 left. Print the tens rail to 3 and reprint six boards when a pass takes the ceiling past 39, or print
