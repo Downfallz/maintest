@@ -14,6 +14,7 @@
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |
+| [domain/content-review.md](domain/content-review.md) | Review: an adversarial reading of the content and the rules as bot play shows them, the hypotheses a physical playtest should test, and what to do before the first session. |
 | [tabletop/plan.md](tabletop/plan.md) | The plan for the board game and the playtest app: what is translated, in which order, and what is still open. |
 | [tabletop/translation.md](tabletop/translation.md) | The audit: what every rule of the engine costs to track by hand, and the verdict on each. |
 | [tabletop/components.md](tabletop/components.md) | What is in the box: the manifest and where each count comes from, the card face, the boards, and the generator's specification. |
