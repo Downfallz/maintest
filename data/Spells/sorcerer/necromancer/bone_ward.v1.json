@@ -1,6 +1,6 @@
 {
   "id": "spell:bone_ward:v1",
-  "name": "Bone Ward",
+  "name": "Bonewall",
   "spellType": "Defensive",
   "creatureClass": "Necromancer",
   "energyCost": 1,

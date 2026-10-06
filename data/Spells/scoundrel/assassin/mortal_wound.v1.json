@@ -1,6 +1,6 @@
 {
   "id": "spell:mortal_wound:v1",
-  "name": "Mortal Wound",
+  "name": "Eviscerate",
   "spellType": "Offensive",
   "creatureClass": "Assassin",
   "energyCost": 3,

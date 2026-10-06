@@ -1,6 +1,6 @@
 {
   "id": "spell:enraged_charge:v1",
-  "name": "Enraged Charge",
+  "name": "Fury",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
   "energyCost": 3,

@@ -1,6 +1,6 @@
 {
   "id": "spell:wait:v1",
-  "name": "Wait",
+  "name": "Focus",
   "spellType": "Defensive",
   "creatureClass": "Creature",
   "energyCost": 0,

@@ -1,6 +1,6 @@
 {
   "id": "tier:berserker:v1",
-  "name": "Berserker",
+  "name": "Frenzied",
   "level": 2,
   "prerequisites": [
     "tier:brute:v1"

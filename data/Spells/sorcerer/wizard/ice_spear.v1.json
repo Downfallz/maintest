@@ -1,6 +1,6 @@
 {
   "id": "spell:ice_spear:v1",
-  "name": "Ice Spear",
+  "name": "Deep Freeze",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "energyCost": 2,

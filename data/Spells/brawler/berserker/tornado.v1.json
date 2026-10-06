@@ -1,6 +1,6 @@
 {
   "id": "spell:tornado:v1",
-  "name": "Tornado",
+  "name": "Whirlwind",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
   "energyCost": 3,

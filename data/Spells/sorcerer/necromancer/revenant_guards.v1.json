@@ -1,6 +1,6 @@
 {
   "id": "spell:revenant_guards:v1",
-  "name": "Revenant Guards",
+  "name": "Wraithguard",
   "spellType": "Defensive",
   "creatureClass": "Necromancer",
   "energyCost": 3,

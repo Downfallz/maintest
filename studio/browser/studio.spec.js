@@ -47,8 +47,8 @@ test('real packages drive the mobile guide and its linked spell details', async 
   }
   await expect(page.locator('.tier-section')).toHaveCount(3);
   await fit(page); await shot(page, info, 'explore');
-  await page.locator('.family-pick').filter({ hasText: 'Occultist' }).click();
-  await expect(page.locator('.package-name').first()).toHaveText('Occultist');
+  await page.locator('.family-pick').filter({ hasText: 'Warped' }).click();
+  await expect(page.locator('.package-name').first()).toHaveText('Warped');
   await page.locator('.package-tile').first().click();
   await expect(page.getByRole('heading', { name: 'Included spells' })).toBeVisible();
   await fit(page); await shot(page, info, 'package');
@@ -59,7 +59,7 @@ test('real packages drive the mobile guide and its linked spell details', async 
   await page.reload();
   await expect(page.locator('.reader-heading h2')).toHaveText(name);
   await page.getByRole('button', { name: '← Back', exact: true }).click();
-  await expect(page.locator('.reader-heading h2')).toHaveText('Occultist');
+  await expect(page.locator('.reader-heading h2')).toHaveText('Warped');
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Find your next move.' })).toBeVisible();
 });
@@ -104,13 +104,13 @@ test('browsing spells shows the tier and package each one is learned from, and f
 test('a spell card shows its critical bonus, collapsed in both libraries, and a spell without one says nothing', async ({ page }) => {
   await page.locator('#spells-view').click();
   const search = page.getByRole('searchbox', { name: 'Search spells', exact: true });
-  await search.fill('ice spear');
+  await search.fill('deep freeze');
   await expect(page.locator('.spell-tile .spell-meta')).toContainText('+50% crit');
-  await search.fill('bone ward');
+  await search.fill('bonewall');
   await expect(page.locator('.spell-tile .spell-meta')).not.toContainText('crit');
-  await search.fill('ice spear');
+  await search.fill('deep freeze');
   await page.getByRole('button', { name: 'Energy & effects', exact: true }).click();
-  await expect(page.locator('.strategy-spell').filter({ hasText: 'Ice Spear' }).locator('.strategy-spell-facts')).toContainText('+50% crit');
+  await expect(page.locator('.strategy-spell').filter({ hasText: 'Deep Freeze' }).locator('.strategy-spell-facts')).toContainText('+50% crit');
 });
 
 test('a spell shows its value a round next to its tier, and the reader says what the estimate leaves out', async ({ page }, info) => {
@@ -176,13 +176,13 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
   await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
-  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Prowler');
-  const prowler = sheet.locator('.balance-item');
-  await expect(prowler).toHaveCount(1);
-  await prowler.locator('summary').click();
-  await expect(prowler).toContainText('/initiativeBonus');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Predator');
+  const predator = sheet.locator('.balance-item');
+  await expect(predator).toHaveCount(1);
+  await predator.locator('summary').click();
+  await expect(predator).toContainText('/initiativeBonus');
   await fit(page); await shot(page, info, 'balance-package');
-  await prowler.getByRole('button', { name: 'Open content' }).click();
+  await predator.getByRole('button', { name: 'Open content' }).click();
   await expect(page.locator('#detail .balance-value')).toContainText('Initiative +');
   await page.getByRole('button', { name: 'Edit content' }).click();
   await expect(page.locator('#balance-strip')).toContainText('What this package is for');
@@ -228,7 +228,7 @@ test('reading a version no alias reaches shows its missing balance entry as a no
 test('a spell two aliases point at is two rows of the overview, one per entry', async ({ page }) => {
   const doubled = structuredClone(catalogue);
   doubled.aliases['spell:jab'] = 'spell:heavy_strike:v1';
-  doubled.balance.spells['spell:jab'] = { name: 'Heavy Strike', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
+  doubled.balance.spells['spell:jab'] = { name: 'Strike', class: 'Brute', intent: 'The same jab, read by another name.', keep: [], knobs: [] };
   await page.route('**/api/catalogue', route => route.fulfill({ json: { ok: true, result: doubled } }));
   await page.reload();
   await page.locator('#tools-panel').click();
@@ -237,7 +237,7 @@ test('a spell two aliases point at is two rows of the overview, one per entry', 
   await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('spell:jab');
   await expect(sheet.locator('.balance-item')).toHaveCount(1);
   await expect(sheet.locator('.balance-item')).toContainText('read by another name');
-  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Heavy Strike');
+  await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Strike');
   await expect(sheet.locator('.balance-item')).toHaveCount(2);
 });
 
@@ -310,11 +310,11 @@ test('package comparison combines distinct spells and separates caster effects',
   await page.getByRole('button', { name: 'On caster', exact: true }).click();
   await page.locator('.strategy-effect').filter({ hasText: 'Energy' }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(1);
-  await expect(page.locator('.strategy-spell')).toContainText('Momentum');
+  await expect(page.locator('.strategy-spell')).toContainText('Pursuit');
   await expect(page.locator('.strategy-caster')).toContainText('Energy + 2');
   await page.getByRole('button', { name: 'On targets', exact: true }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(1);
-  await expect(page.locator('.strategy-spell')).toContainText('Wait');
+  await expect(page.locator('.strategy-spell')).toContainText('Focus');
   await fit(page);
 });
 

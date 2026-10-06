@@ -303,10 +303,10 @@ replay. `--bind <your LAN IPv4 address>` and `--port N` also work for a phone.
 
 | Scenario | Starting point | Try |
 | --- | --- | --- |
-| Choose your target | Round 1, Lightning Bolt targets | Compare targets and the energy left after cost |
+| Choose your target | Round 1, Shock targets | Compare targets and the energy left after cost |
 | Build a multiclass creature | Round 3, evolution | Add a different level-1 package to Brute or take a level-2 upgrade |
-| Interrupt an action | Round 5, Tranquilizer Dart targets | Stun before an enemy acts; follow skipped actions and later immunity |
-| Read a layered resolution | Round 5, Toxic Waves targets | Follow multiple targets, bleed and Psycho Rush's caster effect |
+| Interrupt an action | Round 5, Paralyzing Barb targets | Stun before an enemy acts; follow skipped actions and later immunity |
+| Read a layered resolution | Round 5, Void Pulse targets | Follow multiple targets, bleed and Deranged Charge's caster effect |
 
 Practice uses seed 17 and a ten-round cap, plays its setup through the actual engine,
 and continues normally after handing player 1 to you. It writes no playtest files or

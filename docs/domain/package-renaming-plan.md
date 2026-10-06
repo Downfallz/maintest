@@ -1,5 +1,20 @@
 # Package and spell renaming plan
 
+## Status
+
+- **Done (2026-10-06, content `9419f935`): the English display names** of every package and every Spell
+  below, in each Tier's and Spell's `name` and in the matching `name` of `data/balance/knobs.json`. The
+  starting kit's `spell:heavy_strike` is **Strike** and `spell:wait` is **Focus**. The play did not move: the
+  benchmark digest is the previous one entry for entry (journal, 2026-10-06).
+- **Kept: the ids and the file names**, by the maintainer's decision. `tier:dreadnought:v1` is the id of
+  Colossus, in `data/Tiers/dreadnought.v1.json`. Renaming the ids was measured first and it changes the play:
+  the engine offers the available Tiers in id order and the bots break ties in that order, so new ids reshuffle
+  the level-1 openers (Greedy against itself: 11.3 rounds to 15.3, Player 1 49.5% to 56%).
+- **Kept as records:** ADRs, earlier journal entries, `spells.md` (what the port brought over), and the two
+  `tier-evolution-*` documents name things as they were.
+- **Not yet: the French display names and the family names** (Physical, Predator, Warped). French needs a
+  decision on where a translation lives in the presentation layer first (step 3 below).
+
 ## Goal
 
 Rename the evolution packages and their spells so they read as **mutations or forms a creature becomes**, not RPG classes a creature takes.

@@ -4,10 +4,10 @@ Status: **Specification** (2026-09-14; brought up to the package model and to th
 question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
 day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
 `momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day; to one Activation a slot,
-2026-09-28; to the content of 2026-10-04: Night Raid, Ambush, Protective Slam's stun, and the hand-tuned
-amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Night
-Raid on two enemies, and Crazed Specter's Bleed on its targets; to the content of 2026-10-06: Basic Attack
-removed, two starting Spells). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+2026-09-28; to the content of 2026-10-04: Blood Hunt, Ambush, Crash's stun, and the hand-tuned
+amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Blood
+Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
+removed, two starting Spells; to the renamed packages and Spells the same day). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -23,7 +23,7 @@ What is current, exactly:
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
-- **Every count is read at content `3c9eb083`** (the last point below), and the schedule in
+- **Every count is read at content `3c9eb083`** (the second-last point below), and the schedule in
   `docs/tabletop/playtest.rules.json`. Re-run the commands when the hash moves. `3c9eb083` removed one Spell
   from `ad3e4d00`, and `ad3e4d00` changed two from `e6f72578`. A line that still names `e6f72578` or
   `ad3e4d00` was re-read at `3c9eb083` and did not move; the lines that moved name `3c9eb083`. Before
@@ -54,7 +54,7 @@ What is current, exactly:
   gain in a Round ([1.7](#17-the-energy-track-what-ends-it)), the widest card line
   ([2.3](#23-the-measurement)), the Spells with a caster line ([2.1](#21-what-is-printed-and-where-it-comes-from),
   [2.4](#24-the-seven-that-need-a-second-sentence)), and Part 7. Those readings are at `813bb91b`.
-- **Tune run 11 moved two package bonuses**, Occultist from +2 to +3 and Warmonger from +4 to +3 (PR #208,
+- **Tune run 11 moved two package bonuses**, Warped from +2 to +3 and Tyrant from +4 to +3 (PR #208,
   journal 2026-09-24; it is what lies between `4ab506fa` and `0f036b75`). The bonuses still sum to 47 and
   still run 0 to 5, but the 10 packages one Creature can own now pay 29, not 28. So the Base initiative
   ceiling goes from 33 to **34** and the Current initiative ceiling from 39 to **40**
@@ -112,6 +112,15 @@ What is current, exactly:
   knob count moves. Its card had 2 body lines, so the cards at 2 lines go from 15 to 14, and the body and
   statline medians from 40 and 68 to 41 and 68.5 ([2.3](#23-the-measurement)). The card faces' hash prefix
   is `3c9eb0`.
+- **The names of 2026-10-06, `9419f935`.** Every package that moved and 40 of the 44 Spells take the display
+  names of [package-renaming-plan.md](../domain/package-renaming-plan.md). Ids, files and play do not move
+  (the benchmark digest is `3c9eb083`'s entry for entry), so every count read at `3c9eb083` holds. What reads a
+  name was re-read at `9419f935`: the longest Spell card head line ([2.5](#25-three-card-faces-written-out)),
+  the package card's widest line ([4.1](#41-the-package-card)), and the class on a Spell card, which now agrees
+  with the package on none of the 42 taught Spells (Part 6, question 10). The card faces' hash prefix is
+  `9419f9`. **This document names every package and Spell by its current name**, also where it reports a
+  reading or an event from before `9419f935`; the ids did not move, so the same row is found at any earlier
+  hash under the name the plan's table gives. Quoted command outputs are read at `9419f935`.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -274,9 +283,9 @@ print('most Base initiative one Creature buys',f(bb,C))"
 ```
 
 That output is read at `e6f72578`. At `813bb91b` the last two lines read 34 and 29, and at `4ab506fa` the
-last read 28: tune run 11's Occultist +3 and Warmonger +3 moved it to 29. Since then the level-2 packages
+last read 28: tune run 11's Warped +3 and Tyrant +3 moved it to 29. Since then the level-2 packages
 gained their second Spell (PR #245), which moved the first line, and several bonuses moved; the last of them,
-Plague Doctor's from 2 to 3 on 2026-10-04, took the second line from 29 to 30.
+Blighted's from 2 to 3 on 2026-10-04, took the second line from 29 to 30.
 
 6 Creatures x 2 starting Spells = 12 cards in hands at setup (18 while the starting kit was 3 Spells, until
 2026-10-06). The command reads the Rounds 1 to 20, the
@@ -564,7 +573,7 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | --- | --- | --- | --- |
 | Head | Name | `name` | |
 | Head | Energy cost, as a numeral in a filled circle | `energyCost` | An Intent is only legal if the Creature can afford it (`IntentRules.cs:50-69`), checked against a public Energy rail |
-| Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `e6f72578` every head names one |
+| Head | Every package that teaches it, with its level: `Revenant . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `e6f72578` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
 | Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Fourteen Spells carry one at `e6f72578` (eight at `813bb91b`; seven until ADR 0078 gave `momentum` its `Caster: Energy +2`), and it must not read as a target effect |
@@ -581,10 +590,10 @@ kept printing them would teach two rules the game does not have. The table app's
 (`CardFace`, `table/card.js`).
 
 The head used to print the Spell's `creatureClass`. It does not: the class names are the talent tree's, the
-package names are the Tiers', and at `e6f72578` they disagree on 34 of the 42 taught Spells. Some collide:
-`tornado` is authored under the class `Berserker`, and the `Berserker` package does not teach it (`Ravager`
-does). A Spell card that says `Berserker` and a package card that says `Berserker` must mean the same
-package. The table app still prints the class; Part 6, question 10.
+package names are the Tiers', and at `9419f935` they agree on none of the 42 taught Spells. Until the
+renaming of 2026-10-06 some collided: `tornado` was authored under the class `Berserker`, and the package then
+named `Berserker` did not teach it (`Ravager` does). A Spell card and a package card that print the same word
+must mean the same package. The table app still prints the class; Part 6, question 10.
 
 Two rules that are **not** printed per card because they are true of every card, and belong on the player aid:
 a Multi Spell may take fewer targets than its maximum (`TargetingRules.cs:49`), and `Ally` includes the caster
@@ -706,13 +715,13 @@ effect, each with its own Duration, and a 0.3 pt rule above the caster line. Tha
 four things on the card instead of one sentence to parse. `crazed_specter` prints the same Condition twice,
 `Bleed 4 a round, 2 rounds` above the rule and `Caster: Bleed 4 a round, 1 round` below it: one token face,
 two Durations, two different Creatures. The rule is what says each target bleeds for two Rounds and the
-Necromancer for one. Nine
+caster for one. Nine
 more Spells carry a Caster effect at `e6f72578` and are not among the audit's seven: `bone_ward`, `extort`,
 `hateful_sacrifice`, `latch`, `momentum`, `ambush`, `parasite_jab`, `reckless_swing` and `shield_bash`. They
 use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damage 3` (8) /
-`Caster: Energy +2` (17): three lines, and the rule is what says the 2 Energy go to the Assassin that struck
+`Caster: Energy +2` (17): three lines, and the rule is what says the 2 Energy go to the caster that struck
 and not to the enemy it struck. `ambush` reads `One enemy` (9) / `Damage 8` (8) /
-`Caster: Initiative -5, 1 round` (30), and the rule is what says the Assassin slows itself, not its victim.
+`Caster: Initiative -5, 1 round` (30), and the rule is what says the caster slows itself, not its victim.
 `latch` reads `One enemy` (9) / `Bleed 1 a round, 3 rounds` (25) / `Damage 1` (8) /
 `Caster: Regen 1 a round, 3 rounds` (33): four lines, the widest line in the catalogue, and no wrap. It is the
 card the `Regen` abbreviation was made for ([2.2](#22-the-words)): with the full word its caster line was 40
@@ -720,7 +729,7 @@ and took a fifth line.
 
 ### 2.5 Three card faces, written out
 
-Real Spells, generated from `data/`. `[ ]` marks a printed zone. `3c9eb0` is the first six characters of
+Real Spells, generated from `data/`. `[ ]` marks a printed zone. `9419f9` is the first six characters of
 the content hash this working tree builds (`cat data/dst/game.schema.sha256`); the generator prints
 whatever the build it was handed says, and refuses to print when there is nothing to say.
 
@@ -729,8 +738,8 @@ since 2026-10-05 ([Part 7](#part-7-coverage-the-needs-a-component-rows)).
 
 ```
 +--------------------------------------+
-| Revenant Guards                  (3) |   name, energy cost
-| Lich . level 3                       |   the package that teaches it
+| Wraithguard                      (3) |   name, energy cost
+| Revenant . level 3                   |   the package that teaches it
 |--------------------------------------|
 | Up to 3 allies                       |   targeting: origin, scope, max targets
 | Defense +3, permanent                |
@@ -740,7 +749,7 @@ since 2026-10-05 ([Part 7](#part-7-coverage-the-needs-a-component-rows)).
 |--------------------------------------|
 | No critical roll                     |   the chance as authored: 0 since 2026-10-04
 |                                      |
-| spell:revenant_guards:v1     3c9eb0  |   versioned id, content hash prefix
+| spell:revenant_guards:v1     9419f9  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
@@ -755,7 +764,7 @@ build, not corrected by hand.
 ```
 +--------------------------------------+
 | Crushing Stomp                   (4) |
-| Dreadnought . level 3                |
+| Colossus . level 3                   |
 |--------------------------------------|
 | One enemy                            |
 | Damage 7                             |
@@ -763,7 +772,7 @@ build, not corrected by hand.
 |--------------------------------------|
 | Critical 75%  d20: 6+                |
 |                                      |
-| spell:crushing_stomp:v1      3c9eb0  |
+| spell:crushing_stomp:v1      9419f9  |
 +--------------------------------------+
 ```
 
@@ -773,7 +782,7 @@ over.
 
 ```
 +--------------------------------------+
-| Wait                             (0) |
+| Focus                            (0) |
 | Starting spell                       |
 |--------------------------------------|
 | Self                                 |
@@ -781,14 +790,15 @@ over.
 |--------------------------------------|
 | No critical roll                     |
 |                                      |
-| spell:wait:v1                3c9eb0  |
+| spell:wait:v1                9419f9  |
 +--------------------------------------+
 ```
 
 The head line is the whole of what the card says about acquiring the Spell: which package to buy, and how
-deep it sits. `Dreadnought . level 3` does not say what Dreadnought needs first or what it pays in initiative;
-the Dreadnought package card does, once, for both of the Spells it teaches. The longest head line
-at `e6f72578` is `Plague Doctor . level 2` (23 characters), inside the 38 a line holds.
+deep it sits. `Colossus . level 3` does not say what Colossus needs first or what it pays in initiative;
+the Colossus package card does, once, for both of the Spells it teaches. The longest head line
+at `9419f935` is 22 characters (`Deathstalker . level 3`, as are Blightweaver's and Transcendent's), inside the
+38 a line holds. It was `Plague Doctor . level 2` (23) before the packages were renamed.
 
 ### 2.6 The Speed card
 
@@ -803,7 +813,7 @@ from `data/`: its two faces are the two Speeds of the glossary, and its count is
 | Acts before every Standard Creature.               |
 | No critical roll this Round.                       |   the reminder: CriticalChanceOf is 0 for Quick
 |                                                    |
-| Speed card                                 3c9eb0  |   what it is, content hash prefix
+| Speed card                                 9419f9  |   what it is, content hash prefix
 +----------------------------------------------------+
 
 +----------------------------------------------------+
@@ -812,7 +822,7 @@ from `data/`: its two faces are the two Speeds of the glossary, and its count is
 | Acts after every Quick Creature.                   |
 | Critical as printed on the Spell.                  |
 |                                                    |
-| Speed card                                 3c9eb0  |
+| Speed card                                 9419f9  |
 +----------------------------------------------------+
 ```
 
@@ -962,10 +972,10 @@ A Player makes 2 picks at each of 10 opportunities: 20 purchases. A Creature buy
 opportunity (ADR 0066), so **10 of them at most land on one Creature**. The 21 packages' bonuses sum to 50,
 but a Creature cannot own all 21 with 10 picks, and a level-3 package cannot be bought without the two below
 it. The 10 prerequisite-closed packages that pay the most pay 30, and four sets tie there. All four hold
-Prowler, Assassin, Deathstalker, Plague Doctor and Blightweaver (18), and Occultist and Elementalist (5);
-the last three are Shaman, Spiritcaller and Harbinger; Parasite, Soulreaver and Harbinger; Brute, Berserker
-and Ravager; or Brute, Berserker and Harbinger (7 each). At `813bb91b` it was 29, from one set; several bonuses
-have moved since, and the last, Plague Doctor's from 2 to 3, took it to 30. So **Base initiative tops out at
+Predator, Deathmarked, Deathstalker, Blighted and Blightweaver (18), and Warped and Stormborn (5);
+the last three are Ethereal, Transcendent and Cataclysm; Parasite, Soulreaver and Cataclysm; Brute, Frenzied
+and Ravager; or Brute, Frenzied and Cataclysm (7 each). At `813bb91b` it was 29, from one set; several bonuses
+have moved since, and the last, Blighted's from 2 to 3, took it to 30. So **Base initiative tops out at
 5 + 30 = 35.**
 
 **Current initiative tops out at the same 35.** It is Base plus the Initiative buffs less the debuffs, and at
@@ -986,7 +996,7 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
 
 A line that read `InitiativeBuff` would raise the Current ceiling above the Base one. While `death_squad`
 placed +2 for a Round on up to 3 allies, three of them could land on the Creature at the Base ceiling, so the
-Current ceiling was 6 above it: 40 at `813bb91b`, 39 before tune run 11 (Occultist +2, Warmonger +4, at
+Current ceiling was 6 above it: 40 at `813bb91b`, 39 before tune run 11 (Warped +2, Tyrant +4, at
 `4ab506fa`), where the Base ceiling was 34 and 33. In a 16-Round Match they were 29 and 35. While two packages
 could land on one Creature an opportunity (ADR 0056, before ADR 0066), they were 44 and 46 in 16 Rounds;
 under one Spell a pick, twice every Round, 52 and 58.
@@ -998,7 +1008,7 @@ board's 95 mm of usable width; the rule is the ceiling of 35, which the rails' 0
 the units rail, sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE**: the bonuses are content, and a tuning pass may move the ones
-`data/balance/knobs.json` declares as knobs (ADR 0061). At `e6f72578` it declares one, Plague Doctor's, from 1
+`data/balance/knobs.json` declares as knobs (ADR 0061). At `e6f72578` it declares one, Blighted's, from 1
 to 4. At that `max` the 1.1 command reads a ceiling of 5 + 31 = 36, inside the rails' 39, so no pass inside
 the declared bounds reprints the rail. Part 6, question 11.
 
@@ -1177,16 +1187,16 @@ nothing a cast needs:
 
 ```
 +--------------------------------------+
-| Dreadnought                     [+1] |   name; the bonus, in a square
+| Colossus                        [+1] |   name; the bonus, in a square
 | level 3 . +1 initiative              |   the band ends here
 |======================================|
-| Needs Ironbound                      |   every Tier it requires, or "Needs nothing"
+| Needs Ironhide                       |   every Tier it requires, or "Needs nothing"
 |--------------------------------------|
-| Restorative Gush                     |   every Spell it teaches, one a line
+| Vital Surge                          |   every Spell it teaches, one a line
 | Crushing Stomp                       |
 |                                      |
 |                                      |
-| tier:dreadnought:v1          3c9eb0  |   versioned id, content hash prefix
+| tier:dreadnought:v1          9419f9  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
@@ -1199,14 +1209,14 @@ What each piece of the layout answers:
 | Choice | Why |
 | --- | --- |
 | The top band, two lines: name, then `level N . +B initiative` | A Creature's cards lie in a stagger, each covering the last but for its band ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The band alone must say which Tier it is, how deep, and what it paid. |
-| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; no package has one at `e6f72578` (`Shaman` did). |
+| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; no package has one at `e6f72578` (`Ethereal` did). |
 | A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature. A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `e6f72578` (the widest line read the same at `813bb91b` and at `4ab506fa`, where it was
-Warmonger's `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one
-Spell):
+The measurement, at `9419f935` (the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa`
+too, where it was Tyrant's `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages
+taught one Spell):
 
 ```bash
 python3 -c "
@@ -1218,7 +1228,7 @@ for t in T.values():
   lines=[t['name'], f\"level {t['level']} . +{t['initiativeBonus']} initiative\", 'Needs '+(' and '.join(T[q]['name'] for q in t['prerequisites']) or 'nothing')]+[S[x] for x in t['spells']]
   L.append((max(len(x) for x in lines), t['name'], len(lines)-2))
 print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
-# widest line (23, 'Warmonger', 3)
+# widest line (23, 'Warped', 3)
 # body lines [3]
 ```
 
@@ -1323,7 +1333,7 @@ the browser. No PDF library, no build step, nothing installed - the same weight 
 | Bleed | 3 mm on the outer edge only; cards abut inside the grid | Neighbours share a cut line, so no bleed is wasted between them and a single cut serves two cards. |
 | Cut marks | Hairline marks in the outer margin, at every grid line, never across a card | A mark that crosses the card is printed on the card. Marks in the margin survive a guillotine and a craft knife. |
 | Fold marks | None | Cards are cut, not folded. Boards are printed one to a face. |
-| Colour | Everything readable in greyscale; a package family's colour is a strip **and** a printed package name | Home printers run out of one ink. A card that only says "Lich" in purple stops saying it. |
+| Colour | Everything readable in greyscale; a package family's colour is a strip **and** a printed package name | Home printers run out of one ink. A card that only says "Revenant" in purple stops saying it. |
 
 ### 5.4 Where it lives
 
@@ -1507,9 +1517,9 @@ lives (question 6).
 ### 10. The class on a Spell card
 
 The spec prints the package that teaches a Spell in the card's head, and not its `creatureClass`
-([2.1](#21-what-is-printed-and-where-it-comes-from)): the two sets of names disagree on 34 of the 42 taught
-Spells, and some collide, so `tornado` would print `Berserker` while the `Berserker` package does not teach
-it. The table app prints the class (`cardHead` in `table/card.js`, from `CardFace.CreatureClass`). The screen
+([2.1](#21-what-is-printed-and-where-it-comes-from)): the two sets of names agree on none of the 42 taught
+Spells at `9419f935`, and until the packages were renamed some collided, so `tornado` would have printed
+`Berserker` while the package then named `Berserker` did not teach it. The table app prints the class (`cardHead` in `table/card.js`, from `CardFace.CreatureClass`). The screen
 and the deck should say the same thing. Which is it? And does the class mean anything a player needs, now that
 the talent tree gates nothing? ADR 0058 leaves "what the tree is for" open, and this is one place that answer
 lands.
@@ -1521,7 +1531,7 @@ The tens rail runs 0 to 3 because the most Base initiative one Creature can buy 
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 10 packages, one an opportunity (ADR 0066).
 A package's `initiativeBonus` may be a balance knob (ADR 0061), with a declared `max` in
 `data/balance/knobs.json`. At `813bb91b` every package had one, and at every `max` the ceiling was
-5 + 48 = 53. At `e6f72578` only Plague Doctor's is declared, 1 to 4, and at its `max` the ceiling is
+5 + 48 = 53. At `e6f72578` only Blighted's is declared, 1 to 4, and at its `max` the ceiling is
 5 + 31 = 36, inside the rail. Tune run 11 was the first pass to test the first answer: it raised the
 ceiling by one, and the rail to 3 absorbed it with 5 left; the content of 2026-10-04 raised it by one more,
 with 4 left. Print the tens rail to 3 and reprint six boards when a pass takes the ceiling past 39, or print

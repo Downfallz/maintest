@@ -1,6 +1,6 @@
 {
   "id": "tier:shaman:v1",
-  "name": "Shaman",
+  "name": "Ethereal",
   "level": 2,
   "prerequisites": [
     "tier:occultist:v1"

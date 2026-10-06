@@ -1,6 +1,6 @@
 {
   "id": "spell:rejuvenate:v1",
-  "name": "Rejuvenate",
+  "name": "Revitalize",
   "spellType": "Defensive",
   "creatureClass": "Sorcerer",
   "energyCost": 2,

@@ -1,6 +1,6 @@
 {
   "id": "spell:parasite_jab:v1",
-  "name": "Parasite Jab",
+  "name": "Bite",
   "spellType": "Offensive",
   "creatureClass": "Leech",
   "energyCost": 2,

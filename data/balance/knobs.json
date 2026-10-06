@@ -174,7 +174,7 @@
   },
   "spells": {
     "spell:wait": {
-      "name": "Wait",
+      "name": "Focus",
       "class": "Creature",
       "intent": "The floor of the game: spend the activation on nothing and come back two energy richer. It is what a creature does when everything it knows is too expensive, so it must stay free and it must stay worse than acting.",
       "keep": [
@@ -186,7 +186,7 @@
       ]
     },
     "spell:heavy_strike": {
-      "name": "Heavy Strike",
+      "name": "Strike",
       "class": "Creature",
       "intent": "The starting kit's commitment: pay more of the round for the bigger opening hit. The decision it exists to pose is spend now or bank for later, so it has to cost what it wins.",
       "keep": [
@@ -214,7 +214,7 @@
       ]
     },
     "spell:guard": {
-      "name": "Guard",
+      "name": "Brace",
       "class": "Brawler",
       "intent": "The Brawler's investment: a point of defense on an ally for good, plus a point while the pressure is on. Cheap, repeatable and permanent, which makes it the likeliest single cause of a match no one can finish.",
       "keep": [
@@ -229,7 +229,7 @@
       ]
     },
     "spell:extort": {
-      "name": "Extort",
+      "name": "Claim",
       "class": "Mercenary",
       "intent": "The Mercenary takes its cut: a cheap hit that skims a point of energy off the target and pockets one. It slows an enemy's big spells without ever locking them, which is the whole design: the drain stays under the two a creature earns each round, so the target always climbs, and the price stays at or above what the caster pockets, so casting it every round banks nothing.",
       "keep": [
@@ -245,7 +245,7 @@
       ]
     },
     "spell:protective_slam": {
-      "name": "Protective Slam",
+      "name": "Crash",
       "class": "Mercenary",
       "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense; a caster effect can say that now, as Shield Bash's brace does, but on this spell armour would break the Mercenary's line, so it stays off. Protection is expressed as tempo instead -- a slammed enemy loses its next action -- which is the one protective thing that can be said to an enemy. It slowed its target until the owner made it a stun on 2026-10-04: the slow was never enough to be bought. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stun, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
@@ -261,7 +261,7 @@
       ]
     },
     "spell:chain_slash": {
-      "name": "Chain Slash",
+      "name": "Dominate",
       "class": "Mercenary",
       "intent": "The Mercenary's payoff, and, beside Throwing Star, the only cast in the catalogue that hits exactly two, and the harder of the pair: the rung between a single-target spike and a line-wide storm. It is the reason to walk that line to the end, so it stays expensive and stays late.",
       "keep": [
@@ -276,7 +276,7 @@
       ]
     },
     "spell:thundering_seal": {
-      "name": "Thundering Seal",
+      "name": "Fortress",
       "class": "Mercenary",
       "intent": "Guard grown up: three permanent points of defense on an ally and three more for two rounds. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation. It is the one place the Mercenary protects with armour rather than with tempo -- `protective_slam` says 'never armour' and means it -- because the taxonomy's initiative buff (ADR 0036) belongs to the Assassin's line, not to this one, so the Mercenary protects an ally with armour alone.",
       "keep": [
@@ -292,7 +292,7 @@
       ]
     },
     "spell:shield_bash": {
-      "name": "Shield Bash",
+      "name": "Body Slam",
       "class": "Warlord",
       "intent": "Ironbound's active answer: Full Plate only armours its caster, so without this the package bought nothing to hit with until Dreadnought. A hit that leaves the caster braced keeps the Warlord's armour identity while giving the tier-2 pick a move of its own, priced beside Enraged Charge and Protective Slam at three energy.",
       "keep": [
@@ -309,7 +309,7 @@
       ]
     },
     "spell:full_plate": {
-      "name": "Full Plate",
+      "name": "Carapace",
       "class": "Warlord",
       "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is three self-targeted permanent points of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income for three points, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
       "keep": [
@@ -324,7 +324,7 @@
       ]
     },
     "spell:restorative_gush": {
-      "name": "Restorative Gush",
+      "name": "Vital Surge",
       "class": "Warlord",
       "intent": "The big single-target heal: more health back than most single hits take away. It decides on its own whether a war of attrition is winnable, which is why the average match length moves with it.",
       "keep": [
@@ -355,7 +355,7 @@
       ]
     },
     "spell:reckless_swing": {
-      "name": "Reckless Swing",
+      "name": "Wild Swing",
       "class": "Berserker",
       "intent": "The Berserker's every-round swing: cheap enough to throw each round on the income alone, and paid for in the Berserker's own blood. Enraged Charge is the big hit two rounds in three; this is what the rage does in between, and the self-inflicted wound is the rage -- the line that ends in Psycho Rush fights by giving something up.",
       "keep": [
@@ -371,7 +371,7 @@
       ]
     },
     "spell:enraged_charge": {
-      "name": "Enraged Charge",
+      "name": "Fury",
       "class": "Berserker",
       "intent": "The Berserker's gamble, and the one spell in the catalogue whose whole point is the roll. One heavy swing at the highest critical chance anywhere, bought at a price that keeps it to two rounds in three: rage that lands or does not, rather than a steady beat. It comes in one package with Reckless Swing, the every-round beat, so the class is offered the gamble and the steady hit together.",
       "keep": [
@@ -387,7 +387,7 @@
       ]
     },
     "spell:tornado": {
-      "name": "Tornado",
+      "name": "Whirlwind",
       "class": "Berserker",
       "intent": "The sweep: against a full team it is among the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly, and that is where it has been looked.",
       "keep": [
@@ -403,7 +403,7 @@
       ]
     },
     "spell:psycho_rush": {
-      "name": "Psycho Rush",
+      "name": "Deranged Charge",
       "class": "Berserker",
       "intent": "The Berserker's all-in: a third of a creature in a single cast, two-thirds on a critical, and the caster stands there open for a round afterwards. It throws itself at one target and the recoil is the spell -- swing that hard and you are not covering yourself.",
       "keep": [
@@ -419,7 +419,7 @@
       ]
     },
     "spell:poison_slash": {
-      "name": "Poison Slash",
+      "name": "Venom Claw",
       "class": "Scoundrel",
       "intent": "The Scoundrel's signature: a small hit that keeps hurting. It is the first way into bleed, at level 1, and the spell that teaches a player what a lasting effect is.",
       "keep": [
@@ -435,7 +435,7 @@
       ]
     },
     "spell:throwing_star": {
-      "name": "Throwing Star",
+      "name": "Quill",
       "class": "Scoundrel",
       "intent": "The Prowler's second verb. Its packagemate `poison_slash` concentrates -- one target, hit now and bleeding after -- and this one spreads: the same activation, the same price, across two enemies. A thrown weapon reaching more than one thing it is thrown at is the one shape an opener can carry that the class does not already have, and it is what makes the pick a decision every round rather than a decision once. It used to be the tempo half of the package instead, on two points of Base initiative bought at unlock; the package pays that now and pays it whole (ADR 0059), which left the spell as a smaller copy of its sibling.",
       "keep": [
@@ -469,7 +469,7 @@
       ]
     },
     "spell:parasite_jab": {
-      "name": "Parasite Jab",
+      "name": "Bite",
       "class": "Leech",
       "intent": "The Leech's opener and the first spell in the catalogue that feeds its caster (ADR 0031): a modest bite that puts some of what it takes back into whoever threw it. It is deliberately a lighter hit than its tier's heavy attacks, and with Latch beside it the line that answers being hurt, so the choice it offers is not how hard to hit but whether you need the health.",
       "keep": [
@@ -486,7 +486,7 @@
       ]
     },
     "spell:hateful_sacrifice": {
-      "name": "Hateful Sacrifice",
+      "name": "Blood Price",
       "class": "Leech",
       "intent": "The largest single hit in the game, and it costs the caster three health to throw. The sacrifice is the name of the spell and it is finally in it (ADR 0031): the legacy prototype paired a hit of 10 with `SelfDirect Health -4`, and only the first half survived the port.",
       "keep": [
@@ -502,7 +502,7 @@
       ]
     },
     "spell:soul_devourer": {
-      "name": "Soul Devourer",
+      "name": "Soul Feast",
       "class": "Leech",
       "intent": "Parasite Jab grown up: the Leech takes what it hits, and this one takes two things. The health it drinks is the class signature the opener already has; the energy it tears out is this spell's own, the half the port dropped and ADR 0035 gave back.",
       "keep": [
@@ -535,7 +535,7 @@
       ]
     },
     "spell:momentum": {
-      "name": "Momentum",
+      "name": "Pursuit",
       "class": "Assassin",
       "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more. The owner raised the hit from 2 to 3 on 2026-10-04: a match is nine or ten rounds, and the spell is cast for its energy more than its hit.",
       "keep": [
@@ -549,7 +549,7 @@
       ]
     },
     "spell:night_raid": {
-      "name": "Night Raid",
+      "name": "Blood Hunt",
       "class": "Assassin",
       "intent": "The Deathstalker's raid: a cut on two enemies that takes three energy from each, more than a round's income, for three, the only drain in the game that reaches more than one. The Assassin is already first in the turn order, so it strikes before the others can spend and leaves their big spells out of reach. It replaced Death Squad on 2026-10-04, a team haste no agent ever cast (journal).",
       "keep": [
@@ -566,7 +566,7 @@
       ]
     },
     "spell:mortal_wound": {
-      "name": "Mortal Wound",
+      "name": "Eviscerate",
       "class": "Assassin",
       "intent": "The bleed that actually kills: a hit now and a heavier wound over the rounds that follow. It is the reason to fear the Assassin and the likeliest single cause of a match that runs away from the loser.",
       "keep": [
@@ -582,7 +582,7 @@
       ]
     },
     "spell:adrenaline_tonic": {
-      "name": "Adrenaline Tonic",
+      "name": "Overdrive",
       "class": "Trickster",
       "intent": "The Plague Doctor's stimulant: two points of energy for up to three allies, for one. Its point is where the energy goes: it brings three creatures to a spell they could not pay for a round early. It used to carry a point of poison in the same dose and to be held at or under what Wait gives across the team, which kept it a spell nobody cast; the owner lifted both on 2026-10-03, once the agents priced energy by the spell it unlocks (ADR 0096, journal).",
       "keep": [
@@ -596,7 +596,7 @@
       ]
     },
     "spell:noxious_cure": {
-      "name": "Noxious Cure",
+      "name": "Toxic Mend",
       "class": "Trickster",
       "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is left open for having drunk it. Legacy stripped 2 defense from the allies it healed and ADR 0035 gave that stat back, so the bargain is now written in the currency it was written in. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
       "keep": [
@@ -613,7 +613,7 @@
       ]
     },
     "spell:tranquilizer_dart": {
-      "name": "Tranquilizer Dart",
+      "name": "Paralyzing Barb",
       "class": "Trickster",
       "intent": "The cheap stun: a stolen activation for half what Crushing Stomp asks, and almost nothing else. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
       "keep": [
@@ -629,7 +629,7 @@
       ]
     },
     "spell:infectious_blast": {
-      "name": "Infectious Blast",
+      "name": "Contagion",
       "class": "Trickster",
       "intent": "A plague cloud: one energy to strip the armour off the whole enemy team for good, with a little damage as it lands. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
       "keep": [
@@ -645,7 +645,7 @@
       ]
     },
     "spell:lightning_bolt": {
-      "name": "Lightning Bolt",
+      "name": "Shock",
       "class": "Sorcerer",
       "intent": "The Sorcerer's bread and butter: a modest hit that crits one time in two. It is the caster's mirror of Pummel and the spell every Sorcerer branch gets compared against.",
       "keep": [
@@ -659,7 +659,7 @@
       ]
     },
     "spell:rejuvenate": {
-      "name": "Rejuvenate",
+      "name": "Revitalize",
       "class": "Sorcerer",
       "intent": "The Sorcerer's first heal and the reason a Sorcerer team can outlast a Brawler team: 5 health for two energy (4 until the owner raised it on 2026-10-02), the price the healing line is measured from. Healing Screech, Restorative Gush and Noxious Cure cost the same and have to justify it by healing more; Soothing Chant costs one by healing less, over time.",
       "keep": [
@@ -674,7 +674,7 @@
       ]
     },
     "spell:frostbite": {
-      "name": "Frostbite",
+      "name": "Ice Grip",
       "class": "Wizard",
       "intent": "The Elementalist's spare-energy spell: one point is what Meteor leaves behind on an income of two, and this spends it. A light chill that slows its target for a round -- the cold before the ice: Ice Spear freezes outright at tier 3.",
       "keep": [
@@ -689,7 +689,7 @@
       ]
     },
     "spell:meteor": {
-      "name": "Meteor",
+      "name": "Emberstorm",
       "class": "Wizard",
       "intent": "The Wizard's sweep, and the spell that says what reach costs: each enemy takes less than one of them would take from a single-target spell of the same depth, and the whole line reads 7.00 a round, under the tier-2 hits beside it (Enraged Charge and Shield Bash at 8.40, Protective Slam at 9.02). It is the only sweep in a class whose other three spells each strike one target, so it is the one that has to make the trade legible -- a sweep that hit as hard per target as a bolt would simply be a bolt that hits three.",
       "keep": [
@@ -706,7 +706,7 @@
       ]
     },
     "spell:engulfing_flames": {
-      "name": "Engulfing Flames",
+      "name": "Incinerate",
       "class": "Wizard",
       "intent": "The clean nuke. The catalogue holds three big single-target hits at three energy and this is the only one that costs its caster nothing -- Psycho Rush leaves the Berserker open for a round, Hateful Sacrifice takes three of the Leech's own health, and the Wizard simply casts.",
       "keep": [
@@ -722,7 +722,7 @@
       ]
     },
     "spell:ice_spear": {
-      "name": "Ice Spear",
+      "name": "Deep Freeze",
       "class": "Wizard",
       "intent": "Damage that also freezes: a hit now and the target frozen for a round. It is the Wizard's answer to going second -- the cold that Frostbite only slows at tier 2 sets hard here.",
       "keep": [
@@ -737,7 +737,7 @@
       ]
     },
     "spell:bone_ward": {
-      "name": "Bone Ward",
+      "name": "Bonewall",
       "class": "Necromancer",
       "intent": "The Necromancer's single ward: a shell of bone around one ally, paid for in the caster's own blood. It spends the point Summon Minions leaves over on an income of two, and it is the one-target first step of Revenant Guards, which wards the whole team at the same kind of price at tier 3.",
       "keep": [
@@ -753,7 +753,7 @@
       ]
     },
     "spell:summon_minions": {
-      "name": "Summon Minions",
+      "name": "Infestation",
       "class": "Necromancer",
       "intent": "One of the two attacks in the catalogue that do nothing when they land (`latch` is the other): the minions are raised, and they gnaw at the whole enemy line over the rounds that follow. Raising them is paid in the Necromancer's own health, so the class opens on a bargain rather than on a blow -- patience bought with life. It is what both its children inherit: `crazed_specter`'s reach and `revenant_guards`' willingness to pay.",
       "keep": [
@@ -770,7 +770,7 @@
       ]
     },
     "spell:revenant_guards": {
-      "name": "Revenant Guards",
+      "name": "Wraithguard",
       "class": "Necromancer",
       "intent": "Thundering Seal for the whole team, paid in the Necromancer's own blood: permanent defense on three allies at once, and four health off whoever raised them. It is the willingness to pay its parent names, spent on the team instead of on the enemy.",
       "keep": [
@@ -788,7 +788,7 @@
       ]
     },
     "spell:crazed_specter": {
-      "name": "Crazed Specter",
+      "name": "Death Wail",
       "class": "Necromancer",
       "intent": "The heaviest sweep in the game, dealt over time, and the Necromancer bleeds for it: a light hit on the whole enemy team that leaves each of them bleeding four a round for two rounds, and four health off the caster every time it is thrown. Since 2026-10-05 it has no critical chance: its weight is in the bleed, which a critical never reached. Reach is what this class inherits from its opener; paying for it is the other half.",
       "keep": [
@@ -805,7 +805,7 @@
       ]
     },
     "spell:soothing_chant": {
-      "name": "Soothing Chant",
+      "name": "Whisper",
       "class": "Shaman",
       "intent": "The Shaman's group mend: a little healing each round on up to three allies, for the one energy a round leaves over. Healing Screech saves one creature in trouble; this keeps the whole team topped up, and it is the first group spell of the line that Spiritcaller carries at tier 3.",
       "keep": [
@@ -820,7 +820,7 @@
       ]
     },
     "spell:healing_screech": {
-      "name": "Healing Screech",
+      "name": "Vital Echo",
       "class": "Shaman",
       "intent": "The one heal split between now and later: a quarter of it now and the rest over the next two rounds, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 8 health against `rejuvenate`'s 4 for the same price -- and the step is entirely in the part that has to be bought early.",
       "keep": [
@@ -838,7 +838,7 @@
       ]
     },
     "spell:restorative_burst": {
-      "name": "Restorative Burst",
+      "name": "Renewal Burst",
       "class": "Shaman",
       "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only spell that hands one ally health and energy at once -- `adrenaline_tonic` gives up to three allies a point of energy for a bleed, and `wait`, `momentum` and `extort` hand energy only to their own caster.",
       "keep": [
@@ -854,7 +854,7 @@
       ]
     },
     "spell:toxic_waves": {
-      "name": "Toxic Waves",
+      "name": "Void Pulse",
       "class": "Shaman",
       "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the round after. It is what makes a Shaman team win the rounds it did not act in.",
       "keep": [
@@ -881,7 +881,7 @@
       "knobs": []
     },
     "tier:occultist": {
-      "name": "Occultist",
+      "name": "Warped",
       "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it back to 2 so the Prowler stays the fastest opener (journal, 2026-10-01).",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -889,7 +889,7 @@
       "knobs": []
     },
     "tier:prowler": {
-      "name": "Prowler",
+      "name": "Predator",
       "intent": "The Scoundrel's opener, and the fastest of the three, alone again since the owner set Occultist back to 2 (journal, 2026-10-01): the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
@@ -898,7 +898,7 @@
       "knobs": []
     },
     "tier:assassin": {
-      "name": "Assassin",
+      "name": "Deathmarked",
       "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Ambush, a heavy strike that slows its caster next round. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
@@ -907,7 +907,7 @@
       "knobs": []
     },
     "tier:berserker": {
-      "name": "Berserker",
+      "name": "Frenzied",
       "intent": "The Berserker's opener: Enraged Charge, one swing on the highest critical chance, and Reckless Swing, the every-round hit paid in blood. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -915,7 +915,7 @@
       "knobs": []
     },
     "tier:elementalist": {
-      "name": "Elementalist",
+      "name": "Stormborn",
       "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies, and Frostbite, the cheap slowing hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -923,7 +923,7 @@
       "knobs": []
     },
     "tier:ironbound": {
-      "name": "Ironbound",
+      "name": "Ironhide",
       "intent": "The Warlord's opener: Full Plate, armour as a line's identity, and Shield Bash, the hit that braces its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -931,7 +931,7 @@
       "knobs": []
     },
     "tier:marauder": {
-      "name": "Marauder",
+      "name": "Oppressor",
       "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger, and Extort, the hit that skims energy. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -939,7 +939,7 @@
       "knobs": []
     },
     "tier:necromancer": {
-      "name": "Necromancer",
+      "name": "Necrotic",
       "intent": "The Necromancer's opener: Summon Minions and Bone Ward, both paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -955,7 +955,7 @@
       "knobs": []
     },
     "tier:plague_doctor": {
-      "name": "Plague Doctor",
+      "name": "Blighted",
       "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the owner set it to 2 on 2026-10-02 and to 3 on 2026-10-03, with Noxious Cure's heal at 7 and Adrenaline Tonic rebuilt, which took the package from the weakest tier 2 to even (journal). At 4, with the cure healing 6, it read +0.071, over the top.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -965,7 +965,7 @@
       ]
     },
     "tier:shaman": {
-      "name": "Shaman",
+      "name": "Ethereal",
       "intent": "The Shaman's opener: Healing Screech, a heal that keeps healing, and Soothing Chant, the team regeneration of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 0, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -992,7 +992,7 @@
       "knobs": []
     },
     "tier:dreadnought": {
-      "name": "Dreadnought",
+      "name": "Colossus",
       "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 1 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1000,7 +1000,7 @@
       "knobs": []
     },
     "tier:harbinger": {
-      "name": "Harbinger",
+      "name": "Cataclysm",
       "intent": "The Wizard's close: the burning nuke and the stunning spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1008,7 +1008,7 @@
       "knobs": []
     },
     "tier:lich": {
-      "name": "Lich",
+      "name": "Revenant",
       "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1033,7 +1033,7 @@
       "knobs": []
     },
     "tier:spiritcaller": {
-      "name": "Spiritcaller",
+      "name": "Transcendent",
       "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1041,7 +1041,7 @@
       "knobs": []
     },
     "tier:warmonger": {
-      "name": "Warmonger",
+      "name": "Tyrant",
       "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"

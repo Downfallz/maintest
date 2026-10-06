@@ -1,6 +1,6 @@
 {
   "id": "spell:restorative_gush:v1",
-  "name": "Restorative Gush",
+  "name": "Vital Surge",
   "spellType": "Defensive",
   "creatureClass": "Warlord",
   "energyCost": 2,

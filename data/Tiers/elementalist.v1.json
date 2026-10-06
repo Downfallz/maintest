@@ -1,6 +1,6 @@
 {
   "id": "tier:elementalist:v1",
-  "name": "Elementalist",
+  "name": "Stormborn",
   "level": 2,
   "prerequisites": [
     "tier:occultist:v1"
