@@ -4,6 +4,24 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-06. The packages take their mutation-form names, and no match changes
+
+- **What changed.** Fifteen package display names, per [package-renaming-plan.md](../domain/package-renaming-plan.md):
+  Brute is Colossus, Berserker Frenzied, Ironbound Ironhide, Marauder Conqueror, Warmonger Crusher, Prowler
+  Predator, Assassin Deathmarked, Plague Doctor Blighted, Occultist Warped, Elementalist Stormborn, Harbinger
+  Cataclysm, Necromancer Necrotic, Lich Revenant, Shaman Ethereal, Spiritcaller Transcendent. Ravager,
+  Dreadnought, Deathstalker, Parasite, Soulreaver and Blightweaver keep theirs. Only each Tier's `name` and
+  the matching package `name` in `data/balance/knobs.json` moved.
+- **What did not.** Every id (`tier:brute:v1` is still `tier:brute:v1`), every file name, every Spell's
+  `creatureClass`, the feature schema (built from Tier ids), and the play.
+- **The reading.** Content `ad3e4d00` to `66964555`. The new benchmark digest is the old one entry for entry:
+  the same 400 matches, winners, rounds and health. A name feeds the content hash and nothing else.
+- **Why the ids stay.** Renaming them was tried and measured first: it changes the play. The engine offers
+  the available Tiers in id order (`TierEligibility`), and the bots break ties in that order, so new ids
+  reshuffle the level-1 openers (Brute, Occultist, Prowler became Colossus, Predator, Warped). Greedy against
+  itself went from 11.3 rounds to 15.3 and Player 1 from 49.5% to 56%, with no rule touched. The maintainer
+  kept the ids.
+
 ## 2026-10-05. The refit (`ci-247`): a clone that copies search-23 to 97 % and loses to Greedy
 
 - **The turn.**

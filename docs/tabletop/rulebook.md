@@ -331,25 +331,25 @@ Then every pick token comes off the mats and the boards.
 
 > **Example.** Round 1 offers an opportunity. Every Creature knows Basic Attack, Heavy Strike and Wait, owns no
 > Tier, and has a Base initiative of 5. Each Player has 2 picks.
-> **Player 1, first pick: Brute, for Creature 1.** Brute is level 1 and requires nothing. Player 1 lays a Brute
+> **Player 1, first pick: Colossus, for Creature 1.** Colossus is level 1 and requires nothing. Player 1 lays a Colossus
 > package card face down with Creature 1 and moves a pick token onto Creature 1's board. No Spell card moves,
 > and Base initiative stays at 5.
-> **Player 1, second pick.** Player 1 wants Marauder for Creature 1. Marauder is level 2 and requires Brute.
-> Creature 1 does not own Brute yet: its card is face down. And Creature 1 holds a pick token. The pick is
-> refused twice over. Player 1 picks **Occultist for Creature 2** instead, face down, and says they are done.
-> **Player 2, at the same time:** Prowler for Creature 4, and Brute for Creature 5. Player 2 does not know
-> Player 1's Tiers, and Creature 1's face-down Brute does not stop Creature 5 picking it.
-> **The Purchase reveal.** Both Players turn the four cards over together. Player 1's purchases: Brute for
-> Creature 1, Pummel and Guard into the hand, +1 takes Base initiative to 6; Occultist for Creature 2,
-> Lightning Bolt and Rejuvenate, +2 to 7. Player 2's: Prowler for Creature 4, Poison Slash and Throwing Star,
-> +3 to 8; Brute for Creature 5, Pummel and Guard, +1 to 6. The four pick tokens come off the boards.
-> Marauder waits for Creature 1 until Round 3, since Round 2 offers no opportunity. Warmonger, the level 3 Tier
-> above Marauder, waits until Round 5 at the earliest. Until Round 3, Creature 4 at 8 holds the highest Base
+> **Player 1, second pick.** Player 1 wants Conqueror for Creature 1. Conqueror is level 2 and requires Colossus.
+> Creature 1 does not own Colossus yet: its card is face down. And Creature 1 holds a pick token. The pick is
+> refused twice over. Player 1 picks **Warped for Creature 2** instead, face down, and says they are done.
+> **Player 2, at the same time:** Predator for Creature 4, and Colossus for Creature 5. Player 2 does not know
+> Player 1's Tiers, and Creature 1's face-down Colossus does not stop Creature 5 picking it.
+> **The Purchase reveal.** Both Players turn the four cards over together. Player 1's purchases: Colossus for
+> Creature 1, Pummel and Guard into the hand, +1 takes Base initiative to 6; Warped for Creature 2,
+> Lightning Bolt and Rejuvenate, +2 to 7. Player 2's: Predator for Creature 4, Poison Slash and Throwing Star,
+> +3 to 8; Colossus for Creature 5, Pummel and Guard, +1 to 6. The four pick tokens come off the boards.
+> Conqueror waits for Creature 1 until Round 3, since Round 2 offers no opportunity. Crusher, the level 3 Tier
+> above Conqueror, waits until Round 5 at the earliest. Until Round 3, Creature 4 at 8 holds the highest Base
 > initiative on the table, and Creature 2 at 7 is the fastest on Player 1's side.
 >
 > **Example, one Creature left.** Round 7 offers an opportunity. Player 2 has only Creature 6 alive, and it
-> owns Occultist. Player 2 has **one** pick, not two: Creature 6 is the only Creature it can go to. Player 2
-> picks Shaman, level 2 and requiring Occultist, for Creature 6. Creature 6 now holds a pick token, so Player 2
+> owns Warped. Player 2 has **one** pick, not two: Creature 6 is the only Creature it can go to. Player 2
+> picks Ethereal, level 2 and requiring Warped, for Creature 6. Creature 6 now holds a pick token, so Player 2
 > has no pick they could use and does not pass. Their second pick token stays on the mat, unused, and comes
 > off with the rest. Player 1, with three living Creatures, still has two picks. At the Purchase reveal,
 > Healing Screech and Soothing Chant go into Player 2's hand, and the bonus of +2 raises Creature 6's Base
@@ -409,10 +409,10 @@ Quick always beats Standard. A Quick Creature with Current initiative 0 still ac
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
 
 > **Example.** Round 4, which offers no Evolution opportunity. In Rounds 1 and 3 both Players spent their four
-> picks alike. Round 1: Occultist for their first and second Creatures. Round 3: Elementalist for their first
-> Creature, and Occultist for their third. Occultist is +2 and Elementalist +3, so Creatures 1 and 4 read a Base
+> picks alike. Round 1: Warped for their first and second Creatures. Round 3: Stormborn for their first
+> Creature, and Warped for their third. Warped is +2 and Stormborn +3, so Creatures 1 and 4 read a Base
 > initiative of 10, and the other four read 7. **Two sides that buy alike tie everywhere.**
-> In Round 3, Creature 4 hit Creature 2 with **Frostbite**, which Elementalist teaches:
+> In Round 3, Creature 4 hit Creature 2 with **Frostbite**, which Stormborn teaches:
 > `Initiative -3, 1 round`. It landed after Round 3's timeline was built, so this is the first Round it
 > changes ([6.6](#66-the-combat-timeline-and-its-tiebreaks)). Creature 2's Current initiative is 7 - 3 = 4.
 > Every other Creature's is its Base initiative.

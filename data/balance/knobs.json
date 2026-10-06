@@ -887,7 +887,7 @@
   },
   "packages": {
     "tier:brute": {
-      "name": "Brute",
+      "name": "Colossus",
       "intent": "The Brawler's opener: a cheap swing and a point of armour, bought together. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -895,7 +895,7 @@
       "knobs": []
     },
     "tier:occultist": {
-      "name": "Occultist",
+      "name": "Warped",
       "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it back to 2 so the Prowler stays the fastest opener (journal, 2026-10-01).",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -903,7 +903,7 @@
       "knobs": []
     },
     "tier:prowler": {
-      "name": "Prowler",
+      "name": "Predator",
       "intent": "The Scoundrel's opener, and the fastest of the three, alone again since the owner set Occultist back to 2 (journal, 2026-10-01): the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
@@ -912,7 +912,7 @@
       "knobs": []
     },
     "tier:assassin": {
-      "name": "Assassin",
+      "name": "Deathmarked",
       "intent": "The Assassin's opener: Momentum, a free strike that banks energy, and Ambush, a heavy strike that slows its caster next round. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
@@ -921,7 +921,7 @@
       "knobs": []
     },
     "tier:berserker": {
-      "name": "Berserker",
+      "name": "Frenzied",
       "intent": "The Berserker's opener: Enraged Charge, one swing on the highest critical chance, and Reckless Swing, the every-round hit paid in blood. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -929,7 +929,7 @@
       "knobs": []
     },
     "tier:elementalist": {
-      "name": "Elementalist",
+      "name": "Stormborn",
       "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies, and Frostbite, the cheap slowing hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 3 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -937,7 +937,7 @@
       "knobs": []
     },
     "tier:ironbound": {
-      "name": "Ironbound",
+      "name": "Ironhide",
       "intent": "The Warlord's opener: Full Plate, armour as a line's identity, and Shield Bash, the hit that braces its caster. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -945,7 +945,7 @@
       "knobs": []
     },
     "tier:marauder": {
-      "name": "Marauder",
+      "name": "Conqueror",
       "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger, and Extort, the hit that skims energy. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -953,7 +953,7 @@
       "knobs": []
     },
     "tier:necromancer": {
-      "name": "Necromancer",
+      "name": "Necrotic",
       "intent": "The Necromancer's opener: Summon Minions and Bone Ward, both paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -969,7 +969,7 @@
       "knobs": []
     },
     "tier:plague_doctor": {
-      "name": "Plague Doctor",
+      "name": "Blighted",
       "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals, and Adrenaline Tonic, energy for the team. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the owner set it to 2 on 2026-10-02 and to 3 on 2026-10-03, with Noxious Cure's heal at 7 and Adrenaline Tonic rebuilt, which took the package from the weakest tier 2 to even (journal). At 4, with the cure healing 6, it read +0.071, over the top.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -979,7 +979,7 @@
       ]
     },
     "tier:shaman": {
-      "name": "Shaman",
+      "name": "Ethereal",
       "intent": "The Shaman's opener: Healing Screech, a heal that keeps healing, and Soothing Chant, the team regeneration of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 0, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1014,7 +1014,7 @@
       "knobs": []
     },
     "tier:harbinger": {
-      "name": "Harbinger",
+      "name": "Cataclysm",
       "intent": "The Wizard's close: the burning nuke and the stunning spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1022,7 +1022,7 @@
       "knobs": []
     },
     "tier:lich": {
-      "name": "Lich",
+      "name": "Revenant",
       "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason it would be the first thing a knob on this package moved.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1047,7 +1047,7 @@
       "knobs": []
     },
     "tier:spiritcaller": {
-      "name": "Spiritcaller",
+      "name": "Transcendent",
       "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 3, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
@@ -1055,7 +1055,7 @@
       "knobs": []
     },
     "tier:warmonger": {
-      "name": "Warmonger",
+      "name": "Crusher",
       "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it to 2 on 2026-10-02.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"

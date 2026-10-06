@@ -236,7 +236,7 @@ numbered discs**, **VALUE** (team size), moved only at a Purchase reveal, at mos
 | Choice | The constraint it answers |
 | --- | --- |
 | In the middle | No room on the card; and a pick is chosen on where a purchase puts a Creature against the enemies (ADR 0088, 0089), which a ladder shows for all six at once |
-| 5 to 39 | Base starts at the definition's 5 and only grows; 39 keeps the reach of today's rails, so Plague Doctor's bonus at its knob `max` (ceiling 36, components 3.4) reprints nothing. **VALUE** |
+| 5 to 39 | Base starts at the definition's 5 and only grows; 39 keeps the reach of today's rails, so Blighted's bonus at its knob `max` (ceiling 36, components 3.4) reprints nothing. **VALUE** |
 | 35 cells of 22 x 33 mm, 5 rows of 7, 154 x 165 mm, its own sheet | A cell holds six 10 mm discs: all six Creatures start on 5 |
 
 Current initiative is the ladder less the Initiative debuff tokens, read once at Turn order resolution, as
@@ -516,9 +516,9 @@ a defence band on every card, colour-coded categories.
 2. **A fixed icon row on every Spell**: target, cost, critical threshold, and whether it ignores Defense (only
    Bleed does). A card-face change, not a rule, and what brings a Spell nearer one line (3.6). Icons replace
    words, which components 2.2 makes the maintainer's decision (the `Regen` precedent).
-3. **Colour by Tier family.** Three families of seven: **Brute** (Berserker-Ravager, Ironbound-Dreadnought,
-   Marauder-Warmonger), **Occultist** (Elementalist-Harbinger, Necromancer-Lich, Shaman-Spiritcaller),
-   **Prowler** (Assassin-Deathstalker, Parasite-Soulreaver, Plague Doctor-Blightweaver). A hue a family makes
+3. **Colour by Tier family.** Three families of seven: **Colossus** (Frenzied-Ravager, Ironhide-Dreadnought,
+   Conqueror-Crusher), **Warped** (Stormborn-Cataclysm, Necrotic-Revenant, Ethereal-Transcendent),
+   **Predator** (Deathmarked-Deathstalker, Parasite-Soulreaver, Blighted-Blightweaver). A hue a family makes
    a cascade readable across the table and groups the dial's ring. **Not** the dock's four colours, or "the
    plum card" and "the plum lane" collide; and a glyph each, for greyscale.
 

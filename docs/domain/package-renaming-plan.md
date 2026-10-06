@@ -1,5 +1,17 @@
 # Package renaming plan
 
+## Status
+
+- **Done (2026-10-06): the English display names.** Every Tier's `name` and its package `name` in
+  `data/balance/knobs.json` read as the table below. The play did not move: the benchmark digest is the
+  previous one entry for entry (journal, 2026-10-06).
+- **Kept: the ids and the file names**, by the maintainer's decision. `tier:brute:v1` is still the id of
+  Colossus, in `data/Tiers/brute.v1.json`. Renaming the ids was measured first and it changes the play: the
+  engine offers the available Tiers in id order and the bots break ties in that order, so new ids reshuffle
+  the level-1 openers (Greedy against itself: 11.3 rounds to 15.3, Player 1 49.5% to 56%).
+- **Not yet: the French display names, and the family names** (Physical, Predator, Warped). French needs a
+  decision on where a translation lives in the presentation layer first.
+
 ## Goal
 
 Rename the evolution packages so they read as **mutations or forms a creature becomes**, not RPG classes a creature takes.
@@ -28,7 +40,7 @@ The internal mechanical vocabulary remains separate from the names. Package iden
 
 ## Proposed package names
 
-| Family | Tier | Current EN | Proposed EN | Proposed FR |
+| Family | Tier | Previous EN | EN | Proposed FR |
 | --- | ---: | --- | --- | --- |
 | Physical | 1 | Brute | **Colossus** | **Colosse** |
 | Physical | 2 | Berserker | **Frenzied** | **Frénétique** |

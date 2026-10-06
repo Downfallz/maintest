@@ -72,8 +72,8 @@ test('multiclass starts at the new opportunity with existing packages visible', 
   await open(page, 'multiclass');
   await expect(page.locator('#phase')).toContainText('Round 3');
   await expect(page.locator('#evolution-budget')).toContainText('2 / 2');
-  await expect(page.locator('#choices')).toContainText('Occultist');
-  await expect(page.locator('#choices')).toContainText('Berserker');
+  await expect(page.locator('#choices')).toContainText('Warped');
+  await expect(page.locator('#choices')).toContainText('Frenzied');
   // The spellbook's link opens the atlas at every width; a phone has no tab row for it.
   await page.locator('#hand-talents').click();
   await expect(page.locator('#mat')).toBeVisible();

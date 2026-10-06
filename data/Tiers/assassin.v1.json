@@ -1,6 +1,6 @@
 {
   "id": "tier:assassin:v1",
-  "name": "Assassin",
+  "name": "Deathmarked",
   "level": 2,
   "prerequisites": [
     "tier:prowler:v1"
