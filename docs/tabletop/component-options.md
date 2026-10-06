@@ -278,6 +278,19 @@ can name the Spells, not state them. To read every Spell without lifting a card,
 | --- | --- | --- | --- |
 | Column, 89 + 45 x (n - 1) mm | 201 mm | 269 mm | 494 mm |
 
+**Compact-cascade prototype.** The half-card step is the fully-readable extreme, not the only layout worth
+testing. A package can instead expose a **20 to 25 mm summary band** while most of its rules text remains
+under the next card. The band should be enough to scan the build at a glance:
+
+`RAVAGER · AoE / Burst / Sacrifice · +3 Init · A Tornado · B Psycho Rush`
+
+The full text of both Spells remains on the same package card below the band and can be exposed when exact
+wording is needed. This deliberately trades "every line of every Spell visible at all times" for a much
+shorter physical spellbook while keeping every owned package face up and immediately identifiable. At a
+25 mm step, five packages occupy about 189 mm instead of 269 mm; ten occupy about 314 mm instead of 494 mm.
+The prototype should test whether players actually need full rules text continuously visible once they know
+their own build, or whether the summary band is enough for normal planning.
+
 ### 3.7 The pick tokens go: 4 to 0
 
 Since ADR 0089 a pick is a package card laid face down with the Creature (§5.3). That card, or the dial of
@@ -316,9 +329,10 @@ director.
 - **The cascade as a tree**: a level-2 card on its level-1, a level-3 on its level-2. The 21 Tiers are three
   trees of seven (Part 6, 3), so a prerequisite reads as "it sits on its parent". Wider than a column
   when a Creature owns two branches of one family.
-- **A Speed ring on the dial**: set Speed, turn the dials together, then set the Intent. It takes out the 12
-  Speed cards (2 sheets) for one more setting a Round, and loses the Quick card's printed reminder that a
-  Quick Creature rolls no critical.
+- **Keep Speed separate from the Intent dial.** Speed is committed and revealed **before** the Spell Intent
+  is chosen, specifically so the players choose their Spells with turn order known. Combining Speed and
+  Intent on one dial would collapse two sequential decisions into one and remove that information structure.
+  The 12 Speed cards therefore remain in the hybrid proposal.
 
 ### 3.11 The box, counted
 
@@ -371,6 +385,45 @@ costs one lookup at each reveal. And **the component stops enforcing "the Creatu
 card could only come from a hand that held it, while a dial can name a Tier the Creature does not own, or
 `C` on a Tier. The engine refuses such an Intent at submission (`IntentRules`, `SpellNotKnown`), so no rule
 says what a table does with one turned at the reveal (Part 8, question 1).
+
+#### 4.1.1 Relative spellbook dial: S / 1-10 + A / B / C
+
+A second dial layout is now worth prototyping beside the 21-name catalogue dial.
+
+Instead of printing every Tier name on the dial, **number packages in the order that this Creature acquires
+them**. The cascade itself becomes the legend:
+
+- `1 = Colossus`
+- `2 = Frenzied`
+- `3 = Ravager`
+- `4 = Predator`
+- and so on, up to the maximum 10 purchases a Creature can make in 20 Rounds.
+
+The outer ring then needs only **`S / 1 / 2 / ... / 10`**. The inner ring remains **A / B / C**.
+`S` points to the common starting kit: `SA = Basic Attack`, `SB = Heavy Strike`, `SC = Wait`.
+For bought packages, only A and B are legal because each teaches exactly two Spells.
+
+Example: if package 3 in this Creature's cascade is Ravager, **`3B` means Ravager's Spell B,
+Psycho Rush**. Another Creature can have a different package in slot 3; the dial is an address into that
+Creature's visible spellbook, not a global catalogue.
+
+**Why prototype it:**
+
+- one universal dial works for every Creature and does not contain content names;
+- package renames or localization changes do not force a dial reprint;
+- the dial can be physically smaller and less visually dense than 22 named cells;
+- the cascade remains the visible record of what the Creature knows;
+- it matches how players actually think about a growing personal spellbook rather than asking them to scan
+  the full 21-Tier catalogue every Intent.
+
+**Cost:** the component still does not enforce legality. A player can reveal `9B` on a Creature that owns
+only four packages, just as the named dial can point to an unowned Tier. The rule therefore still needs an
+invalid-Intent verdict (Part 8, question 1). The slot number is also a new physical convention, so the package
+band should print that number clearly or provide a tiny write-on/clip area.
+
+**Speed stays separate.** This relative dial is only the Spell Intent. Speed is committed and revealed first;
+the turn order is then known, and only after that do players choose their Spells. Merging Speed onto the same
+dial would change the decision sequence rather than merely save components.
 
 ### 4.2 Option A: the tree on the mat, the packages in hand
 
@@ -510,8 +563,10 @@ Not made here. One line each.
 2. **Does the table hide which Creature was picked, and a pass?** ADR 0089 hides both; the rulebook's
    procedure shows both. A dial with every living Creature hides them, and changes §5.3; it also needs a word
    on a Player who sets more Tiers than they have picks. **`boardgame-director`.** Settled by a verdict.
-3. **Dial or deck** (4.3). **The maintainer.** Settled by a prototype: one dial and one cascade printed at
-   size, ten reveals timed against ten card reveals, and the cascade read across a real table at 8 pt.
+3. **Dial or deck, and which dial layout** (4.1, 4.3). **The maintainer.** Settled by a prototype of the
+   21-name catalogue dial and the relative `S / 1-10 + A / B / C` dial beside the same cascade, plus ten
+   reveals timed against ten card reveals. Test both the fully-readable half-card cascade and the compact
+   20-25 mm summary-band cascade at real table distance.
 4. **The Creature card's size** (3.1): 80 x 120 with the starting Spells elsewhere, or a larger card.
    **The maintainer.** Settled by a 1:1 print with real tokens and dice on it.
 5. **Dice or clips** for Energy and Defense (3.2, 3.3): dice read fastest and get knocked over; clips survive
