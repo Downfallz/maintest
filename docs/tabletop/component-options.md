@@ -3,7 +3,10 @@
 Status: **Draft** (2026-10-04). A design proposal, not a manifest. It records what the maintainer has
 decided about the physical box, what he is still choosing between, and the evidence for each, so the next
 pass on [components.md](components.md) and [rulebook.md](rulebook.md) can be made from it. Read at content
-`e6f72578` and the table's rule set (`docs/tabletop/playtest.rules.json`).
+`e6f72578` and the table's rule set (`docs/tabletop/playtest.rules.json`). The counts of the catalogue and the
+starting kit are re-read at `3c9eb083` (2026-10-06), where Basic Attack is gone and every Creature starts
+with Heavy Strike and Wait; each line that moved says so. The bot matches were not re-run: they are read at
+`e6f72578`, with Basic Attack in every hand.
 
 ## 1. Status and scope
 
@@ -172,7 +175,7 @@ table where a cube does not, and the frame puts every cell on an edge.
 | Number and name | 10 mm high | fits | fits |
 | Four lanes of three 15 mm tokens | 46 x 64 mm | fits, exactly | fits |
 | Dice: Energy d20, Defense buffs d20, debuffs d10 (3.2, 3.3) | 56 x 22 mm | **no** | fits; the card is full |
-| Three starting Spells, 2 lines each | 46 x 24 mm | no | no |
+| Two starting Spells, 2 lines each (three, 46 x 24 mm, until 2026-10-06) | 46 x 16 mm | fits beside the number and the lanes, 90 of 96 mm | no: the dice fill the card |
 | Base initiative, tens and units rails | 70 mm long | no | no |
 
 **A tarot card does not hold the maintainer's list.** The proposal is **80 x 120 mm**, a stocked card and
@@ -244,9 +247,9 @@ today. The ordering track keeps its own 6 discs (3.8).
 
 ### 3.5 The starting Spells
 
-**3**, **VALUE** (`startingSpellIds`): Basic Attack, Heavy Strike, Wait. The maintainer wants them on the
-Creature card; next to its live state they do not fit (3.1). All six Creatures play one Creature definition,
-so the three are the same everywhere. Two places that cost nothing: **the back of every dial** (identical on
+**2**, **VALUE** (`startingSpellIds`): Heavy Strike, Wait. It was 3, with Basic Attack, until 2026-10-06.
+The maintainer wants them on the Creature card; next to its live state they do not fit (3.1). All six
+Creatures play one Creature definition, so the two are the same everywhere. Two places that cost nothing: **the back of every dial** (identical on
 all six, so it hides nothing, 4.1), or the player aid. With the deck fork an Intent is a card, so the
 starting Spells need hand cards again whatever the Creature card prints.
 
@@ -256,8 +259,8 @@ starting Spells need hand cards again whatever the Creature card prints.
 (any Creature may buy any Tier, ADR 0056), times 21 and 6, **VALUE**s. With the dial it is the only card with
 Spell text, so it prints **both Spells in full**.
 
-**It fits.** A Spell is a head line (name, cost, critical), a targeting line and 1 to 3 effect lines: 15, 25
-and 5 Spells (the brief's 15, 26, 4 is `9659f610`). A card is a 2-line band and two Spells: **8 to 11 lines,
+**It fits.** A Spell is a head line (name, cost, critical), a targeting line and 1 to 3 effect lines: 14, 24
+and 6 Spells at `3c9eb083` (15, 25 and 5 at `e6f72578`; the brief's 15, 26, 4 is `9659f610`). A card is a 2-line band and two Spells: **8 to 11 lines,
 at most 38.5 mm of the 78.9 mm** inside 5 mm margins. The widest line is a head line at exactly the 38
 characters a line holds (`Restorative Burst (3)` with `No critical roll`); moving the critical to the
 targeting line or an icon (6.2) leaves no line tight.
@@ -270,7 +273,8 @@ print(sorted({2+sum(n(S[x]) for x in t['spells']) for t in G['tiers']}))"   # [8
 ```
 
 **What a cascade band can carry.** A whole Spell on one line, in the card's words (components 2.2), is 46 to
-137 characters, median 76: **0 of 45 fit** a portrait line of 38, 7 of 45 a landscape line of 56. A 10 mm band
+137 characters, median 77.5: **0 of 44 fit** a portrait line of 38, 7 of 44 a landscape line of 56, at
+`3c9eb083` (median 76, and 0 and 7 of 45, at `e6f72578`). A 10 mm band
 can name the Spells, not state them. To read every Spell without lifting a card, the cascade steps by
 **half a card, about 45 mm**, the band and both Spells printed in the top half:
 
@@ -339,10 +343,10 @@ director.
 | | Today (components.md) | Hybrid, dial, 3v3 | Hybrid, dial, 2v2 |
 | --- | --- | --- | --- |
 | Creature cards (80 x 120) | 0: 6 boards, 2 mats | **6** | 4 |
-| Spell cards | 270 | **0** | 0 |
+| Spell cards | 264 (270 until 2026-10-06) | **0** | 0 |
 | Package cards (poker) | 126 | 126 | 84 |
 | Speed cards (poker) | 12 | 12 | 8 |
-| **Cards** | **408** | **144** | **96** |
+| **Cards** | **402** (408) | **144** | **96** |
 | Dials, with split pins | 0 | 6 | 4 |
 | Condition tokens | 168 | 168 | **88**: a Multi Spell reaches at most 2, plus Crazed Specter's caster |
 | Immune tokens, tie order chits | 6, 6 | 6, 6 | 4, 4 |
@@ -375,18 +379,18 @@ maintainer reads his Spells every Round and will not flip cards to do it).
 
 Package cards lie **face up in a cascade** under each Creature (3.6); nothing is held but the Speed cards. The
 **Intent is a dial**: an outer ring of **22 cells**, the 21 Tiers grouped by family and level plus `Start`,
-**VALUE** (enabled Tiers), and an inner ring **A / B / C**, because a Tier teaches 2 Spells and the starting
-kit 3, **VALUE**. Set it, lay it face down, turn it at the slot; everyone reads the named Spell in that
+**VALUE** (enabled Tiers), and an inner ring **A / B**, because a Tier teaches 2 Spells and so does the
+starting kit, **VALUE**. It was **A / B / C** until 2026-10-06, while the starting kit was 3. Set it, lay it face down, turn it at the slot; everyone reads the named Spell in that
 Creature's cascade. **6 dials**, **VALUE** (team size): each a base with a window, the Tier ring, the letter
 disc and a split pin, about 90 mm across, its back identical on all six.
 
 It buys: no Spell card at all, nothing to count, no leak, and the pick without the supply leak (3.9). It
 costs one lookup at each reveal. And **the component stops enforcing "the Creature knows this Spell"**: a
-card could only come from a hand that held it, while a dial can name a Tier the Creature does not own, or
-`C` on a Tier. The engine refuses such an Intent at submission (`IntentRules`, `SpellNotKnown`), so no rule
+card could only come from a hand that held it, while a dial can name a Tier the Creature does not own. (It
+could also name `C` on a Tier while the ring had a `C`.) The engine refuses such an Intent at submission (`IntentRules`, `SpellNotKnown`), so no rule
 says what a table does with one turned at the reveal (Part 8, question 1).
 
-#### 4.1.1 Relative spellbook dial: S / 1-10 + A / B / C
+#### 4.1.1 Relative spellbook dial: S / 1-10 + A / B
 
 A second dial layout is now worth prototyping beside the 21-name catalogue dial.
 
@@ -399,9 +403,11 @@ them**. The cascade itself becomes the legend:
 - `4 = Predator`
 - and so on, up to the maximum 10 purchases a Creature can make in 20 Rounds.
 
-The outer ring then needs only **`S / 1 / 2 / ... / 10`**. The inner ring remains **A / B / C**.
-`S` points to the common starting kit: `SA = Basic Attack`, `SB = Heavy Strike`, `SC = Wait`.
-For bought packages, only A and B are legal because each teaches exactly two Spells.
+The outer ring then needs only **`S / 1 / 2 / ... / 10`**. The inner ring is **A / B**.
+`S` points to the common starting kit: `SA = Heavy Strike`, `SB = Wait`.
+The starting kit and every package teach exactly two Spells, so both letters are legal on `S` and on every
+package the Creature owns. Until 2026-10-06 the ring was **A / B / C**, with `SA = Basic Attack`, and `C` was legal on
+`S` alone.
 
 Example: if package 3 in this Creature's cascade is Ravager, **`3B` means Ravager's Spell B,
 Psycho Rush**. Another Creature can have a different package in slot 3; the dial is an address into that
@@ -440,7 +446,7 @@ Everything in Part 3 works with either.
 
 | | Dial (B) | Deck (A) |
 | --- | --- | --- |
-| Cards | 144 | 162: 126 package, 18 starting (3 a Creature, 6 Creatures), 12 Speed, 6 Creature; and 60 markers |
+| Cards | 144 | 156: 126 package, 12 starting (2 a Creature, 6 Creatures), 12 Speed, 6 Creature; and 60 markers. It was 162, with 18 starting, until 2026-10-06 |
 | Where a Player reads their Spells | The face-up cascade, the opponent's view too | Their hand; the opponent reads names on the tree |
 | Declaring an Intent | Two settings, one face-down dial | One card face down, the right way round |
 | The reveal | A lookup, Tier and letter to the cascade | None: the card is the Spell |
@@ -451,7 +457,7 @@ Everything in Part 3 works with either.
 
 **The recommendation is the dial**: the one design where a player never holds or flips a card to read a
 Spell, which is the maintainer's own constraint, and the one that also closes the supply leak. What it gives
-up, the hand enforcing what a Creature knows, is a question for the director, not a reason to keep 270
+up, the hand enforcing what a Creature knows, is a question for the director, not a reason to keep 264
 cards. Settled by a prototype (Part 8, question 3).
 
 ---
@@ -461,7 +467,7 @@ cards. Settled by a prototype (Part 8, question 3).
 Six copies of a **package card** are needed because a bought card lies face up with its Creature as the record
 that it owns the Tier (3.6), and any of the six Creatures may own the same Tier (ADR 0056). That holds with the
 dial as with the deck. Six copies of a **Spell card** are needed only because an Intent is played face down from
-a hand, which is what the dial removes: it takes out the 270 Spell cards, not the package copies. The most Creatures sharing one
+a hand, which is what the dial removes: it takes out the 264 Spell cards, not the package copies. The most Creatures sharing one
 taught Spell, at the end of a match, dead or alive (each Spell is taught by exactly one Tier, so this is also
 the most copies of one package card in use):
 
@@ -483,19 +489,19 @@ reaches 6 at every level). The search-31 mirror reaches 6 at levels 1 and 2 in n
 | Tiers owned (brief: 4, 6, 7) | 3.5 | 5 | 11; 10 within 20 Rounds |
 
 **The structure holds**: 21 Tiers, 3 at level 1, 9 at level 2, 9 at level 3, each teaching exactly 2 Spells;
-45 Spells = 3 starting + 42 taught, none taught twice.
+44 Spells = 2 starting + 42 taught, none taught twice, at `3c9eb083` (45 = 3 + 42 until 2026-10-06).
 
 | Option | Package cards | With today's Spell cards | What it costs |
 | --- | --- | --- | --- |
-| Today | 126 | 270 + 126 + 12 = 408 | |
-| **1. Copies by level**: 6 a level-1 Tier, 3 a level-2 or level-3; a blank card with the Tier written on it when a supply runs out (the escape components 1.4 uses for tokens) | 3 x 6 + 18 x 3 = **72** | 162 Spell cards; **246** in all | 3 copies are exceeded at level 2 in 4% of realistic matches, 84% of greedy-mirror and all stun-mirror ones; at level 3 in 4.5% of greedy-mirror and 88.5% of stun-mirror ones. The blank keeps it legal, so no rule moves; a playtest box, not a general answer. It does not split into two private libraries (3.9) |
+| Today | 126 | 264 + 126 + 12 = 402 (408 with 270 Spell cards) | |
+| **1. Copies by level**: 6 a level-1 Tier, 3 a level-2 or level-3; a blank card with the Tier written on it when a supply runs out (the escape components 1.4 uses for tokens) | 3 x 6 + 18 x 3 = **72** | 2 x 6 + 6 x 6 + 36 x 3 = 156 Spell cards; **240** in all (162 and 246 with three starting Spells) | 3 copies are exceeded at level 2 in 4% of realistic matches, 84% of greedy-mirror and all stun-mirror ones; at level 3 in 4.5% of greedy-mirror and 88.5% of stun-mirror ones. The blank keeps it legal, so no rule moves; a playtest box, not a general answer. It does not split into two private libraries (3.9) |
 | **2. Separate the Intent from the card** | 126 | 0 with the dial | Part 4 |
 | **3. A design limit**: a Tier owned by at most 2 Creatures of a Team | 21 x 2 x 2 = **84** | | A rule: the `boardgame-director`'s (Part 8) |
 | **4. Mini cards**, 44 x 63 mm | 126 on 8 sheets | | **The text does not fit**: about 25 characters a line at 8 pt, against 33 for the widest Spell line and 38 for a head line. It fits only at 5 to 6 pt |
 
 **At team size 2**: package cards 21 x 4 = **84**, and every Creature can still own every Tier (6
 purchases for a Team of 2 to own a level-3 Tier on both, inside the 20 a Player makes); today's Spell cards
-would be 45 x 4 = 180; copies by level, 3 x 4 + 18 x 2 = 48.
+would be 44 x 4 = 176 (45 x 4 = 180 until 2026-10-06); copies by level, 3 x 4 + 18 x 2 = 48.
 
 ---
 
@@ -564,7 +570,7 @@ Not made here. One line each.
    procedure shows both. A dial with every living Creature hides them, and changes §5.3; it also needs a word
    on a Player who sets more Tiers than they have picks. **`boardgame-director`.** Settled by a verdict.
 3. **Dial or deck, and which dial layout** (4.1, 4.3). **The maintainer.** Settled by a prototype of the
-   21-name catalogue dial and the relative `S / 1-10 + A / B / C` dial beside the same cascade, plus ten
+   21-name catalogue dial and the relative `S / 1-10 + A / B` dial beside the same cascade, plus ten
    reveals timed against ten card reveals. Test both the fully-readable half-card cascade and the compact
    20-25 mm summary-band cascade at real table distance.
 4. **The Creature card's size** (3.1): 80 x 120 with the starting Spells elsewhere, or a larger card.

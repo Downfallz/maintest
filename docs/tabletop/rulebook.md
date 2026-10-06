@@ -3,8 +3,8 @@
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
-picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04 and again for the content of
-2026-10-05). Phase 4 of
+picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04, again for the content of
+2026-10-05, and for the content of 2026-10-06, which removed Basic Attack). Phase 4 of
 [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
@@ -150,8 +150,8 @@ The Health was 20 until [ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-roun
    Energy marker on its Energy, both Defense markers on 0, and the Base initiative markers on its Base
    initiative. Reference: Health 30, Energy 0, Defense 0 and 0, Base initiative 5.
 5. **Deal the starting Spells.** Every Creature takes one card of each Spell its Creature definition starts
-   with, into its Player's concealed hand. Reference: Basic Attack, Heavy Strike, Wait — three cards per
-   Creature, nine per Player. The starting Spells belong to no Tier, so no package card records them: they are
+   with, into its Player's concealed hand. Reference: Heavy Strike, Wait — two cards per Creature, six per
+   Player. The starting Spells belong to no Tier, so no package card records them: they are
    the Creature definition's, and both Players know them.
 6. **Set the tracks.** Put the Round marker on space 1 of the Round track. Put the Round cap marker on the
    space equal to the setup table's Round cap. Leave the initiative track empty; its divider is placed every
@@ -165,7 +165,7 @@ The Health was 20 until [ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-roun
    Spells come from.
 
 The board is now photographable, and it is the same board in every Match: six Creature boards at full Health
-and zero Energy, eighteen Spell cards and twelve Speed cards in two concealed hands, no package card with any
+and zero Energy, twelve Spell cards and twelve Speed cards in two concealed hands, no package card with any
 Creature, an empty initiative track, and the Round marker on 1.
 
 ### 3.3 Check before you start
@@ -329,8 +329,8 @@ A purchase is three actions, in this order:
 
 Then every pick token comes off the mats and the boards.
 
-> **Example.** Round 1 offers an opportunity. Every Creature knows Basic Attack, Heavy Strike and Wait, owns no
-> Tier, and has a Base initiative of 5. Each Player has 2 picks.
+> **Example.** Round 1 offers an opportunity. Every Creature knows Heavy Strike and Wait, owns no Tier, and
+> has a Base initiative of 5. Each Player has 2 picks.
 > **Player 1, first pick: Brute, for Creature 1.** Brute is level 1 and requires nothing. Player 1 lays a Brute
 > package card face down with Creature 1 and moves a pick token onto Creature 1's board. No Spell card moves,
 > and Base initiative stays at 5.
@@ -444,13 +444,15 @@ your slot you choose targets, never another Spell.
 Your opponent can count the cost against your public Energy rail without seeing your card. That is why the
 Energy rails stay face up.
 
-> **Example.** Creature 1 has Energy 3 and knows, among others, Meteor (cost 3), Basic Attack (cost 1) and
-> Crushing Stomp (cost 4). It may declare Meteor. It may not declare Crushing Stomp: 3 is less than 4.
+> **Example.** Creature 1 has Energy 3 and knows, among others, Meteor (cost 3), Heavy Strike (cost 2) and
+> Crushing Stomp (cost 4). It may declare Meteor or Heavy Strike. It may not declare Crushing Stomp: 3 is less
+> than 4. Player 1 declares Meteor.
 > Player 2 can see the 3 on the rail, so they know Crushing Stomp is not under that card. They do not know
-> whether Meteor is.
+> whether Meteor or Heavy Strike is.
 > Later this Round, Creature 5 acts before Creature 1 and casts **Soul Devourer** on it: `Damage 7` and
 > **`Energy -3`**. Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Meteor's 3:
-> its card is flipped with no targets and Fizzles. See [6.1](#61-the-fizzle-and-every-cause-of-it).
+> its card is flipped with no targets and Fizzles. Heavy Strike's 2 would have Fizzled the same way. See
+> [6.1](#61-the-fizzle-and-every-cause-of-it).
 
 ### 5.7 Activation
 
@@ -760,8 +762,8 @@ A Quick Creature never rolls ([5.4](#54-speed)), and a Fizzle never reaches the 
 > faithful way to roll such a card on a d20, and does not invent one; the snap is the fix.
 
 **A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
-rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty-one of the forty-five
-never touch the die.
+rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty of the forty-four never
+touch the die.
 
 A critical multiplies, by the setup table's critical multiplier, dropping any fraction:
 
@@ -789,7 +791,7 @@ the example in [5.8](#58-resolving-an-action).
 
 ### 6.8 Two more things every card assumes
 
-**A multi-target Spell may take fewer targets than its maximum.** It is not printed on the 45 cards because it
+**A multi-target Spell may take fewer targets than its maximum.** It is not printed on the 44 cards because it
 is true of all of them. It is a real choice: **Meteor** on one enemy is legal.
 
 **`Ally` includes the caster.** A Creature can cast **Guard**, **Rejuvenate** or **Revenant Guards** on
@@ -882,7 +884,7 @@ writing around it. Each one is faithful to the engine; each one is longer than a
    wrong, and it is the part that cannot be moved onto the card.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
-   may take fewer) are deliberately not printed on any of the 45 cards because they are true of all of them.
+   may take fewer) are deliberately not printed on any of the 44 cards because they are true of all of them.
    The card is missing the two rules a new player most needs.
 4. **The Duration** ([6.5](#65-the-first-countdown-after-an-application-does-not-count)). The rule the engine
    states is "the first countdown after an application does not count", which is a mechanism. What a Player
@@ -926,7 +928,11 @@ initiative, to Frostbite. On 2026-10-05 the same re-read ran at content `ad3e4d0
 Night Raid reaches 2 enemies for `Damage 4` and `Energy -3`, and Crazed Specter deals `Damage 4`, places a
 `Bleed 4 a round, 2 rounds` on each target and has no Critical chance. No worked example uses either. §6.1's
 cause 4 still holds, since Night Raid still takes Energy, and §6.7's count of Spells that never roll went from
-twenty to twenty-one.
+twenty to twenty-one. On 2026-10-06 the same re-read ran at content `3c9eb083`, which removed Basic Attack:
+every Creature starts with Heavy Strike and Wait. §3.2's step 5 and its photographable board went from three
+starting cards a Creature to two. §5.3's example dropped Basic Attack from what every Creature knows, and
+§5.6's names Heavy Strike in its place and teaches the same rule. §6.7's count went back to twenty, of
+forty-four, and §6.8 and Part 8 count 44 cards. No rule moved.
 
 | This book | The specification |
 | --- | --- |

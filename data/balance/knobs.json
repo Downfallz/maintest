@@ -166,7 +166,6 @@
       "enabled": true,
       "spells": [
         "spell:wait",
-        "spell:basic_attack",
         "spell:heavy_strike"
       ],
       "what": "None of the three spells every creature starts with may be strictly better than another. Implied by noNewStrictDominance, named separately because this is the one hand every match is dealt.",
@@ -184,19 +183,6 @@
       ],
       "knobs": [
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 }
-      ]
-    },
-    "spell:basic_attack": {
-      "name": "Basic Attack",
-      "class": "Creature",
-      "intent": "The reliable jab of the starting kit: cheap, certain, no critical. Every other attack in the catalogue is priced against its damage per energy, so moving it moves everything.",
-      "keep": [
-        "The cheapest damaging spell a creature knows on round one",
-        "No critical chance: it is the predictable one"
-      ],
-      "knobs": [
-        { "path": "/energyCost", "min": 0, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:heavy_strike": {

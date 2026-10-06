@@ -9,7 +9,6 @@
   "baseCriticalChance": 0,
   "talentTreeId": "talent-tree:base_creature:v1",
   "startingSpellIds": [
-    "spell:basic_attack",
     "spell:heavy_strike",
     "spell:wait"
   ]
