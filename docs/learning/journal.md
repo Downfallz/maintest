@@ -22,17 +22,23 @@ All on content `ad3e4d00`, played locally.
   Against Greedy, search-23 buys other packages than it buys against itself (Dreadnought, Occultist, Lich),
   and the clone buys the self-play answer (Ironbound, Marauder, Shaman). The features are not what it lacks.
   It has never been shown a board Greedy makes, which is the ordinary failure of cloning from one opponent.
-- **The remedy, measured.** A second clone was fitted on 700 matches of self-play plus search-23's own steps
-  from the 1200 matches against Greedy. Both clones were played on the 200 benchmark seeds, which neither
-  was fitted on:
+- **The remedy, measured on three dataset seeds.** A second clone was fitted on two kinds of data:
+  700 matches of self-play, and search-23's own steps from 1200 matches against Greedy, 600 in each seat.
+  This was done three times on separate seeds:
+  - self-play seeds 1, 10001 and 20001;
+  - Greedy seeds 900001/910001, 930001/940001 and 950001/960001.
+
+  Each clone was played on the 200 benchmark seeds, which none was fitted on. The self-play-only clone is
+  ci-247's, three seeds of 2000 matches on the same content, played on the same seeds (min / median / max):
 
   | clone | against Greedy | against search-23 |
   |---|---|---|
-  | self-play only (2000) | 0.056 (0.034 to 0.079) | 0.504 |
-  | self-play (700) and against Greedy (1200) | **0.958** (0.936 to 0.979) | 0.328 |
+  | self-play only (ci-247, 2000 a seed) | 0.005 / 0.018 / 0.229 | 0.394 / 0.433 / 0.440 |
+  | self-play (700) and against Greedy (1200) | **0.958 / 0.965 / 0.970** | 0.328 / 0.449 / 0.484 |
 
-  Against search-23 the second clone gives back what its smaller self-play share cost: the dataset has to
-  mix opponents, not trade one for another. A turn that records the teacher against a panel, and fits only on
+  Against Greedy the worst seed of the mixed clone is above the best seed of the self-play one. Against
+  search-23 the two overlap, and the mixed clone's worst seed (0.328) is below the self-play clone's. The
+  smaller self-play share costs something there, so the dataset has to mix opponents, not trade one for another. A turn that records the teacher against a panel, and fits only on
   the teacher's steps, would be the change; it is not made, because no policy is needed for play (below).
 - **Memory.** Fitting on 923,815 steps (2000 self-play matches and the 1200 against Greedy) was killed by the
   kernel at 14 GB. That is the likeliest cause of the runner shutdown in ci-245, at 5000 matches.
