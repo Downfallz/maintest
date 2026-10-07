@@ -199,9 +199,14 @@ alone whatever the spec says, as it buys without rollouts.
 What it sees that one round cannot: a kill that leaves the wrong enemy standing, a lethal two rounds out, a
 ward that keeps the last creature alive through the next round. What it costs is the rollouts: each candidate of
 a decision adds `2 x rollouts x rounds` rounds of play on top of the two round play-outs it already made (one
-when the actor cannot crit), targets as well as intents, and the tie orders. The journal entry that
-introduced it carries the clock and the strength; it is a bot for a person to sit across from
-(`learning/seatable.json`), not one for the tuner's panel, which it would slow by the same factor.
+when the actor cannot crit), targets as well as intents, and the tie orders. Measured on the same weights
+(journal, 2026-10-07), it is no stronger than the one-round reading: even at `2x2` (20 matches in 40) and
+weaker at `4x4` (16 in 40), at three times the clock. Four rollouts give an outcome in quarters, and the
+outcome is compared before the score, so once rollouts start ending a match one rollout's dice outrank
+anything the round itself shows; before that, no rollout ends and the reading is the one-round one. It
+stays opt-in, a bot for a person to sit across from (`learning/seatable.json`, after lookahead-34, with its
+measure in its label), not one for the tuner's panel, which it would slow by the same factor for nothing
+measured.
 
 ## The worst reply
 
