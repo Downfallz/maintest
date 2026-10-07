@@ -39,14 +39,19 @@ Four things are worth worrying about, in this order:
    after the first death. The owner's own matches against the lookahead say comebacks happen; the appendix
    reads the same numbers under the lookahead, and the table decides which reading holds. Concession exists;
    a comeback valve does not.
-4. **The three families are near-isomorphic.** Each has a heal, a stun and a sweep; the differences are
-   numbers, caster costs and reach. One line (Oppressor, Tyrant) has no theme at all and is the least bought.
+4. **The three families share their verbs.** Each has a heal, a stun and a sweep; what differs is how each
+   says them, and whether that is legible at a table is the question. One line (Oppressor, Tyrant) has no
+   theme at all; Greedy never buys it, the lookahead buys it often.
 
-None of these needs a new mechanic. If one mechanic were added, the review argues for **asymmetry at setup**
-(a second creature definition or a draft of the opening package), not for positions, passives or a new
-resource. The physical playtest is the right next step, with three things done first: snap the seven
-off-grid critical chances to the d20, decide what bounds armour, and print the lighter kit. Section 6 lists
-the hypotheses the first sessions should be designed to answer.
+None of these needs a new mechanic, and the owner's follow-up on the pull request (2026-10-07) goes further:
+the core is frozen for the physical alpha, and a mechanic is authorised only when a playtest names the
+problem it solves. If one were added later, the review's candidate is **asymmetry at setup** (a second
+creature definition or a draft of the opening package), not positions, passives or a new resource. The
+physical playtest is the right next step, with three things done first: snap the seven off-grid critical
+chances to the d20, decide whether armour is tested at the table before anything bounds it, and print the
+lighter kit. Section 5 lists the hypotheses the first sessions should be designed to answer, in the owner's
+priority order, and F8 adds the one the owner raised after reading this review: late Evolution picks that
+may be compulsory clutter.
 
 ## 2. What the evidence says is in good shape
 
@@ -144,9 +149,11 @@ zero, both starting spells among them.
 | defense-heavy against Greedy | 91 % | 94 % | 91 % |
 | exploring self-play (one decision in five is random) | 77 % | 79 % | 83 % |
 
-For the agents, Speed is not a tempo decision: it is "will my spell roll". The bots are not wrong to play it
-that way. Going Standard with a spell that cannot crit buys nothing; going Quick with one that can forfeits
-its best half. So a human will converge on the same rule, and a human who watches the Speed reveal learns
+For the agents, Speed is not a tempo decision: it is "will my spell roll". Going Standard with a spell that
+cannot crit buys only the later slot, which a heal cast after the damage, a reactive ward or a target chosen
+on a changed board may want; the bots' speed rule does not price that, so part of the correlation above is
+the heuristic's own. Going Quick with a spell that can crit forfeits its best half. A human will lean the
+same way, and a human who watches the Speed reveal learns
 which of the three enemy creatures is about to cast Shock, Fury, Incinerate or Blood Price rather than
 Strike, Focus, a heal or a ward. Speed is chosen face down by both sides at once, so nobody can answer a
 Standard with a Quick. But it is revealed **before** intents are chosen, so the reader can act on it with the
@@ -174,8 +181,11 @@ action:
 | First death | median round 4; a median of 7 more rounds are then played |
 | Side that loses the first creature wins | 29 % |
 
-A 10-round match in which the loser's position is settled by round 4 and the first death lands at round 4
-is a match whose second half is an execution. Elimination games usually accept this if the end is quick; here
+Lock-in reads the total health lead and nothing else: not the energy banked, the defense held, the bleeds and
+regenerations queued, the initiative or the depth of the packages. It is a health-stabilisation reading, not
+a solved-position one, and a side behind on health with a Blood Price in hand is not behind. With that said,
+a 10-round match in which the health lead settles by round 4 and the first death lands at round 4 is a match
+whose second half looks like an execution from the outside. Elimination games usually accept this if the end is quick; here
 it is six or seven rounds, which at the table is ten minutes.
 
 **What the owner's own play says.** The owner has played the lookahead often and been surprised by it coming
@@ -225,10 +235,12 @@ something a player can say in one sentence, and today it is "I hit a bit harder 
 
 **The line without a theme.** Oppressor then Tyrant teaches Crash (hit and stun), Claim (hit and drain),
 Dominate (hit two) and Fortress (armour): four verbs, no sentence. The knobs file's own intent for the
-Mercenary ("protection through tempo") describes Crash alone. It is also the least attractive line in play:
-Oppressor read −0.033 against Brute alone when forced (journal, 2026-10-03), Greedy never buys it on its
-own, and in 300 exploring matches Crash was cast 9 times, Claim 13, Dominate 5 and Fortress 5. Frenzied then
-Ravager, by contrast, is one sentence ("I gamble, and I pay for it") and the best tier-2 package when forced.
+Mercenary ("protection through tempo") describes Crash alone. Whether it is also weak depends on who is
+buying: Oppressor read −0.033 against Brute alone when forced (journal, 2026-10-03), Greedy never buys it
+on its own (Crash 9 casts, Claim 13, Dominate 5, Fortress 5 in 300 exploring matches), but the lookahead
+makes it the fifth most cast package of the 21 (Crash 354, Claim 160 of 9188 landed casts on the benchmark
+seeds) and reaches Tyrant 120 times. So the finding is legibility, not strength. Frenzied then Ravager, by
+contrast, is one sentence ("I gamble, and I pay for it") and the best tier-2 package when forced.
 
 **Spells the bots leave on the shelf.** Under exploring Greedy, 300 matches and 13,505 landed casts: Fortress
 5, Dominate 5, Crash 9, Paralyzing Barb 9, Blood Price 13, Claim 13, Soul Feast 20, Latch 21, Blood Hunt 39,
@@ -304,6 +316,50 @@ still carries the legacy table as history, which a new reader mistakes for the c
   The lookahead buys differently (ADR 0094, ADR 0095), and the owner's forced experiments show every other
   opening beats "Warped twice", so this is Greedy's taste. It is still the spell a new player will cast most.
 
+### F8. Late Evolution picks may be compulsory clutter
+
+Raised by the owner on the pull request after reading this review, and measurable on the traces at hand.
+
+**The hypothesis.** A side gets two picks at every opportunity. With three living creatures they can be
+spread; with two, both survivors take a package every opportunity unless their player passes. By rounds 7,
+9 and 11 a creature can have finished a coherent line, so another package has to open a sibling branch, open
+another family, or add to an already large spellbook. Multiclassing would then be partly a rules artefact,
+"I guess I have to take something", which the owner has felt at the table around rounds 7 and 9 with two
+creatures left. It would connect three observations: the high multiclass rate under the strong weights, the
+small tier-3 share although tier 3 is reached, and the size of the spellbook.
+
+**What the rules already say.** Passing is legal: a player may pass their remaining picks (`game-rules.md`,
+Evolution; rulebook 5.3, the Evolution pass). The bots never pass while anything can be bought, so every bot
+multiclass rate in this review overstates wanted breadth by construction. The experiment the owner proposes,
+allow passing and count how often people use it, needs no rule change: the table has to say the pass exists
+and record it.
+
+**What the traces say.** Picks that land on a creature already holding a tier-3 package, packages bought at
+round 7 or later that never cast one of their spells before the match ended, and the cross-family share of
+picks by how many creatures the buyer had alive:
+
+| Batch | Picks on a creature already at tier 3 | Late packages never cast | Cross-family picks, 3 alive / 2 alive / 1 alive |
+| --- | --- | --- | --- |
+| exploring Greedy, 300 matches, 6004 picks | 20 % | 44 % of 2508 | 4 % / 11 % / 15 % |
+| search-23 against Greedy, 200 matches, 4806 picks | 33 % | 33 % of 2406 | 17 % / too few / too few |
+| defense-heavy against Greedy, 120 matches, 4582 picks | 62 % | 51 % of 3142 | 3 % / 19 % / 18 % |
+
+A package bought from round 7 on has about an even chance of never being cast, partly because the match ends
+(median round 10) and partly because the spellbook already holds better spells; both say the same thing to
+the player who had to pick it. And a side down a creature crosses families three to five times as often as
+a whole one, which is the signature the hypothesis predicts. Passes in the exploring run: 150 of 6004 picks,
+the random fifth and the sides with nothing left to buy.
+
+**What to record at the table**, the owner's list: at every opportunity, "would you have passed this pick?"
+(it is legal; the table should say so and count the passes), and "did this pick make the build clearer,
+stronger, or only broader?"; the round of the first tier 3; the round of the first cross-family pick;
+packages per surviving creature by round; the spellbook size at which a player stops reading all of it; and
+whether a late package was taken for a concrete counter or because a pick was there.
+
+**Fixes to keep in reserve**, the owner's, none to build now: a cap on packages per creature, a different late
+cadence, a declined pick converting into something small, a "build complete" state that takes a creature out
+of future picks. Each moves the snowball or the climb; the cheapest experiment is counting the passes.
+
 ## 4. Should a last mechanic be added?
 
 Not a system. The game has ten effect kinds in play, a timeline with two speeds, hidden intents, packages
@@ -319,6 +375,9 @@ ADR-sized change that would reset every measurement:
 | Real passives | Carapace as authored | A new place for an effect to live, in the engine and on the card | Not worth a slot alone |
 | Minions as a resource | The Necromancer's bank | A second currency on the table, tracked by hand | No: the blood price already says it |
 | An objective other than elimination (sudden death, a zone) | Shorter or less snowbally endings | A new win condition (ADR 0011) | Only if F3 measures badly at the table |
+
+**The owner's call (2026-10-07):** the core is frozen for the physical alpha, and a new mechanic is authorised
+only when a playtest names the specific problem it solves. The candidate above stays a candidate.
 
 The honest answer to "should I add one more thing" is that the content is not what is thin. What is thin is
 the **shape of a match for a human**: the same two blank teams every time, a first round that plays itself, a
@@ -343,12 +402,21 @@ Three things first, in this order:
 3. Print the lighter kit with the colour round track (`component-options.md`), which is decided, and settle
    the dial-or-deck fork by the prototype test that document already specifies.
 
+The owner's priorities for the alpha, after this review: handling and the spellbook's decision load first,
+then late-pick pressure (F8), then the armour stall against an opponent who deliberately pivots to punish
+it, then whether progression feels like a payoff despite the 8 % tier-3 share, then whether the Speed signal
+is a poker layer or a trivial one, then Oppressor and Tyrant as a legibility question, and comeback feel
+last, pending the lookahead traces. Two prototype constraints come with them: hidden Evolution picks must not
+leak through a public physical supply before the reveal, and Carapace's `Passive` type must be clarified
+before a player's comprehension of it is judged.
+
 Then play with hypotheses, not with a questionnaire. Each row names what the table's own trace answers and
 what only the people at it can:
 
 | Hypothesis | The trace says | The players say |
 | --- | --- | --- |
-| The armour line is found and is dull (F1) | defense at the end of each round, hits for zero, matches past round 14 | "nothing happened for five rounds" |
+| The armour line is found and is dull (F1): one player turtles on purpose, the other tries to punish it as early as possible | defense at the end of each round, hits for zero, matches past round 14; whether a human pivot collapses the stall back to 11 rounds or it still takes 18 to 22 | "nothing happened for five rounds" |
+| Late picks are compulsory clutter (F8) | packages bought at round 7 or later that never cast; cross-family picks by living creatures; passes | "would you have passed?" at each opportunity |
 | Players read the Speed tell (F2) | Standard chosen with a non-crit spell (a bluff); stuns, kills and wards aimed by creatures already Quick at the ones that went Standard | whether they noticed |
 | Matches are over before they end (F3) | lock-in round, concession round, lead changes | the round they felt it was over |
 | The dice decide (F5) | criticals that killed, matches lost within two rounds of one | "a 20 took my creature" |
@@ -441,8 +509,17 @@ casts wards when it is losing and finishers when it is winning.
 
 ### The strongest play, 40 benchmark seeds
 
-Pending, as above: the lookahead on `lookahead-34` against `search-23` and against Greedy on 40 benchmark
-seeds, and 40 traced matches of `explore:0.2:lookahead` for the opening picks of a buyer that is not Greedy.
+The lookahead on `lookahead-34`, the strongest agent the project has, against `search-23`, the strongest
+one-step weights, on the first 40 benchmark seeds, both seats: the lookahead wins 74 of 80 (92.5 %) in 14.8
+rounds on average, no draw, nothing at the cap, with 62 health left against 4.5. search-23 plays its armour
+line (Brace 826 declarations, Vital Surge 658, Carapace 409, Focus 290, Infestation 219) and the lookahead
+answers it with bleeds, armour of its own and stuns (Brace 497, Venom Claw 469, Infestation 301, Focus 206,
+Fury 173, Crash 162, Death Wail 158, Strike 155). Carapace and Vital Surge are cast by the losing side 76 %
+and 84 % of the time here. It is the F1 matchup with a better player in the aggressor's seat: the stall is
+broken, and it still takes 15 rounds.
+
+Pending, still playing: the same lookahead against Greedy on the same 40 seeds, and 40 traced matches of
+`explore:0.2:lookahead` read with the lock-in, comeback, depth and late-pick scripts above.
 
 ### `check-knobs`
 
