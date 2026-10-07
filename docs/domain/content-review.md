@@ -352,7 +352,7 @@ what only the people at it can:
 | Players read the Speed tell (F2) | Standard chosen with a non-crit spell (a bluff); stuns, kills and wards aimed by creatures already Quick at the ones that went Standard | whether they noticed |
 | Matches are over before they end (F3) | lock-in round, concession round, lead changes | the round they felt it was over |
 | The dice decide (F5) | criticals that killed, matches lost within two rounds of one | "a 20 took my creature" |
-| A round takes under two minutes (F6) | timestamps per sub-phase, already recorded | where the hands slowed down |
+| A round takes under two minutes (F6) | not the trace, which carries no clock, but `notes.jsonl`, which the table writes beside it: each decision's `at` and `elapsedMs`; a round's duration is the span from its first decision to its last | where the hands slowed down |
 | The families feel different (F4) | packages bought, multiclass rate | one sentence per family, asked after the match |
 
 Record every session (`--record`, `--who`), and read the first ten with the same scripts the bots are read
@@ -382,11 +382,19 @@ dotnet run --project src/DownfallArena.Cli -- evaluate --p1 explore:0.2:lookahea
 # traced batches the per-round readings were taken from
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 300 --seed 500001 --p1 explore:0.2 --p2 explore:0.2 --record runs/review/rec/explore --traces 300
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 700001 --p1 heuristic:learning/weights/search-23.json --p2 greedy --record runs/review/rec/s23 --traces 200
-dotnet run --project src/DownfallArena.Cli -- simulate --matches 120 --seed 900001 --p1 heuristic:<turtle.json> --p2 greedy --record runs/review/rec/turtle --traces 120
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 120 --seed 900001 --p1 heuristic:runs/review/turtle.json --p2 greedy --record runs/review/rec/turtle --traces 120
 uv run --project learning check-knobs
 ```
 
-`turtle.json` is Greedy's weights with `defense` at 3.0 and `heal` at 1.6. The per-round readings (Speed
+`runs/review/turtle.json` is not in the repository (`runs/` is ignored): write it first. It is Greedy's weights
+with `defense` at 3.0 and `heal` at 1.6:
+
+```json
+{ "damage": 1.0, "kill": 5.0, "heal": 1.6, "stun": 3.0, "bleed": 0.8,
+  "defense": 3.0, "energy": 0.3, "initiative": 2.1, "pressure": 0.0 }
+```
+
+The per-round readings (Speed
 against the spell declared, energy at activation, lock-in, lead changes, defense held, hits for zero, the
 result under a cap of 20) were computed from the traces by a scratch script that reads
 `CombatActionResolved` frames and `SpeedChoiceSubmitted` and `IntentSubmitted` events; it is not committed.
