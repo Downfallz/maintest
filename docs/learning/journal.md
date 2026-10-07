@@ -33,6 +33,21 @@ first.
   replays the rest of the match. The moves are inside what a seed block moves on its own (2.6 on the
   objective at 200 seeds, `knobs.json`), which is what seven moves of 0.02 should read as. Nothing here is a
   balance result, and no Spell changes role.
+- **The four readings of the objective** (`score-content` on the benchmark seeds, `knobs.json`'s four
+  evaluations, before on a checkout of `9419f935` with the `check-knobs` of its day, since the new one refuses
+  the old band):
+
+  | reading | metric | `9419f935` | `b41ba55e` |
+  |---|---|---|---|
+  | mirror (Greedy, Greedy) | Player 1 share / rounds / spells never cast | 0.490 / 11.44 / 8 | 0.470 / 11.34 / 5 |
+  | skill (Greedy, Random) | Greedy's win rate / rounds | 1.000 / 9.26 | 1.000 / 9.26 |
+  | variety (explore:0.2:lookahead, both) | rounds / spell entropy / tier usage share | 11.09 / 4.511 / 0.823 | 11.28 / 4.560 / 0.829 |
+  | exploit (five weights files, Greedy) | win rate / rounds / cap share | 0.975 / 12.92 / 0.033 | 0.973 / 12.81 / 0.033 |
+
+  Every other metric of the four moves in the third decimal or not at all. The objective's score goes from
+  0.418 to 0.664, all of it the one target already outside its band before the snap: `variety.tierUsageShare`
+  reads 0.829 against a ceiling of 0.8, where it read 0.823. That is the content review's F8 (late picks),
+  not this pass, and the lookahead's variety run is the noisiest of the four.
 - **What the table gets.** Every card that rolls prints its threshold: nine distinct chances, 0.20 to 0.80,
   each a face (`Crit 35% · d20 14+`), read off the content by the app's catalogue projection and the print
   generator with no change to either. Twenty of the 44 Spells never roll. The rulebook's §6.7 loses its "not
