@@ -110,6 +110,53 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
+    /// ADR 0099. Four is the last enemy, at three health, and acts first. It is guessed to strike, and on that guess
+    /// either of One's casts wins: Strike kills Four at once, and after Rest Two's Strike does. Rest scores more
+    /// at the weights here, so a reading of the guess alone takes it. But Four can mend itself instead, and then
+    /// only the round in which both allies strike still wins. A win that survives the reply outranks one that
+    /// needs the guess to be right.
+    /// </summary>
+    [Fact]
+    public void A_win_that_survives_the_enemy_s_reply_outranks_one_that_needs_the_guess()
+    {
+        var (resources, board) = FourLastAndAboutToMend();
+
+        new LookaheadAgent(ScoringWeights.Default with { Energy = 50 }, resources, Rules)
+            .DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Strike]))
+            .ShouldBe(TestContent.Strike);
+    }
+
+    /// <summary>
+    /// One (knows Rest and Strike) and Two (knows Strike) for Player1; Four, at three health, for Player2, knowing a
+    /// mend of one and Steady. Four acts first, then One, then Two.
+    /// </summary>
+    private static (IGameResources Resources, PlayerBoardState Board) FourLastAndAboutToMend()
+    {
+        var mender = CreatureDefinitionId.Parse("creature:mender:v1");
+        var striker = CreatureDefinitionId.Parse("creature:striker:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(mender, Mend.Id, Steady.Id), Definition(striker, Rest.Id, TestContent.Strike)],
+            [.. TestContent.Resources.Spells, Mend, Steady, Rest],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { DefinitionId = striker, KnownSpells = new HashSet<SpellId> { Rest.Id, TestContent.Strike } };
+        var two = Boards.Creature(2, PlayerSlot.Player1) with { KnownSpells = new HashSet<SpellId> { TestContent.Strike } };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = mender, Health = Health.Of(3), KnownSpells = new HashSet<SpellId> { Mend.Id, Steady.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one, two], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1), Slot(Two, PlayerSlot.Player1)],
+        };
+        return (resources, board);
+    }
+
+    /// <summary>A free heal of one on the caster: the reply that takes a kill out of reach by a single point.</summary>
+    private static Spell Mend { get; } = Spell.Create(
+        SpellId.Parse("spell:mend:v1"), "Mend", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Self), [Heal.Of(1)]);
+
+    /// <summary>
     /// One and Two tie with Four and hold the first and third places, Four the second. Four has six health, so
     /// it takes both strikes, and it kills whichever ally it can: One, at three health. Seated as rolled, Two
     /// strikes first, Four kills One, and One never strikes; seated the other way, One strikes before it dies
