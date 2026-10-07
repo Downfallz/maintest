@@ -45,10 +45,10 @@ All on content `9419f935`, weights `lookahead-34` (`@123c9a0d`) in both seats un
   move has a strong one-round reading to lose.
 - **The clock.** One match against Greedy on seed 11, four cores: 9.3 s for 52 activations with the one-round
   reading (0.18 s each), 24.3 s for 46 with `4x4` (0.53 s each). A person waits half a second a move.
-- **Where it lands.** The spec stays, opt-in, for the table: `learning/seatable.json` offers
-  `lookahead:4x4:learning/weights/lookahead/lookahead-34.json` second, after lookahead-34, with its measure in
-  its label, so the default seat does not change. Not in the tuner's panel, which it would slow by the same
-  factor for nothing measured.
+- **Where it lands.** The spec stays, opt-in, seated from a shell
+  (`table --p2 lookahead:4x4:learning/weights/lookahead/lookahead-34.json`). Not in `learning/seatable.json`,
+  which puts forward what measured as worth playing against, and not in the tuner's panel, which it would
+  slow by the same factor for nothing measured.
 - **What would be worth measuring next.** A deterministic continuation (plain rolls, one line, no dice), so
   that what is compared first is not a sample; or the outcome weighed into the score rather than ranked above
   it; or more rollouts, at the price of the clock. None is measured here.

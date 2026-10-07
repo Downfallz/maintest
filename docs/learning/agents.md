@@ -204,9 +204,9 @@ when the actor cannot crit), targets as well as intents, and the tie orders. Mea
 weaker at `4x4` (16 in 40), at three times the clock. Four rollouts give an outcome in quarters, and the
 outcome is compared before the score, so once rollouts start ending a match one rollout's dice outrank
 anything the round itself shows; before that, no rollout ends and the reading is the one-round one. It
-stays opt-in, a bot for a person to sit across from (`learning/seatable.json`, after lookahead-34, with its
-measure in its label), not one for the tuner's panel, which it would slow by the same factor for nothing
-measured.
+stays opt-in, seated by its spec from a shell (`table --p2 lookahead:4x4:<weights file>`): not put forward
+by `learning/seatable.json`, which offers what measured as worth playing against, and not in the tuner's
+panel, which it would slow by the same factor for nothing measured.
 
 ## The worst reply
 
