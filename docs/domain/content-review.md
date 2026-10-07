@@ -518,8 +518,15 @@ Fury 173, Crash 162, Death Wail 158, Strike 155). Carapace and Vital Surge are c
 and 84 % of the time here. It is the F1 matchup with a better player in the aggressor's seat: the stall is
 broken, and it still takes 15 rounds.
 
-Pending, still playing: the same lookahead against Greedy on the same 40 seeds, and 40 traced matches of
-`explore:0.2:lookahead` read with the lock-in, comeback, depth and late-pick scripts above.
+The same lookahead against Greedy on the same 40 seeds: 73 of 80 (91.2 %) in 10.2 rounds, no draw, nothing
+at the cap, 50 health left against 2.9. Here the lookahead plays a Brute and Predator game (Strike 326
+declarations, Toxic Mend 256, Brace 227, Quill 193, Crash 117, Focus 112, Venom Claw 99, Fury 91) against
+Greedy's Shock 549, Strike 374, Bonewall 293 and Death Wail 147. The strongest player beats the baseline in
+the length the game is designed for, and beats the armour player in 15 rounds: the clock of F1 is what the
+best play available pays, not only what Greedy pays.
+
+Pending, replayed after a container restart interrupted the first batch: 40 traced matches of
+`explore:0.2:lookahead`, read with the lock-in, comeback, depth and late-pick scripts above.
 
 ### `check-knobs`
 
