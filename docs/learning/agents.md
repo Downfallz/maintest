@@ -179,10 +179,15 @@ A combat move can be read past its round, the way a purchase is (ADR 0094): `loo
 candidate, the rest of the round as above and then the next four rounds out on four rollouts, every
 sub-phase of them, every decision in both seats the agent the lookahead is built on, on dice derived from
 the agent's seed and the decision (the round, the actor and the slot), so that every candidate of one
-decision is read on the same rolls and only the candidate is left between them. The value is a
-`RolloutValue` folded into the round's: the match the rollouts end first, as the share of wins less losses,
-then the round's score plus the rollouts' mean, with the actor's critical mixed in as before. A reading that
-wins outranks any score, as a round that wins does.
+decision is read on the same rolls and only the candidate is left between them. What is read off them is
+the match they end and nothing else: the candidate's outcome becomes the share of rollouts won less the
+share lost, with the actor's critical mixed in as before, and its score stays the round's own. A candidate
+whose rounds after end in a win outranks every other, one that ends in a loss ranks below, and between
+candidates that end nothing the one-round reading decides, as it always did. The rollouts' summed scores
+are deliberately not added: a sum of one-step scores over rounds a bot plays out cannot tell damage now from
+damage later, and measured on the benchmark seeds it made Focus the most cast spell in the catalogue and
+lost three matches in four to the one-round reading on the same weights, with the stock terms (energy,
+defense, initiative) in the sum or without them.
 
 `<rounds>x<rollouts>` goes right after the kind and in front of whatever named the weights or the inner
 agent before: `lookahead:4x4`, `lookahead:4x4:learning/weights/lookahead/lookahead-34.json`,
@@ -191,8 +196,8 @@ reads the round alone, so every spec written before this reads the same. The dep
 (`Lookahead:4x4:<file>@<fingerprint>`). It needs dice: an agent built without a random source reads the round
 alone whatever the spec says, as it buys without rollouts.
 
-What it sees that one round cannot: a buff that pays next round, a kill that leaves the wrong enemy
-standing, energy kept for a spell the next round reaches. What it costs is the rollouts: each candidate of
+What it sees that one round cannot: a kill that leaves the wrong enemy standing, a lethal two rounds out, a
+ward that keeps the last creature alive through the next round. What it costs is the rollouts: each candidate of
 a decision adds `2 x rollouts x rounds` rounds of play on top of the two round play-outs it already made (one
 when the actor cannot crit), targets as well as intents, and the tie orders. The journal entry that
 introduced it carries the clock and the strength; it is a bot for a person to sit across from

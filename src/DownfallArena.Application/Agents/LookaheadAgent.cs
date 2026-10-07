@@ -48,11 +48,12 @@ namespace DownfallArena.Application.Agents;
 /// <para>
 /// A combat move can be read the same way, past its round: with a <see cref="CombatReading"/> and dice, the
 /// rounds after the one played out are rolled out whole by <see cref="RoundRollout"/>, every decision in both
-/// seats the agent this one is built on, and the move is judged by the match those rounds end first and by
-/// the summed score second, the way a purchase is. It costs the rollouts and sees what one round cannot: a
-/// buff that pays next round, a kill that leaves the wrong enemy standing, an energy kept for a spell the
-/// next round reaches. <c>lookahead:4x4</c> reads four rounds on four rollouts; a bare <c>lookahead</c> reads
-/// the round alone, as it always did.
+/// seats the agent this one is built on, and the move is judged by the match those rounds end: a candidate
+/// whose rounds after end in a win outranks every other, one whose rounds after end in a loss ranks below,
+/// and between candidates that end nothing the round's own value decides, as it always did. It costs the
+/// rollouts and sees what one round cannot: a kill that leaves the wrong enemy standing, a lethal two rounds
+/// out, a ward that keeps the last creature alive through the next round. <c>lookahead:4x4</c> reads four
+/// rounds on four rollouts; a bare <c>lookahead</c> reads the round alone.
 /// </para>
 /// </summary>
 public sealed class LookaheadAgent(
@@ -100,18 +101,6 @@ public sealed class LookaheadAgent(
 
     /// <summary>How far this agent reads a combat move past its round.</summary>
     public CombatReading Combat => _combat;
-
-    /// <summary>
-    /// The scorer the rounds after a move are summed with: the weights without their stocks. Energy kept,
-    /// defense held and initiative bought are priced by the one-step reading as a guess at what they will buy,
-    /// and a rollout plays that out, so a scorer that priced them too would pay a move for its energy at every
-    /// action it stays banked through and for its armour at every hit it then softens as well. Measured, that
-    /// read Focus as the best spell in the catalogue and lost six matches in seven to the one-round reading.
-    /// Damage, kills, heals and the lasting effects a later round applies keep their prices: the first three
-    /// are flows the rollout realises once, and a stun or a bleed applied inside the rollout is otherwise
-    /// worth nothing to a sum of actions, since the action it takes away is one that never scores.
-    /// </summary>
-    private readonly Lazy<ActionScorer> _ahead = new(() => new ActionScorer(resources, rules, weights with { Energy = 0, Defense = 0, Initiative = 0 }).WithoutUnlocks);
 
     /// <summary>
     /// What every rollout's dice are derived from, drawn once from the source the agent was given: a purchase's
@@ -557,10 +546,15 @@ public sealed class LookaheadAgent(
     /// rollout picks the match up at the start of the next round, every decision in both seats the agent this
     /// one is built on, on dice derived from the agent's seed and the decision -- the round, the actor and the
     /// slot -- and so the same for every candidate of one decision, which leaves only the candidate between
-    /// them (ADR 0094). The outcome is the share of matches the rollouts win less the share they lose, the
-    /// score the round's plus the rollouts' mean, and both compare the way a round's do: a reading that wins
-    /// outranks any score. Without dice, or reading nothing past the round, the round stands alone, which is
-    /// what it did before this reading existed.
+    /// them (ADR 0094). What is read off them is the match they end and nothing else: the outcome becomes the
+    /// share of rollouts won less the share lost, and the score stays the round's own. The rollouts' summed
+    /// scores are not added, because a sum of one-step scores over rounds a bot plays out cannot tell damage
+    /// now from damage later: measured on the benchmark seeds, adding them made Focus the most cast spell in
+    /// the catalogue and lost three matches in four to the one-round reading on the same weights, with the
+    /// stock terms (energy, defense, initiative) in the sum or without them. So the rounds after a move only
+    /// ever decide between candidates that end the match differently inside them, a win or a loss the round
+    /// alone cannot see, and every other decision is the one-round reading's. Without dice, or reading nothing
+    /// past the round, the round stands alone, which is what it did before this reading existed.
     /// </summary>
     private RoundValue ReadAhead(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> cleaned, int round, CreatureId? actor, double value, bool stopped)
     {
@@ -569,14 +563,13 @@ public sealed class LookaheadAgent(
             return new RoundValue(0, value, stopped);
         }
 
-        var rollout = new RoundRollout(_oneStep, _ahead.Value, resources, rules);
+        var rollout = new RoundRollout(_oneStep, _scorer.WithoutUnlocks, resources, rules);
         var seeds = Enumerable.Range(0, _combat.Rollouts)
             .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)(actor?.Value ?? 0) * 7_919UL) + ((ulong)board.ActivationCursor * 104_729UL) + (ulong)index)
             .ToArray();
         var played = new RolloutValue[seeds.Length];
         Each(seeds.Length, index => played[index] = rollout.Continue(board, cleaned, round + 1, _combat.Rounds, new RolloutDice(seeds[index])));
-        var ahead = RolloutValue.Mean(played);
-        return new RoundValue(ahead.Outcome, value + ahead.Score, stopped);
+        return new RoundValue(RolloutValue.Mean(played).Outcome, value, stopped);
     }
 
     private static RoundValue Valued(MatchOutcome? outcome, PlayerSlot seat, double value, bool stopped) =>

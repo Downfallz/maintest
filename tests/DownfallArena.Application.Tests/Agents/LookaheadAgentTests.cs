@@ -515,29 +515,30 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
-    /// Two enemies at six health that have both acted; the ally Two strikes after One and finishes whichever
-    /// enemy One has hit. The round reads the same either way, so the one-round reading keeps the first
-    /// target by order. But One is at three health, Four is the fast enemy and Three the slow one: next round
-    /// Four kills One before anyone else moves, where Three dies to One and Two before it acts. A reading of
-    /// the rounds after the move hits Four, so that the enemy left standing is the one that cannot punish it.
+    /// Two enemies at three health that have both acted, and One, alone and at three health, strikes last and
+    /// kills whichever it hits. The round reads the same either way, so the one-round reading keeps the first
+    /// target by order. But the enemy left standing races One next round: each kills the other outright, so
+    /// both go Quick (ADR 0084) and the initiative decides it. Four is the fast enemy and wins that race, Three
+    /// the slow one and loses it, which ends the match inside the round read either way, one way a loss and
+    /// the other a win. A reading of the round after the move hits Four, so that the enemy left standing is
+    /// the one whose death it can see.
     /// </summary>
     [Fact]
     public void Reading_the_rounds_after_a_move_hits_the_enemy_whose_survival_costs_next_round()
     {
         var one = Boards.Creature(1, PlayerSlot.Player1) with { Health = Health.Of(3) };
-        var two = Boards.Creature(2, PlayerSlot.Player1);
-        var three = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(6), BaseInitiative = Initiative.Of(1), CurrentInitiative = Initiative.Of(1) };
-        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(6), BaseInitiative = Initiative.Of(9), CurrentInitiative = Initiative.Of(9) };
-        var board = Boards.Board(PlayerSlot.Player1, [one, two], [three, four]) with
+        var three = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(3), BaseInitiative = Initiative.Of(1), CurrentInitiative = Initiative.Of(1) };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(3), BaseInitiative = Initiative.Of(9), CurrentInitiative = Initiative.Of(9) };
+        var board = Boards.Board(PlayerSlot.Player1, [one], [three, four]) with
         {
             RoundNumber = 1,
-            Timeline = [Slot(Three, PlayerSlot.Player2), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1), Slot(Two, PlayerSlot.Player1)],
+            Timeline = [Slot(Three, PlayerSlot.Player2), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
             ActivationCursor = 2,
         };
         var options = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
 
         Agent.DecideTargets(board, options).ShouldBe([Three], "the round reads alike either way, so the first target by order is kept");
-        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(3), combat: new CombatReading(2, 2))
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(3), combat: new CombatReading(1, 2))
             .DecideTargets(board, options).ShouldBe([Four]);
     }
 
