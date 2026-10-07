@@ -1,12 +1,13 @@
 # Every critical chance is a twentieth
 
-Status: **Draft, settled, not built** (2026-09-17; the tables and the counts re-read on 2026-10-04 against
-content `e6f72578`, on 2026-10-05 against `ad3e4d00`, and on 2026-10-06 against `3c9eb083`). Spells carry the names of `9419f935`, the same content renamed
+Status: **Built** (2026-10-07, [ADR 0099](../adr/0099-every-critical-chance-is-a-twentieth.md)). The decision is
+the ADR's; this document keeps the readings that priced it. The seven Spells of the table below are snapped,
+`lightning_bolt`'s band floor is 0.15, the data builder and `check-knobs` hold the grid, and content `9419f935`
+became `b41ba55e` (journal, 2026-10-07). It was a draft from 2026-09-17, its tables re-read on 2026-10-04
+against content `e6f72578`, on 2026-10-05 against `ad3e4d00`, and on 2026-10-06 against `3c9eb083`; Spells
+carry the names of `9419f935`, the same content renamed
 ([package-renaming-plan.md](../domain/package-renaming-plan.md)), also in the earlier readings: the ids did not
-move, so a row is found at any of those hashes under the name the plan's table gives. Every question
-this document opened has an
-answer; what is left is the work. Not a numbered ADR: this branch claims no ADR number. When the rule is settled and built, this text moves into
-`docs/adr/` with the next free number.
+move, so a row is found at any of those hashes under the name the plan's table gives.
 
 ## The rule, in one sentence
 
@@ -180,7 +181,8 @@ since ADR 0083, and the audit keeps its old name).
 
 ## Still open
 
-Nothing. What is left is the work: snap the seven Spells (Wraithguard's zeroing landed with the content
-of 2026-10-04, and Death Wail's with that of 2026-10-05), move `lightning_bolt`'s band floor, teach the data
-builder and `check-knobs` the grid, and pay the usual price of a content change — a new hash, a regenerated
-digest, a journal entry, and the four readings saying what the snap cost.
+Nothing, and the work is done (2026-10-07, ADR 0099): the seven Spells are snapped (Wraithguard's zeroing
+landed with the content of 2026-10-04, and Death Wail's with that of 2026-10-05), `lightning_bolt`'s band
+floor is 0.15, the data builder refuses a Spell off the twentieths and a Creature with a chance of its own,
+`check-knobs` refuses a band off them, and the content change paid its price: content `b41ba55e`, its digest,
+and the journal entry of 2026-10-07 with what the snap moved.

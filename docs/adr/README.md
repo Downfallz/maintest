@@ -104,3 +104,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0096](0096-energy-is-priced-by-the-spell-it-unlocks.md) | Energy is priced by the spell it unlocks | Proposed |
 | [0097](0097-the-learning-loop-measures-one-format.md) | Measure one format, and let the others be played | Proposed |
 | [0098](0098-a-defense-debuff-is-priced-by-the-damage-it-lets-through.md) | A defense debuff is priced by the damage it lets through | Proposed |
+| [0099](0099-every-critical-chance-is-a-twentieth.md) | Every critical chance is a twentieth | Proposed |

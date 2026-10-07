@@ -261,7 +261,9 @@ Three things stand between the rulebook and a faithful session.
    Void Pulse and Toxic Mend 0.33, Revitalize 0.22. The rulebook says so itself (6.7): such a card prints a
    percentage and no threshold, and "this book has no faithful way to roll such a card". The snap is a
    content pass of seven numbers, each by 0.02 at most, with a digest and a journal entry
-   (`docs/tabletop/d20-criticals.md`). It should happen before the first printed deck.
+   (`docs/tabletop/d20-criticals.md`). It should happen before the first printed deck. **Done on 2026-10-07**
+   (ADR 0099): the seven are snapped, the grid is enforced by the data builder and `check-knobs`, and the
+   journal entry of that day carries what it moved.
 2. **The handling cost.** The manifest counts 168 condition tokens in 6 kinds, 402 cards (144 with the dial
    kit), 55 sheets to print (26 with the lighter kit), and a creature can carry up to 13 tokens at once. The
    rulebook's own "what was hard to write" names four rules longer than a rule should be: the fizzle (five
