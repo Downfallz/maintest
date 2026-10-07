@@ -316,8 +316,14 @@ public sealed class LookaheadAgent(
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
-        RoundValue Round(SpellId spell, bool worst) =>
-            Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(board, ahead, intentOption.Creature, spell), worst);
+        RoundValue Round(SpellId spell, bool worst)
+        {
+            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
+            CombatAction? Cast(IReadOnlyList<CreatureSnapshot> ahead) => BestTargets(board, ahead, intentOption.Creature, spell);
+            return worst
+                ? Worst(board, creatures, creatures, 0, intentOption.Creature, declared, Cast)
+                : PlayOut(board, creatures, 0, intentOption.Creature, declared, Cast);
+        }
         var candidates = intentOption.CastableSpells
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)
             .Select(spell => new Candidate<SpellId>(spell, Round(spell, adversarial), OneStep(_scorer.Best(actor, spell, creatures, speed: SpeedOf(board, actor.Id)))))
@@ -336,7 +342,7 @@ public sealed class LookaheadAgent(
         // round: its reply is not a guess but the worst the enemy can do, and against that the free spell is the
         // one that still resolves.
         var paid = candidates.Where(candidate => resources.GetSpell(candidate.Option).Stats.Cost.Value > 0).ToList();
-        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
+        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Played.ActorStopped))
         {
             return candidates.MaxBy(candidate => candidate.OneStep).Option;
         }
@@ -368,8 +374,9 @@ public sealed class LookaheadAgent(
         var declared = DeclaredSpells(board, ahead, options.Actor, options.Spell);
         var intent = new CombatIntent(options.Actor, options.Spell);
         var speed = SpeedOf(board, options.Actor);
-        RoundValue Round(CombatAction action, bool worst) =>
-            Value(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action, worst);
+        RoundValue Round(CombatAction action, bool worst) => worst
+            ? Worst(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action)
+            : PlayOut(board, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action);
         var candidates = TargetSets.Of(options.LegalTargets)
             .Select(targets => CombatAction.Bind(intent, targets))
             .Select(action => new Candidate<CombatAction>(action, Round(action, adversarial), (_scorer.Wins(action, ahead), _scorer.Expected(action, ahead, speed: speed))))
@@ -379,7 +386,7 @@ public sealed class LookaheadAgent(
     }
 
     /// <summary>A candidate with what is known of it: the round played out, and the one-step reading as a win then a score.</summary>
-    private readonly record struct Candidate<T>(T Option, RoundValue Round, (bool Wins, double Score) OneStep);
+    private readonly record struct Candidate<T>(T Option, RoundValue Played, (bool Wins, double Score) OneStep);
 
     /// <summary>The one-step reading of a spell's best targets: whether it wins on its own, then its score; nothing to hit is worth nothing.</summary>
     private static (bool Wins, double Score) OneStep((IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? best) =>
@@ -408,12 +415,13 @@ public sealed class LookaheadAgent(
     /// </summary>
     private Candidate<T> First<T>(List<Candidate<T>> candidates, Func<Candidate<T>, RoundValue> worstOf)
     {
-        var top = candidates.Max(candidate => candidate.Round.Outcome);
-        var read = !adversarial && top > 0 && candidates.Count(candidate => candidate.Round.Outcome == top) > 1;
+        // Nothing is above the top, so reaching it is matching it, without comparing two doubles for equality.
+        var top = candidates.Max(candidate => candidate.Played.Outcome);
+        var read = !adversarial && top > 0 && candidates.Count(candidate => candidate.Played.Outcome >= top) > 1;
         var ranked = candidates
             .Select(candidate => (
                 Candidate: candidate,
-                Key: (candidate.Round.Outcome, Robust: read && candidate.Round.Outcome == top ? worstOf(candidate).Outcome : 0, candidate.Round.Score, candidate.OneStep.Wins, candidate.OneStep.Score)))
+                Key: (candidate.Played.Outcome, Robust: read && candidate.Played.Outcome >= top ? worstOf(candidate).Outcome : 0, candidate.Played.Score, candidate.OneStep.Wins, candidate.OneStep.Score)))
             .ToList();
         return ranked.Skip(1).Aggregate(ranked[0], (best, candidate) => candidate.Key.CompareTo(best.Key) > 0 ? candidate : best).Candidate;
     }
@@ -431,13 +439,17 @@ public sealed class LookaheadAgent(
 
         var creatures = Creatures(board);
         var declared = DeclaredSpells(board, creatures, actor, candidate);
-        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate), adversarial);
+        if (adversarial)
+        {
+            Worst(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
+        }
+
         return declared;
     }
 
     /// <summary>
-    /// The round's worth for a candidate: played out on the replies as they stand, or, adversarially, with
-    /// each enemy slot still ahead settled at the reply that costs the actor most. One enemy at a time in
+    /// The round's worth for a candidate against the enemy's worst replies: each enemy slot still ahead settled at
+    /// the reply that costs the actor most. One enemy at a time in
     /// timeline order, each over the spells it can cast, the earlier ones already settled and the later ones
     /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
     /// where this costs the sum, and the round is short enough that the difference between the two is rarely
@@ -445,24 +457,19 @@ public sealed class LookaheadAgent(
     /// The replies an enemy can choose from are read on <paramref name="beforeCombat"/>, where it declared:
     /// the round is played from <paramref name="start"/>. At a declaration the two are the same board; at a
     /// target, the only board left is the one the earlier slots made (ADR 0083), and it stands for both.
-    /// <paramref name="worst"/> says which of the two readings: the minimax agent's always, and the lookahead's
-    /// only to tell two wins apart (ADR 0099).
+    /// It is the minimax agent's reading of every round, and the lookahead's only to tell two wins apart
+    /// (ADR 0099).
     /// </summary>
-    private RoundValue Value(
+    private RoundValue Worst(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         IReadOnlyList<CreatureSnapshot> beforeCombat,
         int fromSlot,
         CreatureId actor,
         Dictionary<CreatureId, SpellId?> declared,
-        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate,
-        bool worst)
+        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
     {
         var value = PlayOut(board, start, fromSlot, actor, declared, candidate);
-        if (!worst)
-        {
-            return value;
-        }
 
         foreach (var enemy in board.Timeline.Skip(fromSlot).Select(slot => slot.Creature).Distinct())
         {
