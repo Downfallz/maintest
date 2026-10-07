@@ -63,9 +63,12 @@ package and no alias is reported by `check-knobs` rather than guessed at.
 - An effect's amount and duration have a floor of 1, which the engine enforces, and a duration has a ceiling of
   **3 rounds**, the owner's rule of 2026-10-02: no condition, on a target or on its caster, lasts longer.
   `check-knobs` refuses a knob whose bounds reach past either.
-- A move is `step` added to **the value the content carries today**, not to a grid, so a critical chance
-  authored at 0.667 can reach 0.717 and 0.617 and stays reachable from itself. Results are rounded to three
-  decimals and clamped to `[min, max]`.
+- A move is `step` added to **the value the content carries today**, not to a grid. Results are rounded to
+  three decimals and clamped to `[min, max]`. A critical chance is the one number held to a grid: it is a
+  whole number of twentieths (ADR 0099), so that a card prints a d20 threshold, and `check-knobs` refuses a
+  `/criticalChance` band whose bounds or step are not multiples of 0.05, because a move from a value on the
+  grid by a step on the grid stays on it, and a band off it would carry an offset through every pass, which is
+  how the legacy thirds (0.33, 0.667, 0.717) survived until 2026-10-07.
 - **Only the listed pointers may move.** Everything else is the spell's identity: its kind of effect, its
   targeting, whether a buff is permanent, how many targets it reaches. Changing one of those is a design
   decision and belongs in a commit with a reason, not in a search.

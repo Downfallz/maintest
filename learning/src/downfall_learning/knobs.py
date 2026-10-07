@@ -54,6 +54,11 @@ HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff", "DefenseDebuff
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
 
+#: The die's grid (ADR 0099): a critical chance is a whole number of twentieths, because a card prints the
+#: d20 threshold and the data builder refuses a chance it cannot. A band whose bounds or step are not on the
+#: grid would walk a value off it, which is how the legacy thirds survived every tuning pass before the rule.
+TWENTIETH = 0.05
+
 #: The pointer that names a spell's energy cost.
 ENERGY_COST = "/energyCost"
 
@@ -126,8 +131,9 @@ class Knob:
     def moved(self, value: float, steps: int) -> float:
         """``value`` moved by ``steps`` of this knob, clamped to its bounds.
 
-        Moves are relative to the value the content carries rather than to a grid, so a critical chance
-        authored at 0.667 stays reachable from itself.
+        Moves are relative to the value the content carries rather than to a grid. Since ADR 0099 a critical
+        chance is authored on the d20's twentieths and its band is held to them, so a move keeps it there;
+        before it, the same arithmetic carried the legacy thirds forward.
         """
         return self.clamp(value + steps * self.step)
 
@@ -669,7 +675,23 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
                 f"{knob.key}: the critical multiplier reaches a target's damage and direct heal, and this "
                 "spell does neither, so this knob cannot move anything."
             )
+        if knob.path == CRITICAL_CHANCE:
+            off = [
+                name
+                for name, bound in (("min", knob.minimum), ("max", knob.maximum), ("step", knob.step))
+                if _off_the_twentieths(bound)
+            ]
+            if off:
+                problems.append(
+                    f"{knob.key}: a critical chance is a whole number of twentieths (ADR 0099), and this "
+                    f"band's {', '.join(off)} would walk it off the grid; every bound and the step must be a "
+                    f"multiple of {TWENTIETH}."
+                )
     return problems
+
+
+def _off_the_twentieths(value: float) -> bool:
+    return abs(value * 20 - round(value * 20)) > 1e-9
 
 
 #: The agent kinds that name a file after the colon. `greedy`, `random` and `explore:<rate>` name none.

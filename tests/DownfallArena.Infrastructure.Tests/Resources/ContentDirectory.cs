@@ -33,7 +33,7 @@ internal sealed class ContentDirectory : IDisposable
         .WithFile("Creatures/main.v1.json", """
             {
               "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
-              "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+              "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0,
               "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
             }
             """)

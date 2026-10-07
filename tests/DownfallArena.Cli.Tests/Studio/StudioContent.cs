@@ -10,7 +10,7 @@ internal sealed class StudioContent : IDisposable
     public const string Guard = """
         {
           "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-          "energyCost": 1, "criticalChance": 0,
+          "energyCost": 1, "criticalChance": 0.05,
           "targeting": { "origin": "Self", "scope": "SingleTarget" },
           "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
         }
@@ -26,14 +26,14 @@ internal sealed class StudioContent : IDisposable
         Write("Creatures/main.v1.json", """
             {
               "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
-              "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+              "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0,
               "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
             }
             """);
         Write("Spells/strike.v1.json", """
             {
               "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
-              "energyCost": 0, "criticalChance": 0,
+              "energyCost": 0, "criticalChance": 0.05,
               "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
               "effects": [ { "kind": "Damage", "amount": 1 } ]
             }
