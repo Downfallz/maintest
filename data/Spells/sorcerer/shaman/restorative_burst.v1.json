@@ -1,6 +1,6 @@
 {
   "id": "spell:restorative_burst:v1",
-  "name": "Restorative Burst",
+  "name": "Renewal Burst",
   "spellType": "Defensive",
   "creatureClass": "Shaman",
   "energyCost": 3,

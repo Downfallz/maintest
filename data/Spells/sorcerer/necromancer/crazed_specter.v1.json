@@ -1,6 +1,6 @@
 {
   "id": "spell:crazed_specter:v1",
-  "name": "Crazed Specter",
+  "name": "Death Wail",
   "spellType": "Offensive",
   "creatureClass": "Necromancer",
   "energyCost": 3,

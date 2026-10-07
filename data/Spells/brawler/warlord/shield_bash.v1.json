@@ -1,6 +1,6 @@
 {
   "id": "spell:shield_bash:v1",
-  "name": "Shield Bash",
+  "name": "Body Slam",
   "spellType": "Offensive",
   "creatureClass": "Warlord",
   "energyCost": 3,

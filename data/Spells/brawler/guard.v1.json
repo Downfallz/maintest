@@ -1,6 +1,6 @@
 {
   "id": "spell:guard:v1",
-  "name": "Guard",
+  "name": "Brace",
   "spellType": "Defensive",
   "creatureClass": "Brawler",
   "energyCost": 1,

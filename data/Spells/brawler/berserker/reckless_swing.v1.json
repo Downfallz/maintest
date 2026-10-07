@@ -1,6 +1,6 @@
 {
   "id": "spell:reckless_swing:v1",
-  "name": "Reckless Swing",
+  "name": "Wild Swing",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
   "energyCost": 2,

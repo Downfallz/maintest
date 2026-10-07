@@ -1,6 +1,6 @@
 {
   "id": "spell:heavy_strike:v1",
-  "name": "Heavy Strike",
+  "name": "Strike",
   "spellType": "Offensive",
   "creatureClass": "Creature",
   "energyCost": 2,

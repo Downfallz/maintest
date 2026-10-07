@@ -1,6 +1,6 @@
 {
   "id": "spell:throwing_star:v1",
-  "name": "Throwing Star",
+  "name": "Quill",
   "spellType": "Offensive",
   "creatureClass": "Scoundrel",
   "energyCost": 2,

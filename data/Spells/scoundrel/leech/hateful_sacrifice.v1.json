@@ -1,6 +1,6 @@
 {
   "id": "spell:hateful_sacrifice:v1",
-  "name": "Hateful Sacrifice",
+  "name": "Blood Price",
   "spellType": "Offensive",
   "creatureClass": "Leech",
   "energyCost": 3,

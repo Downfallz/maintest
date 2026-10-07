@@ -72,8 +72,8 @@ test('multiclass starts at the new opportunity with existing packages visible', 
   await open(page, 'multiclass');
   await expect(page.locator('#phase')).toContainText('Round 3');
   await expect(page.locator('#evolution-budget')).toContainText('2 / 2');
-  await expect(page.locator('#choices')).toContainText('Occultist');
-  await expect(page.locator('#choices')).toContainText('Berserker');
+  await expect(page.locator('#choices')).toContainText('Warped');
+  await expect(page.locator('#choices')).toContainText('Frenzied');
   // The spellbook's link opens the atlas at every width; a phone has no tab row for it.
   await page.locator('#hand-talents').click();
   await expect(page.locator('#mat')).toBeVisible();
@@ -82,7 +82,7 @@ test('multiclass starts at the new opportunity with existing packages visible', 
 for (const scenario of ['stun', 'resolution']) {
   test(`${scenario} reaches a real resolution and its before/after replay`, async ({ page }, info) => {
     await open(page, scenario);
-    const expected = scenario === 'stun' ? 'Tranquilizer Dart' : 'Toxic Waves';
+    const expected = scenario === 'stun' ? 'Paralyzing Barb' : 'Void Pulse';
     await expect(page.locator('#asking')).toContainText(expected);
     await expect(page.locator('#decision-guide')).toContainText(scenario === 'stun' ? 'Stun' : 'Bleed');
     const seatToken = (await state()).seatToken;

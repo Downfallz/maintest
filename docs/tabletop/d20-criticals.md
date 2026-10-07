@@ -1,7 +1,9 @@
 # Every critical chance is a twentieth
 
 Status: **Draft, settled, not built** (2026-09-17; the tables and the counts re-read on 2026-10-04 against
-content `e6f72578`, on 2026-10-05 against `ad3e4d00`, and on 2026-10-06 against `3c9eb083`). Every question
+content `e6f72578`, on 2026-10-05 against `ad3e4d00`, and on 2026-10-06 against `3c9eb083`). Spells carry the names of `9419f935`, the same content renamed
+([package-renaming-plan.md](../domain/package-renaming-plan.md)), also in the earlier readings: the ids did not
+move, so a row is found at any of those hashes under the name the plan's table gives. Every question
 this document opened has an
 answer; what is left is the work. Not a numbered ADR: this branch claims no ADR number. When the rule is settled and built, this text moves into
 `docs/adr/` with the next free number.
@@ -36,16 +38,16 @@ for f in sorted(glob.glob('data/Spells/**/*.json',recursive=True)):
 
 Which rows it prints changes with every pass; **what does not change is that the rows exist**, because a knob
 moves a value by its step from wherever it sits. Ten Spells move at content `7e199df4`, as they did at
-`938bef5e`, and only Tornado's numbers differ between the two readings.
+`938bef5e`, and only Whirlwind's numbers differ between the two readings.
 
-**Re-read on 2026-10-04, at content `e6f72578`.** Eight Spells move. Two rows are gone: Lightning Bolt
-now sits on 0.50, and Revenant Guards is authored at 0, so the zeroing below has landed. Noxious Cure moved
-from 0.28 to 0.33 and still snaps. Ambush (0.35) and Night Raid (0), new since the last reading, are on the
+**Re-read on 2026-10-04, at content `e6f72578`.** Eight Spells move. Two rows are gone: Shock
+now sits on 0.50, and Wraithguard is authored at 0, so the zeroing below has landed. Toxic Mend moved
+from 0.28 to 0.33 and still snaps. Ambush (0.35) and Blood Hunt (0), new since the last reading, are on the
 grid; Shadowstep and Death Squad, which they replace, were too.
 
-**Re-read on 2026-10-05, at content `ad3e4d00`.** Seven Spells move. One row is gone: Crazed Specter is
+**Re-read on 2026-10-05, at content `ad3e4d00`.** Seven Spells move. One row is gone: Death Wail is
 authored at 0 and rolls no critical, where it printed 0.38, and its critical chance knob went with it. Its
-weight is in the Bleed it now leaves on each target, which a critical never reaches (ADR 0033). Night Raid
+weight is in the Bleed it now leaves on each target, which a critical never reaches (ADR 0033). Blood Hunt
 changed its reach, its Damage and its drain, and is still at 0.
 
 **Re-read on 2026-10-06, at content `3c9eb083`.** The same seven Spells move. Basic Attack is gone from the
@@ -53,12 +55,12 @@ catalogue. It was authored at 0 and had no critical chance knob, so no row and n
 
 | Spell | Now | Snapped | Move |
 | --- | --- | --- | --- |
-| Tornado | 0.38 | 0.40 | 0.020 |
-| Noxious Cure | 0.33 | 0.35 | 0.020 |
-| Rejuvenate | 0.22 | 0.20 | 0.020 |
-| Toxic Waves | 0.33 | 0.35 | 0.020 |
-| Engulfing Flames | 0.33 | 0.35 | 0.020 |
-| Protective Slam | 0.283 | 0.30 | 0.017 |
+| Whirlwind | 0.38 | 0.40 | 0.020 |
+| Toxic Mend | 0.33 | 0.35 | 0.020 |
+| Revitalize | 0.22 | 0.20 | 0.020 |
+| Void Pulse | 0.33 | 0.35 | 0.020 |
+| Incinerate | 0.33 | 0.35 | 0.020 |
+| Crash | 0.283 | 0.30 | 0.017 |
 | Pummel | 0.767 | 0.75 | 0.017 |
 
 Read the values, not the table: 0.33, 0.667 and 0.717 are the legacy prototype's thirds, carried over by the
@@ -66,7 +68,7 @@ port (`docs/domain/spells.md`). A knob moves a value **by** its step, from where
 step of 0.05 on a start of 0.33 gives 0.28 and 0.38; on 0.717 it gives 0.767; on 0.17 it gives 0.22. **The
 step did not create the offset — it preserves it, and every tuning pass carries it forward.** Nineteen of the
 twenty declared bands were on the grid at the first reading, and twenty-four of the twenty-five are at
-`ad3e4d00` and `3c9eb083` (twenty-five of twenty-six at `e6f72578`, before Crazed Specter's band left); the values that walk
+`ad3e4d00` and `3c9eb083` (twenty-five of twenty-six at `e6f72578`, before Death Wail's band left); the values that walk
 them are not, and never will be.
 
 That is what makes this a rule and not a chore. Snap once and the offset is gone for good, because a knob that
@@ -75,8 +77,8 @@ starts on the grid and moves in twentieths stays on it.
 ## What it costs
 
 - **Seven Spells are snapped** (nine at the first reading, eight at `e6f72578`), by 0.02 at most and 0.019
-  on average over the seven. Crazed Specter was one of the eight until 2026-10-05; it left the list by going
-  to 0, not by a snap. **Revenant Guards was the tenth and is not a snap**: it went from 0.33 to 0, a move
+  on average over the seven. Death Wail was one of the eight until 2026-10-05; it left the list by going
+  to 0, not by a snap. **Wraithguard was the tenth and is not a snap**: it went from 0.33 to 0, a move
   of 0.33, because a critical cannot reach anything it does. The content of 2026-10-04 made that move; the rest of this bullet
   is what it cost. Do not average the two together — the snap's cost and the zeroing's cost are different
   decisions and the journal entry has to price them apart. The zeroing also moves what the engine *records*, even though
@@ -123,7 +125,7 @@ nothing today and exists so that the next pass cannot ask. One warning for whoev
 both Python and .NET rounds a tie to even, so `round(0.025 * 20) / 20` is `0.0`, not `0.05`. The rule is
 `floor(x * 20 + 0.5) / 20`.
 
-**Revenant Guards prints no chance at all.** Not 0.35: **0**. A critical multiplies a target's Damage and a
+**Wraithguard prints no chance at all.** Not 0.35: **0**. A critical multiplies a target's Damage and a
 direct Heal (ADR 0033), and this Spell has neither — two Defense buffs and a Bleed on its caster — which is
 why `knobs.json` already refuses it a critical knob. Snapping it would print a number on a card where the die
 cannot change anything. The Spell itself may be reworked later; until then the card tells the truth. The
@@ -145,8 +147,8 @@ off the content, not written into the client (stage 3 of [app-roadmap.md](app-ro
 
 Re-read on 2026-10-06 at content `3c9eb083`. Twenty of the 44 Spells never touch the die, and the
 twenty-four that do carry **nine distinct chances**, each a clean threshold (twenty-one of 45 never touched it
-at `ad3e4d00`, before Basic Attack, which never rolled, left; twenty and twenty-five at `e6f72578`; Crazed
-Specter's 0.38 would have snapped to 0.40, a row Tornado still fills):
+at `ad3e4d00`, before Basic Attack, which never rolled, left; twenty and twenty-five at `e6f72578`; Death
+Wail's 0.38 would have snapped to 0.40, a row Whirlwind still fills):
 
 | Chance | Faces | Card |
 | --- | --- | --- |
@@ -161,8 +163,8 @@ Specter's 0.38 would have snapped to 0.40, a row Tornado still fills):
 | 0.80 | 16 | `d20: 5+` |
 
 Thirteen values become nine, and every one of them is a number a player reads off the die without
-arithmetic. At the first reading it was eleven, with a 0.60 row for Lightning Bolt and no 0.55; Lightning
-Bolt is at 0.50 now, and Healing Screech at 0.55.
+arithmetic. At the first reading it was eleven, with a 0.60 row for Shock and no 0.55; Shock
+is at 0.50 now, and Vital Echo at 0.55.
 
 **A Creature has no Critical chance, and it stays at zero.** ADR 0042 set it to zero and deliberately left the
 mechanism standing, so a Creature that crits more than another remained possible. That door is closed: no
@@ -178,7 +180,7 @@ since ADR 0083, and the audit keeps its old name).
 
 ## Still open
 
-Nothing. What is left is the work: snap the seven Spells (Revenant Guards' zeroing landed with the content
-of 2026-10-04, and Crazed Specter's with that of 2026-10-05), move `lightning_bolt`'s band floor, teach the data
+Nothing. What is left is the work: snap the seven Spells (Wraithguard's zeroing landed with the content
+of 2026-10-04, and Death Wail's with that of 2026-10-05), move `lightning_bolt`'s band floor, teach the data
 builder and `check-knobs` the grid, and pay the usual price of a content change — a new hash, a regenerated
 digest, a journal entry, and the four readings saying what the snap cost.

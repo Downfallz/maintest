@@ -1,6 +1,6 @@
 {
   "id": "spell:infectious_blast:v1",
-  "name": "Infectious Blast",
+  "name": "Contagion",
   "spellType": "Offensive",
   "creatureClass": "Trickster",
   "energyCost": 1,

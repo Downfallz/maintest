@@ -1,6 +1,6 @@
 {
   "id": "spell:thundering_seal:v1",
-  "name": "Thundering Seal",
+  "name": "Fortress",
   "spellType": "Defensive",
   "creatureClass": "Mercenary",
   "energyCost": 2,

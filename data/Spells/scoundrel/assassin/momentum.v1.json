@@ -1,6 +1,6 @@
 {
   "id": "spell:momentum:v1",
-  "name": "Momentum",
+  "name": "Pursuit",
   "spellType": "Offensive",
   "creatureClass": "Assassin",
   "energyCost": 0,

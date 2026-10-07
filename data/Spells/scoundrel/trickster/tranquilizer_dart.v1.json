@@ -1,6 +1,6 @@
 {
   "id": "spell:tranquilizer_dart:v1",
-  "name": "Tranquilizer Dart",
+  "name": "Paralyzing Barb",
   "spellType": "Offensive",
   "creatureClass": "Trickster",
   "energyCost": 2,

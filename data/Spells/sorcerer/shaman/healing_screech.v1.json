@@ -1,6 +1,6 @@
 {
   "id": "spell:healing_screech:v1",
-  "name": "Healing Screech",
+  "name": "Vital Echo",
   "spellType": "Defensive",
   "creatureClass": "Shaman",
   "energyCost": 2,

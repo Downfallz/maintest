@@ -1,6 +1,6 @@
 {
   "id": "spell:chain_slash:v1",
-  "name": "Chain Slash",
+  "name": "Dominate",
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
   "energyCost": 3,

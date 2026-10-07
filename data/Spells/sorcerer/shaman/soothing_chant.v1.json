@@ -1,6 +1,6 @@
 {
   "id": "spell:soothing_chant:v1",
-  "name": "Soothing Chant",
+  "name": "Whisper",
   "spellType": "Defensive",
   "creatureClass": "Shaman",
   "energyCost": 1,

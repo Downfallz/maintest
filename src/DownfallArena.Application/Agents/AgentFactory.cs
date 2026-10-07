@@ -23,8 +23,8 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Heuristic => spec with { Version = Weights(spec).Fingerprint },
             // A searching agent built on another agent stamps as that agent, the same way an exploring one
             // does: what it reads is the inner agent's file, not a weights file of its own (ADR 0055).
-            AgentKind.Lookahead or AgentKind.Minimax when Searched(spec) is { } searched => spec with { Version = Resolve(searched).Version },
-            AgentKind.Lookahead or AgentKind.Minimax when spec.Path is not null => spec with { Version = Weights(spec).Fingerprint },
+            AgentKind.Lookahead or AgentKind.Minimax when Depth(spec).Spec is { Path: not null } rest =>
+                spec with { Version = Searched(rest) is { } searched ? Resolve(searched).Version : Weights(rest).Fingerprint },
             AgentKind.Policy => spec with { Version = Policy(spec).Fingerprint },
             // An exploring agent that names an inner agent is as much that agent as a heuristic or policy
             // agent is, so the stamp fingerprints what the inner one reads: two runs on different weights,
@@ -63,12 +63,48 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     /// </summary>
     private LookaheadAgent Searching(AgentSpec spec, RuleSet rules, IRandomSource random, bool adversarial)
     {
-        if (Searched(spec) is { } searched)
+        var (combat, rest) = Depth(spec);
+        if (Searched(rest) is { } searched)
         {
-            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random);
+            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random, combat: combat);
         }
 
-        return new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial, random: random);
+        return new LookaheadAgent(rest.Path is null ? ScoringWeights.Default : Weights(rest), resources, rules, adversarial, random: random, combat: combat);
+    }
+
+    /// <summary>
+    /// How far a searching spec reads a combat move past its round, and the spec with that part taken off. A
+    /// path that opens with <c>&lt;rounds&gt;x&lt;rollouts&gt;</c> -- <c>lookahead:4x4</c>,
+    /// <c>lookahead:4x4:learning/weights/lookahead/lookahead-34.json</c>, <c>minimax:2x2:greedy</c> -- plays that
+    /// many rounds after the move on that many rollouts, the way a purchase is read (ADR 0094), and what
+    /// follows names the weights or the agent exactly as it did without the opening. No such opening is the
+    /// one-round reading of ADR 0047, so every spec written before this reads the same. Both numbers are at
+    /// least one: a reading of no rounds is the bare spec, and a weights file is never named that way.
+    /// </summary>
+    private static (CombatReading Combat, AgentSpec Spec) Depth(AgentSpec spec)
+    {
+        if (spec.Path is not { } path)
+        {
+            return (CombatReading.None, spec);
+        }
+
+        var separator = path.IndexOf(':', StringComparison.Ordinal);
+        var head = separator < 0 ? path : path[..separator];
+        var parts = head.Split('x', 'X');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var rounds)
+            || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var rollouts))
+        {
+            return (CombatReading.None, spec);
+        }
+
+        if (rounds < 1 || rollouts < 1)
+        {
+            throw new ArgumentException($"A searching agent reads at least one round on at least one rollout past a move: '<rounds>x<rollouts>' with both above zero, not '{head}' in '{spec}'.", nameof(spec));
+        }
+
+        var rest = separator < 0 ? null : path[(separator + 1)..];
+        return (new CombatReading(rounds, rollouts), spec with { Path = string.IsNullOrWhiteSpace(rest) ? null : rest });
     }
 
     /// <summary>

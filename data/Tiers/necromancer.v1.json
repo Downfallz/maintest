@@ -1,6 +1,6 @@
 {
   "id": "tier:necromancer:v1",
-  "name": "Necromancer",
+  "name": "Necrotic",
   "level": 2,
   "prerequisites": [
     "tier:occultist:v1"

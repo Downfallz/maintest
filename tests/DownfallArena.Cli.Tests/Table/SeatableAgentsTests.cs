@@ -84,7 +84,11 @@ public sealed class SeatableAgentsTests : IDisposable
         SeatableAgents.Read(Path.Combine(_directory, "nowhere"), featuredFile: null).Select(agent => agent.Value).ShouldBe(["greedy", "random"]);
     }
 
-    /// <summary>The repository's own file names weights that exist, so what the panel puts forward can be seated.</summary>
+    /// <summary>
+    /// The repository's own file names weights that exist, so what the panel puts forward can be seated. A spec
+    /// names its file after the kind and whatever sits between them (<c>lookahead:4x4:&lt;file&gt;</c>,
+    /// <c>explore:0.2:heuristic:&lt;file&gt;</c>), so the file is the segment that reads as one.
+    /// </summary>
     [Fact]
     public void The_repository_s_featured_agents_name_files_that_exist()
     {
@@ -92,7 +96,7 @@ public sealed class SeatableAgentsTests : IDisposable
         var offered = SeatableAgents.Read(weights, Path.Combine(RepositoryRoot(), SeatableAgents.FeaturedFile)).Where(agent => agent.Featured).ToList();
 
         offered.ShouldNotBeEmpty();
-        foreach (var path in offered.Select(agent => agent.Value.Split(':', 2)).Where(parts => parts.Length == 2).Select(parts => parts[1]))
+        foreach (var path in offered.SelectMany(agent => agent.Value.Split(':')).Where(part => part.EndsWith(".json", StringComparison.Ordinal)))
         {
             File.Exists(Path.Combine(RepositoryRoot(), path)).ShouldBeTrue($"{path} is put forward but is not in the repository");
         }

@@ -1,6 +1,6 @@
 {
   "id": "spell:full_plate:v1",
-  "name": "Full Plate",
+  "name": "Carapace",
   "spellType": "Passive",
   "creatureClass": "Warlord",
   "energyCost": 1,

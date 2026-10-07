@@ -7,8 +7,8 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
-| Lookahead | `lookahead[:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic for a seed. Speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). It orders its own ties by playing each seating out, and prices a purchase by playing the rounds after it out (ADR 0094). See [the round played out](#the-round-played-out). |
-| Minimax | `minimax[:<weights file>\|:<agent>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. It orders its ties as the lookahead does. Deterministic. See [the worst reply](#the-worst-reply). |
+| Lookahead | `lookahead[:<rounds>x<rollouts>][:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. With `<rounds>x<rollouts>` in front (`lookahead:4x4:<weights file>`) it also plays that many rounds after the move out, on that many rollouts, the way it reads a purchase; see [the rounds after a move](#the-rounds-after-a-move). Deterministic for a seed. Speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). It orders its own ties by playing each seating out, and prices a purchase by playing the rounds after it out (ADR 0094). See [the round played out](#the-round-played-out). |
+| Minimax | `minimax[:<rounds>x<rollouts>][:<weights file>\|:<agent>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. It orders its ties as the lookahead does, and reads the rounds after a move the same way when the spec asks for them. Deterministic. See [the worst reply](#the-worst-reply). |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 | Exploring | `explore:<rate>[:<agent>]` | Another agent, except that the given share of decisions is taken uniformly at random (ADR 0014). Bare, it wraps Greedy; a second colon names the agent it deviates from instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`, or a bare path as the shorthand for a weights file. For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
 
@@ -172,6 +172,41 @@ The cost is the branching: one decision plays the rest of the round twice per ca
 plays asks the scorer for a best target set, so a decision costs on the order of the timeline length times
 what a one-step decision costs. The journal entry that introduced it carries the measurement, and the
 measurement is the thing to read before playing it: on the catalogue of that day it does **not** beat Greedy.
+
+### The rounds after a move
+
+A combat move can be read past its round, the way a purchase is (ADR 0094): `lookahead:4x4` plays, for each
+candidate, the rest of the round as above and then the next four rounds out on four rollouts, every
+sub-phase of them, every decision in both seats the agent the lookahead is built on, on dice derived from
+the agent's seed and the decision (the round, the actor and the slot), so that every candidate of one
+decision is read on the same rolls and only the candidate is left between them. What is read off them is
+the match they end and nothing else: the candidate's outcome becomes the share of rollouts won less the
+share lost, with the actor's critical mixed in as before, and its score stays the round's own. A candidate
+whose rounds after end in a win outranks every other, one that ends in a loss ranks below, and between
+candidates that end nothing the one-round reading decides, as it always did. The rollouts' summed scores
+are deliberately not added: a sum of one-step scores over rounds a bot plays out cannot tell damage now from
+damage later, and measured on the benchmark seeds it made Focus the most cast spell in the catalogue and
+lost three matches in four to the one-round reading on the same weights, with the stock terms (energy,
+defense, initiative) in the sum or without them.
+
+`<rounds>x<rollouts>` goes right after the kind and in front of whatever named the weights or the inner
+agent before: `lookahead:4x4`, `lookahead:4x4:learning/weights/lookahead/lookahead-34.json`,
+`lookahead:2x2:policy:<file>`, `minimax:2x2:greedy`. Both numbers are at least one, and a spec without them
+reads the round alone, so every spec written before this reads the same. The depth is part of the stamp
+(`Lookahead:4x4:<file>@<fingerprint>`). It needs dice: an agent built without a random source reads the round
+alone whatever the spec says, as it buys without rollouts.
+
+What it sees that one round cannot: a kill that leaves the wrong enemy standing, a lethal two rounds out, a
+ward that keeps the last creature alive through the next round. What it costs is the rollouts: each candidate of
+a decision adds `2 x rollouts x rounds` rounds of play on top of the two round play-outs it already made (one
+when the actor cannot crit), targets as well as intents, and the tie orders. Measured on the same weights
+(journal, 2026-10-07), it is no stronger than the one-round reading: even at `2x2` (20 matches in 40) and
+weaker at `4x4` (16 in 40), at three times the clock. Four rollouts give an outcome in quarters, and the
+outcome is compared before the score, so once rollouts start ending a match one rollout's dice outrank
+anything the round itself shows; before that, no rollout ends and the reading is the one-round one. It
+stays opt-in, seated by its spec from a shell (`table --p2 lookahead:4x4:<weights file>`): not put forward
+by `learning/seatable.json`, which offers what measured as worth playing against, and not in the tuner's
+panel, which it would slow by the same factor for nothing measured.
 
 ## The worst reply
 
