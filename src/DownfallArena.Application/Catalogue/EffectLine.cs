@@ -31,6 +31,7 @@ public static class EffectLine
             EnergyRegeneration energy => $"Energy regeneration {energy.AmountPerRound} a round, {Lasting(energy.Duration)}",
             Stun stun => $"Stun, {Lasting(stun.Duration)}",
             DefenseBuff buff => $"Defense +{buff.Amount}, {Lasting(buff.Duration)}",
+            DamageBuff buff => $"Damage +{buff.Amount} on every hit, {Lasting(buff.Duration)}",
             DefenseDebuff debuff => $"Defense -{debuff.Amount}, {Lasting(debuff.Duration)}",
             InitiativeBuff buff => $"Initiative +{buff.Amount}, {Lasting(buff.Duration)}",
             InitiativeDebuff debuff => $"Initiative -{debuff.Amount}, {Lasting(debuff.Duration)}",

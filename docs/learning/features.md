@@ -39,7 +39,15 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ## Versions
 
-### features:v8 (published, ADR 0083)
+### features:v9 (published, ADR 0100)
+
+`features:v8` with one more condition kind, `DamageBuff`, appended after `InitiativeDebuff` in every creature
+block's condition pairs (its summed amount and its longest remaining rounds, permanent read as the sentinel as
+the other permanent kinds are). A capstone's passive is not a feature of its own: owning the capstone is, in the
+owned-tier bits every package already has, and its stun immunity is in `stun_immune`. No run recorded under v8
+is comparable to one under v9, and a policy trained under v8 is refused.
+
+### features:v8 (superseded by v9, ADR 0100)
 
 `features:v7` with the same layout and a new meaning for the combat steps. An action resolves as its targets
 are confirmed, so the board of a Target decision already includes every action before it in the round:

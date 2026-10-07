@@ -15,6 +15,7 @@ SUPPORTED_VERSIONS = frozenset(
         "features:v6",
         "features:v7",
         "features:v8",
+        "features:v9",
     }
 )
 

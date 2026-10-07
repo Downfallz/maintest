@@ -76,8 +76,10 @@ public static class GameSchemaMapper
         var id = ParseId<TierId>(dto.Id, context, problems);
         var prerequisites = dto.Prerequisites.Select(value => ParseId<TierId>(value, context, problems)).OfType<TierId>().ToList();
         var spells = dto.Spells.Select(value => ParseId<SpellId>(value, context, problems)).OfType<SpellId>().ToList();
+        var authoredAnyOf = dto.AnyOf ?? [];
+        var anyOf = authoredAnyOf.Select(value => ParseId<TierId>(value, context, problems)).OfType<TierId>().ToList();
 
-        if (id is null || prerequisites.Count != dto.Prerequisites.Count || spells.Count != dto.Spells.Count)
+        if (id is null || prerequisites.Count != dto.Prerequisites.Count || spells.Count != dto.Spells.Count || anyOf.Count != authoredAnyOf.Count)
         {
             return null;
         }
@@ -90,7 +92,8 @@ public static class GameSchemaMapper
 
         try
         {
-            return Tier.Create(id, dto.Name, dto.Level, prerequisites, spells, Initiative.Of(dto.InitiativeBonus));
+            var passive = dto.Passive is { } held ? Passive.Of(held.StunImmunity, held.UpkeepEnergy, held.DamageBonus) : Passive.None;
+            return Tier.Create(id, dto.Name, dto.Level, prerequisites, spells, Initiative.Of(dto.InitiativeBonus), anyOf, passive);
         }
         catch (ArgumentException error)
         {
@@ -170,6 +173,7 @@ public static class GameSchemaMapper
             "ENERGYREGENERATION" => PerRound(dto, effectContext, problems, EnergyRegeneration.Of),
             "STUN" => ForRounds(dto, effectContext, problems, Stun.For),
             "DEFENSEBUFF" => WhileLasting(dto, effectContext, problems, DefenseBuff.Of),
+            "DAMAGEBUFF" => WhileLasting(dto, effectContext, problems, DamageBuff.Of),
             "DEFENSEDEBUFF" => WhileLasting(dto, effectContext, problems, DefenseDebuff.Of),
             "INITIATIVEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeBuff.Of),
             "INITIATIVEDEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeDebuff.Of),
@@ -207,7 +211,7 @@ public static class GameSchemaMapper
         return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds), context, problems) : null;
     }
 
-    /// <summary>DefenseBuff, DefenseDebuff, InitiativeBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
+    /// <summary>DefenseBuff, DamageBuff, DefenseDebuff, InitiativeBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
     private static Effect? WhileLasting(EffectDto dto, string context, List<string> problems, Func<int, Duration, StackingPolicy, Effect> create)
     {
         var stacking = Stacking(dto, context, problems, StackingPolicy.Stack);

@@ -92,6 +92,9 @@ public sealed record SpellOutcome
     /// <summary>InitiativeBuffs applied, kept apart from the debuffs: they move the same stat opposite ways.</summary>
     public int InitiativeBuffs { get; init; }
 
+    /// <summary>Damage buffs applied (ADR 0100), not the damage they go on to add.</summary>
+    public int DamageBuffs { get; init; }
+
     /// <summary>Casts that landed on a side that went on to win.</summary>
     public int ResolvedWhenWon { get; init; }
 
@@ -174,6 +177,7 @@ public sealed record SpellOutcome
             DefenseBuffs = effects.DefenseBuffs,
             DefenseDebuffs = effects.DefenseDebuffs,
             InitiativeBuffs = effects.InitiativeBuffs,
+            DamageBuffs = effects.DamageBuffs,
             InitiativeDebuffs = effects.InitiativeDebuffs,
             ConditionDamage = effects.ConditionDamage,
             ConditionHealing = effects.ConditionHealing,

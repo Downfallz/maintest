@@ -1,8 +1,10 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rules.Rounds;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Domain.Tests.Matches.Rules.Rounds;
@@ -20,6 +22,22 @@ public sealed class UpkeepRulesTests
         Arena.Find(creatures, Arena.Knight).Energy.ShouldBe(Energy.Of(3));
         Arena.Find(creatures, Arena.Archer).Energy.ShouldBe(Energy.Of(0));
         Arena.Find(creatures, Arena.Wraith).Energy.ShouldBe(Energy.Of(3));
+    }
+
+    /// <summary>ADR 0100: a package's upkeep energy comes on top of the rule set's, every upkeep, to its owner alone.</summary>
+    [Fact]
+    public void A_creature_gains_its_packages_upkeep_energy_beside_the_rule_sets()
+    {
+        var creatures = Arena.FourCreatures();
+        var archmage = Tier.Create(TierId.Parse("tier:archmage:v1"), "Archmage", 2, [], [], Initiative.Of(0), [Arena.GuardPack], Passive.Of(upkeepEnergy: 1));
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        knight.BuyTier(archmage).IsSuccess.ShouldBeTrue();
+
+        UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 2, 2, 30, 2.0));
+
+        knight.Energy.ShouldBe(Energy.Of(3));
+        Arena.Find(creatures, Arena.Archer).Energy.ShouldBe(Energy.Of(2));
     }
 
     [Fact]

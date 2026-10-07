@@ -438,6 +438,7 @@ public sealed class ActionScorerTests
         (Regeneration.Of(1, rounds: 1), Regeneration.Of(1, rounds: 2)),
         (EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2)),
         (DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2))),
+        (DamageBuff.Of(1, Duration.OfRounds(1)), DamageBuff.Of(1, Duration.OfRounds(2))),
         (InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2))),
         (DefenseDebuff.Of(1, Duration.OfRounds(1)), DefenseDebuff.Of(1, Duration.OfRounds(2))),
         (InitiativeBuff.Of(1, Duration.OfRounds(1)), InitiativeBuff.Of(1, Duration.OfRounds(2))),

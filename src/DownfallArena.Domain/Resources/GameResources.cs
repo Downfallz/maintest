@@ -208,7 +208,7 @@ public sealed class GameResources : IGameResources
     private static void ValidateClimb(Tier tier, Dictionary<TierId, Tier> tiers, List<string> problems)
     {
         var known = new List<Tier>();
-        foreach (var required in tier.Prerequisites)
+        foreach (var required in tier.Prerequisites.Concat(tier.AnyOf))
         {
             if (!tiers.TryGetValue(required, out var prerequisite))
             {
@@ -230,8 +230,17 @@ public sealed class GameResources : IGameResources
 
         // Sitting above is not enough: a level-3 package whose only prerequisite opens the family is bought
         // with two picks rather than three, so the level it is priced and paced at is not the one a player
-        // pays. Checked only once every prerequisite is known, so one mistake reads as one problem.
-        if (tier.Level > 1 && known.Count == tier.Prerequisites.Count && !known.Exists(prerequisite => prerequisite.Level == tier.Level - 1))
+        // pays. Checked only once every prerequisite is known, so one mistake reads as one problem. Any one of
+        // an any-of list may be the one a creature climbed through, so every one of them is a level below.
+        var stepsDown = tier.Prerequisites.Count + tier.AnyOf.Count;
+        foreach (var skipped in tier.AnyOf.Where(tiers.ContainsKey).Where(one => tiers[one].Level != tier.Level - 1))
+        {
+            problems.Add(
+                $"Tier '{tier.Id.Value}' at level {tier.Level} can be opened by '{skipped.Value}' at level {tiers[skipped].Level}; "
+                + "every package of an any-of prerequisite is the step a creature climbs through, so each sits a level below.");
+        }
+
+        if (tier.Level > 1 && known.Count == stepsDown && !known.Exists(prerequisite => prerequisite.Level == tier.Level - 1))
         {
             problems.Add(
                 $"Tier '{tier.Id.Value}' at level {tier.Level} has no prerequisite at level {tier.Level - 1}; "
@@ -255,7 +264,7 @@ public sealed class GameResources : IGameResources
             return false;
         }
 
-        foreach (var required in tier.Prerequisites)
+        foreach (var required in tier.Prerequisites.Concat(tier.AnyOf))
         {
             if (required == target || (seen.Add(required) && Reaches(required, target, tiers, seen)))
             {

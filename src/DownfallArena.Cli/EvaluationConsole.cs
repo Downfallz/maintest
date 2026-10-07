@@ -65,7 +65,7 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"OverTime",9} {"Heal",5} {"Energy",7} {"Drain",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def+",5} {"Def-",5} {"Init+",6} {"Init-",6}");
+        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"OverTime",9} {"Heal",5} {"Energy",7} {"Drain",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def+",5} {"Def-",5} {"Init+",6} {"Init-",6} {"Dmg+",5}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
@@ -88,7 +88,8 @@ internal static class EvaluationConsole
                 outcome.DefenseBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.DefenseDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.InitiativeBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(6),
-                outcome.InitiativeDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(6)));
+                outcome.InitiativeDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.DamageBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
         }
 
         var landed = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved);

@@ -136,7 +136,7 @@ public sealed class GameSchemaVersionTests
     {
         using var content = Content();
 
-        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithTiers + 1 });
+        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithCapstones + 1 });
 
         Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
             .Message.ShouldContain("written by a newer builder");
@@ -155,7 +155,7 @@ public sealed class GameSchemaVersionTests
         var path = Path.Combine(content.Path, "newer.json");
         File.WriteAllText(path, """
             {
-              "schemaVersion": 5, "contentHash": "", "creatures": [], "spells": [], "talentTrees": [],
+              "schemaVersion": 6, "contentHash": "", "creatures": [], "spells": [], "talentTrees": [],
               "aliases": {}, "somethingANewerBuilderWrites": [1, 2]
             }
             """);

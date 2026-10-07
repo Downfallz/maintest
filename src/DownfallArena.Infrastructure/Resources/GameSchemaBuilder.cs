@@ -116,11 +116,12 @@ public static class GameSchemaBuilder
     /// The document's version and its <c>tiers</c> member decided together, because they are one fact: the
     /// version is the lowest one that can read the document. A catalogue with no packages is emitted exactly as
     /// it was before packages existed -- member absent, version 1, same content hash -- and one that has them
-    /// says version 2, because a reader written before the member refuses it as an unknown field.
+    /// says version 2, because a reader written before the member refuses it as an unknown field. A package that
+    /// uses an any-of prerequisite or a passive (ADR 0100) raises it once more, for the same reason.
     /// </summary>
     private static GameSchema Versioned(GameSchema schema) =>
-        schema.Tiers is { Count: > 0 }
-            ? schema with { SchemaVersion = GameSchema.VersionWithTiers }
+        schema.Tiers is { Count: > 0 } tiers
+            ? schema with { SchemaVersion = tiers.Any(tier => tier.UsesCapstoneMembers) ? GameSchema.VersionWithCapstones : GameSchema.VersionWithTiers }
             : schema with { SchemaVersion = GameSchema.VersionWithoutTiers, Tiers = null };
 
     /// <summary>
@@ -151,7 +152,7 @@ public static class GameSchemaBuilder
     /// </summary>
     private static void VerifyKnownVersion(int declared, string schemaPath)
     {
-        if (declared is GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers)
+        if (declared is GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers or GameSchema.VersionWithCapstones)
         {
             return;
         }
@@ -164,7 +165,7 @@ public static class GameSchemaBuilder
 
         throw new InvalidGameContentException(
             $"'{schemaPath}' declares schema version {declared}; this engine reads "
-            + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. {age}");
+            + $"{GameSchema.VersionWithoutTiers} to {GameSchema.VersionWithCapstones}. {age}");
     }
 
     /// <summary>
@@ -181,11 +182,20 @@ public static class GameSchemaBuilder
                 + $"a catalogue that uses them is version {GameSchema.VersionWithTiers}. Rebuild it with the data builder.");
         }
 
-        if (!carriesTiers && schema.SchemaVersion == GameSchema.VersionWithTiers)
+        if (!carriesTiers && schema.SchemaVersion != GameSchema.VersionWithoutTiers)
         {
             throw new InvalidGameContentException(
-                $"'{schemaPath}' declares schema version {GameSchema.VersionWithTiers} but carries no evolution packages; "
+                $"'{schemaPath}' declares schema version {schema.SchemaVersion} but carries no evolution packages; "
                 + $"a catalogue without them is version {GameSchema.VersionWithoutTiers}. Rebuild it with the data builder.");
+        }
+
+        var carriesCapstones = schema.Tiers?.Any(tier => tier.UsesCapstoneMembers) ?? false;
+        if (carriesTiers && carriesCapstones != (schema.SchemaVersion == GameSchema.VersionWithCapstones))
+        {
+            var expected = carriesCapstones ? GameSchema.VersionWithCapstones : GameSchema.VersionWithTiers;
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {schema.SchemaVersion}, but a catalogue whose packages "
+                + $"{(carriesCapstones ? "use" : "use no")} any-of prerequisites or passives is version {expected}. Rebuild it with the data builder.");
         }
     }
 
@@ -219,6 +229,8 @@ public static class GameSchemaBuilder
         {
             Id = resolver.Resolve<TierId>(tier.Id, context, problems) ?? tier.Id,
             Prerequisites = [.. tier.Prerequisites.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)],
+            AnyOf = tier.AnyOf is { Count: > 0 } anyOf ? [.. anyOf.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)] : null,
+            Passive = tier.Passive is { StunImmunity: false, UpkeepEnergy: 0, DamageBonus: 0 } ? null : tier.Passive,
             Spells = [.. tier.Spells.Select(id => resolver.Resolve<SpellId>(id, context, problems) ?? id)],
         };
     }

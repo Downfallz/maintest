@@ -136,6 +136,7 @@ public sealed class ObservationBuilder(FeatureSchema schema)
             DefenseBuff buff => buff.Amount,
             DefenseDebuff debuff => debuff.Amount,
             InitiativeBuff buff => buff.Amount,
+            DamageBuff buff => buff.Amount,
             InitiativeDebuff debuff => debuff.Amount,
             _ => throw Unpriced(effect),
         };

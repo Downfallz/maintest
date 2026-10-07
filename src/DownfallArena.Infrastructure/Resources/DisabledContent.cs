@@ -53,6 +53,15 @@ internal static class DisabledContent
                     $"Tier '{tier.Id}' requires disabled tier '{required}'. Dropping the requirement would open the "
                     + "package instead of closing it: disable this tier too, or give it another prerequisite.");
             }
+
+            // One of several is enough (ADR 0100), so a disabled one only narrows the way in; with every one of
+            // them disabled the package could never be bought, which is a package nobody can reach.
+            if (tier.AnyOf is { Count: > 0 } anyOf && anyOf.All(disabledTiers.Contains))
+            {
+                problems.Add(
+                    $"Tier '{tier.Id}' is opened by any of {string.Join(", ", anyOf)}, and every one of them is disabled: "
+                    + "nothing could buy it. Disable this tier too, or enable one of them.");
+            }
         }
 
         return authored with

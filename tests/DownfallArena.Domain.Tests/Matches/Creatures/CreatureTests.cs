@@ -337,6 +337,77 @@ public sealed class CreatureTests
             [.. (spells ?? ["spell:guard:v1"]).Select(SpellId.Parse)],
             Initiative.Of(bonus));
 
+    private static Tier Capstone(string id, Passive passive, params string[] anyOf) =>
+        Tier.Create(TierId.Parse(id), id, 2, [], [], Initiative.Of(0), [.. anyOf.Select(TierId.Parse)], passive);
+
+    /// <summary>ADR 0100: a capstone is opened by any one of its family's deepest packages, and by none of them it is refused.</summary>
+    [Fact]
+    public void A_package_opened_by_any_of_several_is_bought_with_one_of_them_and_refused_with_none()
+    {
+        var titan = Capstone("tier:titan:v1", Passive.Of(stunImmunity: true), "tier:a:v1", "tier:b:v1");
+        var without = Spawn();
+        var with = Spawn();
+        with.BuyTier(Package("tier:b:v1")).IsSuccess.ShouldBeTrue();
+
+        without.BuyTier(titan).Error.ShouldBe(CreatureErrors.TierPrerequisiteMissing);
+        with.BuyTier(titan).IsSuccess.ShouldBeTrue();
+        with.OwnsTier(titan.Id).ShouldBeTrue();
+    }
+
+    /// <summary>ADR 0100: the immunity a package gives is held for good, so no stun lands on its owner, whatever the round.</summary>
+    [Fact]
+    public void A_package_that_gives_stun_immunity_makes_its_owner_immune_for_good()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:a:v1")).IsSuccess.ShouldBeTrue();
+
+        creature.BuyTier(Capstone("tier:titan:v1", Passive.Of(stunImmunity: true), "tier:a:v1")).IsSuccess.ShouldBeTrue();
+
+        creature.IsStunImmune.ShouldBeTrue();
+        creature.Apply(Stun.For(2)).ShouldBeNull();
+        creature.IsStunned.ShouldBeFalse();
+        creature.TickConditions();
+        creature.TickConditions();
+        creature.IsStunImmune.ShouldBeTrue();
+        creature.Snapshot().IsStunImmune.ShouldBeTrue();
+        creature.Snapshot().Passive.StunImmunity.ShouldBeTrue();
+    }
+
+    /// <summary>ADR 0100: a direct hit is raised by the packages' bonus and by every damage buff held, the two added.</summary>
+    [Fact]
+    public void The_damage_bonus_adds_the_packages_bonus_and_every_damage_buff()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:a:v1")).IsSuccess.ShouldBeTrue();
+        creature.BuyTier(Capstone("tier:apex:v1", Passive.Of(damageBonus: 2), "tier:a:v1")).IsSuccess.ShouldBeTrue();
+        creature.Apply(DamageBuff.Of(1, Duration.OfRounds(1)));
+        creature.Apply(DamageBuff.Of(3, Duration.Permanent));
+
+        creature.DamageBonus.ShouldBe(6);
+        creature.Snapshot().DamageBonus.ShouldBe(6);
+    }
+
+    /// <summary>
+    /// ADR 0100: a passive is read from the packages a creature owns, so a restored creature holds the one its
+    /// packages give, and a snapshot claiming another is a broken board rather than a creature.
+    /// </summary>
+    [Fact]
+    public void A_restored_creature_holds_its_packages_passive_and_a_snapshot_claiming_another_is_refused()
+    {
+        var opener = Package("tier:a:v1");
+        var titan = Capstone("tier:titan:v1", Passive.Of(stunImmunity: true, upkeepEnergy: 1), "tier:a:v1");
+        var creature = Spawn();
+        creature.BuyTier(opener).IsSuccess.ShouldBeTrue();
+        creature.BuyTier(titan).IsSuccess.ShouldBeTrue();
+        var snapshot = creature.Snapshot();
+
+        var restored = Creature.Restore(snapshot, Content.Creature(), [opener, titan]);
+
+        restored.Passive.ShouldBe(titan.Passive);
+        restored.IsStunImmune.ShouldBeTrue();
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { Passive = Passive.None }, Content.Creature(), [opener, titan]));
+    }
+
     [Fact]
     public void Buying_a_package_teaches_every_spell_in_it_and_raises_initiative_once()
     {

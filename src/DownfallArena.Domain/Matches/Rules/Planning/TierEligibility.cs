@@ -35,7 +35,7 @@ public static class TierEligibility
         return
         [
             .. resources.Tiers
-                .Where(tier => !creature.OwnsTier(tier.Id) && tier.Prerequisites.All(creature.OwnsTier))
+                .Where(tier => !creature.OwnsTier(tier.Id) && tier.IsOpenTo(creature.OwnsTier))
                 .Select(tier => tier.Id)
                 .OrderBy(tier => tier.Value, StringComparer.Ordinal),
         ];

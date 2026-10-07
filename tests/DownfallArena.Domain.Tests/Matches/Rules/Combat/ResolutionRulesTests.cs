@@ -36,6 +36,38 @@ public sealed class ResolutionRulesTests
     }
 
     /// <summary>
+    /// ADR 0100: the caster's damage bonus raises a direct hit before the critical doubles it and before the
+    /// target's defense takes from it: Strike's 3 and a bonus of 2 make 5, doubled to 10, less a defense of 1.
+    /// </summary>
+    [Fact]
+    public void A_damage_bonus_raises_a_direct_hit_before_the_critical_and_the_defense()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Apply(DamageBuff.Of(2, Duration.OfRounds(1)));
+        Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
+        var creatures = Arena.Snapshots(living);
+
+        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 9, true)]);
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, false)]);
+    }
+
+    /// <summary>ADR 0100: what a cast does to its own caster is a cost, not a hit, so the caster's bonus leaves it alone.</summary>
+    [Fact]
+    public void A_damage_bonus_leaves_a_casts_recoil_on_its_caster_alone()
+    {
+        var spell = Spell.Create(SpellId.Parse("spell:recoil:v1"), "Recoil", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None), TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(3)], [Damage.Of(2)]);
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.Learn(spell.Id);
+        knight.Apply(DamageBuff.Of(2, Duration.OfRounds(1)));
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var outcomes = ResolutionRules.Resolve(action, Arena.Snapshots(living), Resources(spell), RuleSet.Default, NoCrit, Speed.Standard).Outcomes;
+
+        outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 5, false), new DamageOutcome(Arena.Knight, 2, false) { OnCaster = true }]);
+    }
+
+    /// <summary>
     /// ADR 0033: one roll multiplies what the cast puts on a target's health now -- the damage and the direct
     /// heal -- and nothing else. The two energy effects, the bleed and the debuff in this spell are the boundary:
     /// energy is another economy, and a condition pays out at each upkeep, which one roll should not decide.
