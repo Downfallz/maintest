@@ -4,7 +4,7 @@
   "spellType": "Defensive",
   "creatureClass": "Trickster",
   "energyCost": 2,
-  "criticalChance": 0.33,
+  "criticalChance": 0.35,
   "targeting": {
     "origin": "Ally",
     "scope": "Multi",

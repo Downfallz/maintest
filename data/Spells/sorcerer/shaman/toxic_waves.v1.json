@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Shaman",
   "energyCost": 3,
-  "criticalChance": 0.33,
+  "criticalChance": 0.35,
   "targeting": {
     "origin": "Enemy",
     "scope": "Multi",

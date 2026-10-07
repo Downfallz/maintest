@@ -4,6 +4,43 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-07. Every critical chance is a twentieth: seven Spells snapped, and the grid is a rule
+
+- **What changed.** The seven Spells off the d20's grid are on it, the pass
+  [d20-criticals.md](../tabletop/d20-criticals.md) priced and [ADR 0099](../adr/0099-every-critical-chance-is-a-twentieth.md)
+  decides: Whirlwind 0.38 to 0.40, Toxic Mend, Void Pulse and Incinerate 0.33 to 0.35, Revitalize 0.22 to
+  0.20, Crash 0.283 to 0.30, Pummel 0.767 to 0.75. To the nearest twentieth, by 0.02 at most and 0.019 on
+  average. `lightning_bolt`'s critical chance band floor moves from 0.17 to 0.15, the one band off its own
+  grid; its value, 0.5, does not move. No other number in `data/` changes.
+- **What holds it.** The data builder refuses a Spell whose chance is not a whole number of twentieths,
+  naming the nearest, and a Creature definition with a chance of its own; `check-knobs` refuses a
+  `/criticalChance` band whose bounds or step are off 0.05. A knob that starts on the grid and moves in
+  twentieths stays on it, which is why this is a rule and not a chore: the thirds the legacy port carried
+  (0.33, 0.667, 0.717) survived every tuning pass because a knob moves a value by its step from wherever it
+  sits.
+- **The reading.** Content `9419f935` to `b41ba55e`, benchmark digest regenerated. Greedy against itself on
+  the 400 benchmark matches:
+
+  | | `9419f935` | `b41ba55e` |
+  |---|---|---|
+  | Player 1 wins | 196 (49.0 %) | 188 (47.0 %) |
+  | rounds, mean | 11.44 | 11.34 |
+  | health left, mean | 37.4 | 38.1 |
+  | draws, round cap | 0, 0 | 0, 0 |
+
+  96 of the 400 outcomes move, 24 of them in the winner and 82 in the length, across 48 of the 200 seeds: a
+  chance moved by 0.02 flips the roll that lands between the old threshold and the new one, and a flipped roll
+  replays the rest of the match. The moves are inside what a seed block moves on its own (2.6 on the
+  objective at 200 seeds, `knobs.json`), which is what seven moves of 0.02 should read as. Nothing here is a
+  balance result, and no Spell changes role.
+- **What the table gets.** Every card that rolls prints its threshold: nine distinct chances, 0.20 to 0.80,
+  each a face (`Crit 35% · d20 14+`), read off the content by the app's catalogue projection and the print
+  generator with no change to either. Twenty of the 44 Spells never roll. The rulebook's §6.7 loses its "not
+  yet built" clause.
+- **The test content moves with it.** The host and studio tests' creature carried a chance of 0.05 of its
+  own, which the builder now refuses; its two cards carry the 0.05 instead. The sum the engine rolls against
+  is the same, so the matches those tests play are the same.
+
 ## 2026-10-07. The lookahead can read a combat move past its round. Measured, the rounds after a move buy nothing yet
 
 All on content `9419f935`, weights `lookahead-34` (`@123c9a0d`) in both seats unless named, 20 seeds mirrored
