@@ -1,0 +1,16 @@
+{
+  "id": "tier:apex:v1",
+  "name": "Apex",
+  "level": 4,
+  "prerequisites": [],
+  "anyOf": [
+    "tier:blightweaver:v1",
+    "tier:deathstalker:v1",
+    "tier:soulreaver:v1"
+  ],
+  "spells": [],
+  "initiativeBonus": 0,
+  "passive": {
+    "damageBonus": 2
+  }
+}

@@ -77,7 +77,7 @@ public sealed partial class StudioFilesTests
             .Matches(page)
             .ToDictionary(match => match.Groups["kind"].Value, match => match.Groups["policy"].Value, StringComparer.Ordinal);
 
-        seeded.Count.ShouldBe(8, "the page seeds a policy for every lasting kind; a new one needs a row here too");
+        seeded.Count.ShouldBe(9, "the page seeds a policy for every lasting kind; a new one needs a row here too");
         foreach (var (kind, policy) in seeded)
         {
             FallbackFor(kind).ToString().ShouldBe(policy, $"the page seeds {kind} at {policy} and the engine falls back to something else");

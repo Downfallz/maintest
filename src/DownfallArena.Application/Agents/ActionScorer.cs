@@ -324,7 +324,26 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             }
         }
 
-        return best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) };
+        return PassiveTerms(actor, tier.Passive, creatures) + (best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) });
+    }
+
+    /// <summary>
+    /// What a package's passive is worth to its buyer (ADR 0100), priced over the rounds a permanent condition is
+    /// read for, the way the condition it stands in for is: energy at upkeep as the energy it gives, a damage
+    /// bonus as one hit a round raised by it, and stun immunity as a stun a round prevented while a living enemy
+    /// knows one, which it would be worth to an enemy to land.
+    /// </summary>
+    private ScoreTerms PassiveTerms(CreatureSnapshot actor, Passive passive, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var stunners = passive.StunImmunity && !actor.Passive.StunImmunity
+            ? creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive && creature.KnownSpells.Any(spell => resources.GetSpell(spell).Effects.Any(effect => effect is Stun)))
+            : 0;
+        return ScoreTerms.Zero with
+        {
+            Energy = passive.UpkeepEnergy * PermanentConditionRounds,
+            Damage = passive.DamageBonus * PermanentConditionRounds,
+            Stun = Math.Min(stunners, PermanentConditionRounds),
+        };
     }
 
     /// <summary>

@@ -32,12 +32,17 @@ export function statPairs(creature) {
 // say the creature has lost its speed slot this round, which is the thing a player plans around -- and the
 // speed lives in the timeline, which is a strip of six and not a thing read per creature.
 //
-// Every word is the payload's: `isStunned` and `isStunImmune` are the snapshot's own fields, and the speed is the band the engine
-// put the slot in.
+// Every fact is the payload's: `isStunned` and `isStunImmune` are the snapshot's own fields (the latter already true
+// for a creature whose packages give stun immunity, ADR 0100), the speed is the band the engine put the slot in,
+// and `damageBonus` and `passive.upkeepEnergy` are what its packages and damage buffs add for as long as they last.
+// Those two are numbers rather than lines, so they are worded here, in the card's own words.
 export function badges(creature, timeline) {
   const found = [];
   if (creature?.isStunned === true) found.push('stunned');
   if (creature?.isStunImmune === true) found.push('immune to stun');
+  if (Number.isInteger(creature?.damageBonus) && creature.damageBonus > 0) found.push(`damage +${creature.damageBonus} on every hit`);
+  const upkeep = creature?.passive?.upkeepEnergy;
+  if (Number.isInteger(upkeep) && upkeep > 0) found.push(`energy +${upkeep} at every upkeep`);
   const slot = (timeline ?? []).find(one => one?.creature === creature?.id);
   if (typeof slot?.speed === 'string' && slot.speed !== '') found.push(slot.speed);
   return found;

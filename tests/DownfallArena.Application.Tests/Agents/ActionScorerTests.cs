@@ -1201,6 +1201,61 @@ public sealed class ActionScorerTests
         SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
         TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
 
+    private static readonly TierId Steadfast = TierId.Parse("tier:steadfast:v1");
+
+    private static readonly TierId Focused = TierId.Parse("tier:focused:v1");
+
+    /// <summary>
+    /// Two capstones (ADR 0100) behind Slam's package, teaching nothing: one immune to stun, one with an energy
+    /// at upkeep and two damage on every hit.
+    /// </summary>
+    private static ActionScorer Capstones { get; } = new(
+        GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures],
+            [.. TestContent.Resources.Spells],
+            [.. TestContent.Resources.TalentTrees],
+            [
+                .. TestContent.Resources.Tiers,
+                Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
+                Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
+            ]),
+        MatchStore.TwoOnTwo(),
+        ScoringWeights.Default);
+
+    /// <summary>
+    /// A passive is priced over the rounds a permanent condition is read for (ADR 0100): an energy at every upkeep
+    /// as that much energy, two damage on every hit as one hit a round raised by two.
+    /// </summary>
+    [Fact]
+    public void A_capstone_is_priced_on_its_passive_over_the_rounds_a_permanent_condition_is_read_for()
+    {
+        var board = Board(enemyHealth: 20);
+
+        var terms = Capstones.PurchaseTerms(board[0], Focused, board);
+
+        terms.ShouldBe(ScoreTerms.Zero with { Energy = ActionScorer.PermanentConditionRounds, Damage = 2 * ActionScorer.PermanentConditionRounds });
+    }
+
+    /// <summary>Stun immunity is a stun a round prevented, for each living enemy that knows one to land.</summary>
+    [Fact]
+    public void Stun_immunity_is_priced_by_the_enemies_that_know_a_stun()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]) };
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).Stun.ShouldBe(1);
+    }
+
+    /// <summary>Against enemies that cannot stun, immunity prevents nothing and is worth nothing.</summary>
+    [Fact]
+    public void Stun_immunity_is_worth_nothing_when_no_enemy_can_stun()
+    {
+        var board = Board(enemyHealth: 20);
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).ShouldBe(ScoreTerms.Zero);
+    }
+
     /// <summary>Two energy for the caster, free: Wait, as every creature knows it.</summary>
     private static Spell Rest { get; } = Spell.Create(
         SpellId.Parse("spell:rest:v1"), "Rest", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),

@@ -20,8 +20,8 @@ listed in [spells.md](spells.md).
   actions bound in timeline order; one activation cursor tracks combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
-- Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
-  package it requires; an evolution choice must target an own, living creature that has not bought a package
+- Planning rules (phase 5): a package is available to a creature when it does not own it, owns every
+  package it requires, and owns one of its any-of list when it names one (ADR 0100); an evolution choice must target an own, living creature that has not bought a package
   this round and an available package, within the picks the rule set's schedule gives that round, and the
   sub-phase completes when no player has an effective pick left (capped by how many of their living creatures
   have not bought yet and can buy something, ADR 0066) -- which is immediately, in a round the schedule offers
@@ -48,6 +48,12 @@ listed in [spells.md](spells.md).
   round down, except that the first countdown after an application does not count: a one-round stun applied
   in combat stuns the creature for the whole next round. A creature whose stun ends at cleanup is immune to
   stun through the next round, and a stun on a stunned or immune creature is ignored (ADR 0072).
+  A package may carry a passive, held for as long as the creature owns it and read from the packages it owns
+  (ADR 0100): stun immunity that lasts, energy gained at every upkeep beside the rule set's, and a damage bonus.
+  A creature's damage bonus is its packages' and its damage buffs' added; it is added to every direct hit
+  the creature deals before the critical multiplier and the target's defense, and never to a bleed or to
+  what a cast does to its own caster. Each family closes with a level-4 capstone opened by any of its level-3
+  packages and teaching no spell: Titan (stun immunity), Archmage (+1 energy at upkeep), Apex (+2 damage).
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the

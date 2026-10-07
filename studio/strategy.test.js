@@ -72,6 +72,13 @@ test('compact values preserve direction, ticks, duration, permanence and missing
   assert.equal(compactEffect({ kind: 'FutureEffect' }), 'FutureEffect');
 });
 
+// ADR 0100: a damage buff is a lasting effect like a defense buff, and it belongs with damage when filtering.
+test('a damage buff reads as a lasting bonus to every hit and is filed under damage', () => {
+  assert.equal(compactEffect({ kind: 'DamageBuff', amount: 2, durationRounds: 3 }), 'Damage per hit + 2 · 3r');
+  assert.equal(compactEffect({ kind: 'DamageBuff', amount: 1, permanent: true }), 'Damage per hit + 1 · permanent');
+  assert.deepEqual([...effectGroups({ document: { effects: [{ kind: 'DamageBuff', amount: 1 }] } })], ['damage']);
+});
+
 test('the shipped catalogue has a complete, nonduplicated cost distribution with every effect classified', () => {
   const root = new URL('../data/Spells/', import.meta.url);
   const spells = readdirSync(root, { recursive: true }).filter(path => path.endsWith('.json')).map(path => {

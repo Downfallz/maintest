@@ -255,6 +255,84 @@ public sealed class TierContentTests
     }
 
     /// <summary>
+    /// A capstone (ADR 0100): opened by either of two level-3 packages, teaching nothing, and carrying the passive
+    /// that is the whole of what it sells.
+    /// </summary>
+    [Fact]
+    public void A_capstone_reaches_the_catalogue_with_its_any_of_prerequisite_and_its_passive()
+    {
+        using var content = Climb().WithFile("Tiers/titan.v1.json", """
+            { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1", "tier:ravager:v1"],
+              "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true, "damageBonus": 2 } }
+            """);
+
+        var titan = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)).GetTier(TierId.Parse("tier:titan:v1"));
+
+        titan.AnyOf.ShouldBe([TierId.Parse("tier:warmonger:v1"), TierId.Parse("tier:ravager:v1")]);
+        titan.Spells.ShouldBeEmpty();
+        titan.Passive.ShouldBe(Passive.Of(stunImmunity: true, damageBonus: 2));
+    }
+
+    /// <summary>A package with neither a spell nor a passive sells nothing, whatever opens it.</summary>
+    [Fact]
+    public void A_package_with_no_spell_and_an_empty_passive_is_refused()
+    {
+        using var content = Climb().WithFile("Tiers/titan.v1.json", """
+            { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1"],
+              "spells": [], "initiativeBonus": 0, "passive": {} }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("at least one spell");
+    }
+
+    /// <summary>
+    /// Any one of the list may be the package a creature climbed through, so each is the level below: a level-2
+    /// package in a capstone's list would open it two picks early.
+    /// </summary>
+    [Fact]
+    public void Every_package_of_an_any_of_prerequisite_sits_a_level_below()
+    {
+        using var content = Climb().WithFile("Tiers/titan.v1.json", """
+            { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1", "tier:marauder:v1"],
+              "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true } }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("can be opened by 'tier:marauder:v1' at level 2");
+    }
+
+    [Fact]
+    public void An_any_of_prerequisite_naming_an_unknown_package_is_refused()
+    {
+        using var content = Climb().WithFile("Tiers/titan.v1.json", """
+            { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:nope:v1"],
+              "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true } }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("unknown tier 'tier:nope:v1'");
+    }
+
+    /// <summary>The empty gate a disabled list would leave opens the capstone to anyone, so it is refused instead.</summary>
+    [Fact]
+    public void Disabling_every_package_of_an_any_of_prerequisite_is_refused()
+    {
+        using var content = Content()
+            .WithFile("Tiers/brute.v1.json", Opener)
+            .WithFile("Tiers/marauder.v1.json", """
+                { "id": "tier:marauder:v1", "name": "Marauder", "level": 2, "prerequisites": ["tier:brute:v1"], "spells": ["spell:guard"], "initiativeBonus": 0, "enabled": false }
+                """)
+            .WithFile("Tiers/titan.v1.json", """
+                { "id": "tier:titan:v1", "name": "Titan", "level": 3, "prerequisites": [], "anyOf": ["tier:marauder:v1"],
+                  "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true } }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Message.ShouldContain("tier:titan:v1");
+    }
+
+    /// <summary>
     /// Catalogues without tiers are what exists today, and the migration is not finished, so the builder has
     /// to keep accepting them rather than demanding content nobody has authored yet.
     /// </summary>
@@ -267,4 +345,16 @@ public sealed class TierContentTests
     }
 
     private static ContentDirectory Content() => new ContentDirectory().WithValidContent();
+
+    /// <summary>One family climbed to level 3 twice, so a capstone has two packages to be opened by.</summary>
+    private static ContentDirectory Climb() =>
+        Content()
+            .WithFile("Tiers/brute.v1.json", Opener)
+            .WithFile("Tiers/marauder.v1.json", Advanced)
+            .WithFile("Tiers/warmonger.v1.json", """
+                { "id": "tier:warmonger:v1", "name": "Warmonger", "level": 3, "prerequisites": ["tier:marauder:v1"], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """)
+            .WithFile("Tiers/ravager.v1.json", """
+                { "id": "tier:ravager:v1", "name": "Ravager", "level": 3, "prerequisites": ["tier:marauder:v1"], "spells": ["spell:guard"], "initiativeBonus": 1 }
+                """);
 }

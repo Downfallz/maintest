@@ -2,7 +2,7 @@ import { active, resolve } from './catalogue.js';
 
 // These groups describe authored effects, not their value in a particular combat situation.
 export const EFFECT_GROUPS = [
-  { id: 'damage', name: 'Damage', kinds: ['Damage'] },
+  { id: 'damage', name: 'Damage', kinds: ['Damage', 'DamageBuff'] },
   { id: 'bleed', name: 'Bleed', kinds: ['Bleed'] },
   { id: 'healing', name: 'Healing', kinds: ['Heal', 'Regeneration'] },
   { id: 'defense', name: 'Defense', kinds: ['DefenseBuff', 'DefenseDebuff'] },
@@ -64,12 +64,12 @@ export function strategyOverview(catalogue, ui = {}) {
 // check-knobs reading, labelled as an estimate beside these facts and never in place of them.
 export function compactEffect(effect) {
   const names = { Damage: 'Damage', Heal: 'Heal', EnergyGain: 'Energy +', EnergyDrain: 'Energy −',
-    DefenseBuff: 'Defense +', DefenseDebuff: 'Defense −', InitiativeBuff: 'Initiative +', InitiativeDebuff: 'Initiative −' };
+    DefenseBuff: 'Defense +', DamageBuff: 'Damage per hit +', DefenseDebuff: 'Defense −', InitiativeBuff: 'Initiative +', InitiativeDebuff: 'Initiative −' };
   if (effect.kind === 'Stun') return `Stun ${effect.durationRounds ?? 1}r`;
   const recurring = { Bleed: 'Bleed', Regeneration: 'Heal', EnergyRegeneration: 'Energy +' };
   if (recurring[effect.kind]) return `${recurring[effect.kind]} ${effect.amountPerRound ?? '?'} / round · ${duration(effect)}`;
   if (!names[effect.kind]) return effect.kind ?? 'Unknown effect';
-  const lasting = ['DefenseBuff', 'DefenseDebuff', 'InitiativeBuff', 'InitiativeDebuff'].includes(effect.kind);
+  const lasting = ['DefenseBuff', 'DamageBuff', 'DefenseDebuff', 'InitiativeBuff', 'InitiativeDebuff'].includes(effect.kind);
   const suffix = lasting ? ` · ${duration(effect)}` : '';
   return `${names[effect.kind]} ${effect.amount ?? '?'}${suffix}`;
 }

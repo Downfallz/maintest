@@ -59,8 +59,8 @@ def test_a_policy_round_trips_through_its_file(tmp_path: Path) -> None:
 
 
 def test_a_policy_on_an_unknown_schema_version_is_refused() -> None:
-    with pytest.raises(SchemaError, match="features:v9"):
-        a_policy(schema_id="features:v9+0123456789ab")
+    with pytest.raises(SchemaError, match="features:v10"):
+        a_policy(schema_id="features:v10+0123456789ab")
 
 
 def test_a_file_whose_version_contradicts_its_id_is_refused() -> None:

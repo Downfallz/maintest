@@ -96,7 +96,7 @@ public static class CatalogueProjection
     /// in: the opener before what it opens.
     /// </summary>
     private static PackageCard Package(Tier tier) =>
-        new(tier.Id, tier.Name, tier.Level, tier.Prerequisites, tier.Spells, tier.InitiativeBonus.Value);
+        new(tier.Id, tier.Name, tier.Level, tier.Prerequisites, tier.Spells, tier.InitiativeBonus.Value, tier.AnyOf, tier.Passive, EffectLine.Of(tier.Passive));
 
     /// <summary>
     /// The round, as the strip a table prints. The sub-phases are <see cref="RoundSubPhase" /> in declaration

@@ -36,6 +36,26 @@ const ordinal = (left, right) => (left < right ? -1 : Number(left > right));
 // A package's entry lives in its own section of the knobs file, next to the spells (ADR 0061). The prefix is
 // what tells the two apart, the way `load_knobs` tells them apart, so no caller has to say which it means.
 const PACKAGE_PREFIX = 'tier:';
+
+/**
+ * The numbers of a package a tuning pass may move, as `check-knobs` names them (`PACKAGE_KNOBS`): its initiative
+ * bonus, and the amounts of a capstone's passive (ADR 0100). Whether a passive gives stun immunity is its kind,
+ * and the level, the prerequisites and the spells are the progression: none of those is a knob.
+ */
+export const PACKAGE_KNOBS = Object.freeze(['/initiativeBonus', '/passive/upkeepEnergy', '/passive/damageBonus']);
+
+/**
+ * The part of a package document a knob may point into: the initiative bonus, and each passive amount the
+ * package carries as a number. What the knob editor offers and seeds from, so a pointer it adds is one the
+ * file accepts.
+ */
+export function packageKnobScope(document) {
+  const scope = { initiativeBonus: document?.initiativeBonus };
+  const passive = isRecord(document?.passive) ? document.passive : {};
+  const amounts = Object.fromEntries(['upkeepEnergy', 'damageBonus'].filter(key => isNumber(passive[key])).map(key => [key, passive[key]]));
+  if (Object.keys(amounts).length) scope.passive = amounts;
+  return scope;
+}
 const sectionOf = alias => (text(alias).startsWith(PACKAGE_PREFIX) ? 'packages' : 'spells');
 
 const isRecord = value => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -351,8 +371,8 @@ export function readings(entry, document) {
  */
 export function summarise(entry, document) {
   const knobs = readings(entry, document).map(knob => {
-    if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || knob.path === '/initiativeBonus') return knob;
-    const problems = [...knob.problems, problem('packageIdentity', `Only /initiativeBonus is a package knob; ${knob.path} is progression, not a tuning value.`)];
+    if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || PACKAGE_KNOBS.includes(knob.path)) return knob;
+    const problems = [...knob.problems, problem('packageIdentity', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; ${knob.path} is progression, not a tuning value.`)];
     return { ...knob, problems, tone: 'bad' };
   });
   const problems = entry?.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];

@@ -1,0 +1,16 @@
+{
+  "id": "tier:titan:v1",
+  "name": "Titan",
+  "level": 4,
+  "prerequisites": [],
+  "anyOf": [
+    "tier:ravager:v1",
+    "tier:dreadnought:v1",
+    "tier:warmonger:v1"
+  ],
+  "spells": [],
+  "initiativeBonus": 0,
+  "passive": {
+    "stunImmunity": true
+  }
+}

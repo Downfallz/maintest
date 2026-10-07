@@ -1040,6 +1040,34 @@
       ],
       "knobs": []
     },
+    "tier:apex": {
+      "name": "Apex",
+      "intent": "The Predator family's capstone (ADR 0100): bought after any of its level-3 packages, it teaches nothing and adds 2 to every direct hit its owner deals for the rest of the match. The late pick that turns a hunter's every strike up rather than adding a card.",
+      "keep": [
+        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
+      ],
+      "knobs": [
+        { "path": "/passive/damageBonus", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "tier:archmage": {
+      "name": "Archmage",
+      "intent": "The Warped family's capstone (ADR 0100): bought after any of its level-3 packages, it teaches nothing and gives its owner 1 energy at every upkeep beside the rule set's own, for the rest of the match. The family's deepest spells cost 3, and this is what pays for them.",
+      "keep": [
+        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
+      ],
+      "knobs": [
+        { "path": "/passive/upkeepEnergy", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
+    "tier:titan": {
+      "name": "Titan",
+      "intent": "The Brute family's capstone (ADR 0100): bought after any of its level-3 packages, it teaches nothing and makes its owner immune to stun for the rest of the match. The answer to the control the other families close on, with nothing to tune but whether it is bought.",
+      "keep": [
+        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
+      ],
+      "knobs": []
+    },
     "tier:warmonger": {
       "name": "Tyrant",
       "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the eleventh tuning pass moved it to 3 (journal, 2026-09-24), and the owner set it to 2 on 2026-10-02.",

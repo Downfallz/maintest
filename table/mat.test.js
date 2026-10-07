@@ -165,3 +165,57 @@ test('each authored family has a coherent range shared by its cards and descenda
   assert.equal(classColour('child-0', palette), palette.get('a/cool-child'));
   assert.equal(classColour('child-2', palette), '#e68573');
 });
+
+// ADR 0100: a capstone names no all-of prerequisite, only any one of its family's level-3 packages. Read
+// through the all-of list alone it would be a root of its own; it is drawn under each package that opens it.
+test('a capstone is drawn under every package of its any-of list rather than as a root', async () => {
+  const { packageForest } = await import('./mat.js');
+  const packages = [
+    { id: 'brute', level: 1, prerequisites: [] },
+    { id: 'berserker', level: 2, prerequisites: ['brute'] },
+    { id: 'marauder', level: 2, prerequisites: ['brute'] },
+    { id: 'ravager', level: 3, prerequisites: ['berserker'] },
+    { id: 'warmonger', level: 3, prerequisites: ['marauder'] },
+    { id: 'titan', level: 4, prerequisites: [], anyOf: ['ravager', 'warmonger'], spells: [] },
+  ];
+  const roots = packageForest({ packages });
+  assert.deepEqual(roots.map(pack => pack.id), ['brute']);
+  const closers = roots[0].children.map(branch => branch.children[0]);
+  assert.deepEqual(closers.map(pack => pack.id), ['ravager', 'warmonger']);
+  assert.deepEqual(closers.map(pack => pack.children.map(child => child.id)), [['titan'], ['titan']]);
+});
+
+test('a requirement line keeps every-one-of and any-one-of apart', async () => {
+  const { requirementLine } = await import('./mat.js');
+  const names = new Map([['a', 'Alpha'], ['b', 'Beta'], ['c', 'Gamma']]);
+  const nameOf = id => names.get(id) ?? id;
+  assert.equal(requirementLine({ prerequisites: [] }, nameOf), 'Requires: No prerequisite package');
+  assert.equal(requirementLine({ prerequisites: ['a', 'b'] }, nameOf), 'Requires: Alpha + Beta');
+  assert.equal(requirementLine({ prerequisites: [], anyOf: ['a', 'b', 'c'] }, nameOf), 'Requires one of: Alpha / Beta / Gamma');
+  assert.equal(requirementLine({ prerequisites: ['a'], anyOf: ['b', 'c'] }, nameOf), 'Requires: Alpha, and one of: Beta / Gamma');
+  assert.equal(requirementLine(null), 'Requires: No prerequisite package');
+});
+
+test('a passive is printed in the host words and nothing is invented for a card without them', async () => {
+  const { passiveOf } = await import('./mat.js');
+  assert.deepEqual(passiveOf({ passive: { stunImmunity: true }, passiveLines: ['Immune to stun'] }), ['Immune to stun']);
+  assert.deepEqual(passiveOf({ passive: { stunImmunity: true } }), []);
+  assert.deepEqual(passiveOf({ passiveLines: ['', null, 'Damage +2 on every hit'] }), ['Damage +2 on every hit']);
+  assert.deepEqual(passiveOf(undefined), []);
+});
+
+// A capstone teaches no spell, so it has no class to take a colour from. It wears the colour of the package
+// that opens its family instead of a hash of its own name.
+test('a package with no spell takes its family colour', async () => {
+  const { talentPalette } = await import('./mat.js');
+  const catalogue = { packages: [
+    { id: 'brute', name: 'Brute', level: 1, prerequisites: [], spells: ['swing'] },
+    { id: 'ravager', name: 'Ravager', level: 2, prerequisites: ['brute'], spells: ['maul'] },
+    { id: 'titan', name: 'Titan', level: 3, prerequisites: [], anyOf: ['ravager'], spells: [] },
+    { id: 'lonely', name: 'Lonely', level: 1, prerequisites: [], spells: [] },
+  ] };
+  const cards = new Map([['swing', { creatureClass: 'Brawler' }], ['maul', { creatureClass: 'Reaver' }]]);
+  const palette = talentPalette(catalogue, cards);
+  assert.equal(palette.get('titan'), palette.get('brute'));
+  assert.match(palette.get('lonely'), /^hsl\(/);
+});

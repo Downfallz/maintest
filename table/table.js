@@ -6,7 +6,7 @@ import { badges, chipSource, chipText, conditionDock, healthShare, healthText, l
 import { handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
-import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
+import { classColour, talentClasses, packageForest, passiveOf, requirementLine, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { healthChange, playbackBoard, playbackChanges } from './replay.js';
@@ -1244,7 +1244,7 @@ function renderMat(state, current) {
   heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Tier 1 → Tier 2 → Tier 3. Select a package to inspect all its spells. Lines show required packages; one pick buys the whole package.';
+  help.textContent = 'Tier 1 → Tier 2 → Tier 3 → Tier 4. A Tier 4 capstone opens from any Tier 3 of its family and gives a passive instead of spells. Select a package to inspect it. Lines show required packages; one pick buys the whole package.';
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
   picker.setAttribute('aria-label', 'Inspect talent progress');
@@ -1302,7 +1302,7 @@ function atlasInspector(state, selected, graph, current, creature) {
   }
   const prompt = document.createElement('p');
   prompt.className = 'atlas-prompt';
-  prompt.textContent = 'Select a package above to see its spells, initiative bonus and prerequisites.';
+  prompt.textContent = 'Select a package above to see its spells or passive, initiative bonus and prerequisites.';
   detail.append(prompt);
   return detail;
 }
@@ -1324,12 +1324,20 @@ function talentLane(state, group, current, creature) {
   title.textContent = `${group.name} · Tier ${group.level}`;
   const summary = document.createElement('p');
   summary.className = 'package-summary';
-  const requires = (group.prerequisites ?? []).map(id => state.packages.get(id)?.name ?? id).join(' + ');
-  summary.textContent = `↟ ${group.initiativeBonus >= 0 ? '+' : ''}${group.initiativeBonus} initiative on purchase · Requires: ${requires || 'No prerequisite package'}`;
+  const requires = requirementLine(group, id => state.packages.get(id)?.name ?? id);
+  summary.textContent = `↟ ${group.initiativeBonus >= 0 ? '+' : ''}${group.initiativeBonus} initiative on purchase · ${requires}`;
   const status = document.createElement('p');
   status.className = 'talent-status';
   status.textContent = PACKAGE_STATUS_TEXT[group.status] ?? PACKAGE_STATUS_TEXT.future;
   lane.append(title, summary, status);
+  // A capstone teaches nothing (ADR 0100): what it gives for the rest of the match is the whole purchase.
+  const passive = passiveOf(group);
+  if (passive.length) {
+    const gives = document.createElement('p');
+    gives.className = 'package-summary package-passive';
+    gives.textContent = `Held while owned · ${passive.join(' · ')}`;
+    lane.append(gives);
+  }
   if (group.status === 'available') {
     const buy = button(`Buy ${group.name} for creature ${creature.id}`, () => buyPackage(state, current, creature.id, group.id));
     buy.disabled = state.sending;
@@ -1337,6 +1345,7 @@ function talentLane(state, group, current, creature) {
     buy.dataset.focus = `atlas-buy-${creature.id}-${group.id}`;
     lane.append(buy);
   }
+  if (!group.tiers[0].spells.length) return lane;
   const column = document.createElement('div');
   column.className = 'talent-tier';
   column.style.setProperty('--tier-columns', Math.min(2, group.spells.length));
@@ -2395,11 +2404,15 @@ function packageCard(state, tier, onClick) {
 
   const body = document.createElement('div');
   body.className = 'card-body';
-  body.textContent = face.spells.map(spell => cardTitle(state.cards.get(spell)) || spell).join(' · ');
+  const passive = passiveOf(face);
+  body.textContent = [
+    ...(face.spells ?? []).map(spell => cardTitle(state.cards.get(spell)) || spell),
+    ...passive.map(line => `Held: ${line}`),
+  ].join(' · ');
 
   const requires = document.createElement('p');
   requires.className = 'package-requires';
-  requires.textContent = `Requires: ${(face.prerequisites ?? []).map(id => state.packages.get(id)?.name ?? id).join(' + ') || 'No prerequisite package'}`;
+  requires.textContent = requirementLine(face, id => state.packages.get(id)?.name ?? id);
   choice.append(head, body, requires);
   return choice;
 }
@@ -2749,7 +2762,7 @@ function treeNode(state, node, classes, creature) {
   title.textContent = node.name;
   const progress = document.createElement('span');
   progress.className = 'tree-progress';
-  progress.textContent = `Tier ${node.level} · ${node.initiativeBonus >= 0 ? "+" : ""}${node.initiativeBonus} initiative`;
+  progress.textContent = [`Tier ${node.level}`, `${node.initiativeBonus >= 0 ? '+' : ''}${node.initiativeBonus} initiative`, ...passiveOf(node)].join(' · ');
   const status = document.createElement('span');
   status.className = 'tree-offer';
   status.textContent = TREE_STATUS_TEXT[group?.status] ?? 'Inspect package';

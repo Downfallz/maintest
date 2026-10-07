@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { active, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
+import { active, originText, packageFamilies, packageParents, packageRequirements, packagesTeaching, requirementText, spellInTier, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
 
 const pack = (id, level, prerequisites = [], spells = []) => ({ id, name: id, enabled: true, document: { level, prerequisites, spells } });
 const spell = { id: 'spark:v1', name: 'Spark', document: { spellType: 'Offensive', effects: [{ kind: 'Damage' }], casterEffects: [{ kind: 'Bleed' }] } };
@@ -74,4 +74,35 @@ test('the tier filter keeps a spell taught at that level or, for the kit, one a 
   assert.equal(spellInTier(spell, '1', catalogue), false);
   assert.equal(spellInTier(spell, 'Starting', catalogue), false);
   assert.equal(spellMatches(spell, 'tier 2', 'All', catalogue), true);
+});
+
+// ADR 0100: a capstone names no all-of prerequisite, only an any-of list of its family's closers. Read through
+// the all-of list alone it would be a family root of its own, with nothing above it.
+test('a capstone opened by any of a family closers joins that family rather than starting one', () => {
+  const capstone = { ...pack('titan', 4, [], []), document: { level: 4, prerequisites: [], anyOf: ['ravager', 'warmonger:v1'], spells: [], passive: { stunImmunity: true } } };
+  const catalogue = { aliases: { 'warmonger': 'warmonger:v1' }, tiers: [
+    pack('brute', 1), pack('berserker', 2, ['brute']), pack('marauder', 2, ['brute']),
+    pack('ravager', 3, ['berserker']), pack('warmonger:v1', 3, ['marauder']), capstone,
+  ] };
+
+  const families = packageFamilies(catalogue);
+  assert.deepEqual(families.map(f => f.root.id), ['brute']);
+  assert.equal(families[0].packages.at(-1).id, 'titan');
+  assert.deepEqual(packageParents(capstone, catalogue).map(p => p.id), ['ravager', 'warmonger:v1']);
+  assert.deepEqual(packageRequirements(capstone, catalogue).allOf, []);
+  assert.deepEqual(packageRequirements(capstone, catalogue).anyOf.map(p => p.id), ['ravager', 'warmonger:v1']);
+});
+
+test('a requirement line says which packages are all needed and which one of is enough', () => {
+  const catalogue = { tiers: [pack('a', 1), pack('b', 1), pack('c', 2), pack('d', 2)] };
+  assert.equal(requirementText(pack('opener', 1), catalogue), '');
+  assert.equal(requirementText(pack('both', 2, ['a', 'b']), catalogue), 'Requires a + b');
+  assert.equal(requirementText({ id: 'cap', document: { prerequisites: [], anyOf: ['c', 'd'] } }, catalogue), 'Requires one of c / d');
+  assert.equal(requirementText({ id: 'mixed', document: { prerequisites: ['a'], anyOf: ['c', 'd'] } }, catalogue), 'Requires a and one of c / d');
+  assert.equal(requirementText({ id: 'torn', document: { prerequisites: 'a', anyOf: 3 } }, catalogue), '');
+});
+
+test('a damage buff reads as more damage on every hit, for its duration', () => {
+  assert.equal(effectText({ kind: 'DamageBuff', amount: 2, durationRounds: 2 }), 'Deal 2 more damage on every hit for 2 rounds');
+  assert.equal(effectText({ kind: 'DamageBuff', amount: 1, permanent: true }), 'Deal 1 more damage on every hit permanently');
 });

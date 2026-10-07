@@ -954,12 +954,23 @@ def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) ->
     assert validate(knobs, packaged(initiativeBonus=2)) == []
 
 
+def test_a_passive_amount_is_a_package_knob_a_search_can_move(tmp_path: Path) -> None:
+    """A capstone's passive is its one number (ADR 0100), so it is the one thing on it a search moves."""
+    entry = package_entry(knobs=[{"path": "/passive/damageBonus", "min": 1, "max": 3, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
+
+    problems = validate(knobs, packaged(passive={"damageBonus": 2}))
+
+    assert "tier:open/passive/damageBonus" in {knob.key for knob in knobs}
+    assert problems == []
+
+
 def test_the_repository_knobs_cover_every_package_the_repository_sells() -> None:
     content = load_content(REPO_ROOT / "data")
     knobs = load_knobs(REPO_ROOT / "data" / "balance" / "knobs.json")
 
     assert set(knobs.packages) == set(content.package_documents)
-    assert len(content.package_documents) == 21
+    assert len(content.package_documents) == 24
 
 
 OPEN_PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"]}

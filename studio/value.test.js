@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { castValue, roundValue, isAttack, standing } from './value.js';
+import { castValue, effectValue, roundValue, isAttack, standing } from './value.js';
 
 const weights = JSON.parse(readFileSync(new URL('../learning/weights/greedy.json', import.meta.url), 'utf8'));
 // Frozen copies, not data/Spells: a tuning pass that moves one of these spells must not fail a test about the
@@ -44,4 +44,11 @@ test('a spell is placed among the same tier on the same side of the attack line'
   assert.equal(standing(all[0], all, levels, weights).place, 'lowest');
   assert.equal(standing(all[3], all, levels, weights).place, 'alone');
   assert.equal(standing(spell('untaught', 5), all, levels, weights).level, null);
+});
+
+// ADR 0100: a damage buff adds to every hit while it lasts, priced the way ActionScorer prices it.
+test('a damage buff is worth its amount in damage for every round it lasts', () => {
+  const weights = { damage: 1.5 };
+  assert.equal(effectValue({ kind: 'DamageBuff', amount: 2, durationRounds: 2 }, weights), 6);
+  assert.equal(effectValue({ kind: 'DamageBuff', amount: 1, permanent: true }, weights), 4.5);
 });

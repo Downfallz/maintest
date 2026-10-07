@@ -1,0 +1,16 @@
+{
+  "id": "tier:archmage:v1",
+  "name": "Archmage",
+  "level": 4,
+  "prerequisites": [],
+  "anyOf": [
+    "tier:harbinger:v1",
+    "tier:lich:v1",
+    "tier:spiritcaller:v1"
+  ],
+  "spells": [],
+  "initiativeBonus": 0,
+  "passive": {
+    "upkeepEnergy": 1
+  }
+}

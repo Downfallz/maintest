@@ -68,9 +68,13 @@ AT_LEAST_ONE = re.compile(r"^/(effects|casterEffects)/\d+/(amount|amountPerRound
 MOST_ROUNDS = 3
 DURATION = re.compile(r"^/(effects|casterEffects)/\d+/durationRounds$")
 
-#: The one number a package carries that a tuning pass may move: what a purchase adds to Base initiative
+#: The one number every package carries that a tuning pass may move: what a purchase adds to Base initiative
 #: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
 INITIATIVE_BONUS = "/initiativeBonus"
+
+#: The numbers a package may move: its initiative bonus, and the amounts of a capstone's passive (ADR 0100).
+#: Whether a passive gives stun immunity is its kind, not a number, and is never a knob.
+PACKAGE_KNOBS = frozenset({INITIATIVE_BONUS, "/passive/upkeepEnergy", "/passive/damageBonus"})
 
 #: How a package alias reads, and so how a document is told apart from a spell without a second field.
 PACKAGE_PREFIX = "tier:"
@@ -601,7 +605,8 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
 
     The same three questions a spell entry answers -- is every enabled package covered, does every entry name
     one, does every pointer address a number inside its bounds -- plus one only a package can raise: a knob on
-    anything but the initiative bonus is refused, because the rest of a package is the progression itself.
+    anything but the initiative bonus or a passive's amount is refused, because the rest of a package is the
+    progression itself.
     """
     problems = list(content.ambiguous_packages)
     for alias in sorted(set(content.package_documents) - set(knobs.packages)):
@@ -616,9 +621,9 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
             problems.append(f"{alias}: no intent, so nothing says what its number is for.")
         problems.extend(
             f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
-            f"'{INITIATIVE_BONUS}' may move."
+            f"{', '.join(repr(path) for path in sorted(PACKAGE_KNOBS))} may move."
             for knob in package.knobs
-            if knob.path != INITIATIVE_BONUS
+            if knob.path not in PACKAGE_KNOBS
         )
         problems.extend(_knob_problems(package, document))
     return problems
@@ -1069,6 +1074,8 @@ def _effect_value(effect: Mapping[str, object], weights: Mapping[str, float], cr
         "DefenseDebuff": 0.0,
         "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
         "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
+        # One hit a round raised by it (ADR 0100), the way the scorer reads it.
+        "DamageBuff": weights.get("damage", 0) * amount * rounds,
     }.get(kind, 0.0)
 
 

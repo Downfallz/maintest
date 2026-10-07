@@ -1764,3 +1764,34 @@ test('a table given up while it waited shows the outcome without the waiting roo
   p.draw();
   assert.equal(p.nodes['waiting-room'].hidden, true);
 });
+
+// ADR 0100: a capstone is opened by any one of its family's level-3 packages and teaches no spell, so its lane
+// and its offer card say which packages open it and print the passive the host wrote instead of a spell list.
+function capstoneFixture(p) {
+  const capstone = { id: 'tier:cap:v1', name: 'Capstone', level: 3, prerequisites: [], anyOf: ['tier:two:v1', 'tier:one:v1'], spells: [], initiativeBonus: 0,
+    passive: { stunImmunity: true, upkeepEnergy: 0, damageBonus: 0 }, passiveLines: ['Immune to stun'] };
+  p.state.packages.set(capstone.id, capstone);
+  p.state.catalogue.packages.push(capstone);
+}
+
+test('a capstone lane says any one of its packages opens it and shows its passive instead of spells', () => {
+  const p = page(); talentFixture(p); capstoneFixture(p); p.state.inspectClass = 'tier:cap:v1'; p.draw();
+  const lane = p.nodes.mat.children[2];
+  assert.match(lane.textContent, /Capstone · Tier 3/);
+  assert.match(lane.textContent, /Requires one of: Second package \/ First package/);
+  assert.match(lane.textContent, /Held while owned · Immune to stun/);
+  const section = lane.children[1];
+  assert.equal(section.className, 'talent-lane');
+  assert.equal(section.children.some(child => child.className === 'talent-tier'), false);
+  p.state.inspectClass = 'tier:two:v1'; p.draw();
+  assert.equal(p.nodes.mat.children[2].children[1].children.some(child => child.className === 'talent-tier'), true);
+  assert.match(p.nodes.mat.children[0].textContent, /Tier 4/);
+});
+
+test('a capstone offer card prints its passive and its any-of requirement', () => {
+  const p = page(); capstoneFixture(p); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: ['tier:cap:v1'] }] } }; p.draw();
+  const text = p.nodes.choices.textContent;
+  assert.match(text, /Held: Immune to stun/);
+  assert.match(text, /Requires one of: Second package \/ First package/);
+});

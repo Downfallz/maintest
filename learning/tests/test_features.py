@@ -18,11 +18,12 @@ def test_every_published_version_is_readable() -> None:
     assert check_schema("features:v3+31987e1de3a9") == "features:v3"
     assert check_schema("features:v4+31987e1de3a9") == "features:v4"
     assert check_schema("features:v6+31987e1de3a9") == "features:v6"
+    assert check_schema("features:v9+31987e1de3a9") == "features:v9"
 
 
 def test_an_unknown_version_is_refused() -> None:
-    with pytest.raises(SchemaError, match="features:v9"):
-        check_schema("features:v9+31987e1de3a9")
+    with pytest.raises(SchemaError, match="features:v10"):
+        check_schema("features:v10+31987e1de3a9")
 
 
 def test_a_different_fingerprint_of_the_same_version_is_another_layout() -> None:

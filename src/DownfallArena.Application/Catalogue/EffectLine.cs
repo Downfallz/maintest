@@ -1,4 +1,5 @@
 using System.Globalization;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 
 namespace DownfallArena.Application.Catalogue;
@@ -17,6 +18,32 @@ namespace DownfallArena.Application.Catalogue;
 /// </remarks>
 public static class EffectLine
 {
+    /// <summary>
+    /// What a package's passive does, a line per property, in the order a card prints them (ADR 0100). Empty for
+    /// a package that gives nothing through it.
+    /// </summary>
+    public static IReadOnlyList<string> Of(Passive passive)
+    {
+        ArgumentNullException.ThrowIfNull(passive);
+        var lines = new List<string>();
+        if (passive.StunImmunity)
+        {
+            lines.Add("Immune to stun");
+        }
+
+        if (passive.UpkeepEnergy > 0)
+        {
+            lines.Add($"Energy +{passive.UpkeepEnergy} at every upkeep");
+        }
+
+        if (passive.DamageBonus > 0)
+        {
+            lines.Add($"Damage +{passive.DamageBonus} on every hit");
+        }
+
+        return lines;
+    }
+
     public static string Of(Effect effect)
     {
         ArgumentNullException.ThrowIfNull(effect);

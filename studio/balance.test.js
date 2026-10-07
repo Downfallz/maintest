@@ -11,7 +11,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 
 import {
   STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
-  newKnob, objectiveOf, pointersOf,
+  PACKAGE_KNOBS, newKnob, objectiveOf, packageKnobScope, pointersOf,
   readBalance, readPointer, readings, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry,
 } from './balance.js';
 
@@ -202,6 +202,31 @@ test('package entries flag progression knobs and name their initiative bonus', (
   assert.deepEqual(rolled.flagged[0].problems.map(item => item.code), ['packageIdentity']);
   assert.equal(rolled.rows[0].summary.knobs[0].value, 3);
   assert.equal(rolled.rows[0].summary.knobs[0].path, '/initiativeBonus');
+});
+
+// ADR 0100 and check-knobs' PACKAGE_KNOBS: a capstone's passive amounts are numbers a tuning pass may move,
+// while whether it gives stun immunity is what the passive is.
+test('a capstone entry may tune its passive amounts and nothing else of the passive', () => {
+  const balance = knobsFile({}, { packages: { 'tier:apex': { name: 'Apex', intent: 'Harder hits.', knobs: [
+    { path: '/passive/damageBonus', min: 1, max: 3, step: 1 },
+    { path: '/passive/stunImmunity', min: 0, max: 1, step: 1 },
+  ] } } });
+  const apex = { id: 'tier:apex:v1', name: 'Apex', path: 'Tiers/apex.json', document: { level: 4, anyOf: [], spells: [], initiativeBonus: 0, passive: { damageBonus: 2 } } };
+  const rolled = surveyPackages(balance, [apex], {});
+
+  assert.equal(rolled.rows[0].summary.knobs[0].value, 2);
+  assert.deepEqual(rolled.rows[0].summary.knobs[0].problems, []);
+  assert.deepEqual(rolled.flagged[0].problems.map(item => [item.code, item.path]).filter(([code]) => code === 'packageIdentity'),
+    [['packageIdentity', '/passive/stunImmunity']]);
+  assert.deepEqual(PACKAGE_KNOBS, ['/initiativeBonus', '/passive/upkeepEnergy', '/passive/damageBonus']);
+});
+
+test('the knob editor offers a package its initiative bonus and the passive amounts it carries', () => {
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 1, level: 2, spells: ['spell:a:v1'] })), ['/initiativeBonus']);
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, level: 4, passive: { stunImmunity: true, upkeepEnergy: 1 } })),
+    ['/initiativeBonus', '/passive/upkeepEnergy']);
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, passive: 'broken' })), ['/initiativeBonus']);
+  assert.deepEqual(pointersOf(packageKnobScope(undefined)), []);
 });
 
 test('package survey follows a version alias, spots ambiguity and keeps disabled entries at rest', () => {
