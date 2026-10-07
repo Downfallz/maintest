@@ -130,9 +130,67 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return !resolution.Fizzled && Damage(resolution, creatures, NoneGone).Any(hit => hit.Kills && hit.Enemy);
     }
 
-    /// <summary>The best target set of a spell for an actor, or null when the spell has no legal target.</summary>
-    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null) =>
-        BestTerms(actor, spellId, creatures, gone, speed, stillToAct) is { } best ? (best.Targets, weights.Apply(best.Terms)) : null;
+    /// <summary>
+    /// The target set an agent casts a spell on, or null when the spell has no legal target: one that wins the
+    /// match on its own if there is one, then the best score (ADR 0099). <c>Wins</c> says whether it does. A win is
+    /// never weighed against a score -- a weights file only has to be finite, so no score could be trusted to stay
+    /// below it -- which is the order the lookahead's round already reads (ADR 0047).
+    /// </summary>
+    public (IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(spellId);
+        ArgumentNullException.ThrowIfNull(creatures);
+
+        var legal = TargetingRules.LegalTargets(actor, resources.GetSpell(spellId), creatures);
+        (IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? best = null;
+        foreach (var targets in TargetSets.Of(legal))
+        {
+            var action = CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets);
+            var wins = Wins(action, creatures);
+            var score = Expected(action, creatures, gone, speed, stillToAct);
+            if (best is not { } found || (wins, score).CompareTo((found.Wins, found.Score)) > 0)
+            {
+                best = (targets, score, wins);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Whether this action alone ends the match on a plain roll: whether, resolved on this board, it leaves none of
+    /// the actor's enemies standing (ADR 0099). A win only a critical would bring is a chance, and the score prices
+    /// it as one, through the kills it weighs by the critical chance; a win the plain roll brings is certain, and
+    /// nothing outranks it. Every enemy counts, the ones the actor's own team is expected to kill first included:
+    /// a kill that ends the match is never a wasted round, since if the ally's lands the round after it never
+    /// comes, and if it does not this one is the win.
+    /// </summary>
+    public bool Wins(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(creatures);
+
+        var actor = creatures.First(creature => creature.Id == action.Actor);
+        var standing = creatures.Where(creature => creature.Owner != actor.Owner && creature.IsAlive).Select(creature => creature.Id).ToList();
+        // Most of a match has more enemies standing than one cast reaches, and then nothing needs resolving. The
+        // roll is forced plain, so the speed cannot change this reading, as in Kills.
+        return standing.Count > 0
+            && standing.TrueForAll(action.Targets.Contains)
+            && Wipes(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, Speed.Standard), creatures, standing);
+    }
+
+    /// <summary>Whether a resolution's damage kills every one of the enemies named.</summary>
+    private static bool Wipes(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, List<CreatureId> standing)
+    {
+        if (resolution.Fizzled)
+        {
+            return false;
+        }
+
+        var killed = Damage(resolution, creatures, NoneGone).Where(hit => hit.Kills && hit.Enemy).Select(hit => hit.Id).ToHashSet();
+        return standing.TrueForAll(killed.Contains);
+    }
 
     /// <summary>
     /// The best target set of a spell for an actor with the terms behind its score, or null when the spell has

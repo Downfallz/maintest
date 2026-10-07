@@ -111,14 +111,16 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var gone = _foresight.AlreadyDoomed(board, creatures, actor);
         var stillToAct = Foresight.StillToAct(board, actor.Id);
         SpellId? best = null;
-        var bestScore = double.NegativeInfinity;
+        var bestValue = (Wins: false, Score: double.NegativeInfinity);
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var score = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct)?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
-            if (score > bestScore)
+            // A cast that can end the match first, whatever any other scores (ADR 0099); nothing to hit is worth
+            // nothing (ADR 0040).
+            var value = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct) is { } found ? (found.Wins, found.Score) : (false, 0.0);
+            if (value.CompareTo(bestValue) > 0)
             {
                 best = spell;
-                bestScore = score;
+                bestValue = value;
             }
         }
 
