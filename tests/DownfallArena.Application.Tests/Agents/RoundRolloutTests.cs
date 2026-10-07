@@ -87,6 +87,29 @@ public sealed class RoundRolloutTests
         whole.Outcome.ShouldNotBe(0);
     }
 
+    /// <summary>
+    /// A continuation picks the match up where a round's cleanup left it and plays the rounds from there,
+    /// each from its start: it is how a combat move is read past its round. No rounds is nothing; one round
+    /// cannot end two full teams; the cap's worth of rounds ends the match; and the score it is handed is
+    /// carried into the sum.
+    /// </summary>
+    [Fact]
+    public void A_continuation_plays_the_rounds_after_the_one_it_is_given()
+    {
+        var store = new MatchStore();
+        var match = store.Started(Rules, new TestRandom(1));
+        var origin = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+        var greedy = new GreedyAgent(TestContent.Resources, Rules);
+        var rollout = new RoundRollout(greedy, new ActionScorer(TestContent.Resources, Rules, ScoringWeights.Default), TestContent.Resources, Rules);
+        var cleaned = Advance.Cleanup(match.Snapshots(), TestContent.Resources);
+
+        rollout.Continue(origin, cleaned, 2, 0, new TestRandom(1)).ShouldBe(new RolloutValue(0, 0));
+        var oneRound = rollout.Continue(origin, cleaned, 2, 1, new TestRandom(1));
+        oneRound.Outcome.ShouldBe(0, "two full teams do not end in a round");
+        rollout.Continue(origin, cleaned, 2, Rules.RoundCap, new TestRandom(1)).Outcome.ShouldNotBe(0);
+        rollout.Continue(origin, cleaned, 2, 1, new TestRandom(1), score: 5).Score.ShouldBe(oneRound.Score + 5, 1e-9);
+    }
+
     [Fact]
     public void A_seat_picks_one_package_per_creature_up_to_its_picks()
     {

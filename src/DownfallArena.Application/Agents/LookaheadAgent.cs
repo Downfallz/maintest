@@ -45,6 +45,15 @@ namespace DownfallArena.Application.Agents;
 /// any other move. So is a purchase, once the agent has dice to roll (ADR 0094): what a package is worth
 /// shows only over the rounds after it, so those are played out whole, every sub-phase of them.
 /// </para>
+/// <para>
+/// A combat move can be read the same way, past its round: with a <see cref="CombatReading"/> and dice, the
+/// rounds after the one played out are rolled out whole by <see cref="RoundRollout"/>, every decision in both
+/// seats the agent this one is built on, and the move is judged by the match those rounds end first and by
+/// the summed score second, the way a purchase is. It costs the rollouts and sees what one round cannot: a
+/// buff that pays next round, a kill that leaves the wrong enemy standing, an energy kept for a spell the
+/// next round reaches. <c>lookahead:4x4</c> reads four rounds on four rollouts; a bare <c>lookahead</c> reads
+/// the round alone, as it always did.
+/// </para>
 /// </summary>
 public sealed class LookaheadAgent(
     ScoringWeights weights,
@@ -53,7 +62,8 @@ public sealed class LookaheadAgent(
     bool adversarial = false,
     IPlayerAgent? inner = null,
     IRandomSource? random = null,
-    PurchaseReading? purchases = null) : IPlayerAgent
+    PurchaseReading? purchases = null,
+    CombatReading? combat = null) : IPlayerAgent
 {
     /// <summary>
     /// The agent that plays every seat this one has to guess: an ally that has not declared as the round is
@@ -80,6 +90,16 @@ public sealed class LookaheadAgent(
     public bool IsAdversarial => adversarial;
 
     private readonly PurchaseReading _purchases = purchases ?? PurchaseReading.Default;
+
+    /// <summary>
+    /// How far a combat move is read past its round: nothing, which is the one-round reading of ADR 0047,
+    /// unless the spec said otherwise (<c>lookahead:4x4</c>), in which case the rounds after the move are
+    /// played out by <see cref="RoundRollout"/> on dice, the way a purchase is (ADR 0094).
+    /// </summary>
+    private readonly CombatReading _combat = combat ?? CombatReading.None;
+
+    /// <summary>How far this agent reads a combat move past its round.</summary>
+    public CombatReading Combat => _combat;
 
     /// <summary>
     /// What every rollout's dice are derived from, drawn once from the source the agent was given: a purchase's
@@ -513,7 +533,38 @@ public sealed class LookaheadAgent(
             }
         }
 
-        return Valued(Advance.Outcome(Advance.Cleanup(ahead, resources), resources, board.RoundNumber ?? 1, rules), board.Slot, value, stopped);
+        var cleaned = Advance.Cleanup(ahead, resources);
+        var round = board.RoundNumber ?? 1;
+        return Advance.Outcome(cleaned, resources, round, rules) is { } ended
+            ? Valued(ended, board.Slot, value, stopped)
+            : ReadAhead(board, cleaned, round, actor, value, stopped);
+    }
+
+    /// <summary>
+    /// The rounds after the one just played out, when the agent reads that far (<see cref="Combat"/>): each
+    /// rollout picks the match up at the start of the next round, every decision in both seats the agent this
+    /// one is built on, on dice derived from the agent's seed and the decision -- the round, the actor and the
+    /// slot -- and so the same for every candidate of one decision, which leaves only the candidate between
+    /// them (ADR 0094). The outcome is the share of matches the rollouts win less the share they lose, the
+    /// score the round's plus the rollouts' mean, and both compare the way a round's do: a reading that wins
+    /// outranks any score. Without dice, or reading nothing past the round, the round stands alone, which is
+    /// what it did before this reading existed.
+    /// </summary>
+    private RoundValue ReadAhead(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> cleaned, int round, CreatureId? actor, double value, bool stopped)
+    {
+        if (!_combat.ReadsAhead || _dice is not { } dice)
+        {
+            return new RoundValue(0, value, stopped);
+        }
+
+        var rollout = new RoundRollout(_oneStep, _scorer.WithoutUnlocks, resources, rules);
+        var seeds = Enumerable.Range(0, _combat.Rollouts)
+            .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)(actor?.Value ?? 0) * 7_919UL) + ((ulong)board.ActivationCursor * 104_729UL) + (ulong)index)
+            .ToArray();
+        var played = new RolloutValue[seeds.Length];
+        Each(seeds.Length, index => played[index] = rollout.Continue(board, cleaned, round + 1, _combat.Rounds, new RolloutDice(seeds[index])));
+        var ahead = RolloutValue.Mean(played);
+        return new RoundValue(ahead.Outcome, value + ahead.Score, stopped);
     }
 
     private static RoundValue Valued(MatchOutcome? outcome, PlayerSlot seat, double value, bool stopped) =>

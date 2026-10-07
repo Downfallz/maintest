@@ -467,6 +467,102 @@ public sealed class LookaheadAgentTests
             .ShouldBeNull("the built-in weights are the whole identity");
     }
 
+    /// <summary>
+    /// A spec whose path opens with rounds x rollouts reads the rounds after a move the way a purchase is read
+    /// (ADR 0094): the two numbers say how far and on how many dice, and what follows names the weights or
+    /// the agent exactly as before. Both numbers are at least one, and a spec without the opening reads the
+    /// round alone, as every spec written before it does.
+    /// </summary>
+    [Fact]
+    public void A_searching_spec_may_read_the_rounds_after_a_move()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default with { Kill = 7 });
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        var bare = factory.Create(AgentSpec.Parse("lookahead:2x3"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>();
+        bare.Combat.ShouldBe(new CombatReading(2, 3));
+        bare.Weights.ShouldBe(ScoringWeights.Default);
+
+        var onWeights = factory.Create(AgentSpec.Parse("lookahead:2x3:learning/weights/search-4.json"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>();
+        onWeights.Combat.ShouldBe(new CombatReading(2, 3));
+        onWeights.Weights.Kill.ShouldBe(7);
+        weights.Received().Load("learning/weights/search-4.json");
+
+        var onAgent = factory.Create(AgentSpec.Parse("minimax:1x2:greedy"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>();
+        onAgent.Combat.ShouldBe(new CombatReading(1, 2));
+        onAgent.IsAdversarial.ShouldBeTrue();
+
+        factory.Create(AgentSpec.Parse("lookahead"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>().Combat.ShouldBe(CombatReading.None);
+        Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("lookahead:0x2"), Rules, new TestRandom(1)));
+        Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("lookahead:2x0"), Rules, new TestRandom(1)));
+    }
+
+    /// <summary>The depth is part of the stamp, and what the agent reads is still the weights file after it.</summary>
+    [Fact]
+    public void A_spec_that_reads_the_rounds_after_a_move_stamps_as_the_weights_it_reads()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        var resolved = factory.Resolve(AgentSpec.Parse("lookahead:2x3:learning/weights/stun-first.json"));
+
+        resolved.Version.ShouldBe(ScoringWeights.Default.Fingerprint);
+        resolved.Path.ShouldBe("2x3:learning/weights/stun-first.json", "the depth stays in the stamp");
+        factory.Resolve(AgentSpec.Parse("lookahead:2x3:heuristic:learning/weights/stun-first.json")).Version.ShouldBe(ScoringWeights.Default.Fingerprint);
+        factory.Resolve(AgentSpec.Parse("lookahead:2x3")).Version.ShouldBeNull("the built-in weights are the whole identity");
+    }
+
+    /// <summary>
+    /// Two enemies at six health that have both acted; the ally Two strikes after One and finishes whichever
+    /// enemy One has hit. The round reads the same either way, so the one-round reading keeps the first
+    /// target by order. But One is at three health, Four is the fast enemy and Three the slow one: next round
+    /// Four kills One before anyone else moves, where Three dies to One and Two before it acts. A reading of
+    /// the rounds after the move hits Four, so that the enemy left standing is the one that cannot punish it.
+    /// </summary>
+    [Fact]
+    public void Reading_the_rounds_after_a_move_hits_the_enemy_whose_survival_costs_next_round()
+    {
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { Health = Health.Of(3) };
+        var two = Boards.Creature(2, PlayerSlot.Player1);
+        var three = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(6), BaseInitiative = Initiative.Of(1), CurrentInitiative = Initiative.Of(1) };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(6), BaseInitiative = Initiative.Of(9), CurrentInitiative = Initiative.Of(9) };
+        var board = Boards.Board(PlayerSlot.Player1, [one, two], [three, four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Three, PlayerSlot.Player2), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1), Slot(Two, PlayerSlot.Player1)],
+            ActivationCursor = 2,
+        };
+        var options = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
+
+        Agent.DecideTargets(board, options).ShouldBe([Three], "the round reads alike either way, so the first target by order is kept");
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, random: new TestRandom(3), combat: new CombatReading(2, 2))
+            .DecideTargets(board, options).ShouldBe([Four]);
+    }
+
+    /// <summary>Without dice the rounds after a move cannot be rolled, so the reading is the round alone.</summary>
+    [Fact]
+    public void Without_dice_the_rounds_after_a_move_are_not_read()
+    {
+        var board = FourAboutToKillTwo();
+        var options = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, combat: new CombatReading(4, 4))
+            .DecideTargets(board, options).ShouldBe(Agent.DecideTargets(board, options));
+    }
+
+    [Fact]
+    public async Task Reading_the_rounds_after_a_move_replays_identically()
+    {
+        var first = await DigestAsync("lookahead:1x2");
+        var second = await DigestAsync("lookahead:1x2");
+
+        first.Entries.Count.ShouldBe(4);
+        first.DifferencesFrom(second).ShouldBeEmpty();
+        first.AgentA.ShouldBe("Lookahead:1x2");
+    }
+
     private static PlayerBoardState FourAboutToKillTwo()
     {
         var one = Boards.Creature(1, PlayerSlot.Player1);
@@ -654,13 +750,14 @@ public sealed class LookaheadAgentTests
     private static ActivationSlot Slot(CreatureId creature, PlayerSlot owner) =>
         new(owner, creature, Speed.Standard, Initiative.Of(5));
 
-    private static async Task<BenchmarkDigest> DigestAsync()
+    private static async Task<BenchmarkDigest> DigestAsync(string agentA = "lookahead")
     {
         var store = new MatchStore();
         var runner = new EvaluationRunner(Handlers.Runner(store.Workflow, new TestRandomFactory()));
         var rules = MatchStore.TwoOnTwo(roundCap: 8);
-        var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), "Lookahead", "Greedy", 1);
-        var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = AgentSpec.Parse("lookahead"), AgentB = AgentSpec.Greedy, Seeds = [3, 4] };
+        var spec = AgentSpec.Parse(agentA);
+        var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), spec.ToString(), "Greedy", 1);
+        var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = spec, AgentB = AgentSpec.Greedy, Seeds = [3, 4] };
         return BenchmarkDigest.Of(await runner.RunAsync(scenario, stamp, TestContext.Current.CancellationToken));
     }
 }

@@ -43,23 +43,55 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(random);
 
+        if (rounds <= 0)
+        {
+            return new RolloutValue(0, 0);
+        }
+
         var first = origin.RoundNumber ?? 1;
         var seat = origin.Slot;
         var score = 0.0;
-        for (var round = first; round < first + rounds; round++)
+        var (played, wiped) = Combat(origin, board, first, random, ref score);
+        if (wiped is not null)
         {
-            if (round > first)
-            {
-                board = Advance.StartOfRound(board, resources, rules);
-                if (Advance.Elimination(board) is { } bled)
-                {
-                    return RolloutValue.Of(bled, seat, score);
-                }
+            return RolloutValue.Of(wiped, seat, score);
+        }
 
-                if (rules.EvolutionPicksIn(round) > 0)
-                {
-                    board = Advance.Buy(board, [.. Picks(origin, board, round, PlayerSlot.Player1, []), .. Picks(origin, board, round, PlayerSlot.Player2, [])], resources);
-                }
+        board = Advance.Cleanup(played, resources);
+        if (Advance.Outcome(board, resources, first, rules) is { } outcome)
+        {
+            return RolloutValue.Of(outcome, seat, score);
+        }
+
+        return Continue(origin, board, first + 1, rounds - 1, random, score);
+    }
+
+    /// <summary>
+    /// The rounds from <paramref name="fromRound"/> on, at most <paramref name="rounds"/> of them, each from
+    /// its start, on a board the cleanup of the round before left: the start of the round, the purchases of an
+    /// evolution round, then its planning and combat, exactly as <see cref="Play"/> walks the rounds after the
+    /// first. It is how a combat move is read past its round (<see cref="CombatReading"/>): the round the move
+    /// is made in is played out by the lookahead itself, and this picks the match up where that round's
+    /// cleanup left it. <paramref name="score"/> is what the rounds before are worth, carried into the sum.
+    /// </summary>
+    public RolloutValue Continue(PlayerBoardState origin, IReadOnlyList<CreatureSnapshot> board, int fromRound, int rounds, IRandomSource random, double score = 0)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(random);
+
+        var seat = origin.Slot;
+        for (var round = fromRound; round < fromRound + rounds; round++)
+        {
+            board = Advance.StartOfRound(board, resources, rules);
+            if (Advance.Elimination(board) is { } bled)
+            {
+                return RolloutValue.Of(bled, seat, score);
+            }
+
+            if (rules.EvolutionPicksIn(round) > 0)
+            {
+                board = Advance.Buy(board, [.. Picks(origin, board, round, PlayerSlot.Player1, []), .. Picks(origin, board, round, PlayerSlot.Player2, [])], resources);
             }
 
             var (played, wiped) = Combat(origin, board, round, random, ref score);
