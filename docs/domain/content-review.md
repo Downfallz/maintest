@@ -36,9 +36,10 @@ Four things are worth worrying about, in this order:
    question for the table.
 3. **Matches are decided early and played out, in Greedy self-play.** There the eventual loser is never
    ahead again after 38 % of the match, one match in five has no lead change, and seven rounds are played
-   after the first death. The owner's own matches against the lookahead say comebacks happen; the appendix
-   reads the same numbers under the lookahead, and the table decides which reading holds. Concession exists;
-   a comeback valve does not.
+   after the first death. The owner's own matches against the lookahead say comebacks happen, and 40 traced
+   lookahead matches agree in part: the health lead settles as early, but the side that loses the first
+   creature wins 40 % against 29 %. The table decides which reading holds. Concession exists; a comeback
+   valve does not.
 4. **The three families share their verbs.** Each has a heal, a stun and a sweep; what differs is how each
    says them, and whether that is legible at a table is the question. One line (Oppressor, Tyrant) has no
    theme at all; Greedy never buys it, the lookahead buys it often.
@@ -191,8 +192,10 @@ it is six or seven rounds, which at the table is ten minutes.
 **What the owner's own play says.** The owner has played the lookahead often and been surprised by it coming
 back. The readings above are exploring Greedy self-play, where a losing side plays its losing position out
 mechanically and a fifth of the decisions are random; a stronger player converts more of the 29 %. The
-appendix reads the same metrics on traced matches of `explore:0.2:lookahead`, and the table is the reading
-that counts: when people concede, and whether a match that looked lost at round 5 was. ADR 0066 compounds the loss by design: a side
+appendix reads the same metrics on 40 traced matches of `explore:0.2:lookahead`: the health lead settles as
+early (lock-in median 0.35, 17 % of matches with no lead change), but the side that loses the first creature
+wins 40 % of the time against 29 %, on a sample of 40. The table is the reading that counts: when people
+concede, and whether a match that looked lost at round 5 was. ADR 0066 compounds the loss by design: a side
 with fewer living creatures has fewer picks, less energy generation, fewer actions and fewer initiative
 bonuses, with nothing pulling the other way. Concession (ADR 0087) is the only valve.
 
@@ -307,8 +310,9 @@ still carries the legacy table as history, which a new reader mistakes for the c
   teaching game and a dull one for the fiftieth. Setup asymmetry (section 4) is the lever.
 - **Tier 3 is a small slice of play.** Under the lookahead 8 % of landed casts are tier-3 spells, under
   exploring Greedy 13 %. The deepest packages arrive at round 5 at the earliest, a match ends at round 10 or
-  11, and the lookahead prefers breadth (a second family's opener, 74 to 80 % multiclassing under the strong
-  weights) to depth. The top of each line is where the catalogue's identity is loudest and where it is least
+  11, and the lookahead prefers breadth to depth: in its 40 traced matches a third of the buying creatures
+  reach tier 3 (Greedy: more than half), the first tier 3 lands at round 7 (Greedy: round 5), and 45 % of
+  the buying creatures own two families (Greedy: 25 %; the strong weights: 74 to 80 %). The top of each line is where the catalogue's identity is loudest and where it is least
   seen. That is a pacing choice ADR 0066 accepted knowingly; the table should say whether the finishers feel
   like finishers or like cards nobody reached.
 - **Shock is the catalogue's centre of gravity.** 2514 of 8782 declarations by one Greedy in the mirror (29 %),
@@ -343,11 +347,12 @@ picks by how many creatures the buyer had alive:
 | exploring Greedy, 300 matches, 6004 picks | 20 % | 44 % of 2508 | 4 % / 11 % / 15 % |
 | search-23 against Greedy, 200 matches, 4806 picks | 33 % | 33 % of 2406 | 17 % / too few / too few |
 | defense-heavy against Greedy, 120 matches, 4582 picks | 62 % | 51 % of 3142 | 3 % / 19 % / 18 % |
+| exploring lookahead, 40 matches, 802 picks | 11 % | 51 % of 337 | 11 % / 17 % / 30 % |
 
 A package bought from round 7 on has about an even chance of never being cast, partly because the match ends
 (median round 10) and partly because the spellbook already holds better spells; both say the same thing to
-the player who had to pick it. And a side down a creature crosses families three to five times as often as
-a whole one, which is the signature the hypothesis predicts. Passes in the exploring run: 150 of 6004 picks,
+the player who had to pick it. And a side down a creature crosses families two to five times as often as a
+whole one, in every batch including the lookahead's, which is the signature the hypothesis predicts. Passes in the exploring run: 150 of 6004 picks,
 the random fifth and the sides with nothing left to buy.
 
 **What to record at the table**, the owner's list: at every opportunity, "would you have passed this pick?"
@@ -525,8 +530,34 @@ Greedy's Shock 549, Strike 374, Bonewall 293 and Death Wail 147. The strongest p
 the length the game is designed for, and beats the armour player in 15 rounds: the clock of F1 is what the
 best play available pays, not only what Greedy pays.
 
-Pending, replayed after a container restart interrupted the first batch: 40 traced matches of
-`explore:0.2:lookahead`, read with the lock-in, comeback, depth and late-pick scripts above.
+Forty traced matches of `explore:0.2:lookahead` (seeds 800001 and up, replayed after a container restart
+interrupted the first batch), read with the same scripts as the Greedy batches. Rounds 10.5, median 11, 10th
+to 90th percentile 8 to 13; none past round 20. Energy at activation: median 3, 45 % of activations below 3,
+21 % at 6 or more, Focus 5.3 % of casts. Speed: when Standard was chosen the spell could crit 80 % of the
+time, one decision in five being random. Fizzles 8.2 %; a quarter of landed casts rolled and 58 % of the
+rolls hit, since the lookahead goes Standard with its high-chance spells; 3.9 % of hits fully absorbed; the
+highest defense in a match reads a median of 6, and 12 % of matches saw a creature at 10.
+
+| Reading, 40 matches | lookahead | exploring Greedy, 300 matches |
+| --- | --- | --- |
+| Lock-in, median fraction of the match | 0.35 | 0.38 |
+| Matches with no lead change | 17 % | 22 % |
+| Winner's remaining health share of 90 | 0.43 | 0.45 |
+| First death, median round; rounds played after it | 4; 6 | 4; 7 |
+| Side that lost the first creature wins | **40 %** (16 of 40) | 29 % |
+| Opening picks | Brute 91, Predator 33, Warped 28 | Warped 87 % |
+| Creatures that bought anything reaching tier 3 | 34 % | 55 % |
+| Tier-3 packages a match; first tier 3, median round | 2.3; round 7 | 4.3; round 5 |
+| Buying creatures owning two families | 45 % | 25 % |
+| Picks on a creature already at tier 3 | 11 % | 20 % |
+| Packages bought at round 7 or later, never cast | 51 % of 337 | 44 % of 2508 |
+| Cross-family picks with 3 / 2 / 1 living creatures | 11 % / 17 % / 30 % | 4 % / 11 % / 15 % |
+
+Forty matches is a sample; the comeback share in particular has a wide interval. What it says is consistent
+with the owner's play: under the better buyer the health lead settles as early as under Greedy, but losing
+the first creature is less decisive, the climb is shallower and broader (Brute openings, two families on
+nearly half the creatures, tier 3 at round 7 and on a third of the creatures), and the late picks are no
+less often wasted.
 
 ### `check-knobs`
 
