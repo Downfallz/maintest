@@ -25,15 +25,20 @@ published games ever get.
 Four things are worth worrying about, in this order:
 
 1. **Armour.** The strongest hand-written agents converge on stacking defense to the ceiling of 10 and
-   waiting for bleeds. One defensive player turns an 11-round game into a 22-round one, and at the table's
+   waiting for bleeds. Bleeds ignore defense and they do win those matches, so armour is not dominant; it is
+   slow. One defensive player turns an 11-round game into a 22-round one while losing, and at the table's
    cap of 20 more than half of those matches are decided by the health tiebreak. A person finds this line
    in an evening. This is the one finding that can make a playtest report "it was long and nothing happened".
 2. **The Speed card is a tell.** Twenty of the 44 spells cannot roll a critical, so Quick costs them nothing
    and Standard announces a critical spell. With the deterministic agents, Standard means "a spell that can
-   crit" 95 times in 100. Whether that is a poker layer or a non-decision is a question for the table.
-3. **Matches are decided early and played out.** In exploring self-play the eventual loser is never ahead
-   again after 38 % of the match, one match in five has no lead change, and seven rounds are played after
-   the first death. Concession exists; a comeback valve does not.
+   crit" 95 times in 100. Speed is simultaneous, so nobody answers a Standard with a Quick; the answer is in
+   the intents and targets chosen after the reveal. Whether that is a poker layer or a non-decision is a
+   question for the table.
+3. **Matches are decided early and played out, in Greedy self-play.** There the eventual loser is never
+   ahead again after 38 % of the match, one match in five has no lead change, and seven rounds are played
+   after the first death. The owner's own matches against the lookahead say comebacks happen; the appendix
+   reads the same numbers under the lookahead, and the table decides which reading holds. Concession exists;
+   a comeback valve does not.
 4. **The three families are near-isomorphic.** Each has a heal, a stun and a sweep; the differences are
    numbers, caster costs and reach. One line (Oppressor, Tyrant) has no theme at all and is the least bought.
 
@@ -94,10 +99,17 @@ The journal saw the same shape on 2026-09-24 with the ceiling in place: the sear
 30-round cap in every match, stun-first in 58 %, search-19 in 55 %, and "10 still stops every plain hit".
 The owner kept 10. Nothing since has changed what a plain hit does against 10 defense.
 
+**The counter exists and works.** Bleeds ignore defense, eight spells carry one, and they decide every stalled
+match above: the defense-heavy heuristic loses, and Greedy's casts against it move on their own to Bonewall,
+Death Wail, Infestation and Void Pulse. So armour is not a dominant line. The finding is about the clock, not
+the result: the counter takes until round 12 to land, and until it does two hits in three do nothing. Whether
+that is a flaw is a question about the evening, not about the win rate.
+
 **Why a person finds it.** "Buy Brute then Ironhide, cast Carapace four rounds running, and nothing but a
 critical hurts you" is one sentence a player says to themselves in the first evening. The counterplay exists
-(eight bleeds, four stuns, three drains, Contagion, criticals) but is spread across families: a team that
-opened two Brutes has no bleed until it multiclasses, which is three picks and round 5 at the earliest.
+(eight bleeds, four stuns, three drains, Contagion, criticals) but is spread across families, and the Brute
+family has no bleed at all: a team that opened two Brutes has none until one of them buys Predator, round 3
+at the earliest, and no heavy one before round 5.
 
 **Options**, cheapest first. Each is a rule, so an ADR, a digest and a journal entry; none is a component.
 
@@ -136,9 +148,10 @@ For the agents, Speed is not a tempo decision: it is "will my spell roll". The b
 that way. Going Standard with a spell that cannot crit buys nothing; going Quick with one that can forfeits
 its best half. So a human will converge on the same rule, and a human who watches the Speed reveal learns
 which of the three enemy creatures is about to cast Shock, Fury, Incinerate or Blood Price rather than
-Strike, Focus, a heal or a ward. Speed is revealed **before** intents are chosen, so the reader can act on
-it: stun that creature with a Quick Paralyzing Barb (crit 0, so Quick is free), kill it first, or ward its
-likely target.
+Strike, Focus, a heal or a ward. Speed is chosen face down by both sides at once, so nobody can answer a
+Standard with a Quick. But it is revealed **before** intents are chosen, so the reader can act on it with the
+intents and the targets: a creature already set Quick aims its stun or its kill at the one that went Standard,
+and a heal or a ward goes where that creature's spell is likely to land.
 
 **Two readings.** As a poker layer this is good design: a bluff costs something real on either side, and the
 information is actionable. As a tempo decision it is thin: in the deterministic batches 58 to 69 % of timeline
@@ -163,7 +176,13 @@ action:
 
 A 10-round match in which the loser's position is settled by round 4 and the first death lands at round 4
 is a match whose second half is an execution. Elimination games usually accept this if the end is quick; here
-it is six or seven rounds, which at the table is ten minutes. ADR 0066 compounds the loss by design: a side
+it is six or seven rounds, which at the table is ten minutes.
+
+**What the owner's own play says.** The owner has played the lookahead often and been surprised by it coming
+back. The readings above are exploring Greedy self-play, where a losing side plays its losing position out
+mechanically and a fifth of the decisions are random; a stronger player converts more of the 29 %. The
+appendix reads the same metrics on traced matches of `explore:0.2:lookahead`, and the table is the reading
+that counts: when people concede, and whether a match that looked lost at round 5 was. ADR 0066 compounds the loss by design: a side
 with fewer living creatures has fewer picks, less energy generation, fewer actions and fewer initiative
 bonuses, with nothing pulling the other way. Concession (ADR 0087) is the only valve.
 
@@ -321,7 +340,7 @@ what only the people at it can:
 | Hypothesis | The trace says | The players say |
 | --- | --- | --- |
 | The armour line is found and is dull (F1) | defense at the end of each round, hits for zero, matches past round 14 | "nothing happened for five rounds" |
-| Players read the Speed tell (F2) | Standard chosen with a non-crit spell (a bluff), Quick stuns aimed at Standard creatures | whether they noticed |
+| Players read the Speed tell (F2) | Standard chosen with a non-crit spell (a bluff); stuns, kills and wards aimed by creatures already Quick at the ones that went Standard | whether they noticed |
 | Matches are over before they end (F3) | lock-in round, concession round, lead changes | the round they felt it was over |
 | The dice decide (F5) | criticals that killed, matches lost within two rounds of one | "a 20 took my creature" |
 | A round takes under two minutes (F6) | timestamps per sub-phase, already recorded | where the hands slowed down |
