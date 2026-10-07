@@ -108,7 +108,8 @@ so an ADR, a digest and a journal entry; none is a component.
 
 - *A hit never deals less than 1.* One sentence, no component, no new number. At 10 defense a stalled board
   still loses about 6 health a side a round, so the "nothing happens" state cannot last ten rounds. It does
-  not make armour bad; it makes the stall visible as a slow loss instead of a freeze. It also makes weak multi-target hits chip through specialised tanks, changing their reward.
+  not make armour bad; it makes the stall visible as a slow loss instead of a freeze. It also makes weak
+  multi-target hits chip through specialised tanks, changing their reward.
   Test it only as an A/B experiment if deliberate human counterplay still stalls.
 - *A critical ignores defense.* Thematic ("a critical finds the gap"), makes Standard the anti-armour choice
   and so gives the Speed decision a second axis (F2). Raises variance (F5).
@@ -298,11 +299,13 @@ catalogue.
   exploring Greedy 13 %. The deepest packages arrive at round 5 at the earliest, a match ends at round 10 or
   11, and the lookahead prefers breadth to depth: in its 40 traced matches a third of the buying creatures
   reach tier 3 (Greedy: more than half), the first tier 3 lands at round 7 (Greedy: round 5), and 45 % of
-  the buying creatures own two families (Greedy: 25 %; the strong weights: 74 to 80 %). The top of each line is where the catalogue's identity is loudest and where it is least
+  the buying creatures own two families (Greedy: 25 %; the strong weights: 74 to 80 %). The top of each line
+  is where the catalogue's identity is loudest and where it is least
   seen. That is a pacing choice ADR 0066 accepted knowingly; the table should say whether the finishers feel
   like finishers or like cards nobody reached.
 - **Shock is the catalogue's centre of gravity.** 2514 of 8782 declarations by one Greedy in the mirror (29 %),
-  2758 of 13,505 landed casts in the exploring run, and the opener that carries it is bought first 87 % of the time by Greedy.
+  2758 of 13,505 landed casts in the exploring run, and the opener that carries it is bought first 87 % of the
+  time by Greedy.
   The lookahead buys differently (ADR 0094, ADR 0095), and the owner's forced experiments show every other
   opening beats "Warped twice", so this is Greedy's taste. It is still the spell a new player will cast most.
 
@@ -318,8 +321,8 @@ rules artefact, "I guess I have to take something", which the owner has felt at 
 and 9 with two creatures left. It would connect three observations: the high multiclass rate under the
 strong weights, the small tier-3 share although tier 3 is reached, and the size of the spellbook.
 
-**What the rules already say.** Passing is legal: a player may pass their remaining picks (`game-
-rules.md`, Evolution; rulebook 5.3, the Evolution pass). The bots never pass while anything can be
+**What the rules already say.** Passing is legal: a player may pass their remaining picks (`game-rules.md`,
+Evolution; rulebook 5.3, the Evolution pass). The bots never pass while anything can be
 bought, so bot multiclass rates cannot distinguish desired breadth from buying simply because a pick is
 available. The experiment the owner proposes, allow passing and count how often people use it, needs no
 rule change: the table has to say the pass exists and record it.
