@@ -230,12 +230,15 @@ Oppressor read −0.033 against Brute alone when forced (journal, 2026-10-03), G
 own, and in 300 exploring matches Crash was cast 9 times, Claim 13, Dominate 5 and Fortress 5. Frenzied then
 Ravager, by contrast, is one sentence ("I gamble, and I pay for it") and the best tier-2 package when forced.
 
-**Spells the bots leave on the shelf**, landed casts in 300 exploring matches of 13,505 casts: Fortress 5,
-Dominate 5, Crash 9, Paralyzing Barb 9, Blood Price 13, Claim 13, Soul Feast 20, Latch 21, Blood Hunt 39,
-Contagion 42, Whirlwind 43. Most are tier 3 of lines Greedy does not walk, so this is a reading of Greedy's
-purchases as much as of the spells; the variety run with the lookahead behind it is the fairer reading and
-is in the appendix. Pummel is outclassed by Shock on paper and in play (232 casts to 2758), which the knobs
-file already says and accepts.
+**Spells the bots leave on the shelf.** Under exploring Greedy, 300 matches and 13,505 landed casts: Fortress
+5, Dominate 5, Crash 9, Paralyzing Barb 9, Blood Price 13, Claim 13, Soul Feast 20, Latch 21, Blood Hunt 39,
+Contagion 42, Whirlwind 43, most of them tier 3 of lines Greedy does not walk. Under the lookahead, the fairer
+buyer, 200 benchmark seeds and 9188 landed casts: every spell is cast, and the least are Deep Freeze 14,
+Renewal Burst 20, Wraithguard 22, Incinerate 28 and Whirlwind 29. The two buyers disagree on almost
+everything (Greedy casts Incinerate 492 times, the lookahead 28; Greedy casts Pummel 232 times, the lookahead
+970), which is itself a reading: no spell is dead for both, and which spells look dead depends on who is
+buying. Pummel is outclassed by Shock on paper, which the knobs file says and accepts, and the lookahead casts
+it more than any spell but Strike.
 
 ### F5. The dice swing hard
 
@@ -290,6 +293,12 @@ still carries the legacy table as history, which a new reader mistakes for the c
 - **Round 1 is nearly scripted.** Both players hold Strike and Focus and one just-bought opener; the first
   round's decisions are which opener (3 options) and whom to Strike. That is a fine first round for a
   teaching game and a dull one for the fiftieth. Setup asymmetry (section 4) is the lever.
+- **Tier 3 is a small slice of play.** Under the lookahead 8 % of landed casts are tier-3 spells, under
+  exploring Greedy 13 %. The deepest packages arrive at round 5 at the earliest, a match ends at round 10 or
+  11, and the lookahead prefers breadth (a second family's opener, 74 to 80 % multiclassing under the strong
+  weights) to depth. The top of each line is where the catalogue's identity is loudest and where it is least
+  seen. That is a pacing choice ADR 0066 accepted knowingly; the table should say whether the finishers feel
+  like finishers or like cards nobody reached.
 - **Shock is the catalogue's centre of gravity.** 2514 of 8782 declarations by one Greedy in the mirror (29 %),
   2758 of 13,505 landed casts in the exploring run, and the opener that carries it is bought first 87 % of the time by Greedy.
   The lookahead buys differently (ADR 0094, ADR 0095), and the owner's forced experiments show every other
@@ -395,8 +404,32 @@ Greedy 400 of 400 against Random, 9.3 rounds, Random's remaining health 0.
 
 ### Variety, 200 benchmark seeds, `explore:0.2:lookahead` both sides
 
-Pending: the run was still playing when this file was first committed. The numbers land in the next commit
-to this file.
+Rounds 11.1, draws 0, cap 0 %, fizzles 7.1 %, 19.4 % of actions critical, entropy 4.51 bits against the Greedy
+mirror's 3.57. 9188 landed casts, counted once. Every one of the 44 spells was declared by eight sides or more.
+
+| Spells of | Landed casts | Share |
+| --- | --- | --- |
+| the starting kit (Strike, Focus) | 2082 | 23 % |
+| tier-1 packages | 3681 | 40 % |
+| tier-2 packages | 2649 | 29 % |
+| tier-3 packages | 776 | 8 % |
+
+Top-spell share per package, worst first: Blighted 0.86 (Toxic Mend 302, Overdrive 48), Ironhide 0.75 (Body
+Slam 242, Carapace 82), Transcendent 0.75 (Void Pulse 61, Renewal Burst 20), Warped 0.72 (Shock 729,
+Revitalize 281), Frenzied 0.71 (Fury 424, Wild Swing 170). The best splits are Parasite, Ethereal and Stormborn
+at 0.51. Read as the objective reads it, the lower Wilson bound against 0.8, only Blighted is over, which is
+the package the forced experiments flagged (journal, 2026-10-03).
+
+Least cast: Deep Freeze 14, Renewal Burst 20, Wraithguard 22, Incinerate 28, Whirlwind 29, Blood Price 31,
+Death Wail 31, Contagion 36, Soul Feast 38, Emberstorm 39. The lookahead's purchases are the reverse of
+Greedy's: Brute spells 1548 casts, Predator 1123, Warped 1010, and the Wizard's top package, Cataclysm, is the
+least reached of the 21 (42 casts in 200 matches) where Greedy casts Incinerate and Deep Freeze more than
+anything but Shock and Strike.
+
+Won-cast, the share of a spell's landed casts made by a side that won: Bonewall 26 %, Wraithguard 33 %,
+Fortress 37 %, Infestation 39 % and Body Slam 39 % at the bottom; Renewal Burst 100 % of 16 sides, Deranged
+Charge 87 %, Contagion 86 %, Blood Price 82 % and Incinerate 80 % at the top. Correlation, not cause: a side
+casts wards when it is losing and finishers when it is winning.
 
 ### The strongest play, 40 benchmark seeds
 
