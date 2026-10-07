@@ -164,7 +164,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// it as one, through the kills it weighs by the critical chance; a win the plain roll brings is certain, and
     /// nothing outranks it. Every enemy counts, the ones the actor's own team is expected to kill first included:
     /// a kill that ends the match is never a wasted round, since if the ally's lands the round after it never
-    /// comes, and if it does not this one is the win.
+    /// comes, and if it does not this one is the win. A cast that also takes the last of the actor's own team
+    /// down, through what it does to its caster, ends the match in a draw, and is no win.
     /// </summary>
     public bool Wins(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -175,21 +176,20 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var standing = creatures.Where(creature => creature.Owner != actor.Owner && creature.IsAlive).Select(creature => creature.Id).ToList();
         // Most of a match has more enemies standing than one cast reaches, and then nothing needs resolving. The
         // roll is forced plain, so the speed cannot change this reading, as in Kills.
-        return standing.Count > 0
-            && standing.TrueForAll(action.Targets.Contains)
-            && Wipes(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, Speed.Standard), creatures, standing);
-    }
+        if (standing.Count == 0 || !standing.TrueForAll(action.Targets.Contains))
+        {
+            return false;
+        }
 
-    /// <summary>Whether a resolution's damage kills every one of the enemies named.</summary>
-    private static bool Wipes(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, List<CreatureId> standing)
-    {
+        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, Speed.Standard);
         if (resolution.Fizzled)
         {
             return false;
         }
 
-        var killed = Damage(resolution, creatures, NoneGone).Where(hit => hit.Kills && hit.Enemy).Select(hit => hit.Id).ToHashSet();
-        return standing.TrueForAll(killed.Contains);
+        var killed = Damage(resolution, creatures, NoneGone).Where(hit => hit.Kills).Select(hit => hit.Id).ToHashSet();
+        return standing.TrueForAll(killed.Contains)
+            && creatures.Any(creature => creature.Owner == actor.Owner && creature.IsAlive && !killed.Contains(creature.Id));
     }
 
     /// <summary>

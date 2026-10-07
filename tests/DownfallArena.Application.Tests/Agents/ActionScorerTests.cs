@@ -1026,6 +1026,24 @@ public sealed class ActionScorerTests
             .ShouldBe((0.95 * ((3 + (3 / 20.0)) - (2 + (2 / 20.0)))) + (0.05 * ((6 + (6 / 20.0)) - (2 + (2 / 20.0)))), 1e-9);
     }
 
+    /// <summary>
+    /// ADR 0099. Recoil kills the last enemy and, at two health, its own caster, the last of its team: both teams
+    /// fall together, which is a draw and not a win. With an ally still standing beside the caster, the same cast
+    /// wins, and so does a Strike that costs the caster nothing.
+    /// </summary>
+    [Fact]
+    public void A_cast_that_takes_its_last_caster_down_with_the_last_enemy_does_not_win()
+    {
+        var scorer = ScorerWith(CasterSpell(Recoil, Damage.Of(2)));
+        var caster = Boards.Creature(1, PlayerSlot.Player1) with { Health = Health.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Strike, Recoil } };
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var enemy = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(3) };
+
+        scorer.Wins(Action(One, Recoil, Three), [caster, enemy]).ShouldBeFalse();
+        scorer.Wins(Action(One, Recoil, Three), [caster, ally, enemy]).ShouldBeTrue();
+        scorer.Wins(Strike(One, Three), [caster, enemy]).ShouldBeTrue();
+    }
+
     private static readonly SpellId Recoil = SpellId.Parse("spell:recoil:v1");
 
     /// <summary>A single-target hit for 3 that also does something to whoever cast it.</summary>
