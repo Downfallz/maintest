@@ -102,6 +102,18 @@ public sealed class LookaheadAgent(
     public CombatReading Combat => _combat;
 
     /// <summary>
+    /// The scorer the rounds after a move are summed with: the weights without their stocks. Energy kept,
+    /// defense held and initiative bought are priced by the one-step reading as a guess at what they will buy,
+    /// and a rollout plays that out, so a scorer that priced them too would pay a move for its energy at every
+    /// action it stays banked through and for its armour at every hit it then softens as well. Measured, that
+    /// read Focus as the best spell in the catalogue and lost six matches in seven to the one-round reading.
+    /// Damage, kills, heals and the lasting effects a later round applies keep their prices: the first three
+    /// are flows the rollout realises once, and a stun or a bleed applied inside the rollout is otherwise
+    /// worth nothing to a sum of actions, since the action it takes away is one that never scores.
+    /// </summary>
+    private readonly Lazy<ActionScorer> _ahead = new(() => new ActionScorer(resources, rules, weights with { Energy = 0, Defense = 0, Initiative = 0 }).WithoutUnlocks);
+
+    /// <summary>
     /// What every rollout's dice are derived from, drawn once from the source the agent was given: a purchase's
     /// dice then depend on the board it is made on and nothing the agent did before, so a table rebuilt from
     /// its decisions (ADR 0091), which does not ask the agent again for the picks it replays, buys afterwards
@@ -557,7 +569,7 @@ public sealed class LookaheadAgent(
             return new RoundValue(0, value, stopped);
         }
 
-        var rollout = new RoundRollout(_oneStep, _scorer.WithoutUnlocks, resources, rules);
+        var rollout = new RoundRollout(_oneStep, _ahead.Value, resources, rules);
         var seeds = Enumerable.Range(0, _combat.Rollouts)
             .Select(index => dice + ((ulong)round * 1_000_003UL) + ((ulong)(actor?.Value ?? 0) * 7_919UL) + ((ulong)board.ActivationCursor * 104_729UL) + (ulong)index)
             .ToArray();
