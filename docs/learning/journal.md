@@ -30,7 +30,10 @@ Content `9419f935` before, `49c96577` after: the same catalogue plus Titan, Arch
     rounds a creature saving for a spell can pay for it.
   - Apex: the bonus on every hit of the creature's best damaging spell, a critical one counted at the
     multiplier.
-  - Titan: the creature's cast, kept once for each living enemy that knows a stun.
+  - Titan: the creature's cast, kept once for each living enemy that knows a stun, and half a cast for each
+    one that could buy a package teaching a stun at its next pick. Counting those enemies moved Greedy's own
+    play by nothing measurable: 50.5 % of 400 and 51.0 % of 800 matches against the rule without them. It is
+    kept because an immunity bought before the enemy's stun is worth something.
 
   The same 100 mirrors then bought 145 capstones: Archmage 142, Apex 2, Titan 1. Matches went from 11.2 rounds
   to 10.05.
@@ -42,6 +45,8 @@ Content `9419f935` before, `49c96577` after: the same catalogue plus Titan, Arch
   Greedy: two damage on a single-target spell is about 6 over three rounds, and few enemies know a stun.
   Lookahead-34 buys them the other way round (Apex 24, Titan 15, Archmage 4). The two bots disagree on what
   the capstones are worth, and the Archmage knob (1 to 2) cannot go lower.
+- **Pricing Apex higher does not help Greedy.** Greedy with Apex's bonus priced at double lost to plain Greedy:
+  49.5 % of 400 and 49.2 % of 800 matches. Its pricing stays as it is.
 - **Open.** A reading of whether capstones decide matches (family win share, comebacks) needs more than 40
   lookahead matches. The passive amounts are knobs (Archmage 1 to 2, Apex 1 to 3) for the next tuning pass.
 

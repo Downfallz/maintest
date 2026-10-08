@@ -1275,25 +1275,45 @@ public sealed class ActionScorerTests
 
     /// <summary>
     /// Stun immunity is the actor's cast kept, once for each living enemy that knows a stun: here Strike's
-    /// expected damage, the actor's one spell.
+    /// expected damage, the actor's one spell. The other enemy owns both packages that teach Slam, so it can
+    /// neither cast a stun nor buy one.
     /// </summary>
     [Fact]
     public void Stun_immunity_is_priced_by_the_cast_each_stunning_enemy_would_take()
     {
         var board = Board(enemyHealth: 20);
-        board[1] = board[1] with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]) };
+        board[1] = board[1] with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]), AcquiredTiers = StunPackages };
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
 
         Capstones.PurchaseTerms(board[0], Steadfast, board).Damage.ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }
 
-    /// <summary>Against enemies that cannot stun, immunity prevents nothing and is worth nothing.</summary>
+    /// <summary>
+    /// An enemy that does not know a stun yet but could buy one at its next pick is half a stunner, since it
+    /// may buy something else: with nothing bought, Both's package, which teaches Slam, is open to it.
+    /// </summary>
+    [Fact]
+    public void Stun_immunity_counts_half_for_an_enemy_that_could_buy_a_stun_next()
+    {
+        var board = Board(enemyHealth: 20);
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).Damage.ShouldBe(0.5 * ((0.95 * 3) + (0.05 * 6)), 1e-9);
+    }
+
+    /// <summary>Against enemies that cannot stun and cannot buy a stun next, immunity prevents nothing and is worth nothing.</summary>
     [Fact]
     public void Stun_immunity_is_worth_nothing_when_no_enemy_can_stun()
     {
         var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { AcquiredTiers = StunPackages };
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
 
         Capstones.PurchaseTerms(board[0], Steadfast, board).ShouldBe(ScoreTerms.Zero);
     }
+
+    /// <summary>Both packages that teach Slam, the one spell that stuns: an enemy owning them has no stun left to buy.</summary>
+    private static HashSet<TierId> StunPackages => [TestContent.GuardPack, TestContent.SlamPack, TestContent.BothPack];
 
     /// <summary>Two energy for the caster, free: Wait, as every creature knows it.</summary>
     private static Spell Rest { get; } = Spell.Create(

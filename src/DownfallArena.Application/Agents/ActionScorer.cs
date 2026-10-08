@@ -32,6 +32,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     private readonly bool _priceUnlocks = true;
 
+    /// <summary>The spells that stun, and the packages that teach one: read once, since the catalogue does not change.</summary>
+    private readonly Lazy<(HashSet<SpellId> Spells, List<Tier> Tiers)> _stuns = new(() =>
+    {
+        var spells = resources.Spells.Where(spell => spell.Effects.Any(effect => effect is Stun)).Select(spell => spell.Id).ToHashSet();
+        return (spells, [.. resources.Tiers.Where(tier => tier.Spells.Any(spells.Contains))]);
+    });
+
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
     /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
@@ -335,8 +342,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <item>energy at upkeep as the energy itself and the better spell it pays for every round, the way an
     /// energy gift is priced by the spell it unlocks (ADR 0096);</item>
     /// <item>a damage bonus as every hit of the buyer's best damaging spell raised by it, one cast a round;</item>
-    /// <item>stun immunity as the buyer's best cast kept, once for each living enemy that knows a stun, up to
-    /// one a round: a stun costs its caster a cast, so no enemy is read landing one every round.</item>
+    /// <item>stun immunity as the buyer's best cast kept, once for each living enemy that knows a stun and half
+    /// for one that could buy one at its next pick, up to one a round: a stun costs its caster a cast, so no
+    /// enemy is read landing one every round.</item>
     /// </list>
     /// </summary>
     private ScoreTerms PassiveTerms(CreatureSnapshot actor, Passive passive, IReadOnlyList<CreatureSnapshot> creatures)
@@ -362,11 +370,25 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         if (passive.StunImmunity && !actor.Passive.StunImmunity)
         {
-            var stunners = creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive && creature.KnownSpells.Any(spell => resources.GetSpell(spell).Effects.Any(effect => effect is Stun)));
+            var stunners = creatures.Where(creature => creature.Owner != actor.Owner && creature.IsAlive).Sum(StunThreat);
             terms += Math.Min(stunners, PermanentConditionRounds) * Affordable(kit, Upkeep(actor)).Terms;
         }
 
         return terms;
+    }
+
+    /// <summary>
+    /// How much of a stunner an enemy is: one that knows a stun is one, one that could buy a package teaching
+    /// one at its next pick is half, since it may buy something else, and any other is none.
+    /// </summary>
+    private double StunThreat(CreatureSnapshot enemy)
+    {
+        if (enemy.KnownSpells.Any(_stuns.Value.Spells.Contains))
+        {
+            return 1;
+        }
+
+        return _stuns.Value.Tiers.Any(tier => !enemy.AcquiredTiers.Contains(tier.Id) && tier.IsOpenTo(enemy.AcquiredTiers.Contains)) ? 0.5 : 0;
     }
 
     /// <summary>
