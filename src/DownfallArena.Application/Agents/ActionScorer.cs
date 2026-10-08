@@ -39,12 +39,6 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return (spells, [.. resources.Tiers.Where(tier => tier.Spells.Any(spells.Contains))]);
     });
 
-    /// <summary>
-    /// The most energy worth holding (ADR 0103): what the dearest spell in the catalogue costs. A point past it
-    /// pays for no cast, now or once a package is bought, so it is worth nothing.
-    /// </summary>
-    private readonly Lazy<int> _usefulEnergy = new(() => resources.Spells.Select(spell => spell.Stats.Cost.Value).DefaultIfEmpty(0).Max());
-
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
     /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
@@ -577,11 +571,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         terms += NextPurse(actor, resolution, creatures, remaining[actor.Id]);
 
         // What the actor keeps; what a spell hands out is priced per outcome above. The actor's own purse,
-        // what it keeps and what the spell gives it back, is worth only as much of it as the dearest spell
+        // what it keeps and what the spell gives it back, is worth only up to the reserve its dearest spell
         // can spend (ADR 0103): energy hoarded past that pays for nothing.
         var given = resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
         var purse = actor.Energy.Value - resolution.EnergySpent.Value + given;
-        return terms with { Energy = terms.Energy - given + Math.Min(purse, _usefulEnergy.Value) };
+        return terms with { Energy = terms.Energy - given + Math.Min(purse, Reserve(actor)) };
     }
 
     private static CreatureSnapshot Target(CreatureId id, IReadOnlyList<CreatureSnapshot> creatures) => creatures.First(creature => creature.Id == id);
@@ -782,6 +776,19 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>The energy a creature gains at the next upkeep: the rule set's, and its packages' passive (ADR 0101).</summary>
     private int Upkeep(CreatureSnapshot creature) => rules.EnergyPerRound + creature.Passive.UpkeepEnergy;
+
+    /// <summary>
+    /// The most energy worth holding (ADR 0103): what it takes to cast the creature's dearest spell every round
+    /// for the rounds a permanent condition is read for. Its cost now, and for each round after, what a round's
+    /// energy does not cover: Crushing Stomp at 4 on 2 a round wants 8, a spell no dearer than a round's energy
+    /// wants its cost. A point past that pays for no cast, so it is worth nothing. The spells it knows, not the
+    /// ones it may buy: a purchase raises the reserve the round it lands.
+    /// </summary>
+    private int Reserve(CreatureSnapshot creature)
+    {
+        var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
+        return dearest + ((PermanentConditionRounds - 1) * Math.Max(0, dearest - Upkeep(creature)));
+    }
 
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of
