@@ -109,7 +109,7 @@ public static class ContentAudit
             // Taken as a list before anything is bought, not iterated lazily: the filter reads `owned`, which
             // the body then adds to, so a deferred query would be answering a question about a set that is
             // changing underneath it. One round at a time is what the loop already says it does.
-            opened = [.. resources.Tiers.Where(tier => !owned.Contains(tier.Id) && tier.Prerequisites.All(owned.Contains))];
+            opened = [.. resources.Tiers.Where(tier => !owned.Contains(tier.Id) && tier.IsOpenTo(owned.Contains))];
             foreach (var tier in opened)
             {
                 owned.Add(tier.Id);

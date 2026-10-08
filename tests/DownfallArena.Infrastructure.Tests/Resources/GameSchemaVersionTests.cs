@@ -3,6 +3,7 @@ using System.Text;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Resources;
 using DownfallArena.Infrastructure.Resources.Schema;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Infrastructure.Tests.Resources;
 
@@ -17,6 +18,10 @@ public sealed class GameSchemaVersionTests
 {
     private const string Opener = """
         { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1 }
+        """;
+
+    private const string WithPassive = """
+        { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1, "passive": { "upkeepEnergy": 1 } }
         """;
 
     /// <summary>
@@ -61,6 +66,58 @@ public sealed class GameSchemaVersionTests
 
         schema.SchemaVersion.ShouldBe(GameSchema.VersionWithTiers);
         schema.Tiers.ShouldNotBeNull().Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A passive or an any-of list is a member a reader written before ADR 0101 does not know, so the document
+    /// that uses one says so; a catalogue whose packages use neither stays the version it was.
+    /// </summary>
+    [Fact]
+    public void A_built_catalogue_with_a_passive_declares_the_version_that_carries_capstones()
+    {
+        using var content = Content().WithFile("Tiers/brute.v1.json", WithPassive);
+
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        schema.SchemaVersion.ShouldBe(GameSchema.VersionWithCapstones);
+        GameSchemaBuilder.Load(Write(content, built => built)).GetTier(TierId.Parse("tier:brute:v1")).Passive.UpkeepEnergy.ShouldBe(1);
+    }
+
+    [Fact]
+    public void A_document_with_a_passive_at_the_version_before_capstones_is_refused()
+    {
+        using var content = Content().WithFile("Tiers/brute.v1.json", WithPassive);
+
+        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithTiers });
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
+            .Message.ShouldContain("any-of prerequisites or passives");
+    }
+
+    [Fact]
+    public void A_document_with_no_passive_at_the_version_that_carries_capstones_is_refused()
+    {
+        using var content = Content().WithFile("Tiers/brute.v1.json", Opener);
+
+        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithCapstones });
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
+            .Message.ShouldContain("any-of prerequisites or passives");
+    }
+
+    /// <summary>A passive that gives nothing is no passive: it leaves the document, so it cannot move the version or the hash.</summary>
+    [Fact]
+    public void An_empty_passive_leaves_the_document_at_the_version_before_capstones()
+    {
+        using var content = Content().WithFile("Tiers/brute.v1.json", """
+            { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1, "passive": {} }
+            """);
+        using var bare = Content().WithFile("Tiers/brute.v1.json", Opener);
+
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        schema.SchemaVersion.ShouldBe(GameSchema.VersionWithTiers);
+        schema.ContentHash.ShouldBe(GameSchemaBuilder.Build(bare.Path).ContentHash);
     }
 
     /// <summary>
@@ -136,7 +193,7 @@ public sealed class GameSchemaVersionTests
     {
         using var content = Content();
 
-        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithTiers + 1 });
+        var path = Write(content, schema => schema with { SchemaVersion = GameSchema.VersionWithCapstones + 1 });
 
         Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
             .Message.ShouldContain("written by a newer builder");
@@ -155,7 +212,7 @@ public sealed class GameSchemaVersionTests
         var path = Path.Combine(content.Path, "newer.json");
         File.WriteAllText(path, """
             {
-              "schemaVersion": 5, "contentHash": "", "creatures": [], "spells": [], "talentTrees": [],
+              "schemaVersion": 6, "contentHash": "", "creatures": [], "spells": [], "talentTrees": [],
               "aliases": {}, "somethingANewerBuilderWrites": [1, 2]
             }
             """);

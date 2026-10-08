@@ -1,6 +1,7 @@
 import { EFFECT_GROUPS, energyCost, strategyOverview, compactEffect } from './strategy.js';
-import { active, named, originText, packageFamilies, packageParents, packagesTeaching, spellInTier, spellLevels, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
+import { active, named, originText, packageFamilies, packageParents, packageRequirements, packagesTeaching, requirementText, spellInTier, spellLevels, spellMatches, spellOrigins, effectText, targetText, criticalText, percentText } from './catalogue.js';
 import { standing } from './value.js';
+import { passiveLines } from './tiers.js';
 
 const h = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -94,15 +95,16 @@ function spellTile(item, catalogue, open) {
     valueLine(item, catalogue), h('span', 'spell-meta', [doc.spellType, targetText(doc.targeting), criticalText(doc)].filter(Boolean).join(' · ')));
 }
 
+// A capstone teaches no spell and is bought for its passive (ADR 0101), so its tile reads what it gives instead.
 function packageTile(item, catalogue, open) {
   const doc = item.document;
   const tile = button('', 'package-tile', () => open(item.path));
-  const parents = packageParents(item, catalogue);
   const spells = (doc.spells ?? []).map(id => named(catalogue.spells, id, catalogue)?.name ?? id);
+  const gives = passiveLines(doc.passive).map(line => `Passive: ${line}`);
   return append(tile,
     append(h('span', 'package-top'), h('span', 'tier-label', `TIER ${doc.level}`), h('span', 'initiative-bonus', `+${doc.initiativeBonus ?? 0} initiative`)),
-    h('strong', 'package-name', item.name), h('span', 'package-spells', spells.join(' · ') || 'No spells'),
-    h('span', 'package-parent', parents.length ? `Requires ${parents.map(parent => parent.name).join(' + ')}` : 'Start here'),
+    h('strong', 'package-name', item.name), h('span', 'package-spells', [...spells, ...gives].join(' · ') || 'No spells'),
+    h('span', 'package-parent', requirementText(item, catalogue) || 'Start here'),
     h('span', 'tile-arrow', '↗'));
 }
 
@@ -199,11 +201,27 @@ export function reader(item, catalogue, open, edit, back) {
 
 function packageReading(view, item, catalogue, open) {
   const doc = item.document;
-  view.append(append(h('div', 'reader-stats'), stat(`+${doc.initiativeBonus ?? 0}`, 'base initiative'), stat((doc.spells ?? []).length, 'spells learned')));
-  const parents = packageParents(item, catalogue);
-  view.append(title('TO UNLOCK', parents.length ? 'Required packages' : 'An open starting point', parents.length ? 'Own all of these packages before choosing this one.' : 'This package has no prerequisite.'),
-    append(h('div', 'reader-links'), ...parents.map(parent => itemLink(parent, open))));
-  view.append(title('ONE PICK TEACHES', 'Included spells', 'Learn every spell below when you acquire this package.'));
+  const gives = passiveLines(doc.passive);
+  view.append(append(h('div', 'reader-stats'), stat(`+${doc.initiativeBonus ?? 0}`, 'base initiative'), stat((doc.spells ?? []).length, 'spells learned'),
+    gives.length ? stat(gives.length, gives.length === 1 ? 'passive' : 'passives') : null));
+  const { allOf, anyOf } = packageRequirements(item, catalogue);
+  if (!allOf.length && !anyOf.length) view.append(title('TO UNLOCK', 'An open starting point', 'This package has no prerequisite.'));
+  if (allOf.length) {
+    view.append(title('TO UNLOCK', 'Required packages', 'Own all of these packages before choosing this one.'),
+      append(h('div', 'reader-links'), ...allOf.map(parent => itemLink(parent, open))));
+  }
+  // ADR 0101: a capstone is opened by whichever of its family's closers the creature climbed through.
+  if (anyOf.length) {
+    view.append(title(allOf.length ? 'AND' : 'TO UNLOCK', 'Any one of these', 'Own at least one of these packages before choosing this one.'),
+      append(h('div', 'reader-links'), ...anyOf.map(parent => itemLink(parent, open))));
+  }
+  if (gives.length) {
+    view.append(title('ONE PICK GIVES', 'Passive', 'Held for as long as the creature owns this package, for the rest of the match.'),
+      append(h('div', 'reader-links'), ...gives.map(line => h('span', 'chip', line))));
+  }
+  if ((doc.spells ?? []).length || !gives.length) {
+    view.append(title('ONE PICK TEACHES', 'Included spells', 'Learn every spell below when you acquire this package.'));
+  }
   const spells = (doc.spells ?? []).map(id => named(catalogue.spells, id, catalogue));
   view.append(append(h('div', 'spell-grid'), ...spells.filter(Boolean).map(spell => spellTile(spell, catalogue, open))));
   for (const id of (doc.spells ?? []).filter(id => !named(catalogue.spells, id, catalogue))) view.append(message(`Spell unavailable: ${id}`));

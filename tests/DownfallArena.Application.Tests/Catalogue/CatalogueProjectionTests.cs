@@ -254,6 +254,7 @@ public sealed class CatalogueProjectionTests
             DefenseBuff.Of(3, Duration.Permanent),
             DefenseDebuff.Of(2, Duration.OfRounds(1)),
             InitiativeBuff.Of(2, Duration.OfRounds(1)),
+            DamageBuff.Of(2, Duration.OfRounds(1)),
             InitiativeDebuff.Of(2, Duration.OfRounds(2)),
         ];
 
@@ -275,6 +276,7 @@ public sealed class CatalogueProjectionTests
             "Defense +3, permanent",
             "Defense -2, 1 round",
             "Initiative +2, 1 round",
+            "Damage +2 on every hit, 1 round",
             "Initiative -2, 2 rounds",
         ]);
     }

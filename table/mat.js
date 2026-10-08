@@ -64,14 +64,45 @@ function packageStatus(id, owned, picked, offered) {
   return offered.has(id) ? 'available' : 'future';
 }
 
-// Every edge is an authored package prerequisite. Multiple parents are drawn under each parent; levels
-// must increase, so malformed content cannot make the reference recurse forever.
+// Every package a pick has to own first: every one of `prerequisites`, or any one of `anyOf` (ADR 0101).
+function parentsOf(pack) {
+  return [...(Array.isArray(pack?.prerequisites) ? pack.prerequisites : []), ...(Array.isArray(pack?.anyOf) ? pack.anyOf : [])];
+}
+
+// Every edge is an authored package prerequisite, from either list: a capstone is drawn under each of its
+// family's level-3 packages, because any one of them opens it. Multiple parents are drawn under each parent;
+// levels must increase, so malformed content cannot make the reference recurse forever.
 export function packageForest(catalogue) {
   const packs = catalogue?.packages ?? [];
   const build = pack => ({ ...pack, key: pack.id, depth: pack.level,
-    children: packs.filter(child => child.level > pack.level && child.prerequisites?.includes(pack.id)).map(build),
+    children: packs.filter(child => child.level > pack.level && parentsOf(child).includes(pack.id)).map(build),
   });
-  return packs.filter(pack => !pack.prerequisites?.some(id => packs.some(parent => parent.id === id && parent.level < pack.level))).map(build);
+  return packs.filter(pack => !parentsOf(pack).some(id => packs.some(parent => parent.id === id && parent.level < pack.level))).map(build);
+}
+
+// What a package needs, as its card prints it. The all-of list is joined with "+" and the any-of list with "/",
+// so "Requires one of" is never read as "requires all of".
+export function requirementLine(pack, nameOf = id => id) {
+  const all = (Array.isArray(pack?.prerequisites) ? pack.prerequisites : []).map(nameOf).join(' + ');
+  const any = (Array.isArray(pack?.anyOf) ? pack.anyOf : []).map(nameOf).join(' / ');
+  if (all && any) return `Requires: ${all}, and one of: ${any}`;
+  if (any) return `Requires one of: ${any}`;
+  return `Requires: ${all || 'No prerequisite package'}`;
+}
+
+// What a package gives for as long as it is owned, in the host's words (`passiveLines`, ADR 0101). Nothing
+// here words a passive: a card that does not carry the lines has none to print.
+export function passiveOf(pack) {
+  return (Array.isArray(pack?.passiveLines) ? pack.passiveLines : []).filter(line => typeof line === 'string' && line !== '');
+}
+
+// The family a package belongs to, by its first parent of a lower level, up to the package that opens it.
+// A capstone teaches no spell to take a class colour from, so it wears its family's.
+function familyRoot(pack, byId, seen = new Set()) {
+  if (seen.has(pack.id)) return pack;
+  seen.add(pack.id);
+  const parent = parentsOf(pack).map(id => byId.get(id)).find(one => one && one.level < pack.level);
+  return parent ? familyRoot(parent, byId, seen) : pack;
 }
 
 // Parent codes are scoped to their tree; depth alone is not enough to recover ancestry after reordering.
@@ -109,9 +140,15 @@ export function talentPalette(catalogue, cards) {
     paint({ ...root, children: [] }, ['#c9c2a8']);
     root.children.forEach((branch, index) => paint(branch, ranges[index % ranges.length]));
   }
-  for (const pack of catalogue?.packages ?? []) {
-    const name = cards?.get(pack.spells?.[0])?.creatureClass;
+  const packs = catalogue?.packages ?? [];
+  const byId = new Map(packs.map(pack => [pack.id, pack]));
+  for (const pack of packs.filter(one => one.spells?.length)) {
+    const name = cards?.get(pack.spells[0])?.creatureClass;
     palette.set(pack.id, classColour(name ?? pack.name, palette));
+  }
+  for (const pack of packs.filter(one => !one.spells?.length)) {
+    const root = familyRoot(pack, byId);
+    palette.set(pack.id, root !== pack && palette.has(root.id) ? palette.get(root.id) : classColour(pack.name, palette));
   }
   return palette;
 }

@@ -38,14 +38,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('real packages drive the mobile guide and its linked spell details', async ({ page }, info) => {
-  await expect(page.locator('.hero-stats')).toContainText('21packages');
-  await expect(page.locator('.hero-stats')).toContainText('3tiers');
+  await expect(page.locator('.hero-stats')).toContainText('24packages');
+  await expect(page.locator('.hero-stats')).toContainText('4tiers');
   await expect(page.locator('.family-pick')).toHaveCount(3);
   if (page.viewportSize().width < 900) {
     const bar = await page.locator('#toolbar').boundingBox();
     expect(bar.y + bar.height).toBe(page.viewportSize().height);
   }
-  await expect(page.locator('.tier-section')).toHaveCount(3);
+  await expect(page.locator('.tier-section')).toHaveCount(4);
   await fit(page); await shot(page, info, 'explore');
   await page.locator('.family-pick').filter({ hasText: 'Warped' }).click();
   await expect(page.locator('.package-name').first()).toHaveText('Warped');
@@ -175,7 +175,9 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages + knobbedSpells);
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
-  await expect(sheet.locator('.balance-value').first()).toContainText('Initiative +');
+  await expect(sheet.locator('.balance-value').filter({ hasText: 'Initiative +' })).not.toHaveCount(0);
+  // A capstone's passive amount is a package knob too (ADR 0101), named by what it adds.
+  await expect(sheet.locator('.balance-value').filter({ hasText: 'Damage per hit +' })).not.toHaveCount(0);
   await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Predator');
   const predator = sheet.locator('.balance-item');
   await expect(predator).toHaveCount(1);
@@ -252,7 +254,7 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   });
   await page.goto('https://downfallz.github.io/maintest/');
   await expect(page.locator('.family-pick')).toHaveCount(3);
-  await expect(page.locator('.hero-stats')).toContainText('21packages');
+  await expect(page.locator('.hero-stats')).toContainText('24packages');
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(44);
   await expect(page.locator('.strategy-spell .spell-value').first()).toContainText('a round');

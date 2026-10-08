@@ -46,7 +46,7 @@ public sealed class EvaluationConsoleTests
     [Fact]
     public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
     {
-        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def+", "Def-", "Init+", "Init-"];
+        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def+", "Def-", "Init+", "Init-", "Dmg+"];
         var kinds = typeof(LastingEffect).Assembly.GetTypes()
             .Count(type => type.IsSubclassOf(typeof(LastingEffect)) && !type.IsAbstract);
 
@@ -107,12 +107,12 @@ public sealed class EvaluationConsoleTests
     {
         var printed = Print(Outcome("spell:ice_spear:v1", sides: 10, wins: 6, resolved: 20, fizzled: 0, damage: 80, resolvedWhenWon: 12)
             with
-        { DefenseBuffs = 4, DefenseDebuffs = 9, InitiativeBuffs = 11, InitiativeDebuffs = 17 });
+        { DefenseBuffs = 4, DefenseDebuffs = 9, InitiativeBuffs = 11, InitiativeDebuffs = 17, DamageBuffs = 3 });
 
         var rows = printed.Split('\n').Where(line => line.Contains("spell:ice_spear:v1", StringComparison.Ordinal)).ToList();
 
         rows.Count.ShouldBe(1);
-        rows[0].ShouldEndWith("    4     9     11     17", Case.Sensitive, "the four stat conditions are four columns, not two sums");
+        rows[0].ShouldEndWith("    4     9     11     17     3", Case.Sensitive, "the stat conditions are a column each, not sums");
     }
 
     [Fact]

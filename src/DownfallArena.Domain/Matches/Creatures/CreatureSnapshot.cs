@@ -1,3 +1,5 @@
+using DownfallArena.Domain.Resources;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
 
@@ -53,11 +55,17 @@ public sealed record CreatureSnapshot
     /// </summary>
     public int StunImmunityRounds { get; init; }
 
+    /// <summary>What the packages it owns give it for good (ADR 0101), combined; <see cref="Passive.None"/> unless it owns one that gives something.</summary>
+    public Passive Passive { get; init; } = Passive.None;
+
     /// <summary>Whether a stun would be ignored for immunity. A stunned creature ignores one too; <see cref="CanBeStunned"/> says both.</summary>
-    public bool IsStunImmune => IsAlive && StunImmunityRounds > 0;
+    public bool IsStunImmune => IsAlive && (StunImmunityRounds > 0 || Passive.StunImmunity);
 
     /// <summary>Whether a stun cast on this creature would land: alive, and neither stunned nor immune (ADR 0072).</summary>
     public bool CanBeStunned => IsAlive && !IsStunned && !IsStunImmune;
+
+    /// <summary>Added to every direct hit it deals: its packages' bonus and its damage buffs (ADR 0101).</summary>
+    public int DamageBonus => Passive.DamageBonus + Conditions.Select(condition => condition.Effect).OfType<DamageBuff>().Sum(buff => buff.Amount);
 
     public bool IsDead => Health.IsZero;
 

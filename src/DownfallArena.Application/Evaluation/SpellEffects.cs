@@ -36,7 +36,8 @@ public sealed record SpellEffects(
     int ConditionDamage = 0,
     int Hits = 0,
     int ConditionHealing = 0,
-    int ConditionEnergy = 0)
+    int ConditionEnergy = 0,
+    int DamageBuffs = 0)
 {
     public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -71,6 +72,7 @@ public sealed record SpellEffects(
             ConditionDamage + other.ConditionDamage,
             Hits + other.Hits,
             ConditionHealing + other.ConditionHealing,
-            ConditionEnergy + other.ConditionEnergy);
+            ConditionEnergy + other.ConditionEnergy,
+            DamageBuffs + other.DamageBuffs);
     }
 }

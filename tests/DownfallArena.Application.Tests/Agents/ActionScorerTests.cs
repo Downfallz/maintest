@@ -438,6 +438,7 @@ public sealed class ActionScorerTests
         (Regeneration.Of(1, rounds: 1), Regeneration.Of(1, rounds: 2)),
         (EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2)),
         (DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2))),
+        (DamageBuff.Of(1, Duration.OfRounds(1)), DamageBuff.Of(1, Duration.OfRounds(2))),
         (InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2))),
         (DefenseDebuff.Of(1, Duration.OfRounds(1)), DefenseDebuff.Of(1, Duration.OfRounds(2))),
         (InitiativeBuff.Of(1, Duration.OfRounds(1)), InitiativeBuff.Of(1, Duration.OfRounds(2))),
@@ -460,6 +461,21 @@ public sealed class ActionScorerTests
         // enemy's worth of order a round, whatever the points (ADR 0088).
         Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(Tempo * 0.5 * 2, 1e-9);
         Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(Tempo * 0.5 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A damage buff is the holder's own hits raised (ADR 0101), so on the actor's side it counts for and on an
+    /// enemy against, one hit a round -- the sign the sweep above cannot see.
+    /// </summary>
+    [Fact]
+    public void A_damage_buff_counts_for_on_the_actor_and_against_on_an_enemy()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = Strike(One, Three);
+        var buff = DamageBuff.Of(2, Duration.OfRounds(2));
+
+        Scorer.Score(Cast(action, One, buff), board).ShouldBe(ScoringWeights.Default.Damage * 2 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, buff), board).ShouldBe(-ScoringWeights.Default.Damage * 2 * 2, 1e-9);
     }
 
     /// <summary>
@@ -1199,6 +1215,116 @@ public sealed class ActionScorerTests
     private static Spell Gift { get; } = Spell.Create(
         SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
         TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
+
+    private static readonly TierId Steadfast = TierId.Parse("tier:steadfast:v1");
+
+    private static readonly TierId Focused = TierId.Parse("tier:focused:v1");
+
+    /// <summary>
+    /// Two capstones (ADR 0101) behind Slam's package, teaching nothing: one immune to stun, one with an energy
+    /// at upkeep and two damage on every hit.
+    /// </summary>
+    private static GameResources CapstoneContent { get; } = GameResources.Create(
+        "test",
+        [.. TestContent.Resources.Creatures],
+        [.. TestContent.Resources.Spells],
+        [.. TestContent.Resources.TalentTrees],
+        [
+            .. TestContent.Resources.Tiers,
+            Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
+            Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
+        ]);
+
+    private static ActionScorer Capstones { get; } = new(CapstoneContent, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+
+    /// <summary>
+    /// A passive is priced by the casts it changes over the rounds a permanent condition is read for (ADR 0101).
+    /// Two damage on every hit raises each hit of Strike, the actor's one damaging spell: one hit a cast, and a
+    /// critical one counted at the multiplier. The energy at upkeep is the energy itself here: Strike costs
+    /// nothing, so a richer purse pays for nothing better.
+    /// </summary>
+    [Fact]
+    public void A_capstone_is_priced_by_the_casts_its_passive_changes()
+    {
+        var board = Board(enemyHealth: 20);
+
+        var terms = Capstones.PurchaseTerms(board[0], Focused, board);
+
+        terms.Energy.ShouldBe(ActionScorer.PermanentConditionRounds, 1e-9);
+        terms.Damage.ShouldBe(2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds, 1e-9);
+    }
+
+    /// <summary>
+    /// A damage bonus raises every hit of a cast, so a spell that reaches two enemies gains it twice: Slam hits
+    /// both enemies on the board.
+    /// </summary>
+    [Fact]
+    public void A_damage_bonus_is_priced_on_every_enemy_the_best_cast_reaches()
+    {
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
+
+        var terms = Capstones.PurchaseTerms(board[0], Focused, board);
+
+        terms.Damage.ShouldBe(2 * 2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds, 1e-9);
+    }
+
+    /// <summary>
+    /// The energy at upkeep that lets a creature cast its dear spell every round instead of saving for it: at
+    /// one energy a round Slam is cast every second round, at two every round, and the half a round more of Slam
+    /// it buys is priced on top of the energy.
+    /// </summary>
+    [Fact]
+    public void Energy_at_upkeep_is_priced_by_the_dearer_spell_it_sustains()
+    {
+        var poor = new ActionScorer(CapstoneContent, RuleSet.Create(2, 1, 2, 30, 2.0), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
+
+        var terms = poor.PurchaseTerms(board[0], Focused, board);
+
+        terms.Stun.ShouldBeGreaterThan(0, "half a round more of Slam is half a stun more a round");
+    }
+
+    /// <summary>
+    /// Stun immunity is the actor's cast kept, once for each living enemy that knows a stun: here Strike's
+    /// expected damage, the actor's one spell. The other enemy owns both packages that teach Slam, so it can
+    /// neither cast a stun nor buy one.
+    /// </summary>
+    [Fact]
+    public void Stun_immunity_is_priced_by_the_cast_each_stunning_enemy_would_take()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]), AcquiredTiers = StunPackages };
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).Damage.ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
+    }
+
+    /// <summary>
+    /// An enemy that does not know a stun yet but could buy one at its next pick is half a stunner, since it
+    /// may buy something else: with nothing bought, Both's package, which teaches Slam, is open to it.
+    /// </summary>
+    [Fact]
+    public void Stun_immunity_counts_half_for_an_enemy_that_could_buy_a_stun_next()
+    {
+        var board = Board(enemyHealth: 20);
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).Damage.ShouldBe(0.5 * ((0.95 * 3) + (0.05 * 6)), 1e-9);
+    }
+
+    /// <summary>Against enemies that cannot stun and cannot buy a stun next, immunity prevents nothing and is worth nothing.</summary>
+    [Fact]
+    public void Stun_immunity_is_worth_nothing_when_no_enemy_can_stun()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { AcquiredTiers = StunPackages };
+        board[2] = board[2] with { AcquiredTiers = StunPackages };
+
+        Capstones.PurchaseTerms(board[0], Steadfast, board).ShouldBe(ScoreTerms.Zero);
+    }
+
+    /// <summary>Both packages that teach Slam, the one spell that stuns: an enemy owning them has no stun left to buy.</summary>
+    private static HashSet<TierId> StunPackages => [TestContent.GuardPack, TestContent.SlamPack, TestContent.BothPack];
 
     /// <summary>Two energy for the caster, free: Wait, as every creature knows it.</summary>
     private static Spell Rest { get; } = Spell.Create(

@@ -34,6 +34,13 @@ public sealed class Creature : Entity<CreatureId>
     /// </summary>
     private int _stunImmunity;
 
+    /// <summary>
+    /// What the packages this creature owns give it for good (ADR 0101), combined: read from the packages
+    /// rather than stored as a condition, so it is kept in step with them at a purchase and recomputed from them
+    /// when the creature is restored.
+    /// </summary>
+    private Passive _passive = Passive.None;
+
     /// <summary>How long the immunity a stun leaves behind lasts: the one round after it ends (ADR 0072).</summary>
     private const int StunImmunityDuration = 1;
 
@@ -109,8 +116,14 @@ public sealed class Creature : Entity<CreatureId>
 
     public bool IsStunned => IsAlive && _conditions.Has<Stun>();
 
-    /// <summary>Whether a stun would be ignored: the round after a stun ends (ADR 0072).</summary>
-    public bool IsStunImmune => IsAlive && _stunImmunity > 0;
+    /// <summary>Whether a stun would be ignored: the round after a stun ends (ADR 0072), or for good once a package gives the immunity (ADR 0101).</summary>
+    public bool IsStunImmune => IsAlive && (_stunImmunity > 0 || _passive.StunImmunity);
+
+    /// <summary>What the packages this creature owns give it for good (ADR 0101).</summary>
+    public Passive Passive => _passive;
+
+    /// <summary>Added to every direct hit this creature deals: its packages' bonus and its damage buffs (ADR 0101).</summary>
+    public int DamageBonus => _passive.DamageBonus + _conditions.Sum<DamageBuff>(buff => buff.Amount);
 
     public Defense TotalDefense => BaseStats.Defense
         .Plus(Math.Min(DefenseBuffCeiling, _conditions.Sum<DefenseBuff>(buff => buff.Amount)))
@@ -189,6 +202,12 @@ public sealed class Creature : Entity<CreatureId>
         // restored creature's, recomputed from its conditions. A snapshot where the two disagree would be
         // resolved on one board and applied to another.
         var creature = new Creature(snapshot, definition);
+        creature._passive = Passive.Of(acquired);
+        if (creature._passive != snapshot.Passive)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id}'s snapshot carries a passive its packages do not give.", nameof(snapshot));
+        }
+
         if (creature.MaxHealth != snapshot.MaxHealth
             || creature.TotalDefense != snapshot.TotalDefense
             || creature.CurrentInitiative != snapshot.CurrentInitiative
@@ -198,8 +217,9 @@ public sealed class Creature : Entity<CreatureId>
             throw new ArgumentException($"Creature {snapshot.Id}'s snapshot disagrees with the conditions it carries.", nameof(snapshot));
         }
 
-        // The immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves a creature
-        // stunned and immune at once, immune while dead, or immune for longer than that.
+        // The round of immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves that
+        // round running on a stunned creature, a dead one, or for longer. The immunity a package gives for good
+        // (ADR 0101) is not this counter, and a creature stunned before it bought one stays stunned until it ends.
         if (snapshot.StunImmunityRounds is < 0 or > StunImmunityDuration
             || (snapshot.StunImmunityRounds > 0 && (snapshot.IsStunned || snapshot.IsDead)))
         {
@@ -241,12 +261,13 @@ public sealed class Creature : Entity<CreatureId>
             return Result.Failure(CreatureErrors.TierAlreadyOwned);
         }
 
-        if (!tier.Prerequisites.All(_acquiredTiers.Contains))
+        if (!tier.IsOpenTo(_acquiredTiers.Contains))
         {
             return Result.Failure(CreatureErrors.TierPrerequisiteMissing);
         }
 
         _acquiredTiers.Add(tier.Id);
+        _passive = _passive.With(tier.Passive);
         foreach (var spell in tier.Spells)
         {
             Learn(spell);
@@ -413,6 +434,7 @@ public sealed class Creature : Entity<CreatureId>
         StunImmunityRounds = IsAlive ? _stunImmunity : 0,
         KnownSpells = _knownSpells.ToHashSet(),
         AcquiredTiers = _acquiredTiers.ToHashSet(),
+        Passive = _passive,
         Conditions = [.. _conditions.Active.Select(condition => condition.Snapshot())],
     };
 }

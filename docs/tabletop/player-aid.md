@@ -3,8 +3,10 @@
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
 the same engine: Tiers bought on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
 ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
-(ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), and one Activation a slot, each action
-resolving the moment its targets are named (ADR 0083). The section number is beside each rule. Fill the setup table's values in before the first Match.
+(ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), one Activation a slot, each action
+resolving the moment its targets are named (ADR 0083), and a level-4 Capstone in each family that gives a
+Passive instead of Spells (ADR 0101). The section number is beside each rule. Fill the setup table's values in
+before the first Match.
 
 ---
 
@@ -12,7 +14,7 @@ resolving the moment its targets are named (ADR 0083). The section number is bes
 
 | # | Phase | Sub-phase | What happens | §|
 | --- | --- | --- | --- | --- |
-| 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy. | 5.1 |
+| 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy, **plus** any `Energy +N at every upkeep` its package cards print. | 5.1 |
 | 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
 | 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Tier, **face down**, both Players at once. **One Tier a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** buys them all. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
@@ -36,8 +38,19 @@ pick token comes off the mats and the boards: picks never carry over.
 **Who.** A living Creature **without a pick token on its board**. A Creature buys **at most one Tier an
 opportunity**, so no Creature climbs two levels in one Round. Down to one living Creature, you have one pick.
 
-**What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, and **owns every
-Tier it requires**. A face-down card is not owned yet. Nothing else decides which Tier.
+**What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, **owns every
+Tier it requires**, and owns **at least one** Tier of a `Needs one of` list. A face-down card is not owned
+yet. Nothing else decides which Tier.
+
+**Capstones** (level 4; Round 7 at the earliest on the reference schedule). Each needs **one of** its
+family's level-3 Tiers, teaches **no Spell**, pays **+0** initiative, and gives a **Passive** for the rest of
+the Match (§7.3):
+
+| Capstone | Needs one of | Passive |
+| --- | --- | --- |
+| **Titan** | Ravager, Colossus, Tyrant | `Immune to stun`. A Stun it already carries still runs out |
+| **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round |
+| **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit`: every target of every Damage line |
 
 Give up the rest with an **Evolution pass**, unannounced. The step ends when neither Player has a pick they
 could use.
@@ -45,8 +58,9 @@ could use.
 **Purchase reveal**: turn every face-down package card over together, then buy each, Player 1's then Player
 2's:
 
-1. **Package card** stays face up with that Creature.
-2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows.
+1. **Package card** stays face up with that Creature. A Passive it prints holds from now on.
+2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows,
+   and none for a Capstone.
 3. **Base initiative** + the Tier's initiative bonus. Once, for the rest of the Match. The only thing that
    moves it.
 
@@ -81,12 +95,15 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 3. **Flip and name** the targets, together.
 4. **Pay** the printed cost.
 5. **Roll for a critical**, once for the cast. **Quick never rolls.**
-6. **Apply each effect line to each target.**
-7. **Apply the `Caster:` line**, once.
+6. **Apply each effect line to each target.** A Damage line takes the caster's **Damage bonus**.
+7. **Apply the `Caster:` line**, once. No critical, no Damage bonus.
 8. **A Team with no living Creature?** The Match ends now. Otherwise, the next slot.
 
 **Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
 **total**, not the halves.
+
+**Damage bonus** = the `Damage +N on every hit` on the caster's package cards + its Damage buffs. Never on a
+Bleed tick, never on the `Caster:` line.
 
 ---
 
@@ -98,13 +115,13 @@ rolled. A card printed at **0%** never rolls.
 
 | Multiplied | Not multiplied |
 | --- | --- |
-| **Damage** on a target | The **`Caster:`** line, all of it |
+| **Damage** on a target, Damage bonus included | The **`Caster:`** line, all of it |
 | A **Heal** on a target | **Energy** given or taken |
-| | Every **lasting Effect** (Bleed, Regeneration, Energy regeneration, Stun, Defense, Initiative) |
+| | Every **lasting Effect** (Bleed, Regeneration, Energy regeneration, Stun, Defense, Initiative, Damage buff) |
 
-**Multiply first, subtract Defense second.**
-`(printed Damage x multiplier), then - total Defense, floor 0.`
-Not `(printed Damage - total Defense) x multiplier`.
+**Add the bonus first, multiply second, subtract Defense third.**
+`(printed Damage + Damage bonus) x multiplier, then - total Defense, floor 0.`
+Not `(printed Damage - total Defense) x multiplier`, and not `printed Damage x multiplier + Damage bonus`.
 
 ---
 
@@ -134,15 +151,17 @@ Creature is ignored.**
 | **Energy regeneration** | Start of Round, **1st** *(no card applies it today)* |
 | **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
-| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
+| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4). Ignored, always, on a Creature that owns **Titan** |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution *(no card applies a buff today)* |
+| **Damage buff** | Read whenever its holder deals a direct hit, added to its Damage bonus *(no card applies it today)* |
 
 **Cleanup, in two moves (§5.9):**
 
 1. Every token in a numbered lane slides **one lane left**; leaving lane `1` removes it. A **Stun** token
    leaving lane `1` of a living Creature is swapped for an **Immune** token in lane `1`, and the Stun token in
-   the Speed slot comes off. The next Cleanup removes the Immune token.
+   the Speed slot comes off. The next Cleanup removes the Immune token. A Creature that owns **Titan** needs no
+   Immune token: its package card is its immunity, for good.
 2. Every token in `new` moves into the lane matching its printed Duration.
 
 > `new` is why **the first countdown does not count**. Read a Duration as "**this many of the following

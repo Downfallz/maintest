@@ -3,19 +3,25 @@ export const active = items => (items ?? []).filter(item => item.enabled !== fal
 export const resolve = (id, catalogue) => catalogue?.aliases?.[id] ?? id;
 export const named = (items, id, catalogue) => (items ?? []).find(item => item.id === resolve(id, catalogue));
 
+// Every package a pick has to own first: the all-of list, then the any-of one a capstone is opened by (ADR 0101).
+const listOf = value => (Array.isArray(value) ? value : []);
+const required = item => [...listOf(item.document?.prerequisites), ...listOf(item.document?.anyOf)];
+
 export function packageFamilies(catalogue) {
   const packages = active(catalogue?.tiers);
-  const roots = packages.filter(item => !(item.document?.prerequisites ?? []).length);
+  const roots = packages.filter(item => !required(item).length);
   return roots.map((root, index) => ({ root, tone: index % 3, packages: descendants(root.id, packages, catalogue) }));
 }
 
+// A capstone is in every family one of its any-of packages is: the list is a family's closers, so in the
+// authored content that is one family, and naming two only puts it in both.
 function descendants(id, packages, catalogue) {
   const found = new Set([id]);
   let changed = true;
   while (changed) {
     changed = false;
     for (const item of packages) {
-      if (!found.has(item.id) && (item.document?.prerequisites ?? []).some(parent => found.has(resolve(parent, catalogue)))) {
+      if (!found.has(item.id) && required(item).some(parent => found.has(resolve(parent, catalogue)))) {
         found.add(item.id);
         changed = true;
       }
@@ -24,8 +30,29 @@ function descendants(id, packages, catalogue) {
   return packages.filter(item => found.has(item.id)).sort((a, b) => a.document.level - b.document.level || a.name.localeCompare(b.name));
 }
 
+const parentOf = (id, catalogue) => named(catalogue.tiers, id, catalogue) ?? { id, name: id, missing: true };
+
+/** Every package this one is opened from, either list: what a family and "what comes next" follow. */
 export function packageParents(item, catalogue) {
-  return (item.document?.prerequisites ?? []).map(id => named(catalogue.tiers, id, catalogue) ?? { id, name: id, missing: true });
+  return required(item).map(id => parentOf(id, catalogue));
+}
+
+/** The two lists apart: every one of `allOf` has to be owned, and any one of `anyOf` is enough. */
+export function packageRequirements(item, catalogue) {
+  return {
+    allOf: listOf(item.document?.prerequisites).map(id => parentOf(id, catalogue)),
+    anyOf: listOf(item.document?.anyOf).map(id => parentOf(id, catalogue)),
+  };
+}
+
+/** What a package needs, in one line, or the empty string for an opener. */
+export function requirementText(item, catalogue) {
+  const { allOf, anyOf } = packageRequirements(item, catalogue);
+  const all = allOf.map(parent => parent.name).join(' + ');
+  const any = anyOf.map(parent => parent.name).join(' / ');
+  if (all && any) return `Requires ${all} and one of ${any}`;
+  if (any) return `Requires one of ${any}`;
+  return all ? `Requires ${all}` : '';
 }
 
 export function packagesTeaching(spell, catalogue) {
@@ -96,6 +123,7 @@ export function effectText(effect) {
     case 'EnergyRegeneration': return `Gain ${amount} energy each round ${duration}`;
     case 'Stun': return `Stun ${duration}`;
     case 'DefenseBuff': return `Gain ${amount} defense ${duration}`;
+    case 'DamageBuff': return `Deal ${amount} more damage on every hit ${duration}`;
     case 'DefenseDebuff': return `Reduce defense by ${amount} ${duration}`;
     case 'InitiativeBuff': return `Gain ${amount} initiative ${duration}`;
     case 'InitiativeDebuff': return `Reduce initiative by ${amount} ${duration}`;

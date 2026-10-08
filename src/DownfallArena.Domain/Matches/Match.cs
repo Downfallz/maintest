@@ -445,7 +445,8 @@ public sealed class Match : AggregateRoot<MatchId>
         var expired = UpkeepRules.Cleanup(creatures);
         RaiseDomainEvent(new ConditionsExpired(Id, round.Id, Expired(expired)));
         List<CreatureId> immune = [.. creatures
-            .Where(creature => creature.IsStunImmune && expired.TryGetValue(creature.Id, out var gone) && gone.Any(condition => condition.Effect is Stun))
+            // A creature immune for good (ADR 0101) gains nothing when a stun it carried from before ends.
+            .Where(creature => creature.IsStunImmune && !creature.Passive.StunImmunity && expired.TryGetValue(creature.Id, out var gone) && gone.Any(condition => condition.Effect is Stun))
             .Select(creature => creature.Id)];
         if (immune.Count > 0)
         {

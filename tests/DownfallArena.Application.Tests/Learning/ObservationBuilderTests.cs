@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v8+");
+        observation.SchemaId.ShouldStartWith("features:v9+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -251,6 +251,7 @@ public sealed class ObservationBuilderTests
         "DefenseDebuff" => DefenseDebuff.Of(2, Duration.OfRounds(1)),
         "InitiativeBuff" => InitiativeBuff.Of(2, Duration.OfRounds(1)),
         "InitiativeDebuff" => InitiativeDebuff.Of(2, Duration.OfRounds(1)),
+        "DamageBuff" => DamageBuff.Of(2, Duration.OfRounds(1)),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "The schema publishes a kind this test has no sample for."),
     };
 
@@ -262,7 +263,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v8");
+        exception.Message.ShouldContain("features:v9");
     }
 
     [Fact]

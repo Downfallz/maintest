@@ -9,9 +9,9 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, packageKnobScope, pointersOf, readBalance, seedEntry, summarise, survey, surveyPackages, unclaimedPointer, withEntry } from './balance.js';
 import { explore, spellLibrary, strategyLibrary, reader, useWeights } from './codex.js';
-import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
+import { passiveLines, startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
 let backend = backendForThisPage();
@@ -52,6 +52,7 @@ const EFFECTS = {
   EnergyRegeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
   Stun: { amounts: [], rounds: true, stacking: 'Ignore' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
+  DamageBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   DefenseDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
@@ -90,8 +91,9 @@ const TEMPLATES = {
     name: 'New talent tree',
     root: emptyNode('Root', 'Root'),
   }),
-  // A package with no spell is refused by the domain -- a pick has to buy something -- so a new one starts at
-  // level 1 with no prerequisite, which is the only shape that is legal before anything is filled in.
+  // A package with no spell and no passive is refused by the domain -- a pick has to buy something (ADR 0101)
+  // -- so a new one starts at level 1 with no prerequisite, which is the only shape that is legal before
+  // anything is filled in. `anyOf` and `passive` are a capstone's, and are added from the sheet when wanted.
   tiers: () => ({
     id: 'tier:new_package:v1',
     name: 'New package',
@@ -388,11 +390,16 @@ function glance(item) {
 
   if (item.kind === 'Tier') {
     const taught = asArray(doc.spells).length;
+    const gives = passiveLines(doc.passive);
     const bonus = typeof doc.initiativeBonus === 'number' ? `+${doc.initiativeBonus} initiative` : null;
     const opens = asArray(doc.prerequisites).length;
+    const anyOf = asArray(doc.anyOf).length;
+    const behind = [opens ? `behind ${opens}` : null, anyOf ? `behind any of ${anyOf}` : null].filter(Boolean);
+    // A capstone teaches nothing (ADR 0101): its figure is what it gives instead of "0 spells".
+    const figure = !taught && gives.length ? gives.join(' · ') : `${taught} ${taught === 1 ? 'spell' : 'spells'}`;
     return [
-      element('span', { className: 'figure', textContent: `${taught} ${taught === 1 ? 'spell' : 'spells'}` }),
-      element('span', { className: 'meta', textContent: [`level ${doc.level ?? '?'}`, bonus, opens ? `behind ${opens}` : 'opener'].filter(Boolean).join(' · ') }),
+      element('span', { className: 'figure', textContent: figure }),
+      element('span', { className: 'meta', textContent: [`level ${doc.level ?? '?'}`, bonus, ...(behind.length ? behind : ['opener'])].filter(Boolean).join(' · ') }),
     ];
   }
 
@@ -413,6 +420,7 @@ function effectSummary(effect) {
     case 'EnergyRegeneration': return `+${effect.amountPerRound}/r energy`;
     case 'Stun': return `stun ${effect.durationRounds ?? 1}r`;
     case 'DefenseBuff': return `+${effect.amount} def${rounds}`;
+    case 'DamageBuff': return `+${effect.amount} dmg/hit${rounds}`;
     case 'DefenseDebuff': return `-${effect.amount} def${rounds}`;
     case 'InitiativeBuff': return `+${effect.amount} init${rounds}`;
     case 'InitiativeDebuff': return `-${effect.amount} init${rounds}`;
@@ -952,8 +960,12 @@ function creatureEditor() {
 
 // ---------- the package a pick buys ----------
 
-/** The prerequisite rows: the packages that have to be owned before this one can be bought. */
-function tierList(target, key) {
+/**
+ * The prerequisite rows: the packages that have to be owned before this one can be bought -- every one of
+ * `prerequisites`, or any one of `anyOf` (ADR 0101). The list is not written into the document until a row
+ * is added, so a package that has no any-of list keeps reading as it did.
+ */
+function tierList(target, key, { add = 'Add prerequisite' } = {}) {
   const container = element('div');
   const redraw = () => {
     const rows = (target[key] || []).map((reference, index) => {
@@ -970,7 +982,7 @@ function tierList(target, key) {
       // Never this package. Only a package the studio created or versioned has an alias, so a new one's alias
       // sorts ahead of every versioned id and would otherwise be the reference a first prerequisite starts at
       // -- seeding the one requirement no package may have.
-      miniButton('Add prerequisite', () => {
+      miniButton(add, () => {
         const self = resolveReference(state.draft?.id);
         target[key] = [...(target[key] || []), tierReferences().find(reference => resolveReference(reference) !== self) || ''];
         markDirty();
@@ -1007,9 +1019,47 @@ function tierEditor() {
     element('h3', { textContent: 'Owned before this can be bought' }),
     element('p', { className: 'muted', textContent: 'The only eligibility rule. The talent tree gates nothing a pick buys, so multiclassing is free.' }),
     tierList(draft, 'prerequisites'),
+    element('h3', { textContent: 'Or opened by any one of' }),
+    element('p', { className: 'muted', textContent: 'A capstone\'s way in (ADR 0101): owning one of these is enough, beside every package above. Each sits exactly a level below.' }),
+    tierList(draft, 'anyOf', { add: 'Add any-of package' }),
   ]);
 
-  return element('div', {}, [card, balanceStrip(), spells, prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
+  return element('div', {}, [card, balanceStrip(), spells, passiveCard(draft), prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
+}
+
+/**
+ * The passive a package gives for as long as its owner holds it (ADR 0101). Written into the document only
+ * while it gives something, so a package with none reads in its file exactly as it did before passives existed
+ * -- the same way `PassiveDto` writes only the members that give something.
+ */
+function passiveCard(draft) {
+  const holder = { stunImmunity: false, upkeepEnergy: 0, damageBonus: 0, ...(draft.passive && typeof draft.passive === 'object' ? draft.passive : {}) };
+  const reading = element('p', { className: 'muted' });
+  const read = () => {
+    reading.textContent = passiveLines(draft.passive).join(' · ') || 'No passive: the package is bought for its spells and its initiative bonus.';
+  };
+  // Only on an edit: opening a sheet must not rewrite a document nobody has touched.
+  const sync = () => {
+    const passive = {};
+    if (holder.stunImmunity === true) passive.stunImmunity = true;
+    for (const key of ['upkeepEnergy', 'damageBonus']) if (holder[key]) passive[key] = holder[key];
+    if (Object.keys(passive).length) draft.passive = passive; else delete draft.passive;
+    read();
+    refreshTierWarnings();
+  };
+  const immune = element('input', { type: 'checkbox', checked: holder.stunImmunity === true });
+  immune.addEventListener('change', () => { holder.stunImmunity = immune.checked; sync(); markDirty(); });
+  const card = element('div', { className: 'card' }, [
+    element('h3', { textContent: 'Passive it gives' }),
+    fields([
+      ['Immune to stun', immune],
+      ['Energy at every upkeep', numberBox(holder, 'upkeepEnergy', { min: 0, onChange: sync })],
+      ['Damage on every hit', numberBox(holder, 'damageBonus', { min: 0, onChange: sync })],
+    ]),
+    reading,
+  ]);
+  read();
+  return card;
 }
 
 function tierWarningRows(draft) {
@@ -1530,7 +1580,7 @@ function knobList(dirty) {
     // question about the other knobs, so changing one pointer changes what two readings say, and neither block
     // may be torn down to say it.
     const readingsOf = [];
-    const scope = state.tab === 'tiers' ? { initiativeBonus: state.draft.initiativeBonus } : state.draft;
+    const scope = state.tab === 'tiers' ? packageKnobScope(state.draft) : state.draft;
     const free = unclaimedPointer(state.entry, scope);
     list.replaceChildren(
       ...(knobs.length
@@ -1541,7 +1591,7 @@ function knobList(dirty) {
         // it is removed, and the picker cannot be used to fix it: with nothing selected the browser shows the
         // first option, so choosing what is already on screen fires no change at all.
         free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, scope)); dirty(); redraw(); }) : null,
-        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Initiative already has a knob.' : 'Every number this spell has already has a knob.' }),
+        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Every number this package may tune already has a knob.' : 'Every number this spell has already has a knob.' }),
       ]),
     );
   };
@@ -1592,7 +1642,7 @@ function knobBlock(index, dirty, redrawList, readingsOf) {
     // nothing else worth offering -- though a pointer that reads fine can still be refused for what it means,
     // a critical chance on a spell that deals no damage being the one the file already documents. A pointer the
     // entry holds and the spell no longer has stays in the list, marked unknown, rather than being dropped.
-    picker(knob, 'path', state.tab === 'tiers' ? ['/initiativeBonus'] : pointersOf(state.draft), { dirty, onChange: repoint }),
+    picker(knob, 'path', state.tab === 'tiers' ? pointersOf(packageKnobScope(state.draft)) : pointersOf(state.draft), { dirty, onChange: repoint }),
     element('span', { className: 'muted', textContent: 'min' }), bound('minimum'),
     element('span', { className: 'muted', textContent: 'max' }), bound('maximum'),
     element('span', { className: 'muted', textContent: 'step' }), bound('step'),
@@ -1778,6 +1828,8 @@ function balanceDetails(row, off) {
 
 function knobLabel(path, document) {
   if (path === '/initiativeBonus') return 'Initiative +';
+  if (path === '/passive/upkeepEnergy') return 'Upkeep energy +';
+  if (path === '/passive/damageBonus') return 'Damage per hit +';
   if (path === '/energyCost') return 'Energy';
   if (path === '/criticalChance') return 'Crit';
   const parts = path.split('/');

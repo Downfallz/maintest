@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
+import { passiveLines, requiredTiers, startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Packages as the catalogue lists them: an id, a name and the authored document under it.
 const tier = (id, level, prerequisites = [], spells = ['spell:guard:v1']) =>
@@ -12,10 +12,10 @@ const CATALOGUE = [OPENER, ADVANCED];
 
 test('a package that teaches nothing is refused, because a pick would buy nothing', () => {
   assert.deepEqual(tierWarnings({ id: 'tier:empty:v1', level: 1, spells: [] }, CATALOGUE), [
-    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings({ id: 'tier:blank:v1', level: 1, spells: ['', null] }, CATALOGUE), [
-    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings(OPENER.document, CATALOGUE), []);
 });
@@ -56,10 +56,10 @@ test('a prerequisite the catalogue does not carry is left to the builder rather 
 
 test('a draft with nothing in it warns about the spells rather than throwing', () => {
   assert.deepEqual(tierWarnings({}, []), [
-    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings(undefined, undefined), [
-    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
 });
 
@@ -131,7 +131,7 @@ test('a package whose list fields are not lists is read as empty rather than thr
   assert.deepEqual(tiersBehind('tier:brute:v1', catalogue), []);
   assert.deepEqual(startersOverlapping(broken.document, [{ document: { startingSpellIds: 'spell:guard:v1' } }]), []);
   assert.deepEqual(tierWarnings(broken.document, catalogue), [
-    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
 });
 
@@ -144,4 +144,73 @@ test('a level-one package with any prerequisite is warned about, because nothing
   assert.deepEqual(tierWarnings(rooted, CATALOGUE), [
     'A prerequisite has to sit above what it opens, so its level has to be lower than this one.',
   ]);
+});
+
+// ADR 0101: a capstone teaches nothing and is bought for what it gives for good, so a package with no spell is
+// refused only when it gives no passive either.
+test('a package that teaches nothing but gives a passive is accepted', () => {
+  const capstone = { id: 'tier:titan:v1', level: 3, anyOf: ['tier:marauder:v1'], spells: [], passive: { stunImmunity: true } };
+
+  assert.deepEqual(tierWarnings(capstone, CATALOGUE), []);
+  assert.deepEqual(tierWarnings({ ...capstone, passive: { stunImmunity: false, damageBonus: 0 } }, CATALOGUE), [
+    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+  ]);
+});
+
+test('a passive that takes something away is refused, as Passive.Of refuses it', () => {
+  const curse = { id: 'tier:curse:v1', level: 1, spells: ['spell:guard:v1'], passive: { damageBonus: -1 } };
+
+  assert.deepEqual(tierWarnings(curse, CATALOGUE), [
+    "A passive's damageBonus cannot be negative: a package that took it away would be a curse, not a purchase.",
+  ]);
+});
+
+test('a passive reads as the lines the table card prints, and nothing reads as no line', () => {
+  assert.deepEqual(passiveLines({ stunImmunity: true, upkeepEnergy: 1, damageBonus: 2 }), [
+    'Immune to stun', 'Energy +1 at every upkeep', 'Damage +2 on every hit',
+  ]);
+  assert.deepEqual(passiveLines({ damageBonus: 0, stunImmunity: false }), []);
+  assert.deepEqual(passiveLines(undefined), []);
+  assert.deepEqual(passiveLines('stun'), []);
+  assert.deepEqual(passiveLines([1]), []);
+});
+
+// The any-of list counts toward the climb: a capstone's only steps are its any-of ones, so one at the level
+// below is what satisfies "a prerequisite exactly a level below".
+const SECOND = tier('tier:berserker:v1', 2, ['tier:brute:v1'], ['spell:rage:v1']);
+const CLOSER = tier('tier:ravager:v1', 3, ['tier:marauder:v1'], ['spell:maul:v1']);
+const OTHER_CLOSER = tier('tier:warmonger:v1', 3, ['tier:berserker:v1'], ['spell:cleave:v1']);
+const FAMILY = [OPENER, ADVANCED, SECOND, CLOSER, OTHER_CLOSER];
+
+test('a capstone opened by any of its family closers climbs one level at a time', () => {
+  const titan = { id: 'tier:titan:v1', level: 4, prerequisites: [], anyOf: ['tier:ravager:v1', 'tier:warmonger:v1'], spells: [], passive: { stunImmunity: true } };
+
+  assert.deepEqual(tierWarnings(titan, FAMILY), []);
+  assert.deepEqual(requiredTiers(titan), ['tier:ravager:v1', 'tier:warmonger:v1']);
+});
+
+// ValidateClimb holds every any-of entry to the level below, because any one may be the step a creature took:
+// one at level 2 would let a level-4 package be bought with three picks.
+test('every package of an any-of list has to sit exactly a level below', () => {
+  const skipped = { id: 'tier:titan:v1', level: 4, anyOf: ['tier:ravager:v1', 'tier:berserker:v1'], spells: [], passive: { stunImmunity: true } };
+
+  assert.deepEqual(tierWarnings(skipped, FAMILY), [
+    'tier:berserker:v1 at level 2 can open this level-4 package: every package of an any-of list is a step a creature climbs through, so each sits at level 3.',
+  ]);
+});
+
+test('an any-of list with nothing a level below fails the climb, and one naming the package itself is refused', () => {
+  const low = { id: 'tier:low:v1', level: 4, anyOf: ['tier:marauder:v1'], spells: ['spell:slam:v1'] };
+  assert.ok(tierWarnings(low, FAMILY).includes('A package at level 4 needs a prerequisite at level 3: a family is climbed one level at a time.'));
+
+  const loop = { id: 'tier:loop:v1', level: 2, anyOf: ['tier:loop:v1', 'tier:brute:v1'], spells: ['spell:slam:v1'] };
+  assert.ok(tierWarnings(loop, FAMILY).includes('A package cannot be opened by itself.'));
+});
+
+test('a package named only in an any-of list still has the capstone behind it', () => {
+  const titan = tier('tier:titan:v1', 4, [], []);
+  titan.document.anyOf = ['tier:ravager:v1', 'tier:warmonger:v1'];
+
+  assert.deepEqual(tiersBehind('tier:warmonger:v1', [...FAMILY, titan]), [titan]);
+  assert.deepEqual(tiersBehind('tier:ravager:v1', [...FAMILY, titan]), [titan]);
 });

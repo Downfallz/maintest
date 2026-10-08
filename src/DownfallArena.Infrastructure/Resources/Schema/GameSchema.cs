@@ -21,6 +21,13 @@ public sealed record GameSchema
     public const int VersionWithTiers = 4;
 
     /// <summary>
+    /// The document whose packages may name an any-of prerequisite or carry a passive (ADR 0101), which a reader
+    /// written before them refuses as unknown members. A catalogue none of whose packages uses either stays at
+    /// <see cref="VersionWithTiers"/>.
+    /// </summary>
+    public const int VersionWithCapstones = 5;
+
+    /// <summary>
     /// The lowest version that can read this document, not the newest the builder knows. A catalogue with no
     /// packages stays at <see cref="VersionWithoutTiers"/>; one that has them says so, because a reader that
     /// predates the member refuses it as an unknown field.
