@@ -33,19 +33,23 @@ public sealed class BatchRunner(
 {
     private readonly int _maxParallelism = maxParallelism ?? Environment.ProcessorCount;
 
+    /// <summary>How many matches this runner plays at once, for a caller that runs several batches under one bound.</summary>
+    public int MaxParallelism => _maxParallelism;
+
     public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
         RunAsync(scenario, null, cancellationToken);
 
     /// <summary>Plays the scenario and, when a recorder is given, records every match through it.</summary>
     public Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, CancellationToken cancellationToken = default) =>
-        RunAsync(scenario, recorder, played: null, cancellationToken);
+        RunAsync(scenario, recorder, played: null, gate: null, cancellationToken);
 
     /// <summary>
     /// Plays the scenario, records every match through the recorder when one is given, and hands each result to
     /// <paramref name="played"/> as its match ends, in the order they end: from several threads at once when the
-    /// matches run side by side, so a caller that counts must count safely.
+    /// matches run side by side, so a caller that counts must count safely. A <paramref name="gate"/> shared by
+    /// batches run at the same time holds them all under one bound: each match waits for a place in it.
     /// </summary>
-    public async Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, Action<MatchResult>? played, CancellationToken cancellationToken = default)
+    public async Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, Action<MatchResult>? played, SemaphoreSlim? gate, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentOutOfRangeException.ThrowIfNegative(scenario.Matches);
@@ -71,7 +75,20 @@ public sealed class BatchRunner(
             parallel,
             async (index, token) =>
             {
-                results[index] = await PlayOneAsync(scenario, index, recorder, token);
+                if (gate is not null)
+                {
+                    await gate.WaitAsync(token);
+                }
+
+                try
+                {
+                    results[index] = await PlayOneAsync(scenario, index, recorder, token);
+                }
+                finally
+                {
+                    gate?.Release();
+                }
+
                 played?.Invoke(results[index]);
             });
 

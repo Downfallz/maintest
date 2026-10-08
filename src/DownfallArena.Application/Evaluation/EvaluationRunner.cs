@@ -30,8 +30,10 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
         var aFirst = new IntentCounter();
         var bFirst = new IntentCounter();
         var tally = new ProgressTally(scenario.Seeds.Count * 2, progress);
-        var firstRun = batches.RunAsync(Batch(scenario, scenario.AgentA, scenario.AgentB), aFirst, result => tally.Played(result, PlayerSlot.Player1), cancellationToken);
-        var secondRun = batches.RunAsync(Batch(scenario, scenario.AgentB, scenario.AgentA), bFirst, result => tally.Played(result, PlayerSlot.Player2), cancellationToken);
+        // One bound for both seatings: two batches each allowed the runner's parallelism would play twice that.
+        using var gate = new SemaphoreSlim(batches.MaxParallelism);
+        var firstRun = batches.RunAsync(Batch(scenario, scenario.AgentA, scenario.AgentB), aFirst, result => tally.Played(result, PlayerSlot.Player1), gate, cancellationToken);
+        var secondRun = batches.RunAsync(Batch(scenario, scenario.AgentB, scenario.AgentA), bFirst, result => tally.Played(result, PlayerSlot.Player2), gate, cancellationToken);
         await Task.WhenAll(firstRun, secondRun);
         var first = await firstRun;
         var second = await secondRun;
