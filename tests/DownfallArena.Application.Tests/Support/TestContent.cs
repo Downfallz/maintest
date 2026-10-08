@@ -73,7 +73,7 @@ internal static class TestContent
         ],
         [
             MakeSpell(Strike, "Strike", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
-            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, DefenseBuff.Of(2, Duration.OfRounds(1))),
+            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, SpellType.Defensive, DefenseBuff.Of(2, Duration.OfRounds(1))),
             MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, Damage.Of(2), Stun.For(1)),
             MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(1), Bleed.Of(19, rounds: 1)),
             MakeSpell(Jab, "Jab", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
@@ -97,10 +97,17 @@ internal static class TestContent
         ]);
 
     private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, params Effect[] effects) =>
+        MakeSpell(id, name, targeting, cost, SpellType.Offensive, effects);
+
+    /// <summary>
+    /// A spell of a kind other than offensive. Guard is defensive, as it would be authored: a purchase is priced
+    /// against the best known spell of its kind (ADR 0102), and a guard is not the hit it stands beside.
+    /// </summary>
+    private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, SpellType type, params Effect[] effects) =>
         Spell.Create(
             id,
             name,
-            SpellType.Offensive,
+            type,
             CreatureClass.Creature,
             new SpellStats(Energy.Of(cost), CriticalChance.None),
             targeting,

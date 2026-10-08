@@ -4,6 +4,31 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-08. A purchase is priced by what it adds over its kind (ADR 0102)
+
+All on content `cedcfb61`.
+
+- **Why.** Greedy priced a package at its best spell's whole cast. That spell read at about 13 even when the
+  creature already cast something better, so Greedy bought it over a capstone almost every time (ADR 0101).
+- **What changed.** A spell is priced by what it adds over the best spell of its kind the buyer knows:
+  offensive, defensive or passive. A spell that adds nothing is worth nothing, and the package is then worth
+  its initiative and its passive.
+- **Measured against Greedy as it was** (whole-cast pricing):
+  - By kind: 89.7 % of 400 matches on the benchmark seeds (86.1 to 93.4), 88.7 % of 800 on the confirmation
+    seeds (85.9 to 91.6).
+  - Over every known spell, whatever its kind: 62.7 % and 65.4 %.
+  - By kind against over every known spell: 89.5 % and 88.2 %. Measured against the buyer's best hit, a guard
+    reads as nothing, and Greedy stopped buying defense.
+- **Greedy against itself**, 100 matches from seed 300:
+  - Capstones bought: 236 (Titan 170, Archmage 54, Apex 12) against 145 (Archmage 142, Apex 2, Titan 1).
+  - Matches run 14.99 rounds against 10.05.
+  - Spell packages bought from round 7 and never cast: 44 %, against 45 %. When nothing adds, a pick still buys
+    initiative.
+- **Digest regenerated.** All 400 matches change. The mean goes from 9.53 rounds to 15.26, just above the 10 to
+  15 band (ADR 0068), and 10 matches reach the round cap. Player 1 wins 200 of 400.
+- **Open.** The weights files were fitted under the whole-cast pricing and are not refitted here. Greedy is the
+  benchmark baseline, so every reading taken against it moves.
+
 ## 2026-10-08. A capstone per family, bought for a passive (ADR 0101)
 
 Measured on content `9419f935` before and `49c96577` after: the same catalogue plus Titan, Archmage and

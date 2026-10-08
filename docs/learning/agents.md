@@ -78,8 +78,10 @@ Decisions:
   of which of two of its own creatures should act first, so it does not pretend to; the lookahead plays each
   seating out ([the round played out](#the-round-played-out)), the random agent shuffles each tie and the
   exploring one does at its rate.
-- **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
-  best target set on the current board), plus `w.initiative` x the order the package's initiative bonus buys
+- **Evolution**: for each unlockable spell, what it adds over the best spell of its kind (offensive,
+  defensive, passive) the creature already knows, each read as if the creature knew it and could afford it on
+  the current board, and nothing when it adds nothing (ADR 0102); plus the package's passive, priced by the casts
+  it changes over three rounds (ADR 0101); plus `w.initiative` x the order the package's initiative bonus buys
   for the rest of the match -- the living enemies it takes the buyer past, a tie counting half (ADR 0017,
   priced by ADR 0018, read as order by ADR 0088) -- minus `w.energy` x
   the part of the cost the actor cannot cover (ADR 0026); unlock the highest, pass only when nothing can be

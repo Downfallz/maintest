@@ -299,6 +299,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// spell per pick, so this pricing is provisional until they are refitted (ADR 0056).
     /// </para>
     /// <para>
+    /// A spell is worth what it adds over the best spell of its kind -- offensive, defensive or passive -- the
+    /// creature already knows, as both read on this board, and nothing when it adds nothing (ADR 0102). A
+    /// creature casts one spell a round, so a second spell that does what a known one does better is a card it
+    /// never plays, and pricing it at its whole cast had bots buy them late in every match. The comparison is
+    /// within a kind because a guard is not the hit it stands beside: it is cast on the rounds a hit is not.
+    /// </para>
+    /// <para>
     /// A spell the creature already knows is not part of what the package sells: two packages may teach the
     /// same spell, and <see cref="Domain.Matches.Creatures.Creature.BuyTier"/> grants it idempotently, so
     /// pricing it again would have an agent pay a pick for a combat option it already has. A package whose
@@ -308,7 +315,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures) =>
         weights.Apply(PurchaseTerms(actor, tierId, creatures));
 
-    /// <summary>The terms behind <see cref="PurchaseValue"/>: the best spell's combat estimate, the initiative bought, the cost not covered.</summary>
+    /// <summary>The terms behind <see cref="PurchaseValue"/>: what the best spell adds over its kind, the initiative bought, the cost not covered, and the passive.</summary>
     public ScoreTerms PurchaseTerms(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -316,14 +323,20 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(creatures);
 
         var tier = resources.GetTier(tierId);
+        var kit = Spells(actor, creatures);
         var best = ScoreTerms.Zero;
         var bestScore = double.NegativeInfinity;
         foreach (var spellId in tier.Spells.Where(spell => !actor.KnownSpells.Contains(spell)).OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var stats = resources.GetSpell(spellId).Stats;
+            var spell = resources.GetSpell(spellId);
             var combat = EstimateTerms(actor, spellId, creatures);
-            var terms = combat with { Energy = combat.Energy - Math.Max(0, stats.Cost.Value - actor.Energy.Value) };
+            var gained = Gained(combat, BestOfKind(kit, spell.Type));
+            if (weights.Apply(gained) <= 0)
+            {
+                continue;
+            }
 
+            var terms = gained with { Energy = combat.Energy - Math.Max(0, spell.Stats.Cost.Value - actor.Energy.Value) };
             var score = weights.Apply(terms);
             if (score > bestScore)
             {
@@ -333,6 +346,26 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         return PassiveTerms(actor, tier.Passive, creatures) + (best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) });
+    }
+
+    /// <summary>
+    /// The best spell of <paramref name="kind"/> the creature already knows, as it reads on this board: what a
+    /// new spell of that kind has to beat to be cast instead (ADR 0102). Nothing when it knows none.
+    /// </summary>
+    private ScoreTerms BestOfKind(List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, SpellType kind)
+    {
+        var best = ScoreTerms.Zero;
+        var bestScore = 0.0;
+        foreach (var (id, terms, _, score, _) in kit)
+        {
+            if (score > bestScore && resources.GetSpell(id).Type == kind)
+            {
+                best = terms;
+                bestScore = score;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

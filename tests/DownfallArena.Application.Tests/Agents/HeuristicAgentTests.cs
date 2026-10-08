@@ -211,9 +211,22 @@ public sealed class HeuristicAgentTests
         var board = Board(enemyHealth: 20);
 
         Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])])).Choice.ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
-        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack]), new EvolutionOption(Two, [TestContent.SlamPack])])).Choice
-            .ShouldBe(new EvolutionChoice(Two, TestContent.SlamPack), "a two-target stun is worth more than a defense buff");
+        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack, TestContent.SlamPack])])).Choice
+            .ShouldBe(new EvolutionChoice(One, TestContent.SlamPack), "a two-target stun adds more to a Strike than a defense buff does");
         Agent.DecideEvolution(board, new EvolutionOptions(2, [])).IsPass.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A package is worth what it adds to the creature that buys it (ADR 0102): Two already kills a
+    /// full-health enemy with Rend, so Slam adds less to it than Guard adds to One, which has no defense at all.
+    /// </summary>
+    [Fact]
+    public void Evolution_buys_for_the_creature_a_package_adds_the_most_to()
+    {
+        var board = Board(enemyHealth: 20);
+
+        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack]), new EvolutionOption(Two, [TestContent.SlamPack])])).Choice
+            .ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
     }
 
     /// <summary>
