@@ -72,7 +72,7 @@ DURATION = re.compile(r"^/(effects|casterEffects)/\d+/durationRounds$")
 #: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
 INITIATIVE_BONUS = "/initiativeBonus"
 
-#: The numbers a package may move: its initiative bonus, and the amounts of a capstone's passive (ADR 0100).
+#: The numbers a package may move: its initiative bonus, and the amounts of a capstone's passive (ADR 0101).
 #: Whether a passive gives stun immunity is its kind, not a number, and is never a knob.
 PACKAGE_KNOBS = frozenset({INITIATIVE_BONUS, "/passive/upkeepEnergy", "/passive/damageBonus"})
 
@@ -1074,7 +1074,7 @@ def _effect_value(effect: Mapping[str, object], weights: Mapping[str, float], cr
         "DefenseDebuff": 0.0,
         "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
         "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
-        # One hit a round raised by it (ADR 0100), the way the scorer reads it.
+        # One hit a round raised by it (ADR 0101), the way the scorer reads it.
         "DamageBuff": weights.get("damage", 0) * amount * rounds,
     }.get(kind, 0.0)
 

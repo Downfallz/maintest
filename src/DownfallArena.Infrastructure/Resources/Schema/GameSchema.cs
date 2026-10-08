@@ -21,7 +21,7 @@ public sealed record GameSchema
     public const int VersionWithTiers = 4;
 
     /// <summary>
-    /// The document whose packages may name an any-of prerequisite or carry a passive (ADR 0100), which a reader
+    /// The document whose packages may name an any-of prerequisite or carry a passive (ADR 0101), which a reader
     /// written before them refuses as unknown members. A catalogue none of whose packages uses either stays at
     /// <see cref="VersionWithTiers"/>.
     /// </summary>

@@ -1765,7 +1765,7 @@ test('a table given up while it waited shows the outcome without the waiting roo
   assert.equal(p.nodes['waiting-room'].hidden, true);
 });
 
-// ADR 0100: a capstone is opened by any one of its family's level-3 packages and teaches no spell, so its lane
+// ADR 0101: a capstone is opened by any one of its family's level-3 packages and teaches no spell, so its lane
 // and its offer card say which packages open it and print the passive the host wrote instead of a spell list.
 function capstoneFixture(p) {
   const capstone = { id: 'tier:cap:v1', name: 'Capstone', level: 3, prerequisites: [], anyOf: ['tier:two:v1', 'tier:one:v1'], spells: [], initiativeBonus: 0,

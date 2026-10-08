@@ -91,7 +91,7 @@ const TEMPLATES = {
     name: 'New talent tree',
     root: emptyNode('Root', 'Root'),
   }),
-  // A package with no spell and no passive is refused by the domain -- a pick has to buy something (ADR 0100)
+  // A package with no spell and no passive is refused by the domain -- a pick has to buy something (ADR 0101)
   // -- so a new one starts at level 1 with no prerequisite, which is the only shape that is legal before
   // anything is filled in. `anyOf` and `passive` are a capstone's, and are added from the sheet when wanted.
   tiers: () => ({
@@ -395,7 +395,7 @@ function glance(item) {
     const opens = asArray(doc.prerequisites).length;
     const anyOf = asArray(doc.anyOf).length;
     const behind = [opens ? `behind ${opens}` : null, anyOf ? `behind any of ${anyOf}` : null].filter(Boolean);
-    // A capstone teaches nothing (ADR 0100): its figure is what it gives instead of "0 spells".
+    // A capstone teaches nothing (ADR 0101): its figure is what it gives instead of "0 spells".
     const figure = !taught && gives.length ? gives.join(' · ') : `${taught} ${taught === 1 ? 'spell' : 'spells'}`;
     return [
       element('span', { className: 'figure', textContent: figure }),
@@ -962,7 +962,7 @@ function creatureEditor() {
 
 /**
  * The prerequisite rows: the packages that have to be owned before this one can be bought -- every one of
- * `prerequisites`, or any one of `anyOf` (ADR 0100). The list is not written into the document until a row
+ * `prerequisites`, or any one of `anyOf` (ADR 0101). The list is not written into the document until a row
  * is added, so a package that has no any-of list keeps reading as it did.
  */
 function tierList(target, key, { add = 'Add prerequisite' } = {}) {
@@ -1020,7 +1020,7 @@ function tierEditor() {
     element('p', { className: 'muted', textContent: 'The only eligibility rule. The talent tree gates nothing a pick buys, so multiclassing is free.' }),
     tierList(draft, 'prerequisites'),
     element('h3', { textContent: 'Or opened by any one of' }),
-    element('p', { className: 'muted', textContent: 'A capstone\'s way in (ADR 0100): owning one of these is enough, beside every package above. Each sits exactly a level below.' }),
+    element('p', { className: 'muted', textContent: 'A capstone\'s way in (ADR 0101): owning one of these is enough, beside every package above. Each sits exactly a level below.' }),
     tierList(draft, 'anyOf', { add: 'Add any-of package' }),
   ]);
 
@@ -1028,7 +1028,7 @@ function tierEditor() {
 }
 
 /**
- * The passive a package gives for as long as its owner holds it (ADR 0100). Written into the document only
+ * The passive a package gives for as long as its owner holds it (ADR 0101). Written into the document only
  * while it gives something, so a package with none reads in its file exactly as it did before passives existed
  * -- the same way `PassiveDto` writes only the members that give something.
  */

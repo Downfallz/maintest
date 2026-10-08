@@ -76,7 +76,7 @@ test('the tier filter keeps a spell taught at that level or, for the kit, one a 
   assert.equal(spellMatches(spell, 'tier 2', 'All', catalogue), true);
 });
 
-// ADR 0100: a capstone names no all-of prerequisite, only an any-of list of its family's closers. Read through
+// ADR 0101: a capstone names no all-of prerequisite, only an any-of list of its family's closers. Read through
 // the all-of list alone it would be a family root of its own, with nothing above it.
 test('a capstone opened by any of a family closers joins that family rather than starting one', () => {
   const capstone = { ...pack('titan', 4, [], []), document: { level: 4, prerequisites: [], anyOf: ['ravager', 'warmonger:v1'], spells: [], passive: { stunImmunity: true } } };

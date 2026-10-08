@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace DownfallArena.Infrastructure.Resources.Schema;
 
 /// <summary>
-/// What a package gives its owner for as long as it owns it (ADR 0100). Every member is written only when it gives
+/// What a package gives its owner for as long as it owns it (ADR 0101). Every member is written only when it gives
 /// something, so a passive reads as what it does.
 /// </summary>
 public sealed record PassiveDto

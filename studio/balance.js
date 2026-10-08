@@ -39,7 +39,7 @@ const PACKAGE_PREFIX = 'tier:';
 
 /**
  * The numbers of a package a tuning pass may move, as `check-knobs` names them (`PACKAGE_KNOBS`): its initiative
- * bonus, and the amounts of a capstone's passive (ADR 0100). Whether a passive gives stun immunity is its kind,
+ * bonus, and the amounts of a capstone's passive (ADR 0101). Whether a passive gives stun immunity is its kind,
  * and the level, the prerequisites and the spells are the progression: none of those is a knob.
  */
 export const PACKAGE_KNOBS = Object.freeze(['/initiativeBonus', '/passive/upkeepEnergy', '/passive/damageBonus']);

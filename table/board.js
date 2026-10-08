@@ -33,7 +33,7 @@ export function statPairs(creature) {
 // speed lives in the timeline, which is a strip of six and not a thing read per creature.
 //
 // Every fact is the payload's: `isStunned` and `isStunImmune` are the snapshot's own fields (the latter already true
-// for a creature whose packages give stun immunity, ADR 0100), the speed is the band the engine put the slot in,
+// for a creature whose packages give stun immunity, ADR 0101), the speed is the band the engine put the slot in,
 // and `damageBonus` and `passive.upkeepEnergy` are what its packages and damage buffs add for as long as they last.
 // Those two are numbers rather than lines, so they are worded here, in the card's own words.
 export function badges(creature, timeline) {

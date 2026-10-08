@@ -21,7 +21,7 @@ listed in [spells.md](spells.md).
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
 - Planning rules (phase 5): a package is available to a creature when it does not own it, owns every
-  package it requires, and owns one of its any-of list when it names one (ADR 0100); an evolution choice must target an own, living creature that has not bought a package
+  package it requires, and owns one of its any-of list when it names one (ADR 0101); an evolution choice must target an own, living creature that has not bought a package
   this round and an available package, within the picks the rule set's schedule gives that round, and the
   sub-phase completes when no player has an effective pick left (capped by how many of their living creatures
   have not bought yet and can buy something, ADR 0066) -- which is immediately, in a round the schedule offers
@@ -49,7 +49,7 @@ listed in [spells.md](spells.md).
   in combat stuns the creature for the whole next round. A creature whose stun ends at cleanup is immune to
   stun through the next round, and a stun on a stunned or immune creature is ignored (ADR 0072).
   A package may carry a passive, held for as long as the creature owns it and read from the packages it owns
-  (ADR 0100): stun immunity that lasts, energy gained at every upkeep beside the rule set's, and a damage bonus.
+  (ADR 0101): stun immunity that lasts, energy gained at every upkeep beside the rule set's, and a damage bonus.
   A creature's damage bonus is its packages' and its damage buffs' added; it is added to every direct hit
   the creature deals before the critical multiplier and the target's defense, and never to a bleed or to
   what a cast does to its own caster. Each family closes with a level-4 capstone opened by any of its level-3
@@ -88,7 +88,7 @@ listed in [spells.md](spells.md).
 
 1. **Start of round**
    1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes), and
-      the energy its packages' Passives give at upkeep (ADR 0100).
+      the energy its packages' Passives give at upkeep (ADR 0101).
    2. `OngoingEffects`: energy regeneration Conditions give their Energy, regeneration Conditions heal, then
       bleed Conditions deal their damage, which ignores Defense. Healing goes before the Bleeds (ADR 0019), so
       a Regeneration can carry a Creature through a Bleed that would otherwise have killed it. Energy goes
@@ -99,7 +99,7 @@ listed in [spells.md](spells.md).
       the picks the Rule set's schedule gives that Round: two, at Round 1 and every second Round after it
       (ADR 0056). A Round the schedule skips gives nobody a pick, and the sub-phase completes as it opens
       rather than asking anyone to pass. A Creature may buy a package it does not own and whose prerequisite
-      packages it does own -- every one of them, and one of its any-of list when it names one (ADR 0100) --
+      packages it does own -- every one of them, and one of its any-of list when it names one (ADR 0101) --
       whatever family they belong to: **prerequisites are the only rule, so
       multiclassing is free**. One pick buys the whole package -- every Spell in it at once, a Spell it
       already knows granted without complaint -- and **a Creature buys at most one package an opportunity**
@@ -143,7 +143,7 @@ listed in [spells.md](spells.md).
       reaches the end of the timeline. An action resolves in this order:
       - the energy cost is spent;
       - the actor's Damage bonus -- its Passives' and its Damage buffs' -- is added to each damage it deals a
-        target, and to nothing it does to itself (ADR 0100);
+        target, and to nothing it does to itself (ADR 0101);
       - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
         target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
@@ -153,7 +153,7 @@ listed in [spells.md](spells.md).
         floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
         there, except a Stun, which is ignored on a Creature already stunned or immune to stun (ADR 0072; it
-        restarted the running Stun under ADR 0041), whether for a Round or for good through Titan (ADR 0100).
+        restarted the running Stun under ADR 0041), whether for a Round or for good through Titan (ADR 0101).
         The cast's other effects still land.
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an

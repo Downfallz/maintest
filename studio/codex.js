@@ -95,7 +95,7 @@ function spellTile(item, catalogue, open) {
     valueLine(item, catalogue), h('span', 'spell-meta', [doc.spellType, targetText(doc.targeting), criticalText(doc)].filter(Boolean).join(' · ')));
 }
 
-// A capstone teaches no spell and is bought for its passive (ADR 0100), so its tile reads what it gives instead.
+// A capstone teaches no spell and is bought for its passive (ADR 0101), so its tile reads what it gives instead.
 function packageTile(item, catalogue, open) {
   const doc = item.document;
   const tile = button('', 'package-tile', () => open(item.path));
@@ -210,7 +210,7 @@ function packageReading(view, item, catalogue, open) {
     view.append(title('TO UNLOCK', 'Required packages', 'Own all of these packages before choosing this one.'),
       append(h('div', 'reader-links'), ...allOf.map(parent => itemLink(parent, open))));
   }
-  // ADR 0100: a capstone is opened by whichever of its family's closers the creature climbed through.
+  // ADR 0101: a capstone is opened by whichever of its family's closers the creature climbed through.
   if (anyOf.length) {
     view.append(title(allOf.length ? 'AND' : 'TO UNLOCK', 'Any one of these', 'Own at least one of these packages before choosing this one.'),
       append(h('div', 'reader-links'), ...anyOf.map(parent => itemLink(parent, open))));

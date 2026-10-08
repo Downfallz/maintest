@@ -340,7 +340,7 @@ public sealed class CreatureTests
     private static Tier Capstone(string id, Passive passive, params string[] anyOf) =>
         Tier.Create(TierId.Parse(id), id, 2, [], [], Initiative.Of(0), [.. anyOf.Select(TierId.Parse)], passive);
 
-    /// <summary>ADR 0100: a capstone is opened by any one of its family's deepest packages, and by none of them it is refused.</summary>
+    /// <summary>ADR 0101: a capstone is opened by any one of its family's deepest packages, and by none of them it is refused.</summary>
     [Fact]
     public void A_package_opened_by_any_of_several_is_bought_with_one_of_them_and_refused_with_none()
     {
@@ -354,7 +354,7 @@ public sealed class CreatureTests
         with.OwnsTier(titan.Id).ShouldBeTrue();
     }
 
-    /// <summary>ADR 0100: the immunity a package gives is held for good, so no stun lands on its owner, whatever the round.</summary>
+    /// <summary>ADR 0101: the immunity a package gives is held for good, so no stun lands on its owner, whatever the round.</summary>
     [Fact]
     public void A_package_that_gives_stun_immunity_makes_its_owner_immune_for_good()
     {
@@ -373,7 +373,7 @@ public sealed class CreatureTests
         creature.Snapshot().Passive.StunImmunity.ShouldBeTrue();
     }
 
-    /// <summary>ADR 0100: a direct hit is raised by the packages' bonus and by every damage buff held, the two added.</summary>
+    /// <summary>ADR 0101: a direct hit is raised by the packages' bonus and by every damage buff held, the two added.</summary>
     [Fact]
     public void The_damage_bonus_adds_the_packages_bonus_and_every_damage_buff()
     {
@@ -388,7 +388,7 @@ public sealed class CreatureTests
     }
 
     /// <summary>
-    /// ADR 0100: a passive is read from the packages a creature owns, so a restored creature holds the one its
+    /// ADR 0101: a passive is read from the packages a creature owns, so a restored creature holds the one its
     /// packages give, and a snapshot claiming another is a broken board rather than a creature.
     /// </summary>
     [Fact]

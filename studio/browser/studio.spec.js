@@ -176,7 +176,7 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
   await expect(sheet.locator('.balance-value').filter({ hasText: 'Initiative +' })).not.toHaveCount(0);
-  // A capstone's passive amount is a package knob too (ADR 0100), named by what it adds.
+  // A capstone's passive amount is a package knob too (ADR 0101), named by what it adds.
   await expect(sheet.locator('.balance-value').filter({ hasText: 'Damage per hit +' })).not.toHaveCount(0);
   await sheet.getByRole('searchbox', { name: 'Find a balance knob' }).fill('Predator');
   const predator = sheet.locator('.balance-item');

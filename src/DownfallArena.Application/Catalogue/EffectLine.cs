@@ -19,7 +19,7 @@ namespace DownfallArena.Application.Catalogue;
 public static class EffectLine
 {
     /// <summary>
-    /// What a package's passive does, a line per property, in the order a card prints them (ADR 0100). Empty for
+    /// What a package's passive does, a line per property, in the order a card prints them (ADR 0101). Empty for
     /// a package that gives nothing through it.
     /// </summary>
     public static IReadOnlyList<string> Of(Passive passive)

@@ -2,7 +2,7 @@ namespace DownfallArena.Domain.Resources;
 
 /// <summary>
 /// What a Tier gives its owner for as long as the owner holds it, beside the spells it teaches and its initiative
-/// bonus (ADR 0100): a closed set of standing properties the rules name, read from the packages a creature owns
+/// bonus (ADR 0101): a closed set of standing properties the rules name, read from the packages a creature owns
 /// rather than stored on it.
 /// </summary>
 public sealed record Passive
@@ -23,7 +23,7 @@ public sealed record Passive
     /// <summary>Added to every direct hit the owner deals, as a damage buff held for good would be.</summary>
     public int DamageBonus { get; }
 
-    /// <summary>A package that gives nothing beyond its spells and its initiative bonus: every package before ADR 0100.</summary>
+    /// <summary>A package that gives nothing beyond its spells and its initiative bonus: every package before ADR 0101.</summary>
     public static Passive None { get; } = new(false, 0, 0);
 
     /// <summary>A passive, refusing a negative amount: a package that took energy or damage away would be a curse, not a purchase.</summary>

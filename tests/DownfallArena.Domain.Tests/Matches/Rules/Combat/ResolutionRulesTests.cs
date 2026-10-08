@@ -36,7 +36,7 @@ public sealed class ResolutionRulesTests
     }
 
     /// <summary>
-    /// ADR 0100: the caster's damage bonus raises a direct hit before the critical doubles it and before the
+    /// ADR 0101: the caster's damage bonus raises a direct hit before the critical doubles it and before the
     /// target's defense takes from it: Strike's 3 and a bonus of 2 make 5, doubled to 10, less a defense of 1.
     /// </summary>
     [Fact]
@@ -51,7 +51,7 @@ public sealed class ResolutionRulesTests
         Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, false)]);
     }
 
-    /// <summary>ADR 0100: what a cast does to its own caster is a cost, not a hit, so the caster's bonus leaves it alone.</summary>
+    /// <summary>ADR 0101: what a cast does to its own caster is a cost, not a hit, so the caster's bonus leaves it alone.</summary>
     [Fact]
     public void A_damage_bonus_leaves_a_casts_recoil_on_its_caster_alone()
     {

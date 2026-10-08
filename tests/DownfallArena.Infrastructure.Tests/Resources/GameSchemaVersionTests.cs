@@ -69,7 +69,7 @@ public sealed class GameSchemaVersionTests
     }
 
     /// <summary>
-    /// A passive or an any-of list is a member a reader written before ADR 0100 does not know, so the document
+    /// A passive or an any-of list is a member a reader written before ADR 0101 does not know, so the document
     /// that uses one says so; a catalogue whose packages use neither stays the version it was.
     /// </summary>
     [Fact]

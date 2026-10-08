@@ -97,7 +97,7 @@ public static class ResolutionRules
     private static bool Lands(Effect effect, CreatureSnapshot target) => effect is not Stun || target.CanBeStunned;
 
     /// <summary>
-    /// What one effect does to one target. <paramref name="damageBonus"/> is the caster's (ADR 0100): it raises a
+    /// What one effect does to one target. <paramref name="damageBonus"/> is the caster's (ADR 0101): it raises a
     /// direct hit before the critical multiplies it and before the target's defense takes from it, and is nought
     /// for what a cast does to its own caster, which is a cost and not a hit.
     /// </summary>

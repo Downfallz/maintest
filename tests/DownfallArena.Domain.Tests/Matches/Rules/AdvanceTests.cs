@@ -252,7 +252,7 @@ public sealed class AdvanceTests
     }
 
     /// <summary>
-    /// A hypothetical board holds a capstone's passive the way the match does (ADR 0100): the lookahead plays its
+    /// A hypothetical board holds a capstone's passive the way the match does (ADR 0101): the lookahead plays its
     /// purchases out on boards bought here, so a passive missing from them would be priced at nothing.
     /// </summary>
     [Fact]

@@ -91,7 +91,7 @@ half that exists strong enough to compensate.
 
 The same fields as a spell's, without a class, and knobs on two things only: `/initiativeBonus`, what a
 purchase adds to the buyer's Base initiative for the rest of the match (ADR 0056), and a passive's amount,
-`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0100). A package's level, prerequisites, any-of list
+`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0101). A package's level, prerequisites, any-of list
 and spells are the progression itself, and `check-knobs` refuses a knob on any of them.
 
 Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it

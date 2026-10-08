@@ -8,7 +8,7 @@ day again, to a 20-Round cap the same day once more, and to Stun immunity the sa
 amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Blood
 Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
-ADR 0100, 2026-10-07). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+ADR 0101, 2026-10-07). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -123,7 +123,7 @@ What is current, exactly:
   reading or an event from before `9419f935`; the ids did not move, so the same row is found at any earlier
   hash under the name the plan's table gives. Quoted command outputs are read at `9419f935`.
 - **The Capstones of 2026-10-07, `49c96577`**
-  ([ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
+  ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
   level-4 package that any of its level-3 packages opens, that teaches no Spell, pays +0 initiative, and gives
   a Passive: Titan is immune to Stun, Archmage gains 1 more Energy at every Upkeep, Apex adds 2 to every
   direct hit. The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
@@ -204,7 +204,7 @@ table's rule set file (`table --rules`) has the same numbers and a 20-Round cap.
 table replaces, and it is a setup: the Round track is built for 20, so a table may set any cap up to 20.
 
 The 24 Tiers: 3 at level 1, 9 at level 2, 9 at level 3, each with two Spells, and 3 at level 4, the
-Capstones, with none (ADR 0100; 21 Tiers until 2026-10-07). They teach 42 Spells, each exactly once. The
+Capstones, with none (ADR 0101; 21 Tiers until 2026-10-07). They teach 42 Spells, each exactly once. The
 other 2, `heavy_strike` and `wait`, are the starting kit, which no Tier teaches. It was 3 until 2026-10-06,
 with `basic_attack`.
 
@@ -265,7 +265,7 @@ The content of 2026-10-05 moved one: `crazed_specter` places a Bleed of 4 on its
 caster, so the Condition tokens go from 150 to **168** and the token pieces from 248 to **266**, still on 2
 sheets, and the paper stays 55 ([1.4](#14-condition-tokens)). The content of 2026-10-06 moved one more:
 `basic_attack` is gone, so 44 Spells make **264** Spell cards, still on 30 sheets, and the paper stays 55
-([1.1](#11-spell-cards-and-package-cards)). ADR 0100 moved one more: three Capstones make 24 Tiers, so the
+([1.1](#11-spell-cards-and-package-cards)). ADR 0101 moved one more: three Capstones make 24 Tiers, so the
 package cards go from 126 to **144**, on 16 sheets, and the paper from 55 to **57**
 ([1.1](#11-spell-cards-and-package-cards)).
 
@@ -274,7 +274,7 @@ package cards go from 126 to **144**, on 16 sheets, and the paper from 55 to **5
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
 | Spell card | **264** = 44 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `3c9eb083` there is none, so all 44 are printed. 264 is 30 sheets, the last holding 3 (270, exactly 30, until 2026-10-06). | 44 is a **VALUE** (content: 2 starting, 42 taught; 3 and 42 until 2026-10-06); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
-| Package card | **144** = 24 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3), and of the Passive it holds if the Tier gives one (ADR 0100). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a Capstone costs a Creature 4 purchases at 4 opportunities, 12 for a whole Team, inside the 20 a Player makes in 20 Rounds. So all six Creatures can own the same Tier in one Match. 144 is exactly 16 sheets (126 on 14 until 2026-10-07). | 24 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
+| Package card | **144** = 24 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3), and of the Passive it holds if the Tier gives one (ADR 0101). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a Capstone costs a Creature 4 purchases at 4 opportunities, 12 for a whole Team, inside the 20 a Player makes in 20 Rounds. So all six Creatures can own the same Tier in one Match. 144 is exactly 16 sheets (126 on 14 until 2026-10-07). | 24 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
 What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
 command below also gives the Base initiative ceiling that
@@ -425,7 +425,7 @@ initiative ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)), so t
 rulebook; a Spell that authored one again would bring the face back, sized by the same rule, as a reprint of
 the token sheet. **VALUE** (content).
 
-**No Damage buff token**, by the same rule. ADR 0100 added the `DamageBuff` kind: it raises its holder's
+**No Damage buff token**, by the same rule. ADR 0101 added the `DamageBuff` kind: it raises its holder's
 Damage bonus, for a number of Rounds or for good, and stacks. At `49c96577` no Spell authors one, so the
 command above prints none and no cast can place one. A timed one would
 bring a face, sized by the same rule. **A permanent one has nowhere to go**: every other permanent Condition
@@ -469,7 +469,7 @@ above, and the two cannot happen together: a slot casts one Spell.
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. A Creature that owns Titan is immune for good (ADR 0100) and needs no token for it: its package card is the record ([4.1](#41-the-package-card)), so the count does not move. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, and that of 2026-10-05 makes it 266 again. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. A Creature that owns Titan is immune for good (ADR 0101) and needs no token for it: its package card is the record ([4.1](#41-the-package-card)), so the count does not move. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, and that of 2026-10-05 makes it 266 again. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -563,7 +563,7 @@ every Round (`UpkeepRules.cs:13-22`), and a table's Match is at most 20 Rounds, 
 is the Energy a Creature banks by doing nothing at all**. That is the gain no play can refuse, and it is the
 honest end of a printed track. It ran to 32 while the track was built for 16 Rounds.
 
-**Archmage does not move the end** (ADR 0100). Its owner gains 1 more at every Energy gain
+**Archmage does not move the end** (ADR 0101). Its owner gains 1 more at every Energy gain
 (`UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy`), but only after a purchase, which is a play: the
 earliest is Round 7, after that Round's gain, so a Creature that buys it and then does nothing banks
 2 x 7 + 3 x 13 = **53** in 20 Rounds. That is past 40 and inside the one overflow chit, as the five Spells
@@ -966,7 +966,7 @@ start of `Creature.TickConditions`, before the Stun expires in the same call, an
 Stun expires on a living Creature; so it runs through the next Round and ends at the next Cleanup. The
 Immune token did not slide, so the next Cleanup's move 1 takes it out of lane `1` at exactly that moment. The
 immunity is not a Condition, and the dock holds its token only because lane `1` is the lane the next Cleanup
-empties. Titan's immunity for good (ADR 0100) takes nothing in the dock: the Titan package card face up with
+empties. Titan's immunity for good (ADR 0101) takes nothing in the dock: the Titan package card face up with
 its Creature is the record, and the dock's swap, if a Stun the Creature carried before the purchase ends,
 changes nothing for it.
 
@@ -1006,7 +1006,7 @@ so the end the rule gives no longer blanks anything a Creature can reach, and wh
 should move is Part 6, question 16.
 
 **At `49c96577` the largest direct hit is 13**: Apex adds 2 to every direct hit its owner deals, before the
-critical (ADR 0100), so `hateful_sacrifice` from an Apex owner is 13, 26 on a critical. The rule would read 26
+critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 13, 26 on a critical. The rule would read 26
 (28 at the knob's `max` of 3). It moves nothing for the reason above: no Creature's Defense reads above 10.
 The command below reads the printed Damage, which is the Spell card's; the bonus is the package card's.
 
@@ -1190,7 +1190,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 - **The package cards** of a Creature lie in a stagger below its intent slot, each covering the one before
   it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
   Creature's record reads as a list, and the newest card shows whole.
-- **A Capstone card lies beside the stagger, uncovered** (ADR 0100). Its Passive is read during play — at
+- **A Capstone card lies beside the stagger, uncovered** (ADR 0101). Its Passive is read during play — at
   every Energy gain, at every hit, at every Stun line — and the band does not print it, so a card bought
   later must not cover it. A Creature owns at most two Capstones in 20 Rounds (four purchases each, ten in
   all), so the column needs room for two cards beside the stagger. That is question 15's player area again.
@@ -1221,7 +1221,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 3. **Resolve** it at once, before the next slot: move the Energy marker down by the cost, roll the die if the
    card prints a chance and the Speed card is Standard, apply each effect line to each target, then the
    caster line. A Damage line on a target adds the caster's Damage bonus first, read off its Apex card and
-   its Damage buff tokens (ADR 0100). A Team left with no living Creature ends the Match there.
+   its Damage buff tokens (ADR 0101). A Team left with no living Creature ends the Match there.
 
 ---
 
@@ -1229,7 +1229,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 
 A pick buys a Tier: a named package of Spells with a level, the Tiers it requires, and one initiative bonus
 (ADR 0056). 24 are enabled at `49c96577`: 3 at level 1, 9 at level 2, 9 at level 3, two Spells each, and 3
-at level 4, the Capstones, which teach none and give a Passive instead (ADR 0100). Each level-2 package
+at level 4, the Capstones, which teach none and give a Passive instead (ADR 0101). Each level-2 package
 requires one level-1 package and each level-3 package requires one level-2 package; each Capstone requires
 **one of** its family's three level-3 packages. So the 24 form three families of eight, one opened by each
 level-1 package and closed by its Capstone. **Prerequisites are the only rule**: the talent tree gates
@@ -1265,7 +1265,7 @@ nothing a cast needs:
 +--------------------------------------+
 ```
 
-A Capstone's card has the same frame (ADR 0100). Its `Needs` line becomes two, the any-of list under a
+A Capstone's card has the same frame (ADR 0101). Its `Needs` line becomes two, the any-of list under a
 `Needs one of:` head, and its body prints the Passive where a package prints its Spells, in the words the
 table app prints (`EffectLine.Of(Passive)`):
 
@@ -1302,8 +1302,8 @@ What each piece of the layout answers:
 | The top band, two lines: name, then `level N . +B initiative` | A Creature's cards lie in a stagger, each covering the last but for its band ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The band alone must say which Tier it is, how deep, and what it paid. |
 | The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; the three Capstones have one at `49c96577` (no package did at `e6f72578`; `Ethereal` did before). |
 | A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
-| `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature, and, for a card that prints `Needs one of:`, at least one of the Tiers listed under it (ADR 0100). A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
-| The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0100). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
+| `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature, and, for a card that prints `Needs one of:`, at least one of the Tiers listed under it (ADR 0101). A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
+| The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0101). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
 The measurement, at `49c96577` (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`;
@@ -1363,7 +1363,7 @@ Rules of the sub-phase that the components carry rather than the rulebook:
 - **A prerequisite is a card.** Every Tier a card `Needs` must already lie face up with the same Creature,
   and at least one of a `Needs one of:` list. The check is a read down one stagger's bands.
 - **A Passive is a card.** Nothing else on the table records it: the Capstone card, face up and uncovered
-  beside its Creature's stagger, is read at every Energy gain, hit or Stun line it changes (ADR 0100).
+  beside its Creature's stagger, is read at every Energy gain, hit or Stun line it changes (ADR 0101).
 - **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has
   been picked for this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`,
   ADR 0066). A face-down card is not owned yet, so the face-up stagger is the board as the Sub-phase opened,
@@ -1396,7 +1396,7 @@ differs on the head (Part 6, question 10).
 
 | Input | What it is | Why it is this and not something else |
 | --- | --- | --- |
-| `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, `anyOf` and `passive` included (ADR 0100), and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
+| `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, `anyOf` and `passive` included (ADR 0101), and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
 | `data/dst/game.schema.sha256` | The content hash | The stamp every sheet carries, and the identity of the deck. |
 | A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks, the Round track's spaces and the Energy rail's end. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
 | The die | A d20 ([d20-criticals.md](d20-criticals.md), settled) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. The rule that every chance is a twentieth is settled and not built, so today some cards print a percentage alone. |
@@ -1477,7 +1477,7 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | A Regeneration effect prints as `Regen N a round, ...` on a Spell card face, and the Regeneration token's face keeps the word `Regeneration` | [2.2](#22-the-words): the abbreviation is the card body's, made to keep every line within 38 characters, and is not a second name for the Condition. |
 | **No face carries an initiative or a prerequisite**, and none carries the talent tree's class | ADR 0059 and ADR 0056. A card that prints a rule the engine stopped applying is a card a table plays. |
 | A package's level is its own `level`, and a starting Spell's is 0 | ADR 0058 superseded the tree depth of ADR 0034. A depth computed from the tree is a number the game does not consult. |
-| A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none), a `Needs one of:` head and its list for an any-of prerequisite, every Spell it teaches and every line its Passive gives, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses, and an any-of list printed as a `Needs` line is one that refuses what the engine sells. A Capstone face with no Passive line is a card that sells nothing (ADR 0100). |
+| A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none), a `Needs one of:` head and its list for an any-of prerequisite, every Spell it teaches and every line its Passive gives, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses, and an any-of list printed as a `Needs` line is one that refuses what the engine sells. A Capstone face with no Passive line is a card that sells nothing (ADR 0101). |
 | The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
 | The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
 | The Round track has one space per Round up to the rule set's Round cap (20 in `playtest.rules.json`), and the pick marks are exactly the Rounds on it that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. A track shorter than the cap leaves the Round cap marker nowhere to go. |
@@ -1704,7 +1704,7 @@ landscape, 90 x 65 mm, so a board has 65 mm less height for its rails and its do
 44% of it, on an A5 board 31%. The card a Player keeps
 goes in the concealed hand, so the player area holds nothing new.
 
-ADR 0100 adds to it on the mat. A Capstone card lies whole beside the stagger, never under a later card
+ADR 0101 adds to it on the mat. A Capstone card lies whole beside the stagger, never under a later card
 ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)), and a Creature can own two, so a column needs
 room for two poker cards beside its stagger as well as below its intent slot.
 
@@ -1738,8 +1738,8 @@ the rule beside the count, so it is the maintainer's call. The counts in Part 1 
 Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
 are translation.md's as it reads on this branch after its package re-audit, its ADR 0072 re-read and its
 ADR 0078 re-read, its spell rows re-read for the content of 2026-10-04, and its `night_raid` and
-`crazed_specter` rows for that of 2026-10-05, and its rows for ADR 0100: 19 from Part 1, 6 from Part 2, 24
-from Part 3; 49 of 49. ADR 0100 added one, the Passive a Tier may give, which the package card answers; its
+`crazed_specter` rows for that of 2026-10-05, and its rows for ADR 0101: 19 from Part 1, 6 from Part 2, 24
+from Part 3; 49 of 49. ADR 0101 added one, the Passive a Tier may give, which the package card answers; its
 `DamageBuff` kind is **keep as is**, since no Spell gives one ([1.4](#14-condition-tokens)). ADR 0078 took two
 rows out, the
 `EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
@@ -1759,7 +1759,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.3 An opportunity at Round 1 and every second Round after | The 10 pick marks on the Round track, [3.6](#36-the-round-track) |
 | 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces); a token that buys lies on the buyer's board until the Sub-phase ends, [3.1](#31-the-creature-board), which also carries the restate row "A Creature buys at most one Tier an opportunity" |
 | 1.3 A pick buys a whole Tier | 144 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line, or `Needs one of:` list, is the prerequisite check; no Spell card prints a gate. |
-| 1.3 A Tier may give a Passive, held while it is owned, and then teaches no Spell | The Passive's line on the Capstone's package card, and the card's place beside the stagger where nothing covers it, [4.1](#41-the-package-card) and [3.7](#37-the-player-area-and-where-a-face-down-intent-sits). No token, no rail (ADR 0100). |
+| 1.3 A Tier may give a Passive, held while it is owned, and then teaches no Spell | The Passive's line on the Capstone's package card, and the card's place beside the stagger where nothing covers it, [4.1](#41-the-package-card) and [3.7](#37-the-player-area-and-where-a-face-down-intent-sits). No token, no rail (ADR 0101). |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
 | 1.4 One Speed choice per living, unstunned Creature | 12 Speed cards, a Quick and a Standard a Creature behind one back, one laid face down and one kept, [1.5](#15-the-rest-of-the-pieces) and [2.6](#26-the-speed-card); the card-sized Speed slot a Stun token occupies, [3.1](#31-the-creature-board). Part 6, question 14, answered by the maintainer |
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |

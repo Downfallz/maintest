@@ -255,7 +255,7 @@ public sealed class TierContentTests
     }
 
     /// <summary>
-    /// A capstone (ADR 0100): opened by either of two level-3 packages, teaching nothing, and carrying the passive
+    /// A capstone (ADR 0101): opened by either of two level-3 packages, teaching nothing, and carrying the passive
     /// that is the whole of what it sells.
     /// </summary>
     [Fact]

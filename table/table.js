@@ -1330,7 +1330,7 @@ function talentLane(state, group, current, creature) {
   status.className = 'talent-status';
   status.textContent = PACKAGE_STATUS_TEXT[group.status] ?? PACKAGE_STATUS_TEXT.future;
   lane.append(title, summary, status);
-  // A capstone teaches nothing (ADR 0100): what it gives for the rest of the match is the whole purchase.
+  // A capstone teaches nothing (ADR 0101): what it gives for the rest of the match is the whole purchase.
   const passive = passiveOf(group);
   if (passive.length) {
     const gives = document.createElement('p');

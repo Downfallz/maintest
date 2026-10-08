@@ -24,7 +24,7 @@ public sealed class UpkeepRulesTests
         Arena.Find(creatures, Arena.Wraith).Energy.ShouldBe(Energy.Of(3));
     }
 
-    /// <summary>ADR 0100: a package's upkeep energy comes on top of the rule set's, every upkeep, to its owner alone.</summary>
+    /// <summary>ADR 0101: a package's upkeep energy comes on top of the rule set's, every upkeep, to its owner alone.</summary>
     [Fact]
     public void A_creature_gains_its_packages_upkeep_energy_beside_the_rule_sets()
     {

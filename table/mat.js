@@ -64,7 +64,7 @@ function packageStatus(id, owned, picked, offered) {
   return offered.has(id) ? 'available' : 'future';
 }
 
-// Every package a pick has to own first: every one of `prerequisites`, or any one of `anyOf` (ADR 0100).
+// Every package a pick has to own first: every one of `prerequisites`, or any one of `anyOf` (ADR 0101).
 function parentsOf(pack) {
   return [...(Array.isArray(pack?.prerequisites) ? pack.prerequisites : []), ...(Array.isArray(pack?.anyOf) ? pack.anyOf : [])];
 }
@@ -90,7 +90,7 @@ export function requirementLine(pack, nameOf = id => id) {
   return `Requires: ${all || 'No prerequisite package'}`;
 }
 
-// What a package gives for as long as it is owned, in the host's words (`passiveLines`, ADR 0100). Nothing
+// What a package gives for as long as it is owned, in the host's words (`passiveLines`, ADR 0101). Nothing
 // here words a passive: a card that does not carry the lines has none to print.
 export function passiveOf(pack) {
   return (Array.isArray(pack?.passiveLines) ? pack.passiveLines : []).filter(line => typeof line === 'string' && line !== '');

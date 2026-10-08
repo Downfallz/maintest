@@ -46,7 +46,7 @@ test('a spell is placed among the same tier on the same side of the attack line'
   assert.equal(standing(spell('untaught', 5), all, levels, weights).level, null);
 });
 
-// ADR 0100: a damage buff adds to every hit while it lasts, priced the way ActionScorer prices it.
+// ADR 0101: a damage buff adds to every hit while it lasts, priced the way ActionScorer prices it.
 test('a damage buff is worth its amount in damage for every round it lasts', () => {
   const weights = { damage: 1.5 };
   assert.equal(effectValue({ kind: 'DamageBuff', amount: 2, durationRounds: 2 }, weights), 6);

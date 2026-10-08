@@ -294,7 +294,7 @@ a nested scrolling pane. Smaller screens retain links between board and decision
 Talents opens a movable, resizable, maximizable non-modal atlas; a phone gets a full-screen
 panel. The atlas draws the package prerequisite graph as connected rows for tiers 1–4: a level-4 Capstone
 is drawn under each of its family's level-3 packages, since any one of them opens it, and shows its Passive
-where a package shows its spells (ADR 0100). Package names, prerequisite ids (the all-of and the any-of
+where a package shows its spells (ADR 0101). Package names, prerequisite ids (the all-of and the any-of
 lists), contained spells, Passive lines and initiative bonuses come from the catalogue; spell cards carry no
 acquisition gates. The original `TalentBand.ParentCode` links still supply the family palette.
 The first-level authored families receive cool, leaf and ember palettes, inherited by their specializations

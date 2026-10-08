@@ -13,7 +13,7 @@ public sealed record TierDto
     public IReadOnlyList<string> Prerequisites { get; init; } = [];
 
     /// <summary>
-    /// Packages of which the buyer must own at least one (ADR 0100), absent rather than empty on every package that
+    /// Packages of which the buyer must own at least one (ADR 0101), absent rather than empty on every package that
     /// names none, so a catalogue authored before it keeps its content hash.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -24,11 +24,11 @@ public sealed record TierDto
     /// <summary>Raised on the buyer's base initiative once, and belonging to the package rather than a spell.</summary>
     public int InitiativeBonus { get; init; }
 
-    /// <summary>What the package gives its owner for good (ADR 0100), absent on every package that gives nothing through it.</summary>
+    /// <summary>What the package gives its owner for good (ADR 0101), absent on every package that gives nothing through it.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PassiveDto? Passive { get; init; }
 
-    /// <summary>Whether the package uses a member a reader written before ADR 0100 does not know.</summary>
+    /// <summary>Whether the package uses a member a reader written before ADR 0101 does not know.</summary>
     [JsonIgnore]
     public bool UsesCapstoneMembers => AnyOf is { Count: > 0 } || Passive is not null;
 

@@ -8,7 +8,7 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
 - `TalentTrees/*.json`: talent trees.
 - `Tiers/*.json`: the packages one evolution pick buys (ADR 0056, `docs/domain/tier-evolution-plan.md`).
   **Authored, like everything above** (ADR 0057). The studio edits them: id, name, level, prerequisites, the
-  spells taught, the initiative bonus, and since ADR 0100 an `anyOf` list and a `passive`. `scripts/build-tiers.py` is how the 21 were first written from the
+  spells taught, the initiative bonus, and since ADR 0101 an `anyOf` list and a `passive`. `scripts/build-tiers.py` is how the 21 were first written from the
   talent tree; it has run, and re-running it would overwrite what has been authored since. The data builder
   validates them and carries them into the consolidated schema, which is then version 4; a catalogue with no
   packages is version 3. Both numbers moved from 2 and 1 when a spell stopped carrying its own initiative
@@ -83,7 +83,7 @@ including the content hash.
 | `DefenseDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; subtracts from the same total the buff adds to, floored at zero |
 | `InitiativeBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; adds to the same total the debuff subtracts from, floored at zero |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
-| `DamageBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; added to every direct hit the holder deals, before the critical multiplier and the target's defense, never to a bleed or a caster effect (ADR 0100) |
+| `DamageBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; added to every direct hit the holder deals, before the critical multiplier and the target's defense, never to a bleed or a caster effect (ADR 0101) |
 
 `stacking` is one of `Stack`, `Refresh`, `Ignore`.
 

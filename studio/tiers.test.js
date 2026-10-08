@@ -146,7 +146,7 @@ test('a level-one package with any prerequisite is warned about, because nothing
   ]);
 });
 
-// ADR 0100: a capstone teaches nothing and is bought for what it gives for good, so a package with no spell is
+// ADR 0101: a capstone teaches nothing and is bought for what it gives for good, so a package with no spell is
 // refused only when it gives no passive either.
 test('a package that teaches nothing but gives a passive is accepted', () => {
   const capstone = { id: 'tier:titan:v1', level: 3, anyOf: ['tier:marauder:v1'], spells: [], passive: { stunImmunity: true } };

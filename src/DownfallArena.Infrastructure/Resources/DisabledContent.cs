@@ -18,7 +18,7 @@ namespace DownfallArena.Infrastructure.Resources;
 /// package that lost a disabled spell is a package nobody authored, and a package whose prerequisite was
 /// disabled is a package with nothing in front of it -- which opens a descendant rather than closing it, the
 /// same failure as the empty <c>anyOf</c>. Both are problems, so disabling a spell or a tier that something
-/// still depends on has to be done deliberately rather than absorbed. A tier's own any-of list (ADR 0100) is the
+/// still depends on has to be done deliberately rather than absorbed. A tier's own any-of list (ADR 0101) is the
 /// one exception: one of it is enough, so a disabled entry is dropped, and only a list left empty is a problem.
 /// </para>
 /// </summary>
@@ -55,7 +55,7 @@ internal static class DisabledContent
                     + "package instead of closing it: disable this tier too, or give it another prerequisite.");
             }
 
-            // One of several is enough (ADR 0100), so a disabled one only narrows the way in; with every one of
+            // One of several is enough (ADR 0101), so a disabled one only narrows the way in; with every one of
             // them disabled the package could never be bought, which is a package nobody can reach.
             if (tier.AnyOf is { Count: > 0 } anyOf && anyOf.All(disabledTiers.Contains))
             {
@@ -80,7 +80,7 @@ internal static class DisabledContent
     }
 
     /// <summary>
-    /// An any-of list without its disabled packages (ADR 0100). One of several is enough, so dropping one only
+    /// An any-of list without its disabled packages (ADR 0101). One of several is enough, so dropping one only
     /// narrows the way in; a list every package of which is disabled is reported above rather than emptied,
     /// because an empty list means no requirement.
     /// </summary>

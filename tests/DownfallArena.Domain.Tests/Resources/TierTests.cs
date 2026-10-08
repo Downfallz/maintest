@@ -34,7 +34,7 @@ public sealed class TierTests
         Should.Throw<ArgumentException>(() => Tier.Create(Brute, "Brute", 1, [], [], Initiative.Of(1)));
     }
 
-    /// <summary>ADR 0100: a capstone teaches nothing and is bought for its passive, which is something to buy.</summary>
+    /// <summary>ADR 0101: a capstone teaches nothing and is bought for its passive, which is something to buy.</summary>
     [Fact]
     public void A_tier_that_teaches_nothing_but_gives_a_passive_is_a_package()
     {
@@ -46,7 +46,7 @@ public sealed class TierTests
         Should.Throw<ArgumentException>(() => Tier.Create(Brute, "Brute", 1, [], [], Initiative.Of(1), passive: Passive.None));
     }
 
-    /// <summary>ADR 0100: an any-of list opens the tier with one of its packages; the all-of list still needs every one.</summary>
+    /// <summary>ADR 0101: an any-of list opens the tier with one of its packages; the all-of list still needs every one.</summary>
     [Fact]
     public void An_any_of_prerequisite_opens_with_one_of_its_packages_beside_every_required_one()
     {

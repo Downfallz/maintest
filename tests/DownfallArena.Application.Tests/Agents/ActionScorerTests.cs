@@ -464,7 +464,7 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// A damage buff is the holder's own hits raised (ADR 0100), so on the actor's side it counts for and on an
+    /// A damage buff is the holder's own hits raised (ADR 0101), so on the actor's side it counts for and on an
     /// enemy against, one hit a round -- the sign the sweep above cannot see.
     /// </summary>
     [Fact]
@@ -1221,7 +1221,7 @@ public sealed class ActionScorerTests
     private static readonly TierId Focused = TierId.Parse("tier:focused:v1");
 
     /// <summary>
-    /// Two capstones (ADR 0100) behind Slam's package, teaching nothing: one immune to stun, one with an energy
+    /// Two capstones (ADR 0101) behind Slam's package, teaching nothing: one immune to stun, one with an energy
     /// at upkeep and two damage on every hit.
     /// </summary>
     private static GameResources CapstoneContent { get; } = GameResources.Create(
@@ -1238,7 +1238,7 @@ public sealed class ActionScorerTests
     private static ActionScorer Capstones { get; } = new(CapstoneContent, MatchStore.TwoOnTwo(), ScoringWeights.Default);
 
     /// <summary>
-    /// A passive is priced by the casts it changes over the rounds a permanent condition is read for (ADR 0100).
+    /// A passive is priced by the casts it changes over the rounds a permanent condition is read for (ADR 0101).
     /// Two damage on every hit raises each hit of Strike, the actor's one damaging spell: one hit a cast, and a
     /// critical one counted at the multiplier. The energy at upkeep is the energy itself here: Strike costs
     /// nothing, so a richer purse pays for nothing better.

@@ -117,7 +117,7 @@ public static class GameSchemaBuilder
     /// version is the lowest one that can read the document. A catalogue with no packages is emitted exactly as
     /// it was before packages existed -- member absent, version 1, same content hash -- and one that has them
     /// says version 2, because a reader written before the member refuses it as an unknown field. A package that
-    /// uses an any-of prerequisite or a passive (ADR 0100) raises it once more, for the same reason.
+    /// uses an any-of prerequisite or a passive (ADR 0101) raises it once more, for the same reason.
     /// </summary>
     private static GameSchema Versioned(GameSchema schema) =>
         schema.Tiers is { Count: > 0 } tiers

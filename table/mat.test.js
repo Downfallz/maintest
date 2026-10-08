@@ -166,7 +166,7 @@ test('each authored family has a coherent range shared by its cards and descenda
   assert.equal(classColour('child-2', palette), '#e68573');
 });
 
-// ADR 0100: a capstone names no all-of prerequisite, only any one of its family's level-3 packages. Read
+// ADR 0101: a capstone names no all-of prerequisite, only any one of its family's level-3 packages. Read
 // through the all-of list alone it would be a root of its own; it is drawn under each package that opens it.
 test('a capstone is drawn under every package of its any-of list rather than as a root', async () => {
   const { packageForest } = await import('./mat.js');

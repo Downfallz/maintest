@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-10-08. A capstone per family, bought for a passive (ADR 0100)
+## 2026-10-08. A capstone per family, bought for a passive (ADR 0101)
 
 Content `9419f935` before, `49c96577` after: the same catalogue plus Titan, Archmage and Apex.
 

@@ -23,7 +23,7 @@ the Capstones and their Passives 2026-10-07). Phase 4 of [plan.md](plan.md).
 > resolves at once; a Team wiped ends the Match on the spot
 > ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). Each family closes with a
 > level-4 Capstone that teaches no Spell and gives a Passive instead, and any one of the family's level-3 Tiers
-> opens it ([ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md)). This book names the
+> opens it ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). This book names the
 > **package card** by what it must show; its size, its count and where it sits are
 > [components.md](components.md)'s to specify.
 
@@ -930,7 +930,7 @@ Creature at 3 Health or less that kills the last enemy with it wipes its own Tea
 
 ### 7.3 The three Passives and their timing
 
-A **Passive** is what a Tier gives its owner for as long as it owns it (ADR 0100). Only a Capstone gives one
+A **Passive** is what a Tier gives its owner for as long as it owns it (ADR 0101). Only a Capstone gives one
 of the three below. It is printed on the package card, and the card face up with the Creature is its only
 record: no token, no rail. A Passive starts at the Purchase reveal that buys it, never counts down, and lasts
 to the end of the Match. A Creature that owns two Capstones holds both Passives.
@@ -965,7 +965,7 @@ writing around it. Each one is faithful to the engine; each one is longer than a
 2. **The critical roll** ([6.7](#67-the-critical-roll)). Trigger, one roll per cast, a chance that is the
    card's alone, a table of what is multiplied and what is not, and an ordering against Defense that changes
    the answer. Five statements for one die roll. The ordering against Defense is the part that will be played
-   wrong, and it is the part that cannot be moved onto the card. Since ADR 0100 the ordering has three steps,
+   wrong, and it is the part that cannot be moved onto the card. Since ADR 0101 the ordering has three steps,
    not two: add the Damage bonus, multiply, subtract Defense. The bonus is printed on a package card, not on
    the Spell card being cast, so it is the one number of a hit that the flipped card does not show.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
@@ -1023,7 +1023,7 @@ their final names (content `9419f935`, [package-renaming-plan.md](../domain/pack
 every example, this paragraph included, names them so; no number in an example moved. On 2026-10-07 Part 1,
 Part 2, §3.3, step 1 of Part 4, §5.1, §5.3, §5.8, §5.9, §6.1's cause 2, §6.4, §6.7, §7.1, the new §7.3,
 Part 8 and this table were re-run against
-[ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md), `data/Tiers/` (24 Tiers, three of
+[ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md), `data/Tiers/` (24 Tiers, three of
 them the level-4 Capstones `titan`, `archmage` and `apex`) and the engine's `Tier.IsOpenTo`, `Passive`,
 `UpkeepRules.EnergyGain`, `ResolutionRules.Outcome` and `Creature.IsStunImmune`. The specification states
 the Passives in its "Combat rules (phase 6)" summary and the any-of list in "Planning rules (phase 5)"; its
@@ -1051,11 +1051,11 @@ the Passives in its "Combat rules (phase 6)" summary and the any-of list in "Pla
 | [5.9](#59-cleanup), [6.5](#65-the-first-countdown-after-an-application-does-not-count) | "End of round", 1: `Cleanup` |
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`; "Match lifecycle"; "Combat", 2: "a Team wiped by an action ends the Match there"; ADR 0011, ADR 0083 |
 | [7.1](#71-the-nine-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
-| [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0100. The engine: `Tier.IsOpenTo` |
-| [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0100. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
-| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster"; ADR 0100. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense`, with a bonus of 0 on the `Caster:` line |
-| [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity for good, [5.9](#59-cleanup), [7.3](#73-the-three-passives-and-their-timing) | "Combat rules (phase 6)": "stun immunity that lasts"; ADR 0100. The engine: `Creature.IsStunImmune`, true for a living Creature whose Passive gives it; a Stun it already carries is not touched by `Creature.BuyTier`. The Titan package card is the table's record of the glossary's **Passive** |
-| [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0100; glossary, **Damage buff** and **Damage bonus** |
+| [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0101. The engine: `Tier.IsOpenTo` |
+| [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0101. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
+| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster"; ADR 0101. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense`, with a bonus of 0 on the `Caster:` line |
+| [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity for good, [5.9](#59-cleanup), [7.3](#73-the-three-passives-and-their-timing) | "Combat rules (phase 6)": "stun immunity that lasts"; ADR 0101. The engine: `Creature.IsStunImmune`, true for a living Creature whose Passive gives it; a Stun it already carries is not touched by `Creature.BuyTier`. The Titan package card is the table's record of the glossary's **Passive** |
+| [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0101; glossary, **Damage buff** and **Damage bonus** |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 

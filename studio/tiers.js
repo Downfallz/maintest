@@ -35,7 +35,7 @@ export function tierNamed(reference, tiers, resolve = value => value) {
 
 /**
  * What a package's passive does, a line per property, in the words and order the table's card prints them
- * (`EffectLine.Of(Passive)`, ADR 0100). Empty for a package that gives nothing through it, and for a `passive`
+ * (`EffectLine.Of(Passive)`, ADR 0101). Empty for a package that gives nothing through it, and for a `passive`
  * that is not an object: a malformed file reaches this module as whatever JSON it holds.
  */
 export function passiveLines(passive) {
@@ -48,7 +48,7 @@ export function passiveLines(passive) {
 }
 
 /**
- * Every package a draft names on its way up: the all-of list, then the any-of one (ADR 0100). The order
+ * Every package a draft names on its way up: the all-of list, then the any-of one (ADR 0101). The order
  * `ValidateClimb` reads them in, and the one a sheet lists them in.
  */
 export function requiredTiers(draft) {
@@ -69,7 +69,7 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
   const anyOf = asArray(draft?.anyOf).filter(Boolean);
   const required = [...prerequisites, ...anyOf];
 
-  // A capstone teaches nothing and is bought for its passive (ADR 0100): only a package that gives neither is
+  // A capstone teaches nothing and is bought for its passive (ADR 0101): only a package that gives neither is
   // a pick that buys nothing. `Tier` refuses it in its constructor.
   if (!asArray(draft?.spells).filter(Boolean).length && !passiveLines(draft?.passive).length) {
     warnings.push('A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.');

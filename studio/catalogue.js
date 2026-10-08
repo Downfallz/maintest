@@ -3,7 +3,7 @@ export const active = items => (items ?? []).filter(item => item.enabled !== fal
 export const resolve = (id, catalogue) => catalogue?.aliases?.[id] ?? id;
 export const named = (items, id, catalogue) => (items ?? []).find(item => item.id === resolve(id, catalogue));
 
-// Every package a pick has to own first: the all-of list, then the any-of one a capstone is opened by (ADR 0100).
+// Every package a pick has to own first: the all-of list, then the any-of one a capstone is opened by (ADR 0101).
 const listOf = value => (Array.isArray(value) ? value : []);
 const required = item => [...listOf(item.document?.prerequisites), ...listOf(item.document?.anyOf)];
 

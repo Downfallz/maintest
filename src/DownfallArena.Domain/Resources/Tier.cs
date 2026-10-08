@@ -5,7 +5,7 @@ namespace DownfallArena.Domain.Resources;
 
 /// <summary>
 /// A named package a creature buys with one evolution pick: every spell in it at once, its initiative bonus
-/// exactly once, and its passive for as long as the creature owns it (ADR 0100).
+/// exactly once, and its passive for as long as the creature owns it (ADR 0101).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -46,7 +46,7 @@ public sealed class Tier
     /// <summary>What a player is shown. It may be renamed without rewriting a single saved reference.</summary>
     public string Name { get; }
 
-    /// <summary>How deep the package sits: 1 opens a family, 3 closes one, and 4 is a family's capstone (ADR 0100).</summary>
+    /// <summary>How deep the package sits: 1 opens a family, 3 closes one, and 4 is a family's capstone (ADR 0101).</summary>
     public int Level { get; }
 
     /// <summary>The tiers the same creature must already own. Empty for a tier that opens a family.</summary>
@@ -55,7 +55,7 @@ public sealed class Tier
     /// <summary>
     /// Tiers of which the same creature must already own at least one, beside every one of
     /// <see cref="Prerequisites"/>. Empty for a tier that names none, which is every tier but a capstone: a
-    /// capstone is opened by any level-3 tier of its family (ADR 0100).
+    /// capstone is opened by any level-3 tier of its family (ADR 0101).
     /// </summary>
     public IReadOnlyList<TierId> AnyOf { get; }
 
@@ -65,7 +65,7 @@ public sealed class Tier
     /// <summary>Raised on the creature's base initiative once, when the package is bought.</summary>
     public Initiative InitiativeBonus { get; }
 
-    /// <summary>What the owner holds for as long as it owns the package (ADR 0100); <see cref="Passive.None"/> for most.</summary>
+    /// <summary>What the owner holds for as long as it owns the package (ADR 0101); <see cref="Passive.None"/> for most.</summary>
     public Passive Passive { get; }
 
     /// <summary>Whether a creature owning exactly the tiers <paramref name="owns"/> says it owns may buy this one, prerequisites read: every one of <see cref="Prerequisites"/>, and one of <see cref="AnyOf"/> when it names any.</summary>

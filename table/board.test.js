@@ -199,7 +199,7 @@ test('a creature immune to stun is badged as such', () => {
   assert.deepEqual(badges({ id: 1, isStunned: false, isStunImmune: false }, []), []);
 });
 
-// ADR 0100: a capstone's passive is read from the packages a creature owns. Stun immunity already arrives as
+// ADR 0101: a capstone's passive is read from the packages a creature owns. Stun immunity already arrives as
 // `isStunImmune`; the damage bonus and the upkeep energy are numbers the row words, and nothing shows without one.
 test('a row badges the damage bonus and upkeep energy its packages give', () => {
   assert.deepEqual(badges({ id: 1, isStunImmune: true, passive: { stunImmunity: true }, damageBonus: 0 }, []), ['immune to stun']);

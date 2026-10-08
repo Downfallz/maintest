@@ -204,7 +204,7 @@ test('package entries flag progression knobs and name their initiative bonus', (
   assert.equal(rolled.rows[0].summary.knobs[0].path, '/initiativeBonus');
 });
 
-// ADR 0100 and check-knobs' PACKAGE_KNOBS: a capstone's passive amounts are numbers a tuning pass may move,
+// ADR 0101 and check-knobs' PACKAGE_KNOBS: a capstone's passive amounts are numbers a tuning pass may move,
 // while whether it gives stun immunity is what the passive is.
 test('a capstone entry may tune its passive amounts and nothing else of the passive', () => {
   const balance = knobsFile({}, { packages: { 'tier:apex': { name: 'Apex', intent: 'Harder hits.', knobs: [

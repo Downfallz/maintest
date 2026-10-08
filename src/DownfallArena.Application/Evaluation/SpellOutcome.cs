@@ -92,7 +92,7 @@ public sealed record SpellOutcome
     /// <summary>InitiativeBuffs applied, kept apart from the debuffs: they move the same stat opposite ways.</summary>
     public int InitiativeBuffs { get; init; }
 
-    /// <summary>Damage buffs applied (ADR 0100), not the damage they go on to add.</summary>
+    /// <summary>Damage buffs applied (ADR 0101), not the damage they go on to add.</summary>
     public int DamageBuffs { get; init; }
 
     /// <summary>Casts that landed on a side that went on to win.</summary>

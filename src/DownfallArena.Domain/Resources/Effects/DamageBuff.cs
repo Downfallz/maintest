@@ -1,7 +1,7 @@
 namespace DownfallArena.Domain.Resources.Effects;
 
 /// <summary>
-/// Raises every direct hit its holder deals by an amount, for a duration or for good (ADR 0100): added to a
+/// Raises every direct hit its holder deals by an amount, for a duration or for good (ADR 0101): added to a
 /// <see cref="Damage"/> effect's amount before the critical multiplier and before the target's defense. A
 /// bleed is not a hit, and what a cast does to its own caster is not one either.
 /// </summary>

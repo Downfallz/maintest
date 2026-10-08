@@ -336,7 +336,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>
-    /// What a package's passive is worth to its buyer (ADR 0100), over the rounds a permanent condition is read
+    /// What a package's passive is worth to its buyer (ADR 0101), over the rounds a permanent condition is read
     /// for, each priced by the casts it changes, so that it weighs against a spell package's one cast:
     /// <list type="bullet">
     /// <item>energy at upkeep as the energy itself and the better spell it pays for every round, the way an
@@ -694,7 +694,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             .DefaultIfEmpty(0)
             .Max();
 
-    /// <summary>The energy a creature gains at the next upkeep: the rule set's, and its packages' passive (ADR 0100).</summary>
+    /// <summary>The energy a creature gains at the next upkeep: the rule set's, and its packages' passive (ADR 0101).</summary>
     private int Upkeep(CreatureSnapshot creature) => rules.EnergyPerRound + creature.Passive.UpkeepEnergy;
 
     /// <summary>
@@ -881,7 +881,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Regeneration regeneration => ScoreTerms.Zero with { Heal = -sign * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth) },
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
-            // A hit a round raised by the amount (ADR 0100): the holder's own direct hits, which it lands on its enemies.
+            // A hit a round raised by the amount (ADR 0101): the holder's own direct hits, which it lands on its enemies.
             DamageBuff buff => ScoreTerms.Zero with { Damage = -sign * buff.Amount * rounds },
             InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
             InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },

@@ -35,7 +35,7 @@ public sealed class Creature : Entity<CreatureId>
     private int _stunImmunity;
 
     /// <summary>
-    /// What the packages this creature owns give it for good (ADR 0100), combined: read from the packages
+    /// What the packages this creature owns give it for good (ADR 0101), combined: read from the packages
     /// rather than stored as a condition, so it is kept in step with them at a purchase and recomputed from them
     /// when the creature is restored.
     /// </summary>
@@ -116,13 +116,13 @@ public sealed class Creature : Entity<CreatureId>
 
     public bool IsStunned => IsAlive && _conditions.Has<Stun>();
 
-    /// <summary>Whether a stun would be ignored: the round after a stun ends (ADR 0072), or for good once a package gives the immunity (ADR 0100).</summary>
+    /// <summary>Whether a stun would be ignored: the round after a stun ends (ADR 0072), or for good once a package gives the immunity (ADR 0101).</summary>
     public bool IsStunImmune => IsAlive && (_stunImmunity > 0 || _passive.StunImmunity);
 
-    /// <summary>What the packages this creature owns give it for good (ADR 0100).</summary>
+    /// <summary>What the packages this creature owns give it for good (ADR 0101).</summary>
     public Passive Passive => _passive;
 
-    /// <summary>Added to every direct hit this creature deals: its packages' bonus and its damage buffs (ADR 0100).</summary>
+    /// <summary>Added to every direct hit this creature deals: its packages' bonus and its damage buffs (ADR 0101).</summary>
     public int DamageBonus => _passive.DamageBonus + _conditions.Sum<DamageBuff>(buff => buff.Amount);
 
     public Defense TotalDefense => BaseStats.Defense
@@ -219,7 +219,7 @@ public sealed class Creature : Entity<CreatureId>
 
         // The round of immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves that
         // round running on a stunned creature, a dead one, or for longer. The immunity a package gives for good
-        // (ADR 0100) is not this counter, and a creature stunned before it bought one stays stunned until it ends.
+        // (ADR 0101) is not this counter, and a creature stunned before it bought one stays stunned until it ends.
         if (snapshot.StunImmunityRounds is < 0 or > StunImmunityDuration
             || (snapshot.StunImmunityRounds > 0 && (snapshot.IsStunned || snapshot.IsDead)))
         {

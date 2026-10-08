@@ -5,7 +5,7 @@ the same engine: Tiers bought on the Rule set's schedule, one a Creature an oppo
 ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
 (ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), one Activation a slot, each action
 resolving the moment its targets are named (ADR 0083), and a level-4 Capstone in each family that gives a
-Passive instead of Spells (ADR 0100). The section number is beside each rule. Fill the setup table's values in
+Passive instead of Spells (ADR 0101). The section number is beside each rule. Fill the setup table's values in
 before the first Match.
 
 ---

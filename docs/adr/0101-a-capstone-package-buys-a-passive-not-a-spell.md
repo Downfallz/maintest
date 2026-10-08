@@ -1,4 +1,4 @@
-# 0100. Let a capstone package buy a passive instead of a spell
+# 0101. Let a capstone package buy a passive instead of a spell
 
 Date: 2026-10-08
 Status: Proposed

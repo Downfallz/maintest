@@ -955,7 +955,7 @@ def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) ->
 
 
 def test_a_passive_amount_is_a_package_knob_a_search_can_move(tmp_path: Path) -> None:
-    """A capstone's passive is its one number (ADR 0100), so it is the one thing on it a search moves."""
+    """A capstone's passive is its one number (ADR 0101), so it is the one thing on it a search moves."""
     entry = package_entry(knobs=[{"path": "/passive/damageBonus", "min": 1, "max": 3, "step": 1}])
     knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
 

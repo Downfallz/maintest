@@ -9,7 +9,7 @@ namespace DownfallArena.Domain.Matches.Rules.Rounds;
 /// </summary>
 public static class UpkeepRules
 {
-    /// <summary>EnergyGain sub-phase: every living creature gains the rule set's energy per round, and what its packages add to it (ADR 0100).</summary>
+    /// <summary>EnergyGain sub-phase: every living creature gains the rule set's energy per round, and what its packages add to it (ADR 0101).</summary>
     public static void EnergyGain(IReadOnlyList<Creature> creatures, RuleSet rules)
     {
         ArgumentNullException.ThrowIfNull(creatures);
