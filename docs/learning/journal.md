@@ -7,7 +7,7 @@ first.
 ## 2026-10-07. Every critical chance is a twentieth: seven Spells snapped, and the grid is a rule
 
 - **What changed.** The seven Spells off the d20's grid are on it, the pass
-  [d20-criticals.md](../tabletop/d20-criticals.md) priced and [ADR 0099](../adr/0099-every-critical-chance-is-a-twentieth.md)
+  [d20-criticals.md](../tabletop/d20-criticals.md) priced and [ADR 0100](../adr/0100-every-critical-chance-is-a-twentieth.md)
   decides: Whirlwind 0.38 to 0.40, Toxic Mend, Void Pulse and Incinerate 0.33 to 0.35, Revitalize 0.22 to
   0.20, Crash 0.283 to 0.30, Pummel 0.767 to 0.75. To the nearest twentieth, by 0.02 at most and 0.019 on
   average. `lightning_bolt`'s critical chance band floor moves from 0.17 to 0.15, the one band off its own

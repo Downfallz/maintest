@@ -65,7 +65,7 @@ package and no alias is reported by `check-knobs` rather than guessed at.
   `check-knobs` refuses a knob whose bounds reach past either.
 - A move is `step` added to **the value the content carries today**, not to a grid. Results are rounded to
   three decimals and clamped to `[min, max]`. A critical chance is the one number held to a grid: it is a
-  whole number of twentieths (ADR 0099), so that a card prints a d20 threshold, and `check-knobs` refuses a
+  whole number of twentieths (ADR 0100), so that a card prints a d20 threshold, and `check-knobs` refuses a
   `/criticalChance` band whose bounds or step are not multiples of 0.05, because a move from a value on the
   grid by a step on the grid stays on it, and a band off it would carry an offset through every pass, which is
   how the legacy thirds (0.33, 0.667, 0.717) survived until 2026-10-07.

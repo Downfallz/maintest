@@ -1,6 +1,6 @@
 # Every critical chance is a twentieth
 
-Status: **Built** (2026-10-07, [ADR 0099](../adr/0099-every-critical-chance-is-a-twentieth.md)). The decision is
+Status: **Built** (2026-10-07, [ADR 0100](../adr/0100-every-critical-chance-is-a-twentieth.md)). The decision is
 the ADR's; this document keeps the readings that priced it. The seven Spells of the table below are snapped,
 `lightning_bolt`'s band floor is 0.15, the data builder and `check-knobs` hold the grid, and content `9419f935`
 became `b41ba55e` (journal, 2026-10-07). It was a draft from 2026-09-17, its tables re-read on 2026-10-04
@@ -181,7 +181,7 @@ since ADR 0083, and the audit keeps its old name).
 
 ## Still open
 
-Nothing, and the work is done (2026-10-07, ADR 0099): the seven Spells are snapped (Wraithguard's zeroing
+Nothing, and the work is done (2026-10-07, ADR 0100): the seven Spells are snapped (Wraithguard's zeroing
 landed with the content of 2026-10-04, and Death Wail's with that of 2026-10-05), `lightning_bolt`'s band
 floor is 0.15, the data builder refuses a Spell off the twentieths and a Creature with a chance of its own,
 `check-knobs` refuses a band off them, and the content change paid its price: content `b41ba55e`, its digest,

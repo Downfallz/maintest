@@ -69,7 +69,7 @@ dotnet test --no-build                    # Microsoft.Testing.Platform runner (s
 dotnet test --no-build -- --coverage      # with code coverage
 dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to fix
 node --test studio/*.test.js table/*.test.js   # the static pages' own tests (ADR 0024); needs no install
-dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content; refuses a critical chance off the d20's twentieths and a creature with a chance of its own (ADR 0099)
+dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content; refuses a critical chance off the d20's twentieths and a creature with a chance of its own (ADR 0100)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --format 1v1   # the same, 1 creature a side; --format takes 3v3|2v2|1v1 (or the team size alone) on play, human, simulate, evaluate and table, and moves nothing but the team size. Not on benchmark: its digest is committed per content hash, so every format would be verified against the same one
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot

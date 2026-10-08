@@ -329,7 +329,7 @@ public static class GameSchemaBuilder
     }
 
     /// <summary>
-    /// The die's grid (ADR 0099): a Spell's critical chance is a whole number of twentieths, and a Creature's own
+    /// The die's grid (ADR 0100): a Spell's critical chance is a whole number of twentieths, and a Creature's own
     /// is zero, so that the threshold a card prints is the whole chance a d20 rolls against. Read once the
     /// disabled content has left, because a Spell out of the build prints no card.
     /// </summary>
@@ -339,14 +339,14 @@ public static class GameSchemaBuilder
         {
             problems.Add(
                 $"spell '{spell.Id}': a critical chance of {Chance(spell.CriticalChance)} is not a whole number of twentieths, "
-                + $"so no d20 threshold prints it (ADR 0099); the nearest is {Chance(NearestTwentieth(spell.CriticalChance))}.");
+                + $"so no d20 threshold prints it (ADR 0100); the nearest is {Chance(NearestTwentieth(spell.CriticalChance))}.");
         }
 
         foreach (var creature in schema.Creatures.Where(creature => creature.BaseCriticalChance != 0))
         {
             problems.Add(
                 $"creature '{creature.Id}': a base critical chance of {Chance(creature.BaseCriticalChance)} is refused; a Creature's own "
-                + "chance is zero, so that the chance a card prints is the whole chance rolled (ADR 0042, ADR 0099).");
+                + "chance is zero, so that the chance a card prints is the whole chance rolled (ADR 0042, ADR 0100).");
         }
     }
 

@@ -1,4 +1,4 @@
-# 0099. Every critical chance is a twentieth
+# 0100. Every critical chance is a twentieth
 
 Date: 2026-10-07
 Status: Proposed

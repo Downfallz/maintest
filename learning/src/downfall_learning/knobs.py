@@ -54,7 +54,7 @@ HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff", "DefenseDebuff
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
 
-#: The die's grid (ADR 0099): a critical chance is a whole number of twentieths, because a card prints the
+#: The die's grid (ADR 0100): a critical chance is a whole number of twentieths, because a card prints the
 #: d20 threshold and the data builder refuses a chance it cannot. A band whose bounds or step are not on the
 #: grid would walk a value off it, which is how the legacy thirds survived every tuning pass before the rule.
 TWENTIETH = 0.05
@@ -131,7 +131,7 @@ class Knob:
     def moved(self, value: float, steps: int) -> float:
         """``value`` moved by ``steps`` of this knob, clamped to its bounds.
 
-        Moves are relative to the value the content carries rather than to a grid. Since ADR 0099 a critical
+        Moves are relative to the value the content carries rather than to a grid. Since ADR 0100 a critical
         chance is authored on the d20's twentieths and its band is held to them, so a move keeps it there;
         before it, the same arithmetic carried the legacy thirds forward.
         """
@@ -683,7 +683,7 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
             ]
             if off:
                 problems.append(
-                    f"{knob.key}: a critical chance is a whole number of twentieths (ADR 0099), and this "
+                    f"{knob.key}: a critical chance is a whole number of twentieths (ADR 0100), and this "
                     f"band's {', '.join(off)} would walk it off the grid; every bound and the step must be a "
                     f"multiple of {TWENTIETH}."
                 )

@@ -194,7 +194,7 @@ public sealed class GameSchemaBuilderTests
     }
 
     /// <summary>
-    /// ADR 0099: a card prints a d20 threshold, so a chance the die cannot roll is refused at the source, with
+    /// ADR 0100: a card prints a d20 threshold, so a chance the die cannot roll is refused at the source, with
     /// the face it should be snapped to.
     /// </summary>
     [Fact]
@@ -238,7 +238,7 @@ public sealed class GameSchemaBuilderTests
     }
 
     /// <summary>
-    /// ADR 0099: the chance a card prints is the whole chance rolled only while a Creature adds nothing to it,
+    /// ADR 0100: the chance a card prints is the whole chance rolled only while a Creature adds nothing to it,
     /// so a Creature authored with a chance of its own is refused rather than silently added at the table.
     /// </summary>
     [Fact]

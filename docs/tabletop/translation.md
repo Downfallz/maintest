@@ -98,7 +98,7 @@ re-read for the content of 2026-10-06 (`3c9eb083`)). Phase 1 of [plan.md](plan.m
     tallies lose that row: 125 rows, **keep as is** 38.
 - **Re-read at `b41ba55e`, the content of 2026-10-07.** It differs from `9419f935` (the content of
   2026-10-06 renamed, every id and every number kept) in seven Critical chances, snapped to the d20's
-  twentieths by 0.02 at most (ADR 0099): `tornado` 0.38 to 0.4, `protective_slam` 0.283 to 0.3, `pummel`
+  twentieths by 0.02 at most (ADR 0100): `tornado` 0.38 to 0.4, `protective_slam` 0.283 to 0.3, `pummel`
   0.767 to 0.75, `noxious_cure`, `toxic_waves` and `engulfing_flames` 0.33 to 0.35, `rejuvenate` 0.22 to 0.2.
   No other number moved, so every count above holds except the ones a chance feeds: 24 Spells still roll and
   20 never do, the 24 carry nine distinct chances instead of thirteen, every one a whole number of twentieths,
@@ -275,7 +275,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | --- | --- | --- | --- | --- |
 | Fizzle | A dead or stunned actor, one that no longer knows or can afford the Spell, a global targeting failure, or no target left (`ResolutionRules.cs:37-55`; ADR 0038 for the word) | 1 to 4 checks per cast, before anything moves | **restate** | Nothing. The rulebook owes one clear paragraph; it is the rule most likely to be played wrong. |
 | A Fizzle costs nothing | `CombatResolution.Fizzle` spends no Energy and applies no outcome (`Rules/Combat/CombatResolution.cs:49-54`, `CombatExecution.cs:22-25`) | 0 | **keep as is** | Nothing. |
-| One critical roll a cast | `random.NextDouble() < CriticalChanceOf(actor, spell, speed)`, the Creature's chance plus the Spell's (`ResolutionRules.cs:59,80-86`) | 1 die roll and 1 lookup, on a `Standard` cast of one of the 24 Spells that print a chance at `ad3e4d00` and `3c9eb083` (25 at `e6f72578`, before `crazed_specter` went to 0); the Creature's own chance is 0 since ADR 0042, and every chance is a whole number of twentieths since ADR 0099 (2026-10-07), so the 20 Spells at zero never roll at `3c9eb083` (21 at `ad3e4d00`, with `basic_attack`) | **needs a component** | A die, settled by fork B. At most six rolls a Round and often fewer. See Part 3 for what the snap has to cover. |
+| One critical roll a cast | `random.NextDouble() < CriticalChanceOf(actor, spell, speed)`, the Creature's chance plus the Spell's (`ResolutionRules.cs:59,80-86`) | 1 die roll and 1 lookup, on a `Standard` cast of one of the 24 Spells that print a chance at `ad3e4d00` and `3c9eb083` (25 at `e6f72578`, before `crazed_specter` went to 0); the Creature's own chance is 0 since ADR 0042, and every chance is a whole number of twentieths since ADR 0100 (2026-10-07), so the 20 Spells at zero never roll at `3c9eb083` (21 at `ad3e4d00`, with `basic_attack`) | **needs a component** | A die, settled by fork B. At most six rolls a Round and often fewer. See Part 3 for what the snap has to cover. |
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
@@ -389,7 +389,7 @@ grid (0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.75, 0.8) and one on a 1-in-6 grid (0.5)
 0.283, 0.33, 0.38, 0.767) are on neither, and two of them carry a third decimal. `data/balance/knobs.json`
 declares `/criticalChance` a knob on 25 Spells with a step of 0.05 (26 at `e6f72578`; `crazed_specter`'s
 went with its chance), so a d20 snap is inside the declared search space and a d6 snap is not. The die is
-settled since, a d20 ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0099: at `b41ba55e`
+settled since, a d20 ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0100: at `b41ba55e`
 the 24 Spells that roll carry nine distinct chances, 0.2, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.75 and 0.8, every
 one a face, and the die moves none); the error each candidate die costs
 is measured in components.md §1.6. Counted here at `3c9eb083`, as at `ad3e4d00`, a d20 moves 7 of the 24, the
