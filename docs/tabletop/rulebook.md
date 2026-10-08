@@ -121,14 +121,15 @@ one of them in a sentence.
 
 The die is not on this table, because it is not a Rule set value and it does not move: it is a **d20**, for
 the critical roll ([6.7](#67-the-critical-roll)) and the Roll-off
-([6.6](#66-the-combat-timeline-and-its-tiebreaks)) alike. It is settled and not yet built
-([d20-criticals.md](d20-criticals.md)); what that leaves open at the table is said once, in
-[6.7](#67-the-critical-roll).
+([6.6](#66-the-combat-timeline-and-its-tiebreaks)) alike. It is settled and built
+([ADR 0100](../adr/0100-every-critical-chance-is-a-twentieth.md)): every Critical chance a card prints is a
+whole number of twentieths, so every card that rolls prints its threshold ([6.7](#67-the-critical-roll)).
 
 Three numbers come from the Creature definition rather than the Rule set, and are printed on the Creature
 board: starting Health, starting Energy, starting Base initiative. The reference Creature definition
 (`data/Creatures/main.v1.json`) is Health 30, Energy 0, Defense 0, Base initiative 5. Its own Critical
-chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's chance off the card alone.
+chance is 0 (ADR 0042, and ADR 0100 holds it there), which is why [6.7](#67-the-critical-roll) reads a cast's
+chance off the card alone.
 The Health was 20 until [ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md).
 
 **Every worked example in this book uses the reference column and the reference Creature definition.**
@@ -756,14 +757,13 @@ A Quick Creature never rolls ([5.4](#54-speed)), and a Fizzle never reaches the 
 **Result.** Roll a d20, **once for the whole cast**, and compare it to the threshold the card prints:
 `d20: 11+` means 11 or more. On a hit, the cast is critical.
 
-> **Not yet built.** The d20 is settled ([d20-criticals.md](d20-criticals.md)), but the catalogue has not been
-> snapped to it: a card whose chance is not a whole number of twentieths prints the percentage and no
-> threshold ([components.md 2.1](components.md#21-what-is-printed-and-where-it-comes-from)). This book has no
-> faithful way to roll such a card on a d20, and does not invent one; the snap is the fix.
+Every card that rolls prints its threshold: a Critical chance is a whole number of twentieths by rule
+([ADR 0100](../adr/0100-every-critical-chance-is-a-twentieth.md), built on 2026-10-07), so no card prints a
+chance the d20 cannot roll. The catalogue carries nine distinct chances, 20% to 80%, each a face.
 
-**A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
-rolled: you add nothing to it. A Spell printed at zero never rolls at all — twenty of the forty-four never
-touch the die.
+**A Creature's own Critical chance is zero** (ADR 0042, and ADR 0100 refuses any other value). The chance
+printed on the card is the chance rolled: you add nothing to it. A Spell printed at zero never rolls at all —
+twenty of the forty-four never touch the die.
 
 A critical multiplies, by the setup table's critical multiplier, dropping any fraction:
 
@@ -959,7 +959,7 @@ every example, this paragraph included, names them so; no number in an example m
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`; "Match lifecycle"; "Combat", 2: "a Team wiped by an action ends the Match there"; ADR 0011, ADR 0083 |
 | [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
-| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
+| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" and the threshold on every card | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`; ADR 0100, which refuses any other value in the data builder and holds every Spell's chance to the d20's twentieths. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero by rule, so the card's chance is the whole chance |
 
 Five presentation rules are the table's and are declared as such, per
 [plan.md](plan.md)'s "one engine, one truth":

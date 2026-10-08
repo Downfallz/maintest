@@ -193,6 +193,74 @@ public sealed class GameSchemaBuilderTests
         problems.ShouldContain("at least two targets");
     }
 
+    /// <summary>
+    /// ADR 0100: a card prints a d20 threshold, so a chance the die cannot roll is refused at the source, with
+    /// the face it should be snapped to.
+    /// </summary>
+    [Fact]
+    public void A_critical_chance_off_the_twentieths_is_refused_with_the_nearest_one()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/pummel.v1.json", """
+                {
+                  "id": "spell:pummel:v1", "name": "Pummel", "spellType": "Offensive", "creatureClass": "Brawler",
+                  "energyCost": 1, "criticalChance": 0.767,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 2 } ]
+                }
+                """);
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        var problem = exception.Problems.ShouldHaveSingleItem();
+        problem.ShouldContain("spell 'spell:pummel:v1'");
+        problem.ShouldContain("0.767");
+        problem.ShouldContain("the nearest is 0.75");
+    }
+
+    /// <summary>A Spell that leaves the build prints no card, so its chance is not read against the die.</summary>
+    [Fact]
+    public void A_disabled_spell_off_the_twentieths_is_not_a_problem()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/pummel.v1.json", """
+                {
+                  "id": "spell:pummel:v1", "name": "Pummel", "spellType": "Offensive", "creatureClass": "Brawler",
+                  "energyCost": 1, "criticalChance": 0.767, "enabled": false,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 2 } ]
+                }
+                """);
+
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        schema.Spells.ShouldNotContain(spell => spell.Id == "spell:pummel:v1");
+    }
+
+    /// <summary>
+    /// ADR 0100: the chance a card prints is the whole chance rolled only while a Creature adds nothing to it,
+    /// so a Creature authored with a chance of its own is refused rather than silently added at the table.
+    /// </summary>
+    [Fact]
+    public void A_creature_with_a_critical_chance_of_its_own_is_refused()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Creatures/main.v1.json", """
+                {
+                  "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+                }
+                """);
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        var problem = exception.Problems.ShouldHaveSingleItem();
+        problem.ShouldContain("creature 'creature:main:v1'");
+        problem.ShouldContain("0.05");
+        problem.ShouldContain("zero");
+    }
+
     /// <summary>ADR 0072: a second stun is ignored whatever the file says, so a file that says otherwise is refused.</summary>
     [Fact]
     public void A_stun_authored_with_any_policy_but_ignore_is_refused()
@@ -231,7 +299,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Creatures/main.v1.json", """
                 {
                   "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
-                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0,
                   "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike", "spell:guard"]
                 }
                 """)
@@ -271,7 +339,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Creatures/main.v1.json", """
                 {
                   "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature", "enabled": false,
-                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0,
                   "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
                 }
                 """);

@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Brawler",
   "energyCost": 1,
-  "criticalChance": 0.767,
+  "criticalChance": 0.75,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",

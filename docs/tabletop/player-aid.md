@@ -92,8 +92,9 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 
 ## What a critical does (§6.7)
 
-**Roll a d20 once per cast, against the threshold on the card (`d20: 11+`).** A Creature's own
-Critical chance is **zero**: the chance on the card is the chance rolled. A card printed at **0%** never rolls.
+**Roll a d20 once per cast, against the threshold on the card (`d20: 11+`).** Every card that rolls prints
+one (ADR 0100), and a Creature's own Critical chance is **zero**: the chance on the card is the whole chance
+rolled. A card printed at **0%** never rolls.
 
 | Multiplied | Not multiplied |
 | --- | --- |

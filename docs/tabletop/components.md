@@ -165,8 +165,8 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
   One application is one token. A Stun that ends leaves its Creature immune to Stun for the next Round
   (ADR 0072).
 - A critical is a **die roll** and the catalogue will be authored onto the die's grid. The die is a **d20**
-  ([d20-criticals.md](d20-criticals.md), settled, not built); [Part 1.6](#16-dice) keeps what each candidate
-  cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
+  ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0100: every chance is a twentieth, by
+  rule); [Part 1.6](#16-dice) keeps what each candidate cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
 - Evolution buys **packages** (Tiers), two picks at Round 1 and every second Round after, and a package's
   prerequisites are the only rule for what a Creature may buy (ADR 0056). A Creature buys at most one
   package an opportunity, so the two picks go to two Creatures (ADR 0066).
@@ -448,12 +448,15 @@ python3 -c "
 import json,glob,collections
 v=collections.Counter(json.load(open(p))['criticalChance'] for p in glob.glob('data/Spells/**/*.json',recursive=True))
 print(sorted(v.items()))"
-# [(0, 20), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 1), (0.4, 1), (0.45, 2), (0.5, 7),
+# at b41ba55e (2026-10-07, ADR 0100): [(0, 20), (0.2, 1), (0.3, 2), (0.35, 6), (0.4, 2), (0.45, 2), (0.5, 7), (0.55, 1), (0.75, 2), (0.8, 1)]
+# at 3c9eb083, before the snap: [(0, 20), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 1), (0.4, 1), (0.45, 2), (0.5, 7),
 #  (0.55, 1), (0.75, 1), (0.767, 1), (0.8, 1)]
 ```
 
-**24 of 44 Spells roll. 20 never touch a die.** Thirteen distinct chances are printed at content `3c9eb083`,
-and the die's grid has to carry them. It was 24 and 21 at `ad3e4d00`, until `basic_attack`, which printed 0,
+**24 of 44 Spells roll. 20 never touch a die.** Nine distinct chances are printed at content `b41ba55e`, every
+one a whole number of twentieths (ADR 0100, 2026-10-07), so the d20 carries them all and moves none. Thirteen
+were printed at content `3c9eb083`, and the die's grid had to carry them; the table below is that reading,
+kept because it is what chose the die. It was 24 and 21 at `ad3e4d00`, until `basic_attack`, which printed 0,
 left. It was 25 and 20 at `e6f72578`: `crazed_specter` printed 0.38 and prints 0 since 2026-10-05, and
 `tornado` keeps 0.38 on the list. The table below is a reading, not a
 constant — the maintainer is tuning, so re-run the command rather than trusting the cells. What each
@@ -503,13 +506,14 @@ until 2026-10-05, when `crazed_specter` lost its chance and its critical chance 
 One finding the maintainer owns before the snap is authored, not this document's to decide. A second, that
 `revenant_guards` printed 0.33 and had no critical chance knob, is gone: it prints 0 since 2026-10-04.
 
-- **Eight of the 25 knobbed Spells are off their own declared grid**: their printed value is not their
-  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `tornado` 0.38,
+- **Eight of the 25 knobbed Spells were off their own declared grid** until 2026-10-07, when ADR 0100 snapped
+  the seven and moved the eighth's band floor to 0.15; `check-knobs` refuses a band off the twentieths since.
+  Their printed value was not their band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `tornado` 0.38,
   `engulfing_flames`, `noxious_cure` and `toxic_waves` at 0.33, `rejuvenate` 0.22, and `lightning_bolt` 0.5
   in a band of `[0.17, 0.8]`. Seven of the eight sit on a band whose `min` **is** a multiple of 0.05, so a d20
   snap fixes them outright; they are the 7 the d20 moves. The eighth is `lightning_bolt`, whose 0.5 is already
-  a twentieth, but whose band floor 0.17 is the only knob band off its own grid, and it leaves the band itself
-  to be moved: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
+  a twentieth, but whose band floor 0.17 was the only knob band off its own grid, and it left the band itself
+  to be moved, to 0.15: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
   the ninth until 2026-10-05.
 
 ### 1.7 The energy track: what ends it
@@ -1297,7 +1301,7 @@ differs on the head (Part 6, question 10).
 | `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
 | `data/dst/game.schema.sha256` | The content hash | The stamp every sheet carries, and the identity of the deck. |
 | A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks, the Round track's spaces and the Energy rail's end. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
-| The die | A d20 ([d20-criticals.md](d20-criticals.md), settled) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. The rule that every chance is a twentieth is settled and not built, so today some cards print a percentage alone. |
+| The die | A d20 ([d20-criticals.md](d20-criticals.md), built as ADR 0100) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. Every chance is a twentieth by rule since 2026-10-07, and the data builder refuses one that is not, so every card that rolls prints its threshold and the omission is never taken. |
 
 Cards are **generated, never transcribed**. A tuning pass reprints the deck rather than invalidating it, which
 is the whole reason phase 3 specifies a generator instead of a table of card texts.
@@ -1408,14 +1412,14 @@ answered elsewhere, question 14 by the maintainer, and each says so. Question 16
 
 ### 1. Which die
 
-**Answered: a d20** ([d20-criticals.md](d20-criticals.md), settled, not built), for the reason in
+**Answered: a d20** ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0100), for the reason in
 [1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 25 Spells,
 d10 and d20, and the d20 is the finer of the two: it moves 7 of the 24 Spells that roll where the d10 moves
 14 (8 of 25 and 15 at `e6f72578`), its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
-second use on the same die, the Roll-off. The question stays here for what is left with it:
-`lightning_bolt`'s knob band starts at 0.17, so its own grid contains no multiple of 0.05. That is a content
-change with a journal entry and a new hash. (`revenant_guards`, which printed a chance with no critical
-chance knob, prints 0 since 2026-10-04.)
+second use on the same die, the Roll-off. Nothing is left with it: `lightning_bolt`'s knob band started at
+0.17, so its own grid contained no multiple of 0.05, and that content change landed with the snap on
+2026-10-07, the floor at 0.15, with its journal entry and the hash `b41ba55e`. (`revenant_guards`, which
+printed a chance with no critical chance knob, prints 0 since 2026-10-04.)
 
 ### 2. The deck's copy count
 
@@ -1724,7 +1728,7 @@ it (PR #245 and the content of 2026-10-04). translation.md has rows for all of t
 
 ## What this document does not decide
 
-- The die. It is a d20, settled in [d20-criticals.md](d20-criticals.md), not here
+- The die. It is a d20, settled in [d20-criticals.md](d20-criticals.md) and built as ADR 0100, not here
   ([Part 6](#part-6-open-questions), question 1).
 - The evolution rules. A package, its prerequisites, its bonus and the schedule are ADR 0056 and the content
   in `data/Tiers/`; this document counts what they need and changes none of them.
