@@ -32,6 +32,8 @@ cast on the rounds a hit is not: measured against the buyer's hits, every defens
 - Bad: every heuristic agent buys differently, and so do the agents built on it: the lookahead's guesses and
   every weights file. Those weights were fitted under the whole-cast pricing and are not refitted here. The
   benchmark digest changes on 396 of the 400 matches.
+- Bad: lookahead-34 now beats Greedy only 50.7 % of 400 matches, against 94.8 % before. The table's strong bot
+  is no stronger than Greedy until its weights are searched again against this Greedy.
 - Bad: Greedy's mirror runs longer, 15.1 rounds against 9.5, just above the 10 to 15 band (ADR 0068). 10 of the
   400 benchmark matches reach the round cap.
 
