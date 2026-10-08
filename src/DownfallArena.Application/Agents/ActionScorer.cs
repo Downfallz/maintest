@@ -570,8 +570,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         terms += DefensiveTerms(actor, resolution, creatures, remaining, stillToAct);
         terms += NextPurse(actor, resolution, creatures, remaining[actor.Id]);
 
-        // What the actor keeps; what a spell hands out is priced per outcome above.
-        return terms with { Energy = terms.Energy + (actor.Energy.Value - resolution.EnergySpent.Value) };
+        // What the actor keeps; what a spell hands out is priced per outcome above. The actor's own purse,
+        // what it keeps and what the spell gives it back, is worth only up to the reserve its dearest spell
+        // can spend (ADR 0103): energy hoarded past that pays for nothing.
+        // A gain that lands on a caster its own cast killed is refused, and priced at nothing above.
+        var given = remaining[actor.Id] == 0 ? 0 : resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
+        var purse = actor.Energy.Value - resolution.EnergySpent.Value + given;
+        return terms with { Energy = terms.Energy - given + Math.Min(purse, Reserve(actor)) };
     }
 
     private static CreatureSnapshot Target(CreatureId id, IReadOnlyList<CreatureSnapshot> creatures) => creatures.First(creature => creature.Id == id);
@@ -772,6 +777,19 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>The energy a creature gains at the next upkeep: the rule set's, and its packages' passive (ADR 0101).</summary>
     private int Upkeep(CreatureSnapshot creature) => rules.EnergyPerRound + creature.Passive.UpkeepEnergy;
+
+    /// <summary>
+    /// The most energy worth holding (ADR 0103): what it takes to cast the creature's dearest spell every round
+    /// for the rounds a permanent condition is read for. Its cost now, and for each round after, what a round's
+    /// energy does not cover: Crushing Stomp at 4 on 2 a round wants 8, a spell no dearer than a round's energy
+    /// wants its cost. A point past that pays for no cast, so it is worth nothing. The spells it knows, not the
+    /// ones it may buy: a purchase raises the reserve the round it lands.
+    /// </summary>
+    private int Reserve(CreatureSnapshot creature)
+    {
+        var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
+        return dearest + ((PermanentConditionRounds - 1) * Math.Max(0, dearest - Upkeep(creature)));
+    }
 
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of

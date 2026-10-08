@@ -72,8 +72,8 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         var stillToAct = Foresight.StillToAct(board, actor.Id);
         // Nothing to hit is worth nothing (ADR 0040), as the heuristic agent reads it.
         return [.. option.CastableSpells.Select(spell => Vector(
-            _scorer.Best(actor, spell, creatures, gone, stillToAct: stillToAct) is { } best
-                ? _scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spell), best.Targets), creatures, gone, stillToAct: stillToAct)
+            _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct) is { } best
+                ? _scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spell), best.Targets), creatures, gone, SpeedOf(board, actor.Id), stillToAct)
                 : ScoreTerms.Zero))];
     }
 
@@ -90,8 +90,15 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
 
         var creatures = Foresight.Creatures(board);
         var stillToAct = Foresight.StillToAct(board, options.Actor);
-        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, stillToAct: stillToAct)))];
+        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, speed: SpeedOf(board, options.Actor), stillToAct: stillToAct)))];
     }
+
+    /// <summary>
+    /// What the creature chose in the Speed sub-phase, which decides whether its cast can crit: the reading the
+    /// heuristic agent decides on, so the terms recorded beside its decision are the ones it compared.
+    /// </summary>
+    private static Domain.Matches.Rounds.Speed SpeedOf(PlayerBoardState board, CreatureId creature) =>
+        board.SpeedChoices.FirstOrDefault(choice => choice.Creature == creature)?.Speed ?? Domain.Matches.Rounds.Speed.Standard;
 
     private static float[] Vector(ScoreTerms terms) => [.. terms.ToArray().Select(value => (float)value)];
 }

@@ -352,7 +352,8 @@ public sealed class ActionScorerTests
     [Fact]
     public void Every_energy_term_is_priced_at_the_weight_and_not_at_a_constant()
     {
-        var board = Board(enemyHealth: 20, actorEnergy: 2);
+        // Slam costs 2, so the 2 the actor keeps are inside what its dearest spell can spend (ADR 0103).
+        var board = Board(enemyHealth: 20, actorEnergy: 2, actorSpells: [TestContent.Strike, TestContent.Slam]);
         var ally = Boards.Creature(2, PlayerSlot.Player1);
         var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] }
             .Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(5) } : creature)
@@ -599,7 +600,7 @@ public sealed class ActionScorerTests
     [Fact]
     public void Energy_kept_counts_a_little_and_a_dropped_target_costs_only_what_it_would_have_earned()
     {
-        var board = Board(enemyHealth: 20, actorEnergy: 2);
+        var board = Board(enemyHealth: 20, actorEnergy: 2, actorSpells: [TestContent.Strike, TestContent.Slam]);
         var action = Strike(One, Three);
 
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), []), board).ShouldBe(PerEnergy * 2, 1e-9);
@@ -737,7 +738,7 @@ public sealed class ActionScorerTests
 
     /// <summary>
     /// A spell that gives only energy adds that energy: Rest, the one defensive spell on offer to a creature that
-    /// knows none, is worth the two energy it gives, which the comparison must not drop.
+    /// knows none and has a spell to spend it on, is worth the two energy it gives, which the comparison must not drop.
     /// </summary>
     [Fact]
     public void A_spell_that_only_gives_energy_is_worth_the_energy_it_gives()
@@ -752,10 +753,51 @@ public sealed class ActionScorerTests
                 [.. TestContent.Resources.Tiers, Tier.Create(restPack, "Rest", 1, [], [Rest.Id], Initiative.Of(1))]),
             MatchStore.TwoOnTwo(),
             ScoringWeights.Default with { Initiative = 0 });
-        var board = Board(enemyHealth: 20);
+        // A creature that knows Slam, so energy buys it a cast (ADR 0103).
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
 
         scorer.PurchaseValue(board[0], restPack, board).ShouldBeGreaterThan(0);
         scorer.PurchaseValue(board[0], restPack, board).ShouldBe(scorer.Estimate(board[0], Rest.Id, board), 1e-9);
+    }
+
+    /// <summary>
+    /// Energy past the reserve a creature's dearest spell can spend pays for no cast, so it is worth nothing (ADR
+    /// 0103). The reserve casts that spell every round for three rounds on the 2 a round gives: Lunge at 2 wants
+    /// 2, Smite at 4 wants 4 now and 2 more for each of the two rounds after, 8. Resting at the reserve gains
+    /// nothing over a free strike; below it, it gains its 2.
+    /// </summary>
+    [Theory]
+    [InlineData(2, 0, 2)]
+    [InlineData(2, 2, 0)]
+    [InlineData(4, 6, 2)]
+    [InlineData(4, 8, 0)]
+    public void Energy_past_the_reserve_the_dearest_spell_spends_is_worth_nothing(int dearest, int energy, double gained)
+    {
+        var scorer = Unlocking.WithoutUnlocks;
+        var board = Board(enemyHealth: 20, actorEnergy: energy, actorSpells: [TestContent.Strike, Rest.Id, dearest == 4 ? Smite.Id : Lunge.Id]);
+
+        var rest = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Rest.Id), [One]), board, speed: Speed.Quick);
+        var strike = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, TestContent.Strike), [Three]), board, speed: Speed.Quick);
+
+        (rest.Energy - strike.Energy).ShouldBe(gained, 1e-9);
+    }
+
+    /// <summary>
+    /// A gain that lands on a caster its own cast killed is refused, so it moves nothing (ADR 0103): with a
+    /// free kit there is no reserve, and the energy the cast would have given it is neither priced nor charged.
+    /// </summary>
+    [Fact]
+    public void Energy_given_to_a_caster_its_own_cast_killed_counts_for_nothing()
+    {
+        var board = Board(enemyHealth: 20);
+        var actor = board[0];
+        var action = Strike(One, Three);
+
+        var terms = Scorer.Terms(
+            CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new DamageOutcome(One, actor.Health.Value, false), new EnergyOutcome(One, 2)]),
+            board);
+
+        terms.Energy.ShouldBe(0, 1e-9);
     }
 
     /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
