@@ -316,12 +316,17 @@ public sealed class LookaheadAgent(
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
+        RoundValue Round(SpellId spell, bool worst)
+        {
+            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
+            CombatAction? Cast(IReadOnlyList<CreatureSnapshot> ahead) => BestTargets(board, ahead, intentOption.Creature, spell);
+            return worst
+                ? Worst(board, creatures, creatures, 0, intentOption.Creature, declared, Cast)
+                : PlayOut(board, creatures, 0, intentOption.Creature, declared, Cast);
+        }
         var candidates = intentOption.CastableSpells
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)
-            .Select(spell => (
-                Spell: spell,
-                Round: Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(board, ahead, intentOption.Creature, spell)),
-                OneStep: _scorer.Best(actor, spell, creatures, speed: SpeedOf(board, actor.Id))?.Score ?? 0))
+            .Select(spell => new Candidate<SpellId>(spell, Round(spell, adversarial), OneStep(_scorer.Best(actor, spell, creatures, speed: SpeedOf(board, actor.Id)))))
             .ToList();
         if (candidates.Count == 0)
         {
@@ -336,15 +341,13 @@ public sealed class LookaheadAgent(
         // 2026-09-23: the lookahead cast Wait 248 times against greedy for exactly this). Minimax keeps its
         // round: its reply is not a guess but the worst the enemy can do, and against that the free spell is the
         // one that still resolves.
-        var paid = candidates.Where(candidate => resources.GetSpell(candidate.Spell).Stats.Cost.Value > 0).ToList();
-        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
+        var paid = candidates.Where(candidate => resources.GetSpell(candidate.Option).Stats.Cost.Value > 0).ToList();
+        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Played.ActorStopped))
         {
-            return candidates.MaxBy(candidate => candidate.OneStep).Spell;
+            return candidates.MaxBy(candidate => candidate.OneStep).Option;
         }
 
-        return candidates.Skip(1)
-            .Aggregate(candidates[0], (best, candidate) => Better((candidate.Round, candidate.OneStep), (best.Round, best.OneStep)) ? candidate : best)
-            .Spell;
+        return First(candidates, candidate => Round(candidate.Option, worst: true)).Option;
     }
 
     /// <summary>
@@ -370,22 +373,57 @@ public sealed class LookaheadAgent(
         var ahead = Creatures(board);
         var declared = DeclaredSpells(board, ahead, options.Actor, options.Spell);
         var intent = new CombatIntent(options.Actor, options.Spell);
-        IReadOnlyList<CreatureId> best = [];
-        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
-        foreach (var targets in TargetSets.Of(options.LegalTargets))
-        {
-            var action = CombatAction.Bind(intent, targets);
-            var value = (
-                Round: Value(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
-                OneStep: _scorer.Expected(action, ahead, speed: SpeedOf(board, options.Actor)));
-            if (Better(value, bestValue))
-            {
-                best = targets;
-                bestValue = value;
-            }
-        }
+        var speed = SpeedOf(board, options.Actor);
+        RoundValue Round(CombatAction action, bool worst) => worst
+            ? Worst(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action)
+            : PlayOut(board, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action);
+        var candidates = TargetSets.Of(options.LegalTargets)
+            .Select(targets => CombatAction.Bind(intent, targets))
+            .Select(action => new Candidate<CombatAction>(action, Round(action, adversarial), (_scorer.Wins(action, ahead), _scorer.Expected(action, ahead, speed: speed))))
+            .ToList();
 
-        return best;
+        return candidates.Count == 0 ? [] : First(candidates, candidate => Round(candidate.Option, worst: true)).Option.Targets;
+    }
+
+    /// <summary>A candidate with what is known of it: the round played out, and the one-step reading as a win then a score.</summary>
+    private readonly record struct Candidate<T>(T Option, RoundValue Played, (bool Wins, double Score) OneStep);
+
+    /// <summary>The one-step reading of a spell's best targets: whether it wins on its own, then its score; nothing to hit is worth nothing.</summary>
+    private static (bool Wins, double Score) OneStep((IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? best) =>
+        best is { } found ? (found.Wins, found.Score) : (false, 0);
+
+    /// <summary>
+    /// The candidate to play: the round's outcome first; among candidates that win on the guess, the one whose win
+    /// also stands against the enemy's worst replies (ADR 0099); then the round's score; then the one-step reading.
+    /// Ties go to the first candidate.
+    /// <para>
+    /// The second key is what keeps a win from resting on the guess. When an ally's cast is guessed to end the
+    /// match, every candidate wins on the guess and the round's score picks one that spends the slot on something
+    /// else -- a guard, a heal, a wait -- and the win is gone the moment the enemy mends itself or acts first. Read
+    /// against its worst replies, a round where every ally commits still wins where the other does not. It is only
+    /// read when two candidates tie on a win, which is the end of a match, so it costs a playout per enemy spell
+    /// there and nothing anywhere else. The minimax agent has read the worst replies already, and skips it.
+    /// </para>
+    /// <para>
+    /// The one-step key is not a refinement: it is what decides when the others cannot. The rollout stands in for
+    /// the hidden slots with a guess, and when that guess has the actor dead or stunned before its own slot,
+    /// every candidate leaves the same board and the round says nothing about the choice. The choice still
+    /// matters in every world where the guess is wrong and the actor does act, and the one-step reading is the
+    /// best that can be said about those. Without it the tie went to the first spell in id order, which is how
+    /// the weakest spell in the catalogue came to be cast three times more often than the greedy agent casts it.
+    /// </para>
+    /// </summary>
+    private Candidate<T> First<T>(List<Candidate<T>> candidates, Func<Candidate<T>, RoundValue> worstOf)
+    {
+        // Nothing is above the top, so reaching it is matching it, without comparing two doubles for equality.
+        var top = candidates.Max(candidate => candidate.Played.Outcome);
+        var read = !adversarial && top > 0 && candidates.Count(candidate => candidate.Played.Outcome >= top) > 1;
+        var ranked = candidates
+            .Select(candidate => (
+                Candidate: candidate,
+                Key: (candidate.Played.Outcome, Robust: read && candidate.Played.Outcome >= top ? worstOf(candidate).Outcome : 0, candidate.Played.Score, candidate.OneStep.Wins, candidate.OneStep.Score)))
+            .ToList();
+        return ranked.Skip(1).Aggregate(ranked[0], (best, candidate) => candidate.Key.CompareTo(best.Key) > 0 ? candidate : best).Candidate;
     }
 
     /// <summary>
@@ -401,13 +439,17 @@ public sealed class LookaheadAgent(
 
         var creatures = Creatures(board);
         var declared = DeclaredSpells(board, creatures, actor, candidate);
-        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
+        if (adversarial)
+        {
+            Worst(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
+        }
+
         return declared;
     }
 
     /// <summary>
-    /// The round's worth for a candidate: played out on the replies as they stand, or, adversarially, with
-    /// each enemy slot still ahead settled at the reply that costs the actor most. One enemy at a time in
+    /// The round's worth for a candidate against the enemy's worst replies: each enemy slot still ahead settled at
+    /// the reply that costs the actor most. One enemy at a time in
     /// timeline order, each over the spells it can cast, the earlier ones already settled and the later ones
     /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
     /// where this costs the sum, and the round is short enough that the difference between the two is rarely
@@ -415,8 +457,10 @@ public sealed class LookaheadAgent(
     /// The replies an enemy can choose from are read on <paramref name="beforeCombat"/>, where it declared:
     /// the round is played from <paramref name="start"/>. At a declaration the two are the same board; at a
     /// target, the only board left is the one the earlier slots made (ADR 0083), and it stands for both.
+    /// It is the minimax agent's reading of every round, and the lookahead's only to tell two wins apart
+    /// (ADR 0099).
     /// </summary>
-    private RoundValue Value(
+    private RoundValue Worst(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         IReadOnlyList<CreatureSnapshot> beforeCombat,
@@ -426,10 +470,6 @@ public sealed class LookaheadAgent(
         Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
     {
         var value = PlayOut(board, start, fromSlot, actor, declared, candidate);
-        if (!adversarial)
-        {
-            return value;
-        }
 
         foreach (var enemy in board.Timeline.Skip(fromSlot).Select(slot => slot.Creature).Distinct())
         {
@@ -439,7 +479,7 @@ public sealed class LookaheadAgent(
                 continue;
             }
 
-            var worst = declared[enemy];
+            var reply = declared[enemy];
             foreach (var spell in Castable(snapshot))
             {
                 declared[enemy] = spell;
@@ -447,29 +487,14 @@ public sealed class LookaheadAgent(
                 if (replied.CompareTo(value) < 0)
                 {
                     value = replied;
-                    worst = spell;
+                    reply = spell;
                 }
             }
 
-            declared[enemy] = worst;
+            declared[enemy] = reply;
         }
 
         return value;
-    }
-
-    /// <summary>
-    /// The round played out first, the one-step score second. The second key is not a refinement: it is
-    /// what decides when the first cannot. The rollout stands in for the hidden slots with a guess, and when
-    /// that guess has the actor dead or stunned before its own slot, every candidate leaves the same board and
-    /// the round says nothing about the choice. The choice still matters in every world where the guess is
-    /// wrong and the actor does act, and the one-step reading is the best that can be said about those.
-    /// Without it the tie went to the first spell in id order, which is how the weakest spell in the
-    /// catalogue came to be cast three times more often than the greedy agent casts it.
-    /// </summary>
-    private static bool Better((RoundValue Round, double OneStep) candidate, (RoundValue Round, double OneStep) best)
-    {
-        var round = candidate.Round.CompareTo(best.Round);
-        return round > 0 || (round == 0 && candidate.OneStep > best.OneStep);
     }
 
     /// <summary>
@@ -759,11 +784,11 @@ public sealed class LookaheadAgent(
             .Where(spell => resources.GetSpell(spell).Stats.Cost.Value <= creature.Energy.Value)
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)];
 
-    /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it.</summary>
+    /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it: a cast that can end the match first (ADR 0099), then the best score.</summary>
     private SpellId? GreedyIntent(PlayerBoardState board, CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
     {
         SpellId? best = null;
-        var bestScore = double.NegativeInfinity;
+        var bestValue = (Wins: false, Score: double.NegativeInfinity);
         foreach (var spell in snapshot.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             if (resources.GetSpell(spell).Stats.Cost.Value > snapshot.Energy.Value)
@@ -771,11 +796,10 @@ public sealed class LookaheadAgent(
                 continue;
             }
 
-            var score = _scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id))?.Score;
-            if (score is { } found && found > bestScore)
+            if (_scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id)) is { } found && (found.Wins, found.Score).CompareTo(bestValue) > 0)
             {
                 best = spell;
-                bestScore = found;
+                bestValue = (found.Wins, found.Score);
             }
         }
 

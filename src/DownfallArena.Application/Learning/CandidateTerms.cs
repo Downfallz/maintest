@@ -56,7 +56,11 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
     /// <summary>Quick and Standard, in that order, neither of which the scorer reads.</summary>
     public static IReadOnlyList<IReadOnlyList<float>> Speed() => [Vector(ScoreTerms.Zero), Vector(ScoreTerms.Zero)];
 
-    /// <summary>One vector per castable spell in the option's order: the terms of its best target set.</summary>
+    /// <summary>
+    /// One vector per castable spell in the option's order: the terms of the target set the heuristic agent binds,
+    /// a winning one first (ADR 0099). The win itself is not a term -- no weight could be trusted to dominate it --
+    /// so a policy on these terms reads the end of a match the way the scorer did before.
+    /// </summary>
     public IReadOnlyList<IReadOnlyList<float>> Intent(PlayerBoardState board, IntentOption option)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -67,7 +71,10 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         var gone = _foresight.AlreadyDoomed(board, creatures, actor);
         var stillToAct = Foresight.StillToAct(board, actor.Id);
         // Nothing to hit is worth nothing (ADR 0040), as the heuristic agent reads it.
-        return [.. option.CastableSpells.Select(spell => Vector(_scorer.BestTerms(actor, spell, creatures, gone, stillToAct: stillToAct)?.Terms ?? ScoreTerms.Zero))];
+        return [.. option.CastableSpells.Select(spell => Vector(
+            _scorer.Best(actor, spell, creatures, gone, stillToAct: stillToAct) is { } best
+                ? _scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spell), best.Targets), creatures, gone, stillToAct: stillToAct)
+                : ScoreTerms.Zero))];
     }
 
     /// <summary>One vector per legal target set in <see cref="TargetSets"/> order; one zero vector for an uncastable spell.</summary>

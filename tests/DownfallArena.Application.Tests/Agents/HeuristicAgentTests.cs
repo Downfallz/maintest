@@ -40,19 +40,47 @@ public sealed class HeuristicAgentTests
     }
 
     /// <summary>
-    /// ADR 0039. Creature Two acts first on the timeline and has already declared Strike, which kills the one
-    /// enemy left. Hitting a corpse scores nothing at all (ADR 0040), so Guard wins and One spends its round
-    /// on itself instead. Both readings this needs are public and were already on the board state: the timeline
-    /// says who acts first, and the player's own intents say what it has declared.
+    /// ADR 0039. Creature Two acts first on the timeline and has already declared Strike, which kills Three.
+    /// Hitting a corpse scores nothing at all (ADR 0040), and Four's armour takes all of Strike, so Guard wins
+    /// and One spends its round on itself instead. Both readings this needs are public and were already on the
+    /// board state: the timeline says who acts first, and the player's own intents say what it has declared.
     /// </summary>
     [Fact]
     public void A_creature_does_not_aim_at_an_enemy_its_own_team_already_kills_first()
     {
-        var board = OneEnemyLeft();
+        var board = OneEnemyToKill();
         var option = new IntentOption(One, [TestContent.Guard, TestContent.Strike]);
 
         Agent.DecideIntent(board, option).ShouldBe(TestContent.Strike, "nothing says the enemy is spoken for");
         Agent.DecideIntent(WithAllyStriking(board), option).ShouldBe(TestContent.Guard, "Two kills it first, so Strike is a wasted round");
+    }
+
+    /// <summary>
+    /// ADR 0099. The same declarations with Three the last enemy standing: Two's kill ends the match, so the round
+    /// One would spend on itself never comes, and if Two's kill does not land -- Two stunned, Three healed before
+    /// it -- One's Strike is the win. A kill that ends the match is never a wasted round.
+    /// </summary>
+    [Fact]
+    public void The_kill_that_ends_the_match_is_taken_even_when_an_ally_is_already_on_it()
+    {
+        var option = new IntentOption(One, [TestContent.Guard, TestContent.Strike]);
+
+        Agent.DecideIntent(WithAllyStriking(OneEnemyLeft()), option).ShouldBe(TestContent.Strike);
+    }
+
+    /// <summary>
+    /// ADR 0099. With kills priced at nothing and bleeds at ten, Rend outscores Strike on any target. Strike still
+    /// takes the last enemy, because that cast wins the match and no score is worth more than a win. With a second
+    /// enemy standing the same kill wins nothing, and the score decides again.
+    /// </summary>
+    [Fact]
+    public void A_cast_that_wins_the_match_outranks_any_score_whatever_the_weights()
+    {
+        var agent = new HeuristicAgent(ScoringWeights.Default with { Kill = 0, Bleed = 10 }, TestContent.Resources, Rules);
+        var option = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
+
+        agent.DecideIntent(Board(enemyHealth: 3, enemy2Health: 0), option).ShouldBe(TestContent.Strike);
+        agent.DecideIntent(Board(enemyHealth: 3, enemy2Health: 20), option).ShouldBe(TestContent.Rend);
     }
 
     /// <summary>
@@ -63,7 +91,7 @@ public sealed class HeuristicAgentTests
     [Fact]
     public void An_ally_counts_only_when_it_both_acts_first_and_has_already_declared()
     {
-        var board = OneEnemyLeft();
+        var board = OneEnemyToKill();
         var option = new IntentOption(One, [TestContent.Guard, TestContent.Strike]);
         var declaredButLater = WithAllyStriking(board) with
         {
@@ -73,6 +101,17 @@ public sealed class HeuristicAgentTests
 
         Agent.DecideIntent(declaredButLater, option).ShouldBe(TestContent.Strike, "Two swings after One, so the enemy is still there");
         Agent.DecideIntent(firstButSilent, option).ShouldBe(TestContent.Strike, "Two acts first but has chosen nothing yet");
+    }
+
+    /// <summary>
+    /// The same board with Four standing too, behind enough armour that Strike takes none of its health: Three is
+    /// the one enemy Strike can kill, and killing it does not end the match.
+    /// </summary>
+    private static PlayerBoardState OneEnemyToKill()
+    {
+        var board = OneEnemyLeft();
+        var four = board.Enemies[1] with { Health = Health.Of(20), TotalDefense = Defense.Of(10) };
+        return board with { Enemies = [board.Enemies[0], four] };
     }
 
     /// <summary>One (Strike, Guard, one energy) and Two beside it, against a single enemy Strike kills.</summary>
