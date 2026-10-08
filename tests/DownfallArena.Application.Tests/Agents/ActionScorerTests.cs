@@ -659,13 +659,15 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// An unlock is worth what the spell does plus the turn order its initiative buys (ADR 0017, ADR 0088),
-    /// priced by the initiative weight (ADR 0018, measured by ADR 0032). Guard's package adds 6 and the others
-    /// 1, but on this board everyone stands at 5, so any bonus takes the buyer out of the same two ties and
-    /// buys the same one enemy's worth of order.
+    /// An unlock is worth what the spell adds over the best known spell of its kind (ADR 0102) plus the turn
+    /// order its initiative buys (ADR 0017, ADR 0088), priced by the initiative weight (ADR 0018, measured by
+    /// ADR 0032). The buyer knows Strike, an offensive spell: Jab does exactly what it does and adds nothing,
+    /// Slam adds what it does beyond it, and Guard, the one defensive spell, adds the whole of what it does.
+    /// Guard's package adds 6 initiative and the others 1, but on this board everyone stands at 5, so any bonus
+    /// takes the buyer out of the same two ties and buys the same one enemy's worth of order.
     /// </summary>
     [Fact]
-    public void Buying_a_package_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
+    public void Buying_a_package_is_worth_what_it_adds_over_its_kind_plus_the_initiative_it_buys_less_what_it_costs()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
@@ -673,9 +675,91 @@ public sealed class ActionScorerTests
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. The three costs
         // -- Strike 0, Guard 1, Slam 2 -- price at nothing, one point of energy and two.
         scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe((0.65 * 2 * 2) + Tempo - PerEnergy, 1e-9);
-        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
-        scorer.PurchaseValue(board[0], TestContent.SlamPack, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe(Tempo, 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.SlamPack, board).ShouldBe((0.95 * 10) + (0.05 * 14) - StrikeCast + Tempo - (PerEnergy * 2), 1e-9);
     }
+
+    /// <summary>
+    /// The case ADR 0102 exists for: a creature that already casts something better than a package's spell
+    /// would never cast it, so the package is worth no more than the order its initiative buys. One that knows
+    /// Slam gains nothing from Jab, though Jab alone is worth 3.15 a cast.
+    /// </summary>
+    [Fact]
+    public void A_spell_no_better_than_one_of_its_kind_the_creature_knows_adds_nothing()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
+
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe(Tempo, 1e-9);
+    }
+
+    /// <summary>
+    /// A defensive spell is cast on the rounds a hit is not, so it is not measured against the hits a creature
+    /// knows: Guard is worth its whole cast to a creature whose only spell is Strike, though Strike reads higher.
+    /// </summary>
+    [Fact]
+    public void A_spell_is_measured_only_against_the_known_spells_of_its_kind()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
+        var board = Board(enemyHealth: 20, actorEnergy: 1);
+
+        scorer.Estimate(board[0], TestContent.Guard, board).ShouldBeLessThan(StrikeCast);
+        scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe(scorer.Estimate(board[0], TestContent.Guard, board), 1e-9);
+    }
+
+    /// <summary>
+    /// Both sides of the comparison are read alike (ADR 0102). Jab does what Strike does, and either one cast now
+    /// leaves the purse that pays for Bulwark, a four-energy guard, next round: so Jab adds nothing, though its
+    /// own reading credits that unlock. Read with the unlock on Jab's side only, it would be worth a Bulwark it
+    /// does not add.
+    /// </summary>
+    [Fact]
+    public void A_spell_and_the_one_it_is_measured_against_are_read_with_the_same_unlocks()
+    {
+        var bulwark = Spell.Create(
+            SpellId.Parse("spell:bulwark:v1"), "Bulwark", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(4), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Self), [DefenseBuff.Of(5, Duration.OfRounds(2))]);
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, bulwark],
+                [.. TestContent.Resources.TalentTrees],
+                [.. TestContent.Resources.Tiers]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorEnergy: 2, actorSpells: [TestContent.Strike, bulwark.Id]);
+        scorer.EstimateTerms(board[0], TestContent.Jab, board).ShouldNotBe(
+            scorer.WithoutUnlocks.EstimateTerms(board[0], TestContent.Jab, board), "the case is about a reading that credits the unlock");
+
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe(Tempo, 1e-9);
+    }
+
+    /// <summary>
+    /// A spell that gives only energy adds that energy: Rest, the one defensive spell on offer to a creature that
+    /// knows none, is worth the two energy it gives, which the comparison must not drop.
+    /// </summary>
+    [Fact]
+    public void A_spell_that_only_gives_energy_is_worth_the_energy_it_gives()
+    {
+        var restPack = TierId.Parse("tier:rest:v1");
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, Rest],
+                [.. TestContent.Resources.TalentTrees],
+                [.. TestContent.Resources.Tiers, Tier.Create(restPack, "Rest", 1, [], [Rest.Id], Initiative.Of(1))]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default with { Initiative = 0 });
+        var board = Board(enemyHealth: 20);
+
+        scorer.PurchaseValue(board[0], restPack, board).ShouldBeGreaterThan(0);
+        scorer.PurchaseValue(board[0], restPack, board).ShouldBe(scorer.Estimate(board[0], Rest.Id, board), 1e-9);
+    }
+
+    /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
+    private const double StrikeCast = (0.95 * 3) + (0.05 * 6);
 
     /// <summary>
     /// Guard is worth 2.6 in combat against Strike's 3.15 and still wins the pick once the order its initiative
@@ -738,15 +822,16 @@ public sealed class ActionScorerTests
         var free = scorer.PurchaseValue(board[0], TestContent.JabPack, board);
         var paid = scorer.PurchaseValue(board[0], TestContent.SlamPack, board);
 
-        (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(Tempo, 1e-9);
-        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - (PerEnergy * 2), 1e-9);
+        free.ShouldBe(Tempo, 1e-9);
+        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - (PerEnergy * 2) - StrikeCast, 1e-9);
     }
 
     /// <summary>
     /// The other half of the same term, and the one the first version of ADR 0026 got wrong. Once the actor
     /// can afford the spell, <see cref="ActionScorer.Estimate"/>'s raise does nothing and the energy it keeps
     /// already differs by the full cost -- so charging the cost again here would price it twice. At 4 energy
-    /// the unlock is worth its combat value plus its initiative and nothing else.
+    /// the unlock is worth what it adds over the known spell of its kind plus its initiative and nothing else:
+    /// all of Guard, Slam less the Strike it would be cast instead of, and nothing of Jab.
     /// </summary>
     [Theory]
     [InlineData(2)]
@@ -756,11 +841,11 @@ public sealed class ActionScorerTests
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20, actorEnergy: energy);
 
-        foreach (var (tier, spell) in new[] { (TestContent.JabPack, TestContent.Strike), (TestContent.GuardPack, TestContent.Guard), (TestContent.SlamPack, TestContent.Slam) })
-        {
-            (scorer.PurchaseValue(board[0], tier, board) - scorer.Estimate(board[0], spell, board))
-                .ShouldBe(Tempo, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
-        }
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe(Tempo, 1e-9);
+        (scorer.PurchaseValue(board[0], TestContent.GuardPack, board) - scorer.Estimate(board[0], TestContent.Guard, board))
+            .ShouldBe(Tempo, 1e-9, $"Guard costs at most {energy}, so its cost is already in the estimate");
+        (scorer.PurchaseValue(board[0], TestContent.SlamPack, board) - scorer.Estimate(board[0], TestContent.Slam, board))
+            .ShouldBe(Tempo - StrikeCast, 1e-9, $"Slam costs at most {energy}, so its cost is already in the estimate");
     }
 
     /// <summary>
@@ -789,7 +874,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20, actorEnergy: 1);
 
         (scorer.PurchaseValue(board[0], TestContent.SlamPack, board) - scorer.Estimate(board[0], TestContent.Slam, board))
-            .ShouldBe(Tempo - PerEnergy, 1e-9);
+            .ShouldBe(Tempo - PerEnergy - StrikeCast, 1e-9);
     }
 
     /// <summary>
