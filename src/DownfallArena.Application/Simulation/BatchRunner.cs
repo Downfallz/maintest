@@ -31,10 +31,8 @@ public sealed class BatchRunner(
     IAgentFactory agents,
     int? maxParallelism = null)
 {
-    private readonly int _maxParallelism = maxParallelism ?? Environment.ProcessorCount;
-
     /// <summary>How many matches this runner plays at once, for a caller that runs several batches under one bound.</summary>
-    public int MaxParallelism => _maxParallelism;
+    public int MaxParallelism { get; } = maxParallelism ?? Environment.ProcessorCount;
 
     public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
         RunAsync(scenario, null, cancellationToken);
@@ -67,7 +65,7 @@ public sealed class BatchRunner(
         var sequential = recorder is { AllowsParallelMatches: false };
         var parallel = new ParallelOptions
         {
-            MaxDegreeOfParallelism = sequential ? 1 : _maxParallelism,
+            MaxDegreeOfParallelism = sequential ? 1 : MaxParallelism,
             CancellationToken = cancellationToken,
         };
         await Parallel.ForEachAsync(
