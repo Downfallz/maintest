@@ -213,7 +213,9 @@ internal sealed class GameSession
         IReadOnlyList<int> seeds = explicitSeeds ?? [.. Enumerable.Range(0, _options.Matches).Select(index => unchecked(_seed + index))];
         var seedSet = explicitSeeds is null ? $"seeds {_seed} to {unchecked(_seed + seeds.Count - 1)}" : $"seed set {SeedSets.IdentityOf(seeds)} from '{_options.Seeds}'";
         Console.WriteLine($"Evaluating {_options.Player1} against {_options.Player2} on {seeds.Count} seeds, mirrored ({seedSet})...");
-        var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds, explicitSeeds is null ? _seed : SeedSets.IdentityOf(seeds));
+        // One line a match as it ends, so a long evaluation can be read before it is over.
+        var progress = new ConsoleProgress(now => Console.WriteLine($"  {now.Played} of {now.Total} played: A {now.WinsOfA}, B {now.WinsOfB}, draws {now.Draws}"));
+        var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds, explicitSeeds is null ? _seed : SeedSets.IdentityOf(seeds), progress);
         EvaluationConsole.Print(evaluation, Console.Out);
 
         var fullPath = Path.GetFullPath(_options.Output);
@@ -267,10 +269,20 @@ internal sealed class GameSession
     }
 
     /// <summary>The stamp's base seed is the identity of the seed set when the seeds came from a file, so a repeated run stamps the same.</summary>
-    private Task<EvaluationResult> EvaluateAsync(AgentSpec agentA, AgentSpec agentB, IReadOnlyList<int> seeds, int baseSeed) =>
+    private Task<EvaluationResult> EvaluateAsync(AgentSpec agentA, AgentSpec agentB, IReadOnlyList<int> seeds, int baseSeed, IProgress<EvaluationProgress>? progress = null) =>
         _services.GetRequiredService<EvaluationRunner>().RunAsync(
             new EvaluationScenario { RuleSet = _rules, Roster = Roster, AgentA = agentA, AgentB = agentB, Seeds = seeds },
-            RunStamp.Create(EngineVersion.Current, _resources, _rules, _schema, agentA.ToString(), agentB.ToString(), baseSeed));
+            RunStamp.Create(EngineVersion.Current, _resources, _rules, _schema, agentA.ToString(), agentB.ToString(), baseSeed),
+            progress);
+
+    /// <summary>
+    /// Writes each report on the thread the match ended on, which the evaluation already serializes, so the
+    /// lines come out in count order; <see cref="Progress{T}"/> would hand them to the thread pool in any order.
+    /// </summary>
+    private sealed class ConsoleProgress(Action<EvaluationProgress> write) : IProgress<EvaluationProgress>
+    {
+        public void Report(EvaluationProgress value) => write(value);
+    }
 
     // The trace recorder is resolved only when it was registered: with --traces 0 nothing listens, so asking
     // the container for it would throw rather than record nothing.

@@ -37,7 +37,15 @@ public sealed class BatchRunner(
         RunAsync(scenario, null, cancellationToken);
 
     /// <summary>Plays the scenario and, when a recorder is given, records every match through it.</summary>
-    public async Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, CancellationToken cancellationToken = default)
+    public Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, CancellationToken cancellationToken = default) =>
+        RunAsync(scenario, recorder, played: null, cancellationToken);
+
+    /// <summary>
+    /// Plays the scenario, records every match through the recorder when one is given, and hands each result to
+    /// <paramref name="played"/> as its match ends, in the order they end: from several threads at once when the
+    /// matches run side by side, so a caller that counts must count safely.
+    /// </summary>
+    public async Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, Action<MatchResult>? played, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentOutOfRangeException.ThrowIfNegative(scenario.Matches);
@@ -61,7 +69,11 @@ public sealed class BatchRunner(
         await Parallel.ForEachAsync(
             Enumerable.Range(0, scenario.Matches),
             parallel,
-            async (index, token) => results[index] = await PlayOneAsync(scenario, index, recorder, token));
+            async (index, token) =>
+            {
+                results[index] = await PlayOneAsync(scenario, index, recorder, token);
+                played?.Invoke(results[index]);
+            });
 
         return new BatchResult(scenario, results, SimulationSummary.Of(results));
     }
