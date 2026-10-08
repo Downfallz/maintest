@@ -389,6 +389,30 @@ def test_a_step_that_moves_nothing_is_reported(tmp_path: Path) -> None:
     assert any("moves nothing" in problem for problem in validate(knobs, content(**{"spell:attack": ATTACK})))
 
 
+def test_a_critical_chance_band_off_the_twentieths_is_reported(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"] = [
+        {"path": "/criticalChance", "min": 0.17, "max": 0.8, "step": 0.05}
+    ]
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}))
+
+    assert any("twentieths" in problem and "band's min" in problem for problem in problems)
+
+
+def test_a_critical_chance_band_on_the_twentieths_is_accepted(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"] = [
+        {"path": "/criticalChance", "min": 0.15, "max": 0.8, "step": 0.05}
+    ]
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}))
+
+    assert not any("twentieths" in problem for problem in problems)
+
+
 def test_a_target_reading_an_evaluation_nobody_plays_is_reported(tmp_path: Path) -> None:
     """The score would quietly be short a term, and only a ten-minute search would have said so."""
     document = knobs_json(

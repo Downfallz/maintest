@@ -119,7 +119,7 @@ test('a spell shows its value a round next to its tier, and the reader says what
   await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 6\.3 a round · Tier 2 attacks \d+\.\d–\d+\.\d$/);
   await page.locator('.spell-tile').click();
   const reading = page.locator('.value-reading');
-  await expect(reading.locator('summary')).toHaveText('Value 6.3 a round · 9.4 a cast');
+  await expect(reading.locator('summary')).toHaveText('Value 6.3 a round · 9.5 a cast');
   await reading.locator('summary').click();
   await expect(reading).toContainText('This one is inside that range.');
   await expect(reading).toContainText('Played matches decide balance');

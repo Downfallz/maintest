@@ -122,7 +122,7 @@ What is current, exactly:
   `9419f9`. **This document names every package and Spell by its current name**, also where it reports a
   reading or an event from before `9419f935`; the ids did not move, so the same row is found at any earlier
   hash under the name the plan's table gives. Quoted command outputs are read at `9419f935`.
-- **The Capstones of 2026-10-07, `49c96577`**
+- **The Capstones of 2026-10-07, `cedcfb61`**
   ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
   level-4 package that any of its level-3 packages opens, that teaches no Spell, pays +0 initiative, and gives
   a Passive: Titan is immune to Stun, Archmage gains 1 more Energy at every Upkeep, Apex adds 2 to every
@@ -137,7 +137,7 @@ What is current, exactly:
   moves the most Energy one Creature gains in a Round from 8 to 9, inside the overflow chit
   ([1.7](#17-the-energy-track-what-ends-it)), and Apex moves the largest direct hit from 11 to 13, which no
   rail reads ([3.3](#33-defense-two-rails-because-the-floor-is-applied-once)). Every count that reads
-  `data/Tiers/` is re-read at `49c96577`; the Spells did not change.
+  `data/Tiers/` is re-read at `cedcfb61`; the Spells did not change.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -182,8 +182,8 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
   One application is one token. A Stun that ends leaves its Creature immune to Stun for the next Round
   (ADR 0072).
 - A critical is a **die roll** and the catalogue will be authored onto the die's grid. The die is a **d20**
-  ([d20-criticals.md](d20-criticals.md), settled, not built); [Part 1.6](#16-dice) keeps what each candidate
-  cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
+  ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0100: every chance is a twentieth, by
+  rule); [Part 1.6](#16-dice) keeps what each candidate cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
 - Evolution buys **packages** (Tiers), two picks at Round 1 and every second Round after, and a package's
   prerequisites are the only rule for what a Creature may buy (ADR 0056). A Creature buys at most one
   package an opportunity, so the two picks go to two Creatures (ADR 0066).
@@ -280,7 +280,7 @@ What a Match actually consumes is smaller, and it is the number the open questio
 command below also gives the Base initiative ceiling that
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) uses. It grows every set of packages one
 Creature can own in 10 purchases, one package at a time, each bought only once its prerequisites are owned:
-every Tier of `prerequisites`, and one of `anyOf` when it names any (13,622 sets at `49c96577`, under a
+every Tier of `prerequisites`, and one of `anyOf` when it names any (13,622 sets at `cedcfb61`, under a
 second). Until 2026-10-07 it tried all 2^21 sets and read `prerequisites` alone; with the Capstones' any-of
 lists that would have sold a Capstone to a Creature owning nothing.
 
@@ -310,7 +310,7 @@ print('most Base initiative one Creature buys',f(bb,C))"
 # most Base initiative one Creature buys 30
 ```
 
-That output is read at `49c96577`, and it is the output of `e6f72578`: a Capstone pays +0 and teaches
+That output is read at `cedcfb61`, and it is the output of `e6f72578`: a Capstone pays +0 and teaches
 nothing, so a purchase spent on one adds to neither line. It was first read at `e6f72578`. At `813bb91b` the
 last two lines read 34 and 29, and at `4ab506fa` the
 last read 28: tune run 11's Warped +3 and Tyrant +3 moved it to 29. Since then the level-2 packages
@@ -426,7 +426,7 @@ rulebook; a Spell that authored one again would bring the face back, sized by th
 the token sheet. **VALUE** (content).
 
 **No Damage buff token**, by the same rule. ADR 0101 added the `DamageBuff` kind: it raises its holder's
-Damage bonus, for a number of Rounds or for good, and stacks. At `49c96577` no Spell authors one, so the
+Damage bonus, for a number of Rounds or for good, and stacks. At `cedcfb61` no Spell authors one, so the
 command above prints none and no cast can place one. A timed one would
 bring a face, sized by the same rule. **A permanent one has nowhere to go**: every other permanent Condition
 moves a rail and is discarded, and the creature board has no Damage bonus rail. A Spell that authored a
@@ -488,12 +488,15 @@ python3 -c "
 import json,glob,collections
 v=collections.Counter(json.load(open(p))['criticalChance'] for p in glob.glob('data/Spells/**/*.json',recursive=True))
 print(sorted(v.items()))"
-# [(0, 20), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 1), (0.4, 1), (0.45, 2), (0.5, 7),
+# at b41ba55e (2026-10-07, ADR 0100): [(0, 20), (0.2, 1), (0.3, 2), (0.35, 6), (0.4, 2), (0.45, 2), (0.5, 7), (0.55, 1), (0.75, 2), (0.8, 1)]
+# at 3c9eb083, before the snap: [(0, 20), (0.22, 1), (0.283, 1), (0.3, 1), (0.33, 3), (0.35, 3), (0.38, 1), (0.4, 1), (0.45, 2), (0.5, 7),
 #  (0.55, 1), (0.75, 1), (0.767, 1), (0.8, 1)]
 ```
 
-**24 of 44 Spells roll. 20 never touch a die.** Thirteen distinct chances are printed at content `3c9eb083`,
-and the die's grid has to carry them. It was 24 and 21 at `ad3e4d00`, until `basic_attack`, which printed 0,
+**24 of 44 Spells roll. 20 never touch a die.** Nine distinct chances are printed at content `b41ba55e`, every
+one a whole number of twentieths (ADR 0100, 2026-10-07), so the d20 carries them all and moves none. Thirteen
+were printed at content `3c9eb083`, and the die's grid had to carry them; the table below is that reading,
+kept because it is what chose the die. It was 24 and 21 at `ad3e4d00`, until `basic_attack`, which printed 0,
 left. It was 25 and 20 at `e6f72578`: `crazed_specter` printed 0.38 and prints 0 since 2026-10-05, and
 `tornado` keeps 0.38 on the list. The table below is a reading, not a
 constant — the maintainer is tuning, so re-run the command rather than trusting the cells. What each
@@ -543,13 +546,14 @@ until 2026-10-05, when `crazed_specter` lost its chance and its critical chance 
 One finding the maintainer owns before the snap is authored, not this document's to decide. A second, that
 `revenant_guards` printed 0.33 and had no critical chance knob, is gone: it prints 0 since 2026-10-04.
 
-- **Eight of the 25 knobbed Spells are off their own declared grid**: their printed value is not their
-  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `tornado` 0.38,
+- **Eight of the 25 knobbed Spells were off their own declared grid** until 2026-10-07, when ADR 0100 snapped
+  the seven and moved the eighth's band floor to 0.15; `check-knobs` refuses a band off the twentieths since.
+  Their printed value was not their band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `tornado` 0.38,
   `engulfing_flames`, `noxious_cure` and `toxic_waves` at 0.33, `rejuvenate` 0.22, and `lightning_bolt` 0.5
   in a band of `[0.17, 0.8]`. Seven of the eight sit on a band whose `min` **is** a multiple of 0.05, so a d20
   snap fixes them outright; they are the 7 the d20 moves. The eighth is `lightning_bolt`, whose 0.5 is already
-  a twentieth, but whose band floor 0.17 is the only knob band off its own grid, and it leaves the band itself
-  to be moved: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
+  a twentieth, but whose band floor 0.17 was the only knob band off its own grid, and it left the band itself
+  to be moved, to 0.15: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
   the ninth until 2026-10-05.
 
 ### 1.7 The energy track: what ends it
@@ -1005,7 +1009,7 @@ past the printed end. The rails are not reprinted here: since ADR 0076 no Creatu
 so the end the rule gives no longer blanks anything a Creature can reach, and whether the rule or the rail
 should move is Part 6, question 16.
 
-**At `49c96577` the largest direct hit is 13**: Apex adds 2 to every direct hit its owner deals, before the
+**At `cedcfb61` the largest direct hit is 13**: Apex adds 2 to every direct hit its owner deals, before the
 critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 13, 26 on a critical. The rule would read 26
 (28 at the knob's `max` of 3). It moves nothing for the reason above: no Creature's Defense reads above 10.
 The command below reads the printed Damage, which is the Spell card's; the bonus is the package card's.
@@ -1027,7 +1031,7 @@ A Player makes 2 picks at each of 10 opportunities: 20 purchases. A Creature buy
 opportunity (ADR 0066), so **10 of them at most land on one Creature**. The 24 packages' bonuses sum to 50,
 the three Capstones paying +0, but a Creature cannot own all 24 with 10 picks, and a level-3 package cannot be
 bought without the two below it. A Capstone only spends a purchase that a paying package could have used, so
-the ceiling did not move with them (re-read at `49c96577`). The 10 prerequisite-closed packages that pay the
+the ceiling did not move with them (re-read at `cedcfb61`). The 10 prerequisite-closed packages that pay the
 most pay 30, and four sets tie there. All four hold
 Predator, Deathmarked, Deathstalker, Blighted and Blightweaver (18), and Warped and Stormborn (5);
 the last three are Ethereal, Transcendent and Cataclysm; Parasite, Soulreaver and Cataclysm; Brute, Frenzied
@@ -1228,7 +1232,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 ## Part 4. The packages as an object
 
 A pick buys a Tier: a named package of Spells with a level, the Tiers it requires, and one initiative bonus
-(ADR 0056). 24 are enabled at `49c96577`: 3 at level 1, 9 at level 2, 9 at level 3, two Spells each, and 3
+(ADR 0056). 24 are enabled at `cedcfb61`: 3 at level 1, 9 at level 2, 9 at level 3, two Spells each, and 3
 at level 4, the Capstones, which teach none and give a Passive instead (ADR 0101). Each level-2 package
 requires one level-1 package and each level-3 package requires one level-2 package; each Capstone requires
 **one of** its family's three level-3 packages. So the 24 form three families of eight, one opened by each
@@ -1300,13 +1304,13 @@ What each piece of the layout answers:
 | Choice | Why |
 | --- | --- |
 | The top band, two lines: name, then `level N . +B initiative` | A Creature's cards lie in a stagger, each covering the last but for its band ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The band alone must say which Tier it is, how deep, and what it paid. |
-| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; the three Capstones have one at `49c96577` (no package did at `e6f72578`; `Ethereal` did before). |
+| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). A bonus of 0 prints `+0`, not a blank; the three Capstones have one at `cedcfb61` (no package did at `e6f72578`; `Ethereal` did before). |
 | A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature, and, for a card that prints `Needs one of:`, at least one of the Tiers listed under it (ADR 0101). A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0101). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `49c96577` (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`;
+The measurement, at `cedcfb61` (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`;
 the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa` too, where it was Tyrant's
 `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one Spell):
 
@@ -1399,7 +1403,7 @@ differs on the head (Part 6, question 10).
 | `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, `anyOf` and `passive` included (ADR 0101), and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
 | `data/dst/game.schema.sha256` | The content hash | The stamp every sheet carries, and the identity of the deck. |
 | A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks, the Round track's spaces and the Energy rail's end. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
-| The die | A d20 ([d20-criticals.md](d20-criticals.md), settled) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. The rule that every chance is a twentieth is settled and not built, so today some cards print a percentage alone. |
+| The die | A d20 ([d20-criticals.md](d20-criticals.md), built as ADR 0100) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. Every chance is a twentieth by rule since 2026-10-07, and the data builder refuses one that is not, so every card that rolls prints its threshold and the omission is never taken. |
 
 Cards are **generated, never transcribed**. A tuning pass reprints the deck rather than invalidating it, which
 is the whole reason phase 3 specifies a generator instead of a table of card texts.
@@ -1410,7 +1414,7 @@ is the whole reason phase 3 specifies a generator instead of a table of card tex
   teaches - repeated 2 x team size times, laid out 9 to a sheet. 44 faces and 264 cards, 30 sheets, the last
   holding 3, at `3c9eb083` (45 faces and 270 cards at `e6f72578` and `ad3e4d00`).
 - **Package card sheets**: every enabled Tier's face, repeated 2 x team size times, 9 to a sheet. 24 faces
-  and 144 cards, 16 sheets, at `49c96577` (21 faces, 126 cards and 14 sheets at `e6f72578`).
+  and 144 cards, 16 sheets, at `cedcfb61` (21 faces, 126 cards and 14 sheets at `e6f72578`).
 - **Speed card sheets**: the Quick face and the Standard face of [2.6](#26-the-speed-card), each repeated 2 x
   team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
   but the hash.
@@ -1510,14 +1514,14 @@ answered elsewhere, question 14 by the maintainer, and each says so. Question 16
 
 ### 1. Which die
 
-**Answered: a d20** ([d20-criticals.md](d20-criticals.md), settled, not built), for the reason in
+**Answered: a d20** ([d20-criticals.md](d20-criticals.md), built on 2026-10-07 as ADR 0100), for the reason in
 [1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 25 Spells,
 d10 and d20, and the d20 is the finer of the two: it moves 7 of the 24 Spells that roll where the d10 moves
 14 (8 of 25 and 15 at `e6f72578`), its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
-second use on the same die, the Roll-off. The question stays here for what is left with it:
-`lightning_bolt`'s knob band starts at 0.17, so its own grid contains no multiple of 0.05. That is a content
-change with a journal entry and a new hash. (`revenant_guards`, which printed a chance with no critical
-chance knob, prints 0 since 2026-10-04.)
+second use on the same die, the Roll-off. Nothing is left with it: `lightning_bolt`'s knob band started at
+0.17, so its own grid contained no multiple of 0.05, and that content change landed with the snap on
+2026-10-07, the floor at 0.15, with its journal entry and the hash `b41ba55e`. (`revenant_guards`, which
+printed a chance with no critical chance knob, prints 0 since 2026-10-04.)
 
 ### 2. The deck's copy count
 
@@ -1834,7 +1838,7 @@ it (PR #245 and the content of 2026-10-04). translation.md has rows for all of t
 
 ## What this document does not decide
 
-- The die. It is a d20, settled in [d20-criticals.md](d20-criticals.md), not here
+- The die. It is a d20, settled in [d20-criticals.md](d20-criticals.md) and built as ADR 0100, not here
   ([Part 6](#part-6-open-questions), question 1).
 - The evolution rules. A package, its prerequisites, its bonus and the schedule are ADR 0056 and the content
   in `data/Tiers/`; this document counts what they need and changes none of them.

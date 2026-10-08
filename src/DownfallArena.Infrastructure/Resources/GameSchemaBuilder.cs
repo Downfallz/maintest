@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -54,6 +55,9 @@ public static class GameSchemaBuilder
         ThrowIfAny(problems);
 
         schema = DisabledContent.Remove(schema, notes, problems);
+        ThrowIfAny(problems);
+
+        CheckTheDie(schema, problems);
         ThrowIfAny(problems);
 
         schema = Versioned(schema);
@@ -335,6 +339,35 @@ public static class GameSchemaBuilder
 
         return items;
     }
+
+    /// <summary>
+    /// The die's grid (ADR 0100): a Spell's critical chance is a whole number of twentieths, and a Creature's own
+    /// is zero, so that the threshold a card prints is the whole chance a d20 rolls against. Read once the
+    /// disabled content has left, because a Spell out of the build prints no card.
+    /// </summary>
+    private static void CheckTheDie(GameSchema schema, List<string> problems)
+    {
+        foreach (var spell in schema.Spells.Where(spell => !IsTwentieth(spell.CriticalChance)))
+        {
+            problems.Add(
+                $"spell '{spell.Id}': a critical chance of {Chance(spell.CriticalChance)} is not a whole number of twentieths, "
+                + $"so no d20 threshold prints it (ADR 0100); the nearest is {Chance(NearestTwentieth(spell.CriticalChance))}.");
+        }
+
+        foreach (var creature in schema.Creatures.Where(creature => creature.BaseCriticalChance != 0))
+        {
+            problems.Add(
+                $"creature '{creature.Id}': a base critical chance of {Chance(creature.BaseCriticalChance)} is refused; a Creature's own "
+                + "chance is zero, so that the chance a card prints is the whole chance rolled (ADR 0042, ADR 0100).");
+        }
+    }
+
+    private static bool IsTwentieth(double chance) => Math.Abs((chance * 20) - Math.Round(chance * 20)) < 1e-9;
+
+    /// <summary>To the nearest twentieth, a tie rounding up: <c>Math.Round</c> would send 0.025 to 0, not 0.05.</summary>
+    private static double NearestTwentieth(double chance) => Math.Floor((chance * 20) + 0.5) / 20;
+
+    private static string Chance(double chance) => chance.ToString("0.###", CultureInfo.InvariantCulture);
 
     private static void ThrowIfAny(List<string> problems)
     {

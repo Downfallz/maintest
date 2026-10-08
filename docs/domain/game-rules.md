@@ -39,7 +39,9 @@ listed in [spells.md](spells.md).
   spell's targeting spec fully (count, duplicates, origin, existence, death) against the board as it stands,
   any failure blocks the action, and the action resolves as soon as its targets are confirmed (ADR 0083). A
   creature that cannot act when its slot comes up -- dead, stunned, unable to pay or to cast, or with no legal
-  target -- is revealed with no targets and fizzles at no cost, without its owner being asked. The critical roll adds the creature's and the spell's chances and multiplies what the cast
+  target -- is revealed with no targets and fizzles at no cost, without its owner being asked. The critical roll adds the creature's and the spell's chances (every spell's chance is a whole number of
+  twentieths and a creature's own is zero, so the chance a card prints is the whole chance a d20 rolls
+  against, ADR 0100) and multiplies what the cast
   puts on a target's health now -- damage and a direct heal (ADR 0033) -- floored; damage is then reduced by
   the target's total defense, floor zero. A lasting effect, an effect on the caster and energy are not
   multiplied. The energy cost is spent, instant

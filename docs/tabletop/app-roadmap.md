@@ -202,12 +202,12 @@ authored side and includes documents a build prunes
 (`src/DownfallArena.Infrastructure/Resources/DisabledContent.cs:24-25`). The app must print the catalogue the
 Match is playing, which is why this is a new projection and not a reuse of that route.
 
-**The d20 threshold.** [d20-criticals.md](d20-criticals.md) is landing now. A card prints `d20: 14+` rather
-than `35%`. The threshold is computed **server-side**, in the projection: it is `21 - 20 x chance`, and the
+**The d20 threshold.** [d20-criticals.md](d20-criticals.md) landed on 2026-10-07 (ADR 0100): every chance is
+a twentieth, so every card that rolls prints `d20: 14+` beside its `35%`. The threshold is computed **server-side**, in the projection: it is `21 - 20 x chance`, and the
 chance is the one the engine rolls against
-(`src/DownfallArena.Domain/Matches/Rules/Combat/ResolutionRules.cs:56`). Until the rule lands, the projection
-prints the chance as a percentage and omits the threshold line — the same fallback components.md:778 gives
-the print generator.
+(`src/DownfallArena.Domain/Matches/Rules/Combat/ResolutionRules.cs:56`). A chance off the twentieths would
+print as a percentage with no threshold line, the same fallback components.md:778 gives the print generator;
+since ADR 0100 the data builder refuses such a chance, so the fallback is kept and never taken.
 
 One thing to write down while writing it, because it is the app's only dependency on the d20 rule: the printed
 chance is the whole chance **only because a Creature carries none**. The engine still sums the Creature's

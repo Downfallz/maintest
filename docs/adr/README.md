@@ -105,4 +105,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0097](0097-the-learning-loop-measures-one-format.md) | Measure one format, and let the others be played | Proposed |
 | [0098](0098-a-defense-debuff-is-priced-by-the-damage-it-lets-through.md) | A defense debuff is priced by the damage it lets through | Proposed |
 | [0099](0099-a-win-on-the-board-outranks-any-score.md) | Let a win on the board outrank any score | Proposed |
+| [0100](0100-every-critical-chance-is-a-twentieth.md) | Every critical chance is a twentieth | Proposed |
 | [0101](0101-a-capstone-package-buys-a-passive-not-a-spell.md) | Let a capstone package buy a passive instead of a spell | Proposed |
