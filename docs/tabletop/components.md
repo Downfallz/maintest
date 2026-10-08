@@ -8,7 +8,7 @@ day again, to a 20-Round cap the same day once more, and to Stun immunity the sa
 amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Blood
 Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
-ADR 0101, 2026-10-07). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -34,6 +34,10 @@ What is current, exactly:
   ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the Health rail
   ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach of the
   Bleed supply ([1.4](#14-condition-tokens)); no piece count moved.
+- **Toxic Mend strips 3 Defense, not 2** (journal, 2026-10-08). The -2 Defense debuff face was shared by
+  `noxious_cure` and `psycho_rush`'s caster debuff; `noxious_cure` now needs a -3 face of its own (6 x 3),
+  and `psycho_rush` keeps 6 at -2 ([1.4](#14-condition-tokens)). The Condition tokens go from 168 to **174**
+  and the token pieces from 266 to **272**, which the same 2 token sheets hold; the paper stays 57.
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -220,7 +224,7 @@ Totals first, then the derivation of each line.
 | Package cards | 144 |
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
-| Condition tokens | 168 in 6 kinds |
+| Condition tokens | 174 in 6 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
@@ -228,7 +232,7 @@ Totals first, then the derivation of each line.
 
 The paper: 30 sheets of Spell cards, 16 of package cards and 2 of Speed cards (9 a sheet; the last Spell
 sheet and the second Speed sheet hold 3 each), 3 of creature boards (2 a sheet), 2 player mats, 1 for the
-initiative and round tracks, 2 of tokens (266 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
+initiative and round tracks, 2 of tokens (272 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
 of player aids. 57. Card backs would add 48 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -395,10 +399,10 @@ for s in S:
 | Defense debuff | -3 | 18 | `noxious_cure` on up to 3 allies; 6 x 3 (-2 until 2026-10-08) | **VALUE** |
 | Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
-| **Total** | | **168** | | |
+| **Total** | | **174** | | |
 
 Every timed amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 1,
-2 or 3; a timed Defense buff is 1, 3 or 4; every timed Defense debuff is 2; an Initiative debuff is 3 or 5.
+2 or 3; a timed Defense buff is 1, 3 or 4; a timed Defense debuff is 2 or 3; an Initiative debuff is 3 or 5.
 No Spell places an Initiative buff. The one permanent Defense debuff, `infectious_blast`'s -3, moves the rail
 and takes no token. That is why a token set this small covers a 44-Spell catalogue. At `813bb91b` this table
 read 144 in 7 kinds; what moved it to 150 in 6 is content alone. The Bleed faces are re-dealt (6, 18, 18, 6
@@ -1774,7 +1778,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.8 Reveal in timeline order, bind targets at reveal | **No component since ADR 0083.** It was 18 target markers and the `Targeted by` row. The reveal and the resolution are one turn of `Activation` now, so the Spell card turned face up in its intent slot and the targets named aloud are the whole of it, [3.8](#38-how-a-cast-is-declared-and-resolved-in-components). translation.md keeps the row as it measured it, with a note. |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 168 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 174 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
