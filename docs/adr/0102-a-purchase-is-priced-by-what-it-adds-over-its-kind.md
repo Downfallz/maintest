@@ -14,29 +14,34 @@ in 551 (ADR 0101), and nearly half the packages bought from round 7 were never c
 ## Decision
 
 A spell in a package is priced by what it adds over the best spell of its kind -- offensive, defensive or
-passive -- that the buyer already knows, both read on the board as it stands. The gain is taken term by term,
-as an energy gift's unlock is (ADR 0096). A spell that adds nothing is worth nothing, and the package is then
-worth its initiative and its passive. The comparison stays within a kind because a guard is cast on the rounds
-a hit is not: measured against the buyer's hits, every defense would read as nothing beside them.
+passive -- that the buyer already knows. Both are read alike on the board as it stands: the same estimate,
+with the unlocks its leftover purse pays for next round (ADR 0096), less the part of its cost the buyer cannot
+cover (ADR 0026). What the two spells do is compared term by term, and a spell that adds nothing is worth
+nothing: the package is then worth its initiative and its passive. The energy term is not compared, because it
+is the purse the purchase leaves and what it costs, not what the cast does. A spell that adds something, or
+that moves energy at all, carries its own energy term. The comparison stays within a kind because a guard is
+cast on the rounds a hit is not: measured against the buyer's hits, every defense would read as nothing.
 
 ## Consequences
 
-- Good: Greedy is much stronger. Against Greedy as it was, it won 89.7 % of 400 matches on the benchmark seeds
-  and 88.7 % of 800 on the confirmation seeds.
+- Good: Greedy is much stronger. Against Greedy as it was, it won 91.0 % of 400 matches on the benchmark seeds
+  and 89.2 % of 800 on the confirmation seeds.
 - Good: a capstone is bought when it adds more than another spell. Greedy mirrors bought 236 capstones in 100
-  matches (Titan 170, Archmage 54, Apex 12) instead of 145, almost all of them Archmage.
+  matches (Titan 176, Archmage 31, Apex 29) instead of 145, almost all of them Archmage.
+- Good: the share of packages bought from round 7 and never cast falls from 45 % to 38 %.
 - Bad: every heuristic agent buys differently, and so do the agents built on it: the lookahead's guesses and
   every weights file. Those weights were fitted under the whole-cast pricing and are not refitted here. The
-  benchmark digest changes on all 400 matches.
-- Bad: Greedy's mirror runs longer, 15.3 rounds against 9.5, just above the 10 to 15 band (ADR 0068). 10 of the
+  benchmark digest changes on 396 of the 400 matches.
+- Bad: Greedy's mirror runs longer, 15.1 rounds against 9.5, just above the 10 to 15 band (ADR 0068). 10 of the
   400 benchmark matches reach the round cap.
-- Neutral: the share of packages bought from round 7 and never cast barely moves (44 % against 45 %). When no
-  spell adds anything, a pick still buys initiative.
 
 ## Alternatives considered
 
-- What a spell adds over every spell the buyer knows: it won 62.7 % and 65.4 % against the whole-cast pricing,
-  and lost 10.5 % and 11.8 % against this one. A defense measured against the buyer's best hit reads as
+- Comparing the energy term too: it won only 52.7 % and 51.9 % against the whole-cast pricing. A dearer spell
+  then pays its whole cost difference against a cheap known one, and Greedy bought almost nothing but
+  initiative and Archmage.
+- What a spell adds over every spell the buyer knows: it won 62.7 % and 65.4 %, and lost about 89 % of matches
+  head to head against the comparison by kind. Measured against the buyer's best hit, a defense reads as
   nothing, so Greedy stopped buying defense.
 - Pricing the passives higher instead: a capstone priced at double made Greedy no stronger (ADR 0101,
   journal 2026-10-08). The capstones were not underpriced; the spells beside them were overpriced.

@@ -707,6 +707,57 @@ public sealed class ActionScorerTests
         scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe(scorer.Estimate(board[0], TestContent.Guard, board), 1e-9);
     }
 
+    /// <summary>
+    /// Both sides of the comparison are read alike (ADR 0102). Jab does what Strike does, and either one cast now
+    /// leaves the purse that pays for Bulwark, a four-energy guard, next round: so Jab adds nothing, though its
+    /// own reading credits that unlock. Read with the unlock on Jab's side only, it would be worth a Bulwark it
+    /// does not add.
+    /// </summary>
+    [Fact]
+    public void A_spell_and_the_one_it_is_measured_against_are_read_with_the_same_unlocks()
+    {
+        var bulwark = Spell.Create(
+            SpellId.Parse("spell:bulwark:v1"), "Bulwark", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(4), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Self), [DefenseBuff.Of(5, Duration.OfRounds(2))]);
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, bulwark],
+                [.. TestContent.Resources.TalentTrees],
+                [.. TestContent.Resources.Tiers]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorEnergy: 2, actorSpells: [TestContent.Strike, bulwark.Id]);
+        scorer.EstimateTerms(board[0], TestContent.Jab, board).ShouldNotBe(
+            scorer.WithoutUnlocks.EstimateTerms(board[0], TestContent.Jab, board), "the case is about a reading that credits the unlock");
+
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe(Tempo, 1e-9);
+    }
+
+    /// <summary>
+    /// A spell that gives only energy adds that energy: Rest, the one defensive spell on offer to a creature that
+    /// knows none, is worth the two energy it gives, which the comparison must not drop.
+    /// </summary>
+    [Fact]
+    public void A_spell_that_only_gives_energy_is_worth_the_energy_it_gives()
+    {
+        var restPack = TierId.Parse("tier:rest:v1");
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, Rest],
+                [.. TestContent.Resources.TalentTrees],
+                [.. TestContent.Resources.Tiers, Tier.Create(restPack, "Rest", 1, [], [Rest.Id], Initiative.Of(1))]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default with { Initiative = 0 });
+        var board = Board(enemyHealth: 20);
+
+        scorer.PurchaseValue(board[0], restPack, board).ShouldBeGreaterThan(0);
+        scorer.PurchaseValue(board[0], restPack, board).ShouldBe(scorer.Estimate(board[0], Rest.Id, board), 1e-9);
+    }
+
     /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
     private const double StrikeCast = (0.95 * 3) + (0.05 * 6);
 

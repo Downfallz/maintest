@@ -79,8 +79,9 @@ Decisions:
   seating out ([the round played out](#the-round-played-out)), the random agent shuffles each tie and the
   exploring one does at its rate.
 - **Evolution**: for each unlockable spell, what it adds over the best spell of its kind (offensive,
-  defensive, passive) the creature already knows, each read as if the creature knew it and could afford it on
-  the current board, and nothing when it adds nothing (ADR 0102); plus the package's passive, priced by the casts
+  defensive, passive) the creature already knows, both read alike, as if the creature knew them and could
+  afford them on the current board, and nothing when it adds nothing; its own energy term rides along when it
+  adds something or moves energy (ADR 0102); plus the package's passive, priced by the casts
   it changes over three rounds (ADR 0101); plus `w.initiative` x the order the package's initiative bonus buys
   for the rest of the match -- the living enemies it takes the buyer past, a tie counting half (ADR 0017,
   priced by ADR 0018, read as order by ADR 0088) -- minus `w.energy` x
