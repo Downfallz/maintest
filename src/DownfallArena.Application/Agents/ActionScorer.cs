@@ -341,7 +341,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <list type="bullet">
     /// <item>energy at upkeep as the energy itself and the better spell it pays for every round, the way an
     /// energy gift is priced by the spell it unlocks (ADR 0096);</item>
-    /// <item>a damage bonus as every hit of the buyer's best damaging spell raised by it, one cast a round;</item>
+    /// <item>a damage bonus as the best cast it makes, every hit of it raised, against the best cast without it,
+    /// one cast a round;</item>
     /// <item>stun immunity as the buyer's best cast kept, once for each living enemy that knows a stun and half
     /// for one that could buy one at its next pick, up to one a round: a stun costs its caster a cast, so no
     /// enemy is read landing one every round.</item>
@@ -365,7 +366,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         if (passive.DamageBonus > 0)
         {
-            terms += ScoreTerms.Zero with { Damage = passive.DamageBonus * Hits(actor, kit, creatures) * PermanentConditionRounds };
+            terms += PermanentConditionRounds * Raised(actor, kit, creatures, passive.DamageBonus);
         }
 
         if (passive.StunImmunity && !actor.Passive.StunImmunity)
@@ -414,31 +415,50 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>
-    /// The direct hits one cast of the creature's best damaging spell lands: each damage effect once on each
-    /// enemy it can reach, which is what a damage bonus raises, and a critical one counted at the multiplier,
-    /// since the bonus is added before it.
+    /// What a damage bonus adds to one round's cast: the best of the creature's spells once each raised by the
+    /// bonus on every hit it lands -- each damage effect once on each enemy it can reach, a critical one counted
+    /// at the multiplier, since the bonus is added before it -- against the best of them as they are. A spell
+    /// that hits several enemies gains the bonus on each, and may become the cast worth making.
     /// </summary>
-    private double Hits(CreatureSnapshot actor, List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, IReadOnlyList<CreatureSnapshot> creatures)
+    private ScoreTerms Raised(CreatureSnapshot actor, List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, IReadOnlyList<CreatureSnapshot> creatures, int bonus)
     {
         var enemies = creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive);
-        var best = 0.0;
-        var bestScore = double.NegativeInfinity;
-        foreach (var (id, _, _, score, _) in kit)
+        var now = ScoreTerms.Zero;
+        var nowScore = 0.0;
+        var raised = ScoreTerms.Zero;
+        var raisedScore = 0.0;
+        foreach (var (id, spellTerms, _, score, _) in kit)
         {
-            var spell = resources.GetSpell(id);
-            var damages = spell.Effects.Count(effect => effect is DamageEffect);
-            if (damages == 0 || spell.Targeting.Origin != TargetOrigin.Enemy || score <= bestScore)
+            if (score > nowScore)
             {
-                continue;
+                now = spellTerms;
+                nowScore = score;
             }
 
-            var reached = spell.Targeting.Scope == TargetScope.SingleTarget ? 1 : Math.Min(spell.Targeting.MaxTargets ?? enemies, enemies);
+            var spell = resources.GetSpell(id);
+            var damages = spell.Effects.Count(effect => effect is DamageEffect);
+            var reached = Reached(spell.Targeting, enemies);
             var chance = actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
-            best = damages * reached * (1 + (chance * (rules.CriticalMultiplier - 1)));
-            bestScore = score;
+            var gained = spellTerms + (ScoreTerms.Zero with { Damage = bonus * damages * reached * (1 + (chance * (rules.CriticalMultiplier - 1))) });
+            if (weights.Apply(gained) > raisedScore)
+            {
+                raised = gained;
+                raisedScore = weights.Apply(gained);
+            }
         }
 
-        return best;
+        return raised + (-1 * now);
+    }
+
+    /// <summary>How many enemies one cast of a spell targeting so reaches, out of <paramref name="enemies"/> living.</summary>
+    private static int Reached(TargetingSpec targeting, int enemies)
+    {
+        if (targeting.Origin != TargetOrigin.Enemy)
+        {
+            return 0;
+        }
+
+        return targeting.Scope == TargetScope.SingleTarget ? 1 : Math.Min(targeting.MaxTargets ?? enemies, enemies);
     }
 
     /// <summary>

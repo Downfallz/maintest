@@ -1250,11 +1250,22 @@ public sealed class ActionScorerTests
 
         var terms = Capstones.PurchaseTerms(board[0], Focused, board);
 
-        terms.ShouldBe(ScoreTerms.Zero with
-        {
-            Energy = ActionScorer.PermanentConditionRounds,
-            Damage = 2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds,
-        });
+        terms.Energy.ShouldBe(ActionScorer.PermanentConditionRounds, 1e-9);
+        terms.Damage.ShouldBe(2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds, 1e-9);
+    }
+
+    /// <summary>
+    /// A damage bonus raises every hit of a cast, so a spell that reaches two enemies gains it twice: Slam hits
+    /// both enemies on the board.
+    /// </summary>
+    [Fact]
+    public void A_damage_bonus_is_priced_on_every_enemy_the_best_cast_reaches()
+    {
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
+
+        var terms = Capstones.PurchaseTerms(board[0], Focused, board);
+
+        terms.Damage.ShouldBe(2 * 2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds, 1e-9);
     }
 
     /// <summary>

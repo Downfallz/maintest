@@ -29,8 +29,10 @@ Apex. Merged onto the critical chances in twentieths (`b41ba55e`), the content i
   4 times. Now each passive is priced over the same three rounds by what it does to casts:
   - Archmage: the energy, plus the dearer spell it lets the creature cast more often, read as the share of
     rounds a creature saving for a spell can pay for it.
-  - Apex: the bonus on every hit of the creature's best damaging spell, a critical one counted at the
-    multiplier.
+  - Apex: the best cast once every hit of it is raised by the bonus, against the best cast without it, a
+    critical hit counted at the multiplier. A spell that reaches three enemies gains the bonus three times, and
+    may become the cast worth making. Against the first reading, the bonus on the hits of the best spell as it
+    stands, this scored 51.0 % of 400 and 50.7 % of 800 matches.
   - Titan: the creature's cast, kept once for each living enemy that knows a stun, and half a cast for each
     one that could buy a package teaching a stun at its next pick. Counting those enemies moved Greedy's own
     play by nothing measurable: 50.5 % of 400 and 51.0 % of 800 matches against the rule without them. It is
@@ -49,6 +51,16 @@ Apex. Merged onto the critical chances in twentieths (`b41ba55e`), the content i
   the capstones are worth, and the Archmage knob (1 to 2) cannot go lower.
 - **Pricing Apex higher does not help Greedy.** Greedy with Apex's bonus priced at double lost to plain Greedy:
   49.5 % of 400 and 49.2 % of 800 matches. Its pricing stays as it is.
+- **Three rounds is about what a passive gets.** When a capstone is first in reach in a Greedy mirror, 2 to 4
+  rounds are left at the median (3.5 to 5 on average), the purchase's own round included. A reading of the
+  rounds left off the board, each side's health over the other's damage a round, read 2.3 at the median: it
+  ignores a side's damage falling as its creatures die, its heals and its defense. It priced the capstones
+  lower, and Greedy bought 83 instead of 145, so the fixed three rounds stay.
+- **Why Apex stays rare under Greedy.** The Predator family's damage spells reach one enemy, bar Throwing Star,
+  Night Raid and Infectious Blast, so Apex is about 2 damage a round, 6.3 over three rounds. A level-1 package
+  of another family is read at about 13 on the same boards: Greedy prices a package at its best spell's whole
+  cast, not at what it adds over the spells the creature already casts. That is the lever left, and it moves
+  every purchase Greedy makes, not only the capstones.
 - **Open.** A reading of whether capstones decide matches (family win share, comebacks) needs more than 40
   lookahead matches. The passive amounts are knobs (Archmage 1 to 2, Apex 1 to 3) for the next tuning pass.
 
