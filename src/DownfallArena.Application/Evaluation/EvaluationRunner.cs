@@ -12,7 +12,16 @@ namespace DownfallArena.Application.Evaluation;
 /// </summary>
 public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? combat = null)
 {
-    public async Task<EvaluationResult> RunAsync(EvaluationScenario scenario, RunStamp stamp, CancellationToken cancellationToken = default)
+    public Task<EvaluationResult> RunAsync(EvaluationScenario scenario, RunStamp stamp, CancellationToken cancellationToken = default) =>
+        RunAsync(scenario, stamp, progress: null, cancellationToken);
+
+    /// <summary>
+    /// Plays the evaluation and reports to <paramref name="progress"/> each time a match ends. Both seatings
+    /// are played side by side rather than one after the other, so that what has been played at any moment is
+    /// spread over both seats: a run read halfway is then a smaller sample of the same question, not the first
+    /// seat alone. Every match draws from its own seed, so the scheduling changes nothing a match does.
+    /// </summary>
+    public async Task<EvaluationResult> RunAsync(EvaluationScenario scenario, RunStamp stamp, IProgress<EvaluationProgress>? progress, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentNullException.ThrowIfNull(stamp);
@@ -20,8 +29,14 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
 
         var aFirst = new IntentCounter();
         var bFirst = new IntentCounter();
-        var first = await batches.RunAsync(Batch(scenario, scenario.AgentA, scenario.AgentB), aFirst, cancellationToken);
-        var second = await batches.RunAsync(Batch(scenario, scenario.AgentB, scenario.AgentA), bFirst, cancellationToken);
+        var tally = new ProgressTally(scenario.Seeds.Count * 2, progress);
+        // One bound for both seatings: two batches each allowed the runner's parallelism would play twice that.
+        using var gate = new SemaphoreSlim(batches.MaxParallelism);
+        var firstRun = batches.RunAsync(Batch(scenario, scenario.AgentA, scenario.AgentB), aFirst, result => tally.Played(result, PlayerSlot.Player1), gate, cancellationToken);
+        var secondRun = batches.RunAsync(Batch(scenario, scenario.AgentB, scenario.AgentA), bFirst, result => tally.Played(result, PlayerSlot.Player2), gate, cancellationToken);
+        await Task.WhenAll(firstRun, secondRun);
+        var first = await firstRun;
+        var second = await secondRun;
         var pairs = scenario.Seeds.Select((seed, index) => new SeedPair(seed, first.Results[index], second.Results[index])).ToList();
         var all = first.Results.Concat(second.Results).ToList();
 
@@ -105,6 +120,45 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                 .ThenByDescending(outcome => outcome.Sides)
                 .ThenBy(outcome => outcome.Spell, StringComparer.Ordinal),
         ];
+    }
+
+    /// <summary>The running count an evaluation reports, kept safe for matches that end on several threads.</summary>
+    private sealed class ProgressTally(int total, IProgress<EvaluationProgress>? progress)
+    {
+        private readonly Lock _gate = new();
+        private int _played;
+        private int _winsOfA;
+        private int _winsOfB;
+        private int _draws;
+
+        /// <summary>One match ended, with agent A in <paramref name="seatOfA"/>.</summary>
+        public void Played(MatchResult result, PlayerSlot seatOfA)
+        {
+            if (progress is null)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _played++;
+                if (result.Outcome.IsDraw)
+                {
+                    _draws++;
+                }
+                else if (result.Outcome.Winner == seatOfA)
+                {
+                    _winsOfA++;
+                }
+                else
+                {
+                    _winsOfB++;
+                }
+
+                // Reported under the same lock the count was taken under, so reports arrive in count order.
+                progress.Report(new EvaluationProgress(_played, total, _winsOfA, _winsOfB, _draws));
+            }
+        }
     }
 
     /// <summary>One spell's running totals while the sides are walked.</summary>

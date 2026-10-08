@@ -74,6 +74,32 @@ public sealed class EvaluationRunnerTests
         first.Entries.Count.ShouldBe(6);
     }
 
+    /// <summary>
+    /// A long evaluation reports each match as it ends, so it can be read before it is over: one report a match,
+    /// counted in order, the last one the whole evaluation.
+    /// </summary>
+    [Fact]
+    public async Task Every_match_is_reported_as_it_ends_and_the_last_report_is_the_whole_evaluation()
+    {
+        var store = new MatchStore();
+        var runner = new EvaluationRunner(Handlers.Runner(store.Workflow, new TestRandomFactory()));
+        var reports = new List<EvaluationProgress>();
+
+        var evaluation = await runner.RunAsync(Scenario([1, 2, 3]), Stamp, new Recorded(reports), TestContext.Current.CancellationToken);
+
+        reports.Select(report => report.Played).ShouldBe([1, 2, 3, 4, 5, 6]);
+        reports.ShouldAllBe(report => report.Total == 6 && report.WinsOfA + report.WinsOfB + report.Draws == report.Played);
+        reports[^1].WinsOfA.ShouldBe(evaluation.AgentA.Wins);
+        reports[^1].WinsOfB.ShouldBe(evaluation.AgentB.Wins);
+        reports[^1].Draws.ShouldBe(evaluation.Draws);
+    }
+
+    /// <summary>Keeps every report on the thread that made it, as the console does.</summary>
+    private sealed class Recorded(List<EvaluationProgress> reports) : IProgress<EvaluationProgress>
+    {
+        public void Report(EvaluationProgress value) => reports.Add(value);
+    }
+
     [Fact]
     public async Task Invalid_inputs_are_rejected()
     {

@@ -189,6 +189,62 @@ public sealed class BatchRunnerTests
         }
     }
 
+    /// <summary>
+    /// Batches run at the same time under one gate play no more matches at once than the gate allows, however
+    /// many each is allowed alone: an evaluation plays its two seatings side by side under the runner's bound.
+    /// </summary>
+    [Fact]
+    public async Task Batches_that_share_a_gate_play_no_more_matches_at_once_than_it_allows()
+    {
+        var runner = Runner(new MatchStore(), new TestRandomFactory(), maxParallelism: 4);
+        var watcher = new InFlight();
+        using var gate = new SemaphoreSlim(2);
+
+        await Task.WhenAll(
+            runner.RunAsync(Scenario(6, 1), watcher, played: null, gate, TestContext.Current.CancellationToken),
+            runner.RunAsync(Scenario(6, 100), watcher, played: null, gate, TestContext.Current.CancellationToken));
+
+        watcher.Most.ShouldBeLessThanOrEqualTo(2);
+        watcher.Played.ShouldBe(12);
+    }
+
+    /// <summary>Counts the matches between their first agent and their end, and the most at once.</summary>
+    private sealed class InFlight : IMatchRecorder
+    {
+        private readonly Lock _gate = new();
+        private readonly HashSet<MatchId> _started = [];
+        private int _now;
+
+        public int Most { get; private set; }
+
+        public int Played { get; private set; }
+
+        public IPlayerAgent Wrap(MatchId matchId, IPlayerAgent agent)
+        {
+            lock (_gate)
+            {
+                if (_started.Add(matchId))
+                {
+                    _now++;
+                    Most = Math.Max(Most, _now);
+                }
+            }
+
+            return agent;
+        }
+
+        public Task MatchPlayedAsync(MatchId matchId, int seed, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                _now--;
+                Played++;
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
     private static SimulationScenario Scenario(int matches, int baseSeed) => new()
     {
         RuleSet = MatchStore.TwoOnTwo(roundCap: 8),
