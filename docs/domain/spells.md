@@ -63,7 +63,7 @@ Each is a rule to decide, not an oversight:
 - ~~**Debuffing a stat other than initiative.**~~ Recovered: ADR 0035 added `DefenseDebuff` and `EnergyDrain`,
   the mirrors of the buff and the gain, and all four spells that were waiting on them say what they meant.
   Soul Devourer tears **2 energy** out of what it hits again, beside the hit and the lifesteal. Infectious
-  Blast is the **permanent -2 defense on the whole enemy line** it always was. Noxious Cure shreds **2 defense
+  Blast is the **permanent -2 defense on the whole enemy line** it always was. Noxious Cure shreds **3 defense
   for a round** off the allies it heals, so the cure is noxious to the cured in the stat legacy charged.
   Psycho Rush is the fourth, above. The substitution they shared — whatever a spell meant to take, it took
   tempo instead — had been used three times, and once ADR 0032 priced a point of initiative at 2.1 it was not
@@ -153,7 +153,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 | Momentum † | Assassin | Offensive | 0 | — | Enemy | Damage 2; caster: EnergyGain 2 |
 | Death Squad | Assassin | Defensive | 2 | — | up to 3 allies | EnergyGain 1 |
 | Mortal Wound | Assassin | Offensive | 3 | 0.5 | Enemy | Damage 4, Bleed 4/r for 2r |
-| Noxious Cure | Trickster | Defensive | 2 | 0.33 | up to 3 allies | Heal 3 |
+| Noxious Cure | Trickster | Defensive | 2 | 0.33 | up to 3 allies | Heal 6, DefenseDebuff 3 (1r) |
 | Tranquilizer Dart | Trickster | Offensive | 3 | — | Enemy | Damage 3, Stun 1r |
 | Infectious Blast | Trickster | Offensive | 1 | — | up to 3 enemies | InitiativeDebuff 2 (2r) |
 | Lightning Bolt | Sorcerer | Offensive | 2 | 0.667 | Enemy | Damage 3 |

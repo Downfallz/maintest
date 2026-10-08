@@ -391,7 +391,8 @@ for s in S:
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half and `bone_ward`, one ally, and `shield_bash` on its own caster; one each; 6 x 1 | **VALUE** |
 | Defense buff | +4 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
-| Defense debuff | -2 | 18 | `noxious_cure` on up to 3 allies; 6 x 3. `psycho_rush`'s caster debuff is the same face. | **VALUE** |
+| Defense debuff | -2 | 6 | `psycho_rush`'s caster debuff; 6 x 1 | **VALUE** |
+| Defense debuff | -3 | 18 | `noxious_cure` on up to 3 allies; 6 x 3 (-2 until 2026-10-08) | **VALUE** |
 | Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
 | **Total** | | **168** | | |
@@ -1816,7 +1817,7 @@ keeps both verdicts: `crazed_specter` still **needs a component**, now four Blee
 | `infectious_blast` | Nothing. -3 on up to 3 enemy Defense debuff rails, permanent |
 | `summon_minions` | Up to 3 Bleeds 2 (3 rounds), one of the longest Durations in the game |
 | `revenant_guards` | Up to 3 Defense buffs +4 (2 rounds) and 1 Bleed 4 on its own caster; +3 on up to 3 rails, permanent. The heaviest cast, with `crazed_specter`: 4 tokens and 3 rail moves |
-| `noxious_cure` | Up to 3 Defense debuffs -2 |
+| `noxious_cure` | Up to 3 Defense debuffs -3 |
 | `crazed_specter` | Up to 3 Bleeds 4 (2 rounds), and 1 Bleed 4 on its own caster (1 round); up to 3 Health rail moves for its `Damage 4`. 4 tokens and 3 rail moves, as heavy as `revenant_guards`. Until 2026-10-05 it placed the caster's Bleed alone |
 | `toxic_waves` | Up to 3 Bleeds 3 (2 rounds) |
 
