@@ -54,6 +54,9 @@ amounts are knobs, so a tuning pass can move them.
   trained before it is refused.
 - Neutral: a Tier must still require one exactly a level below it; for a capstone that is any of its family's
   level-3 Tiers.
+- Neutral: the heuristic agents price a passive by the casts it changes over the rounds a permanent condition
+  is read for, not by its raw amount, which read every capstone at a fraction of a spell package and left
+  them unbought (journal, 2026-10-08).
 
 ## Alternatives considered
 

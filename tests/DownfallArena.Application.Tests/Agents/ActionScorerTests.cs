@@ -1224,42 +1224,66 @@ public sealed class ActionScorerTests
     /// Two capstones (ADR 0100) behind Slam's package, teaching nothing: one immune to stun, one with an energy
     /// at upkeep and two damage on every hit.
     /// </summary>
-    private static ActionScorer Capstones { get; } = new(
-        GameResources.Create(
-            "test",
-            [.. TestContent.Resources.Creatures],
-            [.. TestContent.Resources.Spells],
-            [.. TestContent.Resources.TalentTrees],
-            [
-                .. TestContent.Resources.Tiers,
-                Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
-                Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
-            ]),
-        MatchStore.TwoOnTwo(),
-        ScoringWeights.Default);
+    private static GameResources CapstoneContent { get; } = GameResources.Create(
+        "test",
+        [.. TestContent.Resources.Creatures],
+        [.. TestContent.Resources.Spells],
+        [.. TestContent.Resources.TalentTrees],
+        [
+            .. TestContent.Resources.Tiers,
+            Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
+            Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
+        ]);
+
+    private static ActionScorer Capstones { get; } = new(CapstoneContent, MatchStore.TwoOnTwo(), ScoringWeights.Default);
 
     /// <summary>
-    /// A passive is priced over the rounds a permanent condition is read for (ADR 0100): an energy at every upkeep
-    /// as that much energy, two damage on every hit as one hit a round raised by two.
+    /// A passive is priced by the casts it changes over the rounds a permanent condition is read for (ADR 0100).
+    /// Two damage on every hit raises each hit of Strike, the actor's one damaging spell: one hit a cast, and a
+    /// critical one counted at the multiplier. The energy at upkeep is the energy itself here: Strike costs
+    /// nothing, so a richer purse pays for nothing better.
     /// </summary>
     [Fact]
-    public void A_capstone_is_priced_on_its_passive_over_the_rounds_a_permanent_condition_is_read_for()
+    public void A_capstone_is_priced_by_the_casts_its_passive_changes()
     {
         var board = Board(enemyHealth: 20);
 
         var terms = Capstones.PurchaseTerms(board[0], Focused, board);
 
-        terms.ShouldBe(ScoreTerms.Zero with { Energy = ActionScorer.PermanentConditionRounds, Damage = 2 * ActionScorer.PermanentConditionRounds });
+        terms.ShouldBe(ScoreTerms.Zero with
+        {
+            Energy = ActionScorer.PermanentConditionRounds,
+            Damage = 2 * (1 + (0.05 * (2.0 - 1))) * ActionScorer.PermanentConditionRounds,
+        });
     }
 
-    /// <summary>Stun immunity is a stun a round prevented, for each living enemy that knows one to land.</summary>
+    /// <summary>
+    /// The energy at upkeep that lets a creature cast its dear spell every round instead of saving for it: at
+    /// one energy a round Slam is cast every second round, at two every round, and the half a round more of Slam
+    /// it buys is priced on top of the energy.
+    /// </summary>
     [Fact]
-    public void Stun_immunity_is_priced_by_the_enemies_that_know_a_stun()
+    public void Energy_at_upkeep_is_priced_by_the_dearer_spell_it_sustains()
+    {
+        var poor = new ActionScorer(CapstoneContent, RuleSet.Create(2, 1, 2, 30, 2.0), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Slam]);
+
+        var terms = poor.PurchaseTerms(board[0], Focused, board);
+
+        terms.Stun.ShouldBeGreaterThan(0, "half a round more of Slam is half a stun more a round");
+    }
+
+    /// <summary>
+    /// Stun immunity is the actor's cast kept, once for each living enemy that knows a stun: here Strike's
+    /// expected damage, the actor's one spell.
+    /// </summary>
+    [Fact]
+    public void Stun_immunity_is_priced_by_the_cast_each_stunning_enemy_would_take()
     {
         var board = Board(enemyHealth: 20);
         board[1] = board[1] with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]) };
 
-        Capstones.PurchaseTerms(board[0], Steadfast, board).Stun.ShouldBe(1);
+        Capstones.PurchaseTerms(board[0], Steadfast, board).Damage.ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }
 
     /// <summary>Against enemies that cannot stun, immunity prevents nothing and is worth nothing.</summary>

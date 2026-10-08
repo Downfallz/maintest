@@ -329,22 +329,94 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>
-    /// What a package's passive is worth to its buyer (ADR 0100), priced over the rounds a permanent condition is
-    /// read for, the way the condition it stands in for is: energy at upkeep as the energy it gives, a damage
-    /// bonus as one hit a round raised by it, and stun immunity as one stun prevented for each living enemy that
-    /// knows one, up to one a round: a stun costs its caster a cast, so no enemy is read landing one every round.
+    /// What a package's passive is worth to its buyer (ADR 0100), over the rounds a permanent condition is read
+    /// for, each priced by the casts it changes, so that it weighs against a spell package's one cast:
+    /// <list type="bullet">
+    /// <item>energy at upkeep as the energy itself and the better spell it pays for every round, the way an
+    /// energy gift is priced by the spell it unlocks (ADR 0096);</item>
+    /// <item>a damage bonus as every hit of the buyer's best damaging spell raised by it, one cast a round;</item>
+    /// <item>stun immunity as the buyer's best cast kept, once for each living enemy that knows a stun, up to
+    /// one a round: a stun costs its caster a cast, so no enemy is read landing one every round.</item>
+    /// </list>
     /// </summary>
     private ScoreTerms PassiveTerms(CreatureSnapshot actor, Passive passive, IReadOnlyList<CreatureSnapshot> creatures)
     {
-        var stunners = passive.StunImmunity && !actor.Passive.StunImmunity
-            ? creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive && creature.KnownSpells.Any(spell => resources.GetSpell(spell).Effects.Any(effect => effect is Stun)))
-            : 0;
-        return ScoreTerms.Zero with
+        if (!passive.GivesAnything())
         {
-            Energy = passive.UpkeepEnergy * PermanentConditionRounds,
-            Damage = passive.DamageBonus * PermanentConditionRounds,
-            Stun = Math.Min(stunners, PermanentConditionRounds),
-        };
+            return ScoreTerms.Zero;
+        }
+
+        var kit = Spells(actor, creatures);
+        var terms = ScoreTerms.Zero;
+        if (passive.UpkeepEnergy > 0)
+        {
+            var upkeep = Upkeep(actor);
+            var unlocked = Gained(Sustained(kit, upkeep + passive.UpkeepEnergy), Sustained(kit, upkeep));
+            terms += (PermanentConditionRounds * unlocked) with { Energy = passive.UpkeepEnergy * PermanentConditionRounds };
+        }
+
+        if (passive.DamageBonus > 0)
+        {
+            terms += ScoreTerms.Zero with { Damage = passive.DamageBonus * Hits(actor, kit, creatures) * PermanentConditionRounds };
+        }
+
+        if (passive.StunImmunity && !actor.Passive.StunImmunity)
+        {
+            var stunners = creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive && creature.KnownSpells.Any(spell => resources.GetSpell(spell).Effects.Any(effect => effect is Stun)));
+            terms += Math.Min(stunners, PermanentConditionRounds) * Affordable(kit, Upkeep(actor)).Terms;
+        }
+
+        return terms;
+    }
+
+    /// <summary>
+    /// What a creature casts a round, on average, when every round gives it <paramref name="upkeep"/> energy and
+    /// it saves for what it casts: a spell dearer than a round's energy is cast that share of the rounds, and
+    /// the creature casts whichever spell is worth the most read so.
+    /// </summary>
+    private static ScoreTerms Sustained(List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, int upkeep)
+    {
+        var best = ScoreTerms.Zero;
+        var bestScore = 0.0;
+        foreach (var (_, terms, cost, score, _) in kit)
+        {
+            var share = cost <= upkeep ? 1.0 : (double)upkeep / cost;
+            if (share * score > bestScore)
+            {
+                best = share * terms;
+                bestScore = share * score;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// The direct hits one cast of the creature's best damaging spell lands: each damage effect once on each
+    /// enemy it can reach, which is what a damage bonus raises, and a critical one counted at the multiplier,
+    /// since the bonus is added before it.
+    /// </summary>
+    private double Hits(CreatureSnapshot actor, List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var enemies = creatures.Count(creature => creature.Owner != actor.Owner && creature.IsAlive);
+        var best = 0.0;
+        var bestScore = double.NegativeInfinity;
+        foreach (var (id, _, _, score, _) in kit)
+        {
+            var spell = resources.GetSpell(id);
+            var damages = spell.Effects.Count(effect => effect is DamageEffect);
+            if (damages == 0 || spell.Targeting.Origin != TargetOrigin.Enemy || score <= bestScore)
+            {
+                continue;
+            }
+
+            var reached = spell.Targeting.Scope == TargetScope.SingleTarget ? 1 : Math.Min(spell.Targeting.MaxTargets ?? enemies, enemies);
+            var chance = actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+            best = damages * reached * (1 + (chance * (rules.CriticalMultiplier - 1)));
+            bestScore = score;
+        }
+
+        return best;
     }
 
     /// <summary>

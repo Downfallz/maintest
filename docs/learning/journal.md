@@ -22,11 +22,26 @@ Content `9419f935` before, `49c96577` after: the same catalogue plus Titan, Arch
     never cast afterwards: 241 of 503 (48 %) before, 212 of 462 (46 %) after. The capstones take picks that
     were mostly never-cast level-2 and level-3 packages, and the share of dead spell picks barely moves.
   - Match length: 12.95 rounds before, 12.80 after (sd 4.4, 40 matches: no difference this can read).
-- **Greedy hardly buys them.** In 100 Greedy mirrors a capstone was within reach 551 times and bought 4 times.
-  Greedy prices a new spell at its whole value rather than at what it adds over the spells the creature
-  already has, and a passive at three rounds of what it gives, so the spell nearly always wins. The lookahead
-  plays the purchase out and is the bot people play against at the table. The benchmark digest, Greedy against
-  itself, changed 8 of 400 matches (11.27 rounds against 11.265).
+- **Greedy prices a passive by the casts it changes.** At first Greedy priced a passive as three rounds of
+  its raw amount: Archmage at 0.9, Apex at 6, Titan at 1.5 on average. A level-1 package of another family was
+  worth about 13 on the same boards. So in 100 Greedy mirrors a capstone was within reach 551 times and bought
+  4 times. Now each passive is priced over the same three rounds by what it does to casts:
+  - Archmage: the energy, plus the dearer spell it lets the creature cast more often, read as the share of
+    rounds a creature saving for a spell can pay for it.
+  - Apex: the bonus on every hit of the creature's best damaging spell, a critical one counted at the
+    multiplier.
+  - Titan: the creature's cast, kept once for each living enemy that knows a stun.
+
+  The same 100 mirrors then bought 145 capstones: Archmage 142, Apex 2, Titan 1. Matches went from 11.2 rounds
+  to 10.05.
+- **The new pricing is not weaker.** Greedy with it beat Greedy with the old pricing 52.7 % of 400 matches on
+  the benchmark seeds (49.7 to 55.8) and 52.2 % of 800 on the confirmation seeds (50.2 to 54.3).
+- **But Greedy's matches get shorter.** The digest, Greedy against itself, changed 324 of 400 matches and now
+  averages 9.64 rounds against 11.27, below the 10 to 15 band (ADR 0068). Every Warped creature that closes a
+  line buys Archmage at round 7, and an energy more a round kills sooner. Apex and Titan stay rare under
+  Greedy: two damage on a single-target spell is about 6 over three rounds, and few enemies know a stun.
+  Lookahead-34 buys them the other way round (Apex 24, Titan 15, Archmage 4). The two bots disagree on what
+  the capstones are worth, and the Archmage knob (1 to 2) cannot go lower.
 - **Open.** A reading of whether capstones decide matches (family win share, comebacks) needs more than 40
   lookahead matches. The passive amounts are knobs (Archmage 1 to 2, Apex 1 to 3) for the next tuning pass.
 
