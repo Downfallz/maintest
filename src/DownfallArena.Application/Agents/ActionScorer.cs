@@ -822,7 +822,6 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>The reserve <see cref="SavingFor"/> read for a creature, and the board it read it on.</summary>
     private sealed record Saved(IReadOnlyList<CreatureSnapshot> Board, int Reserve);
 
-
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of
     /// <paramref name="poorer"/> does not. When it does not, the best spell either pays for is the same one and
