@@ -39,6 +39,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return (spells, [.. resources.Tiers.Where(tier => tier.Spells.Any(spells.Contains))]);
     });
 
+    /// <summary>
+    /// The most energy worth holding (ADR 0103): what the dearest spell in the catalogue costs. A point past it
+    /// pays for no cast, now or once a package is bought, so it is worth nothing.
+    /// </summary>
+    private readonly Lazy<int> _usefulEnergy = new(() => resources.Spells.Select(spell => spell.Stats.Cost.Value).DefaultIfEmpty(0).Max());
+
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
     /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
@@ -570,8 +576,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         terms += DefensiveTerms(actor, resolution, creatures, remaining, stillToAct);
         terms += NextPurse(actor, resolution, creatures, remaining[actor.Id]);
 
-        // What the actor keeps; what a spell hands out is priced per outcome above.
-        return terms with { Energy = terms.Energy + (actor.Energy.Value - resolution.EnergySpent.Value) };
+        // What the actor keeps; what a spell hands out is priced per outcome above. The actor's own purse,
+        // what it keeps and what the spell gives it back, is worth only as much of it as the dearest spell
+        // can spend (ADR 0103): energy hoarded past that pays for nothing.
+        var given = resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
+        var purse = actor.Energy.Value - resolution.EnergySpent.Value + given;
+        return terms with { Energy = terms.Energy - given + Math.Min(purse, _usefulEnergy.Value) };
     }
 
     private static CreatureSnapshot Target(CreatureId id, IReadOnlyList<CreatureSnapshot> creatures) => creatures.First(creature => creature.Id == id);

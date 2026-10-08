@@ -758,6 +758,35 @@ public sealed class ActionScorerTests
         scorer.PurchaseValue(board[0], restPack, board).ShouldBe(scorer.Estimate(board[0], Rest.Id, board), 1e-9);
     }
 
+    /// <summary>
+    /// Energy past what the dearest spell costs pays for no cast, so it is worth nothing (ADR 0103). Slam, at 2,
+    /// is the dearest spell here: a creature with nothing gains 2 energy by resting rather than striking for
+    /// free, and one that already holds 2 gains nothing by it, where it used to be worth the same 2 again.
+    /// </summary>
+    [Fact]
+    public void Energy_past_the_dearest_spell_is_worth_nothing()
+    {
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, Rest],
+                [.. TestContent.Resources.TalentTrees],
+                [.. TestContent.Resources.Tiers]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default).WithoutUnlocks;
+        double Gained(int energy)
+        {
+            var board = Board(enemyHealth: 20, actorEnergy: energy, actorSpells: [TestContent.Strike, Rest.Id]);
+            var rest = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Rest.Id), [One]), board, speed: Speed.Quick);
+            var strike = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, TestContent.Strike), [Three]), board, speed: Speed.Quick);
+            return rest.Energy - strike.Energy;
+        }
+
+        Gained(0).ShouldBe(2, 1e-9);
+        Gained(2).ShouldBe(0, 1e-9);
+    }
+
     /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
     private const double StrikeCast = (0.95 * 3) + (0.05 * 6);
 
