@@ -4,6 +4,7 @@ using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
@@ -248,6 +249,37 @@ public sealed class AdvanceTests
         bought.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldContain(Arena.Guard);
         board.Single(creature => creature.Id == Arena.Knight).KnownSpells.ShouldNotContain(Arena.Guard);
         board.Single(creature => creature.Id == Arena.Knight).AcquiredTiers.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// A hypothetical board holds a capstone's passive the way the match does (ADR 0100): the lookahead plays its
+    /// purchases out on boards bought here, so a passive missing from them would be priced at nothing.
+    /// </summary>
+    [Fact]
+    public void A_capstone_bought_on_a_board_gives_its_passive_on_that_board()
+    {
+        var capstone = TierId.Parse("tier:bulwark:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. Arena.Resources.Creatures],
+            [.. Arena.Resources.Spells],
+            [.. Arena.Resources.TalentTrees],
+            [
+                .. Arena.Resources.Tiers,
+                Tier.Create(capstone, "Bulwark", 3, [], [], Initiative.Of(0), [Arena.SlamPack], Passive.Of(stunImmunity: true, upkeepEnergy: 1, damageBonus: 2)),
+            ]);
+        var board = Arena.Snapshots(Arena.FourCreatures());
+        foreach (var tier in new[] { Arena.GuardPack, Arena.SlamPack, capstone })
+        {
+            board = Advance.Buy(board, [new EvolutionChoice(Arena.Knight, tier)], resources);
+        }
+
+        var knight = board.Single(creature => creature.Id == Arena.Knight);
+        var next = Advance.StartOfRound(board, resources, Table.TwoOnTwo());
+
+        knight.IsStunImmune.ShouldBeTrue();
+        knight.DamageBonus.ShouldBe(2);
+        next.Single(creature => creature.Id == Arena.Knight).Energy.ShouldBe(Energy.Of(knight.Energy.Value + 3));
     }
 
     [Fact]

@@ -314,6 +314,32 @@ public sealed class TierContentTests
             .Message.ShouldContain("unknown tier 'tier:nope:v1'");
     }
 
+    /// <summary>
+    /// One of the list is enough, so disabling one only narrows the way in: the capstone stays, opened by the
+    /// packages still enabled, rather than requiring one nothing can buy.
+    /// </summary>
+    [Fact]
+    public void Disabling_one_package_of_an_any_of_prerequisite_narrows_it()
+    {
+        using var content = Content()
+            .WithFile("Tiers/brute.v1.json", Opener)
+            .WithFile("Tiers/marauder.v1.json", Advanced)
+            .WithFile("Tiers/warmonger.v1.json", """
+                { "id": "tier:warmonger:v1", "name": "Warmonger", "level": 3, "prerequisites": ["tier:marauder:v1"], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """)
+            .WithFile("Tiers/ravager.v1.json", """
+                { "id": "tier:ravager:v1", "name": "Ravager", "level": 3, "prerequisites": ["tier:marauder:v1"], "spells": ["spell:guard"], "initiativeBonus": 1, "enabled": false }
+                """)
+            .WithFile("Tiers/titan.v1.json", """
+                { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1", "tier:ravager:v1"],
+                  "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true } }
+                """);
+
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
+
+        resources.GetTier(TierId.Parse("tier:titan:v1")).AnyOf.ShouldBe([TierId.Parse("tier:warmonger:v1")]);
+    }
+
     /// <summary>The empty gate a disabled list would leave opens the capstone to anyone, so it is refused instead.</summary>
     [Fact]
     public void Disabling_every_package_of_an_any_of_prerequisite_is_refused()

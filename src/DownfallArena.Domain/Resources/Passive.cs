@@ -5,11 +5,24 @@ namespace DownfallArena.Domain.Resources;
 /// bonus (ADR 0100): a closed set of standing properties the rules name, read from the packages a creature owns
 /// rather than stored on it.
 /// </summary>
-/// <param name="StunImmunity">The owner cannot be stunned.</param>
-/// <param name="UpkeepEnergy">Energy the owner gains at every upkeep, beside the rule set's own.</param>
-/// <param name="DamageBonus">Added to every direct hit the owner deals, as a damage buff held for good would be.</param>
-public sealed record Passive(bool StunImmunity, int UpkeepEnergy, int DamageBonus)
+public sealed record Passive
 {
+    private Passive(bool stunImmunity, int upkeepEnergy, int damageBonus)
+    {
+        StunImmunity = stunImmunity;
+        UpkeepEnergy = upkeepEnergy;
+        DamageBonus = damageBonus;
+    }
+
+    /// <summary>The owner cannot be stunned.</summary>
+    public bool StunImmunity { get; }
+
+    /// <summary>Energy the owner gains at every upkeep, beside the rule set's own.</summary>
+    public int UpkeepEnergy { get; }
+
+    /// <summary>Added to every direct hit the owner deals, as a damage buff held for good would be.</summary>
+    public int DamageBonus { get; }
+
     /// <summary>A package that gives nothing beyond its spells and its initiative bonus: every package before ADR 0100.</summary>
     public static Passive None { get; } = new(false, 0, 0);
 

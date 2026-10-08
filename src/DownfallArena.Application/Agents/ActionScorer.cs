@@ -255,8 +255,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return ScoreTerms.Zero;
         }
 
-        var purse = hypothetical.Energy.Value - spell.Stats.Cost.Value + rules.EnergyPerRound;
-        if (!Unlocks(hypothetical, rules.EnergyPerRound, purse))
+        var upkeep = Upkeep(actor);
+        var purse = hypothetical.Energy.Value - spell.Stats.Cost.Value + upkeep;
+        if (!Unlocks(hypothetical, upkeep, purse))
         {
             return found.Terms;
         }
@@ -267,7 +268,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             ? known
             : [.. known, (spellId, bought, spell.Stats.Cost.Value, weights.Apply(bought), 0)];
         var ordered = spells.OrderBy(entry => entry.Id.Value, StringComparer.Ordinal).ToList();
-        return found.Terms + Gained(Affordable(ordered, purse).Terms, Affordable(ordered, rules.EnergyPerRound).Terms);
+        return found.Terms + Gained(Affordable(ordered, purse).Terms, Affordable(ordered, upkeep).Terms);
     }
 
     /// <summary>
@@ -330,8 +331,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>
     /// What a package's passive is worth to its buyer (ADR 0100), priced over the rounds a permanent condition is
     /// read for, the way the condition it stands in for is: energy at upkeep as the energy it gives, a damage
-    /// bonus as one hit a round raised by it, and stun immunity as a stun a round prevented while a living enemy
-    /// knows one, which it would be worth to an enemy to land.
+    /// bonus as one hit a round raised by it, and stun immunity as one stun prevented for each living enemy that
+    /// knows one, up to one a round: a stun costs its caster a cast, so no enemy is read landing one every round.
     /// </summary>
     private ScoreTerms PassiveTerms(CreatureSnapshot actor, Passive passive, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -535,9 +536,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         var given = resolution.Outcomes.OfType<EnergyOutcome>().Where(outcome => outcome.Target == actor.Id).Sum(outcome => outcome.Amount);
-        var purse = actor.Energy.Value - resolution.EnergySpent.Value + given + rules.EnergyPerRound;
-        return Unlocks(actor, rules.EnergyPerRound, purse)
-            ? Gained(Affordable(actor, purse, creatures).Terms, Affordable(actor, rules.EnergyPerRound, creatures).Terms)
+        var upkeep = Upkeep(actor);
+        var purse = actor.Energy.Value - resolution.EnergySpent.Value + given + upkeep;
+        return Unlocks(actor, upkeep, purse)
+            ? Gained(Affordable(actor, purse, creatures).Terms, Affordable(actor, upkeep, creatures).Terms)
             : ScoreTerms.Zero;
     }
 
@@ -560,12 +562,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         var spends = !target.IsStunned && (stillToAct is null || stillToAct.Contains(target.Id));
-        if (!Unlocks(target, rules.EnergyPerRound, target.Energy.Value + rules.EnergyPerRound + amount + (spends ? MostGained(target) : 0)))
+        var upkeep = Upkeep(target);
+        if (!Unlocks(target, upkeep, target.Energy.Value + upkeep + amount + (spends ? MostGained(target) : 0)))
         {
             return ScoreTerms.Zero;
         }
 
-        var purse = target.Energy.Value - (spends ? Spent(target, creatures) : 0) + rules.EnergyPerRound;
+        var purse = target.Energy.Value - (spends ? Spent(target, creatures) : 0) + upkeep;
         return Unlocks(target, purse, purse + amount)
             ? -Sign(actor, target) * Gained(Affordable(target, purse + amount, creatures).Terms, Affordable(target, purse, creatures).Terms)
             : ScoreTerms.Zero;
@@ -596,6 +599,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             .Select(spell => spell.Effects.OfType<EnergyGain>().Sum(effect => effect.Amount))
             .DefaultIfEmpty(0)
             .Max();
+
+    /// <summary>The energy a creature gains at the next upkeep: the rule set's, and its packages' passive (ADR 0100).</summary>
+    private int Upkeep(CreatureSnapshot creature) => rules.EnergyPerRound + creature.Passive.UpkeepEnergy;
 
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of
@@ -782,7 +788,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
             // A hit a round raised by the amount (ADR 0100): the holder's own direct hits, which it lands on its enemies.
-            DamageBuff buff => ScoreTerms.Zero with { Damage = sign * buff.Amount * rounds },
+            DamageBuff buff => ScoreTerms.Zero with { Damage = -sign * buff.Amount * rounds },
             InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
             InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },
             DefenseDebuff debuff => DefenseDebuffTerms(sign, target, debuff.Amount, rounds, creatures, remaining),
@@ -932,7 +938,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
                 var chance = enemy.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
                 var expected = spell.Effects.OfType<DamageEffect>()
-                    .Sum(damage => (chance * Landed(damage.Amount, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(damage.Amount, 1.0, defense)));
+                    .Sum(damage => (chance * Landed(damage.Amount + enemy.DamageBonus, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(damage.Amount + enemy.DamageBonus, 1.0, defense)));
                 best = Math.Max(best, expected);
             }
 

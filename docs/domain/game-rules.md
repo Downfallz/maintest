@@ -87,7 +87,8 @@ listed in [spells.md](spells.md).
 ### Round sequence (ADR 0010)
 
 1. **Start of round**
-   1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes).
+   1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes), and
+      the energy its packages' Passives give at upkeep (ADR 0100).
    2. `OngoingEffects`: energy regeneration Conditions give their Energy, regeneration Conditions heal, then
       bleed Conditions deal their damage, which ignores Defense. Healing goes before the Bleeds (ADR 0019), so
       a Regeneration can carry a Creature through a Bleed that would otherwise have killed it. Energy goes
@@ -98,7 +99,8 @@ listed in [spells.md](spells.md).
       the picks the Rule set's schedule gives that Round: two, at Round 1 and every second Round after it
       (ADR 0056). A Round the schedule skips gives nobody a pick, and the sub-phase completes as it opens
       rather than asking anyone to pass. A Creature may buy a package it does not own and whose prerequisite
-      packages it does own, whatever family they belong to: **prerequisites are the only rule, so
+      packages it does own -- every one of them, and one of its any-of list when it names one (ADR 0100) --
+      whatever family they belong to: **prerequisites are the only rule, so
       multiclassing is free**. One pick buys the whole package -- every Spell in it at once, a Spell it
       already knows granted without complaint -- and **a Creature buys at most one package an opportunity**
       (ADR 0066): the two picks go to two different Creatures, so no Creature climbs two levels in one Round,
@@ -140,6 +142,8 @@ listed in [spells.md](spells.md).
       asked. A Team wiped by an action ends the Match there. Otherwise the sub-phase completes when the cursor
       reaches the end of the timeline. An action resolves in this order:
       - the energy cost is spent;
+      - the actor's Damage bonus -- its Passives' and its Damage buffs' -- is added to each damage it deals a
+        target, and to nothing it does to itself (ADR 0100);
       - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
         target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
@@ -149,7 +153,8 @@ listed in [spells.md](spells.md).
         floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
         there, except a Stun, which is ignored on a Creature already stunned or immune to stun (ADR 0072; it
-        restarted the running Stun under ADR 0041). The cast's other effects still land.
+        restarted the running Stun under ADR 0041), whether for a Round or for good through Titan (ADR 0100).
+        The cast's other effects still land.
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an
       application does not count. A living Creature whose Stun expires here is immune to stun through the next

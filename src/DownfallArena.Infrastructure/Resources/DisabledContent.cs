@@ -18,7 +18,8 @@ namespace DownfallArena.Infrastructure.Resources;
 /// package that lost a disabled spell is a package nobody authored, and a package whose prerequisite was
 /// disabled is a package with nothing in front of it -- which opens a descendant rather than closing it, the
 /// same failure as the empty <c>anyOf</c>. Both are problems, so disabling a spell or a tier that something
-/// still depends on has to be done deliberately rather than absorbed.
+/// still depends on has to be done deliberately rather than absorbed. A tier's own any-of list (ADR 0100) is the
+/// one exception: one of it is enough, so a disabled entry is dropped, and only a list left empty is a problem.
 /// </para>
 /// </summary>
 internal static class DisabledContent
@@ -74,8 +75,24 @@ internal static class DisabledContent
             ],
             Spells = [.. authored.Spells.Where(spell => spell.Enabled is not false).Select(spell => spell with { Enabled = null })],
             TalentTrees = [.. authored.TalentTrees.Where(tree => tree.Enabled is not false).Select(tree => Prune(tree, disabledSpells, notes, problems))],
-            Tiers = [.. authoredTiers.Where(tier => tier.Enabled is not false).Select(tier => tier with { Enabled = null })],
+            Tiers = [.. authoredTiers.Where(tier => tier.Enabled is not false).Select(tier => tier with { Enabled = null, AnyOf = Narrowed(tier.AnyOf, disabledTiers) })],
         };
+    }
+
+    /// <summary>
+    /// An any-of list without its disabled packages (ADR 0100). One of several is enough, so dropping one only
+    /// narrows the way in; a list every package of which is disabled is reported above rather than emptied,
+    /// because an empty list means no requirement.
+    /// </summary>
+    private static List<string>? Narrowed(IReadOnlyList<string>? anyOf, HashSet<string> disabledTiers)
+    {
+        if (anyOf is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var kept = anyOf.Where(id => !disabledTiers.Contains(id)).ToList();
+        return kept.Count > 0 ? kept : [.. anyOf];
     }
 
     private static void Note(ICollection<string>? notes, IEnumerable<string> disabled, string kind)

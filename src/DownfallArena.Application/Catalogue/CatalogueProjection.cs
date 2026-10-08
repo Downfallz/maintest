@@ -79,7 +79,7 @@ public static class CatalogueProjection
         [typeof(EnergyDrain)] = ("ϟ", true),
         [typeof(EnergyRegeneration)] = ("ϟ", false),
         [typeof(DefenseBuff)] = ("◇", false),
-        [typeof(DamageBuff)] = ("♥", false),
+        [typeof(DamageBuff)] = ("⚔", false),
         [typeof(DefenseDebuff)] = ("◇", true),
         [typeof(InitiativeBuff)] = ("↟", false),
         [typeof(InitiativeDebuff)] = ("↟", true),

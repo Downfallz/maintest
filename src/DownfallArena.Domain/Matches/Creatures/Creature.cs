@@ -217,8 +217,9 @@ public sealed class Creature : Entity<CreatureId>
             throw new ArgumentException($"Creature {snapshot.Id}'s snapshot disagrees with the conditions it carries.", nameof(snapshot));
         }
 
-        // The immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves a creature
-        // stunned and immune at once, immune while dead, or immune for longer than that.
+        // The round of immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves that
+        // round running on a stunned creature, a dead one, or for longer. The immunity a package gives for good
+        // (ADR 0100) is not this counter, and a creature stunned before it bought one stays stunned until it ends.
         if (snapshot.StunImmunityRounds is < 0 or > StunImmunityDuration
             || (snapshot.StunImmunityRounds > 0 && (snapshot.IsStunned || snapshot.IsDead)))
         {

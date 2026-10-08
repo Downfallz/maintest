@@ -464,6 +464,21 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// A damage buff is the holder's own hits raised (ADR 0100), so on the actor's side it counts for and on an
+    /// enemy against, one hit a round -- the sign the sweep above cannot see.
+    /// </summary>
+    [Fact]
+    public void A_damage_buff_counts_for_on_the_actor_and_against_on_an_enemy()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = Strike(One, Three);
+        var buff = DamageBuff.Of(2, Duration.OfRounds(2));
+
+        Scorer.Score(Cast(action, One, buff), board).ShouldBe(ScoringWeights.Default.Damage * 2 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, buff), board).ShouldBe(-ScoringWeights.Default.Damage * 2 * 2, 1e-9);
+    }
+
+    /// <summary>
     /// ADR 0039: a creature the actor's own team is already committed to killing before this action lands is
     /// worth nothing to hit. Without this the bot counted the kill twice — once for the ally that takes it,
     /// once for itself. Since ADR 0040 that is the whole of it: the waste is priced by the value the action

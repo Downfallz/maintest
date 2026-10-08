@@ -6,6 +6,6 @@ namespace DownfallArena.Application.Catalogue;
 /// domain gets its mark here, and the page draws it the day it is served.
 /// </summary>
 /// <param name="Kind">The effect's name on the wire, which is the domain record's.</param>
-/// <param name="Glyph">The mark of the stat the effect moves: ♥ health, ϟ energy, ◇ defense, ↟ initiative, ⊘ a stun.</param>
+/// <param name="Glyph">The mark of the stat the effect moves: ♥ health, ϟ energy, ◇ defense, ↟ initiative, ⊘ a stun, ⚔ the damage a holder deals.</param>
 /// <param name="Harmful">Whether its number is a loss for whoever carries it, which is the sign a chip prints.</param>
 public sealed record EffectCue(string Kind, string Glyph, bool Harmful);

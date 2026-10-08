@@ -72,7 +72,7 @@ public sealed class TierTests
     {
         var held = Passive.Of(stunImmunity: true, upkeepEnergy: 1).With(Passive.Of(upkeepEnergy: 2, damageBonus: 2)).With(Passive.Of(stunImmunity: true));
 
-        held.ShouldBe(new Passive(true, 3, 2));
+        held.ShouldBe(Passive.Of(stunImmunity: true, upkeepEnergy: 3, damageBonus: 2));
         Passive.None.GivesAnything().ShouldBeFalse();
         Should.Throw<ArgumentOutOfRangeException>(() => Passive.Of(upkeepEnergy: -1));
         Should.Throw<ArgumentOutOfRangeException>(() => Passive.Of(damageBonus: -1));
