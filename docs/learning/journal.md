@@ -18,24 +18,26 @@ first.
   twentieths stays on it, which is why this is a rule and not a chore: the thirds the legacy port carried
   (0.33, 0.667, 0.717) survived every tuning pass because a knob moves a value by its step from wherever it
   sits.
-- **The reading.** Content `9419f935` to `b41ba55e`, benchmark digest regenerated. Greedy against itself on
-  the 400 benchmark matches:
+- **The reading.** Content `9419f935` to `b41ba55e`, benchmark digest regenerated, both on the engine of
+  ADR 0099 (the digest of `9419f935` was regenerated for it the same day). Greedy against itself on the 400
+  benchmark matches:
 
   | | `9419f935` | `b41ba55e` |
   |---|---|---|
-  | Player 1 wins | 196 (49.0 %) | 188 (47.0 %) |
-  | rounds, mean | 11.44 | 11.34 |
-  | health left, mean | 37.4 | 38.1 |
+  | Player 1 wins | 192 (48.0 %) | 182 (45.5 %) |
+  | rounds, mean | 11.27 | 11.16 |
+  | health left, mean | 36.6 | 37.3 |
   | draws, round cap | 0, 0 | 0, 0 |
 
-  96 of the 400 outcomes move, 24 of them in the winner and 82 in the length, across 48 of the 200 seeds: a
+  94 of the 400 outcomes move, 26 of them in the winner and 76 in the length, across 47 of the 200 seeds: a
   chance moved by 0.02 flips the roll that lands between the old threshold and the new one, and a flipped roll
   replays the rest of the match. The moves are inside what a seed block moves on its own (2.6 on the
   objective at 200 seeds, `knobs.json`), which is what seven moves of 0.02 should read as. Nothing here is a
   balance result, and no Spell changes role.
 - **The four readings of the objective** (`score-content` on the benchmark seeds, `knobs.json`'s four
-  evaluations, before on a checkout of `9419f935` with the `check-knobs` of its day, since the new one refuses
-  the old band):
+  evaluations, both sides on the engine before ADR 0099 (`7b4c5ed`), so that the content alone is between
+  them; before on a checkout of `9419f935` with the `check-knobs` of its day, since the new one refuses the
+  old band):
 
   | reading | metric | `9419f935` | `b41ba55e` |
   |---|---|---|---|

@@ -32,8 +32,8 @@ the shared kernel holds no game rules (ADR 0007), and the engine rolls no die.
   catalogue projection and by the print generator with no change to either, and the rulebook's "not yet
   built" clause goes. A knob that starts on the grid and moves in twentieths stays on it, so the offset
   cannot come back.
-- Bad: a content change. Content `9419f935` becomes `b41ba55e`; on the 400 benchmark matches 96 outcomes
-  move, 24 of them in the winner, Player 1 from 196 wins to 188 and the mean length from 11.44 to 11.34
+- Bad: a content change. Content `9419f935` becomes `b41ba55e`; on the 400 benchmark matches 94 outcomes
+  move, 26 of them in the winner, Player 1 from 192 wins to 182 and the mean length from 11.27 to 11.16
   rounds (journal, 2026-10-07). Test content that gave its creature a chance of its own authors it on the
   card instead.
 - Neutral: a Creature that wants a chance of its own is a new ADR, and it moves the threshold out of the
