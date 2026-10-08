@@ -1,11 +1,11 @@
 {
-  "why": "The lookahead's own weights, searched with the lookahead playing every candidate (--kind lookahead), now that a search may run six hours (#280). The lookahead plays best on the built-in weights: 0.933 against Greedy and 0.933 against search-23 on 60 unseen seeds, where the set a local search found on 20 seeds lost 0.133 against Greedy (journal, 2026-10-04). So this one starts from the built-in weights, against Greedy and search-23, the two the lookahead was measured against, on learning/experiments/lookahead-seeds.json: the first 30 benchmark seeds, because the hold-out replays both agents on as many unseen seeds as the file holds, and on 200 it alone would take over three hours with the lookahead. 3 rounds of 5, seed 0, about 4.5 hours by the local rate of 15 seconds a seed against one opponent. No check opponent, for the same budget. What would make it a rung: a set that beats the built-in weights on the unseen seeds against both, and holds when replayed on 60 more.",
-  "initial": "none",
-  "opponent": "greedy,heuristic:learning/weights/search-23.json",
+  "why": "The lookahead's weights refitted under ADR 0102. Greedy now prices a purchase by what it adds over the spells of its kind, and lookahead-34, fitted against the Greedy before it, beats it only 50.7 % of 400 matches where it took 94.8 % (journal, 2026-10-08): the table's strong bot is no stronger than Greedy. So this rung starts from lookahead-34, the set the table seats, and plays every candidate against the new Greedy on the first 60 benchmark seeds (learning/experiments/lookahead-seeds-60.json), because against Greedy the lookahead now sits near even and 30 seeds would not tell one candidate from the next. search-23 stays in the panel on the first 10 seeds only, as a floor: the lookahead on lookahead-34 beats it 12 of 12 there, and it is three times dearer to play than Greedy (15.7 seconds a seed against 5.5 by the local rate). 4 rounds of 5, seed 0, about 3.5 hours by that rate, the hold-out included; search 34 ran in four fifths of its estimate. No check opponent, for the same budget. What would make it a rung: a set that beats lookahead-34 against Greedy on the 60 unseen seeds, without falling against search-23.",
+  "initial": "learning/weights/lookahead/lookahead-34.json",
+  "opponent": "greedy,heuristic:learning/weights/search-23.json@10",
   "check_opponent": "none",
   "kind": "lookahead",
-  "seeds": "learning/experiments/lookahead-seeds.json",
-  "iterations": 3,
+  "seeds": "learning/experiments/lookahead-seeds-60.json",
+  "iterations": 4,
   "population": 5,
   "seed": 0
 }
