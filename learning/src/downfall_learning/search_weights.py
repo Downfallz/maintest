@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -374,6 +374,9 @@ class SearchOptions:
     elite_share: float = 0.25
     sigma: float = 0.5
     seed: int = 0
+    # Handed the search so far after every round, marked incomplete: a lookahead search can outrun the job
+    # that plays it, and a job timeout kills it rather than ends it.
+    checkpoint: Callable[[SearchResult], None] | None = None
 
 
 @dataclass(frozen=True)
@@ -416,6 +419,9 @@ class SearchResult:
     # Per opponent, what a candidate had to hold to score its mean rather than its shortfall; ``None`` when
     # the search played one opponent or never anchored.
     floor: Mapping[str, float] | None = None
+    # False on a checkpoint: the search was still running when this was written, so ``best`` is the best of
+    # the rounds played so far, not of the rounds asked for.
+    complete: bool = True
 
     def write(self, directory: Path, kind: str = "heuristic") -> Path:
         """Writes ``weights.json`` (the best), ``search.json`` (every candidate with its score per
@@ -426,6 +432,7 @@ class SearchResult:
         write_weights(directory / "weights.json", self.best.weights)
         summary: dict[str, object] = {
             "kind": kind,
+            "complete": self.complete,
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "candidates": [candidate.to_json() for candidate in self.candidates],
@@ -554,6 +561,7 @@ def search_weights(
 
     The current mean is always part of the population, so the best weights found are never lost between
     iterations; ``training.jsonl`` gets one row per iteration with the elite's mean score as the loss.
+    ``options.checkpoint``, when there is one, is handed the search so far after every round.
     """
     options = options or SearchOptions()
     if options.population < 2 or options.iterations < 1:
@@ -605,6 +613,9 @@ def search_weights(
                     extra={"bestScore": leader.score.mean, "sigma": float(sigma.mean())},
                 )
             )
+        if options.checkpoint is not None:
+            floor = getattr(evaluator, "floor", None)
+            options.checkpoint(SearchResult(best, tuple(candidates), first, floor, complete=False))
     if log is not None and best.iteration > 0:
         log.mark_best(best.iteration)
     progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")

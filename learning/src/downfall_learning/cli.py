@@ -444,10 +444,17 @@ def _train_value(arguments: argparse.Namespace) -> int:
 
 def _search_weights(arguments: argparse.Namespace) -> int:
     initial = read_weights(arguments.initial) if arguments.initial else DEFAULT_WEIGHTS
-    options = SearchOptions(
-        arguments.iterations, arguments.population, arguments.elite, arguments.sigma, arguments.seed
-    )
     evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
+    options = SearchOptions(
+        arguments.iterations,
+        arguments.population,
+        arguments.elite,
+        arguments.sigma,
+        arguments.seed,
+        # The best set so far is on disk after every round, because a lookahead search can run past its job's
+        # timeout, which kills it, and the artifact is uploaded either way.
+        checkpoint=lambda reached: reached.write(arguments.output, evaluator.kind),
+    )
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
     result.write(arguments.output, evaluator.kind)

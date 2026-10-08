@@ -1,11 +1,11 @@
 {
-  "why": "The lookahead's weights refitted under ADR 0102. Greedy now prices a purchase by what it adds over the spells of its kind, and lookahead-34, fitted against the Greedy before it, beats it only 50.7 % of 400 matches where it took 94.8 % (journal, 2026-10-08): the table's strong bot is no stronger than Greedy. So this rung starts from lookahead-34, the set the table seats, and plays every candidate against the new Greedy on the first 60 benchmark seeds (learning/experiments/lookahead-seeds-60.json), because against Greedy the lookahead now sits near even and 30 seeds would not tell one candidate from the next. search-23 stays in the panel on the first 10 seeds only, as a floor: the lookahead on lookahead-34 beats it 12 of 12 there, and it is three times dearer to play than Greedy (15.7 seconds a seed against 5.5 by the local rate). 4 rounds of 5, seed 0, about 3.5 hours by that rate, the hold-out included; search 34 ran in four fifths of its estimate. No check opponent, for the same budget. What would make it a rung: a set that beats lookahead-34 against Greedy on the 60 unseen seeds, without falling against search-23.",
+  "why": "The lookahead's weights refitted under ADR 0102. Greedy now prices a purchase by what it adds over the spells of its kind, and lookahead-34, fitted against the Greedy before it, beats it only 50.7 % of 400 matches where it took 94.8 % (journal, 2026-10-08): the table's strong bot is no stronger than Greedy. So this rung starts from lookahead-34, the set the table seats, and plays every candidate against the new Greedy on the first 60 benchmark seeds (learning/experiments/lookahead-seeds-60.json), because against Greedy the lookahead now sits near even and 30 seeds would not tell one candidate from the next. The first try of this rung, with search-23 on 10 seeds beside Greedy and 4 rounds of 5, had played 15 of its 21 evaluations after five hours and would have run past the six-hour timeout: the runner plays about 2.5 times slower than the local rate it was sized on (20 minutes an evaluation where 8 were expected). So search-23 leaves the panel, which also takes it out of the hold-out, where it alone would have cost an hour and three quarters; the lookahead on lookahead-34 beats it 12 of 12 on those seeds. 3 rounds of 5, seed 0: about 3.6 hours of search and half an hour of hold-out at the runner's rate. And the search now writes its best set after every round, so a run the timeout kills still leaves one. What would make it a rung: a set that beats lookahead-34 against Greedy on the 60 unseen seeds.",
   "initial": "learning/weights/lookahead/lookahead-34.json",
-  "opponent": "greedy,heuristic:learning/weights/search-23.json@10",
+  "opponent": "greedy",
   "check_opponent": "none",
   "kind": "lookahead",
   "seeds": "learning/experiments/lookahead-seeds-60.json",
-  "iterations": 4,
+  "iterations": 3,
   "population": 5,
   "seed": 0
 }
