@@ -512,8 +512,8 @@ One finding the maintainer owns before the snap is authored, not this document's
   `engulfing_flames`, `noxious_cure` and `toxic_waves` at 0.33, `rejuvenate` 0.22, and `lightning_bolt` 0.5
   in a band of `[0.17, 0.8]`. Seven of the eight sit on a band whose `min` **is** a multiple of 0.05, so a d20
   snap fixes them outright; they are the 7 the d20 moves. The eighth is `lightning_bolt`, whose 0.5 is already
-  a twentieth, but whose band floor 0.17 is the only knob band off its own grid, and it leaves the band itself
-  to be moved: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
+  a twentieth, but whose band floor 0.17 was the only knob band off its own grid, and it left the band itself
+  to be moved, to 0.15: 0.17 plus multiples of 0.05 never lands on a multiple of 0.05. `crazed_specter`, at 0.38, was
   the ninth until 2026-10-05.
 
 ### 1.7 The energy track: what ends it
@@ -1416,10 +1416,10 @@ answered elsewhere, question 14 by the maintainer, and each says so. Question 16
 [1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 25 Spells,
 d10 and d20, and the d20 is the finer of the two: it moves 7 of the 24 Spells that roll where the d10 moves
 14 (8 of 25 and 15 at `e6f72578`), its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
-second use on the same die, the Roll-off. The question stays here for what is left with it:
-`lightning_bolt`'s knob band starts at 0.17, so its own grid contains no multiple of 0.05. That is a content
-change with a journal entry and a new hash. (`revenant_guards`, which printed a chance with no critical
-chance knob, prints 0 since 2026-10-04.)
+second use on the same die, the Roll-off. Nothing is left with it: `lightning_bolt`'s knob band started at
+0.17, so its own grid contained no multiple of 0.05, and that content change landed with the snap on
+2026-10-07, the floor at 0.15, with its journal entry and the hash `b41ba55e`. (`revenant_guards`, which
+printed a chance with no critical chance knob, prints 0 since 2026-10-04.)
 
 ### 2. The deck's copy count
 
