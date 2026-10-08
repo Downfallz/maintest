@@ -601,18 +601,7 @@ def search_weights(
         if leader.score.mean > best.score.mean:
             best = leader
         if log is not None:
-            elite_mean = float(np.mean([candidate.score.mean for candidate in elite]))
-            log.append(
-                TrainingRow(
-                    iteration,
-                    loss=1.0 - elite_mean,
-                    win_rate=leader.score.win_rate,
-                    win_rate_low=leader.score.win_rate_low,
-                    win_rate_high=leader.score.win_rate_high,
-                    matches=leader.score.matches,
-                    extra={"bestScore": leader.score.mean, "sigma": float(sigma.mean())},
-                )
-            )
+            log.append(_round_row(iteration, leader, elite, float(sigma.mean())))
         if options.checkpoint is not None:
             floor = getattr(evaluator, "floor", None)
             options.checkpoint(SearchResult(best, tuple(candidates), first, floor, complete=False))
@@ -621,6 +610,21 @@ def search_weights(
     progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
     floor = getattr(evaluator, "floor", None)
     return SearchResult(best=best, candidates=tuple(candidates), initial=first, floor=floor)
+
+
+def _round_row(iteration: int, leader: Candidate, elite: Sequence[Candidate], sigma: float) -> TrainingRow:
+    """One round of the search as a ``training.jsonl`` row: the elite's mean score as the loss, the leader's
+    win rate and score beside it."""
+    elite_mean = float(np.mean([candidate.score.mean for candidate in elite]))
+    return TrainingRow(
+        iteration,
+        loss=1.0 - elite_mean,
+        win_rate=leader.score.win_rate,
+        win_rate_low=leader.score.win_rate_low,
+        win_rate_high=leader.score.win_rate_high,
+        matches=leader.score.matches,
+        extra={"bestScore": leader.score.mean, "sigma": sigma},
+    )
 
 
 def stamp_of(score: Score) -> RunStamp | None:
