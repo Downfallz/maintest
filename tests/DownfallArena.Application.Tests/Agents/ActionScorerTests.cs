@@ -782,6 +782,24 @@ public sealed class ActionScorerTests
         (rest.Energy - strike.Energy).ShouldBe(gained, 1e-9);
     }
 
+    /// <summary>
+    /// A gain that lands on a caster its own cast killed is refused, so it moves nothing (ADR 0103): with a
+    /// free kit there is no reserve, and the energy the cast would have given it is neither priced nor charged.
+    /// </summary>
+    [Fact]
+    public void Energy_given_to_a_caster_its_own_cast_killed_counts_for_nothing()
+    {
+        var board = Board(enemyHealth: 20);
+        var actor = board[0];
+        var action = Strike(One, Three);
+
+        var terms = Scorer.Terms(
+            CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new DamageOutcome(One, actor.Health.Value, false), new EnergyOutcome(One, 2)]),
+            board);
+
+        terms.Energy.ShouldBe(0, 1e-9);
+    }
+
     /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
     private const double StrikeCast = (0.95 * 3) + (0.05 * 6);
 

@@ -573,7 +573,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         // What the actor keeps; what a spell hands out is priced per outcome above. The actor's own purse,
         // what it keeps and what the spell gives it back, is worth only up to the reserve its dearest spell
         // can spend (ADR 0103): energy hoarded past that pays for nothing.
-        var given = resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
+        // A gain that lands on a caster its own cast killed is refused, and priced at nothing above.
+        var given = remaining[actor.Id] == 0 ? 0 : resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
         var purse = actor.Energy.Value - resolution.EnergySpent.Value + given;
         return terms with { Energy = terms.Energy - given + Math.Min(purse, Reserve(actor)) };
     }
