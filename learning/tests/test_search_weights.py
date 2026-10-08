@@ -82,6 +82,29 @@ def test_the_result_writes_the_weights_the_summary_and_the_evaluation(tmp_path: 
     )
 
 
+def test_a_checkpoint_is_handed_the_best_so_far_after_every_round() -> None:
+    reached: list[SearchResult] = []
+
+    result = search_weights(
+        BowlEvaluator(), SearchOptions(iterations=3, population=4, seed=1, checkpoint=reached.append)
+    )
+
+    assert [len(so_far.candidates) for so_far in reached] == [4, 8, 12]
+    assert all(not so_far.complete for so_far in reached)
+    assert reached[-1].best == result.best
+    assert result.complete
+
+
+def test_a_checkpoint_writes_a_search_marked_incomplete(tmp_path: Path) -> None:
+    result = search_weights(BowlEvaluator(), SearchOptions(iterations=1, population=4, seed=1))
+    checkpoint = SearchResult(result.best, result.candidates, result.initial, complete=False)
+
+    directory = checkpoint.write(tmp_path / "search")
+
+    assert json.loads((directory / "search.json").read_text())["complete"] is False
+    assert read_weights(directory / "weights.json") == dict(result.best.weights)
+
+
 @pytest.mark.parametrize(
     ("options", "message"),
     [
