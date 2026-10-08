@@ -551,7 +551,7 @@ public sealed class LookaheadAgent(
             // The slots after this one are the creatures still to act, so a drain on one that has already acted
             // is not priced as the action it takes away (ADR 0093).
             var stillToAct = board.Timeline.Skip(index + 1).Select(slot => slot.Creature).ToHashSet();
-            value += sign * _scorer.Score(advanced.Resolution, ahead, stillToAct: stillToAct);
+            value += sign * _scorer.Score(advanced.Resolution, ahead, stillToAct: stillToAct, round: board.RoundNumber);
             ahead = advanced.Board;
             if (Advance.Elimination(ahead) is { } wiped)
             {
@@ -796,7 +796,7 @@ public sealed class LookaheadAgent(
                 continue;
             }
 
-            if (_scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id)) is { } found && (found.Wins, found.Score).CompareTo(bestValue) > 0)
+            if (_scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id), round: board.RoundNumber) is { } found && (found.Wins, found.Score).CompareTo(bestValue) > 0)
             {
                 best = spell;
                 bestValue = (found.Wins, found.Score);
@@ -810,7 +810,7 @@ public sealed class LookaheadAgent(
     private CombatAction? BestTargets(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell)
     {
         var snapshot = ahead.First(candidate => candidate.Id == actor);
-        return _scorer.Best(snapshot, spell, ahead, speed: SpeedOf(board, actor)) is { } found
+        return _scorer.Best(snapshot, spell, ahead, speed: SpeedOf(board, actor), round: board.RoundNumber) is { } found
             ? CombatAction.Bind(new CombatIntent(actor, spell), found.Targets)
             : null;
     }
