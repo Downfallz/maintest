@@ -13,11 +13,11 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 7
+      "amount": 6
     },
     {
       "kind": "DefenseDebuff",
-      "amount": 2,
+      "amount": 3,
       "durationRounds": 1
     }
   ],
