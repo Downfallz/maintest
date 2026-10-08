@@ -10,7 +10,9 @@ already stunned or immune to Stun is ignored, and a Stun that ends leaves a Roun
 [ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md) on 2026-09-28; spell rows
 re-read for the content of 2026-10-04 (`e6f72578`), the rows `night_raid` and `crazed_specter` reach
 re-read for the content of 2026-10-05 (`ad3e4d00`), and the rows the removal of `basic_attack` reaches
-re-read for the content of 2026-10-06 (`3c9eb083`)). Phase 1 of [plan.md](plan.md).
+re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
+[ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md) reach added or re-read on 2026-10-07
+(`49c96577`)). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -96,6 +98,18 @@ re-read for the content of 2026-10-06 (`3c9eb083`)). Phase 1 of [plan.md](plan.m
     moves 7 of the 24 that roll.
   - **One verdict leaves with its row.** `basic_attack` was **keep as is** in Part 3's first table. Part 5's
     tallies lose that row: 125 rows, **keep as is** 38.
+- **Re-read at `49c96577`, the content of 2026-10-07, for
+  [ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md).** The Spells did not change. Three
+  Tiers were added, one a family: level 4, opened by **any one** of the family's three level-3 Tiers (an
+  `anyOf` list), teaching no Spell, paying +0 initiative, and giving a **Passive** held for as long as the
+  Tier is owned. Titan (Brute) is immune to Stun, Archmage (Warped) gains 1 more Energy at every Upkeep, Apex
+  (Predator) adds 2 to every direct hit, before the critical and the target's Defense. A new lasting kind,
+  `DamageBuff`, raises the same Damage bonus; no Spell gives it. What this moves here:
+  - **24 Tiers, not 21**, in three families of eight. The rows of 1.3 that count Tiers give both.
+  - **Five rows in Part 1 are new**: the Passive's Energy in 1.1, the any-of prerequisite and the Passive in
+    1.3, the Damage bonus and Titan's immunity in 1.9. **One in Part 2**: `DamageBuff`. No verdict of an
+    older row moves, and no row is re-audited beyond what the Capstones touch.
+  - **Part 5's tallies**: 131 rows, **keep as is** 39, **restate** 43, **needs a component** 49.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -133,7 +147,9 @@ value off another component. Whether a count is too high is a playtest reading, 
 (and `basic_attack` until `3c9eb083`). 21 Tiers in `data/Tiers` (ADR 0057): 3 at level 1 that require nothing, 9 at
 level 2 and 9 at level 3, each selling 2 Spells at `e6f72578` (a level-2 Tier sold 1 until PR #245), every one
 of levels 2 and 3 requiring exactly one Tier a level below. That is three families of seven: each level-1 Tier
-opens one, with three level-2 Tiers on it and one level-3 Tier on each of those. The 42 Spells outside the
+opens one, with three level-2 Tiers on it and one level-3 Tier on each of those. Since ADR 0100 (`49c96577`)
+there are 24: each family closes with a level-4 Capstone that any of its three level-3 Tiers opens, that sells
+no Spell and gives a Passive, so three families of eight. The 42 Spells outside the
 starting kit are each sold by exactly one Tier. The enabled Talent tree,
 `data/TalentTrees/talent_tree.v1.json`, is still loaded, but it gates nothing a pick buys (ADR 0056,
 ADR 0058). So six identical Creatures start a Match, each knowing the same two Spells, each free to buy
@@ -167,6 +183,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | --- | --- | --- | --- | --- |
 | Energy gain per Round | Every living Creature gains `RuleSet.EnergyPerRound` (`Rules/Rounds/UpkeepRules.cs:13-22`) | 6 token moves, no arithmetic if the track is a dial; 0 lookups | **needs a component** | An Energy track on each creature board, six of them. Nothing is lost. |
 | The dead gain nothing | `creatures.Where(creature => creature.IsAlive)` (`UpkeepRules.cs:18`) | 0, a dead creature board is turned over | **keep as is** | Nothing. |
+| A Passive's Energy at every Upkeep | `creature.GainEnergy(rules.EnergyPerRound + creature.Passive.UpkeepEnergy)` (`UpkeepRules.EnergyGain`, ADR 0100): Archmage's +1, beside the Rule set's own, from the Round after its purchase | 1 more marker step on the boards whose Archmage card is face up; 1 look at the stagger, 0 arithmetic beyond the step. A Creature owns at most one Archmage | **restate** | Nothing: the package card prints `Energy +1 at every upkeep`, and the rulebook says it at Energy gain (§5.1). It pushes the banked Energy past the track's 40 sooner, inside the one overflow chit ([components.md](components.md) §1.7). |
 | Energy has no maximum | `Energy` is a `NonNegativeStat` with no ceiling (`SharedKernel/Stats/Energy.cs:3`); `GainEnergy` never clamps (`Creatures/Creature.cs:279-290`) | A track must end somewhere. A Creature casting `wait` every Round nets +4 a Round and spends nothing: 120 Energy over 30 Rounds | **needs a component** | An Energy track that ends, plus something for what passes it. Nothing is lost: ADR candidate 2 is settled the other way — the engine keeps no maximum and [components.md](components.md) §1.7 carries it. |
 
 ### 1.2 `OngoingEffects` (Start of round)
@@ -187,15 +204,17 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | An opportunity at Round 1 and every second Round after | `RuleSet.IsEvolutionRound` and `EvolutionPicksIn` (`Matches/RuleSet.cs:80-84`), at 1, 2 and 2 by default (`RuleSet.cs:30`); the one schedule the validation, the gate and the projections all ask (ADR 0056) | 1 look at the Round track a Round, 0 arithmetic if the opportunity Rounds are marked on it. The table's 8 to 14 Rounds ([plan.md](plan.md), ADR 0086) hold 4 to 7 opportunities, and its Round cap of 20 holds 10 | **needs a component** | A Round track with the opportunity Rounds marked. Nothing is lost; every other Round has one step fewer. |
 | Two picks an opportunity, per Player, shared across the Team | `rules.EvolutionPicksIn(round.Number) - round.EvolutionChoicesOf(slot).Count` (`Rules/Planning/EvolutionRules.cs:100-103`), refused past it (`EvolutionRules.cs:49-52`) | 2 tokens moved from a Player's mat onto the boards of the Creatures that bought, on an opportunity Round; the choice is which two Creatures and which Tier for each | **needs a component** | Two pick tokens a Player. Nothing is lost. |
 | The Players pick face down, and the picks are bought together | Since ADR 0089 the domain records a pick and changes nothing on the board (`Match.SubmitEvolutionChoice`); neither a pick nor a pass is shown to the other Player (`SeatVisibility`). When the sub-phase completes, `Match.RevealPurchases` buys every pick, Player 1's and then Player 2's, and raises `PurchasesRevealed`. The order changes nothing: a Creature buys one package an opportunity, and its prerequisites are its own. The validation reads what each Creature owned when the sub-phase opened | 1 package card laid face down a pick, at most 4 an opportunity, turned over together like the Speed cards, then the purchase actions; 0 arithmetic | **restate** | Nothing in the rules (rulebook.md §5.3). The table shows a little the engine hides: which Creatures hold a face-down card while the other Player is still choosing. It replaces the pick in turn, Player 1 first, that ADR candidate 6 questioned. |
-| A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 2 Spell cards taken from the library (1 or 2 until PR #245 gave every level-2 Tier a second Spell); 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds, each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
+| A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 2 Spell cards taken from the library (1 or 2 until PR #245 gave every level-2 Tier a second Spell); 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds (24 since ADR 0100), each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
+| A Tier may give a Passive, held while it is owned, and then teaches no Spell | `Creature.BuyTier` folds the Tier's `Passive` into the Creature's (`Passive.With`: stun immunity OR'd, the amounts added), and a restored Creature reads it from the Tiers it owns (`Passive.Of`); a Tier with a Passive may teach nothing (`Tier.Create`, ADR 0100). Three Tiers carry one at `49c96577`, the Capstones, each teaching no Spell and paying +0 | 1 Tier card set beside the creature board and **no** Spell card taken; 0 arithmetic at the purchase. The Passive is then read at its own moment: every Energy gain (Archmage), every direct hit (Apex), every Stun line (Titan) | **needs a component** | The Tier card prints the Passive in its body, and lies where no later card covers it, since it is read during play ([components.md](components.md) §3.7, §4.1). No token and no rail: the card is the record, as the glossary's **Passive** is read from the Tiers owned. Nothing is lost. |
 | Prerequisites are the only rule, and the Talent tree gates nothing | `TierEligibility.AvailableTiers`: a Tier the Creature does not own whose prerequisites it owns (`Rules/Planning/TierEligibility.cs:23-42`), checked by `EvolutionRules.ValidateChoice` (`EvolutionRules.cs:61-73`) and again by `BuyTier` (`Creature.cs:216-219`). No family is closed to a Creature, so multiclassing is free (ADR 0056, ADR 0058) | 0 lookups for the 3 openers; 1 for any other Tier: is the one Tier it names beside this creature board. A Creature chooses from 3 Tiers at Round 1, and from 5 once it owns one opener (the 2 other openers and that opener's 3 level-2 Tiers) | **restate** | Nothing. The prerequisite is one line on the Tier card, and eligibility is read off the board, not computed. The Talent tree mat the first audit asked for is not needed to play; if the box keeps one, it is a map of the families, not a gate. |
-| A Creature buys at most one Tier an opportunity | A choice for a Creature that has already bought this Round is refused with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.cs:56-59`), read off the Round's own choices (`HasEvolved`, `EvolutionRules.cs:128-134`; ADR 0066). The two picks go to two Creatures, so neither depends on the other: a Tier the first opens is one only its buyer may buy, and its buyer is done for the Round. It replaces ADR 0056's sequential picks, under which the greedy mirror put both picks on one Creature in half its opportunities | 1 look a pick, 0 arithmetic: the pick token a purchase moves lies on the buyer's board until the Sub-phase ends, and a board holding one is not picked. The top of a family arrives at Round 5 at the earliest: `tier:brute:v1` at Round 1, `tier:ironbound:v1`, which sells `full_plate`, at Round 3, `tier:dreadnought:v1` at Round 5 | **restate** | Nothing: the pick tokens of the row above carry it, laid on the buyer's board instead of set aside (components.md §1.5). It has to be said, with the one-Creature case, since it is the only thing that ever refuses a pick for a Tier the Creature could otherwise buy. |
-| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers` at `e6f72578`: 1, 2 or 3 at level 1; 1 to 3 at level 2; 1 to 5 at level 3; a level-3 Tier and the two it stands on add 3 to 11 together. The largest Base initiative the content can produce is 55: 5, plus all 21 bonuses (50), for a Creature sold every Tier. At one Tier an opportunity (ADR 0066), the table's Round cap of 20 sells one Creature at most 10, and the most they can reach is 35 ([components.md](components.md) §3.4; 34 at `813bb91b`, 33 at `4ab506fa`) | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
+| A Tier may name an any-of prerequisite, one of which is enough | `Tier.IsOpenTo`: every Tier of `Prerequisites` and, when `AnyOf` names any, one of them (`Resources/Tier.cs`, ADR 0100); `GameResources` refuses an any-of Tier that is not exactly a level below. Only the three Capstones name one, each listing its family's three level-3 Tiers | 1 to 3 looks down one stagger for a Capstone: is any of the three beside this creature board. 0 arithmetic | **restate** | Nothing. The Tier card prints `Needs one of:` above the list ([components.md](components.md) §4.1), so "one of" is never read as "all of"; the rulebook says it in one sentence of §5.3. |
+| A Creature buys at most one Tier an opportunity | A choice for a Creature that has already bought this Round is refused with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.cs:56-59`), read off the Round's own choices (`HasEvolved`, `EvolutionRules.cs:128-134`; ADR 0066). The two picks go to two Creatures, so neither depends on the other: a Tier the first opens is one only its buyer may buy, and its buyer is done for the Round. It replaces ADR 0056's sequential picks, under which the greedy mirror put both picks on one Creature in half its opportunities | 1 look a pick, 0 arithmetic: the pick token a purchase moves lies on the buyer's board until the Sub-phase ends, and a board holding one is not picked. The top of a family arrives at Round 5 at the earliest: `tier:brute:v1` at Round 1, `tier:ironbound:v1`, which sells `full_plate`, at Round 3, `tier:dreadnought:v1` at Round 5. Since ADR 0100 the top is the Capstone, at Round 7: `tier:titan:v1` after `tier:dreadnought:v1` | **restate** | Nothing: the pick tokens of the row above carry it, laid on the buyer's board instead of set aside (components.md §1.5). It has to be said, with the one-Creature case, since it is the only thing that ever refuses a pick for a Tier the Creature could otherwise buy. |
+| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers` at `e6f72578`: 1, 2 or 3 at level 1; 1 to 3 at level 2; 1 to 5 at level 3; a level-3 Tier and the two it stands on add 3 to 11 together. The largest Base initiative the content can produce is 55: 5, plus all 21 bonuses (50), for a Creature sold every Tier; the three Capstones of ADR 0100 pay +0, so it is still 55 over 24. At one Tier an opportunity (ADR 0066), the table's Round cap of 20 sells one Creature at most 10, and the most they can reach is 35 ([components.md](components.md) §3.4; 34 at `813bb91b`, 33 at `4ab506fa`) | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
 | The starting kit raises nothing | The definition's `baseInitiative` is where a Creature starts (`Creature.cs:38`); the two starting Spells (three until `3c9eb083`) belong to no Tier (ADR 0058) | 0 | **keep as is** | Nothing. The asymmetry the first audit reported is gone: every other Spell is sold by exactly one Tier, so two Creatures that know the same Spells own the same Tiers and carry the same Base initiative. |
 | A Spell already known is granted, not refused | `Creature.Learn` is idempotent (`Creature.cs:236-240`), so a Tier selling a known Spell is still bought (`Creature.cs:221-225`) | 0. Unreachable with this content: no Spell is sold by two Tiers, and no Tier sells a starting Spell | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable. |
 | A refused purchase changes nothing | `BuyTier` checks a dead Creature, a Tier already owned and a missing prerequisite before it changes anything (`Creature.cs:206-219`); `ValidateChoice` has already refused all three (`EvolutionRules.cs:31-73`) | 0 | **keep as is** | Nothing. |
 | Evolution pass | A Player gives up their remaining picks (`Match.cs:155-174`) | 1 declaration | **restate** | Nothing. |
-| The sub-phase ends when no Player has an *effective* pick left, and at once on a Round without an opportunity | Remaining picks are the schedule's less those spent, capped by how many of the Player's living Creatures have not bought this Round and have a Tier available (`EvolutionRules.cs:83-126`, ADR 0066); a Round the schedule skips is complete as it opens | 0 on a Round without an opportunity: the step is skipped. On an opportunity Round the cap bites when a Player has fewer living Creatures than picks: a Player down to one living Creature has one pick. The Tier half never bites: a Creature has a Tier left to buy until it owns all 21, which takes 21 opportunities at one a Round, more than the 15 a 30-Round cap offers, or the 10 the table's cap of 20 offers | **restate** | Nothing. Three sentences in the rulebook: skip Evolution on the Rounds the track does not mark, one Tier a Creature, and the step ends when both Players have spent, passed, or have no Creature left to buy for. |
+| The sub-phase ends when no Player has an *effective* pick left, and at once on a Round without an opportunity | Remaining picks are the schedule's less those spent, capped by how many of the Player's living Creatures have not bought this Round and have a Tier available (`EvolutionRules.cs:83-126`, ADR 0066); a Round the schedule skips is complete as it opens | 0 on a Round without an opportunity: the step is skipped. On an opportunity Round the cap bites when a Player has fewer living Creatures than picks: a Player down to one living Creature has one pick. The Tier half never bites: a Creature has a Tier left to buy until it owns all 21 (24 since ADR 0100), which takes 21 opportunities at one a Round, more than the 15 a 30-Round cap offers, or the 10 the table's cap of 20 offers | **restate** | Nothing. Three sentences in the rulebook: skip Evolution on the Rounds the track does not mark, one Tier a Creature, and the step ends when both Players have spent, passed, or have no Creature left to buy for. |
 
 ### 1.4 `Speed` (Planning)
 
@@ -271,6 +290,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
+| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0100). Apex's +2 at `49c96577`; no Spell gives a `DamageBuff` | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
 | A critical reaches nothing else | Not a lasting Effect, not a Caster effect, not Energy (`ResolutionRules.cs:68,93-95`, ADR 0033, ADR 0031, ADR 0035) | 0, once the boundary is taught as one sentence | **restate** | Nothing. "What the cast puts on a target's Health now" is the whole rule. |
 | Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 22 at `e6f72578` (`hateful_sacrifice`'s 11, doubled) | **restate** | Nothing. |
 | Total Defense is base plus buffs less debuffs, floored at zero | `Creature.cs:95-97` (ADR 0035) | 1 sum over the Condition tokens per target, per cast | **needs a component** | A Defense track holding the running total, so the sum is done once when a Condition lands and not once per cast. |
@@ -281,6 +301,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Damage is capped by the Health left, and an Outcome that changed nothing is dropped | `CombatExecution.cs:53-71` | 1 comparison | **keep as is** | Nothing. |
 | A lasting Effect attaches as a Condition per its Stacking policy | `Creature.Apply` through `ConditionSet.Apply` (`Creatures/ConditionSet.cs:26-43`) | 1 token placed with an amount and a Duration | **needs a component** | Condition tokens, in eight kinds, with a Duration dial. Nothing is lost. |
 | A Stun on a Creature already stunned or immune to Stun is ignored | `Creature.Apply` refuses a Stun when `!CanBeStunned`, which is stunned or immune (`Creatures/Creature.cs:342-357`), whatever the Stun's Stacking policy; `ResolutionRules.Lands` drops that Stun line before it becomes an Outcome, and the cast's other effects still land (`ResolutionRules.cs:64,97`); the Stun family's default is `Ignore` (`Resources/Effects/Stun.cs`, ADR 0072). ADR 0041's restart is retired | 1 look per Stun line at the target's Speed slot and lane `1`: a Stun token or an Immune token there means no token is placed. 0 arithmetic | **restate** | Nothing. "Conditions add up; a Stun never lands on a stunned or immune Creature" is one sentence and it is the whole rule since ADR 0072. The Stun is ignored, not the cast: it is not a Fizzle. See ADR candidate 1. |
+| A Creature that owns Titan is immune to Stun for good | `Creature.IsStunImmune` is true for a living Creature whose Passive gives stun immunity, whatever the Round (ADR 0100), so `ResolutionRules.Lands` drops every Stun line on it; `BuyTier` does not remove a Stun it already carries | 1 look at the Tier cards beside the board, beside the look at the Speed slot and lane `1` above. 0 tokens | **restate** | Nothing: the Titan card is the record, and needs no Immune token. The rulebook must say that a Stun carried at the purchase still runs out (§6.4). |
 | `Stack` adds another Condition | `ConditionSet.cs:29`, the default of every lasting Effect but Stun (ADR 0041) | 1 more token per application | **needs a component** | Enough tokens; how many is unbounded today, and since ADR 0041 a second Bleed is a second token rather than a lost amount. See ADR candidate 3. |
 
 ### 1.10 `Cleanup` (End of round)
@@ -309,9 +330,10 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 
 ---
 
-## Part 2. The twelve effect kinds
+## Part 2. The thirteen effect kinds
 
-The closed taxonomy of ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035 and ADR 0036. Counts and value
+The closed taxonomy of ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035, ADR 0036 and ADR 0100, which added
+`DamageBuff`. Counts and value
 ranges are computed from `data/Spells/**` at `e6f72578` with a Python pass over the 45 files, counting a
 Spell once per kind whether the Effect sits in `effects` or in `casterEffects`. The counts are therefore
 Spells and not Effects: the 44 files author 80 Effects in all at `3c9eb083` (81 in 45 at `ad3e4d00`, 80 in 45
@@ -344,10 +366,12 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
+| `DamageBuff` | 0 at `49c96577` (new with ADR 0100) | none | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. A Spell that authored a timed one would bring a token, as `InitiativeBuff` would; a permanent one would need a token that never leaves the board, since there is no Damage bonus rail ([components.md](components.md) §1.4). Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
 
 Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 31 of 44 Spells,
-one kind, `InitiativeDebuff`, is in two, and two, `EnergyRegeneration` and `InitiativeBuff`, are in none (at
-`938bef5e` it was 23 of 36, seven kinds in one or two, and none in none). Second, the authored values are
+one kind, `InitiativeDebuff`, is in two, and three, `EnergyRegeneration`, `InitiativeBuff` and `DamageBuff`,
+are in none (at `938bef5e` it was 23 of 36, seven kinds in one or two, and none in none). Second, the authored
+values are
 still small and repetitive, though less than they were: every timed `DefenseDebuff` is 2, an
 `InitiativeDebuff` is 3 or 5, and Durations are only ever 1, 2, 3 or permanent. At `938bef5e` every
 `DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` was exactly 2. A token set is therefore small:
@@ -678,17 +702,20 @@ order would have played another game without breaking a test.
 **Sub-phases.** All eleven appear — ADR 0010's ten and ADR 0063's `TieOrder` — each as exactly one
 section, in the enum's order (`RoundSubPhase.cs:8-18`): `EnergyGain`, `OngoingEffects`, `Evolution`,
 `Speed`, `TurnOrderResolution`, `TieOrder`, `IntentSelection`, `RevealAndTarget`, `ActionResolution`,
-`Cleanup`, `Finalization`. 11 of 11. No mechanic is filed under two of them. Rows per section: 3, 6, 12, 3,
-6, 3, 3, 7, 17, 4, 4. Since ADR 0083 the enum has ten, `RevealAndTarget` and `ActionResolution` being one
+`Cleanup`, `Finalization`. 11 of 11. No mechanic is filed under two of them. Rows per section: 4, 6, 14, 3,
+6, 3, 3, 7, 19, 5, 4 (3, 6, 12, 3, 6, 3, 3, 7, 17, 5, 4 before ADR 0100; this line read 4 for `Cleanup` from
+ADR 0072 until 2026-10-07, which was one row short). Since ADR 0083 the enum has ten, `RevealAndTarget` and
+`ActionResolution` being one
 `Activation`; this check and the tallies below are the measurement as taken, and a re-audit would file the
-7 and 17 rows under one section and move the two verdicts the note under 1.8 names.
+7 and 19 rows under one section and move the two verdicts the note under 1.8 names.
 
-**Effect kinds.** All twelve of the taxonomy appear, each as exactly one row in Part 2: `Damage`, `Heal`,
+**Effect kinds.** All thirteen of the taxonomy appear, each as exactly one row in Part 2: `Damage`, `Heal`,
 `EnergyGain`, `EnergyDrain`, `Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`,
-`DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff`. 12 of 12, and at `e6f72578` every one but
-`EnergyRegeneration` and `InitiativeBuff` has at least one Spell in `data/` using it. The first lost its only
-Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04. Both keep their
-row because the engine keeps the kind.
+`DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff`, and `DamageBuff` since ADR 0100. 13 of 13, and at
+`49c96577` every one but `EnergyRegeneration`, `InitiativeBuff` and `DamageBuff` has at least one Spell in
+`data/` using it. The first lost its only
+Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04; the third has
+never had one. All three keep their row because the engine keeps the kind.
 
 **Spells.** All 45 files under `data/Spells/**` at `e6f72578` appear, each as exactly one row in Part 3: 18
 trivially playable, 18 needing a component or a second reading, 9 expensive. 18 + 18 + 9 = 45. At
@@ -696,15 +723,21 @@ trivially playable, 18 needing a component or a second reading, 9 expensive. 18 
 At `ad3e4d00` the split is the same: `night_raid` at 9 operations and `crazed_specter` at 14 are both still
 expensive, and neither verdict moved. At `3c9eb083` all 44 files appear: `basic_attack` left the first
 table, so 17 + 18 + 9 = 44. By Tier level: 2 at 0 (the starting kit; 3 until `3c9eb083`), 6 at 1, 18 at 2,
-18 at 3, which is what the 21 Tiers sell: 3 x 2, 9 x 2 and 9 x 2 (a level-2 Tier sold 1 until PR #245).
+18 at 3, which is what the 21 Tiers below level 4 sell: 3 x 2, 9 x 2 and 9 x 2 (a level-2 Tier sold 1 until
+PR #245). The three level-4 Capstones sell none (ADR 0100).
 
-**Tiers.** All 21 files under `data/Tiers` are read by the Evolution rows of 1.3, which count them by level,
-Spells sold, prerequisite and initiative bonus; no Tier needs a row of its own, because they differ only in
-numbers the card prints.
+**Tiers.** All 24 files under `data/Tiers` at `49c96577` are read by the Evolution rows of 1.3, which count
+them by level, Spells sold, prerequisite and initiative bonus (21 until ADR 0100); no Tier needs a row of its
+own, because they differ only in what the card prints. The three Capstones differ in kind, not in number: what
+they share, the any-of prerequisite and the Passive, has its rows in 1.3, and each Passive's effect its row in
+1.1 or 1.9.
 
-**Verdicts.** 125 rows carry exactly one verdict each: 69 in Part 1, 12 in Part 2, 44 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 48, **keep as is** 38, **restate** 39,
-**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read
+**Verdicts.** 131 rows carry exactly one verdict each: 74 in Part 1, 13 in Part 2, 44 in Part 3. The totals,
+counted over the file rather than recalled: **needs a component** 49, **keep as is** 39, **restate** 43,
+**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read for
+ADR 0100 added six rows: in Part 1, the Passive's Energy (1.1), the any-of prerequisite (1.3), the Damage
+bonus and Titan's immunity (1.9), all **restate**, and the Passive a Tier may give (1.3), **needs a
+component**; in Part 2, `DamageBuff`, **keep as is**. Before it they were 125 rows, 48, 38 and 39. The re-read
 for `3c9eb083` took out one row, `basic_attack`'s **keep as is** in Part 3: it was 126 rows and 39 **keep as
 is** before it. Before the re-read for `e6f72578` they were 117 rows, 43, 38 and 36, and before the package re-audit 105 rows, 42, 33
 and 30. The `e6f72578` re-read moved no Part 1 verdict. In Part 2, `InitiativeBuff` went from **needs a
@@ -728,11 +761,11 @@ Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
-| keep as is | 23 | 5 | 10 | 38 |
-| restate | 28 | 1 | 10 | 39 |
-| needs a component | 18 | 6 | 24 | 48 |
+| keep as is | 23 | 6 | 10 | 39 |
+| restate | 32 | 1 | 10 | 43 |
+| needs a component | 19 | 6 | 24 | 49 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
-| **Total** | **69** | **12** | **44** | **125** |
+| **Total** | **74** | **13** | **44** | **131** |
 
 **ADR candidates.** Six raised, four excluded with a reason.

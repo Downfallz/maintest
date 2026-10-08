@@ -10,6 +10,15 @@ throughout ([package-renaming-plan.md](../domain/package-renaming-plan.md)), als
 content: the ids did not move, and the lines a name's length moves are re-read there. The bot matches were not re-run: they are read at
 `e6f72578`, with Basic Attack in every hand.
 
+**Not re-read for the Capstones** ([ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md),
+`49c96577`, 2026-10-07). Every count of Tiers here is the 21 before them. What they move, without a re-run:
+the package cards are 24 x 6 = **144** on 16 sheets (3.6, 3.11, 5); the families are eight, not seven, each
+closed by a Capstone any of its level-3 Tiers opens (6, item 3: Titan for Brute, Archmage for Warped, Apex
+for Predator); the named dial's outer ring gains three cells, 25, for packages that teach **no Spell**, so
+`A` and `B` on a Capstone are never legal (4.1, and Part 8, question 1); and a Capstone card prints a Passive
+read during play, so a cascade must leave it uncovered ([components.md](components.md) §3.7). The bot
+matches of Part 5 predate the Capstones, so their copy counts say nothing about level 4.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to

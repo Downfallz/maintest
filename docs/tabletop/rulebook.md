@@ -4,8 +4,8 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
 picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04, again for the content of
-2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells). Phase 4 of
-[plan.md](plan.md).
+2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells;
+the Capstones and their Passives 2026-10-07). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -21,7 +21,9 @@ picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04
 > ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). Combat walks the timeline
 > once: at each slot the Intent is revealed, its targets are chosen on the board as it stands, and the action
 > resolves at once; a Team wiped ends the Match on the spot
-> ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). This book names the
+> ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). Each family closes with a
+> level-4 Capstone that teaches no Spell and gives a Passive instead, and any one of the family's level-3 Tiers
+> opens it ([ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md)). This book names the
 > **package card** by what it must show; its size, its count and where it sits are
 > [components.md](components.md)'s to specify.
 
@@ -43,7 +45,7 @@ rule, it comes from [components.md](components.md) and is named there.
 4. [The shape of a Round](#part-4-the-shape-of-a-round)
 5. [The Round, step by step](#part-5-the-round-step-by-step)
 6. [Edge cases](#part-6-edge-cases)
-7. [Reference: every Condition, and the end of a Match](#part-7-reference-every-condition-and-the-end-of-a-match)
+7. [Reference: every Condition, the end of a Match, and every Passive](#part-7-reference-every-condition-the-end-of-a-match-and-every-passive)
 8. [What was hard to write](#part-8-what-was-hard-to-write)
 9. [Where every rule comes from](#part-9-where-every-rule-comes-from)
 
@@ -66,7 +68,8 @@ Three things make the game:
   turn comes, knowing everything that has already happened this Round.
 - **You grow in packages.** Evolution buys a Tier: a named package of Spells, every one of them at once. The
   Tier also raises that Creature's Base initiative by its bonus, for the rest of the Match. Buying is how a
-  Creature gets stronger, and it is also how it gets faster.
+  Creature gets stronger, and it is also how it gets faster. The last Tier of each family, its Capstone,
+  teaches no Spell: it gives a Passive, which the Creature holds for the rest of the Match.
 - **Nothing is a reservation.** Energy is spent when the action resolves, not when you declare. A Creature can
   be killed, stunned or drained before its turn comes, and its cast then does nothing at all.
 
@@ -89,7 +92,7 @@ The four pieces this book names constantly, and where they are specified:
 | The Creature board | One per Creature: its number, the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition, and an Immune token for the Round after a Stun ends | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
-| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md 4.1](components.md#41-the-package-card) |
+| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches or the Passive it gives, and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows and holds | [components.md 4.1](components.md#41-the-package-card) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
 stunned Creature cannot be given a Speed card. A Creature board turned to its `Defeated` back has no slots at
@@ -175,7 +178,8 @@ Creature, an empty initiative track, and the Round marker on 1.
 - Every Energy rail is **face up and stays face up**. Your opponent must be able to check that an Intent you
   declare is affordable without seeing the card.
 - The package cards are **public**. Everything a Creature knows is public — its starting Spells and the
-  Spells of every Tier it owns; only the card you have chosen to play this Round is hidden.
+  Spells of every Tier it owns — and so is every Passive it holds; only the card you have chosen to play this
+  Round is hidden.
 
 ---
 
@@ -188,7 +192,7 @@ Tie order, because the second only ever finishes what the first began. Step 7 ta
 
 ```
 START OF ROUND
-  1  Energy gain ........... every living Creature gains the Rule set's Energy
+  1  Energy gain ........... every living Creature gains the Rule set's Energy, and its Passive's
   2  Ongoing effects ...... Energy regeneration, then Regeneration, then Bleed
 
 PLANNING
@@ -233,13 +237,18 @@ the setup table's reference column and real Spells from the catalogue.
 
 **Trigger.** The Round begins.
 **Actor.** Both Players, together.
-**Result.** Every **living** Creature gains the setup table's Energy per Round. Move each Energy marker up.
+**Result.** Every **living** Creature gains the setup table's Energy per Round, plus the Energy at every
+Upkeep its package cards print. Move each Energy marker up.
 
 A dead Creature gains nothing. Its board is on its `Defeated` back and has no Energy rail to move.
 
 > **Example.** Round 4 begins. Player 1 has Creatures 1 and 2 alive and Creature 3 dead. Energy per Round is
 > 2, so Creature 1 goes from 1 to 3 and Creature 2 from 4 to 6. Creature 3's board stays face down: it gains
 > nothing, now or ever.
+>
+> **Example, a Passive.** Creature 2 owns Warped, Stormborn and Cataclysm, and buys **Archmage** at the
+> Purchase reveal of Round 7: `Energy +1 at every upkeep`. Round 7's Energy gain is already done, so it gained
+> 2 that Round. From Round 8 on it gains 2 + 1 = 3 at every Energy gain.
 
 ### 5.2 Ongoing effects
 
@@ -297,10 +306,22 @@ the boards, so each opportunity starts with a full set and no pick carries over 
 it requires, the Spells it teaches and its initiative bonus. A level 1 Tier requires nothing; every other Tier
 requires a Tier exactly one level below it.
 
-**Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it and
-owns every Tier it requires. That is the only rule for which Tier. Any Creature may buy any Tier that requires
-nothing, whatever it already owns, and two Creatures may each buy the same Tier. Read it off the board as the
-Sub-phase opened: a face-down card is not owned yet.
+**What a Capstone is.** Each of the three families closes with a level 4 Tier, its **Capstone**. A Capstone
+requires **one of** its family's level 3 Tiers, any one of them. It teaches no Spell, and its initiative bonus
+is +0. It gives a **Passive** instead, printed on its package card
+([7.3](#73-the-three-passives-and-their-timing)):
+
+| Capstone | Family | Needs one of | Passive, as the card prints it |
+| --- | --- | --- | --- |
+| Titan | Brute | Ravager, Colossus, Tyrant | `Immune to stun` |
+| Archmage | Warped | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep` |
+| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit` |
+
+**Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it, owns
+every Tier it requires, and owns at least one Tier of its `Needs one of` list when it has one. That is the
+only rule for which Tier. Any Creature may buy any Tier that requires nothing, whatever it already owns, and
+two Creatures may each buy the same Tier. Read it off the board as the Sub-phase opened: a face-down card is
+not owned yet.
 
 Your first pick never opens anything for your second. A Tier it would open is one only the Creature that picked
 may buy, and that Creature is done for the Round.
@@ -319,9 +340,12 @@ Creature buys one Tier, and what it may buy depends only on what it owns.
 A purchase is three actions, in this order:
 
 1. **Package card.** The package card, now face up, stays with that Creature. It is the public record that
-   the Creature owns the Tier and knows its Spells.
+   the Creature owns the Tier and knows its Spells. If the card prints a Passive, the Creature holds it from
+   this moment to the end of the Match; lay that card where no later card covers it
+   ([components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits)).
 2. **Cards.** Take one card of each Spell the Tier teaches from the library into your hand. If the Creature
-   already knows one of them, take no card for that one; the purchase is still legal.
+   already knows one of them, take no card for that one; the purchase is still legal. A Capstone teaches
+   none, so take no card.
 3. **Initiative.** Raise that Creature's Base initiative by the Tier's initiative bonus. **This is the only
    thing that ever moves a Base initiative marker.** It happens once, at the Purchase reveal, and lasts for
    the rest of the Match. No Spell carries initiative of its own, and casting one moves no Base initiative
@@ -344,8 +368,9 @@ Then every pick token comes off the mats and the boards.
 > Shock and Revitalize, +2 to 7. Player 2's: Predator for Creature 4, Venom Claw and Quill,
 > +3 to 8; Brute for Creature 5, Pummel and Brace, +1 to 6. The four pick tokens come off the boards.
 > Oppressor waits for Creature 1 until Round 3, since Round 2 offers no opportunity. Tyrant, the level 3 Tier
-> above Oppressor, waits until Round 5 at the earliest. Until Round 3, Creature 4 at 8 holds the highest Base
-> initiative on the table, and Creature 2 at 7 is the fastest on Player 1's side.
+> above Oppressor, waits until Round 5 at the earliest, and Titan, the Capstone above it, until Round 7. Until
+> Round 3, Creature 4 at 8 holds the highest Base initiative on the table, and Creature 2 at 7 is the fastest
+> on Player 1's side.
 >
 > **Example, one Creature left.** Round 7 offers an opportunity. Player 2 has only Creature 6 alive, and it
 > owns Warped. Player 2 has **one** pick, not two: Creature 6 is the only Creature it can go to. Player 2
@@ -354,6 +379,16 @@ Then every pick token comes off the mats and the boards.
 > off with the rest. Player 1, with three living Creatures, still has two picks. At the Purchase reveal,
 > Vital Echo and Whisper go into Player 2's hand, and the bonus of +2 raises Creature 6's Base
 > initiative.
+>
+> **Example, a Capstone.** Round 7 offers an opportunity. Creature 1 owns Brute, Frenzied and Ravager.
+> Creature 3 owns Brute and Oppressor. Player 1 wants **Titan** for both.
+> **Creature 1.** Titan needs one of Ravager, Colossus or Tyrant. Creature 1 owns Ravager, so Titan is
+> available. Player 1 lays Titan face down with Creature 1.
+> **Creature 3.** It owns none of the three. Titan is refused, and Player 1 picks Tyrant instead: it requires
+> Oppressor, which Creature 3 owns.
+> **The Purchase reveal.** Titan goes face up with Creature 1. No Spell card moves, and the bonus of +0 moves no
+> rail. From now on Creature 1 is immune to Stun. Tyrant goes face up with Creature 3: Dominate and Fortress go
+> into the hand, and +2 raises its Base initiative. Creature 3 may buy Titan at Round 9.
 
 ### 5.4 Speed
 
@@ -512,14 +547,16 @@ has happened since. Resolve the action in this order, and do not reorder it:
 1. **Pay.** Move the caster's Energy marker down by the printed cost.
 2. **Roll for a critical**, once for the whole cast. A Quick Creature does not roll. See
    [6.7](#67-the-critical-roll).
-3. **Apply each effect line to each target.** Damage is reduced by that target's total Defense and never goes
-   below zero. A Heal is capped by the Health that target is missing. An Energy drain takes at most what the
-   target has. A lasting Effect becomes a Condition; see [5.9](#59-cleanup) and
-   [Part 7](#part-7-reference-every-condition-and-the-end-of-a-match). A Stun on a target that is already
-   stunned, or immune to Stun, is ignored ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
+3. **Apply each effect line to each target.** A Damage line is a direct hit: add the caster's **Damage
+   bonus** to the printed Damage ([7.3](#73-the-three-passives-and-their-timing)), multiply by a critical,
+   then subtract that target's total Defense, never below zero. A Heal is capped by the Health that target is
+   missing. An Energy drain takes at most what the target has. A lasting Effect becomes a Condition; see
+   [5.9](#59-cleanup) and [Part 7](#part-7-reference-every-condition-the-end-of-a-match-and-every-passive). A
+   Stun on a target that is already stunned, or immune to Stun, is ignored
+   ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
 4. **Apply the `Caster:` line, if the card has one.** Once for the whole cast, however many targets it
    reached. A `Caster:` Damage is reduced by the **caster's own** total Defense. A `Caster:` line is never
-   multiplied by a critical.
+   multiplied by a critical, and never takes a Damage bonus.
 
 A Creature's **total Defense** is its base Defense plus its Defense buffs, **counted up to 10 and no
 further**, less its Defense debuffs, and the floor at zero is applied to that total, not to anything on the
@@ -537,6 +574,14 @@ side by side so this is one subtraction, done when a Condition lands, not once p
 > **Then** subtract Defense: 20 - 3 = 17. Creature 5 goes from 30 Health to 13.
 > Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
 > (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
+>
+> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +2 on
+> every hit`. It is Standard, and casts **Blood Price** on Creature 1: `Damage 11`, `Caster: Damage 3`,
+> `Critical 50%  d20: 11+`. Creature 1's total Defense is 3.
+> Add the bonus: 11 + 2 = 13. The d20 shows 14, a critical: 13 x 2 = 26. Subtract Defense: 26 - 3 = **23**.
+> Had the roll missed: 13 - 3 = **10**.
+> The `Caster:` line takes no bonus and no critical: Creature 4 takes exactly 3, less its own total Defense.
+> Add first, multiply second, subtract third. (11 x 2) + 2 - 3 = 21 is not a number in this game.
 
 ### 5.9 Cleanup
 
@@ -559,7 +604,8 @@ Rounds printed on it.
 The Immune token is the rule "**a Creature whose Stun ends is immune to Stun for the next Round**" made out of
 cardboard. It did not slide this Cleanup, so the next Cleanup's first move takes it out of lane `1`, and the
 immunity ends there. Stun immunity is not a Condition: no Spell applies it, and nothing counts it down but that
-one move.
+one move. A Creature that owns **Titan** holds Stun immunity for good, and its package card is the record of
+it: it needs no Immune token.
 See [6.4](#64-a-stunned-creature-skips-the-round-entirely).
 
 A permanent Condition never enters the dock and never counts down. It moved a rail when it landed, and the
@@ -617,7 +663,7 @@ first one that applies ends the action.
 | # | Cause | How it happens at a table |
 | --- | --- | --- |
 | 1 | **The Creature is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
-| 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Crash**, a **Deep Freeze** or a **Paralyzing Barb** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
+| 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Crash**, a **Deep Freeze** or a **Paralyzing Barb** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun, for a Round or for good through Titan, cannot be stunned, so this never happens to it. |
 | 3 | **The Creature no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
 | 4 | **The Creature cannot afford the cost now.** | A **Claim**, a **Blood Hunt** or a **Soul Feast** in an earlier slot drained its Energy below the cost. They are the only Spells in the catalogue that take Energy. |
 | 5 | **The Spell has no legal target.** | Nothing on the board is a target its card allows. With today's cards this cannot happen: an `Ally` or `Self` Spell always has its living caster, and an `Enemy` Spell runs out of targets only when the other Team is wiped, which has already ended the Match ([7.2](#72-the-end-of-a-match)). |
@@ -679,6 +725,12 @@ activations: this Round's, and the two following. It cannot cost more, because o
 **Result.** That Creature is **immune to Stun** until the Cleanup of the next Round. Its Stun token in lane `1`
 is swapped for an Immune token, and the Stun token comes out of its Speed slot ([5.9](#59-cleanup)).
 
+**Stun immunity for good.**
+**Trigger.** A Creature's purchase of **Titan** is revealed.
+**Actor.** Its Player.
+**Result.** That Creature is immune to Stun from that moment to the end of the Match. Its Titan package card is
+the record, so it needs no Immune token. A Stun it already carries is not removed: it runs out as printed.
+
 **A Stun that cannot land.**
 **Trigger.** A resolving cast's Stun line reaches a target that is stunned or immune to Stun.
 **Actor.** The caster's owner, who is resolving the action.
@@ -688,12 +740,19 @@ Every other line of the cast still lands on it, and the cast is not a Fizzle.
 So every Stun ends, and after it the Creature has a Round no Stun can take: no Creature can be kept stunned.
 A stunned or immune Creature is still a legal target when you choose targets, because the rule refuses the
 Stun line, not the Spell. It can still be damaged, healed and killed; an immune Creature that dies loses its
-Immune token with the rest of its dock ([7.1](#71-the-eight-conditions-and-their-timing)).
+Immune token with the rest of its dock ([7.1](#71-the-nine-conditions-and-their-timing)).
 
 > **Example.** In Round 6, Creature 4 is still under the Stun of 5.9's example. Creature 1 casts **Crushing
 > Stomp** on it again: cost 4, `Damage 7`, `Stun, 2 rounds`. Creature 4 takes the Damage. The Stun is ignored:
 > no token goes into the `new` lane, and the Stun token in lane `2` stays in lane `2`. Creature 4's Stun still
 > ends at the Cleanup of Round 7, as it would have. Creature 1 paid 4 Energy for the Damage alone.
+>
+> **Example, Titan.** In Round 6, Creature 2 is hit by **Crash**: `Damage 5`, `Stun, 1 round`. Creature 2
+> owns Brute, Ironhide and Colossus. At Round 7's Evolution, which never asks about a Stun, Player 1 buys it
+> **Titan**. Creature 2 is immune to Stun from the Purchase reveal on, but it is still stunned: Round 7 is the
+> Round that Stun takes, so Creature 2 takes no Speed card. Cleanup of Round 7 ends the Stun and makes the
+> usual swap for an Immune token, which adds nothing to Titan. For the rest of the Match, every Stun line that
+> reaches Creature 2 is ignored, and every other line of the cast still lands.
 
 ### 6.5 The first countdown after an application does not count
 
@@ -769,16 +828,16 @@ A critical multiplies, by the setup table's critical multiplier, dropping any fr
 
 | Multiplied | Not multiplied |
 | --- | --- |
-| **Damage** on a target | Anything on the `Caster:` line, including its Damage and its Heal |
+| **Damage** on a target, the caster's Damage bonus included | Anything on the `Caster:` line, including its Damage and its Heal |
 | A **Heal** on a target | **Energy** given or taken |
-| | Any **lasting Effect**: a Bleed, a Regeneration, an Energy regeneration, a Stun, a Defense or Initiative change |
+| | Any **lasting Effect**: a Bleed, a Regeneration, an Energy regeneration, a Stun, a Defense or Initiative change, a Damage buff |
 
 The rule behind the table: a critical multiplies **what the cast puts on a target's Health right now**, and
 nothing else.
 
-**A critical is applied before Defense is subtracted.** Multiply the printed Damage, then subtract the
-target's total Defense, then floor at zero. Doing it the other way round gives a different, wrong number; see
-the example in [5.8](#58-resolving-an-action).
+**A critical is applied after the Damage bonus and before Defense is subtracted.** Add the caster's Damage
+bonus to the printed Damage, multiply, then subtract the target's total Defense, then floor at zero. Any other
+order gives a different, wrong number; see the examples in [5.8](#58-resolving-an-action).
 
 > **Example, a Heal.** Creature 2 casts **Vital Surge** on Creature 3: `One ally`, `Heal 7`,
 > `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
@@ -799,9 +858,9 @@ itself.
 
 ---
 
-## Part 7. Reference: every Condition, and the end of a Match
+## Part 7. Reference: every Condition, the end of a Match, and every Passive
 
-### 7.1 The eight Conditions and their timing
+### 7.1 The nine Conditions and their timing
 
 A **Condition** is a lasting Effect attached to a Creature, with an amount and a Duration. Every one of them
 counts down at Cleanup, and the first countdown after it is applied does not count
@@ -817,24 +876,30 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Bleed** | Damage equal to its amount, **ignoring Defense** | Start of Round, third pass, after Regeneration | Stacks: both tick, add them | Condition dock |
 | **Regeneration** | Heals its amount, capped by the Health missing | Start of Round, second pass, **before** Bleed | Stacks | Condition dock |
 | **Energy regeneration** | Gives its amount of Energy. No Spell in the current catalogue applies it | Start of Round, first pass | Stacks | Condition dock |
-| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
+| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends, and on a Creature that owns Titan | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative. No Spell in the current catalogue applies it | Read once, at Turn order resolution | Stacks | Condition dock |
 | **Initiative debuff** | Lowers Current initiative | The same | Stacks | Condition dock |
+| **Damage buff** | Raises its holder's Damage bonus. No Spell in the current catalogue applies it | Read whenever its holder deals a direct hit | Stacks | Condition dock |
 
-Two sums, and both floor at zero **after** the subtraction, never before:
+Three sums. The first two floor at zero **after** the subtraction, never before:
 
 - **Total Defense** = base Defense + Defense buffs (at most 10) - Defense debuffs, never below zero.
 - **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below zero.
+- **Damage bonus** = the Damage its package cards print + Damage buffs.
 
 A **permanent** Condition never counts down. Move the rail and put no token on the dock: there is nothing to
 undo and nothing to remember. Permanent and timed Defense buffs share one ceiling of 10 (ADR 0076): stack past
-it and the rail keeps counting, but the Creature's Defense does not.
+it and the rail keeps counting, but the Creature's Defense does not. A permanent Damage buff would have no rail
+to move; no Spell applies one, so the box has nothing for it
+([components.md 1.4](components.md#14-condition-tokens)).
 
 **Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
 of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it
 ([5.9](#59-cleanup)). Its token sits in lane `1` only because that is the lane the next Cleanup empties.
+Titan's Stun immunity is not a Condition either: it is a Passive
+([7.3](#73-the-three-passives-and-their-timing)).
 
 A **dead** Creature takes no new Condition. Return the tokens on its dock to the supply when you turn its
 board over: nothing on a `Defeated` board is ever read again.
@@ -863,6 +928,25 @@ Creature at 3 Health or less that kills the last enemy with it wipes its own Tea
 > Creature 4 has no Defense. Creature 4 goes to 0. Player 2 has no living Creature, and **Player 1 wins now**.
 > Creatures 4 and 1 never act, and nothing counts down.
 
+### 7.3 The three Passives and their timing
+
+A **Passive** is what a Tier gives its owner for as long as it owns it (ADR 0100). Only a Capstone gives one
+of the three below. It is printed on the package card, and the card face up with the Creature is its only
+record: no token, no rail. A Passive starts at the Purchase reveal that buys it, never counts down, and lasts
+to the end of the Match. A Creature that owns two Capstones holds both Passives.
+
+| Passive | Capstone | What it does | When it does it | What it never touches |
+| --- | --- | --- | --- | --- |
+| `Immune to stun` | Titan | Every Stun line that reaches the Creature is ignored; the cast's other lines still land | Whenever a Stun line resolves on it | A Stun it already carried when it bought Titan: that one runs out as printed |
+| `Energy +1 at every upkeep` | Archmage | The Creature gains 1 more Energy | Energy gain, beside the Rule set's own; first at the Round after the purchase | Nothing else: no other pass reads it |
+| `Damage +2 on every hit` | Apex | Adds 2 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
+
+**A direct hit** is a Damage line applied to a target of a cast. A Bleed tick is not one, and neither is
+anything on the `Caster:` line.
+
+The initiative bonus every Tier carries is a Passive of the older kind: it moves the Base initiative rail once,
+at the Purchase reveal ([5.3](#53-evolution)). A Capstone's bonus is +0.
+
 ---
 
 ## Part 8. What was hard to write
@@ -881,7 +965,9 @@ writing around it. Each one is faithful to the engine; each one is longer than a
 2. **The critical roll** ([6.7](#67-the-critical-roll)). Trigger, one roll per cast, a chance that is the
    card's alone, a table of what is multiplied and what is not, and an ordering against Defense that changes
    the answer. Five statements for one die roll. The ordering against Defense is the part that will be played
-   wrong, and it is the part that cannot be moved onto the card.
+   wrong, and it is the part that cannot be moved onto the card. Since ADR 0100 the ordering has three steps,
+   not two: add the Damage bonus, multiply, subtract Defense. The bonus is printed on a package card, not on
+   the Spell card being cast, so it is the one number of a hit that the flipped card does not show.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
    may take fewer) are deliberately not printed on any of the 44 cards because they are true of all of them.
@@ -934,7 +1020,14 @@ starting cards a Creature to two. §5.3's example dropped Basic Attack from what
 §5.6's names Strike in its place and teaches the same rule. §6.7's count went back to twenty, of
 forty-four, and §6.8 and Part 8 count 44 cards. No rule moved. The same day the packages and Spells took
 their final names (content `9419f935`, [package-renaming-plan.md](../domain/package-renaming-plan.md)), and
-every example, this paragraph included, names them so; no number in an example moved.
+every example, this paragraph included, names them so; no number in an example moved. On 2026-10-07 Part 1,
+Part 2, §3.3, step 1 of Part 4, §5.1, §5.3, §5.8, §5.9, §6.1's cause 2, §6.4, §6.7, §7.1, the new §7.3,
+Part 8 and this table were re-run against
+[ADR 0100](../adr/0100-a-capstone-package-buys-a-passive-not-a-spell.md), `data/Tiers/` (24 Tiers, three of
+them the level-4 Capstones `titan`, `archmage` and `apex`) and the engine's `Tier.IsOpenTo`, `Passive`,
+`UpkeepRules.EnergyGain`, `ResolutionRules.Outcome` and `Creature.IsStunImmune`. The specification states
+the Passives in its "Combat rules (phase 6)" summary and the any-of list in "Planning rules (phase 5)"; its
+"Round sequence" does not repeat either, so the rows below cite the summaries.
 
 | This book | The specification |
 | --- | --- |
@@ -957,7 +1050,12 @@ every example, this paragraph included, names them so; no number in an example m
 | [5.8](#58-resolving-an-action) step 4, the `Caster:` line, and its Damage against the **caster's own** total Defense | ADR 0031. `game-rules.md` states the once-per-cast and the never-multiplied halves but is silent on the Defense; ADR 0031's "the outcome goes through the same rules as any other" is where that comes from |
 | [5.9](#59-cleanup), [6.5](#65-the-first-countdown-after-an-application-does-not-count) | "End of round", 1: `Cleanup` |
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`; "Match lifecycle"; "Combat", 2: "a Team wiped by an action ends the Match there"; ADR 0011, ADR 0083 |
-| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
+| [7.1](#71-the-nine-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
+| [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0100. The engine: `Tier.IsOpenTo` |
+| [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0100. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
+| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster"; ADR 0100. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense`, with a bonus of 0 on the `Caster:` line |
+| [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity for good, [5.9](#59-cleanup), [7.3](#73-the-three-passives-and-their-timing) | "Combat rules (phase 6)": "stun immunity that lasts"; ADR 0100. The engine: `Creature.IsStunImmune`, true for a living Creature whose Passive gives it; a Stun it already carries is not touched by `Creature.BuyTier`. The Titan package card is the table's record of the glossary's **Passive** |
+| [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0100; glossary, **Damage buff** and **Damage bonus** |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 
