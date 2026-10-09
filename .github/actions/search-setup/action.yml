@@ -1,0 +1,48 @@
+name: Set up a job of a weight search
+description: >-
+  What every job of a weight search needs before it plays anything: .NET, the learning project, the engine
+  and the content built, and the parameters the run's first job resolved, in the environment. One copy, so
+  a round's jobs and the job that finishes the search cannot drift apart on how the engine is built: they
+  have to play the same evaluations for the kept ones to be the ones a single job would have played.
+inputs:
+  token:
+    description: The workflow's token, to read the run's own artifacts
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Set up .NET (version from global.json)
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: global.json
+
+    - name: Install uv and the dependencies of the learning project
+      shell: bash
+      run: |
+        pipx install uv==0.8.17
+        echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+        echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
+        export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+        uv sync --project learning --locked --no-build --no-install-project
+
+    - name: Build
+      shell: bash
+      run: |
+        dotnet restore
+        dotnet build --no-restore --configuration Release
+
+    - name: Build game content
+      shell: bash
+      run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+    # Resolved once, by the run's first job, and read here from its artifact rather than resolved again: a
+    # dispatch's typed fields only reach the workflow that was dispatched.
+    - name: Read what the search searches with
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        RUN_ID: ${{ github.run_id }}
+      run: |
+        gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name search-knobs --dir "$RUNNER_TEMP/knobs"
+        cat "$RUNNER_TEMP/knobs/knobs.env" >> "$GITHUB_ENV"

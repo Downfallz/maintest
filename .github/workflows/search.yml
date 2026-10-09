@@ -53,11 +53,11 @@ on:
     paths:
       - "learning/experiments/search.json"
 
-# Pushing the proposal branch, and nothing else. GitHub Actions permissions cannot be conditional, so this is
-# `write` even on a report-only run; the checkout below is what actually decides whether a credential is on
-# disk, and it only keeps one when `apply` is set.
+# Reading the run's own artifacts, which is how the rounds hand each other what they played. Only the job
+# that finishes the search can push, below.
 permissions:
-  contents: write
+  contents: read
+  actions: read
 
 concurrency:
   group: search-${{ github.ref }}
@@ -72,27 +72,18 @@ env:
   OUT: runs/search-${{ github.run_number }}
 
 jobs:
-  search:
-    name: Search the scoring weights
+  knobs:
+    name: Read the experiment
     runs-on: ubuntu-latest
-    # The most a GitHub-hosted job may run. A lookahead candidate costs several times a heuristic one since
-    # ADR 0096, and search 32 hit the three hours this was before.
-    timeout-minutes: 360
+    timeout-minutes: 10
     steps:
-      # A report-only run keeps no credential on disk, the way this workflow always did. An applying run keeps
-      # the one the checkout sets up and lets git use it, because the alternative is a token inside a remote
-      # URL, which puts it in the process list and in every error message git prints.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: ${{ inputs.apply }}
+          persist-credentials: false
 
-      - name: Set up .NET (version from global.json)
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          global-json-file: global.json
-
-      # What this run searches with, resolved once and read from the environment by every step after it: a
+      # What this run searches with, resolved once and handed to every job of the run as an artifact, which
+      # the setup each of them runs reads into its environment (.github/actions/search-setup): a
       # typed dispatch field wins, then learning/experiments/search.json, then the default. The same shape as
       # iterate.yml's knobs, and for the same reason -- a run asked for by a commit records what it asked for.
       #
@@ -156,28 +147,171 @@ jobs:
           if [[ -f "$plan" ]]; then
             why="$(jq -r '.why // "" | gsub("\\s+"; " ")' "$plan")"
           fi
-          printf 'WHY=%s\n' "$why" >> "$GITHUB_ENV"
-          printf '%s\n' "$resolved" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/knobs"
+          {
+            printf 'WHY=%s\n' "$why"
+            printf '%s\n' "$resolved"
+          } > "$RUNNER_TEMP/knobs/knobs.env"
           echo "This run searches with:"
           printf '%s\n' "$resolved"
 
-      - name: Install uv and the dependencies of the learning project
+      - name: Hand them to every job of the run
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: search-knobs
+          path: ${{ runner.temp }}/knobs/knobs.env
+          if-no-files-found: error
+          retention-days: 7
+
+  # The search, a round at a time, each round's candidates on runners of their own (search-round.yml). A
+  # round is about the slowest of its evaluations instead of all of them in turn: search 37 played 16
+  # lookahead evaluations one after the other in 4h18 on one runner. One job per round, up to the twelve
+  # rounds of search a run may ask for; the first round that finds the search finished says so, and the
+  # rounds after it are skipped. More rounds than that are played by the job below, one at a time.
+  round-0:
+    name: Round 0
+    needs: knobs
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 0
+
+  round-1:
+    name: Round 1
+    needs: round-0
+    if: needs.round-0.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 1
+
+  round-2:
+    name: Round 2
+    needs: round-1
+    if: needs.round-1.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 2
+
+  round-3:
+    name: Round 3
+    needs: round-2
+    if: needs.round-2.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 3
+
+  round-4:
+    name: Round 4
+    needs: round-3
+    if: needs.round-3.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 4
+
+  round-5:
+    name: Round 5
+    needs: round-4
+    if: needs.round-4.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 5
+
+  round-6:
+    name: Round 6
+    needs: round-5
+    if: needs.round-5.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 6
+
+  round-7:
+    name: Round 7
+    needs: round-6
+    if: needs.round-6.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 7
+
+  round-8:
+    name: Round 8
+    needs: round-7
+    if: needs.round-7.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 8
+
+  round-9:
+    name: Round 9
+    needs: round-8
+    if: needs.round-8.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 9
+
+  round-10:
+    name: Round 10
+    needs: round-9
+    if: needs.round-9.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 10
+
+  round-11:
+    name: Round 11
+    needs: round-10
+    if: needs.round-10.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 11
+
+  round-12:
+    name: Round 12
+    needs: round-11
+    if: needs.round-11.outputs.done == 'false'
+    uses: ./.github/workflows/search-round.yml
+    with:
+      round: 12
+
+  search:
+    name: Search the scoring weights
+    needs: [round-0, round-1, round-2, round-3, round-4, round-5, round-6, round-7, round-8, round-9, round-10, round-11, round-12]
+    # Whatever round the search finished in, the rounds after it are skipped, and skipped is not failed.
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    # Pushing the proposal branch, and reading the rounds' evaluations back. GitHub Actions permissions cannot
+    # be conditional, so this is `write` even on a report-only run; the checkout below is what actually decides
+    # whether a credential is on disk, and it only keeps one when `apply` is set.
+    permissions:
+      contents: write
+      actions: read
+    # The search itself is the rounds' work, read back here; this plays the hold-out, and the rounds past the
+    # last round job when a run asks for more. The most a GitHub-hosted job may run.
+    timeout-minutes: 360
+    steps:
+      # A report-only run keeps no credential on disk, the way this workflow always did. An applying run keeps
+      # the one the checkout sets up and lets git use it, because the alternative is a token inside a remote
+      # URL, which puts it in the process list and in every error message git prints.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: ${{ inputs.apply }}
+
+      - name: Set up
+        uses: ./.github/actions/search-setup
+        with:
+          token: ${{ github.token }}
+
+      - name: Read the evaluations the rounds played
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          pipx install uv==0.8.17
-          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
-          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
-          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
-          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
-          uv sync --project learning --locked --no-build --no-install-project
+          mkdir -p "$RUNNER_TEMP/cache"
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'search-kept-*' --dir "$RUNNER_TEMP/kept"
+          find "$RUNNER_TEMP/kept" -name '*.json' -exec cp {} "$RUNNER_TEMP/cache/" \;
+          echo "$(find "$RUNNER_TEMP/cache" -name '*.json' | wc -l) evaluation(s) kept by the rounds."
 
-      - name: Build
-        run: |
-          dotnet restore
-          dotnet build --no-restore --configuration Release
-
-      - name: Build game content
-        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
-
+      # The search played once more, over every evaluation the rounds kept: it reads them instead of playing
+      # them, so it reaches the end the rounds did and writes what a single job would have written.
       # Inputs reach the shell through the environment, never through the script text.
       # `initial` is what lets the ladder climb. Without it every run restarts from the built-in weights, so a
       # search against a set stronger than Greedy begins the climb from behind whatever it is trying to beat,
@@ -196,6 +330,7 @@ jobs:
             python -m downfall_learning.cli search-weights -o "$OUT" \
             --opponent "$OPPONENT" --kind "$KIND" "${start[@]}" --seeds "$SEEDS" \
             --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
+            --cache "$RUNNER_TEMP/cache" \
             2>&1 | tee "$OUT/search.log"
 
       # Only ratios matter -- scaling every weight scales every score -- so the table reads each weight against

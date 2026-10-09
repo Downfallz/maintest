@@ -367,3 +367,89 @@ def test_an_objective_without_confirmation_seeds_confirms_nothing(tmp_path: Path
     arguments = confirming_namespace(tmp_path)
 
     assert cli._confirmation_seeds(arguments, objective_confirming_on(""), NO_CONTENT) is None
+
+
+def _search(tmp_path: Path, fake_engine: list[str], output: str, *extra: str) -> int:
+    return cli.main(
+        [
+            "search-weights",
+            "-o",
+            str(tmp_path / output),
+            "--iterations",
+            "2",
+            "--population",
+            "3",
+            "--opponent",
+            "greedy,random",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+            *extra,
+        ]
+    )
+
+
+def test_a_search_spread_over_machines_finds_what_one_machine_finds(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    assert _search(tmp_path, fake_engine, "whole") == 0
+    whole_printed = capsys.readouterr().out
+    cache = tmp_path / "cache"
+    rounds = 0
+
+    # What the workflow does: plan, play every pending evaluation on its own, plan again over what was kept.
+    while True:
+        assert _search(tmp_path, fake_engine, "spread", "--cache", str(cache), "--plan-only") == 0
+        pending = tmp_path / "spread" / "pending.json"
+        if not pending.is_file():
+            break
+        rounds += 1
+        for index in range(len(json.loads(pending.read_text())["entries"])):
+            arguments = [str(pending), "--index", str(index), "--cache", str(cache), "--repo", str(tmp_path)]
+            assert cli.main(["search-evaluate", *arguments, "--engine", *fake_engine]) == 0
+
+    whole = json.loads((tmp_path / "whole" / "search.json").read_text())
+    spread = json.loads((tmp_path / "spread" / "search.json").read_text())
+    assert rounds == 3
+    assert spread["candidates"] == whole["candidates"]
+    assert spread["best"] == whole["best"]
+    assert spread["floor"] == whole["floor"]
+    # The last plan, over the whole cache, prints the report a single job prints.
+    spread_printed = capsys.readouterr().out.split("pending, written to")[-1]
+    assert whole_printed.split("Written to")[0] in spread_printed
+
+
+def test_a_planning_search_names_a_whole_round_at_once(tmp_path: Path, fake_engine: list[str]) -> None:
+    cache = tmp_path / "cache"
+    _search(tmp_path, fake_engine, "spread", "--cache", str(cache), "--plan-only")
+    for index in range(2):
+        pending = str(tmp_path / "spread" / "pending.json")
+        cli.main(
+            [
+                "search-evaluate",
+                pending,
+                "--index",
+                str(index),
+                "--cache",
+                str(cache),
+                "--engine",
+                *fake_engine,
+            ]
+        )
+
+    _search(tmp_path, fake_engine, "spread", "--cache", str(cache), "--plan-only")
+
+    entries = json.loads((tmp_path / "spread" / "pending.json").read_text())["entries"]
+    # The first round's three candidates against both opponents, the start among them already kept.
+    assert len(entries) == 4
+    assert {entry["opponent"] for entry in entries} == {"greedy", "random"}
+
+
+def test_a_search_that_only_plans_needs_a_cache(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    code = _search(tmp_path, fake_engine, "spread", "--plan-only")
+
+    assert code != 0
+    assert "needs a cache" in capsys.readouterr().err
