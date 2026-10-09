@@ -216,14 +216,15 @@
     "spell:guard": {
       "name": "Brace",
       "class": "Brawler",
-      "intent": "The Brawler's investment: a point of defense on an ally for good, plus a point while the pressure is on. Cheap, repeatable and permanent, which makes it the likeliest single cause of a match no one can finish.",
+      "intent": "The Brawler's upkeep: a point of defense on an ally for three rounds, plus a point for two while the pressure is on. Cheap and repeatable, and nothing of it lasts: a Brawler that stops casting it gives the defense back. Until 2026-10-09 the first point was permanent and stacked on every cast, the likeliest single cause of a match no one could finish (journal, 2026-10-09).",
       "keep": [
-        "Half of it is permanent and stacks on every cast",
+        "Nothing of it is permanent: the defense holds only while it is cast",
         "No dearer than any heal: it prevents, it does not repair"
       ],
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]

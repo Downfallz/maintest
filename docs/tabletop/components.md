@@ -8,7 +8,8 @@ day again, to a 20-Round cap the same day once more, and to Stun immunity the sa
 amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the content of 2026-10-05: Blood
 Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
-ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08; to Brace's first point lasting three Rounds,
+2026-10-09). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -38,6 +39,17 @@ What is current, exactly:
   `noxious_cure` and `psycho_rush`'s caster debuff; `noxious_cure` now needs a -3 face of its own (6 x 3),
   and `psycho_rush` keeps 6 at -2 ([1.4](#14-condition-tokens)). The Condition tokens go from 168 to **174**
   and the token pieces from 266 to **272**, which the same 2 token sheets hold; the paper stays 57.
+- **Brace's first point lasts three Rounds, not for good** (journal, 2026-10-09; content `f2ae0013`, the
+  hash its benchmark digest is written under). `guard` gives one ally
+  `Defense +1, 3 rounds` and `Defense +1, 2 rounds`, where the first was permanent: it moved the Defense buff
+  rail and took no token. Both halves are timed now, so a cast places **two** Defense buff +1 tokens on its
+  target and moves no rail for good, and the +1 face goes from 6 to **12** (6 slots x 2)
+  ([1.4](#14-condition-tokens)). The Condition tokens go from 174 to **180** and the token pieces from 272 to
+  **278**, which the same 2 token sheets hold (about 370 at 15 mm); the paper stays 57. The card keeps 3 body
+  lines, and its longest is 20 characters, not 21 ([2.4](#24-the-seven-that-need-a-second-sentence)); no
+  figure of [2.3](#23-the-measurement) moves. The dock keeps four lanes: 3 Rounds was already the longest
+  Duration ([3.2](#32-the-condition-dock-and-the-countdown)). Three Defense buff Spells carry a permanent half
+  now, not four.
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -224,7 +236,7 @@ Totals first, then the derivation of each line.
 | Package cards | 144 |
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
-| Condition tokens | 174 in 6 kinds |
+| Condition tokens | 180 in 6 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
@@ -232,7 +244,7 @@ Totals first, then the derivation of each line.
 
 The paper: 30 sheets of Spell cards, 16 of package cards and 2 of Speed cards (9 a sheet; the last Spell
 sheet and the second Speed sheet hold 3 each), 3 of creature boards (2 a sheet), 2 player mats, 1 for the
-initiative and round tracks, 2 of tokens (272 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
+initiative and round tracks, 2 of tokens (278 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
 of player aids. 57. Card backs would add 48 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -271,7 +283,11 @@ sheets, and the paper stays 55 ([1.4](#14-condition-tokens)). The content of 202
 `basic_attack` is gone, so 44 Spells make **264** Spell cards, still on 30 sheets, and the paper stays 55
 ([1.1](#11-spell-cards-and-package-cards)). ADR 0101 moved one more: three Capstones make 24 Tiers, so the
 package cards go from 126 to **144**, on 16 sheets, and the paper from 55 to **57**
-([1.1](#11-spell-cards-and-package-cards)).
+([1.1](#11-spell-cards-and-package-cards)). Toxic Mend's -3 of 2026-10-08 moved one more: a Defense debuff -3
+face of its own, so the Condition tokens go from 168 to **174** and the token pieces from 266 to **272**. And
+Brace's timed first point of 2026-10-09 moved one more: two Defense buff +1 tokens a cast, so the Condition
+tokens go from 174 to **180** and the token pieces from 272 to **278**. Both are still on 2 sheets, and the
+paper stays 57 ([1.4](#14-condition-tokens)).
 
 ### 1.1 Spell cards and package cards
 
@@ -392,14 +408,14 @@ for s in S:
 | Regeneration | 2 a Round | 18 | `soothing_chant`, up to 3 allies; 6 slots x 3 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
 | Stun | - | 12 | A Stun on a Creature already stunned is **ignored** (ADR 0072), so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. The Round of Stun immunity after it is not a Condition and has its own token ([1.5](#15-the-rest-of-the-pieces)). | **RULE** (a Stun on a stunned Creature is ignored, and the two places a Stun is shown) x **VALUE** (team size) |
-| Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
+| Defense buff | +1 | 12 | `guard`, one ally, two a cast (+1 for 3 Rounds and +1 for 2); 6 slots x 2 = 12 (6, its 2-Round half alone, until 2026-10-09, when the other half was permanent) | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half and `bone_ward`, one ally, and `shield_bash` on its own caster; one each; 6 x 1 | **VALUE** |
 | Defense buff | +4 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
 | Defense debuff | -2 | 6 | `psycho_rush`'s caster debuff; 6 x 1 | **VALUE** |
 | Defense debuff | -3 | 18 | `noxious_cure` on up to 3 allies; 6 x 3 (-2 until 2026-10-08) | **VALUE** |
 | Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
-| **Total** | | **174** | | |
+| **Total** | | **180** | | |
 
 Every timed amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 1,
 2 or 3; a timed Defense buff is 1, 3 or 4; a timed Defense debuff is 2 or 3; an Initiative debuff is 3 or 5.
@@ -412,6 +428,11 @@ total 30; the Initiative debuffs are -3 and -5 where they were -1 and -2, and st
 Initiative buff leaves (-18, below). At `ad3e4d00` it reads 168, still in 6 kinds, and content alone moved
 it again: `crazed_specter` places its Bleed of 4 on up to 3 enemies for 2 Rounds as well as on its caster for
 1, so the most one slot places on that face goes from 1 to 4, and the Bleed-4 supply from 6 to 24 (+18).
+Content alone moved it twice more. On 2026-10-08 `noxious_cure`'s Defense debuff went from -2 to -3, a face
+of its own (6 x 3), while `psycho_rush` keeps 6 at -2: 174 (+6). On 2026-10-09 `guard`'s first point went
+from permanent to 3 Rounds, so a cast places two +1 tokens on its one target where it placed one and moved
+the rail with the other; the most one slot places on that face goes from 1 to 2, and the +1 supply from 6 to
+12: **180** (+6), still in 6 kinds. The timed Defense buffs are still +1, +3 and +4, and now total 36.
 
 **No Energy regeneration token.** At `813bb91b`, and still at `e6f72578`, no Spell authors an
 `EnergyRegeneration`, so the command above prints none and no cast can place one: `momentum`, the only Spell
@@ -474,7 +495,7 @@ above, and the two cannot happen together: a slot casts one Spell.
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. A Creature that owns Titan is immune for good (ADR 0101) and needs no token for it: its package card is the record ([4.1](#41-the-package-card)), so the count does not move. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, and that of 2026-10-05 makes it 266 again. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. A Creature that owns Titan is immune for good (ADR 0101) and needs no token for it: its package card is the record ([4.1](#41-the-package-card)), so the count does not move. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, that of 2026-10-05 makes it 266 again, Toxic Mend's -3 (2026-10-08) 272, and Brace's timed first point (2026-10-09) 278. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -763,7 +784,7 @@ line holds:
 | `summon_minions` | `Up to 3 enemies` (15) / `Bleed 2 a round, 3 rounds` (25) / `Caster: Damage 2` (16) | 25 | 3 |
 | `soul_devourer` | `One enemy` (9) / `Damage 7` (8) / `Energy -3` (9) / `Caster: Heal 4` (14) | 14 | **4** |
 | `thundering_seal` | `One ally` (8) / `Defense +3, permanent` (21) / `Defense +3, 2 rounds` (20) | 21 | 3 |
-| `guard` | `One ally` (8) / `Defense +1, permanent` (21) / `Defense +1, 2 rounds` (20) | 21 | 3 |
+| `guard` | `One ally` (8) / `Defense +1, 3 rounds` (20) / `Defense +1, 2 rounds` (20) | 20 | 3 |
 
 Three of the seven use four lines (`crazed_specter` since 2026-10-05, read at `ad3e4d00`), and none of their
 lines is over 32 characters. **The layout that fits them is one effect to a line.** Not prose: a line per
@@ -772,7 +793,9 @@ effect, each with its own Duration, and a 0.3 pt rule above the caster line. Tha
 four things on the card instead of one sentence to parse. `crazed_specter` prints the same Condition twice,
 `Bleed 4 a round, 2 rounds` above the rule and `Caster: Bleed 4 a round, 1 round` below it: one token face,
 two Durations, two different Creatures. The rule is what says each target bleeds for two Rounds and the
-caster for one. Nine
+caster for one. `guard` prints one face twice on the same target since 2026-10-09, `Defense +1, 3 rounds`
+over `Defense +1, 2 rounds`: two lines, two tokens, and the two Durations are what put them in different
+lanes of the dock, so they leave a Round apart. Nine
 more Spells carry a Caster effect at `e6f72578` and are not among the audit's seven: `bone_ward`, `extort`,
 `hateful_sacrifice`, `latch`, `momentum`, `ambush`, `parasite_jab`, `reckless_swing` and `shield_bash`. They
 use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damage 3` (8) /
@@ -980,7 +1003,8 @@ its Creature is the record, and the dock's swap, if a Stun the Creature carried 
 changes nothing for it.
 
 Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed, `latch`'s
-Bleed and the Regeneration on its caster, and `shield_bash`'s Defense buff on its caster, at `e6f72578`),
+Bleed and the Regeneration on its caster, and `shield_bash`'s Defense buff on its caster, at `e6f72578`;
+`guard`'s first Defense buff since 2026-10-09, which adds no lane),
 plus the `new` lane. **VALUE**: a longer
 Duration authored in `data/` is a fifth lane and a reprint of six boards.
 
@@ -1778,7 +1802,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.8 Reveal in timeline order, bind targets at reveal | **No component since ADR 0083.** It was 18 target markers and the `Targeted by` row. The reveal and the resolution are one turn of `Activation` now, so the Spell card turned face up in its intent slot and the targets named aloud are the whole of it, [3.8](#38-how-a-cast-is-declared-and-resolved-in-components). translation.md keeps the row as it measured it, with a note. |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 174 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 180 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
@@ -1790,8 +1814,8 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | `Bleed` | 66 tokens: 6 at 1, 18 at 2, 18 at 3, 24 at 4 (6 at 4 until 2026-10-05) |
 | `Regeneration` | 30 tokens: 6 at 1, 18 at 2, 6 at 3 |
 | `Stun` | 12 tokens, two a Creature: a Stun on a stunned Creature is ignored, so a Creature carries one, and it needs a token in the Speed slot and one in the dock. Plus 6 Immune tokens, one a Creature, for the Round of Stun immunity after it ([1.5](#15-the-rest-of-the-pieces)) |
-| `DefenseBuff` | 30 timed tokens (6 at +1, 6 at +3, 18 at +4); a permanent buff moves the rail and needs none |
-| `DefenseDebuff` | 18 timed tokens at -2; a permanent debuff moves the rail |
+| `DefenseBuff` | 36 timed tokens (12 at +1, 6 at +3, 18 at +4; 6 at +1 until 2026-10-09); a permanent buff moves the rail and needs none |
+| `DefenseDebuff` | 24 timed tokens: 6 at -2, 18 at -3 (18 at -2 until 2026-10-08); a permanent debuff moves the rail |
 | `InitiativeBuff` | **No token** since the content of 2026-10-04: no Spell places one, so the 18 at +2 left the box ([1.4](#14-condition-tokens)). The rule stays, read with the Base rails, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one). translation.md's row reads **keep as is** since its re-read of 2026-10-04. |
 | `InitiativeDebuff` | 12 tokens: 6 at -3, 6 at -5 |
 
@@ -1807,7 +1831,7 @@ keeps both verdicts: `crazed_specter` still **needs a component**, now four Blee
 | Spell | What a cast places |
 | --- | --- |
 | `full_plate` | Nothing. +3 on its own Defense buff rail, permanent |
-| `guard` | 1 Defense buff +1 (2 rounds); +1 on the rail, permanent |
+| `guard` | 2 Defense buffs +1 on its one target, one for 3 rounds and one for 2. Until 2026-10-09 it placed the 2-round one and moved the rail +1, permanent |
 | `thundering_seal` | 1 Defense buff +3 (2 rounds); +3 on the rail, permanent |
 | `healing_screech` | 1 Regeneration 3 (2 rounds) |
 | `death_squad` | **Gone** since 2026-10-04. `night_raid` took its place in Deathstalker and places nothing: its `Damage 4` and `Energy -3` on up to 2 enemies move rails already on the board (`Damage 3` and `Energy -2` on up to 3 until 2026-10-05) |
