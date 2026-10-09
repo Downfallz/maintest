@@ -20,7 +20,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 env:
   DOTNET_NOLOGO: true
@@ -31,6 +30,9 @@ jobs:
   plan:
     name: Plan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     timeout-minutes: 30
     outputs:
       done: ${{ steps.plan.outputs.done }}
@@ -92,6 +94,9 @@ jobs:
     needs: plan
     if: needs.plan.outputs.done == 'false'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     # One evaluation, which is what a whole round was in one job: a lookahead candidate on 60 seeds is about
     # a quarter of an hour on a runner.
     timeout-minutes: 120

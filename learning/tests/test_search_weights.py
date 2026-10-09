@@ -518,3 +518,22 @@ def test_an_evaluator_refuses_an_engine_that_is_not_built(tmp_path: Path) -> Non
 
     with pytest.raises(EvaluationError, match="dotnet build --configuration Release"):
         CliEvaluator(engine, tmp_path / "work")
+
+
+def test_a_kept_evaluation_is_not_read_for_seeds_or_content_that_changed(
+    tmp_path: Path, fake_engine: list[str]
+) -> None:
+    (tmp_path / "seeds.json").write_text(json.dumps({"seeds": [1, 2]}))
+    schema = tmp_path / "data" / "dst" / "game.schema.json"
+    schema.parent.mkdir(parents=True)
+    schema.write_text(json.dumps({"contentHash": "first"}))
+    engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), seeds="seeds.json")
+    evaluator = CliEvaluator(engine, tmp_path / "work", cache=tmp_path / "cache")
+    before = evaluator.key(DEFAULT_WEIGHTS, "greedy")
+
+    (tmp_path / "seeds.json").write_text(json.dumps({"seeds": [1, 3]}))
+    after_seeds = evaluator.key(DEFAULT_WEIGHTS, "greedy")
+    schema.write_text(json.dumps({"contentHash": "second"}))
+    after_content = evaluator.key(DEFAULT_WEIGHTS, "greedy")
+
+    assert len({before, after_seeds, after_content}) == 3

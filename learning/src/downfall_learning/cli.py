@@ -488,13 +488,13 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     except PendingEvaluations as stopped:
         pending.write_text(json.dumps({"entries": stopped.entries}, indent=2) + "\n", encoding="utf-8")
         print(f"{len(stopped.entries)} evaluation(s) of the next round are pending, written to '{pending}'.")
-        return 0
-    result.write(arguments.output, evaluator.kind)
-    print(
-        format_search(
-            result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+    else:
+        result.write(arguments.output, evaluator.kind)
+        print(
+            format_search(
+                result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+            )
         )
-    )
     return 0
 
 

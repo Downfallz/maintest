@@ -53,11 +53,10 @@ on:
     paths:
       - "learning/experiments/search.json"
 
-# Reading the run's own artifacts, which is how the rounds hand each other what they played. Only the job
-# that finishes the search can push, below.
+# Each job asks for what it needs: the rounds read the run's own artifacts, which is how they hand each
+# other what they played, and only the job that finishes the search can push.
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: search-${{ github.ref }}
@@ -171,6 +170,9 @@ jobs:
   round-0:
     name: Round 0
     needs: knobs
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 0
@@ -179,6 +181,9 @@ jobs:
     name: Round 1
     needs: round-0
     if: needs.round-0.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 1
@@ -187,6 +192,9 @@ jobs:
     name: Round 2
     needs: round-1
     if: needs.round-1.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 2
@@ -195,6 +203,9 @@ jobs:
     name: Round 3
     needs: round-2
     if: needs.round-2.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 3
@@ -203,6 +214,9 @@ jobs:
     name: Round 4
     needs: round-3
     if: needs.round-3.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 4
@@ -211,6 +225,9 @@ jobs:
     name: Round 5
     needs: round-4
     if: needs.round-4.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 5
@@ -219,6 +236,9 @@ jobs:
     name: Round 6
     needs: round-5
     if: needs.round-5.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 6
@@ -227,6 +247,9 @@ jobs:
     name: Round 7
     needs: round-6
     if: needs.round-6.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 7
@@ -235,6 +258,9 @@ jobs:
     name: Round 8
     needs: round-7
     if: needs.round-7.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 8
@@ -243,6 +269,9 @@ jobs:
     name: Round 9
     needs: round-8
     if: needs.round-8.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 9
@@ -251,6 +280,9 @@ jobs:
     name: Round 10
     needs: round-9
     if: needs.round-9.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 10
@@ -259,6 +291,9 @@ jobs:
     name: Round 11
     needs: round-10
     if: needs.round-10.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 11
@@ -267,6 +302,9 @@ jobs:
     name: Round 12
     needs: round-11
     if: needs.round-11.outputs.done == 'false'
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/search-round.yml
     with:
       round: 12

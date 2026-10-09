@@ -101,7 +101,8 @@ class EvaluationError(RuntimeError):
     """The engine could not evaluate a candidate."""
 
 
-class PendingEvaluations(RuntimeError):  # noqa: N818 -- a search stopping on purpose, not a failure
+# Not named an error: a search stopping here is doing what it was asked.
+class PendingEvaluations(RuntimeError):  # noqa: N818
     """The search reached evaluations its cache does not hold, and was asked to name them rather than play
     them: what a search spread over several machines stops on, once a round (``CliEvaluator.plan_only``).
 
@@ -356,14 +357,36 @@ class CliEvaluator:
             raise PendingEvaluations(list(missing.values()))
 
     def key(self, weights: Mapping[str, float], opponent: str) -> str:
-        """What an evaluation is kept under: everything that decides what the engine writes for it."""
+        """What an evaluation is kept under: what decides what the engine writes for it. The content it plays,
+        the seed file's seeds and a file an opponent is read from are read by what they hold, not by name, so
+        a cache kept across an edit of any of them misses rather than answers for the old one. The engine's
+        own code is not in the key: a build older than its sources is refused (`missing_engine`), and a run
+        of `search.yml` builds one commit for all its jobs; a cache kept by hand across a code change is the
+        one thing the key does not see."""
         decided = {
             "kind": self._engine.kind,
             "weights": dict(sorted(weights.items())),
             "opponent": opponent,
-            "seeds": self._engine.seeds,
+            "opponentFile": self._digest_of(opponent.rpartition(":")[2].partition("@")[0]),
+            "seeds": self._digest_of(self._engine.seeds) or self._engine.seeds,
+            "content": self._content(),
         }
         return hashlib.sha256(json.dumps(decided, sort_keys=True).encode("utf-8")).hexdigest()[:32]
+
+    def _digest_of(self, name: str) -> str | None:
+        """What a file holds, as a digest, when the name is a file; ``None`` when it is not one."""
+        path = Path(name)
+        path = path if path.is_absolute() else self._engine.root / path
+        if not name or not path.is_file():
+            return None
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def _content(self) -> str | None:
+        """The content hash of the built content the engine plays, when it is built."""
+        schema = self._engine.root / "data" / "dst" / "game.schema.json"
+        if not schema.is_file():
+            return None
+        return str(json.loads(schema.read_text(encoding="utf-8")).get("contentHash"))
 
     def _kept(self, key: str) -> Path:
         assert self._cache is not None
