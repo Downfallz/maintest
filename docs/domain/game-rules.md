@@ -57,8 +57,8 @@ listed in [spells.md](spells.md).
   a bleed or to what a cast does to its own caster. A creature's sunder is its packages' added; every direct
   hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast
   does to its own caster are left alone. Each family closes with a level-4 capstone opened by any of its
-  level-3 packages and teaching no spell: Titan (sunder 3; stun immunity until 2026-10-09), Archmage (+1
-  energy at upkeep), Apex (+2 damage).
+  level-3 packages and teaching no spell: Titan (sunder 2; stun immunity until 2026-10-09), Archmage (+1
+  energy at upkeep), Apex (+3 damage; +2 until 2026-10-09).
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the

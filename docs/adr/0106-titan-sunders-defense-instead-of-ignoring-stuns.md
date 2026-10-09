@@ -18,8 +18,10 @@ capstones feeds the stall the round cap is there to end. The owner asked for an 
 A Passive may carry a sunder: every direct hit its owner deals meets the target's total Defense less the
 sunder, floored at zero, after the critical multiplier and the damage bonus. It never reaches a Bleed or what a
 cast does to its own caster, the boundary the damage bonus already keeps (ADR 0101). Sunders add, as the other
-amounts do. Titan gives a sunder of 3 instead of stun immunity, and the amount is a knob from 1 to 3. The
-stun-immunity passive kind stays in the engine; no capstone gives it.
+amounts do. Titan gives a sunder of 2 instead of stun immunity, and the amount is a knob from 1 to 3. The
+stun-immunity passive kind stays in the engine; no capstone gives it. Apex's damage bonus rises from 2 to 3 in
+the same change: a sunder of 3 won 91 % of the Greedy mirrors in which one side alone bought it, and the
+Predator family, Apex's, won least.
 
 The heuristic agents price a sunder the way they price a damage bonus: the best cast it makes, each hit
 meeting that much less defense, against the best cast without it, over the rounds a permanent condition is
@@ -32,7 +34,7 @@ on a target reads each enemy's sunder in the defense its hits meet.
 - Good: the capstone the Brawler family buys most now shortens the matches where defense stacked, which are
   the ones that reach the cap, and is worth nothing where they would not: it answers armour, as the family's
   identity reads.
-- Good: it is distinct from Apex, which adds 2 to every hit whatever the target holds.
+- Good: it is distinct from Apex, which adds 3 to every hit whatever the target holds.
 - Bad: one more member in a passive, so every client that shows a passive shows it, and the content hash and
   every reading the tuner takes move.
 - Neutral: `PassiveDto` gains a member under the same schema version 5: an engine that does not know it refuses
