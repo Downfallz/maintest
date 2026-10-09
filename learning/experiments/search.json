@@ -1,11 +1,11 @@
 {
-  "why": "The lookahead's weights refitted under ADR 0102. Greedy now prices a purchase by what it adds over the spells of its kind, and lookahead-34, fitted against the Greedy before it, beats it only 50.7 % of 400 matches where it took 94.8 % (journal, 2026-10-08): the table's strong bot is no stronger than Greedy. So this rung starts from lookahead-34, the set the table seats, and plays every candidate against the new Greedy on the first 60 benchmark seeds (learning/experiments/lookahead-seeds-60.json), because against Greedy the lookahead now sits near even and 30 seeds would not tell one candidate from the next. The first try of this rung, with search-23 on 10 seeds beside Greedy and 4 rounds of 5, had played 15 of its 21 evaluations after five hours and would have run past the six-hour timeout: the runner plays about 2.5 times slower than the local rate it was sized on (20 minutes an evaluation where 8 were expected). So search-23 leaves the panel, which also takes it out of the hold-out, where it alone would have cost an hour and three quarters; the lookahead on lookahead-34 beats it 12 of 12 on those seeds. 3 rounds of 5, seed 0: about 3.6 hours of search and half an hour of hold-out at the runner's rate. And the search now writes its best set after every round, so a run the timeout kills still leaves one. What would make it a rung: a set that beats lookahead-34 against Greedy on the 60 unseen seeds.",
-  "initial": "learning/weights/lookahead/lookahead-34.json",
+  "why": "The lookahead's weights refitted with the anticipation of ADR 0104 on. lookahead-37 was searched without it, and on the 60 unseen seeds 995377 to 995436 it beats Greedy 82 matches in 120 without it and 74 with it, a paired difference of -0.058 (-0.145 to +0.028): not settled, and measured on weights that never played with it. So this rung starts from lookahead-37 and plays every candidate as the lookahead does on main now, anticipating, against Greedy. On the first 120 benchmark seeds rather than 60, since the best of 16 on 60 scored 0.758 where the hold-out read 0.688; and 4 rounds of 8, which the search spread over runners (#310) and the faster scorer (#308) make about an hour. What would make it a rung: a set that, played with the anticipation, beats lookahead-37 played without it against Greedy on the 60 unseen seeds, 82 of 120. If none does, the anticipation is switched off for the lookahead.",
+  "initial": "learning/weights/lookahead/lookahead-37.json",
   "opponent": "greedy",
   "check_opponent": "none",
   "kind": "lookahead",
-  "seeds": "learning/experiments/lookahead-seeds-60.json",
-  "iterations": 3,
-  "population": 5,
+  "seeds": "learning/experiments/lookahead-seeds-120.json",
+  "iterations": 4,
+  "population": 8,
   "seed": 0
 }
