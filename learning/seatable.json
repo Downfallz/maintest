@@ -1,7 +1,7 @@
 {
   "_comment": "The bots a host offers a seat to, in the order they are offered: what the journal measured as worth playing against (docs/learning/journal.md). Every other weights file directly under learning/weights/ is offered after these, by its name, as a heuristic; a set for another reading lives in a folder of its own (learning/weights/lookahead/) so it is not. The lobby and the pilot read this through the host, so a new search lands here and nowhere in a page.",
   "featured": [
-    { "agent": "lookahead:learning/weights/lookahead/lookahead-37.json", "label": "Lookahead (lookahead-37) — the strongest: slow, plays the rounds ahead out; beats Greedy 82 matches in 120 on unseen seeds" },
+    { "agent": "lookahead:learning/weights/lookahead/lookahead-39.json", "label": "Lookahead (lookahead-39) — the strongest: slow, plays the rounds ahead out; beats Greedy 84 matches in 120 on unseen seeds" },
     { "agent": "lookahead", "label": "Lookahead on its built-in weights — beats Greedy 54 matches in 60 on unseen seeds" },
     { "agent": "heuristic:learning/weights/search-23.json", "label": "search-23 — the strongest one-move weights" },
     { "agent": "heuristic:learning/weights/pressure-floor.json", "label": "pressure-floor — beats search-23" },
