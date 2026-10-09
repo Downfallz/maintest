@@ -4,15 +4,16 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-10-09. Tier 1 is settled: its six spells leave the tuner's search space
+## 2026-10-09. Tier 1 and the starting kit are settled: their eight spells leave the tuner's search space
 
 No content moves; `data/balance/knobs.json` does.
 
 - **Why.** Tuning passes spent hours moving numbers the owner then put back (pass 22 kept one of six), often on
-  the cheapest spells, where a step reads loudest on the objective. The owner settled tier 1 by hand.
+  the cheapest spells, where a step reads loudest on the objective. The owner settled tier 1 and the starting kit by hand.
 - **What.** Pummel, Brace, Lightning Bolt, Rejuvenate, Poison Slash and Throwing Star (Brute, Occultist,
-  Prowler) keep their entries, intent and keeps, with an empty knob list and a keep that says why. 160 knobs
-  become 139; a pass's opening sweep plays 21 fewer. The packages had no knobs already.
+  Prowler), and the starting kit, Strike and Focus (`heavy_strike`, `wait`), keep their entries, intent and
+  keeps, with an empty knob list and a keep that says why. 160 knobs become 136; a pass's opening sweep plays
+  24 fewer. The packages had no knobs already.
 - **`check-knobs`** has no problem. Its findings that a tier-2 spell cannot become a choice against Lightning
   Bolt or Rejuvenate "at the bottom of its own bounds" now read as settled: the tier-2 spell is the one to move.
 

@@ -178,25 +178,22 @@
       "class": "Creature",
       "intent": "The floor of the game: spend the activation on nothing and come back two energy richer. It is what a creature does when everything it knows is too expensive, so it must stay free and it must stay worse than acting.",
       "keep": [
+        "The starting kit is settled: no knob moves it (the owner, 2026-10-09)",
         "Free to cast",
         "Never worth more than an attack the creature can already afford"
       ],
-      "knobs": [
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 }
-      ]
+      "knobs": []
     },
     "spell:heavy_strike": {
       "name": "Strike",
       "class": "Creature",
       "intent": "The starting kit's commitment: pay more of the round for the bigger opening hit. The decision it exists to pose is spend now or bank for later, so it has to cost what it wins.",
       "keep": [
+        "The starting kit is settled: no knob moves it (the owner, 2026-10-09)",
         "Strictly dearer and stronger than Basic Attack, never both cheaper and better",
         "The reason a first round has a choice in it"
       ],
-      "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 3, "step": 1 }
-      ]
+      "knobs": []
     },
     "spell:pummel": {
       "name": "Pummel",
