@@ -42,6 +42,13 @@ public sealed record Passive
         return new Passive(stunImmunity, upkeepEnergy, damageBonus, sunder);
     }
 
+    /// <summary>What a creature owning every one of <paramref name="tiers"/> holds.</summary>
+    public static Passive Of(IEnumerable<Tier> tiers)
+    {
+        ArgumentNullException.ThrowIfNull(tiers);
+        return tiers.Aggregate(None, (held, tier) => held.With(tier.Passive));
+    }
+
     /// <summary>Whether the package gives anything at all through it.</summary>
     public bool GivesAnything() => StunImmunity || UpkeepEnergy > 0 || DamageBonus > 0 || Sunder > 0;
 
@@ -50,12 +57,5 @@ public sealed record Passive
     {
         ArgumentNullException.ThrowIfNull(other);
         return new Passive(StunImmunity || other.StunImmunity, UpkeepEnergy + other.UpkeepEnergy, DamageBonus + other.DamageBonus, Sunder + other.Sunder);
-    }
-
-    /// <summary>What a creature owning every one of <paramref name="tiers"/> holds.</summary>
-    public static Passive Of(IEnumerable<Tier> tiers)
-    {
-        ArgumentNullException.ThrowIfNull(tiers);
-        return tiers.Aggregate(None, (held, tier) => held.With(tier.Passive));
     }
 }
