@@ -5,8 +5,8 @@ the same engine: Tiers bought on the Rule set's schedule, one a Creature an oppo
 ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
 (ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), one Activation a slot, each action
 resolving the moment its targets are named (ADR 0083), and a level-4 Capstone in each family that gives a
-Passive instead of Spells (ADR 0101). The section number is beside each rule. Fill the setup table's values in
-before the first Match.
+Passive instead of Spells (ADR 0101), Titan's a Sunder (ADR 0106). The section number is beside each rule.
+Fill the setup table's values in before the first Match.
 
 ---
 
@@ -48,7 +48,7 @@ the Match (§7.3):
 
 | Capstone | Needs one of | Passive |
 | --- | --- | --- |
-| **Titan** | Ravager, Colossus, Tyrant | `Immune to stun`. A Stun it already carries still runs out |
+| **Titan** | Ravager, Colossus, Tyrant | `Every hit ignores 3 defense`: a **Sunder** of 3 on every direct hit |
 | **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round |
 | **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit`: every target of every Damage line |
 
@@ -95,8 +95,9 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 3. **Flip and name** the targets, together.
 4. **Pay** the printed cost.
 5. **Roll for a critical**, once for the cast. **Quick never rolls.**
-6. **Apply each effect line to each target.** A Damage line takes the caster's **Damage bonus**.
-7. **Apply the `Caster:` line**, once. No critical, no Damage bonus.
+6. **Apply each effect line to each target.** A Damage line takes the caster's **Damage bonus**, and meets
+   the target's Defense less the caster's **Sunder**.
+7. **Apply the `Caster:` line**, once. No critical, no Damage bonus, no Sunder.
 8. **A Team with no living Creature?** The Match ends now. Otherwise, the next slot.
 
 **Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
@@ -104,6 +105,9 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 
 **Damage bonus** = the `Damage +N on every hit` on the caster's package cards + its Damage buffs. Never on a
 Bleed tick, never on the `Caster:` line.
+
+**Sunder** = the `Every hit ignores N defense` on the caster's package cards. A hit meets the target's total
+Defense **less the Sunder, never below 0**: it never adds damage. No rail moves. Never on the `Caster:` line.
 
 ---
 
@@ -118,10 +122,12 @@ rolled. A card printed at **0%** never rolls.
 | **Damage** on a target, Damage bonus included | The **`Caster:`** line, all of it |
 | A **Heal** on a target | **Energy** given or taken |
 | | Every **lasting Effect** (Bleed, Regeneration, Energy regeneration, Stun, Defense, Initiative, Damage buff) |
+| | The caster's **Sunder** |
 
 **Add the bonus first, multiply second, subtract Defense third.**
-`(printed Damage + Damage bonus) x multiplier, then - total Defense, floor 0.`
-Not `(printed Damage - total Defense) x multiplier`, and not `printed Damage x multiplier + Damage bonus`.
+`(printed Damage + Damage bonus) x multiplier, then - (total Defense - Sunder, floor 0), floor 0.`
+Not `(printed Damage - total Defense) x multiplier`, not `printed Damage x multiplier + Damage bonus`, and
+not `- total Defense + Sunder`, which adds damage when the Sunder is more than the Defense.
 
 ---
 
@@ -151,7 +157,7 @@ Creature is ignored.**
 | **Energy regeneration** | Start of Round, **1st** *(no card applies it today)* |
 | **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
-| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4). Ignored, always, on a Creature that owns **Titan** |
+| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution *(no card applies a buff today)* |
 | **Damage buff** | Read whenever its holder deals a direct hit, added to its Damage bonus *(no card applies it today)* |
@@ -160,8 +166,7 @@ Creature is ignored.**
 
 1. Every token in a numbered lane slides **one lane left**; leaving lane `1` removes it. A **Stun** token
    leaving lane `1` of a living Creature is swapped for an **Immune** token in lane `1`, and the Stun token in
-   the Speed slot comes off. The next Cleanup removes the Immune token. A Creature that owns **Titan** needs no
-   Immune token: its package card is its immunity, for good.
+   the Speed slot comes off. The next Cleanup removes the Immune token.
 2. Every token in `new` moves into the lane matching its printed Duration.
 
 > `new` is why **the first countdown does not count**. Read a Duration as "**this many of the following

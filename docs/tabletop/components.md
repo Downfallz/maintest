@@ -9,8 +9,8 @@ amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the cont
 Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
 ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08; to Brace's first point lasting three Rounds,
-2026-10-09). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
-[translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
+2026-10-09; to Titan's Sunder of ADR 0106 the same day). Phase 3 of [plan.md](plan.md). It answers the
+**needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
 What is current, exactly:
@@ -50,6 +50,19 @@ What is current, exactly:
   figure of [2.3](#23-the-measurement) moves. The dock keeps four lanes: 3 Rounds was already the longest
   Duration ([3.2](#32-the-condition-dock-and-the-countdown)). Three Defense buff Spells carry a permanent half
   now, not four.
+- **Titan sunders 3 Defense instead of giving Stun immunity**
+  ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md), 2026-10-09; content
+  `0a0d8573`, `data/Tiers/titan.v1.json` reads `"passive": {"sunder": 3}`). Every direct hit a Titan owner
+  deals meets the target's total Defense less 3, never below zero. What moved is one line of text: the Titan
+  package card's Passive prints `Every hit ignores 3 defense` where it printed `Immune to stun`
+  ([4.1](#41-the-package-card)), 27 characters, inside the 38 a line holds, and the card's hash prefix.
+  **No count moves.** Titan's immunity never had a token of its own, since its card was the record; the
+  **6 Immune tokens** stay, because they are the Round of Stun immunity after every Stun (ADR 0072), which
+  ADR 0106 does not touch ([1.5](#15-the-rest-of-the-pieces)). The Sunder needs no token and no rail either:
+  like Apex's bonus it is read off the package card at the hit, and it moves neither Defense rail
+  ([3.3](#33-defense-two-rails-because-the-floor-is-applied-once)). A Capstone card is still read during
+  play, at every hit rather than at every Stun line, so it still lies uncovered
+  ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)).
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -141,8 +154,8 @@ What is current, exactly:
 - **The Capstones of 2026-10-07, `cedcfb61`**
   ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
   level-4 package that any of its level-3 packages opens, that teaches no Spell, pays +0 initiative, and gives
-  a Passive: Titan is immune to Stun, Archmage gains 1 more Energy at every Upkeep, Apex adds 2 to every
-  direct hit. The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
+  a Passive: Titan is immune to Stun (a Sunder of 3 since 2026-10-09, above), Archmage gains 1 more Energy
+  at every Upkeep, Apex adds 2 to every direct hit. The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
   16 sheets, not 126 on 14, and the paper is **57** sheets, not 55
   ([1.1](#11-spell-cards-and-package-cards)). The package card prints a `Needs one of:` list and the Passive's
   line ([4.1](#41-the-package-card)), and a Capstone card lies uncovered beside the stagger, since its Passive
@@ -495,7 +508,7 @@ above, and the two cannot happen together: a slot casts one Spell.
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. A Creature that owns Titan is immune for good (ADR 0101) and needs no token for it: its package card is the record ([4.1](#41-the-package-card)), so the count does not move. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, that of 2026-10-05 makes it 266 again, Toxic Mend's -3 (2026-10-08) 272, and Brace's timed first point (2026-10-09) 278. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. From ADR 0101 to ADR 0106 a Creature that owned Titan was immune for good and took no token for it, its package card being the record; no Capstone gives Stun immunity now (2026-10-09), and the count never read it. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, that of 2026-10-05 makes it 266 again, Toxic Mend's -3 (2026-10-08) 272, and Brace's timed first point (2026-10-09) 278. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -998,9 +1011,8 @@ start of `Creature.TickConditions`, before the Stun expires in the same call, an
 Stun expires on a living Creature; so it runs through the next Round and ends at the next Cleanup. The
 Immune token did not slide, so the next Cleanup's move 1 takes it out of lane `1` at exactly that moment. The
 immunity is not a Condition, and the dock holds its token only because lane `1` is the lane the next Cleanup
-empties. Titan's immunity for good (ADR 0101) takes nothing in the dock: the Titan package card face up with
-its Creature is the record, and the dock's swap, if a Stun the Creature carried before the purchase ends,
-changes nothing for it.
+empties. No Capstone gives Stun immunity for good since ADR 0106, so the swap is the only way a Creature
+becomes immune to Stun.
 
 Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed, `latch`'s
 Bleed and the Regeneration on its caster, and `shield_bash`'s Defense buff on its caster, at `e6f72578`;
@@ -1042,6 +1054,11 @@ should move is Part 6, question 16.
 critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 13, 26 on a critical. The rule would read 26
 (28 at the knob's `max` of 3). It moves nothing for the reason above: no Creature's Defense reads above 10.
 The command below reads the printed Damage, which is the Spell card's; the bonus is the package card's.
+
+**At `0a0d8573` Titan's Sunder reads the rails and moves neither** (ADR 0106). A hit from a Titan owner meets
+the target's total Defense less 3, never below zero: the rails still give the total in one subtraction, and
+the Sunder is a second one, done at the hit and read off the Titan package card, as Apex's bonus is. It
+lowers what a hit meets and never raises it, so it moves no end of either rail and no figure above.
 
 ```bash
 python3 -c "
@@ -1224,7 +1241,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
   it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
   Creature's record reads as a list, and the newest card shows whole.
 - **A Capstone card lies beside the stagger, uncovered** (ADR 0101). Its Passive is read during play — at
-  every Energy gain, at every hit, at every Stun line — and the band does not print it, so a card bought
+  every Energy gain, and at every hit — and the band does not print it, so a card bought
   later must not cover it. A Creature owns at most two Capstones in 20 Rounds (four purchases each, ten in
   all), so the column needs room for two cards beside the stagger. That is question 15's player area again.
 - **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
@@ -1254,7 +1271,8 @@ An A4 landscape mat a Player, three columns, one a Creature:
 3. **Resolve** it at once, before the next slot: move the Energy marker down by the cost, roll the die if the
    card prints a chance and the Speed card is Standard, apply each effect line to each target, then the
    caster line. A Damage line on a target adds the caster's Damage bonus first, read off its Apex card and
-   its Damage buff tokens (ADR 0101). A Team left with no living Creature ends the Match there.
+   its Damage buff tokens (ADR 0101), and meets the target's total Defense less the caster's Sunder, read off
+   its Titan card, never below zero (ADR 0106). A Team left with no living Creature ends the Match there.
 
 ---
 
@@ -1310,14 +1328,16 @@ table app prints (`EffectLine.Of(Passive)`):
 | Needs one of:                        |   the any-of list, by name, joined with commas:
 | Ravager, Colossus, Tyrant            |   one of these is enough
 |--------------------------------------|
-| Immune to stun                       |   the Passive, one a line; no Spell
+| Every hit ignores 3 defense          |   the Passive, one a line; no Spell
 |                                      |
-| tier:titan:v1                49c965  |
+| tier:titan:v1                0a0d85  |
 +--------------------------------------+
 ```
 
-The three Passive lines are `Immune to stun` (Titan), `Energy +1 at every upkeep` (Archmage) and `Damage +2 on
-every hit` (Apex). The card is the Passive's only component: no token, no rail, no marker. It is read during
+The three Passive lines are `Every hit ignores 3 defense` (Titan, since ADR 0106; `Immune to stun` before),
+`Energy +1 at every upkeep` (Archmage) and `Damage +2 on every hit` (Apex). The engine still words a Stun
+immunity Passive `Immune to stun` (`EffectLine.Of`), and the measurement below still reads it, but no Tier
+gives one. The card is the Passive's only component: no token, no rail, no marker. It is read during
 play, so a Capstone card lies uncovered beside the stagger
 ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The list is joined with commas under its
 head, not with ` / ` on the `Needs` line as the table app does (`Requires one of: ...`): Apex's list is
@@ -1339,8 +1359,8 @@ What each piece of the layout answers:
 | The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0101). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `cedcfb61` (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`;
-the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa` too, where it was Tyrant's
+The measurement, at `cedcfb61`, re-run at `0a0d8573` with the Sunder's line, which moves neither figure
+(at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`; the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa` too, where it was Tyrant's
 `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one Spell):
 
 ```bash
@@ -1348,7 +1368,7 @@ python3 -c "
 import json,glob
 S={json.load(open(p))['id']:json.load(open(p))['name'] for p in glob.glob('data/Spells/**/*.json',recursive=True)}
 T={json.load(open(p))['id']:json.load(open(p)) for p in glob.glob('data/Tiers/*.json')}
-P=lambda v:(['Immune to stun'] if v.get('stunImmunity') else [])+([f\"Energy +{v['upkeepEnergy']} at every upkeep\"] if v.get('upkeepEnergy') else [])+([f\"Damage +{v['damageBonus']} on every hit\"] if v.get('damageBonus') else [])
+P=lambda v:(['Immune to stun'] if v.get('stunImmunity') else [])+([f\"Energy +{v['upkeepEnergy']} at every upkeep\"] if v.get('upkeepEnergy') else [])+([f\"Damage +{v['damageBonus']} on every hit\"] if v.get('damageBonus') else [])+([f\"Every hit ignores {v['sunder']} defense\"] if v.get('sunder') else [])
 L=[]
 for t in T.values():
   needs=['Needs one of:', ', '.join(T[q]['name'] for q in t['anyOf'])] if t.get('anyOf') else ['Needs '+(' and '.join(T[q]['name'] for q in t['prerequisites']) or 'nothing')]
@@ -1360,7 +1380,8 @@ print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
 ```
 
 The widest line on any package card is 38 characters, Apex's any-of list, **exactly** the 38 a line holds
-at 8 pt; Archmage's list is next, at 33, and every other line is 25 or fewer, and every band's second line
+at 8 pt; Archmage's list is next, at 33, then Titan's Passive line, at 27 since ADR 0106, and every other
+line is 25 or fewer, and every band's second line
 is 23 (`level 3 . +2 initiative`). A
 body is 3 lines, a `Needs` line and two Spells, or a Capstone's two `Needs` lines and its Passive, of the 4
 the Spell card's body box holds. The package card is the easy card to print, except that one line: a
@@ -1396,7 +1417,7 @@ Rules of the sub-phase that the components carry rather than the rulebook:
 - **A prerequisite is a card.** Every Tier a card `Needs` must already lie face up with the same Creature,
   and at least one of a `Needs one of:` list. The check is a read down one stagger's bands.
 - **A Passive is a card.** Nothing else on the table records it: the Capstone card, face up and uncovered
-  beside its Creature's stagger, is read at every Energy gain, hit or Stun line it changes (ADR 0101).
+  beside its Creature's stagger, is read at every Energy gain or hit it changes (ADR 0101, ADR 0106).
 - **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has
   been picked for this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`,
   ADR 0066). A face-down card is not owned yet, so the face-up stagger is the board as the Sub-phase opened,
