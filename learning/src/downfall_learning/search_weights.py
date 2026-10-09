@@ -7,7 +7,9 @@ counts 1, a draw one half), smoother than the win rate and free of the first-mov
 
 from __future__ import annotations
 
+import hashlib
 import json
+import shutil
 import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -97,6 +99,20 @@ def _newer_source(assembly: Path, root: Path, sources: Sequence[str]) -> str | N
 
 class EvaluationError(RuntimeError):
     """The engine could not evaluate a candidate."""
+
+
+# Not named an error: a search stopping here is doing what it was asked.
+class PendingEvaluations(RuntimeError):  # noqa: N818
+    """The search reached evaluations its cache does not hold, and was asked to name them rather than play
+    them: what a search spread over several machines stops on, once a round (``CliEvaluator.plan_only``).
+
+    ``entries`` are what ``search-evaluate`` plays, one evaluation each: the agent kind, the weights, the one
+    opponent entry and the seed file, and the key the result is kept under in the cache.
+    """
+
+    def __init__(self, entries: Sequence[Mapping[str, object]]) -> None:
+        super().__init__(f"{len(entries)} evaluation(s) are not in the cache.")
+        self.entries = list(entries)
 
 
 @dataclass(frozen=True)
@@ -271,7 +287,9 @@ class CliEvaluator:
     knows (``policy:<file>`` for a trained policy).
     """
 
-    def __init__(self, engine: EngineCommand, workdir: Path) -> None:
+    def __init__(
+        self, engine: EngineCommand, workdir: Path, cache: Path | None = None, plan_only: bool = False
+    ) -> None:
         # Here rather than at each call site: three commands reach the engine through this, and the one that
         # had no check (`evaluate-policy`, which `scripts/iterate.sh` runs) reported a file dotnet could not
         # find instead of the build command that would fix it.
@@ -284,6 +302,14 @@ class CliEvaluator:
         self._workdir.mkdir(parents=True, exist_ok=True)
         self.calls = 0
         self._floor: dict[str, float] | None = None
+        # Every weights evaluation this evaluator plays is kept here under a key of what decides it, and read
+        # back instead of played when it is already there: the engine is deterministic for a seed file, so a
+        # kept evaluation is the one playing it again would write. ``plan_only`` stops at the first round that
+        # needs one the cache lacks and names the round's (``PendingEvaluations``) instead of playing them.
+        self._cache = Path(cache).resolve() if cache is not None else None
+        self._plan_only = plan_only
+        if plan_only and cache is None:
+            raise ValueError("A search that only plans needs a cache to read the evaluations it has.")
 
     @property
     def opponent(self) -> str:
@@ -304,12 +330,69 @@ class CliEvaluator:
         return self._engine.kind
 
     def evaluate(self, weights: Mapping[str, float]) -> Score:
+        self.prefetch([weights])
         weights_path = write_weights(self._workdir / "candidate-weights.json", weights)
         return self.evaluate_spec(
-            f"{self._engine.kind}:{weights_path}", self._workdir / "candidate-evaluation.json"
+            f"{self._engine.kind}:{weights_path}", self._workdir / "candidate-evaluation.json", weights
         )
 
-    def evaluate_spec(self, spec: str, output: Path) -> Score:
+    def prefetch(self, population: Sequence[Mapping[str, float]]) -> None:
+        """Before a round is played: when only planning, stop on the evaluations of it the cache lacks, all
+        of them at once, so the machines that play them can play them side by side."""
+        if not self._plan_only:
+            return
+        missing: dict[str, dict[str, object]] = {}
+        for weights in population:
+            for opponent in self._engine.opponents:
+                key = self.key(weights, opponent)
+                if not self._kept(key).is_file():
+                    missing[key] = {
+                        "key": key,
+                        "kind": self._engine.kind,
+                        "weights": dict(weights),
+                        "opponent": opponent,
+                        "seeds": self._engine.seeds,
+                    }
+        if missing:
+            raise PendingEvaluations(list(missing.values()))
+
+    def key(self, weights: Mapping[str, float], opponent: str) -> str:
+        """What an evaluation is kept under: what decides what the engine writes for it. The content it plays,
+        the seed file's seeds and a file an opponent is read from are read by what they hold, not by name, so
+        a cache kept across an edit of any of them misses rather than answers for the old one. The engine's
+        own code is not in the key: a build older than its sources is refused (`missing_engine`), and a run
+        of `search.yml` builds one commit for all its jobs; a cache kept by hand across a code change is the
+        one thing the key does not see."""
+        decided = {
+            "kind": self._engine.kind,
+            "weights": dict(sorted(weights.items())),
+            "opponent": opponent,
+            "opponentFile": self._digest_of(opponent.rpartition(":")[2].partition("@")[0]),
+            "seeds": self._digest_of(self._engine.seeds) or self._engine.seeds,
+            "content": self._content(),
+        }
+        return hashlib.sha256(json.dumps(decided, sort_keys=True).encode("utf-8")).hexdigest()[:32]
+
+    def _digest_of(self, name: str) -> str | None:
+        """What a file holds, as a digest, when the name is a file; ``None`` when it is not one."""
+        path = Path(name)
+        path = path if path.is_absolute() else self._engine.root / path
+        if not name or not path.is_file():
+            return None
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def _content(self) -> str | None:
+        """The content hash of the built content the engine plays, when it is built."""
+        schema = self._engine.root / "data" / "dst" / "game.schema.json"
+        if not schema.is_file():
+            return None
+        return str(json.loads(schema.read_text(encoding="utf-8")).get("contentHash"))
+
+    def _kept(self, key: str) -> Path:
+        assert self._cache is not None
+        return self._cache / f"{key}.json"
+
+    def evaluate_spec(self, spec: str, output: Path, weights: Mapping[str, float] | None = None) -> Score:
         """Runs ``spec`` as agent A against every opponent and reads what the engine wrote.
 
         One opponent writes ``output``. Several write ``<output stem>-vs-<opponent>.json`` each and score as
@@ -319,15 +402,31 @@ class CliEvaluator:
         output = Path(output).resolve()
         opponents = self._engine.opponents
         if len(opponents) == 1:
-            return self._evaluate_against(spec, opponents[0], output)
+            return self._evaluate_against(spec, opponents[0], output, weights)
         parts = [
-            (opponent, self._evaluate_against(spec, opponent, output.with_name(part_name(output, opponent))))
+            (
+                opponent,
+                self._evaluate_against(
+                    spec, opponent, output.with_name(part_name(output, opponent)), weights
+                ),
+            )
             for opponent in opponents
         ]
         return Score.mixture(parts, self._floor)
 
-    def _evaluate_against(self, spec: str, opponent: str, output: Path) -> Score:
+    def _evaluate_against(
+        self, spec: str, opponent: str, output: Path, weights: Mapping[str, float] | None = None
+    ) -> Score:
         output.parent.mkdir(parents=True, exist_ok=True)
+        kept = None
+        if self._cache is not None and weights is not None:
+            kept = self._kept(self.key(weights, opponent))
+        if kept is not None and kept.is_file():
+            # Counted as played: it was, by whichever machine kept it, and the search reports the same count
+            # spread over machines as in one.
+            self.calls += 1
+            shutil.copyfile(kept, output)
+            return Score.of(load_evaluation(output))
         agent, count = split_opponent(opponent)
         arguments = [
             *self._engine.command,
@@ -350,6 +449,9 @@ class CliEvaluator:
         if completed.returncode != 0:
             tail = "\n".join((completed.stderr or completed.stdout).splitlines()[-10:])
             raise EvaluationError(f"The engine exited with {completed.returncode}:\n{tail}")
+        if kept is not None:
+            kept.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(output, kept)
         return Score.of(load_evaluation(output))
 
     def _seeds(self, count: int | None) -> str:
@@ -541,6 +643,7 @@ def _population(sampling: Sampling, vectors: np.ndarray, iteration: int, best: C
     ``best`` only moves when a population is finished and ranked, so a line reading it would claim "best so
     far" while naming a score already beaten earlier in this very round.
     """
+    _prefetch(sampling.evaluator, [_as_weights(vector) for vector in vectors])
     played: list[Candidate] = []
     for vector in vectors:
         weights = _as_weights(vector)
@@ -548,6 +651,13 @@ def _population(sampling: Sampling, vectors: np.ndarray, iteration: int, best: C
         leader = max(best.score.mean, *(candidate.score.mean for candidate in played))
         sampling.progress.step(f"round {iteration}/{sampling.options.iterations} · best {leader:.4f}")
     return played
+
+
+def _prefetch(evaluator: Evaluator, population: Sequence[Mapping[str, float]]) -> None:
+    """Hands an evaluator that can play several at once a population before it is played one by one."""
+    prefetch = getattr(evaluator, "prefetch", None)
+    if prefetch is not None:
+        prefetch(population)
 
 
 def search_weights(
@@ -562,6 +672,12 @@ def search_weights(
     The current mean is always part of the population, so the best weights found are never lost between
     iterations; ``training.jsonl`` gets one row per iteration with the elite's mean score as the loss.
     ``options.checkpoint``, when there is one, is handed the search so far after every round.
+
+    A round's population is drawn before any of it is played, and handed to an evaluator that can play
+    several at once first. That is how one search spreads over several machines: an evaluator that keeps its
+    evaluations and only plans stops on a round it has not played, the round's candidates are played side by
+    side elsewhere, and the search is run again over what was kept, reaching the same draws and so the next
+    round. The search that finishes over a whole cache is this one, played once.
     """
     options = options or SearchOptions()
     if options.population < 2 or options.iterations < 1:

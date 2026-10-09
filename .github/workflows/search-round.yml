@@ -1,0 +1,138 @@
+name: One round of a weight search
+
+# One round of the search in search.yml, its candidates played side by side, one runner each. The search is
+# run again over every evaluation the run has kept so far and stops at the first round it has not played,
+# naming that round's evaluations instead of playing them (`search-weights --plan-only`); a matrix plays them,
+# one evaluation a job (`search-evaluate`), and keeps each as an artifact the next round reads. The draws are
+# the search's own, from its seed, so the round the search stops on is the round a single job would have
+# played next, with the same candidates. `done` is true once the search runs to its end over what was kept.
+on:
+  workflow_call:
+    inputs:
+      round:
+        description: Which round this is, for the artifacts' names
+        type: number
+        required: true
+    outputs:
+      done:
+        description: Whether the search needed nothing more
+        value: ${{ jobs.plan.outputs.done }}
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    timeout-minutes: 30
+    outputs:
+      done: ${{ steps.plan.outputs.done }}
+      entries: ${{ steps.plan.outputs.entries }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up
+        uses: ./.github/actions/search-setup
+        with:
+          token: ${{ github.token }}
+
+      # The first round has nothing kept, and `gh run download` refuses a pattern that matches nothing.
+      - name: Read the evaluations kept so far
+        if: inputs.round > 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'search-kept-*' --dir "$RUNNER_TEMP/kept"
+          mkdir -p "$RUNNER_TEMP/cache"
+          find "$RUNNER_TEMP/kept" -name '*.json' -exec cp {} "$RUNNER_TEMP/cache/" \;
+          echo "$(find "$RUNNER_TEMP/cache" -name '*.json' | wc -l) evaluation(s) kept so far."
+
+      - name: Plan the round
+        id: plan
+        run: |
+          mkdir -p "$RUNNER_TEMP/cache"
+          start=()
+          if [[ -n "$INITIAL" ]]; then
+            start=(--initial "$INITIAL")
+          fi
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli search-weights -o runs/plan --quiet \
+            --opponent "$OPPONENT" --kind "$KIND" "${start[@]}" --seeds "$SEEDS" \
+            --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
+            --cache "$RUNNER_TEMP/cache" --plan-only
+          if [[ -f runs/plan/pending.json ]]; then
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "entries=$(jq -c '[range(.entries | length)]' runs/plan/pending.json)" >> "$GITHUB_OUTPUT"
+          else
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload the round's evaluations to play
+        if: steps.plan.outputs.done == 'false'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: search-pending-${{ inputs.round }}
+          path: runs/plan/pending.json
+          if-no-files-found: error
+          retention-days: 7
+
+  evaluate:
+    name: Evaluate ${{ matrix.index }}
+    needs: plan
+    if: needs.plan.outputs.done == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    # One evaluation, which is what a whole round was in one job: a lookahead candidate on 60 seeds is about
+    # a quarter of an hour on a runner.
+    timeout-minutes: 120
+    strategy:
+      # A round missing one evaluation is a round the next plan stops on again, so the first failure stops
+      # the rest rather than spending them.
+      fail-fast: true
+      matrix:
+        index: ${{ fromJSON(needs.plan.outputs.entries) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up
+        uses: ./.github/actions/search-setup
+        with:
+          token: ${{ github.token }}
+
+      - name: Play the evaluation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          ROUND: ${{ inputs.round }}
+          INDEX: ${{ matrix.index }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "search-pending-$ROUND" --dir "$RUNNER_TEMP/pending"
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli search-evaluate "$RUNNER_TEMP/pending/pending.json" \
+            --index "$INDEX" --cache "$RUNNER_TEMP/cache"
+
+      - name: Keep it
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: search-kept-${{ inputs.round }}-${{ matrix.index }}
+          path: ${{ runner.temp }}/cache/*.json
+          if-no-files-found: error
+          retention-days: 7

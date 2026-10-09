@@ -42,6 +42,7 @@ from downfall_learning.search_weights import (
     WEIGHT_KINDS,
     CliEvaluator,
     EngineCommand,
+    PendingEvaluations,
     SearchOptions,
     format_search,
     missing_engine,
@@ -131,8 +132,30 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         default=None,
         help="the engine command prefix (default: dotnet run on the built Release CLI)",
     )
+    search.add_argument(
+        "--cache",
+        type=Path,
+        help="a directory every evaluation is kept in and read back from, so a search run again over it"
+        " replays what it already played instead of playing it",
+    )
+    search.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="with --cache: stop at the first round the cache does not hold and write its evaluations to"
+        " <output>/pending.json for search-evaluate, instead of playing them",
+    )
     _add_quiet(search)
     search.set_defaults(handler=_search_weights)
+
+    evaluate = commands.add_parser(
+        "search-evaluate", help="play one evaluation a planning search left pending, into its cache"
+    )
+    evaluate.add_argument("pending", type=Path, help="the pending.json a search with --plan-only wrote")
+    evaluate.add_argument("--index", type=int, required=True, help="which of its evaluations to play")
+    evaluate.add_argument("--cache", type=Path, required=True, help="the cache the search reads")
+    evaluate.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
+    evaluate.add_argument("--engine", nargs="+", default=None, help="the engine command prefix")
+    evaluate.set_defaults(handler=_search_evaluate)
 
 
 def _add_tune_content(commands: argparse._SubParsersAction) -> None:
@@ -444,7 +467,9 @@ def _train_value(arguments: argparse.Namespace) -> int:
 
 def _search_weights(arguments: argparse.Namespace) -> int:
     initial = read_weights(arguments.initial) if arguments.initial else DEFAULT_WEIGHTS
-    evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
+    evaluator = CliEvaluator(
+        _engine(arguments), arguments.output / "work", cache=arguments.cache, plan_only=arguments.plan_only
+    )
     options = SearchOptions(
         arguments.iterations,
         arguments.population,
@@ -456,12 +481,40 @@ def _search_weights(arguments: argparse.Namespace) -> int:
         checkpoint=lambda reached: reached.write(arguments.output, evaluator.kind),
     )
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
-    result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
-    result.write(arguments.output, evaluator.kind)
-    print(
-        format_search(
-            result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+    pending = arguments.output / PENDING_FILE
+    pending.unlink(missing_ok=True)
+    try:
+        result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
+    except PendingEvaluations as stopped:
+        pending.write_text(json.dumps({"entries": stopped.entries}, indent=2) + "\n", encoding="utf-8")
+        print(f"{len(stopped.entries)} evaluation(s) of the next round are pending, written to '{pending}'.")
+    else:
+        result.write(arguments.output, evaluator.kind)
+        print(
+            format_search(
+                result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+            )
         )
+    return 0
+
+
+#: What ``search-weights --plan-only`` writes when it stops on a round the cache does not hold.
+PENDING_FILE = "pending.json"
+
+
+def _search_evaluate(arguments: argparse.Namespace) -> int:
+    entry = json.loads(arguments.pending.read_text(encoding="utf-8"))["entries"][arguments.index]
+    engine = EngineCommand(
+        root=arguments.repo, opponent=entry["opponent"], seeds=entry["seeds"], kind=entry["kind"]
+    )
+    if arguments.engine:
+        engine = replace(engine, command=tuple(arguments.engine))
+    evaluator = CliEvaluator(engine, arguments.cache / "work" / entry["key"], cache=arguments.cache)
+    if evaluator.key(entry["weights"], entry["opponent"]) != entry["key"]:
+        raise ValueError(f"Entry {arguments.index} does not read as the key it was written under.")
+    score = evaluator.evaluate(entry["weights"])
+    print(
+        f"Evaluation {arguments.index} ({entry['key']}) against {entry['opponent']}: score {score.mean:.4f}."
     )
     return 0
 
