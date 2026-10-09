@@ -404,10 +404,13 @@ test('the knobs file this repository ships is the shape the page reads', () => {
   const answer = readBalance({ balance: shipped });
 
   assert.equal(answer.ok, true);
-  const entry = entryFor(answer.balance, 'spell:pummel');
-  assert.equal(entry.name, 'Pummel');
+  const entry = entryFor(answer.balance, 'spell:protective_slam');
+  assert.equal(entry.name, 'Crash');
   assert.ok(entry.intent.length > 0);
   assert.ok(entry.knobs.some(knob => knob.path === '/criticalChance'));
+  const settled = entryFor(answer.balance, 'spell:pummel');
+  assert.equal(settled.name, 'Pummel');
+  assert.deepEqual(settled.knobs, []);
   assert.ok(objectiveOf(answer.balance).targets.every(target => target.declared));
   assert.ok(constraintsOf(answer.balance).length >= 3);
 });
