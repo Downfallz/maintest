@@ -22,7 +22,7 @@ All on content `da8d744b`.
   | against Greedy | wins | score |
   |---|---|---|
   | lookahead-37 | 82 of 120 | 0.688 |
-  | lookahead-36 | 65 of 120 | 0.546 |
+  | lookahead-36 | 65 of 120 | 0.542 |
 
   A paired difference of +0.146 (+0.017 to +0.275), clear of zero. The two were played by different builds
   (lookahead-36 by the reserve's working tree before its last fix, lookahead-37 by main at `6f9032e`); the fix
