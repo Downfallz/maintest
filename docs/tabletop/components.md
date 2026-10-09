@@ -207,8 +207,8 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
 The board this manifest is built on, and the commands that read it:
 
 ```bash
-grep -n 'Default {' src/DownfallArena.Domain/Matches/RuleSet.cs   # new(3, 2, 2, 30, 2.0, 1, 2)
-cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same, with a 20-Round cap
+grep -n 'Default {' src/DownfallArena.Domain/Matches/RuleSet.cs   # new(3, 2, 2, 20, 2.0, 1, 2)
+cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same (a 20-Round cap since ADR 0105)
 cat data/Creatures/main.v1.json                                   # Health 30, Energy 0, Defense 0, Base initiative 5
 find data/Spells -name '*.json' | wc -l                           # 44
 ls data/Tiers/*.json | wc -l                                      # 24, none disabled

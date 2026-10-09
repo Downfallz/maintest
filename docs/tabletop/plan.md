@@ -46,7 +46,7 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 
 | Piece | Today | Physical shape it suggests |
 | --- | --- | --- |
-| Match, two players, team of 3 | `RuleSet.Default`: 3 creatures, 30-round cap | Two player areas of three creature boards |
+| Match, two players, team of 3 | `RuleSet.Default`: 3 creatures, 30-round cap (20 since ADR 0105) | Two player areas of three creature boards |
 | Creature | Health 30 (ADR 0068), Energy 0, Defense 0, Initiative 5, Crit 0.05 | A creature board with four tracks and a hand of spell cards |
 | Spell catalogue | 44 spells in `data/Spells`, 2 base + 42 class (the content of 2026-10-06, `3c9eb083`, which removed Basic Attack) | ~44 cards, generated from the built content |
 | Talent tree | `data/TalentTrees`, `allOf`/`anyOf` prerequisites, 3 tiers under 3 classes | A tech-tree mat per class, or prerequisites printed on the card |
