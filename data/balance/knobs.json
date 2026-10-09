@@ -1007,7 +1007,7 @@
     },
     "tier:apex": {
       "name": "Apex",
-      "intent": "The Predator family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and adds 2 to every direct hit its owner deals for the rest of the match. The late pick that turns a hunter's every strike up rather than adding a card.",
+      "intent": "The Predator family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and adds 3 to every direct hit its owner deals for the rest of the match (2 until 2026-10-09, raised with Titan's sunder because the Predator family won least, ADR 0106). The late pick that turns a hunter's every strike up rather than adding a card.",
       "keep": [
         "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
       ],
@@ -1027,7 +1027,7 @@
     },
     "tier:titan": {
       "name": "Titan",
-      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing, and every direct hit its owner deals ignores 3 of the target's defense for the rest of the match (ADR 0106). The Brawler crushes armour: worth nothing against a team without defense, and the answer to one that stacked it. Until 2026-10-09 it made its owner immune to stun instead, which lengthened the matches it was bought in.",
+      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing, and every direct hit its owner deals ignores 2 of the target's defense for the rest of the match (ADR 0106; a sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it). The Brawler crushes armour: worth nothing against a team without defense, and the answer to one that stacked it. Until 2026-10-09 it made its owner immune to stun instead, which lengthened the matches it was bought in.",
       "keep": [
         "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs",
         "Offensive, and only against armour: it never adds damage to a hit on a target with no defense"
