@@ -19,6 +19,12 @@ for Predator); the named dial's outer ring gains three cells, 25, for packages t
 read during play, so a cascade must leave it uncovered ([components.md](components.md) §3.7). The bot
 matches of Part 5 predate the Capstones, so their copy counts say nothing about level 4.
 
+**Nor for the content of 2026-10-08 and 2026-10-09.** Toxic Mend's Defense debuff became -3, a face of its
+own, and Brace's first point became +1 for 3 Rounds instead of permanent, so a cast places two Defense buff
++1 tokens (journal, 2026-10-09). components.md §1.4 reads **180** Condition tokens where 2.3 and 3.11 here
+say 168; the 2v2 figure of 88 in 3.11 is not re-derived. The floor example of 3.3 is restated with Brace's
+new numbers, and its point holds.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -219,7 +225,8 @@ The chit is in use in 4% of realistic readings and nearly 1 in 5 of the stun mir
    and Defense 9; a die at 10 reads 10 - 4 = 6. **Realistic profile: buffs past 10 in 6.7% of
    Creature-Rounds, in 193 of 200 matches; largest buff sum 17.**
 2. **The floor.** `infectious_blast` (`Defense -3, permanent`) on a Creature with no buff: Defense 0. Then
-   `guard` (+1 permanent, +1 for 2 rounds): buffs 2, debuffs 3, Defense still 0; a die at 0 reads 2.
+   `guard` (+1 for 3 rounds, +1 for 2 rounds; the first was permanent until 2026-10-09, journal 2026-10-09):
+   buffs 2, debuffs 3, Defense still 0; a die at 0 reads 2.
    **Debuffs above what the buffs give in 0.31% of Creature-Rounds, in 15 of 200 matches (greedy mirror:
    2.3%, 39 matches); largest debuff sum 9.**
 

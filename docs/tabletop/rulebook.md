@@ -5,7 +5,8 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 2026-09-25, one Activation a slot and the Match ending the moment a Team is wiped 2026-09-28, Evolution
 picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04, again for the content of
 2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells;
-the Capstones and their Passives 2026-10-07). Phase 4 of [plan.md](plan.md).
+the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09, when its first point became
+three Rounds). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -525,7 +526,7 @@ Choose targets to satisfy the card's targeting line:
 > **Slot 2, Creature 1.** It can act. Player 1 reads its card, **Strike** (`One enemy`, `Damage 3`),
 > chooses Creature 5, flips the card and says "5". It resolves now: Creature 5 goes to 0 Health, and its board
 > turns to `Defeated`.
-> **Slot 3, Creature 6.** Its card is **Brace**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2
+> **Slot 3, Creature 6.** Its card is **Brace**: `One ally`, `Defense +1 for 3 rounds` and `Defense +1 for 2
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
 > **Slot 4, Creature 3.** Player 1 declared **Emberstorm** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
