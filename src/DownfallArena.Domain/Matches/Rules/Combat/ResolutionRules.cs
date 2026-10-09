@@ -63,12 +63,15 @@ public static class ResolutionRules
         foreach (var targetId in effectiveTargets)
         {
             var target = creatures.First(candidate => candidate.Id == targetId);
+            // A loop rather than Where: the agents resolve hypothetical casts by the million.
             foreach (var effect in spell.Effects)
             {
-                if (Lands(effect, target))
+                if (!Lands(effect, target))
                 {
-                    outcomes.Add(Outcome(effect, target, multiplier, isCritical, damageBonus));
+                    continue;
                 }
+
+                outcomes.Add(Outcome(effect, target, multiplier, isCritical, damageBonus));
             }
         }
 
