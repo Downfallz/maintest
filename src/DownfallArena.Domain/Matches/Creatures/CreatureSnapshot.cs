@@ -65,7 +65,23 @@ public sealed record CreatureSnapshot
     public bool CanBeStunned => IsAlive && !IsStunned && !IsStunImmune;
 
     /// <summary>Added to every direct hit it deals: its packages' bonus and its damage buffs (ADR 0101).</summary>
-    public int DamageBonus => Passive.DamageBonus + Conditions.Select(condition => condition.Effect).OfType<DamageBuff>().Sum(buff => buff.Amount);
+    public int DamageBonus
+    {
+        get
+        {
+            // A loop rather than a query: the agents read this once for every enemy of every board they score.
+            var bonus = Passive.DamageBonus;
+            foreach (var condition in Conditions)
+            {
+                if (condition.Effect is DamageBuff buff)
+                {
+                    bonus += buff.Amount;
+                }
+            }
+
+            return bonus;
+        }
+    }
 
     public bool IsDead => Health.IsZero;
 

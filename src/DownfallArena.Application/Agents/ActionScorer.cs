@@ -41,6 +41,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<SpellId, int[]> _damages = new();
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, SpellType Kind, ScoreTerms Terms)>> _kinds = [];
+
     /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
     private const int BoardsKept = 4;
 
@@ -374,6 +378,36 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// knows none.
     /// </summary>
     private ScoreTerms BestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        // Every package of a decision is held against the same known spells on the same board, so the reading
+        // is kept per creature snapshot, board and kind, the way the creature's spells are.
+        var kept = _kinds.GetValue(actor, _ => []);
+        lock (kept)
+        {
+            foreach (var (board, keptKind, terms) in kept)
+            {
+                if (keptKind == kind && Same(board, creatures))
+                {
+                    return terms;
+                }
+            }
+        }
+
+        var read = ReadBestOfKind(actor, kind, creatures);
+        lock (kept)
+        {
+            if (kept.Count == BoardsKept * 3)
+            {
+                kept.RemoveAt(0);
+            }
+
+            kept.Add(([.. creatures], kind, read));
+        }
+
+        return read;
+    }
+
+    private ScoreTerms ReadBestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures)
     {
         var best = ScoreTerms.Zero;
         var bestScore = 0.0;
@@ -1115,6 +1149,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 continue;
             }
 
+            // Read once for the enemy rather than once for each of its spells' hits: it sums the creature's
+            // conditions, and this loop is the scorer's hottest.
+            var bonus = enemy.DamageBonus;
             var best = 0.0;
             foreach (var spellId in enemy.KnownSpells)
             {
@@ -1125,8 +1162,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 }
 
                 var chance = enemy.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
-                var expected = spell.Effects.OfType<DamageEffect>()
-                    .Sum(damage => (chance * Landed(damage.Amount + enemy.DamageBonus, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(damage.Amount + enemy.DamageBonus, 1.0, defense)));
+                var expected = 0.0;
+                foreach (var amount in DamagesOf(spell))
+                {
+                    expected += (chance * Landed(amount + bonus, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(amount + bonus, 1.0, defense));
+                }
+
                 best = Math.Max(best, expected);
             }
 
@@ -1135,6 +1176,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         return total;
     }
+
+    /// <summary>The amounts of a spell's damage effects in the order it lists them, read once a spell.</summary>
+    private int[] DamagesOf(Spell spell) =>
+        _damages.GetOrAdd(spell.Id, static (_, spell) => [.. spell.Effects.OfType<DamageEffect>().Select(damage => damage.Amount)], spell);
 
     /// <summary>One hit as the resolution rules land it: the floored product, less the defense, never below zero.</summary>
     private static double Landed(int amount, double multiplier, int defense) =>
