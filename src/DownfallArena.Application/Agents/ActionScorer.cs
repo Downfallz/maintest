@@ -39,14 +39,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return (spells, [.. resources.Tiers.Where(tier => tier.Spells.Any(spells.Contains))]);
     });
 
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
-
     private readonly System.Collections.Concurrent.ConcurrentDictionary<SpellId, int[]> _damages = new();
-
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, SpellType Kind, ScoreTerms Terms)>> _kinds = [];
-
-    /// <summary>How many boards a creature's spells are kept for: a decision reads one, a rollout's slot a few.</summary>
-    private const int BoardsKept = 4;
 
     private ActionScorer(IGameResources resources, RuleSet rules, ScoringWeights weights, bool priceUnlocks)
         : this(resources, rules, weights)
@@ -381,29 +374,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     {
         // Every package of a decision is held against the same known spells on the same board, so the reading
         // is kept per creature snapshot, board and kind, the way the creature's spells are.
-        var kept = _kinds.GetValue(actor, _ => []);
-        lock (kept)
+        if (Readings.Find(this, actor, (int)kind, creatures) is ScoreTerms kept)
         {
-            foreach (var (board, keptKind, terms) in kept)
-            {
-                if (keptKind == kind && Same(board, creatures))
-                {
-                    return terms;
-                }
-            }
+            return kept;
         }
 
         var read = ReadBestOfKind(actor, kind, creatures);
-        lock (kept)
-        {
-            if (kept.Count == BoardsKept * 3)
-            {
-                kept.RemoveAt(0);
-            }
-
-            kept.Add(([.. creatures], kind, read));
-        }
-
+        Readings.Keep(this, actor, (int)kind, creatures, read);
         return read;
     }
 
@@ -673,18 +650,36 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId> gone)
     {
         var actor = Target(resolution.Action.Actor, creatures);
-        foreach (var group in resolution.Outcomes.OfType<DamageOutcome>().GroupBy(outcome => outcome.Target))
+        // The damage on each target, the targets in the order they are first hit, as a grouping would read them:
+        // a cast hits a handful of creatures, so a list is the cheapest way to group them.
+        List<(CreatureId Target, int Total)> totals = [];
+        foreach (var outcome in resolution.Outcomes)
         {
-            if (gone.Contains(group.Key))
+            if (outcome is DamageOutcome damage)
+            {
+                var index = totals.FindIndex(entry => entry.Target == damage.Target);
+                if (index < 0)
+                {
+                    totals.Add((damage.Target, damage.Amount));
+                }
+                else
+                {
+                    totals[index] = (damage.Target, totals[index].Total + damage.Amount);
+                }
+            }
+        }
+
+        foreach (var (targetId, total) in totals)
+        {
+            if (gone.Contains(targetId))
             {
                 continue;  // a creature expected to be dead before this resolves takes none of it
             }
 
-            var target = Target(group.Key, creatures);
-            var total = group.Sum(outcome => outcome.Amount);
+            var target = Target(targetId, creatures);
             var effective = Math.Min(total, target.Health.Value);
             var share = target.Health.Value > 0 ? (double)effective / target.Health.Value : 0.0;
-            yield return (group.Key, target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value, share);
+            yield return (targetId, target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value, share);
         }
     }
 
@@ -696,12 +691,18 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private static Dictionary<CreatureId, int> RemainingHealth(
         CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId> gone)
     {
-        var remaining = creatures.ToDictionary(
-            creature => creature.Id,
-            creature => gone.Contains(creature.Id) ? 0 : creature.Health.Value);
-        foreach (var outcome in resolution.Outcomes.OfType<DamageOutcome>())
+        var remaining = new Dictionary<CreatureId, int>(creatures.Count);
+        foreach (var creature in creatures)
         {
-            remaining[outcome.Target] = Math.Max(0, remaining[outcome.Target] - outcome.Amount);
+            remaining.Add(creature.Id, gone.Contains(creature.Id) ? 0 : creature.Health.Value);
+        }
+
+        foreach (var outcome in resolution.Outcomes)
+        {
+            if (outcome is DamageOutcome damage)
+            {
+                remaining[damage.Target] = Math.Max(0, remaining[damage.Target] - damage.Amount);
+            }
         }
 
         return remaining;
@@ -821,7 +822,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// </summary>
     private int Reserve(CreatureSnapshot creature)
     {
-        var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
+        var dearest = 0;
+        foreach (var spell in creature.KnownSpells)
+        {
+            dearest = Math.Max(dearest, resources.GetSpell(spell).Stats.Cost.Value);
+        }
+
         return dearest + ((PermanentConditionRounds - 1) * Math.Max(0, dearest - Upkeep(creature)));
     }
 
@@ -877,31 +883,18 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// </summary>
     private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> Spells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
     {
-        var kept = _spells.GetValue(creature, _ => []);
-        lock (kept)
+        if (Readings.Find(this, creature, SpellsReading, creatures) is List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kept)
         {
-            foreach (var (board, spells) in kept)
-            {
-                if (Same(board, creatures))
-                {
-                    return spells;
-                }
-            }
+            return kept;
         }
 
         var read = ReadSpells(creature, creatures);
-        lock (kept)
-        {
-            if (kept.Count == BoardsKept)
-            {
-                kept.RemoveAt(0);
-            }
-
-            kept.Add(([.. creatures], read));
-        }
-
+        Readings.Keep(this, creature, SpellsReading, creatures, read);
         return read;
     }
+
+    /// <summary>The kind of reading <see cref="Spells"/> keeps; a best of a kind is kept under its <see cref="SpellType"/>.</summary>
+    private const int SpellsReading = -1;
 
     private static bool Same(CreatureSnapshot[] board, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -1069,10 +1062,16 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private ScoreTerms DefensiveTerms(CreatureSnapshot actor, CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining, IReadOnlySet<CreatureId>? stillToAct)
     {
         var terms = ScoreTerms.Zero;
-        foreach (var targetId in resolution.Outcomes
-            .Where(outcome => outcome is HealOutcome or ConditionOutcome { Effect: DefenseBuff })
-            .Select(outcome => outcome.Target)
-            .Distinct())
+        List<CreatureId> defended = [];
+        foreach (var outcome in resolution.Outcomes)
+        {
+            if (outcome is HealOutcome or ConditionOutcome { Effect: DefenseBuff } && !defended.Contains(outcome.Target))
+            {
+                defended.Add(outcome.Target);
+            }
+        }
+
+        foreach (var targetId in defended)
         {
             var health = remaining[targetId];
             if (health == 0)
@@ -1161,7 +1160,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                     continue;
                 }
 
-                var chance = enemy.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+                // CriticalChance.Plus's clamp, without the instance it allocates.
+                var chance = Math.Clamp(enemy.CriticalChance.Value + spell.Stats.CriticalChance.Value, 0, 1);
                 var expected = 0.0;
                 foreach (var amount in DamagesOf(spell))
                 {
@@ -1175,6 +1175,50 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// The readings a thread made last, kept per scorer, creature snapshot, kind of reading and board, a board
+    /// being the same snapshots in the same order: every action of a decision reads the same board, and a
+    /// rollout's speed, intent and targets each build a new list of the same snapshots. A short ring per thread
+    /// rather than a table per snapshot: the boards an agent reads are made and dropped by the thousand, and a
+    /// weak table kept a handle the collector had to trace for each of them, and a lock the rollouts of one
+    /// decision queued on. A reading is a function of what it is kept under, so a miss only reads it again.
+    /// </summary>
+    private static class Readings
+    {
+        private const int Kept = 64;
+
+        [ThreadStatic]
+        private static (ActionScorer Scorer, CreatureSnapshot Creature, int Kind, CreatureSnapshot[] Board, object Value)[]? Ring;
+
+        [ThreadStatic]
+        private static int Next;
+
+        public static object? Find(ActionScorer scorer, CreatureSnapshot creature, int kind, IReadOnlyList<CreatureSnapshot> creatures)
+        {
+            if (Ring is not { } ring)
+            {
+                return null;
+            }
+
+            foreach (var entry in ring)
+            {
+                if (ReferenceEquals(entry.Creature, creature) && entry.Kind == kind && ReferenceEquals(entry.Scorer, scorer) && Same(entry.Board, creatures))
+                {
+                    return entry.Value;
+                }
+            }
+
+            return null;
+        }
+
+        public static void Keep(ActionScorer scorer, CreatureSnapshot creature, int kind, IReadOnlyList<CreatureSnapshot> creatures, object value)
+        {
+            var ring = Ring ??= new (ActionScorer, CreatureSnapshot, int, CreatureSnapshot[], object)[Kept];
+            ring[Next] = (scorer, creature, kind, [.. creatures], value);
+            Next = (Next + 1) % Kept;
+        }
     }
 
     /// <summary>The amounts of a spell's damage effects in the order it lists them, read once a spell.</summary>

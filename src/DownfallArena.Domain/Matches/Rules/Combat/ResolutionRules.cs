@@ -58,12 +58,19 @@ public static class ResolutionRules
         // one does: the choice changes the outcome, not the stream every later cast in the match reads from.
         var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
-        var outcomes = effectiveTargets
-            .SelectMany(target => spell.Effects
-                .Select(effect => (Effect: effect, Target: creatures.First(candidate => candidate.Id == target)))
-                .Where(pair => Lands(pair.Effect, pair.Target))
-                .Select(pair => Outcome(pair.Effect, pair.Target, multiplier, isCritical, actor.DamageBonus)))
-            .ToList();
+        var damageBonus = actor.DamageBonus;
+        var outcomes = new List<EffectOutcome>();
+        foreach (var targetId in effectiveTargets)
+        {
+            var target = creatures.First(candidate => candidate.Id == targetId);
+            foreach (var effect in spell.Effects)
+            {
+                if (Lands(effect, target))
+                {
+                    outcomes.Add(Outcome(effect, target, multiplier, isCritical, damageBonus));
+                }
+            }
+        }
 
         // What the cast does to whoever cast it (ADR 0031): once, however many targets it reached, and never
         // multiplied by the critical roll -- a recoil that doubles when the blow lands well is another idea.
@@ -85,7 +92,7 @@ public static class ResolutionRules
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spell);
 
-        return speed == Speed.Quick ? 0 : actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+        return speed == Speed.Quick ? 0 : Math.Clamp(actor.CriticalChance.Value + spell.Stats.CriticalChance.Value, 0, 1);
     }
 
     /// <summary>

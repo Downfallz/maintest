@@ -16,7 +16,9 @@ public sealed record TargetingReport(IReadOnlyList<TargetingFailure> Failures)
 
     public IEnumerable<TargetingFailure> PerTargetFailures => Failures.Where(failure => !failure.IsGlobal);
 
-    public IReadOnlySet<CreatureId> InvalidTargets => PerTargetFailures.Select(failure => failure.Target).OfType<CreatureId>().ToHashSet();
+    public IReadOnlySet<CreatureId> InvalidTargets => IsClean ? NoTargets : PerTargetFailures.Select(failure => failure.Target).OfType<CreatureId>().ToHashSet();
+
+    private static readonly IReadOnlySet<CreatureId> NoTargets = new HashSet<CreatureId>();
 
     public TargetingFailure? FirstFailure => GlobalFailures.FirstOrDefault() ?? PerTargetFailures.FirstOrDefault();
 }
