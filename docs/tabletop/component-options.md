@@ -25,6 +25,12 @@ own, and Brace's first point became +1 for 3 Rounds instead of permanent, so a c
 say 168; the 2v2 figure of 88 in 3.11 is not re-derived. The floor example of 3.3 is restated with Brace's
 new numbers, and its point holds.
 
+**Nor for Titan's Sunder** ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md),
+`0a0d8573`, 2026-10-09). Titan's Passive is a Sunder of 3 instead of Stun immunity. Nothing here reads which
+Passive a Capstone gives, so nothing moves: not the package cards, not the uncovered Capstone card of a
+cascade, and not the 6 Immune tokens, which are the Round of Stun immunity after every Stun (ADR 0072). Where
+this document names Titan, it names the Brute family's Capstone and nothing more.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
