@@ -30,6 +30,9 @@ No content moves; `data/balance/knobs.json` does.
     hit for.
   - No package carries an initiative knob: Blighted's, the last one, goes. The owner sets them by hand.
   - Keeps that still named Basic Attack, removed on 2026-10-06, are dropped.
+- **`check-knobs` refuses the two rules** rather than leaving them to the file: a cost knob past 4 energy, and
+  a knob on a package's initiative bonus. The studio's knob editor flags both and no longer offers the
+  initiative bonus as a pointer.
 
 ## 2026-10-09. Guard's first point lasts three rounds
 

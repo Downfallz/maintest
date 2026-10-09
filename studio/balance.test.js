@@ -191,7 +191,12 @@ test('a duration knob whose maximum passes three rounds is a disagreement, as ch
   assert.deepEqual(codes(summary), ['durationCeiling']);
 });
 
-test('package entries flag progression knobs and name their initiative bonus', () => {
+test('a cost a tuning pass could take past four energy is flagged', () => {
+  const summary = of(withKnobs([{ path: '/energyCost', min: 1, max: 5, step: 1 }]), 'spell:pummel', pummel());
+  assert.deepEqual(codes(summary), ['costCeiling']);
+});
+
+test('package entries flag progression knobs and refuse their initiative bonus as a knob', () => {
   const balance = knobsFile({}, { packages: { 'tier:prowler': { name: 'Prowler', intent: 'Fast.', knobs: [
     { path: '/initiativeBonus', min: 1, max: 5, step: 1 },
     { path: '/level', min: 1, max: 3, step: 1 },
@@ -199,7 +204,7 @@ test('package entries flag progression knobs and name their initiative bonus', (
   const packageRow = { id: 'tier:prowler:v1', name: 'Prowler', path: 'Tiers/prowler.json', document: { initiativeBonus: 3, level: 1 } };
   const rolled = surveyPackages(balance, [packageRow], {});
   assert.equal(rolled.covered, 1);
-  assert.deepEqual(rolled.flagged[0].problems.map(item => item.code), ['packageIdentity']);
+  assert.deepEqual(rolled.flagged[0].problems.map(item => item.code), ['packageInitiative', 'packageIdentity']);
   assert.equal(rolled.rows[0].summary.knobs[0].value, 3);
   assert.equal(rolled.rows[0].summary.knobs[0].path, '/initiativeBonus');
 });
@@ -218,14 +223,14 @@ test('a capstone entry may tune its passive amounts and nothing else of the pass
   assert.deepEqual(rolled.rows[0].summary.knobs[0].problems, []);
   assert.deepEqual(rolled.flagged[0].problems.map(item => [item.code, item.path]).filter(([code]) => code === 'packageIdentity'),
     [['packageIdentity', '/passive/stunImmunity']]);
-  assert.deepEqual(PACKAGE_KNOBS, ['/initiativeBonus', '/passive/upkeepEnergy', '/passive/damageBonus']);
+  assert.deepEqual(PACKAGE_KNOBS, ['/passive/upkeepEnergy', '/passive/damageBonus']);
 });
 
-test('the knob editor offers a package its initiative bonus and the passive amounts it carries', () => {
-  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 1, level: 2, spells: ['spell:a:v1'] })), ['/initiativeBonus']);
+test('the knob editor offers a package the passive amounts it carries and never its initiative bonus', () => {
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 1, level: 2, spells: ['spell:a:v1'] })), []);
   assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, level: 4, passive: { stunImmunity: true, upkeepEnergy: 1 } })),
-    ['/initiativeBonus', '/passive/upkeepEnergy']);
-  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, passive: 'broken' })), ['/initiativeBonus']);
+    ['/passive/upkeepEnergy']);
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, passive: 'broken' })), []);
   assert.deepEqual(pointersOf(packageKnobScope(undefined)), []);
 });
 

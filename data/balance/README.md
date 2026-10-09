@@ -95,7 +95,8 @@ half that exists strong enough to compensate.
 Since 2026-10-09, by the owner's call (journal of the day):
 
 - The starting kit and the six tier-1 spells keep their entries with an empty knob list: they are settled.
-- No spell costs more than 4 energy, so no cost knob reaches past 4.
+- No spell costs more than 4 energy, so no cost knob reaches past 4; `check-knobs` and the studio refuse one
+  that does.
 - No permanent buff can be searched above what it gives today (Carapace and Fortress stop at 3): permanent,
   stacking defense is what stalls a match.
 - A keep that ties two numbers or two spells together (Latch's matched halves, Fury's crit above every other,
@@ -103,11 +104,10 @@ Since 2026-10-09, by the owner's call (journal of the day):
 
 ## What a package entry carries
 
-The same fields as a spell's, without a class, and knobs on two things only: `/initiativeBonus`, what a
-purchase adds to the buyer's Base initiative for the rest of the match (ADR 0056), and a passive's amount,
-`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0101). `check-knobs` accepts both, but since
-2026-10-09 no package carries an initiative knob: the owner sets every package's bonus by hand, and a pass
-moves only the capstones' passives. A package's level, prerequisites, any-of list
+The same fields as a spell's, without a class, and knobs on one thing only: a passive's amount,
+`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0101). `/initiativeBonus`, what a purchase adds to the
+buyer's Base initiative for the rest of the match (ADR 0056), is set by hand since 2026-10-09, and
+`check-knobs` refuses a knob on it, as the studio's knob editor does. A package's level, prerequisites, any-of list
 and spells are the progression itself, and `check-knobs` refuses a knob on any of them.
 
 Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it

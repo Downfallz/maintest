@@ -26,6 +26,9 @@ const EFFECT_AMOUNT = /^\/(effects|casterEffects)\/\d+\/(amount|amountPerRound|d
 /** No condition lasts more than three rounds, the owner's rule of 2026-10-02, mirrored from check-knobs. */
 const DURATION = /^\/(effects|casterEffects)\/\d+\/durationRounds$/;
 const MOST_ROUNDS = 3;
+/** No spell costs more than 4 energy, the owner's rule of 2026-10-09, mirrored from check-knobs. */
+const ENERGY_COST = '/energyCost';
+const MOST_ENERGY = 4;
 
 /** 0.667 plus 0.05 does not land on 0.717, and a value authored at a band edge must not read as outside it. */
 const EPSILON = 1e-9;
@@ -38,19 +41,20 @@ const ordinal = (left, right) => (left < right ? -1 : Number(left > right));
 const PACKAGE_PREFIX = 'tier:';
 
 /**
- * The numbers of a package a tuning pass may move, as `check-knobs` names them (`PACKAGE_KNOBS`): its initiative
- * bonus, and the amounts of a capstone's passive (ADR 0101). Whether a passive gives stun immunity is its kind,
- * and the level, the prerequisites and the spells are the progression: none of those is a knob.
+ * The numbers of a package a tuning pass may move, as `check-knobs` names them (`PACKAGE_KNOBS`): the amounts of
+ * a capstone's passive (ADR 0101). The initiative bonus is set by hand since 2026-10-09; whether a passive gives
+ * stun immunity is its kind; and the level, the prerequisites and the spells are the progression: none of those
+ * is a knob.
  */
-export const PACKAGE_KNOBS = Object.freeze(['/initiativeBonus', '/passive/upkeepEnergy', '/passive/damageBonus']);
+export const PACKAGE_KNOBS = Object.freeze(['/passive/upkeepEnergy', '/passive/damageBonus']);
+const INITIATIVE_BONUS = '/initiativeBonus';
 
 /**
- * The part of a package document a knob may point into: the initiative bonus, and each passive amount the
- * package carries as a number. What the knob editor offers and seeds from, so a pointer it adds is one the
- * file accepts.
+ * The part of a package document a knob may point into: each passive amount the package carries as a number.
+ * What the knob editor offers and seeds from, so a pointer it adds is one the file accepts.
  */
 export function packageKnobScope(document) {
-  const scope = { initiativeBonus: document?.initiativeBonus };
+  const scope = {};
   const passive = isRecord(document?.passive) ? document.passive : {};
   const amounts = Object.fromEntries(['upkeepEnergy', 'damageBonus'].filter(key => isNumber(passive[key])).map(key => [key, passive[key]]));
   if (Object.keys(amounts).length) scope.passive = amounts;
@@ -301,6 +305,10 @@ export function knobReading(knob, document, { duplicate = false } = {}) {
     problems.push(problem('effectMinimum', 'A tuning pass could take this effect below 1, which the engine refuses.'));
   }
 
+  if (path === ENERGY_COST && shape.maximum > MOST_ENERGY) {
+    problems.push(problem('costCeiling', `A tuning pass could take this cost past ${MOST_ENERGY} energy, the most a spell may cost.`));
+  }
+
   if (DURATION.test(path) && shape.maximum > MOST_ROUNDS) {
     problems.push(problem('durationCeiling', `A tuning pass could take this duration past ${MOST_ROUNDS} rounds, the longest a condition may last.`));
   }
@@ -372,7 +380,10 @@ export function readings(entry, document) {
 export function summarise(entry, document) {
   const knobs = readings(entry, document).map(knob => {
     if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || PACKAGE_KNOBS.includes(knob.path)) return knob;
-    const problems = [...knob.problems, problem('packageIdentity', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; ${knob.path} is progression, not a tuning value.`)];
+    const refusal = knob.path === INITIATIVE_BONUS
+      ? problem('packageInitiative', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; a package's initiative bonus is set by hand, never searched.`)
+      : problem('packageIdentity', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; ${knob.path} is progression, not a tuning value.`);
+    const problems = [...knob.problems, refusal];
     return { ...knob, problems, tone: 'bad' };
   });
   const problems = entry?.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];

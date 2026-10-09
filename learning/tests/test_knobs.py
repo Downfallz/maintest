@@ -381,6 +381,24 @@ def test_a_duration_a_search_could_take_past_three_rounds_is_reported(tmp_path: 
     assert any("past 3 rounds" in problem for problem in problems)
 
 
+def test_a_cost_a_search_could_take_past_four_energy_is_reported(tmp_path: Path) -> None:
+    """No spell costs more than 4, the owner's rule of 2026-10-09."""
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"].append({"path": "/energyCost", "min": 1, "max": 5, "step": 1})
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}))
+    assert any("spell:attack/energyCost" in problem and "past 4 energy" in problem for problem in problems)
+
+
+def test_a_cost_that_stops_at_four_energy_is_accepted(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"].append({"path": "/energyCost", "min": 1, "max": 4, "step": 1})
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+
+
 def test_a_step_that_moves_nothing_is_reported(tmp_path: Path) -> None:
     document = knobs_json()
     document["spells"]["spell:attack"]["knobs"][0]["step"] = 0
@@ -953,7 +971,7 @@ def test_an_enabled_package_with_no_entry_is_a_number_nobody_decided_the_intent_
     assert "tier:open: an enabled package with no entry in the knobs file." in problems
 
 
-def test_a_package_knob_on_anything_but_its_initiative_bonus_is_refused(tmp_path: Path) -> None:
+def test_a_package_knob_on_anything_but_a_passive_amount_is_refused(tmp_path: Path) -> None:
     """Its level, prerequisites and spells are the progression: moving them would be redesigning it."""
     entry = package_entry(knobs=[{"path": "/level", "min": 1, "max": 3, "step": 1}])
     knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
@@ -963,19 +981,22 @@ def test_a_package_knob_on_anything_but_its_initiative_bonus_is_refused(tmp_path
     assert any("tier:open/level" in problem and "identity" in problem for problem in problems)
 
 
-def test_a_package_bonus_outside_its_own_bounds_is_reported(tmp_path: Path) -> None:
+def test_a_package_passive_outside_its_own_bounds_is_reported(tmp_path: Path) -> None:
     knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
 
-    problems = validate(knobs, packaged(initiativeBonus=9))
+    problems = validate(knobs, packaged(passive={"damageBonus": 9}))
 
-    assert "tier:open/initiativeBonus: the content carries 9.0, outside [0.0, 4.0]." in problems
+    assert "tier:open/passive/damageBonus: the content carries 9.0, outside [1.0, 3.0]." in problems
 
 
-def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) -> None:
-    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
+def test_a_package_initiative_bonus_is_refused_as_a_knob(tmp_path: Path) -> None:
+    """The owner sets every package's initiative by hand (2026-10-09): a search may not move it."""
+    entry = package_entry(knobs=[{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
 
-    assert "tier:open/initiativeBonus" in {knob.key for knob in knobs}
-    assert validate(knobs, packaged(initiativeBonus=2)) == []
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    assert any("tier:open/initiativeBonus" in problem and "set by hand" in problem for problem in problems)
 
 
 def test_a_passive_amount_is_a_package_knob_a_search_can_move(tmp_path: Path) -> None:
@@ -1004,7 +1025,7 @@ def package_entry(**overrides: object) -> dict:
     return {
         "name": "Open",
         "intent": "The opener.",
-        "knobs": [{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}],
+        "knobs": [{"path": "/passive/damageBonus", "min": 1, "max": 3, "step": 1}],
     } | overrides
 
 
