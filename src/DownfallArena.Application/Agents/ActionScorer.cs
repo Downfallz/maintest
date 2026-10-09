@@ -2,6 +2,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
@@ -38,6 +39,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var spells = resources.Spells.Where(spell => spell.Effects.Any(effect => effect is Stun)).Select(spell => spell.Id).ToHashSet();
         return (spells, [.. resources.Tiers.Where(tier => tier.Spells.Any(spells.Contains))]);
     });
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, Saved> _saving = [];
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<CreatureSnapshot, List<(CreatureSnapshot[] Board, List<(SpellId, ScoreTerms, int, double, int)> Spells)>> _spells = [];
 
@@ -78,8 +81,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// no timeline is read, and then every living, unstunned enemy counts.
     /// </para>
     /// </summary>
-    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null) =>
-        weights.Apply(ExpectedTerms(action, creatures, gone, speed, stillToAct));
+    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null, int? round = null) =>
+        weights.Apply(ExpectedTerms(action, creatures, gone, speed, stillToAct, round));
 
     /// <summary>
     /// The terms behind <see cref="Expected"/>: the crit and non-crit terms weighted by the crit chance.
@@ -91,7 +94,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// the speed — because mispricing costs an agent a good move while misresolving would change the game.
     /// </para>
     /// </summary>
-    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null)
+    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null, int? round = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -99,7 +102,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == action.Actor);
         var chance = ResolutionRules.CriticalChanceOf(actor, resources.GetSpell(action.Spell), speed);
-        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone, stillToAct);
+        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone, stillToAct, round);
 
         // With no chance of a critical the mix below is the plain reading exactly -- nought times a finite
         // reading adds nothing -- so the second resolution is skipped rather than weighed at zero. A Quick cast
@@ -109,7 +112,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return plain;
         }
 
-        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone, stillToAct);
+        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone, stillToAct, round);
         return (chance * critical) + ((1 - chance) * plain);
     }
 
@@ -143,7 +146,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// never weighed against a score -- a weights file only has to be finite, so no score could be trusted to stay
     /// below it -- which is the order the lookahead's round already reads (ADR 0047).
     /// </summary>
-    public (IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null)
+    public (IReadOnlyList<CreatureId> Targets, double Score, bool Wins)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null, int? round = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spellId);
@@ -155,7 +158,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         {
             var action = CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets);
             var wins = Wins(action, creatures);
-            var score = Expected(action, creatures, gone, speed, stillToAct);
+            var score = Expected(action, creatures, gone, speed, stillToAct, round);
             if (best is not { } found || (wins, score).CompareTo((found.Wins, found.Score)) > 0)
             {
                 best = (targets, score, wins);
@@ -525,13 +528,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// (ADR 0039). The set is empty for every reading but a declaration.
     /// </para>
     /// </summary>
-    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null) =>
-        weights.Apply(Terms(resolution, creatures, gone, stillToAct));
+    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null, int? round = null) =>
+        weights.Apply(Terms(resolution, creatures, gone, stillToAct, round));
 
     /// <summary>
     /// The terms of one resolution, each signed: what it does to enemies counts for, to allies against.
     /// </summary>
-    public ScoreTerms Terms(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null)
+    public ScoreTerms Terms(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null, int? round = null)
     {
         ArgumentNullException.ThrowIfNull(resolution);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -576,7 +579,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         // A gain that lands on a caster its own cast killed is refused, and priced at nothing above.
         var given = remaining[actor.Id] == 0 ? 0 : resolution.Outcomes.OfType<EnergyOutcome>().Where(energy => energy.Target == actor.Id).Sum(energy => energy.Amount);
         var purse = actor.Energy.Value - resolution.EnergySpent.Value + given;
-        return terms with { Energy = terms.Energy - given + Math.Min(purse, Reserve(actor)) };
+        return terms with { Energy = terms.Energy - given + Math.Min(purse, round is { } now && rules.IsEvolutionRound(now + 1) ? Math.Max(Reserve(actor), SavingFor(actor, creatures)) : Reserve(actor)) };
     }
 
     private static CreatureSnapshot Target(CreatureId id, IReadOnlyList<CreatureSnapshot> creatures) => creatures.First(creature => creature.Id == id);
@@ -785,11 +788,39 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// wants its cost. A point past that pays for no cast, so it is worth nothing. The spells it knows, not the
     /// ones it may buy: a purchase raises the reserve the round it lands.
     /// </summary>
-    private int Reserve(CreatureSnapshot creature)
+    private int Reserve(CreatureSnapshot creature) => Reserve(creature.KnownSpells, Upkeep(creature));
+
+    private int Reserve(IEnumerable<SpellId> spells, int upkeep)
     {
-        var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
-        return dearest + ((PermanentConditionRounds - 1) * Math.Max(0, dearest - Upkeep(creature)));
+        var dearest = spells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
+        return dearest + ((PermanentConditionRounds - 1) * Math.Max(0, dearest - upkeep));
     }
+
+    /// <summary>
+    /// The reserve a creature saves for the round before it may buy (ADR 0104): the one its spells would want
+    /// once it owns the package this scorer would buy it now, the best by <see cref="PurchaseValue"/> on this
+    /// board. A creature with nothing to buy saves nothing more. Read once for each creature on each board,
+    /// since every candidate action of a turn asks it again.
+    /// </summary>
+    private int SavingFor(CreatureSnapshot actor, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (_saving.TryGetValue(actor, out var saved) && ReferenceEquals(saved.Board, creatures))
+        {
+            return saved.Reserve;
+        }
+
+        var tier = TierEligibility.AvailableTiers(actor, resources)
+            .Select(id => (Id: id, Value: PurchaseValue(actor, id, creatures)))
+            .OrderByDescending(candidate => candidate.Value)
+            .Select(candidate => (TierId?)candidate.Id)
+            .FirstOrDefault();
+        var reserve = tier is null ? 0 : Reserve(actor.KnownSpells.Concat(resources.GetTier(tier).Spells), Upkeep(actor));
+        _saving.AddOrUpdate(actor, new Saved(creatures, reserve));
+        return reserve;
+    }
+
+    /// <summary>The reserve <see cref="SavingFor"/> read for a creature, and the board it read it on.</summary>
+    private sealed record Saved(IReadOnlyList<CreatureSnapshot> Board, int Reserve);
 
     /// <summary>
     /// Whether a purse of <paramref name="richer"/> pays for a spell the creature knows that one of

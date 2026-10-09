@@ -109,3 +109,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0101](0101-a-capstone-package-buys-a-passive-not-a-spell.md) | Let a capstone package buy a passive instead of a spell | Proposed |
 | [0102](0102-a-purchase-is-priced-by-what-it-adds-over-its-kind.md) | Price a purchase by what it adds over the spells of its kind | Proposed |
 | [0103](0103-energy-is-worth-holding-up-to-the-reserve-a-creature-can-spend.md) | Energy is worth holding only up to the reserve a creature can spend | Proposed |
+| [0104](0104-a-creature-saves-for-the-package-it-would-buy.md) | A creature saves for the package it would buy the round before it may buy | Proposed |

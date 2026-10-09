@@ -800,6 +800,40 @@ public sealed class ActionScorerTests
         terms.Energy.ShouldBe(0, 1e-9);
     }
 
+    /// <summary>
+    /// The round before it may buy, a creature saves for the package this scorer would buy it (ADR 0104): one
+    /// that knows Lunge at 2 and would buy Smite at 4 holds 8, so resting at 4 gains its 2. Any other round, and
+    /// with no round given, Lunge's reserve of 2 is all it holds, and resting at 4 gains nothing.
+    /// </summary>
+    [Fact]
+    public void The_round_before_a_purchase_a_creature_saves_for_the_package_it_would_buy()
+    {
+        var smitePack = TierId.Parse("tier:smite:v1");
+        var rules = MatchStore.TwoOnTwo();
+        var scorer = new ActionScorer(
+            GameResources.Create(
+                "test",
+                [.. TestContent.Resources.Creatures],
+                [.. TestContent.Resources.Spells, Smite, Lunge, Rest],
+                [.. TestContent.Resources.TalentTrees],
+                [Tier.Create(smitePack, "Smite", 1, [], [Smite.Id], Initiative.Of(0))]),
+            rules,
+            ScoringWeights.Default).WithoutUnlocks;
+        var board = Board(enemyHealth: 40, actorEnergy: 4, actorSpells: [TestContent.Strike, Rest.Id, Lunge.Id]);
+        var before = Enumerable.Range(1, 10).First(round => rules.IsEvolutionRound(round + 1));
+        var after = Enumerable.Range(1, 10).First(round => !rules.IsEvolutionRound(round + 1));
+        double Gained(int? round)
+        {
+            var rest = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, Rest.Id), [One]), board, speed: Speed.Quick, round: round);
+            var strike = scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(One, TestContent.Strike), [Three]), board, speed: Speed.Quick, round: round);
+            return rest.Energy - strike.Energy;
+        }
+
+        Gained(before).ShouldBe(2, 1e-9);
+        Gained(after).ShouldBe(0, 1e-9);
+        Gained(null).ShouldBe(0, 1e-9);
+    }
+
     /// <summary>What Strike does a cast on the scorer tests' board: 3, doubled on a 5 % critical.</summary>
     private const double StrikeCast = (0.95 * 3) + (0.05 * 6);
 
