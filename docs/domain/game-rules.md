@@ -82,7 +82,8 @@ listed in [spells.md](spells.md).
   comes from the Rule set (three in the prototypes).
 - The Match ends per the Win condition: a Team defeated, the moment it is (ADR 0083) -- on the action or the
   upkeep that wipes it, with no further slot and no cleanup; both Teams at once is a draw -- or, at the end
-  of the round cap, the Team with the highest total remaining Health wins; equality is a draw (ADR 0011).
+  of the round cap (20 rounds by default, the table's; ADR 0105), the Team with the highest total remaining
+  Health wins; equality is a draw (ADR 0011).
 - A Player may concede at any point of a Match in progress: it ends on the spot, the other Player wins, and
   the Round is left where it was, with no cleanup (ADR 0087).
 
