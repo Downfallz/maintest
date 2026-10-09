@@ -116,7 +116,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         {
             // A cast that can end the match first, whatever any other scores (ADR 0099); nothing to hit is worth
             // nothing (ADR 0040).
-            var value = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct) is { } found ? (found.Wins, found.Score) : (false, 0.0);
+            var value = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct, board.RoundNumber) is { } found ? (found.Wins, found.Score) : (false, 0.0);
             if (value.CompareTo(bestValue) > 0)
             {
                 best = spell;
@@ -140,7 +140,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == options.Actor);
         // The board already carries every action before this slot (ADR 0083): nobody is expected gone.
-        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id), Foresight.StillToAct(board, actor.Id))?.Targets ?? [];
+        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id), Foresight.StillToAct(board, actor.Id), board.RoundNumber)?.Targets ?? [];
     }
 
     /// <summary>

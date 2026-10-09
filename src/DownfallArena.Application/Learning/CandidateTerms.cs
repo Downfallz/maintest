@@ -72,8 +72,8 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         var stillToAct = Foresight.StillToAct(board, actor.Id);
         // Nothing to hit is worth nothing (ADR 0040), as the heuristic agent reads it.
         return [.. option.CastableSpells.Select(spell => Vector(
-            _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct) is { } best
-                ? _scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spell), best.Targets), creatures, gone, SpeedOf(board, actor.Id), stillToAct)
+            _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct, board.RoundNumber) is { } best
+                ? _scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spell), best.Targets), creatures, gone, SpeedOf(board, actor.Id), stillToAct, board.RoundNumber)
                 : ScoreTerms.Zero))];
     }
 
@@ -90,7 +90,7 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
 
         var creatures = Foresight.Creatures(board);
         var stillToAct = Foresight.StillToAct(board, options.Actor);
-        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, speed: SpeedOf(board, options.Actor), stillToAct: stillToAct)))];
+        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, speed: SpeedOf(board, options.Actor), stillToAct: stillToAct, round: board.RoundNumber)))];
     }
 
     /// <summary>
