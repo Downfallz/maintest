@@ -68,40 +68,50 @@ public static class TargetingRules
 
         for (var index = 0; index < targets.Count; index++)
         {
-            var targetId = targets[index];
-            for (var earlier = 0; earlier < index; earlier++)
-            {
-                if (targets[earlier] == targetId)
-                {
-                    return false;
-                }
-            }
-
-            if (spec.Origin == TargetOrigin.Self && targetId != actor.Id)
-            {
-                return false;
-            }
-
-            CreatureSnapshot? target = null;
-            foreach (var creature in creatures)
-            {
-                if (creature.Id == targetId)
-                {
-                    target = creature;
-                    break;
-                }
-            }
-
-            if (target is null
-                || target.IsDead
-                || (spec.Origin == TargetOrigin.Ally && target.Owner != actor.Owner)
-                || (spec.Origin == TargetOrigin.Enemy && target.Owner == actor.Owner))
+            if (Repeats(targets, index) || !IsCleanTarget(actor, spec, targets[index], creatures))
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /// <summary>Whether the target at <paramref name="index"/> was already named before it.</summary>
+    private static bool Repeats(IReadOnlyList<CreatureId> targets, int index)
+    {
+        for (var earlier = 0; earlier < index; earlier++)
+        {
+            if (targets[earlier] == targets[index])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether one target would draw no failure: <see cref="TargetFailures"/> and the self-only rule.</summary>
+    private static bool IsCleanTarget(CreatureSnapshot actor, TargetingSpec spec, CreatureId targetId, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (spec.Origin == TargetOrigin.Self && targetId != actor.Id)
+        {
+            return false;
+        }
+
+        CreatureSnapshot? target = null;
+        foreach (var creature in creatures)
+        {
+            if (creature.Id == targetId)
+            {
+                target = creature;
+                break;
+            }
+        }
+
+        return target is { IsDead: false }
+            && !(spec.Origin == TargetOrigin.Ally && target.Owner != actor.Owner)
+            && !(spec.Origin == TargetOrigin.Enemy && target.Owner == actor.Owner);
     }
 
     private static IEnumerable<TargetingFailure> GlobalFailures(CreatureSnapshot actor, TargetingSpec spec, IReadOnlyList<CreatureId> targets)

@@ -925,24 +925,6 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>The kind of reading <see cref="Spells"/> keeps; a best of a kind is kept under its <see cref="SpellType"/>.</summary>
     private const int SpellsReading = -1;
 
-    private static bool Same(CreatureSnapshot[] board, IReadOnlyList<CreatureSnapshot> creatures)
-    {
-        if (board.Length != creatures.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < board.Length; index++)
-        {
-            if (!ReferenceEquals(board[index], creatures[index]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> ReadSpells(CreatureSnapshot creature, IReadOnlyList<CreatureSnapshot> creatures)
     {
         var dearest = creature.KnownSpells.Select(spell => resources.GetSpell(spell).Stats.Cost.Value).DefaultIfEmpty(0).Max();
@@ -1092,12 +1074,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     {
         var terms = ScoreTerms.Zero;
         List<CreatureId> defended = [];
+        // A loop rather than Where and Distinct, which allocate for every resolution the agents read.
         foreach (var outcome in resolution.Outcomes)
         {
-            if (outcome is HealOutcome or ConditionOutcome { Effect: DefenseBuff } && !defended.Contains(outcome.Target))
+            if (outcome is not (HealOutcome or ConditionOutcome { Effect: DefenseBuff }) || defended.Contains(outcome.Target))
             {
-                defended.Add(outcome.Target);
+                continue;
             }
+
+            defended.Add(outcome.Target);
         }
 
         foreach (var targetId in defended)
@@ -1247,6 +1232,25 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             var ring = Ring ??= new (ActionScorer, CreatureSnapshot, int, CreatureSnapshot[], object)[Kept];
             ring[Next] = (scorer, creature, kind, [.. creatures], value);
             Next = (Next + 1) % Kept;
+        }
+
+        /// <summary>A board read is the same snapshots in the same order.</summary>
+        private static bool Same(CreatureSnapshot[] board, IReadOnlyList<CreatureSnapshot> creatures)
+        {
+            if (board.Length != creatures.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < board.Length; index++)
+            {
+                if (!ReferenceEquals(board[index], creatures[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 
