@@ -59,9 +59,31 @@ internal sealed class HostedTables : IDisposable
     {
         _host.Dispose();
         _content.Dispose();
-        if (Directory.Exists(RunsDirectory))
+        DeleteRuns();
+    }
+
+    /// <summary>
+    /// Removes the runs, waiting out a table still writing to them. Letting a table go does not wait for its
+    /// driver (<see cref="PlayedTable.Dispose" />), so a match the test let go of can still be appending to
+    /// its recording when this runs, and a file it adds under the delete fails it with "directory not empty".
+    /// </summary>
+    private void DeleteRuns()
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(RunsDirectory, recursive: true);
+            try
+            {
+                if (Directory.Exists(RunsDirectory))
+                {
+                    Directory.Delete(RunsDirectory, recursive: true);
+                }
+
+                return;
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 }
