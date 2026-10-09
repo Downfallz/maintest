@@ -6,7 +6,8 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04, again for the content of
 2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells;
 the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09, when its first point became
-three Rounds, and Titan's Passive a Sunder of 3 the same day). Phase 4 of [plan.md](plan.md).
+three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2 with Apex's Damage bonus
+raised from 2 to 3). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -317,9 +318,9 @@ is +0. It gives a **Passive** instead, printed on its package card
 
 | Capstone | Family | Needs one of | Passive, as the card prints it |
 | --- | --- | --- | --- |
-| Titan | Brute | Ravager, Colossus, Tyrant | `Every hit ignores 3 defense` |
+| Titan | Brute | Ravager, Colossus, Tyrant | `Every hit ignores 2 defense` |
 | Archmage | Warped | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep` |
-| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit` |
+| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +3 on every hit` |
 
 **Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it, owns
 every Tier it requires, and owns at least one Tier of its `Needs one of` list when it has one. That is the
@@ -391,7 +392,7 @@ Then every pick token comes off the mats and the boards.
 > **Creature 3.** It owns none of the three. Titan is refused, and Player 1 picks Tyrant instead: it requires
 > Oppressor, which Creature 3 owns.
 > **The Purchase reveal.** Titan goes face up with Creature 1. No Spell card moves, and the bonus of +0 moves no
-> rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 3
+> rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 2
 > ([5.8](#58-resolving-an-action)). Tyrant goes face up with Creature 3: Dominate and Fortress go
 > into the hand, and +2 raises its Base initiative. Creature 3 may buy Titan at Round 9.
 
@@ -584,22 +585,22 @@ everyone else.
 > Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
 > (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
 >
-> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +2 on
+> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +3 on
 > every hit`. It is Standard, and casts **Blood Price** on Creature 1: `Damage 11`, `Caster: Damage 3`,
 > `Critical 50%  d20: 11+`. Creature 1's total Defense is 3.
-> Add the bonus: 11 + 2 = 13. The d20 shows 14, a critical: 13 x 2 = 26. Subtract Defense: 26 - 3 = **23**.
-> Had the roll missed: 13 - 3 = **10**.
+> Add the bonus: 11 + 3 = 14. The d20 shows 16, a critical: 14 x 2 = 28. Subtract Defense: 28 - 3 = **25**.
+> Had the roll missed: 14 - 3 = **11**.
 > The `Caster:` line takes no bonus and no critical: Creature 4 takes exactly 3, less its own total Defense.
-> Add first, multiply second, subtract third. (11 x 2) + 2 - 3 = 21 is not a number in this game.
+> Add first, multiply second, subtract third. (11 x 2) + 3 - 3 = 22 is not a number in this game.
 >
-> **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 3
+> **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 2
 > defense`. It is Standard, and casts **Dominate** on Creatures 4 and 5: cost 3, `Up to 2 enemies`,
 > `Damage 7`, `Critical 50%  d20: 11+`. Creature 6 cast **Fortress** on Creature 5 last Round, so Creature
-> 5's total Defense is 3 + 3 = 6. Creature 4 cast **Brace** on itself last Round too: total Defense 2.
-> The d20 shows 8: no critical. Creature 5: the hit meets 6 - 3 = 3 Defense, and Creature 5 takes
-> 7 - 3 = **4**. Creature 4: 2 - 3 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
-> not 8. A Sunder takes Defense away; it never adds damage.
-> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 3 = **11** and Creature 4 takes **14**.
+> 5's total Defense is 3 + 3 = 6. Creature 4 has no Defense: total Defense 0.
+> The d20 shows 8: no critical. Creature 5: the hit meets 6 - 2 = 4 Defense, and Creature 5 takes
+> 7 - 4 = **3**. Creature 4: 0 - 2 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
+> not 9. A Sunder takes Defense away; it never adds damage.
+> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 4 = **10** and Creature 4 takes **14**.
 > No rail moves. Creature 2, with no Sunder, hits Creature 5 next with **Strike**, `Damage 3`, and meets all
 > 6: 0 damage.
 
@@ -941,9 +942,9 @@ to the end of the Match. A Creature that owns two Capstones holds both Passives.
 
 | Passive | Capstone | What it does | When it does it | What it never touches |
 | --- | --- | --- | --- | --- |
-| `Every hit ignores 3 defense` | Titan | Its **Sunder**: every direct hit the Creature deals meets the target's total Defense less 3, never below zero. Against a target with no Defense it adds nothing | Applying a Damage line, when Defense is subtracted: **after** the Damage bonus and the critical | A Bleed tick, the `Caster:` line, a Heal, Energy, and the target's Defense rails: no rail moves |
+| `Every hit ignores 2 defense` | Titan | Its **Sunder**: every direct hit the Creature deals meets the target's total Defense less 2, never below zero. Against a target with no Defense it adds nothing | Applying a Damage line, when Defense is subtracted: **after** the Damage bonus and the critical | A Bleed tick, the `Caster:` line, a Heal, Energy, and the target's Defense rails: no rail moves |
 | `Energy +1 at every upkeep` | Archmage | The Creature gains 1 more Energy | Energy gain, beside the Rule set's own; first at the Round after the purchase | Nothing else: no other pass reads it |
-| `Damage +2 on every hit` | Apex | Adds 2 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
+| `Damage +3 on every hit` | Apex | Adds 3 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
 
 **A direct hit** is a Damage line applied to a target of a cast. A Bleed tick is not one, and neither is
 anything on the `Caster:` line.
@@ -1042,7 +1043,11 @@ this table were re-run against
 (`"passive": {"sunder": 3}`, content `0a0d8573`) and the engine's `Passive.Sunder`, `ResolutionRules.Outcome`
 and `EffectLine`. Titan no longer gives Stun immunity, so the rule "a Creature that owns Titan is immune to
 Stun for good" and its §6.4 example are gone; no Capstone gives Stun immunity, and the Round of Stun immunity
-after a Stun (ADR 0072) is untouched.
+after a Stun (ADR 0072) is untouched. Later the same day the owner lowered the Sunder to 2 and raised Apex's
+Damage bonus from 2 to 3 (content `95a78999`: `"passive": {"sunder": 2}` in `data/Tiers/titan.v1.json`,
+`"passive": {"damageBonus": 3}` in `data/Tiers/apex.v1.json`), and §5.3's table and its Capstone example,
+§5.8's two examples, §7.3 and this table were re-read against them. The Sunder example's second target went
+from a Defense of 2 to none, since a Defense equal to the Sunder no longer shows the floor; no rule moved.
 
 | This book | The specification |
 | --- | --- |
@@ -1068,8 +1073,8 @@ after a Stun (ADR 0072) is untouched.
 | [7.1](#71-the-nine-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
 | [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0101. The engine: `Tier.IsOpenTo` |
 | [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0101. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
-| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster"; ADR 0101. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)`, with a bonus of 0 on the `Caster:` line |
-| [5.8](#58-resolving-an-action) step 3 and 4, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Sunder, the Defense a hit meets, and Titan's 3 | "Combat rules (phase 6)": "every direct hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast does to its own caster are left alone", and Titan (sunder 3); "Combat", 2: `Activation`, the instant-effects bullet, "damage reduced by the target's total Defense less the caster's sunder, each floored at zero"; ADR 0106; glossary, **Sunder**. The engine: `Passive.Sunder`, read by `ResolutionRules.Outcome` as above, with a Sunder of 0 on the `Caster:` line. The Titan package card is the table's record of the glossary's **Passive** |
+| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster", and Apex (+3 damage); ADR 0101, ADR 0106 for the 3. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)`, with a bonus of 0 on the `Caster:` line |
+| [5.8](#58-resolving-an-action) step 3 and 4, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Sunder, the Defense a hit meets, and Titan's 2 | "Combat rules (phase 6)": "every direct hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast does to its own caster are left alone", and Titan (sunder 2); "Combat", 2: `Activation`, the instant-effects bullet, "damage reduced by the target's total Defense less the caster's sunder, each floored at zero"; ADR 0106; glossary, **Sunder**. The engine: `Passive.Sunder`, read by `ResolutionRules.Outcome` as above, with a Sunder of 0 on the `Caster:` line. The Titan package card is the table's record of the glossary's **Passive** |
 | [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0101; glossary, **Damage buff** and **Damage bonus** |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" and the threshold on every card | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`; ADR 0100, which refuses any other value in the data builder and holds every Spell's chance to the d20's twentieths. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero by rule, so the card's chance is the whole chance |

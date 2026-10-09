@@ -9,7 +9,8 @@ amounts; to Regeneration printed as `Regen` on the card, 2026-10-04; to the cont
 Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 2026-10-06: Basic Attack
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
 ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08; to Brace's first point lasting three Rounds,
-2026-10-09; to Titan's Sunder of ADR 0106 the same day). Phase 3 of [plan.md](plan.md). It answers the
+2026-10-09; to Titan's Sunder of ADR 0106 the same day, and to that Sunder lowered to 2 and Apex's Damage
+bonus raised to 3 later that day). Phase 3 of [plan.md](plan.md). It answers the
 **needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -50,12 +51,18 @@ What is current, exactly:
   figure of [2.3](#23-the-measurement) moves. The dock keeps four lanes: 3 Rounds was already the longest
   Duration ([3.2](#32-the-condition-dock-and-the-countdown)). Three Defense buff Spells carry a permanent half
   now, not four.
-- **Titan sunders 3 Defense instead of giving Stun immunity**
+- **Titan sunders 2 Defense instead of giving Stun immunity, and Apex adds 3, not 2**
   ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md), 2026-10-09; content
-  `0a0d8573`, `data/Tiers/titan.v1.json` reads `"passive": {"sunder": 3}`). Every direct hit a Titan owner
-  deals meets the target's total Defense less 3, never below zero. What moved is one line of text: the Titan
-  package card's Passive prints `Every hit ignores 3 defense` where it printed `Immune to stun`
-  ([4.1](#41-the-package-card)), 27 characters, inside the 38 a line holds, and the card's hash prefix.
+  `95a78999`, `data/Tiers/titan.v1.json` reads `"passive": {"sunder": 2}` and `data/Tiers/apex.v1.json`
+  `"passive": {"damageBonus": 3}`). Every direct hit a Titan owner deals meets the target's total Defense
+  less 2, never below zero. The Sunder was 3 at `0a0d8573`, earlier the same day; it was lowered, and Apex's
+  bonus raised, because a Sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it and the
+  Predator family won least (ADR 0106). What moved is two lines of text: the Titan package card's Passive
+  prints `Every hit ignores 2 defense` where it printed `Immune to stun`, 27 characters, inside the 38 a line
+  holds, and the Apex card's prints `Damage +3 on every hit` where it printed `Damage +2 on every hit`, 22
+  characters either way ([4.1](#41-the-package-card)); and the content hash prefix every card prints.
+  Apex's 3 moves the largest direct hit from 13 to 14, 28 on a critical, which no rail reads
+  ([3.3](#33-defense-two-rails-because-the-floor-is-applied-once)).
   **No count moves.** Titan's immunity never had a token of its own, since its card was the record; the
   **6 Immune tokens** stay, because they are the Round of Stun immunity after every Stun (ADR 0072), which
   ADR 0106 does not touch ([1.5](#15-the-rest-of-the-pieces)). The Sunder needs no token and no rail either:
@@ -154,8 +161,8 @@ What is current, exactly:
 - **The Capstones of 2026-10-07, `cedcfb61`**
   ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
   level-4 package that any of its level-3 packages opens, that teaches no Spell, pays +0 initiative, and gives
-  a Passive: Titan is immune to Stun (a Sunder of 3 since 2026-10-09, above), Archmage gains 1 more Energy
-  at every Upkeep, Apex adds 2 to every direct hit. The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
+  a Passive: Titan is immune to Stun (a Sunder since 2026-10-09, of 2 at `95a78999`, above), Archmage gains
+  1 more Energy at every Upkeep, Apex adds 2 to every direct hit (3 since 2026-10-09, above). The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
   16 sheets, not 126 on 14, and the paper is **57** sheets, not 55
   ([1.1](#11-spell-cards-and-package-cards)). The package card prints a `Needs one of:` list and the Passive's
   line ([4.1](#41-the-package-card)), and a Capstone card lies uncovered beside the stagger, since its Passive
@@ -164,7 +171,7 @@ What is current, exactly:
   Condition, so no token joins the supply ([1.4](#14-condition-tokens)). What did not move: the Spell cards,
   the most cards in hands (92), the Base initiative ceiling (35), the rails, and every token count. Archmage
   moves the most Energy one Creature gains in a Round from 8 to 9, inside the overflow chit
-  ([1.7](#17-the-energy-track-what-ends-it)), and Apex moves the largest direct hit from 11 to 13, which no
+  ([1.7](#17-the-energy-track-what-ends-it)), and Apex moves the largest direct hit from 11 to 13 (14 at `95a78999`), which no
   rail reads ([3.3](#33-defense-two-rails-because-the-floor-is-applied-once)). Every count that reads
   `data/Tiers/` is re-read at `cedcfb61`; the Spells did not change.
 
@@ -1050,15 +1057,18 @@ past the printed end. The rails are not reprinted here: since ADR 0076 no Creatu
 so the end the rule gives no longer blanks anything a Creature can reach, and whether the rule or the rail
 should move is Part 6, question 16.
 
-**At `cedcfb61` the largest direct hit is 13**: Apex adds 2 to every direct hit its owner deals, before the
-critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 13, 26 on a critical. The rule would read 26
-(28 at the knob's `max` of 3). It moves nothing for the reason above: no Creature's Defense reads above 10.
-The command below reads the printed Damage, which is the Spell card's; the bonus is the package card's.
+**At `95a78999` the largest direct hit is 14**: Apex adds 3 to every direct hit its owner deals, before the
+critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 14, 28 on a critical. The rule would read 28,
+which is also the most a pass can make it: 3 is the knob's `max`, so no pass raises the bonus further. It was
+13, 26 on a critical, from `cedcfb61` until 2026-10-09, when the bonus went from 2 to 3 (ADR 0106). It moves
+nothing for the reason above: no Creature's Defense reads above 10. The command below reads the printed
+Damage, which is the Spell card's; the bonus is the package card's.
 
-**At `0a0d8573` Titan's Sunder reads the rails and moves neither** (ADR 0106). A hit from a Titan owner meets
-the target's total Defense less 3, never below zero: the rails still give the total in one subtraction, and
-the Sunder is a second one, done at the hit and read off the Titan package card, as Apex's bonus is. It
-lowers what a hit meets and never raises it, so it moves no end of either rail and no figure above.
+**Titan's Sunder reads the rails and moves neither** (ADR 0106; 3 at `0a0d8573`, 2 at `95a78999`). A hit
+from a Titan owner meets the target's total Defense less 2, never below zero: the rails still give the total
+in one subtraction, and the Sunder is a second one, done at the hit and read off the Titan package card, as
+Apex's bonus is. It lowers what a hit meets and never raises it, so it moves no end of either rail and no
+figure above, at 2 or at the knob's `max` of 3.
 
 ```bash
 python3 -c "
@@ -1328,14 +1338,15 @@ table app prints (`EffectLine.Of(Passive)`):
 | Needs one of:                        |   the any-of list, by name, joined with commas:
 | Ravager, Colossus, Tyrant            |   one of these is enough
 |--------------------------------------|
-| Every hit ignores 3 defense          |   the Passive, one a line; no Spell
+| Every hit ignores 2 defense          |   the Passive, one a line; no Spell
 |                                      |
-| tier:titan:v1                0a0d85  |
+| tier:titan:v1                95a789  |
 +--------------------------------------+
 ```
 
-The three Passive lines are `Every hit ignores 3 defense` (Titan, since ADR 0106; `Immune to stun` before),
-`Energy +1 at every upkeep` (Archmage) and `Damage +2 on every hit` (Apex). The engine still words a Stun
+The three Passive lines are `Every hit ignores 2 defense` (Titan, since ADR 0106; `Immune to stun` before,
+and `Every hit ignores 3 defense` at `0a0d8573`), `Energy +1 at every upkeep` (Archmage) and
+`Damage +3 on every hit` (Apex; `Damage +2 on every hit` until `95a78999`). The engine still words a Stun
 immunity Passive `Immune to stun` (`EffectLine.Of`), and the measurement below still reads it, but no Tier
 gives one. The card is the Passive's only component: no token, no rail, no marker. It is read during
 play, so a Capstone card lies uncovered beside the stagger
@@ -1359,7 +1370,8 @@ What each piece of the layout answers:
 | The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0101). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `cedcfb61`, re-run at `0a0d8573` with the Sunder's line, which moves neither figure
+The measurement, at `cedcfb61`, re-run at `0a0d8573` with the Sunder's line and at `95a78999` with the
+Sunder of 2 and Apex's `+3`, neither of which moves either figure
 (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`; the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa` too, where it was Tyrant's
 `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one Spell):
 

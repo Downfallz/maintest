@@ -48,9 +48,9 @@ the Match (§7.3):
 
 | Capstone | Needs one of | Passive |
 | --- | --- | --- |
-| **Titan** | Ravager, Colossus, Tyrant | `Every hit ignores 3 defense`: a **Sunder** of 3 on every direct hit |
+| **Titan** | Ravager, Colossus, Tyrant | `Every hit ignores 2 defense`: a **Sunder** of 2 on every direct hit |
 | **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round |
-| **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit`: every target of every Damage line |
+| **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +3 on every hit`: every target of every Damage line |
 
 Give up the rest with an **Evolution pass**, unannounced. The step ends when neither Player has a pick they
 could use.
