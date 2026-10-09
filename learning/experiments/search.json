@@ -1,11 +1,10 @@
 {
-  "why": "The lookahead's weights refitted under ADR 0102. Greedy now prices a purchase by what it adds over the spells of its kind, and lookahead-34, fitted against the Greedy before it, beats it only 50.7 % of 400 matches where it took 94.8 % (journal, 2026-10-08): the table's strong bot is no stronger than Greedy. So this rung starts from lookahead-34, the set the table seats, and plays every candidate against the new Greedy on the first 60 benchmark seeds (learning/experiments/lookahead-seeds-60.json), because against Greedy the lookahead now sits near even and 30 seeds would not tell one candidate from the next. The first try of this rung, with search-23 on 10 seeds beside Greedy and 4 rounds of 5, had played 15 of its 21 evaluations after five hours and would have run past the six-hour timeout: the runner plays about 2.5 times slower than the local rate it was sized on (20 minutes an evaluation where 8 were expected). So search-23 leaves the panel, which also takes it out of the hold-out, where it alone would have cost an hour and three quarters; the lookahead on lookahead-34 beats it 12 of 12 on those seeds. 3 rounds of 5, seed 0: about 3.6 hours of search and half an hour of hold-out at the runner's rate. And the search now writes its best set after every round, so a run the timeout kills still leaves one. What would make it a rung: a set that beats lookahead-34 against Greedy on the 60 unseen seeds.",
-  "initial": "learning/weights/lookahead/lookahead-34.json",
+  "why": "A trial of the search spread over runners, not a rung: the one-step heuristic from the built-in weights against Greedy on the first 60 benchmark seeds, 2 rounds of 3, seed 0. What it checks is the workflow: the rounds plan, a matrix plays each evaluation, the next round reads them back, and the job that finishes the search writes the report a single job would.",
   "opponent": "greedy",
   "check_opponent": "none",
-  "kind": "lookahead",
+  "kind": "heuristic",
   "seeds": "learning/experiments/lookahead-seeds-60.json",
-  "iterations": 3,
-  "population": 5,
+  "iterations": 2,
+  "population": 3,
   "seed": 0
 }
