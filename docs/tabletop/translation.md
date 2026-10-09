@@ -12,7 +12,8 @@ re-read for the content of 2026-10-04 (`e6f72578`), the rows `night_raid` and `c
 re-read for the content of 2026-10-05 (`ad3e4d00`), and the rows the removal of `basic_attack` reaches
 re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
 [ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md) reach added or re-read on 2026-10-07
-(`cedcfb61`)). Phase 1 of [plan.md](plan.md).
+(`cedcfb61`); the rows `guard` reaches re-read on 2026-10-09, when its first point became 3 Rounds (journal,
+2026-10-09)). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -370,7 +371,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `Regeneration` | 3 (2 on targets: `healing_screech`, `soothing_chant`; 1 on the caster: `latch`) | 3 a Round for 2 Rounds, 2 for 2, 1 for 3 | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | Regeneration tokens in three faces, where there was one. Nothing is lost. |
 | `EnergyRegeneration` | 0 at `813bb91b` (`momentum` until ADR 0078) | none; `momentum`'s was 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Energy regeneration token) while `momentum` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `Stun` | 4 (`crushing_stomp`, `ice_spear`, `protective_slam`, `tranquilizer_dart`) | 2 Rounds (`crushing_stomp`); 1 Round for the other three | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 1 or 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a Stun removes a third of a Team for one or two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
-| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 1 or 3; timed 1, 3 or 4, for 2 or 3 Rounds | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. Four of the six carry a permanent Defense buff — three of them beside a timed one — and it stacks without a bound: ADR candidate 3. `bone_ward` and `shield_bash` are timed only. |
+| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3 (and 1, `guard`'s, until 2026-10-09); timed 1, 3 or 4, for 2 or 3 Rounds | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. Three of the six carry a permanent Defense buff — two of them beside a timed one — and it stacks without a bound: ADR candidate 3. `bone_ward`, `guard` and `shield_bash` are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds. |
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
@@ -442,8 +443,8 @@ size; this document only reports which rows carry an extra rule.
 | --- | --- | --- | --- | --- | --- | --- |
 | `wait` | 0 | self | 1 | 0 | **keep as is** | Nothing. |
 | `full_plate` | 2 | self | 2 | 1 | **needs a component** | A permanent Defense token; it is ADR candidate 3's worst case. |
-| `guard` | 1 | 1 ally | 3 | 2 | **needs a component** | Two Defense tokens from one cast, one permanent and one timed. Flagged for card text. |
-| `thundering_seal` | 3 | 1 ally | 3 | 2 | **needs a component** | The same, at amount 3. Flagged for card text. |
+| `guard` | 1 | 1 ally | 3 | 2 | **needs a component** | Two timed Defense +1 tokens from one cast on one target, one for 3 Rounds and one for 2: one face, two Durations. One was permanent until 2026-10-09. Flagged for card text. |
+| `thundering_seal` | 3 | 1 ally | 3 | 2 | **needs a component** | Two Defense tokens from one cast at amount 3, one permanent and one timed (what `guard` was at amount 1 until 2026-10-09). Flagged for card text. |
 | `bone_ward` | 2 | 1 ally | 3 | 2 | **needs a component** | A Defense buff token at +3 for 2 Rounds, and a Bleed 1 on its own caster; the caster line needs its own line on the card. New since PR #245. |
 | `heavy_strike` | 0 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
 | `momentum` | 2 | 1 enemy | 4 | 0 | **restate** | Nothing; the caster Energy needs its own line on the card, or the 2 Energy read as the target's. It deals 3 at `e6f72578`. Read at `813bb91b` (ADR 0078): it was a Self cast at 1 operation and 1 token, **needs a component**, an Energy regeneration token. |
@@ -585,6 +586,10 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > Re-read at content `e6f72578`: `full_plate` is unchanged, but the largest hit is 11 now, so the Round below
 > is 10, not 9, and `revenant_guards`' permanent half is +3, not +2. Two timed-only Defense buff Spells
 > arrived, `bone_ward` and `shield_bash`; neither feeds the line.
+>
+> Re-read on 2026-10-09 (journal, 2026-10-09): `guard`'s first point lasts 3 Rounds, where it was permanent,
+> so three of the six Defense buff Spells carry a permanent half, not four. That is the last option below
+> applied to one Spell. `full_plate` is unchanged, so the reading below stands.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above
@@ -593,8 +598,9 @@ Round 3: an Evolution pick buys `tier:brute:v1` in Round 1 and another `tier:iro
 the Creature gains 2 Energy every Round. Cast every Round from Round 3, its Defense is 3(k - 2) after Round k.
 The largest single hit in the catalogue is 11 (`hateful_sacrifice`); doubled by a critical that is 22. From
 Round 10 the Creature takes zero from every attack in the game except a Bleed, which ignores Defense.
-`thundering_seal` does the same for an ally at +3, `guard` at +1 and `revenant_guards` for the whole Team at
-+3 a cast: four of the six Defense buff Spells carry a permanent half. The plan
+`thundering_seal` does the same for an ally at +3 and `revenant_guards` for the whole Team at
++3 a cast: three of the six Defense buff Spells carry a permanent half (four, with `guard` at +1, until
+2026-10-09). The plan
 already calls this "probably not what anyone wants"; the table gives the round number.
 
 **The question.** What bounds a permanent stat buff?
@@ -603,10 +609,10 @@ already calls this "probably not what anyone wants"; the table gives the round n
 - *A cap on total Defense, in the `Rule set`.* Costs: a new Rule set value and a stamp change; the cap is a
   number to measure, and buff Spells become worthless once it is reached.
 - *Make the permanent halves `Ignore` instead of `Stack`.* Costs: a one-line default change per Effect, a
-  digest move, and four Spells lose their re-cast value entirely — `full_plate` becomes a once-a-Match cast,
+  digest move, and three Spells lose their re-cast value entirely — `full_plate` becomes a once-a-Match cast,
   which is closer to the `Passive` it is authored as.
 - *Remove permanent Durations from the taxonomy and give those halves a long finite Duration.* Costs: a
-  content change on the four Defense buff Spells with a permanent half — five, if `infectious_blast`'s permanent Defense debuff
+  content change on the three Defense buff Spells with a permanent half — four, if `infectious_blast`'s permanent Defense debuff
   goes with them — and a new content hash; the arc of a Match loses its only permanent gain.
 
 ### Candidate 4. A Condition remembers the Spell that applied it

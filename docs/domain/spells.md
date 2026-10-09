@@ -114,8 +114,10 @@ Two more places where the model forced a hand:
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports
   that pair, and `data/balance/knobs.json` says why its cost may not fall back to zero). Same for the
-  permanent half of Guard, Thundering Seal and Revenant Guards: legacy applied those to the stat for good,
-  and re-casting stacks them, exactly as it did there.
+  permanent half of Thundering Seal and Revenant Guards: legacy applied those to the stat for good, and
+  re-casting stacks them, exactly as it did there. Guard had one too until 2026-10-09; its first point now
+  lasts 3 rounds, because a point for good on every cast of a 1-energy spell was what kept mirrors going to
+  the round cap (journal, 2026-10-09).
 
 One deliberate correction: legacy Poison Slash is `SpellType.Defensive` while dealing damage to an enemy.
 That reads as a typo in the prototype; it is `Offensive` here.
@@ -135,7 +137,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 | Basic Attack | Creature | Offensive | 1 | — | Enemy | Damage 1 |
 | Heavy Strike | Creature | Offensive | 2 | — | Enemy | Damage 3 |
 | Pummel | Brawler | Offensive | 1 | 0.667 | Enemy | Damage 2 |
-| Guard | Brawler | Defensive | 1 | — | Ally | DefenseBuff 1 (permanent), DefenseBuff 1 (2r) |
+| Guard | Brawler | Defensive | 1 | — | Ally | DefenseBuff 1 (3r), DefenseBuff 1 (2r) |
 | Protective Slam | Mercenary | Offensive | 2 | 0.333 | Enemy | Damage 3 |
 | Chain Slash | Mercenary | Offensive | 3 | 0.5 | up to 2 enemies | Damage 5 |
 | Thundering Seal | Mercenary | Defensive | 2 | — | Ally | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
