@@ -68,6 +68,49 @@ public sealed class ResolutionRulesTests
     }
 
     /// <summary>
+    /// ADR 0106: the caster's sunder takes from the defense a direct hit meets, after the critical: Strike's 3
+    /// against a defense of 5 sundered by 3 meets 2, so 1 lands, and 6 doubled lands 4.
+    /// </summary>
+    [Fact]
+    public void A_sunder_takes_from_the_defense_a_direct_hit_meets()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(5, Duration.OfRounds(1)));
+        var creatures = Sundering(Arena.Snapshots(living), 3);
+
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 1, false)]);
+        Resolve(Strike(Arena.Ghoul), creatures, Crit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, true)]);
+    }
+
+    /// <summary>ADR 0106: a sunder larger than the defense it meets takes it to zero and adds nothing beyond it.</summary>
+    [Fact]
+    public void A_sunder_against_less_defense_than_it_takes_adds_nothing_past_zero()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
+        var creatures = Sundering(Arena.Snapshots(living), 3);
+
+        Resolve(Strike(Arena.Ghoul), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false)]);
+        Resolve(Strike(Arena.Wraith), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 3, false)]);
+    }
+
+    /// <summary>ADR 0106: a recoil is a cost, not a hit, so the caster's sunder does not reach its own armour.</summary>
+    [Fact]
+    public void A_sunder_leaves_a_casts_recoil_on_its_caster_alone()
+    {
+        var spell = Spell.Create(SpellId.Parse("spell:recoil:v1"), "Recoil", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None), TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(3)], [Damage.Of(2)]);
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.Learn(spell.Id);
+        knight.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)));
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var outcomes = ResolutionRules.Resolve(action, Sundering(Arena.Snapshots(living), 3), Resources(spell), RuleSet.Default, NoCrit, Speed.Standard).Outcomes;
+
+        outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, false), new DamageOutcome(Arena.Knight, 0, false) { OnCaster = true }]);
+    }
+
+    /// <summary>
     /// ADR 0033: one roll multiplies what the cast puts on a target's health now -- the damage and the direct
     /// heal -- and nothing else. The two energy effects, the bleed and the debuff in this spell are the boundary:
     /// energy is another economy, and a condition pays out at each upkeep, which one roll should not decide.
@@ -417,6 +460,10 @@ public sealed class ResolutionRulesTests
         Should.Throw<ArgumentNullException>(() => CombatResolution.Fizzle(action, null!));
         Should.Throw<ArgumentNullException>(() => CombatResolution.Resolved(action, null!, [], false, Energy.Of(0), []));
     }
+
+    /// <summary>The board with the Knight, who casts every action here, holding a passive sunder.</summary>
+    private static IReadOnlyList<CreatureSnapshot> Sundering(IReadOnlyList<CreatureSnapshot> creatures, int sunder) =>
+        [.. creatures.Select(creature => creature.Id == Arena.Knight ? creature with { Passive = Passive.Of(sunder: sunder) } : creature)];
 
     private static CombatAction Strike(CreatureId target) => CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [target]);
 

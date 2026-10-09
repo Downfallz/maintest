@@ -169,7 +169,8 @@ test('a passive reads as the lines the table card prints, and nothing reads as n
   assert.deepEqual(passiveLines({ stunImmunity: true, upkeepEnergy: 1, damageBonus: 2 }), [
     'Immune to stun', 'Energy +1 at every upkeep', 'Damage +2 on every hit',
   ]);
-  assert.deepEqual(passiveLines({ damageBonus: 0, stunImmunity: false }), []);
+  assert.deepEqual(passiveLines({ sunder: 3 }), ['Every hit ignores 3 defense']);
+  assert.deepEqual(passiveLines({ damageBonus: 0, stunImmunity: false, sunder: 0 }), []);
   assert.deepEqual(passiveLines(undefined), []);
   assert.deepEqual(passiveLines('stun'), []);
   assert.deepEqual(passiveLines([1]), []);

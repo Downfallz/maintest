@@ -46,7 +46,7 @@ const PACKAGE_PREFIX = 'tier:';
  * stun immunity is its kind; and the level, the prerequisites and the spells are the progression: none of those
  * is a knob.
  */
-export const PACKAGE_KNOBS = Object.freeze(['/passive/upkeepEnergy', '/passive/damageBonus']);
+export const PACKAGE_KNOBS = Object.freeze(['/passive/upkeepEnergy', '/passive/damageBonus', '/passive/sunder']);
 const INITIATIVE_BONUS = '/initiativeBonus';
 
 /**
@@ -56,7 +56,7 @@ const INITIATIVE_BONUS = '/initiativeBonus';
 export function packageKnobScope(document) {
   const scope = {};
   const passive = isRecord(document?.passive) ? document.passive : {};
-  const amounts = Object.fromEntries(['upkeepEnergy', 'damageBonus'].filter(key => isNumber(passive[key])).map(key => [key, passive[key]]));
+  const amounts = Object.fromEntries(['upkeepEnergy', 'damageBonus', 'sunder'].filter(key => isNumber(passive[key])).map(key => [key, passive[key]]));
   if (Object.keys(amounts).length) scope.passive = amounts;
   return scope;
 }

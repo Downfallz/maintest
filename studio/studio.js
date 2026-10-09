@@ -1033,7 +1033,7 @@ function tierEditor() {
  * -- the same way `PassiveDto` writes only the members that give something.
  */
 function passiveCard(draft) {
-  const holder = { stunImmunity: false, upkeepEnergy: 0, damageBonus: 0, ...(draft.passive && typeof draft.passive === 'object' ? draft.passive : {}) };
+  const holder = { stunImmunity: false, upkeepEnergy: 0, damageBonus: 0, sunder: 0, ...(draft.passive && typeof draft.passive === 'object' ? draft.passive : {}) };
   const reading = element('p', { className: 'muted' });
   const read = () => {
     reading.textContent = passiveLines(draft.passive).join(' · ') || 'No passive: the package is bought for its spells and its initiative bonus.';
@@ -1042,7 +1042,7 @@ function passiveCard(draft) {
   const sync = () => {
     const passive = {};
     if (holder.stunImmunity === true) passive.stunImmunity = true;
-    for (const key of ['upkeepEnergy', 'damageBonus']) if (holder[key]) passive[key] = holder[key];
+    for (const key of ['upkeepEnergy', 'damageBonus', 'sunder']) if (holder[key]) passive[key] = holder[key];
     if (Object.keys(passive).length) draft.passive = passive; else delete draft.passive;
     read();
     refreshTierWarnings();
@@ -1055,6 +1055,7 @@ function passiveCard(draft) {
       ['Immune to stun', immune],
       ['Energy at every upkeep', numberBox(holder, 'upkeepEnergy', { min: 0, onChange: sync })],
       ['Damage on every hit', numberBox(holder, 'damageBonus', { min: 0, onChange: sync })],
+      ['Defense every hit ignores', numberBox(holder, 'sunder', { min: 0, onChange: sync })],
     ]),
     reading,
   ]);
@@ -1830,6 +1831,7 @@ function knobLabel(path, document) {
   if (path === '/initiativeBonus') return 'Initiative +';
   if (path === '/passive/upkeepEnergy') return 'Upkeep energy +';
   if (path === '/passive/damageBonus') return 'Damage per hit +';
+  if (path === '/passive/sunder') return 'Sunder';
   if (path === '/energyCost') return 'Energy';
   if (path === '/criticalChance') return 'Crit';
   const parts = path.split('/');

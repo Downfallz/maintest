@@ -92,7 +92,7 @@ public static class GameSchemaMapper
 
         try
         {
-            var passive = dto.Passive is { } held ? Passive.Of(held.StunImmunity, held.UpkeepEnergy, held.DamageBonus) : Passive.None;
+            var passive = dto.Passive is { } held ? Passive.Of(held.StunImmunity, held.UpkeepEnergy, held.DamageBonus, held.Sunder) : Passive.None;
             return Tier.Create(id, dto.Name, dto.Level, prerequisites, spells, Initiative.Of(dto.InitiativeBonus), anyOf, passive);
         }
         catch (ArgumentException error)

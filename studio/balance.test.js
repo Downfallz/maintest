@@ -223,13 +223,14 @@ test('a capstone entry may tune its passive amounts and nothing else of the pass
   assert.deepEqual(rolled.rows[0].summary.knobs[0].problems, []);
   assert.deepEqual(rolled.flagged[0].problems.map(item => [item.code, item.path]).filter(([code]) => code === 'packageIdentity'),
     [['packageIdentity', '/passive/stunImmunity']]);
-  assert.deepEqual(PACKAGE_KNOBS, ['/passive/upkeepEnergy', '/passive/damageBonus']);
+  assert.deepEqual(PACKAGE_KNOBS, ['/passive/upkeepEnergy', '/passive/damageBonus', '/passive/sunder']);
 });
 
 test('the knob editor offers a package the passive amounts it carries and never its initiative bonus', () => {
   assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 1, level: 2, spells: ['spell:a:v1'] })), []);
   assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, level: 4, passive: { stunImmunity: true, upkeepEnergy: 1 } })),
     ['/passive/upkeepEnergy']);
+  assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, level: 4, passive: { sunder: 3 } })), ['/passive/sunder']);
   assert.deepEqual(pointersOf(packageKnobScope({ initiativeBonus: 0, passive: 'broken' })), []);
   assert.deepEqual(pointersOf(packageKnobScope(undefined)), []);
 });

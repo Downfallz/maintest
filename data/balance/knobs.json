@@ -1027,11 +1027,14 @@
     },
     "tier:titan": {
       "name": "Titan",
-      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and makes its owner immune to stun for the rest of the match. The answer to the control the other families close on, with nothing to tune but whether it is bought.",
+      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing, and every direct hit its owner deals ignores 3 of the target's defense for the rest of the match (ADR 0106). The Brawler crushes armour: worth nothing against a team without defense, and the answer to one that stacked it. Until 2026-10-09 it made its owner immune to stun instead, which lengthened the matches it was bought in.",
       "keep": [
-        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
+        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs",
+        "Offensive, and only against armour: it never adds damage to a hit on a target with no defense"
       ],
-      "knobs": []
+      "knobs": [
+        { "path": "/passive/sunder", "min": 1, "max": 3, "step": 1 }
+      ]
     },
     "tier:warmonger": {
       "name": "Tyrant",
