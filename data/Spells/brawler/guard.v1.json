@@ -14,7 +14,7 @@
     {
       "kind": "DefenseBuff",
       "amount": 1,
-      "permanent": true
+      "durationRounds": 3
     },
     {
       "kind": "DefenseBuff",
