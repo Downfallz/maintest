@@ -90,11 +90,24 @@ energy debuffs, and the minions did not survive the port (`docs/domain/spells.md
 as waiting on a rule, and the point of saying so here is that a search must not "fix" them by making the
 half that exists strong enough to compensate.
 
+## What no pass moves
+
+Since 2026-10-09, by the owner's call (journal of the day):
+
+- The starting kit and the six tier-1 spells keep their entries with an empty knob list: they are settled.
+- No spell costs more than 4 energy, so no cost knob reaches past 4.
+- No permanent buff can be searched above what it gives today (Carapace and Fortress stop at 3): permanent,
+  stacking defense is what stalls a match.
+- A keep that ties two numbers or two spells together (Latch's matched halves, Fury's crit above every other,
+  Paralyzing Barb's stun below Crushing Stomp's) is held by the bounds, since the search moves each knob alone.
+
 ## What a package entry carries
 
 The same fields as a spell's, without a class, and knobs on two things only: `/initiativeBonus`, what a
 purchase adds to the buyer's Base initiative for the rest of the match (ADR 0056), and a passive's amount,
-`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0101). A package's level, prerequisites, any-of list
+`/passive/upkeepEnergy` or `/passive/damageBonus` (ADR 0101). `check-knobs` accepts both, but since
+2026-10-09 no package carries an initiative knob: the owner sets every package's bonus by hand, and a pass
+moves only the capstones' passives. A package's level, prerequisites, any-of list
 and spells are the progression itself, and `check-knobs` refuses a knob on any of them.
 
 Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it

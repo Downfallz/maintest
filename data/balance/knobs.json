@@ -190,7 +190,6 @@
       "intent": "The starting kit's commitment: pay more of the round for the bigger opening hit. The decision it exists to pose is spend now or bank for later, so it has to cost what it wins.",
       "keep": [
         "The starting kit is settled: no knob moves it (the owner, 2026-10-09)",
-        "Strictly dearer and stronger than Basic Attack, never both cheaper and better",
         "The reason a first round has a choice in it"
       ],
       "knobs": []
@@ -198,10 +197,9 @@
     "spell:pummel": {
       "name": "Pummel",
       "class": "Brawler",
-      "intent": "The Brawler's cheap swing: one energy for a hit that crits about three times in four. It buys tempo rather than a big number, and the critical chance is the whole reason to take it over Basic Attack.",
+      "intent": "The Brawler's cheap swing: one energy for a hit that crits about three times in four. It buys tempo rather than a big number, and the critical chance is the whole reason to take it.",
       "keep": [
         "Tier 1 is settled: no knob moves it (the owner, 2026-10-09)",
-        "At most one energy dearer than Basic Attack",
         "Its critical chance stays its defining stat"
       ],
       "knobs": []
@@ -259,7 +257,7 @@
       ],
       "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 15, both at the same depth, `hateful_sacrifice` beats it at 11 on one, and `engulfing_flames` and `psycho_rush` tie it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
@@ -275,7 +273,7 @@
       "note": "It read 5.20 a round against a tier-3 band of 8 to 14, so it was raised to the top of its own bounds rather than redesigned: 2 permanent and 2 for a round became 3 and 3 for two, at the same price. Measured, that is 16 casts to 94 and `spellsNeverCast` 6 to 1 -- longer matches (5.56 rounds to 6.33) buy more evolution picks, so more of the catalogue comes up at all. It is not the best score available: 3 permanent and 2 for two rounds reads 34.33 against this one's 39.97, and the difference is `spellsBarelyCast`. Taken deliberately, because the tier's problem is its floor and this is the shape closer to the tier-3 median, about 10.5 then and about 9.4 today. Its overlap with `revenant_guards` -- the same two effects on three allies -- is left for the Necromancer's turn.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
@@ -309,7 +307,7 @@
       "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also half of the Warlord's opener, Ironhide, beside Body Slam, so `restorative_gush` and `crushing_stomp` are only ever as reachable as that package is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:restorative_gush": {
@@ -322,8 +320,8 @@
       ],
       "note": "Its critical chance became a live number with ADR 0033, and that ADR's follow-up said the knob was added here. It was not -- this entry carried three sentences that were false by the time anyone read them: that the knob existed, that the spell was disabled, and that it carried no chance. The knob is real now. The heal goes to 7 with a chance of 0.5, which is 5.62 a round to 8.40 and inside the 8-to-14 band tier 3 is aimed at; its own bounds could not reach the band on the heal alone, which is why the missing knob mattered rather than being a tidy-up.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 8, "step": 1 },
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
     },
@@ -332,7 +330,7 @@
       "class": "Warlord",
       "intent": "The Warlord's hammer and the costliest spell in the game: heavy damage and two rounds of the target doing nothing. Losing an activation is the harshest thing that can happen to a creature, so the price is the point of the spell.",
       "keep": [
-        "The most expensive cast in the catalogue",
+        "The most expensive cast in the catalogue: 4, the most any spell may cost",
         "Damage and stun together, or it is just an expensive hit"
       ],
       "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
@@ -340,7 +338,7 @@
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 8, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
+        { "path": "/criticalChance", "min": 0.4, "max": 0.75, "step": 0.05 }
       ]
     },
     "spell:reckless_swing": {
@@ -355,8 +353,7 @@
       "knobs": [
         { "path": "/effects/0/amount", "min": 4, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:enraged_charge": {
@@ -372,7 +369,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
-        { "path": "/criticalChance", "min": 0.5, "max": 0.85, "step": 0.05 }
+        { "path": "/criticalChance", "min": 0.8, "max": 0.85, "step": 0.05 }
       ]
     },
     "spell:tornado": {
@@ -386,7 +383,7 @@
       ],
       "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it read 10.64; tune run 9 then took its critical chance 0.33 to 0.38 and #246 its damage 4 to 5, and it reads 13.80 today. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turned the spell into what was then a cheaper `meteor` (3 damage on three targets): the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
@@ -401,7 +398,7 @@
       ],
       "note": "The Berserker is the class whose point is the roll -- `enraged_charge` carries the highest critical chance in the catalogue and says so in its own first line -- and neither spell behind it gambled at all: both sat at 0.33, below the opener. This one now takes 0.5, the top of its own bounds, with the damage at 10: 7.98 a round to 10.00, inside the tier-3 band. Measured, 6 casts to 53. Its second keep used to read 'priced as if the recoil existed, because one day it will'; that day is ADR 0035, and the recoil is on the spell -- 2 defense off its own caster for a round, which is what legacy wrote and what `casterEffects` was built to carry (ADR 0031). It costs 1.30 of the reading, 10.00 a round to 9.13, and the spell stopped reading as strictly better than `engulfing_flames`: the finding was the missing half, not a bound.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
@@ -443,10 +440,6 @@
       "note": "Authored at 4.8 a round in the check-knobs reading. Bleeds and regenerations stack beside the ones already there, so a Latch cast every round keeps three running on each side -- 3 a round drawn and 3 healed, for one energy a round -- which that reading does not see. The duration is the knob to cut if that is too much (two rounds reads 3.2). On #245's content the confirmation seeds' exploring run split the Parasite's casts 43/35 between its two spells; the stacking has not been measured on its own.",
       "knobs": [
         { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
       ]
     },
@@ -461,7 +454,6 @@
       ],
       "note": "The reading that matters is not in the numbers: `ActionScorer`'s `HealTerms` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.35 against `lightning_bolt`'s 6.00 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.75 where play reads between 4.35 and 6.75.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 }
@@ -477,7 +469,7 @@
       ],
       "note": "The self-damage was restored when its tier opened, which `docs/domain/spells.md` said would happen -- 'Psycho Rush and Hateful Sacrifice are still halves of themselves, and are re-authored when their tier is opened' (Psycho Rush and Hateful Sacrifice are Deranged Charge and Blood Price since 2026-10-06). Its old second keep said the energy price stood in for the missing recoil; the recoil is here, so the stand-in is gone. It read 10.00 a round to 7.33, just under the tier-3 band of 8 to 14, and that was accepted rather than compensated: `cast_value` charges the health in full, where a bot pays it only in the rounds where that health is what it had left. #246 has since made it 11 damage for three health, which reads 9.00, inside the band. Measured, 621 casts to 420.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 7, "max": 12, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
@@ -556,10 +548,10 @@
         "The catalogue's heaviest bleed"
       ],
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amountPerRound", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 2, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
@@ -574,7 +566,7 @@
       "knobs": [
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/targeting/maxTargets", "min": 2, "max": 3, "step": 1 },
-        { "path": "/energyCost", "min": 0, "max": 2, "step": 1 }
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:noxious_cure": {
@@ -606,7 +598,6 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/2/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
@@ -675,7 +666,7 @@
       ],
       "note": "Its bounds used to defer to Whirlwind -- 'these two are priced against each other or one of them is dead content' -- and Whirlwind was a tier deeper and disabled then, so this spell was deferring its numbers to one nobody could cast while it became the ceiling of its own tier. Read per round, four damage on three targets was 12.00 against `enraged_charge`'s 8.40, 43% clear of everything; three was 9.00, a step ahead rather than a different game; reworked since to 2 damage and a one-round bleed, it reads 7.00, now behind `enraged_charge`'s 8.40. The damage floor drops to 2 so a real per-target discount is reachable, and the cap to 4, `lightning_bolt`'s own damage on one, so its hit per target can never exceed the bolt's. Whirlwind is enabled now, at tier 3 in Ravager, so the comparison is back: Whirlwind reads 13.80 a round against this spell's 7.00, a comparison between two sweeps rather than a reason to leave this one unpriced.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
@@ -692,7 +683,7 @@
       ],
       "note": "Its old intent read 'Psycho Rush in a robe: the same cost, the same damage, the same critical chance and the same targeting', and its first keep was 'must stop being a copy of Psycho Rush', Deranged Charge's name before 2026-10-06. That was settled by the **Berserker** pass, not by this spell: Deranged Charge now carries 10 damage, a chance of 0.5 and a recoil on its own caster. The claim is withdrawn. What was left was a spell paying twice for the one thing that makes it itself -- 9 damage *and* a chance of 0.33 against the other two's 10 and 0.5, for the privilege of costing nothing. Damage goes to **10**, so the discount is taken once, in the chance alone: 7.98 a round to **8.87**, between Deranged Charge's 9.13 and Blood Price's 7.33 at the time; #246 has since raised Blood Price to 9.00, so this spell now reads the lowest of the three. The `check-knobs` finding against `ice_spear` was **twice an artifact**: `cast_value` has no kill term, which is what a nuke is for, and it priced `ice_spear`'s slow at 2.1 a point, which was 41% of that spell's reading. The finding stays, now against `soul_devourer` at 10.10 over this spell's ceiling of 10.00, and the missing kill term still applies. Measured on content `eca50723`, after [ADR 0042](../../docs/adr/0042-a-creature-has-no-base-critical-chance.md) took the crit floor off every cast, the gap is **wider than when this note was written**, not narrower: the two win **71.2% and 44.1%** of the sides that declare them, where they read 44.4% and 49.0% before, and this one now takes 690 damage to its 653 in **77 landed casts against 127**. The spell the report called the bar then was the one losing more than it won, which is why the way out is not this spell's bounds and is probably not the Wizard's either: it is the missing kill term.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
@@ -718,7 +709,7 @@
       "intent": "The Necromancer's single ward: a shell of bone around one ally, paid for in the caster's own blood. It spends the point Infestation leaves over on an income of two, and it is the one-target first step of Wraithguard, which wards the whole team at the same kind of price at tier 3.",
       "keep": [
         "Always paid in the caster's blood: dark magic costs life in this line",
-        "One ally: the group ward is Wraithguard' at tier 3"
+        "One ally: the group ward is Wraithguard at tier 3"
       ],
       "note": "Authored at 3.1 a round in the check-knobs reading, which prices defense without the threat it stands against -- the same blind spot that reads Brace and Carapace low. Recast on one ally it stacks, bounded by the cap on defense buffs (ADR 0076) and by the caster bleeding each cast. No evaluation has measured it yet.",
       "knobs": [
@@ -756,7 +747,7 @@
       ],
       "note": "Its second keep was **false**. It asked to be priced above `thundering_seal` while both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **4 health on the caster**, as a one-round `Bleed` (ADR 0031). 15.60 to **12.40**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this cost two energy *and* four health. No energy price moved then; tune run 9 has since raised this one to three. The price is a bleed and not a `Damage` because **this spell would otherwise pay its own price down**: `Ally` targeting includes the caster (`TargetingRules`), so every cast permanently armours the summoner, and `ResolutionRules` reduces a caster `Damage` by that armour -- 3 health on the first cast, 1 on the second, 0 on the third. A bleed tick ignores defense (ADR 0019), so the toll is the same every time. `ResolutionRulesTests` pins the difference. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 5, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
@@ -774,7 +765,7 @@
       ],
       "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 }
@@ -824,8 +815,7 @@
       ],
       "note": "**3.60 a round against a tier-3 band of 8 to 14, with a ceiling of 5.70** -- the lowest reading at tier 3 now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.3 a point, which is 0.60, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out that entry names has since been tried: ADR 0037 swept the **price of energy** and moved it 0.2 to 0.3, which took this spell 3.60 to 3.80 and its ceiling 3.80 to 4.10, nowhere near the band. The heal went 3 to **4** then, the top of its box at the time, 2.80 to **3.60** at the price of the day; #246 has since raised it to **6**, the top of today's box, so against `restorative_gush`'s 7 the trade is 1 heal for 2 energy at one more energy to cast, still 3.60 a round, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.60 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied. **It has since survived a rules change that moved everything else and is still not cast.** On content `eca50723` -- base critical chance gone, every condition but Stun stacking, `player1WinShare` 0.695 to 0.475 and matches a round longer -- it is the catalogue's one `spellsNeverCast` and the only spell of 36 that does not appear in `spellOutcomes` at all. So this is the one finding of the ten that is neither an artifact of the reading nor a bound waiting to be widened: the box cannot reach the band, the arithmetic above says why, and the two ways out are both design decisions rather than numbers -- give the spell a shape the reading can price, or take it out. Nobody has taken that decision, and a tuning pass will go on reporting that it found nothing here as though it had looked in the right place.",
       "knobs": [
-        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 9, "step": 1 },
+        { "path": "/effects/0/amount", "min": 8, "max": 9, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
@@ -839,7 +829,7 @@
       ],
       "note": "Its second keep read 'costs more than Tornado because it keeps working' (Tornado is Whirlwind since 2026-10-06), and it was **true until this refonte**: `tornado` cost 2 and this costs 3. The Berserker pass took `tornado` to 3 for its own reasons -- it was the second-largest reading in the catalogue and matches were ending at 6.4 rounds -- and falsified this clause on the way past, the same way it falsified `tranquilizer_dart`'s. The claim cannot be restored by price: 4 would tie `crushing_stomp`, whose own first keep is 'the most expensive cast in the catalogue' and whose entry says the price *is* the spell. So the clause is rewritten to what is true and was always the real point -- the lingering, not the receipt. The bleed duration knob drops from 3 rounds to 2: legacy carries `Length = 1` and so does the content, and a knob that triples a bleed across three targets took the ceiling to **26.40**, the second largest in the catalogue. Ceiling 26.40 to **21.60**; nothing a build reads moved.",
       "knobs": [
-        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
@@ -934,11 +924,10 @@
       "name": "Blighted",
       "intent": "The Trickster's opener: Toxic Mend, a heal that costs the team it heals, and Overdrive, energy for the team. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 1, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), the owner set it to 2 on 2026-10-02 and to 3 on 2026-10-03, with Toxic Mend's heal at 7 and Overdrive rebuilt, which took the package from the weakest tier 2 to even (journal). At 4, with the cure healing 6, it read +0.071, over the top.",
       "keep": [
-        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "Its initiative bonus is set by hand, like every package's: never a knob (the owner, 2026-10-09)"
       ],
-      "knobs": [
-        { "path": "/initiativeBonus", "min": 1, "max": 4, "step": 1 }
-      ]
+      "knobs": []
     },
     "tier:shaman": {
       "name": "Ethereal",
