@@ -388,6 +388,21 @@ public sealed class CreatureTests
     }
 
     /// <summary>
+    /// A snapshot sums its damage buffs as the creature does, overflow included: a total past what an int holds
+    /// is a broken board, not a bonus that wrapped negative and turned a hit into a heal.
+    /// </summary>
+    [Fact]
+    public void A_snapshot_refuses_damage_buffs_that_overflow_as_the_creature_does()
+    {
+        var creature = Spawn();
+        creature.Apply(DamageBuff.Of(int.MaxValue, Duration.Permanent));
+        creature.Apply(DamageBuff.Of(int.MaxValue, Duration.OfRounds(1)));
+
+        Should.Throw<OverflowException>(() => creature.DamageBonus);
+        Should.Throw<OverflowException>(() => creature.Snapshot().DamageBonus);
+    }
+
+    /// <summary>
     /// ADR 0101: a passive is read from the packages a creature owns, so a restored creature holds the one its
     /// packages give, and a snapshot claiming another is a broken board rather than a creature.
     /// </summary>

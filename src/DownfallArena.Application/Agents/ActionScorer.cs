@@ -665,7 +665,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 }
                 else
                 {
-                    totals[index] = (damage.Target, totals[index].Total + damage.Amount);
+                    totals[index] = (damage.Target, checked(totals[index].Total + damage.Amount));  // as Sum did
                 }
             }
         }

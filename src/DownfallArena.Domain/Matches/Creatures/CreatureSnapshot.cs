@@ -75,7 +75,7 @@ public sealed record CreatureSnapshot
             {
                 if (condition.Effect is DamageBuff buff)
                 {
-                    bonus += buff.Amount;
+                    bonus = checked(bonus + buff.Amount);  // as Sum did: an overflow is a broken invariant, not a wrap
                 }
             }
 
