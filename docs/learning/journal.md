@@ -29,6 +29,9 @@ Content `da8d744b`, engine at `cf609eb`, only `RuleSet.Default`'s round cap movi
 - **What it means.** At 30 rounds most of those matches did end, late. At 20 they do not, so the stand-off
   the objective names (`roundCapShare`: "neither side can convert") is now in range of it again. That is the
   next thing to fix, in the content, and it is measured honestly now.
+- **With Guard's three rounds merged in** (content `f2ae0013`), the same score at 20 reads **13.520**, still all
+  `mirror.roundCapShare`: the mirror at the cap 19.5 % to 18.0 %, the exploiter 32.8 % to 28.7 %, and draws
+  2.5 % to 4.5 % in the mirror. Guard was part of the stand-off, not all of it.
 - **Committed policies** carry `roundCap: 30` in their stamp and are refused until a turn of the loop trains
   them again, by the owner's choice. The weights files carry no stamp and still load; they were searched at 30.
 - **The benchmark digests for `da8d744b` and `f2ae0013`** (Guard's three rounds, merged the same day and
