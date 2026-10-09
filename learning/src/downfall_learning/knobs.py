@@ -73,13 +73,18 @@ AT_LEAST_ONE = re.compile(r"^/(effects|casterEffects)/\d+/(amount|amountPerRound
 MOST_ROUNDS = 3
 DURATION = re.compile(r"^/(effects|casterEffects)/\d+/durationRounds$")
 
-#: The one number every package carries that a tuning pass may move: what a purchase adds to Base initiative
-#: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
+#: The most any spell may cost: the owner's rule of 2026-10-09, so that no search prices a spell out of a
+#: match the way a cost of 5 or 6 did on paper while no spell in the content cost more than 4.
+MOST_ENERGY = 4
+
+#: What a purchase adds to Base initiative (ADR 0056). Every package carries it, and since 2026-10-09 the
+#: owner sets it by hand: a search that moved it read turn order as balance, and the owner set it back.
 INITIATIVE_BONUS = "/initiativeBonus"
 
-#: The numbers a package may move: its initiative bonus, and the amounts of a capstone's passive (ADR 0101).
-#: Whether a passive gives stun immunity is its kind, not a number, and is never a knob.
-PACKAGE_KNOBS = frozenset({INITIATIVE_BONUS, "/passive/upkeepEnergy", "/passive/damageBonus"})
+#: The numbers a package may move: the amounts of a capstone's passive (ADR 0101). A package's level,
+#: prerequisites and spells are its identity, its initiative bonus is the owner's, and whether a passive gives
+#: stun immunity is its kind: none of those is a knob.
+PACKAGE_KNOBS = frozenset({"/passive/upkeepEnergy", "/passive/damageBonus"})
 
 #: How a package alias reads, and so how a document is told apart from a spell without a second field.
 PACKAGE_PREFIX = "tier:"
@@ -159,9 +164,10 @@ class SpellKnobs:
 class PackageKnobs:
     """The knobs of one package, with the intent its number serves.
 
-    A package has one number worth tuning, its initiative bonus (ADR 0059 moved it here from the spells), so
-    this is a spell entry without a class: which spells it teaches, at what level and behind what is the
-    package's identity, and a tuning pass that moved any of it would be redesigning the progression.
+    A package's numbers worth tuning are a capstone's passive amounts (ADR 0101); its initiative bonus is set
+    by hand since 2026-10-09. So this is a spell entry without a class: which spells it teaches, at what level
+    and behind what is the package's identity, and a tuning pass that moved any of it would be redesigning
+    the progression.
     """
 
     alias: str
@@ -611,8 +617,8 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
 
     The same three questions a spell entry answers -- is every enabled package covered, does every entry name
     one, does every pointer address a number inside its bounds -- plus one only a package can raise: a knob on
-    anything but the initiative bonus or a passive's amount is refused, because the rest of a package is the
-    progression itself.
+    anything but a passive's amount is refused, because the rest of a package is the progression itself, and
+    its initiative bonus is set by hand.
     """
     problems = list(content.ambiguous_packages)
     for alias in sorted(set(content.package_documents) - set(knobs.packages)):
@@ -626,7 +632,10 @@ def _package_problems(knobs: Knobs, content: Content) -> list[str]:
         if not package.intent.strip():
             problems.append(f"{alias}: no intent, so nothing says what its number is for.")
         problems.extend(
-            f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
+            f"{knob.key}: a package's initiative bonus is set by hand, never searched; only "
+            f"{', '.join(repr(path) for path in sorted(PACKAGE_KNOBS))} may move."
+            if knob.path == INITIATIVE_BONUS
+            else f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
             f"{', '.join(repr(path) for path in sorted(PACKAGE_KNOBS))} may move."
             for knob in package.knobs
             if knob.path not in PACKAGE_KNOBS
@@ -669,6 +678,10 @@ def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, obje
             problems.append(
                 f"{knob.key}: a search could take it below 1, which the engine refuses for an effect's "
                 "amount or duration."
+            )
+        if knob.path == ENERGY_COST and knob.maximum > MOST_ENERGY:
+            problems.append(
+                f"{knob.key}: a search could take it past {MOST_ENERGY} energy, the most a spell may cost."
             )
         if DURATION.match(knob.path) and knob.maximum > MOST_ROUNDS:
             problems.append(

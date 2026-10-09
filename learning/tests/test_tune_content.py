@@ -1721,7 +1721,13 @@ def test_the_same_split_on_many_casts_is_read_close_to_the_split_itself() -> Non
     assert metrics["tierUsageShare"] == pytest.approx(0.728, abs=1e-3)
 
 
-PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"], "initiativeBonus": 2}
+PACKAGE = {
+    "id": "tier:open:v1",
+    "level": 4,
+    "spells": [],
+    "initiativeBonus": 0,
+    "passive": {"damageBonus": 2},
+}
 
 
 def with_package(tmp_path: Path) -> Content:
@@ -1736,7 +1742,7 @@ def with_package(tmp_path: Path) -> Content:
 
 
 def package_move(after: float) -> Move:
-    knob = Knob(target="tier:open", path="/initiativeBonus", minimum=0, maximum=4, step=1)
+    knob = Knob(target="tier:open", path="/passive/damageBonus", minimum=0, maximum=4, step=1)
     return Move(knob=knob, steps=int(after - 2), before=2, after=after)
 
 
@@ -1746,10 +1752,10 @@ def test_a_package_move_lands_in_the_package_and_leaves_every_spell_alone(tmp_pa
 
     moved = content.with_documents(apply_moves(content.documents, [package_move(3)]))
 
-    assert moved.package_documents["tier:open"]["initiativeBonus"] == 3
+    assert moved.package_documents["tier:open"]["passive"]["damageBonus"] == 3
     assert moved.spells == content.spells
     assert "tier:open" not in moved.spells
-    assert content.package_documents["tier:open"]["initiativeBonus"] == 2, "the base is left alone"
+    assert content.package_documents["tier:open"]["passive"]["damageBonus"] == 2, "the base is left alone"
 
 
 def test_a_winning_package_is_written_back_to_the_file_it_came_from(tmp_path: Path) -> None:
@@ -1768,7 +1774,7 @@ def test_a_winning_package_is_written_back_to_the_file_it_came_from(tmp_path: Pa
     written = result.apply()
 
     assert written == [tmp_path / "Tiers" / "open.v1.json"]
-    assert json.loads(written[0].read_text())["initiativeBonus"] == 4
+    assert json.loads(written[0].read_text())["passive"]["damageBonus"] == 4
 
 
 def test_the_report_names_a_package_move_as_a_package(tmp_path: Path) -> None:
@@ -1777,4 +1783,4 @@ def test_the_report_names_a_package_move_as_a_package(tmp_path: Path) -> None:
     best = Candidate(iteration=1, moves=(package_move(3),), score=0.5, breakdown={}, metrics={})
     result = TuneResult(best=best, initial=initial, candidates=(best,), documents={}, files={})
 
-    assert "Open package — initiative bonus: 2 -> 3" in format_result(result, objective)
+    assert "Open package — passive damage bonus: 2 -> 3" in format_result(result, objective)
