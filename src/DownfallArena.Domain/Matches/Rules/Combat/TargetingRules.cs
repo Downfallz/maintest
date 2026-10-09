@@ -20,6 +20,13 @@ public static class TargetingRules
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(creatures);
 
+        // The agents check every target set of every spell they read, nearly all of them legal: those are told
+        // apart first, without building the list a failure needs.
+        if (IsClean(actor, spell.Targeting, targets, creatures))
+        {
+            return TargetingReport.Clean;
+        }
+
         var failures = GlobalFailures(actor, spell.Targeting, targets).ToList();
         foreach (var targetId in targets.Distinct())
         {
@@ -47,6 +54,54 @@ public static class TargetingRules
 
         var max = spec.Scope == TargetScope.SingleTarget ? 1 : Math.Min(spec.MaxTargets ?? candidates.Count, candidates.Count);
         return new LegalTargets(1, Math.Max(1, max), candidates);
+    }
+
+    /// <summary>Whether <see cref="GlobalFailures"/> and every target's <see cref="TargetFailures"/> would find nothing.</summary>
+    private static bool IsClean(CreatureSnapshot actor, TargetingSpec spec, IReadOnlyList<CreatureId> targets, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (targets.Count == 0
+            || (spec.Scope == TargetScope.SingleTarget && targets.Count > 1)
+            || (spec.MaxTargets is { } max && targets.Count > max))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < targets.Count; index++)
+        {
+            var targetId = targets[index];
+            for (var earlier = 0; earlier < index; earlier++)
+            {
+                if (targets[earlier] == targetId)
+                {
+                    return false;
+                }
+            }
+
+            if (spec.Origin == TargetOrigin.Self && targetId != actor.Id)
+            {
+                return false;
+            }
+
+            CreatureSnapshot? target = null;
+            foreach (var creature in creatures)
+            {
+                if (creature.Id == targetId)
+                {
+                    target = creature;
+                    break;
+                }
+            }
+
+            if (target is null
+                || target.IsDead
+                || (spec.Origin == TargetOrigin.Ally && target.Owner != actor.Owner)
+                || (spec.Origin == TargetOrigin.Enemy && target.Owner == actor.Owner))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static IEnumerable<TargetingFailure> GlobalFailures(CreatureSnapshot actor, TargetingSpec spec, IReadOnlyList<CreatureId> targets)
