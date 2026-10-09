@@ -4,14 +4,15 @@ namespace DownfallArena.Domain.Tests.Matches;
 
 public sealed class RuleSetTests
 {
+    /// <summary>The prototype's values, with the table's round cap of 20 where the prototype had 30 (ADR 0105).</summary>
     [Fact]
-    public void The_default_rule_set_matches_the_prototype()
+    public void The_default_rule_set_is_the_prototype_with_the_tables_round_cap()
     {
         RuleSet.Default.ShouldBe(RuleSet.Create(
             teamSize: 3,
             energyPerRound: 2,
             evolutionPicksPerOpportunity: 2,
-            roundCap: 30,
+            roundCap: 20,
             criticalMultiplier: 2.0,
             firstEvolutionRound: 1,
             evolutionInterval: 2));

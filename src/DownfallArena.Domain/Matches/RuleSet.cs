@@ -25,9 +25,10 @@ public sealed record RuleSet
 
     /// <summary>
     /// The prototype's values: three creatures, two energy per round, two evolution picks in an opportunity that
-    /// comes at round 1 and every second round after it, thirty rounds, double damage on a crit (ADR 0056).
+    /// comes at round 1 and every second round after it, double damage on a crit (ADR 0056), and the table's
+    /// twenty rounds where the prototype had thirty (ADR 0105).
     /// </summary>
-    public static RuleSet Default { get; } = new(3, 2, 2, 30, 2.0, 1, 2);
+    public static RuleSet Default { get; } = new(3, 2, 2, 20, 2.0, 1, 2);
 
     public int TeamSize { get; }
 
