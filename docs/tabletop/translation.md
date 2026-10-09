@@ -15,7 +15,8 @@ re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
 (`cedcfb61`); the rows `guard` reaches re-read on 2026-10-09, when its first point became 3 Rounds (journal,
 2026-10-09); the rows Titan reaches re-read the same day for
 [ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md) (`0a0d8573`), when its Passive
-became a Sunder of 3). Phase 1 of [plan.md](plan.md).
+became a Sunder of 3, and again later that day (`95a78999`), when the Sunder became 2 and Apex's Damage bonus
+3). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -113,8 +114,9 @@ became a Sunder of 3). Phase 1 of [plan.md](plan.md).
   [ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md).** The Spells did not change. Three
   Tiers were added, one a family: level 4, opened by **any one** of the family's three level-3 Tiers (an
   `anyOf` list), teaching no Spell, paying +0 initiative, and giving a **Passive** held for as long as the
-  Tier is owned. Titan (Brute) is immune to Stun (a Sunder of 3 since ADR 0106, below), Archmage (Warped)
-  gains 1 more Energy at every Upkeep, Apex (Predator) adds 2 to every direct hit, before the critical and the target's Defense. A new lasting kind,
+  Tier is owned. Titan (Brute) is immune to Stun (a Sunder since ADR 0106, 2 at `95a78999`, below), Archmage
+  (Warped) gains 1 more Energy at every Upkeep, Apex (Predator) adds 2 to every direct hit (3 at `95a78999`,
+  below), before the critical and the target's Defense. A new lasting kind,
   `DamageBuff`, raises the same Damage bonus; no Spell gives it. What this moves here:
   - **24 Tiers, not 21**, in three families of eight. The rows of 1.3 that count Tiers give both.
   - **Five rows in Part 1 are new**: the Passive's Energy in 1.1, the any-of prerequisite and the Passive in
@@ -132,6 +134,10 @@ became a Sunder of 3). Phase 1 of [plan.md](plan.md).
     **restate**, so no verdict and no tally moves.
   - **The Passive row of 1.3** reads its moments as every Energy gain (Archmage) and every direct hit (Apex,
     Titan); no Passive is read at a Stun line any more. Its verdict does not move.
+- **Re-read at `95a78999`, later the same day.** Titan's Sunder is **2**, not 3, and Apex's Damage bonus
+  **3**, not 2 (ADR 0106: a Sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it, and the
+  Predator family won least). Both stay knobs from 1 to 3. Only the amounts in the Damage bonus and Sunder
+  rows of 1.9 move; a hit's operations, its tokens and every verdict and tally do not.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -312,8 +318,8 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
-| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`; no Spell gives a `DamageBuff` | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
-| A Sunder takes from the Defense a direct hit meets, never below zero | `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)` (`ResolutionRules.Outcome`), where `sunder` is the caster's Sunder, its Passives' added (`Passive.Sunder`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0106). Titan's 3 at `0a0d8573`; from ADR 0101 until then Titan gave stun immunity instead, which this row replaces | 1 more subtraction and 1 more floor per target on a Damage line, on the casts of a Titan owner, read off its Tier card: the target's total Defense less 3, floored, is what the hit then subtracts. No rail moves | **restate** | Nothing, but the Sunder is on a Tier card, not on the Spell card being cast nor on the target's rails, and a hit now has two floors: one on the Defense it meets, one on the damage. Subtracting the Defense and adding the Sunder back overshoots on a target with less Defense than the Sunder, so the rulebook (§5.8, §7.3) and the player aid print the order. |
+| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`, +3 at `95a78999`; no Spell gives a `DamageBuff` | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
+| A Sunder takes from the Defense a direct hit meets, never below zero | `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)` (`ResolutionRules.Outcome`), where `sunder` is the caster's Sunder, its Passives' added (`Passive.Sunder`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0106). Titan's 2 at `95a78999`, 3 at `0a0d8573` earlier the same day; from ADR 0101 until then Titan gave stun immunity instead, which this row replaces | 1 more subtraction and 1 more floor per target on a Damage line, on the casts of a Titan owner, read off its Tier card: the target's total Defense less 2, floored, is what the hit then subtracts. No rail moves | **restate** | Nothing, but the Sunder is on a Tier card, not on the Spell card being cast nor on the target's rails, and a hit now has two floors: one on the Defense it meets, one on the damage. Subtracting the Defense and adding the Sunder back overshoots on a target with less Defense than the Sunder, so the rulebook (§5.8, §7.3) and the player aid print the order. |
 | A critical reaches nothing else | Not a lasting Effect, not a Caster effect, not Energy (`ResolutionRules.cs:68,93-95`, ADR 0033, ADR 0031, ADR 0035) | 0, once the boundary is taught as one sentence | **restate** | Nothing. "What the cast puts on a target's Health now" is the whole rule. |
 | Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 22 at `e6f72578` (`hateful_sacrifice`'s 11, doubled) | **restate** | Nothing. |
 | Total Defense is base plus buffs less debuffs, floored at zero | `Creature.cs:95-97` (ADR 0035) | 1 sum over the Condition tokens per target, per cast | **needs a component** | A Defense track holding the running total, so the sum is done once when a Condition lands and not once per cast. |
