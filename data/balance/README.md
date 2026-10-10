@@ -115,9 +115,9 @@ creates a package and prunes it when it deletes one. The 21 bonuses are the sums
 seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
 
 **No package carries an initiative knob today** (journal, 2026-10-01). The bonuses are set by hand, and a
-tuning pass moves no initiative. The two capstones whose passive is an amount do carry one: Archmage's upkeep
-energy (1 to 2) and Apex's damage bonus (1 to 3). Titan's stun immunity is not a number, so its entry has
-none. The entries stay, with their intents, so that putting a knob back is one line and not a
+tuning pass moves no initiative. The three capstones, whose passives are amounts, do carry one: Archmage's
+upkeep energy (1 to 2), Apex's damage bonus (1 to 3) and Titan's sunder (1 to 3, ADR 0106). Titan's stun
+immunity, before it, was not a number and had none. The entries stay, with their intents, so that putting a knob back is one line and not a
 rediscovery of what each package is for. The reason is older than the decision: initiative is live --
 moving `tier:prowler` from 3 to 5 once moved 54 of the 71 objective metrics -- and it is exactly the lever
 that reaches the seat reading (ADR 0061), so a search buys seat asymmetry with it more easily than balance.

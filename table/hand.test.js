@@ -22,7 +22,7 @@ test('the hand holds every known spell, with the castable ones marked', () => {
   ]);
 });
 
-// A spell the creature cannot pay for now is still offered by the host (ADR 0106), marked apart from the castable
+// A spell the creature cannot pay for now is still offered by the host (ADR 0107), marked apart from the castable
 // ones: not castable, but short, which is what lets the page draw it dim and still take a tap on it.
 test('a spell the creature cannot pay for yet is marked short, never castable', () => {
   const intent = { creatures: [{ creature: 1, castableSpells: ['spell:basic_attack:v1'], unaffordableSpells: ['spell:heavy_strike:v1'] }] };

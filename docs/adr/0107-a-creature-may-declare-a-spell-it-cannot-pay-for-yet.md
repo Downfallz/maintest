@@ -1,4 +1,4 @@
-# 0106. A creature may declare a spell it cannot pay for yet
+# 0107. A creature may declare a spell it cannot pay for yet
 
 Date: 2026-10-10
 Status: Accepted

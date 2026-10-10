@@ -33,7 +33,7 @@ public sealed class DecisionGuideProjection(IGameResources resources, RuleSet ru
     {
         var spell = resources.GetSpell(id);
         var intent = new CombatIntent(actor.Id, id);
-        // Declaring no longer asks the price (ADR 0106), but the guide reads the board as it stands: a spell the
+        // Declaring no longer asks the price (ADR 0107), but the guide reads the board as it stands: a spell the
         // creature cannot pay for now says so, and its effects are not previewed on energy it does not have.
         var check = IntentRules.ValidateIntent(board.Slot, intent, creatures, resources);
         if (check.IsSuccess && actor.Energy < spell.Stats.Cost)

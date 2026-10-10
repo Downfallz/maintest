@@ -6,7 +6,7 @@ namespace DownfallArena.Application.Matches.Projections;
 /// One creature to declare for: the spells it can pay for now, and the ones it knows but cannot pay for yet.
 /// </summary>
 /// <remarks>
-/// Both may be declared (ADR 0106): the price is asked when the slot comes up, and energy can arrive in between
+/// Both may be declared (ADR 0107): the price is asked when the slot comes up, and energy can arrive in between
 /// from an ally acting earlier, or not, and then the cast fizzles. The agents choose among the castable ones
 /// only, which keeps their play, and every recorded match, what it was; the second list is for a person who
 /// plans the round the agents do not.

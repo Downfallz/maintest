@@ -81,7 +81,7 @@ public sealed class PlayerOptionsProjectionTests
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
     }
 
-    /// <summary>On one energy a round, Slam's 2 is out of reach at round 1: offered apart, to plan on (ADR 0106).</summary>
+    /// <summary>On one energy a round, Slam's 2 is out of reach at round 1: offered apart, to plan on (ADR 0107).</summary>
     [Fact]
     public void Intent_lists_the_spells_a_creature_cannot_pay_for_yet_apart_from_the_ones_it_can()
     {

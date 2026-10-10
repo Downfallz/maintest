@@ -172,7 +172,7 @@ public sealed class MatchPlayTests
 
     /// <summary>
     /// A creature declared on a spell it could not pay for, and given the energy before its slot -- an ally's
-    /// Overdrive earlier in the timeline, here put on it by hand -- casts it like any other (ADR 0106).
+    /// Overdrive earlier in the timeline, here put on it by hand -- casts it like any other (ADR 0107).
     /// </summary>
     [Fact]
     public void A_spell_declared_without_the_energy_is_cast_when_the_energy_arrives_before_its_slot()
@@ -196,7 +196,7 @@ public sealed class MatchPlayTests
         round.NextSlot.ShouldNotBeNull().Creature.ShouldBe(CreatureId.From(3));
     }
 
-    /// <summary>A creature declared on a spell it could not pay for, and still short when its slot comes up, fizzles (ADR 0106).</summary>
+    /// <summary>A creature declared on a spell it could not pay for, and still short when its slot comes up, fizzles (ADR 0107).</summary>
     [Fact]
     public void A_spell_declared_without_the_energy_fizzles_when_the_energy_never_arrives()
     {

@@ -19,4 +19,8 @@ public sealed record PassiveDto
     /// <summary>Added to every direct hit the owner deals.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int DamageBonus { get; init; }
+
+    /// <summary>Taken off the target's defense by every direct hit the owner deals (ADR 0106).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Sunder { get; init; }
 }

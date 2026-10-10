@@ -85,7 +85,7 @@ public static class PlayerDecisionCheck
             return Result.Failure(DecisionErrors.CreatureNotOffered);
         }
 
-        // A spell the creature cannot pay for yet is offered too (ADR 0106): it fizzles at its slot unless the
+        // A spell the creature cannot pay for yet is offered too (ADR 0107): it fizzles at its slot unless the
         // energy arrives first, which is the declaring player's plan to make.
         return offered.Offers(decision.Spell)
             ? Result.Success()

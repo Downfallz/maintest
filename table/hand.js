@@ -10,7 +10,7 @@
 // already declared. `intent` is the Intent section of the options, absent outside intent selection -- and when
 // it is absent nothing is castable, which is the truth rather than a fallback.
 //
-// `short` marks a spell the creature knows and cannot pay for now, which the host still offers (ADR 0106): it may
+// `short` marks a spell the creature knows and cannot pay for now, which the host still offers (ADR 0107): it may
 // be declared on a plan -- an ally's Overdrive earlier in the round -- and fizzles at its slot if the energy never
 // comes. It stays drawn like a card that cannot be cast, so the plan is the player's choice and not the default.
 export function handRows(allies, intent, intents) {

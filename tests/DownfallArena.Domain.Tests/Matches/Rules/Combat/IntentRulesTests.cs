@@ -29,7 +29,7 @@ public sealed class IntentRulesTests
     }
 
     /// <summary>
-    /// The price is checked when the slot comes up, not when the card goes down (ADR 0106): a creature short of
+    /// The price is checked when the slot comes up, not when the card goes down (ADR 0107): a creature short of
     /// energy now may be given it by an ally acting earlier, and the plan is the player's to make.
     /// </summary>
     [Fact]

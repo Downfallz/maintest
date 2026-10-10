@@ -894,7 +894,7 @@ function spellGroup(type, cards) {
 }
 
 function availabilityText(spell, offered, chosen, reference, short = 0) {
-  // A plan rather than a cast: the card says what it is short of and that it fizzles without it (ADR 0106).
+  // A plan rather than a cast: the card says what it is short of and that it fizzles without it (ADR 0107).
   if (offered && spell.short) return chosen ? `✓ Selected · fizzles unless it gains ${short} energy first` : `${short} energy short now · select to plan →`;
   if (offered) return chosen ? '✓ Selected · declare above' : 'Select card →';
   if (reference) return 'Spell reference';
@@ -2499,7 +2499,7 @@ function intentButtons(state, current) {
   return [confirm];
 }
 
-// A plan says so on the button that commits it: a spell the creature cannot pay for yet may fizzle (ADR 0106).
+// A plan says so on the button that commits it: a spell the creature cannot pay for yet may fizzle (ADR 0107).
 function declareLabel(chosen, name, option) {
   if (chosen === null) return 'Select a spell';
   return (option?.unaffordableSpells ?? []).includes(chosen) ? `Declare ${name} · may fizzle` : `Declare ${name}`;

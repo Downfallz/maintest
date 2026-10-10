@@ -41,6 +41,11 @@ public static class EffectLine
             lines.Add($"Damage +{passive.DamageBonus} on every hit");
         }
 
+        if (passive.Sunder > 0)
+        {
+            lines.Add($"Every hit ignores {passive.Sunder} defense");
+        }
+
         return lines;
     }
 

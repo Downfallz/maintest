@@ -8,7 +8,7 @@ namespace DownfallArena.Domain.Matches.Rules.Combat;
 
 /// <summary>
 /// Rules of the IntentSelection sub-phase: a player declares, for each own creature on the timeline, a spell the
-/// creature knows. Whether it can pay is asked when its slot comes up, not when the card goes down (ADR 0106):
+/// creature knows. Whether it can pay is asked when its slot comes up, not when the card goes down (ADR 0107):
 /// energy can arrive in between, from an ally acting earlier, and a creature still short then fizzles (ADR 0083).
 /// </summary>
 public static class IntentRules
@@ -61,7 +61,7 @@ public static class IntentRules
         return actor.Energy < spell.Stats.Cost ? Result.Failure(CombatErrors.NotEnoughEnergy) : Result.Success();
     }
 
-    /// <summary>The checks a declaration makes: alive, not stunned, knows the spell. Not the price (ADR 0106).</summary>
+    /// <summary>The checks a declaration makes: alive, not stunned, knows the spell. Not the price (ADR 0107).</summary>
     private static Result CanDeclare(CreatureSnapshot actor, SpellId spellId)
     {
         if (actor.IsDead)

@@ -77,7 +77,7 @@ Two properties of the engine make this possible at all, and both are already dec
 ### Why the deck names a selector, not a Spell
 
 An Intent is only legal if the Creature knows the Spell (`IntentRules`), and the Automa, like every agent,
-declares only what it can pay for now (ADR 0106). A card that named
+declares only what it can pay for now (ADR 0107). A card that named
 `spell:heavy_strike` would be unplayable for any Creature that has not bought the package teaching it, which
 is most Creatures for most of the Match.
 

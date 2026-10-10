@@ -1381,6 +1381,8 @@ public sealed class ActionScorerTests
 
     private static readonly TierId Focused = TierId.Parse("tier:focused:v1");
 
+    private static readonly TierId Sundering = TierId.Parse("tier:sundering:v1");
+
     /// <summary>
     /// Two capstones (ADR 0101) behind Slam's package, teaching nothing: one immune to stun, one with an energy
     /// at upkeep and two damage on every hit.
@@ -1394,6 +1396,7 @@ public sealed class ActionScorerTests
             .. TestContent.Resources.Tiers,
             Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
             Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
+            Tier.Create(Sundering, "Sundering", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(sunder: 3)),
         ]);
 
     private static ActionScorer Capstones { get; } = new(CapstoneContent, MatchStore.TwoOnTwo(), ScoringWeights.Default);
@@ -1482,6 +1485,42 @@ public sealed class ActionScorerTests
         board[2] = board[2] with { AcquiredTiers = StunPackages };
 
         Capstones.PurchaseTerms(board[0], Steadfast, board).ShouldBe(ScoreTerms.Zero);
+    }
+
+    /// <summary>
+    /// A sunder is priced by the defense it gets the best cast through (ADR 0106): Strike reaches one enemy and is
+    /// read against the most armoured, whose 4 a sunder of 3 takes 3 from, every round it is read for.
+    /// </summary>
+    [Fact]
+    public void A_sunder_is_priced_by_the_defense_the_best_cast_no_longer_meets()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { TotalDefense = Defense.Of(4) };
+        board[2] = board[2] with { TotalDefense = Defense.Of(1) };
+
+        var terms = Capstones.PurchaseTerms(board[0], Sundering, board);
+
+        terms.Damage.ShouldBe(3 * ActionScorer.PermanentConditionRounds, 1e-9);
+    }
+
+    /// <summary>A sunder never takes more than the target holds: against enemies with one point of defense it gets one through.</summary>
+    [Fact]
+    public void A_sunder_is_priced_at_no_more_than_the_defense_there_is()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { TotalDefense = Defense.Of(1) };
+        board[2] = board[2] with { TotalDefense = Defense.Of(1) };
+
+        Capstones.PurchaseTerms(board[0], Sundering, board).Damage.ShouldBe(1 * ActionScorer.PermanentConditionRounds, 1e-9);
+    }
+
+    /// <summary>Against an enemy team with no defense a sunder lets nothing more through and is worth nothing.</summary>
+    [Fact]
+    public void A_sunder_is_worth_nothing_against_enemies_without_defense()
+    {
+        var board = Board(enemyHealth: 20);
+
+        Capstones.PurchaseTerms(board[0], Sundering, board).ShouldBe(ScoreTerms.Zero);
     }
 
     /// <summary>Both packages that teach Slam, the one spell that stuns: an enemy owning them has no stun left to buy.</summary>

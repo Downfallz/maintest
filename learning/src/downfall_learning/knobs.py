@@ -84,7 +84,7 @@ INITIATIVE_BONUS = "/initiativeBonus"
 #: The numbers a package may move: the amounts of a capstone's passive (ADR 0101). A package's level,
 #: prerequisites and spells are its identity, its initiative bonus is the owner's, and whether a passive gives
 #: stun immunity is its kind: none of those is a knob.
-PACKAGE_KNOBS = frozenset({"/passive/upkeepEnergy", "/passive/damageBonus"})
+PACKAGE_KNOBS = frozenset({"/passive/upkeepEnergy", "/passive/damageBonus", "/passive/sunder"})
 
 #: How a package alias reads, and so how a document is told apart from a spell without a second field.
 PACKAGE_PREFIX = "tier:"

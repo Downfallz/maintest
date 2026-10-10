@@ -1010,6 +1010,17 @@ def test_a_passive_amount_is_a_package_knob_a_search_can_move(tmp_path: Path) ->
     assert problems == []
 
 
+def test_a_sunder_amount_is_a_package_knob_a_search_can_move(tmp_path: Path) -> None:
+    """Titan's sunder is its one number (ADR 0106), the way Apex's damage bonus is Apex's."""
+    entry = package_entry(knobs=[{"path": "/passive/sunder", "min": 1, "max": 3, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
+
+    problems = validate(knobs, packaged(passive={"sunder": 3}))
+
+    assert "tier:open/passive/sunder" in {knob.key for knob in knobs}
+    assert problems == []
+
+
 def test_the_repository_knobs_cover_every_package_the_repository_sells() -> None:
     content = load_content(REPO_ROOT / "data")
     knobs = load_knobs(REPO_ROOT / "data" / "balance" / "knobs.json")

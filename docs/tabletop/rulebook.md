@@ -6,7 +6,8 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04, again for the content of
 2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells;
 the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09, when its first point became
-three Rounds). Phase 4 of [plan.md](plan.md).
+three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2 with Apex's Damage bonus
+raised from 2 to 3). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -24,7 +25,9 @@ three Rounds). Phase 4 of [plan.md](plan.md).
 > resolves at once; a Team wiped ends the Match on the spot
 > ([ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md)). Each family closes with a
 > level-4 Capstone that teaches no Spell and gives a Passive instead, and any one of the family's level-3 Tiers
-> opens it ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). This book names the
+> opens it ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Titan's Passive is a
+> Sunder, not a Stun immunity
+> ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md)). This book names the
 > **package card** by what it must show; its size, its count and where it sits are
 > [components.md](components.md)'s to specify.
 
@@ -315,9 +318,9 @@ is +0. It gives a **Passive** instead, printed on its package card
 
 | Capstone | Family | Needs one of | Passive, as the card prints it |
 | --- | --- | --- | --- |
-| Titan | Brute | Ravager, Colossus, Tyrant | `Immune to stun` |
+| Titan | Brute | Ravager, Colossus, Tyrant | `Every hit ignores 2 defense` |
 | Archmage | Warped | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep` |
-| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +2 on every hit` |
+| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +3 on every hit` |
 
 **Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it, owns
 every Tier it requires, and owns at least one Tier of its `Needs one of` list when it has one. That is the
@@ -389,7 +392,8 @@ Then every pick token comes off the mats and the boards.
 > **Creature 3.** It owns none of the three. Titan is refused, and Player 1 picks Tyrant instead: it requires
 > Oppressor, which Creature 3 owns.
 > **The Purchase reveal.** Titan goes face up with Creature 1. No Spell card moves, and the bonus of +0 moves no
-> rail. From now on Creature 1 is immune to Stun. Tyrant goes face up with Creature 3: Dominate and Fortress go
+> rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 2
+> ([5.8](#58-resolving-an-action)). Tyrant goes face up with Creature 3: Dominate and Fortress go
 > into the hand, and +2 raises its Base initiative. Creature 3 may buy Titan at Round 9.
 
 ### 5.4 Speed
@@ -549,20 +553,24 @@ has happened since. Resolve the action in this order, and do not reorder it:
    [6.7](#67-the-critical-roll).
 3. **Apply each effect line to each target.** A Damage line is a direct hit: add the caster's **Damage
    bonus** to the printed Damage ([7.3](#73-the-three-passives-and-their-timing)), multiply by a critical,
-   then subtract that target's total Defense, never below zero. A Heal is capped by the Health that target is
+   then subtract the Defense the hit meets, never below zero. The Defense a hit meets is that target's total
+   Defense less the caster's **Sunder**, never below zero; a caster with no Sunder meets the whole total
+   ([7.3](#73-the-three-passives-and-their-timing)). A Heal is capped by the Health that target is
    missing. An Energy drain takes at most what the target has. A lasting Effect becomes a Condition; see
    [5.9](#59-cleanup) and [Part 7](#part-7-reference-every-condition-the-end-of-a-match-and-every-passive). A
    Stun on a target that is already stunned, or immune to Stun, is ignored
    ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
 4. **Apply the `Caster:` line, if the card has one.** Once for the whole cast, however many targets it
-   reached. A `Caster:` Damage is reduced by the **caster's own** total Defense. A `Caster:` line is never
-   multiplied by a critical, and never takes a Damage bonus.
+   reached. A `Caster:` Damage is reduced by the **caster's own** total Defense, all of it. A `Caster:` line
+   is never multiplied by a critical, and never takes a Damage bonus or a Sunder.
 
 A Creature's **total Defense** is its base Defense plus its Defense buffs, **counted up to 10 and no
 further**, less its Defense debuffs, and the floor at zero is applied to that total, not to anything on the
 way. The buff rail can read more than 10: every buff is still there and still counts down, it only adds
 nothing past 10 until another one expires. The two Defense rails hold the two sums
-side by side so this is one subtraction, done when a Condition lands, not once per incoming cast.
+side by side so this is one subtraction, done when a Condition lands, not once per incoming cast. A Sunder
+moves no rail: it changes what one caster's hit meets, and the target's total Defense stays the same for
+everyone else.
 
 > **Example.** Creature 2 is Standard, and its slot comes up. Its card is **Incinerate**: cost 3,
 > `One enemy`, `Damage 10`, `Critical 33%`. Creature 5 cast **Carapace** in an earlier Round, so its Defense
@@ -575,13 +583,24 @@ side by side so this is one subtraction, done when a Condition lands, not once p
 > Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
 > (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
 >
-> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +2 on
+> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +3 on
 > every hit`. It is Standard, and casts **Blood Price** on Creature 1: `Damage 11`, `Caster: Damage 3`,
 > `Critical 50%  d20: 11+`. Creature 1's total Defense is 3.
-> Add the bonus: 11 + 2 = 13. The d20 shows 14, a critical: 13 x 2 = 26. Subtract Defense: 26 - 3 = **23**.
-> Had the roll missed: 13 - 3 = **10**.
+> Add the bonus: 11 + 3 = 14. The d20 shows 16, a critical: 14 x 2 = 28. Subtract Defense: 28 - 3 = **25**.
+> Had the roll missed: 14 - 3 = **11**.
 > The `Caster:` line takes no bonus and no critical: Creature 4 takes exactly 3, less its own total Defense.
-> Add first, multiply second, subtract third. (11 x 2) + 2 - 3 = 21 is not a number in this game.
+> Add first, multiply second, subtract third. (11 x 2) + 3 - 3 = 22 is not a number in this game.
+>
+> **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 2
+> defense`. It is Standard, and casts **Dominate** on Creatures 4 and 5: cost 3, `Up to 2 enemies`,
+> `Damage 7`, `Critical 50%  d20: 11+`. Creature 6 cast **Fortress** on Creature 5 last Round, so Creature
+> 5's total Defense is 3 + 3 = 6. Creature 4 has no Defense: total Defense 0.
+> The d20 shows 8: no critical. Creature 5: the hit meets 6 - 2 = 4 Defense, and Creature 5 takes
+> 7 - 4 = **3**. Creature 4: 0 - 2 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
+> not 9. A Sunder takes Defense away; it never adds damage.
+> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 4 = **10** and Creature 4 takes **14**.
+> No rail moves. Creature 2, with no Sunder, hits Creature 5 next with **Strike**, `Damage 3`, and meets all
+> 6: 0 damage.
 
 ### 5.9 Cleanup
 
@@ -604,9 +623,7 @@ Rounds printed on it.
 The Immune token is the rule "**a Creature whose Stun ends is immune to Stun for the next Round**" made out of
 cardboard. It did not slide this Cleanup, so the next Cleanup's first move takes it out of lane `1`, and the
 immunity ends there. Stun immunity is not a Condition: no Spell applies it, and nothing counts it down but that
-one move. A Creature that owns **Titan** holds Stun immunity for good, and its package card is the record of
-it: it needs no Immune token.
-See [6.4](#64-a-stunned-creature-skips-the-round-entirely).
+one move. See [6.4](#64-a-stunned-creature-skips-the-round-entirely).
 
 A permanent Condition never enters the dock and never counts down. It moved a rail when it landed, and the
 rail stays where it is.
@@ -663,7 +680,7 @@ first one that applies ends the action.
 | # | Cause | How it happens at a table |
 | --- | --- | --- |
 | 1 | **The Creature is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
-| 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Crash**, a **Deep Freeze** or a **Paralyzing Barb** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun, for a Round or for good through Titan, cannot be stunned, so this never happens to it. |
+| 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Crash**, a **Deep Freeze** or a **Paralyzing Barb** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
 | 3 | **The Creature no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
 | 4 | **The Creature cannot afford the cost now.** | It was declared on a Spell it could not pay for, and no ally gave it the Energy in time. Or a **Claim**, a **Blood Hunt** or a **Soul Feast** in an earlier slot drained its Energy below the cost; they are the only Spells in the catalogue that take Energy. |
 | 5 | **The Spell has no legal target.** | Nothing on the board is a target its card allows. With today's cards this cannot happen: an `Ally` or `Self` Spell always has its living caster, and an `Enemy` Spell runs out of targets only when the other Team is wiped, which has already ended the Match ([7.2](#72-the-end-of-a-match)). |
@@ -725,12 +742,6 @@ activations: this Round's, and the two following. It cannot cost more, because o
 **Result.** That Creature is **immune to Stun** until the Cleanup of the next Round. Its Stun token in lane `1`
 is swapped for an Immune token, and the Stun token comes out of its Speed slot ([5.9](#59-cleanup)).
 
-**Stun immunity for good.**
-**Trigger.** A Creature's purchase of **Titan** is revealed.
-**Actor.** Its Player.
-**Result.** That Creature is immune to Stun from that moment to the end of the Match. Its Titan package card is
-the record, so it needs no Immune token. A Stun it already carries is not removed: it runs out as printed.
-
 **A Stun that cannot land.**
 **Trigger.** A resolving cast's Stun line reaches a target that is stunned or immune to Stun.
 **Actor.** The caster's owner, who is resolving the action.
@@ -746,13 +757,6 @@ Immune token with the rest of its dock ([7.1](#71-the-nine-conditions-and-their-
 > Stomp** on it again: cost 4, `Damage 7`, `Stun, 2 rounds`. Creature 4 takes the Damage. The Stun is ignored:
 > no token goes into the `new` lane, and the Stun token in lane `2` stays in lane `2`. Creature 4's Stun still
 > ends at the Cleanup of Round 7, as it would have. Creature 1 paid 4 Energy for the Damage alone.
->
-> **Example, Titan.** In Round 6, Creature 2 is hit by **Crash**: `Damage 5`, `Stun, 1 round`. Creature 2
-> owns Brute, Ironhide and Colossus. At Round 7's Evolution, which never asks about a Stun, Player 1 buys it
-> **Titan**. Creature 2 is immune to Stun from the Purchase reveal on, but it is still stunned: Round 7 is the
-> Round that Stun takes, so Creature 2 takes no Speed card. Cleanup of Round 7 ends the Stun and makes the
-> usual swap for an Immune token, which adds nothing to Titan. For the rest of the Match, every Stun line that
-> reaches Creature 2 is ignored, and every other line of the cast still lands.
 
 ### 6.5 The first countdown after an application does not count
 
@@ -830,12 +834,14 @@ A critical multiplies, by the setup table's critical multiplier, dropping any fr
 | **Damage** on a target, the caster's Damage bonus included | Anything on the `Caster:` line, including its Damage and its Heal |
 | A **Heal** on a target | **Energy** given or taken |
 | | Any **lasting Effect**: a Bleed, a Regeneration, an Energy regeneration, a Stun, a Defense or Initiative change, a Damage buff |
+| | The caster's **Sunder**: it takes from the Defense, not from the hit |
 
 The rule behind the table: a critical multiplies **what the cast puts on a target's Health right now**, and
 nothing else.
 
 **A critical is applied after the Damage bonus and before Defense is subtracted.** Add the caster's Damage
-bonus to the printed Damage, multiply, then subtract the target's total Defense, then floor at zero. Any other
+bonus to the printed Damage, multiply, then subtract the Defense the hit meets, then floor at zero. The
+Defense the hit meets is the target's total Defense less the caster's Sunder, floored at zero. Any other
 order gives a different, wrong number; see the examples in [5.8](#58-resolving-an-action).
 
 > **Example, a Heal.** Creature 2 casts **Vital Surge** on Creature 3: `One ally`, `Heal 7`,
@@ -875,7 +881,7 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Bleed** | Damage equal to its amount, **ignoring Defense** | Start of Round, third pass, after Regeneration | Stacks: both tick, add them | Condition dock |
 | **Regeneration** | Heals its amount, capped by the Health missing | Start of Round, second pass, **before** Bleed | Stacks | Condition dock |
 | **Energy regeneration** | Gives its amount of Energy. No Spell in the current catalogue applies it | Start of Round, first pass | Stacks | Condition dock |
-| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends, and on a Creature that owns Titan | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
+| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles the action of a Creature whose slot has not come up yet | Speed Sub-phase, and Activation | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative. No Spell in the current catalogue applies it | Read once, at Turn order resolution | Stacks | Condition dock |
@@ -897,8 +903,6 @@ to move; no Spell applies one, so the box has nothing for it
 **Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
 of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it
 ([5.9](#59-cleanup)). Its token sits in lane `1` only because that is the lane the next Cleanup empties.
-Titan's Stun immunity is not a Condition either: it is a Passive
-([7.3](#73-the-three-passives-and-their-timing)).
 
 A **dead** Creature takes no new Condition. Return the tokens on its dock to the supply when you turn its
 board over: nothing on a `Defeated` board is ever read again.
@@ -936,9 +940,9 @@ to the end of the Match. A Creature that owns two Capstones holds both Passives.
 
 | Passive | Capstone | What it does | When it does it | What it never touches |
 | --- | --- | --- | --- | --- |
-| `Immune to stun` | Titan | Every Stun line that reaches the Creature is ignored; the cast's other lines still land | Whenever a Stun line resolves on it | A Stun it already carried when it bought Titan: that one runs out as printed |
+| `Every hit ignores 2 defense` | Titan | Its **Sunder**: every direct hit the Creature deals meets the target's total Defense less 2, never below zero. Against a target with no Defense it adds nothing | Applying a Damage line, when Defense is subtracted: **after** the Damage bonus and the critical | A Bleed tick, the `Caster:` line, a Heal, Energy, and the target's Defense rails: no rail moves |
 | `Energy +1 at every upkeep` | Archmage | The Creature gains 1 more Energy | Energy gain, beside the Rule set's own; first at the Round after the purchase | Nothing else: no other pass reads it |
-| `Damage +2 on every hit` | Apex | Adds 2 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
+| `Damage +3 on every hit` | Apex | Adds 3 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
 
 **A direct hit** is a Damage line applied to a target of a cast. A Bleed tick is not one, and neither is
 anything on the `Caster:` line.
@@ -966,7 +970,11 @@ writing around it. Each one is faithful to the engine; each one is longer than a
    the answer. Five statements for one die roll. The ordering against Defense is the part that will be played
    wrong, and it is the part that cannot be moved onto the card. Since ADR 0101 the ordering has three steps,
    not two: add the Damage bonus, multiply, subtract Defense. The bonus is printed on a package card, not on
-   the Spell card being cast, so it is the one number of a hit that the flipped card does not show.
+   the Spell card being cast, so it is the one number of a hit that the flipped card does not show. Since
+   ADR 0106 there is a second such number, Titan's Sunder, and it puts a floor inside the third step: the
+   Defense subtracted is the target's total less the Sunder, floored at zero before the hit is. The rule
+   still states in two sentences ([5.8](#58-resolving-an-action), step 3); what grew is the arithmetic a
+   Player must hold, which is read off two package cards and one pair of rails.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
    may take fewer) are deliberately not printed on any of the 44 cards because they are true of all of them.
@@ -1026,7 +1034,18 @@ Part 8 and this table were re-run against
 them the level-4 Capstones `titan`, `archmage` and `apex`) and the engine's `Tier.IsOpenTo`, `Passive`,
 `UpkeepRules.EnergyGain`, `ResolutionRules.Outcome` and `Creature.IsStunImmune`. The specification states
 the Passives in its "Combat rules (phase 6)" summary and the any-of list in "Planning rules (phase 5)"; its
-"Round sequence" does not repeat either, so the rows below cite the summaries.
+"Round sequence" does not repeat either, so the rows below cite the summaries. On 2026-10-09 the opening
+note, §5.3's table and its Capstone example, §5.8, §5.9, §6.1's cause 2, §6.4, §6.7, §7.1, §7.3, Part 8 and
+this table were re-run against
+[ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md), `data/Tiers/titan.v1.json`
+(`"passive": {"sunder": 3}`, content `0a0d8573`) and the engine's `Passive.Sunder`, `ResolutionRules.Outcome`
+and `EffectLine`. Titan no longer gives Stun immunity, so the rule "a Creature that owns Titan is immune to
+Stun for good" and its §6.4 example are gone; no Capstone gives Stun immunity, and the Round of Stun immunity
+after a Stun (ADR 0072) is untouched. Later the same day the owner lowered the Sunder to 2 and raised Apex's
+Damage bonus from 2 to 3 (content `95a78999`: `"passive": {"sunder": 2}` in `data/Tiers/titan.v1.json`,
+`"passive": {"damageBonus": 3}` in `data/Tiers/apex.v1.json`), and §5.3's table and its Capstone example,
+§5.8's two examples, §7.3 and this table were re-read against them. The Sunder example's second target went
+from a Defense of 2 to none, since a Defense equal to the Sunder no longer shows the floor; no rule moved.
 
 | This book | The specification |
 | --- | --- |
@@ -1052,8 +1071,8 @@ the Passives in its "Combat rules (phase 6)" summary and the any-of list in "Pla
 | [7.1](#71-the-nine-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
 | [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0101. The engine: `Tier.IsOpenTo` |
 | [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0101. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
-| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster"; ADR 0101. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense`, with a bonus of 0 on the `Caster:` line |
-| [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity for good, [5.9](#59-cleanup), [7.3](#73-the-three-passives-and-their-timing) | "Combat rules (phase 6)": "stun immunity that lasts"; ADR 0101. The engine: `Creature.IsStunImmune`, true for a living Creature whose Passive gives it; a Stun it already carries is not touched by `Creature.BuyTier`. The Titan package card is the table's record of the glossary's **Passive** |
+| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster", and Apex (+3 damage); ADR 0101, ADR 0106 for the 3. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)`, with a bonus of 0 on the `Caster:` line |
+| [5.8](#58-resolving-an-action) step 3 and 4, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Sunder, the Defense a hit meets, and Titan's 2 | "Combat rules (phase 6)": "every direct hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast does to its own caster are left alone", and Titan (sunder 2); "Combat", 2: `Activation`, the instant-effects bullet, "damage reduced by the target's total Defense less the caster's sunder, each floored at zero"; ADR 0106; glossary, **Sunder**. The engine: `Passive.Sunder`, read by `ResolutionRules.Outcome` as above, with a Sunder of 0 on the `Caster:` line. The Titan package card is the table's record of the glossary's **Passive** |
 | [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0101; glossary, **Damage buff** and **Damage bonus** |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" and the threshold on every card | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`; ADR 0100, which refuses any other value in the data builder and holds every Spell's chance to the d20's twentieths. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero by rule, so the card's chance is the whole chance |
