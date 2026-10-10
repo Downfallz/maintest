@@ -20,7 +20,17 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
     public ScoringWeights Weights => weights;
 
-    /// <summary>Buys the package worth the most on the current board, its best spell's combat value plus the initiative the package buys less the part of that spell's cost the actor cannot cover; passes only when nothing can be bought.</summary>
+    /// <summary>
+    /// Buys the package worth the most on the current board, its best spell's combat value plus the initiative the
+    /// package buys less the part of that spell's cost the actor cannot cover; passes only when nothing can be bought.
+    /// <para>
+    /// A package is read against what the team is buying this round as well as what the creature knows (ADR 0108):
+    /// a spell one of the player's picks this round already teaches adds nothing, and one of its kind has to beat
+    /// it. Each pick was read alone before, so the second pick of a round valued the opener the first had taken as
+    /// highly as the first did, and every team opened on two Brutes; one Warped beside one Brute beat that 70 % of
+    /// the time.
+    /// </para>
+    /// </summary>
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -29,9 +39,10 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         EvolutionChoice? best = null;
         var bestScore = double.NegativeInfinity;
+        var buying = Buying(board);
         foreach (var option in options.Creatures)
         {
-            var actor = creatures.First(creature => creature.Id == option.Creature);
+            var actor = Holding(creatures.First(creature => creature.Id == option.Creature), buying);
             foreach (var tier in option.AvailableTiers)
             {
                 var score = _scorer.PurchaseValue(actor, tier, creatures);
@@ -45,6 +56,14 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         return best is null ? EvolutionDecision.Pass : EvolutionDecision.Unlock(best);
     }
+
+    /// <summary>The spells the player's picks of this round teach: what the rest of its picks are read against.</summary>
+    private HashSet<SpellId> Buying(PlayerBoardState board) =>
+        [.. board.EvolutionChoices.SelectMany(choice => resources.GetTier(choice.Tier).Spells)];
+
+    /// <summary>The creature as a purchase reads it: knowing what it knows and what its team is buying this round.</summary>
+    private static CreatureSnapshot Holding(CreatureSnapshot actor, HashSet<SpellId> buying) =>
+        buying.IsSubsetOf(actor.KnownSpells) ? actor : actor with { KnownSpells = new HashSet<SpellId>([.. actor.KnownSpells, .. buying]) };
 
     /// <summary>
     /// The order the roll-off left. The scorer reads one action at a time and has no view of which of two of

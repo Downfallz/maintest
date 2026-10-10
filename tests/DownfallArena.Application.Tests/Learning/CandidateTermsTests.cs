@@ -136,7 +136,8 @@ public sealed class CandidateTermsTests
     /// <summary>
     /// The invariant the whole channel rests on, over a played match: every intent and every target set the
     /// heuristic chose scores best, under its own weights, among the terms recorded beside it. A policy whose
-    /// candidate weights are the heuristic's therefore plays the heuristic's combat decisions.
+    /// candidate weights are the heuristic's therefore plays the heuristic's combat decisions. The round the match
+    /// ends in is left out: a cast that wins it outranks any score (ADR 0099), and the win is not a term.
     /// </summary>
     [Fact]
     public async Task The_heuristics_combat_decisions_score_best_among_the_recorded_terms()
@@ -155,7 +156,8 @@ public sealed class CandidateTermsTests
             TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
-        var combat = steps.Where(step => step.Kind is ActionKind.Intent or ActionKind.Targets).ToList();
+        var last = steps.Max(step => step.Round);
+        var combat = steps.Where(step => step.Kind is ActionKind.Intent or ActionKind.Targets && step.Round != last).ToList();
         combat.ShouldNotBeEmpty();
         foreach (var step in combat)
         {
