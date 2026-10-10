@@ -25,15 +25,15 @@ Greedy's own play.
   | Warped + Warped | 9.9 % (8 to 12) | 9.3 |
 
 - **The fix.** A package is read against what the team's picks of the round teach as well as what the creature
-  knows (ADR 0108). Against the Greedy before it: 66.5 % (63 to 70) on these seeds, 62.1 % (59 to 65) on 800
-  matches from seed 300000. Reading against every spell the allies know instead scored 60.4 %. The new Greedy
-  opens Brute + Warped in every mirror; its mirror (seeds 5000 to 5399) lasts 10.4 rounds against 12.3, with
-  2.8 % at the cap against 6.2 %, and plays 1 037 Warped creatures of about 2 300 where the old one played
-  almost none. Archmage becomes the capstone it buys most.
+  knows, for what it sells and what it has to beat, and for nothing else (ADR 0108). Against the Greedy before
+  it: 59.4 % (56 to 63) on these seeds, 57.4 % (54 to 61) on 800 matches from seed 300000. It opens Brute +
+  Warped in every mirror; its mirror (seeds 5000 to 5399) lasts 10.0 rounds against 12.3, with 1.0 % at the cap
+  against 6.2 %. A first version that let the creature know the round's spells outright scored 66.5 % and 62.1 %,
+  but read a purchase's energy and passive on spells only a teammate can cast, and its recorded terms disagreed
+  with its choices (Codex on #322); reading against every spell the allies know scored 60.4 %.
 - **What it does not settle.** The opening is now always the same, so the three tier-1 families are still not
   opened evenly, and two of a family read poorly against it. What each opening is worth goes into the tuner's
-  objective next (ADR 0109). The Predator creatures of the new mirror are on the winning side 36 % of the time,
-  but they are 129, picked late and only by the third creature: no reading of the family's strength.
+  objective next (ADR 0109).
 
 ## 2026-10-09. Titan sunders 2 instead of ignoring stuns, and Apex adds 3 (ADR 0106)
 

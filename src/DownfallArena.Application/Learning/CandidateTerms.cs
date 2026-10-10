@@ -42,11 +42,13 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         ArgumentNullException.ThrowIfNull(options);
 
         var creatures = Foresight.Creatures(board);
+        // Read the way the heuristic agent reads them, against what the round's picks already teach (ADR 0108).
+        var buying = HeuristicAgent.Buying(board, resources);
         var terms = new List<IReadOnlyList<float>>();
         foreach (var option in options.Creatures)
         {
             var actor = creatures.First(creature => creature.Id == option.Creature);
-            terms.AddRange(option.AvailableTiers.Select(tier => Vector(_scorer.PurchaseTerms(actor, tier, creatures))));
+            terms.AddRange(option.AvailableTiers.Select(tier => Vector(_scorer.PurchaseTerms(actor, tier, creatures, buying))));
         }
 
         terms.Add(Vector(ScoreTerms.Zero));

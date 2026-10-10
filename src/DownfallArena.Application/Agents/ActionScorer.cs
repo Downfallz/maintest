@@ -312,11 +312,16 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// every spell is already known is still worth the order its initiative bonus buys, and nothing else.
     /// </para>
     /// </summary>
-    public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures) =>
-        weights.Apply(PurchaseTerms(actor, tierId, creatures));
+    public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<SpellId>? buying = null) =>
+        weights.Apply(PurchaseTerms(actor, tierId, creatures, buying));
 
-    /// <summary>The terms behind <see cref="PurchaseValue"/>: what the best spell adds over its kind, the initiative bought, the cost not covered, and the passive.</summary>
-    public ScoreTerms PurchaseTerms(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures)
+    /// <summary>
+    /// The terms behind <see cref="PurchaseValue"/>: what the best spell adds over its kind, the initiative bought,
+    /// the cost not covered, and the passive. <paramref name="buying"/> is what the player's picks of this round
+    /// already teach (ADR 0108): a spell in it is not sold again, and one of its kind has to beat it as one the
+    /// creature knew would. It reaches nothing else of the reading: the creature still knows only its own spells.
+    /// </summary>
+    public ScoreTerms PurchaseTerms(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<SpellId>? buying = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(tierId);
@@ -326,12 +331,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var known = new Dictionary<SpellType, ScoreTerms>();
         var best = ScoreTerms.Zero;
         var bestScore = double.NegativeInfinity;
-        foreach (var spellId in tier.Spells.Where(spell => !actor.KnownSpells.Contains(spell)).OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        foreach (var spellId in tier.Spells.Where(spell => !actor.KnownSpells.Contains(spell) && buying?.Contains(spell) != true).OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             var kind = resources.GetSpell(spellId).Type;
             if (!known.TryGetValue(kind, out var beaten))
             {
-                beaten = BestOfKind(actor, kind, creatures);
+                beaten = BestOfKind(actor, kind, creatures, buying);
                 known[kind] = beaten;
             }
 
@@ -371,8 +376,14 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// and energy included, so a difference between them is the spell's and not the reading's. Nothing when it
     /// knows none.
     /// </summary>
-    private ScoreTerms BestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures)
+    private ScoreTerms BestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<SpellId>? buying)
     {
+        // What the team is buying is read on top, uncached: a round has two picks at most.
+        if (buying is { Count: > 0 })
+        {
+            return ReadBestOfKind(actor, kind, creatures, actor.KnownSpells.Union(buying));
+        }
+
         // Every package of a decision is held against the same known spells on the same board, so the reading
         // is kept per creature snapshot, board and kind, the way the creature's spells are.
         if (Readings.Find(this, actor, (int)kind, creatures) is ScoreTerms kept)
@@ -380,16 +391,16 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return kept;
         }
 
-        var read = ReadBestOfKind(actor, kind, creatures);
+        var read = ReadBestOfKind(actor, kind, creatures, actor.KnownSpells);
         Readings.Keep(this, actor, (int)kind, creatures, read);
         return read;
     }
 
-    private ScoreTerms ReadBestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures)
+    private ScoreTerms ReadBestOfKind(CreatureSnapshot actor, SpellType kind, IReadOnlyList<CreatureSnapshot> creatures, IEnumerable<SpellId> spells)
     {
         var best = ScoreTerms.Zero;
         var bestScore = 0.0;
-        foreach (var spellId in actor.KnownSpells.Where(spell => resources.GetSpell(spell).Type == kind).OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        foreach (var spellId in spells.Where(spell => resources.GetSpell(spell).Type == kind).OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             var terms = AsPurchase(actor, spellId, creatures);
             var score = weights.Apply(terms);
