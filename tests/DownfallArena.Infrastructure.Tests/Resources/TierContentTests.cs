@@ -263,14 +263,14 @@ public sealed class TierContentTests
     {
         using var content = Climb().WithFile("Tiers/titan.v1.json", """
             { "id": "tier:titan:v1", "name": "Titan", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1", "tier:ravager:v1"],
-              "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true, "damageBonus": 2 } }
+              "spells": [], "initiativeBonus": 0, "passive": { "stunImmunity": true, "damageBonus": 2, "sunder": 1 } }
             """);
 
         var titan = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)).GetTier(TierId.Parse("tier:titan:v1"));
 
         titan.AnyOf.ShouldBe([TierId.Parse("tier:warmonger:v1"), TierId.Parse("tier:ravager:v1")]);
         titan.Spells.ShouldBeEmpty();
-        titan.Passive.ShouldBe(Passive.Of(stunImmunity: true, damageBonus: 2));
+        titan.Passive.ShouldBe(Passive.Of(stunImmunity: true, damageBonus: 2, sunder: 1));
     }
 
     /// <summary>A package with neither a spell nor a passive sells nothing, whatever opens it.</summary>

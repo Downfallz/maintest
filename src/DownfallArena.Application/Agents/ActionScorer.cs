@@ -411,6 +411,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// energy gift is priced by the spell it unlocks (ADR 0096);</item>
     /// <item>a damage bonus as the best cast it makes, every hit of it raised, against the best cast without it,
     /// one cast a round;</item>
+    /// <item>a sunder as the best cast it makes, every hit of it meeting that much less of its target's defense,
+    /// against the best cast without it, one cast a round (ADR 0106);</item>
     /// <item>stun immunity as the buyer's best cast kept, once for each living enemy that knows a stun and half
     /// for one that could buy one at its next pick, up to one a round: a stun costs its caster a cast, so no
     /// enemy is read landing one every round.</item>
@@ -435,6 +437,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         if (passive.DamageBonus > 0)
         {
             terms += PermanentConditionRounds * Raised(actor, kit, creatures, passive.DamageBonus);
+        }
+
+        if (passive.Sunder > 0)
+        {
+            terms += PermanentConditionRounds * Sundered(actor, kit, creatures, passive.Sunder);
         }
 
         if (passive.StunImmunity && !actor.Passive.StunImmunity)
@@ -516,6 +523,46 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         }
 
         return raised + (-1 * now);
+    }
+
+    /// <summary>
+    /// What a sunder adds to one round's cast: the best of the creature's spells once each of its hits meets that
+    /// much less defense, against the best of them as they are. A hit gains the defense it no longer meets, at
+    /// most the sunder and never more than the target holds, so against an enemy team with no defense a sunder
+    /// is worth nothing; a spell reaching several enemies is read against the most armoured it can reach. The
+    /// creature's own sunder is already in what its casts resolve to, so a second one is read on what is left.
+    /// </summary>
+    private ScoreTerms Sundered(CreatureSnapshot actor, List<(SpellId Id, ScoreTerms Terms, int Cost, double Score, int Gain)> kit, IReadOnlyList<CreatureSnapshot> creatures, int sunder)
+    {
+        var met = creatures
+            .Where(creature => creature.Owner != actor.Owner && creature.IsAlive)
+            .Select(enemy => Math.Max(0, enemy.TotalDefense.Value - actor.Passive.Sunder))
+            .OrderByDescending(defense => defense)
+            .ToList();
+        var now = ScoreTerms.Zero;
+        var nowScore = 0.0;
+        var sundered = ScoreTerms.Zero;
+        var sunderedScore = 0.0;
+        foreach (var (id, spellTerms, _, score, _) in kit)
+        {
+            if (score > nowScore)
+            {
+                now = spellTerms;
+                nowScore = score;
+            }
+
+            var spell = resources.GetSpell(id);
+            var damages = spell.Effects.Count(effect => effect is DamageEffect);
+            var through = met.Take(Reached(spell.Targeting, met.Count)).Sum(defense => Math.Min(sunder, defense));
+            var gained = spellTerms + (ScoreTerms.Zero with { Damage = damages * through });
+            if (weights.Apply(gained) > sunderedScore)
+            {
+                sundered = gained;
+                sunderedScore = weights.Apply(gained);
+            }
+        }
+
+        return sundered + (-1 * now);
     }
 
     /// <summary>How many enemies one cast of a spell targeting so reaches, out of <paramref name="enemies"/> living.</summary>
@@ -1153,7 +1200,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// </summary>
     private double ThreatOn(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int extraDefense, IReadOnlySet<CreatureId>? stillToAct = null)
     {
-        var defense = target.TotalDefense.Value + extraDefense;
+        var held = target.TotalDefense.Value + extraDefense;
         var total = 0.0;
         foreach (var enemy in creatures)
         {
@@ -1165,6 +1212,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             // Read once for the enemy rather than once for each of its spells' hits: it sums the creature's
             // conditions, and this loop is the scorer's hottest.
             var bonus = enemy.DamageBonus;
+            var defense = Math.Max(0, held - enemy.Passive.Sunder);  // what this enemy's hits meet (ADR 0106)
             var best = 0.0;
             foreach (var spellId in enemy.KnownSpells)
             {

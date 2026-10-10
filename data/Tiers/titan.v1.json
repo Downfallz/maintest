@@ -11,6 +11,6 @@
   "spells": [],
   "initiativeBonus": 0,
   "passive": {
-    "stunImmunity": true
+    "sunder": 2
   }
 }

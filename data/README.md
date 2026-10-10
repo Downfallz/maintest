@@ -16,8 +16,9 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   engine has to be told about rather than left to read as a bad hash. The game plays them: a pick buys one,
   and its `initiativeBonus` is the initiative a purchase is worth.
   A package may also name `anyOf`, packages of which owning one is enough beside `prerequisites`, each a level
-  below it, and a `passive` its owner holds: `{ "stunImmunity": true, "upkeepEnergy": 1, "damageBonus": 2 }`,
-  any of the three. A package with a passive may teach no spell. The three level-4 capstones (Titan, Archmage,
+  below it, and a `passive` its owner holds: `{ "stunImmunity": true, "upkeepEnergy": 1, "damageBonus": 2, "sunder": 3 }`,
+  any of the four (`sunder`, ADR 0106: the defense every direct hit ignores). An engine that does not know a
+  member refuses the catalogue rather than reading the package without it. A package with a passive may teach no spell. The three level-4 capstones (Titan, Archmage,
   Apex) are both: opened by any level-3 package of their family, selling a passive and no spell. A catalogue
   that uses either member is schema version 5, so an engine written before them refuses it as a version.
   Player-facing package identities use the controlled vocabulary in `docs/domain/package-identity-tags.md`;

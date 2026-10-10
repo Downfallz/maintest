@@ -143,6 +143,11 @@ test('a row with no timeline yet badges only what it knows', () => {
   assert.deepEqual(badges(undefined, undefined), []);
 });
 
+test('a creature whose packages sunder says how much defense its hits ignore', () => {
+  assert.deepEqual(badges({ id: 1, passive: { sunder: 3 } }, []), ['every hit ignores 3 defense']);
+  assert.deepEqual(badges({ id: 1, passive: { sunder: 0 } }, []), []);
+});
+
 test('a creature the timeline does not carry gets no speed badge', () => {
   assert.deepEqual(badges({ id: 9, isStunned: false }, [{ creature: 1, speed: 'Quick' }]), []);
 });

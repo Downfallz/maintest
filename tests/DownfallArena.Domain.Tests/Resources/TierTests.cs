@@ -70,12 +70,14 @@ public sealed class TierTests
     [Fact]
     public void Passives_combine_an_immunity_once_and_their_amounts_added()
     {
-        var held = Passive.Of(stunImmunity: true, upkeepEnergy: 1).With(Passive.Of(upkeepEnergy: 2, damageBonus: 2)).With(Passive.Of(stunImmunity: true));
+        var held = Passive.Of(stunImmunity: true, upkeepEnergy: 1).With(Passive.Of(upkeepEnergy: 2, damageBonus: 2, sunder: 1)).With(Passive.Of(stunImmunity: true, sunder: 2));
 
-        held.ShouldBe(Passive.Of(stunImmunity: true, upkeepEnergy: 3, damageBonus: 2));
+        held.ShouldBe(Passive.Of(stunImmunity: true, upkeepEnergy: 3, damageBonus: 2, sunder: 3));
         Passive.None.GivesAnything().ShouldBeFalse();
+        Passive.Of(sunder: 1).GivesAnything().ShouldBeTrue();
         Should.Throw<ArgumentOutOfRangeException>(() => Passive.Of(upkeepEnergy: -1));
         Should.Throw<ArgumentOutOfRangeException>(() => Passive.Of(damageBonus: -1));
+        Should.Throw<ArgumentOutOfRangeException>(() => Passive.Of(sunder: -1));
     }
 
     [Fact]

@@ -44,6 +44,7 @@ export function passiveLines(passive) {
   if (passive.stunImmunity === true) lines.push('Immune to stun');
   if (Number(passive.upkeepEnergy) > 0) lines.push(`Energy +${Number(passive.upkeepEnergy)} at every upkeep`);
   if (Number(passive.damageBonus) > 0) lines.push(`Damage +${Number(passive.damageBonus)} on every hit`);
+  if (Number(passive.sunder) > 0) lines.push(`Every hit ignores ${Number(passive.sunder)} defense`);
   return lines;
 }
 
@@ -76,7 +77,7 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
   }
 
   // `Passive.Of` refuses a negative amount: a package that took energy or damage away would be a curse.
-  for (const key of ['upkeepEnergy', 'damageBonus']) {
+  for (const key of ['upkeepEnergy', 'damageBonus', 'sunder']) {
     if (Number(draft?.passive?.[key]) < 0) {
       warnings.push(`A passive's ${key} cannot be negative: a package that took it away would be a curse, not a purchase.`);
     }

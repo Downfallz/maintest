@@ -234,7 +234,7 @@ public static class GameSchemaBuilder
             Id = resolver.Resolve<TierId>(tier.Id, context, problems) ?? tier.Id,
             Prerequisites = [.. tier.Prerequisites.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)],
             AnyOf = tier.AnyOf is { Count: > 0 } anyOf ? [.. anyOf.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)] : null,
-            Passive = tier.Passive is { StunImmunity: false, UpkeepEnergy: 0, DamageBonus: 0 } ? null : tier.Passive,
+            Passive = tier.Passive is { StunImmunity: false, UpkeepEnergy: 0, DamageBonus: 0, Sunder: 0 } ? null : tier.Passive,
             Spells = [.. tier.Spells.Select(id => resolver.Resolve<SpellId>(id, context, problems) ?? id)],
         };
     }

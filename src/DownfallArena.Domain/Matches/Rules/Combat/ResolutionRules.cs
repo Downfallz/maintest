@@ -59,6 +59,7 @@ public static class ResolutionRules
         var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
         var damageBonus = actor.DamageBonus;
+        var sunder = actor.Passive.Sunder;
         var outcomes = new List<EffectOutcome>();
         foreach (var targetId in effectiveTargets)
         {
@@ -71,14 +72,14 @@ public static class ResolutionRules
                     continue;
                 }
 
-                outcomes.Add(Outcome(effect, target, multiplier, isCritical, damageBonus));
+                outcomes.Add(Outcome(effect, target, multiplier, isCritical, damageBonus, sunder));
             }
         }
 
         // What the cast does to whoever cast it (ADR 0031): once, however many targets it reached, and never
         // multiplied by the critical roll -- a recoil that doubles when the blow lands well is another idea.
         // Marked, because the target alone cannot say: a Self-targeted spell puts ordinary outcomes here too.
-        outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical, damageBonus: 0) with { OnCaster = true }));
+        outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical, damageBonus: 0, sunder: 0) with { OnCaster = true }));
 
         return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes);
     }
@@ -108,13 +109,14 @@ public static class ResolutionRules
 
     /// <summary>
     /// What one effect does to one target. <paramref name="damageBonus"/> is the caster's (ADR 0101): it raises a
-    /// direct hit before the critical multiplies it and before the target's defense takes from it, and is nought
-    /// for what a cast does to its own caster, which is a cost and not a hit.
+    /// direct hit before the critical multiplies it and before the target's defense takes from it. <paramref
+    /// name="sunder"/> is the caster's too (ADR 0106): it takes from the defense the hit meets, never below zero.
+    /// Both are nought for what a cast does to its own caster, which is a cost and not a hit.
     /// </summary>
-    private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical, int damageBonus) =>
+    private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical, int damageBonus, int sunder) =>
         effect switch
         {
-            Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense.Value), isCritical),
+            Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense.Value - sunder)), isCritical),
             Heal heal => new HealOutcome(target.Id, Multiplied(heal.Amount, multiplier)),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
             EnergyDrain drain => new EnergyDrainOutcome(target.Id, drain.Amount),

@@ -51,11 +51,14 @@ listed in [spells.md](spells.md).
   in combat stuns the creature for the whole next round. A creature whose stun ends at cleanup is immune to
   stun through the next round, and a stun on a stunned or immune creature is ignored (ADR 0072).
   A package may carry a passive, held for as long as the creature owns it and read from the packages it owns
-  (ADR 0101): stun immunity that lasts, energy gained at every upkeep beside the rule set's, and a damage bonus.
-  A creature's damage bonus is its packages' and its damage buffs' added; it is added to every direct hit
-  the creature deals before the critical multiplier and the target's defense, and never to a bleed or to
-  what a cast does to its own caster. Each family closes with a level-4 capstone opened by any of its level-3
-  packages and teaching no spell: Titan (stun immunity), Archmage (+1 energy at upkeep), Apex (+2 damage).
+  (ADR 0101): stun immunity that lasts, energy gained at every upkeep beside the rule set's, a damage bonus,
+  and a sunder (ADR 0106). A creature's damage bonus is its packages' and its damage buffs' added; it is added
+  to every direct hit the creature deals before the critical multiplier and the target's defense, and never to
+  a bleed or to what a cast does to its own caster. A creature's sunder is its packages' added; every direct
+  hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast
+  does to its own caster are left alone. Each family closes with a level-4 capstone opened by any of its
+  level-3 packages and teaching no spell: Titan (sunder 2; stun immunity until 2026-10-09), Archmage (+1
+  energy at upkeep), Apex (+3 damage; +2 until 2026-10-09).
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the
@@ -150,13 +153,15 @@ listed in [spells.md](spells.md).
       - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
         target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
-      - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
+      - instant effects apply (damage reduced by the target's total Defense less the caster's sunder, each
+        floored at zero (ADR 0106); heal; energy given,
         or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs,
         which count for at most 10 together however many are active (ADR 0076), less its defense debuffs,
         floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
         there, except a Stun, which is ignored on a Creature already stunned or immune to stun (ADR 0072; it
-        restarted the running Stun under ADR 0041), whether for a Round or for good through Titan (ADR 0101).
+        restarted the running Stun under ADR 0041), whether for a Round or for good through a stun-immunity
+        Passive (ADR 0101), which no Capstone gives since ADR 0106.
         The cast's other effects still land.
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an

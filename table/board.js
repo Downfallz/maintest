@@ -34,8 +34,8 @@ export function statPairs(creature) {
 //
 // Every fact is the payload's: `isStunned` and `isStunImmune` are the snapshot's own fields (the latter already true
 // for a creature whose packages give stun immunity, ADR 0101), the speed is the band the engine put the slot in,
-// and `damageBonus` and `passive.upkeepEnergy` are what its packages and damage buffs add for as long as they last.
-// Those two are numbers rather than lines, so they are worded here, in the card's own words.
+// and `damageBonus`, `passive.upkeepEnergy` and `passive.sunder` are what its packages and damage buffs add for as long
+// as they last. Those are numbers rather than lines, so they are worded here, in the card's own words.
 export function badges(creature, timeline) {
   const found = [];
   if (creature?.isStunned === true) found.push('stunned');
@@ -43,6 +43,8 @@ export function badges(creature, timeline) {
   if (Number.isInteger(creature?.damageBonus) && creature.damageBonus > 0) found.push(`damage +${creature.damageBonus} on every hit`);
   const upkeep = creature?.passive?.upkeepEnergy;
   if (Number.isInteger(upkeep) && upkeep > 0) found.push(`energy +${upkeep} at every upkeep`);
+  const sunder = creature?.passive?.sunder;
+  if (Number.isInteger(sunder) && sunder > 0) found.push(`every hit ignores ${sunder} defense`);
   const slot = (timeline ?? []).find(one => one?.creature === creature?.id);
   if (typeof slot?.speed === 'string' && slot.speed !== '') found.push(slot.speed);
   return found;
