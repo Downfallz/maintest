@@ -25,4 +25,7 @@ public enum AgentKind
 
     /// <summary>The lookahead agent with every enemy slot played as the reply that costs the actor most; the built-in weights, or the file the spec names, or another agent (ADR 0055).</summary>
     Minimax,
+
+    /// <summary>Another agent whose round-1 picks buy the packages the spec names: <c>opening:brute+occultist</c>, Greedy unless a third segment names another (ADR 0109).</summary>
+    Opening,
 }

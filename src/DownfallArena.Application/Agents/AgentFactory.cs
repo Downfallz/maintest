@@ -4,6 +4,7 @@ using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 
 namespace DownfallArena.Application.Agents;
@@ -29,7 +30,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             // An exploring agent that names an inner agent is as much that agent as a heuristic or policy
             // agent is, so the stamp fingerprints what the inner one reads: two runs on different weights,
             // or on different policies, at one path have to stamp apart.
-            AgentKind.Explore when Inner(spec) is { } inner => spec with { Version = Resolve(inner).Version },
+            AgentKind.Explore or AgentKind.Opening when Inner(spec) is { } inner => spec with { Version = Resolve(inner).Version },
             _ => spec,
         };
     }
@@ -47,6 +48,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
             AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules, random), random),
+            AgentKind.Opening => new OpeningAgent(Packages(spec), Explored(spec, rules, random)),
             AgentKind.Lookahead => Searching(spec, rules, random, adversarial: false),
             AgentKind.Minimax => Searching(spec, rules, random, adversarial: true),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
@@ -128,6 +130,32 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     private static string RateText(AgentSpec spec) => Split(spec).Rate;
 
     /// <summary>
+    /// The packages an opening spec names before its inner agent, joined by <c>+</c>, each by its name alone --
+    /// <c>opening:brute+occultist</c> -- and read as the latest version the content carries. Not by its id:
+    /// the colons of <c>tier:brute:v1</c> are where a spec's inner agent starts.
+    /// </summary>
+    private List<TierId> Packages(AgentSpec spec)
+    {
+        var names = Split(spec).Rate.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (names.Length == 0)
+        {
+            throw new ArgumentException($"An opening names its packages: 'opening:<package>+<package>', not '{spec}'.", nameof(spec));
+        }
+
+        return [.. names.Select(name => Package(name, spec))];
+    }
+
+    private TierId Package(string name, AgentSpec spec)
+    {
+        return resources.Tiers
+            .Where(tier => string.Equals(tier.Id.Name, name, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(tier => tier.Id.Version)
+            .Select(tier => tier.Id)
+            .FirstOrDefault()
+            ?? throw new ArgumentException($"The content sells no package called '{name}' for '{spec}' to open with.", nameof(spec));
+    }
+
+    /// <summary>
     /// The agent an exploring agent deviates from: <c>Greedy</c>, or whatever a second colon names. An
     /// exploring run is recorded so that a value policy can see what a move other than the chosen one was
     /// worth (ADR 0014), so the agent it deviates from is the one whose play is being learned. Leaving it at
@@ -157,7 +185,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     {
         var separator = inner.IndexOf(':', StringComparison.Ordinal);
         var kindText = separator < 0 ? inner : inner[..separator];
-        return Enum.TryParse<AgentKind>(kindText, ignoreCase: true, out var kind) && Enum.IsDefined(kind);
+        return kindText.All(char.IsLetter) && Enum.TryParse<AgentKind>(kindText, ignoreCase: true, out var kind) && Enum.IsDefined(kind);
     }
 
     /// <summary>The rate and the optional inner agent an exploring spec carries, split on the colon.</summary>

@@ -20,7 +20,8 @@ public sealed record AgentSpec(AgentKind Kind, string? Path = null, string? Vers
         var separator = text.IndexOf(':', StringComparison.Ordinal);
         var kindText = separator < 0 ? text : text[..separator];
         var rest = separator < 0 ? string.Empty : text[(separator + 1)..];
-        if (!Enum.TryParse<AgentKind>(kindText, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+        // By name only: Enum.TryParse also reads a number, and "7" is not a kind whatever the enum holds.
+        if (!kindText.All(char.IsLetter) || !Enum.TryParse<AgentKind>(kindText, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
         {
             throw new ArgumentException($"Unknown agent kind '{kindText}'. Known kinds: {string.Join(", ", Enum.GetNames<AgentKind>())}.", nameof(text));
         }

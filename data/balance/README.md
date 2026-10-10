@@ -132,7 +132,8 @@ score = sum over targets of  weight * (distance outside the band / scale) ** 2
 ```
 
 Zero is on target and lower is better. A metric no evaluation measured is listed as missing rather than
-counted as zero. Four evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
+counted as zero. Ten evaluations are played on the benchmark seeds: the four below, and the six tier-1
+openings after them ([ADR 0109](../../docs/adr/0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md)). `mirror` (greedy against greedy) reads
 how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
 (`explore:0.2:lookahead` against itself since ADR 0095, `explore:0.2` before) reads whether the content offers a choice, and since ADR 0062 who wins it:
 under packages the greedy mirror ties every initiative and gives the tie to the seat, so Player 1 took 400 of
@@ -172,10 +173,16 @@ set is searched against that catalogue too, which is why the win rate is no long
 panel closes the current catalogue in 5.785 rounds and the moved one in 7.63, and **that** is what the
 objective reads (ADR 0053, and the 2026-09-17 entries for how the three earlier prices of that same move,
 116, 55 and 0, were each an artefact of which agent was asked). A candidate costs five evaluations here and
-eight in all, which is the price of the reading. Only
+fourteen in all since the openings (eight before ADR 0109), which is the price of the reading. Only
 agent A is read as a panel: agent B is the opponent it is measured against, and `check-knobs` refuses a list
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
+
+The six `opening-<a>-<b>` evaluations read what each tier-1 opening is worth, the doubles included
+([ADR 0109](../../docs/adr/0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md)): agent A is
+`opening:<a>+<b>`, Greedy whose two round-1 picks buy those packages, and agent B is Greedy, which opens its
+own way. Each holds `winRateA` between 0.40 and 0.60, so no opening is a trap and none a lock. They add six
+Greedy evaluations to every candidate, fourteen in all.
 
 Most targets read a metric of the whole run. Two read a **package** instead — the spells one evolution pick
 buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
@@ -273,12 +280,16 @@ leaves a one-in-four chance that any given knob is never tried, and the first fu
 on `lightning_bolt`'s energy cost — one move worth more than everything the search did find. `--no-sweep`
 skips it when you want a quick look rather than an answer.
 
-Every candidate costs one content build plus one evaluation per **agent** the objective names, which is eight
-since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md) seated a panel of five
-on `exploit`: three entries of one agent, and five of it. On the 200 benchmark seeds an evaluation is about
+Every candidate costs one content build plus one evaluation per **agent** the objective names, which is fourteen:
+eight since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md) seated a panel of five
+on `exploit`, three entries of one agent and five of it, and six more since
+[ADR 0109](../../docs/adr/0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) read the tier-1 openings. On the 200 benchmark seeds an evaluation is about
 **3.8 seconds** on a four-core machine, so a candidate is about **30 seconds** across the eight, where it was
 14 across the four (ADR 0030 plays the 400 matches of an evaluation at once; it was 7 seconds an evaluation
-and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
+and 34 a candidate when they went one at a time). Those figures are from a nine-spell catalogue: on
+`95a78999` one Greedy evaluation of an opening took about 45 seconds on four cores, so the six add about
+four and a half minutes to a candidate, and `tune.yml` names the runner's own figure, which is the one to size
+a job by. The sweep is up to two candidates per playable
 knob — on the nine-spell core content that is 29 knobs and 41 legal single steps. The paired moves below add
 up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
 then climbs.

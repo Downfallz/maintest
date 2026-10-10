@@ -31,6 +31,36 @@
         ],
         "p2": "greedy",
         "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A is a panel and the reading is its best exploiter (ADR 0052): one agent only ever reads what that agent happens to punish, and the same one-spell move was worth 0.013 to one of these sets and 0.235 to another (journal, 2026-09-17), so the term named a pair rather than a catalogue. Every set is played and the highest win rate decides the evaluation. A set goes stale when the content moves — a tuning pass changes what there is to exploit — so the newest search joins the panel rather than replacing it, and an older set stays because a moved catalogue sometimes blinds the newer ones and not it. kill-first is the one set searched on a catalogue other than this one, the weakened Crushing Stomp of that same entry, and it takes every match on both: a set fitted to a moved catalogue finds another route rather than losing the old one, which is why this term is a constant this file cannot spend content on (journal, 2026-09-17). So what is scored here is no longer whether the best exploiter wins but how fast it does (ADR 0053), and a tie at the top of the panel goes to the fastest win rather than to the first name in the list. On 2026-09-24 the panel was measured again under the stun immunity, the bleed price and the defense ceiling (ADR 0072, 0073, 0076) on the benchmark seeds: search-4, mixture-mean, search-2, search-3 and mixture-worst no longer beat Greedy (0.44 to 0.50), so none of them can be the best exploiter and they left; search-23 and search-21 take every match and joined; kill-first (0.806) left as the weakest of the six that still beat Greedy, so the panel stays at five evaluations a candidate. On 2026-09-29 it was measured again under ADR 0083 to 0085: search-23 fell to 0.196 against Greedy and left; kill-first came back at 0.995, the second best after search-19 (1.000); lookahead-30 (0.975, 13.37 rounds), the newest search, joined, because a moved catalogue can make it the best exploiter where search-19 is today; and stun-first (0.710) left as the weakest of the sets that still beat Greedy, so the panel stays at five evaluations a candidate. Tuning pass 14 then ran out of its six hours inside its opening sweep: a candidate cost 117 seconds on the runner against the 61.7 tune.yml is sized for, and lookahead-30 alone was 77 of the 190 seconds its eight evaluations take one after another. So lookahead-30 left again and stun-first came back: the panel's rule keeps the newest search in only when a pass can afford to play it, and a pass that cannot finish reads nothing at all. On content 9659f610 (2026-09-30) search-31, the newest search, joined: it takes every match from Greedy in 12.28 rounds; stun-first left again as the weakest set that still beats Greedy (0.740), so a candidate still costs five exploit evaluations. search-19 remains the best exploiter, at 1.000 in 12.18 rounds. On content e6f72578 (2026-10-05, after ADR 0096 and 0098) the sets were measured again against Greedy on the benchmark seeds: search-19 (0.000), search-31 (0.007), pressure-floor (0.083) and stun-first (0.086) no longer beat it and left; search-23 (0.997 in 21.34 rounds), search-21 (0.871) and kill-first (0.845) do, and mixture-mean (0.583) came back as the fourth and last set that still does. search-19 stays as the fifth although it scores 0.000 on this catalogue: it was the best exploiter on the one before, so it is the set a candidate that moves the content back is likeliest to wake (ADR 0052 keeps an older set for exactly that), and it keeps the panel at the five evaluations a candidate the tuner is budgeted for; the lookahead on lookahead-34 beats Greedy too (0.89 on unseen seeds) but costs what lookahead-30 cost, so it stays out for the reason lookahead-30 left."
+      },
+      "opening-brute-brute": {
+        "p1": "opening:brute+brute",
+        "p2": "greedy",
+        "reads": "What opening two Brute is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks both buy Brute and who plays the rest of the match as Greedy; agent B is Greedy. The doubles are read with the pairs because the owner wants every tier-1 opening to be a real choice."
+      },
+      "opening-occultist-occultist": {
+        "p1": "opening:occultist+occultist",
+        "p2": "greedy",
+        "reads": "What opening two Warped is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks both buy Warped and who plays the rest of the match as Greedy; agent B is Greedy. The doubles are read with the pairs because the owner wants every tier-1 opening to be a real choice."
+      },
+      "opening-prowler-prowler": {
+        "p1": "opening:prowler+prowler",
+        "p2": "greedy",
+        "reads": "What opening two Predator is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks both buy Predator and who plays the rest of the match as Greedy; agent B is Greedy. The doubles are read with the pairs because the owner wants every tier-1 opening to be a real choice."
+      },
+      "opening-brute-occultist": {
+        "p1": "opening:brute+occultist",
+        "p2": "greedy",
+        "reads": "What opening one Brute and one Warped is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks buy those packages and who plays the rest of the match as Greedy; agent B is Greedy. All six tier-1 openings are read, the doubles too, because the owner wants every one of them to be a real choice: an opening far below an even score is one a player who knows the game never takes."
+      },
+      "opening-brute-prowler": {
+        "p1": "opening:brute+prowler",
+        "p2": "greedy",
+        "reads": "What opening one Brute and one Predator is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks buy those packages and who plays the rest of the match as Greedy; agent B is Greedy. All six tier-1 openings are read, the doubles too, because the owner wants every one of them to be a real choice: an opening far below an even score is one a player who knows the game never takes."
+      },
+      "opening-occultist-prowler": {
+        "p1": "opening:occultist+prowler",
+        "p2": "greedy",
+        "reads": "What opening one Warped and one Predator is worth against Greedy's own opening (ADR 0109). Agent A is Greedy whose two round-1 picks buy those packages and who plays the rest of the match as Greedy; agent B is Greedy. All six tier-1 openings are read, the doubles too, because the owner wants every one of them to be a real choice: an opening far below an even score is one a player who knows the game never takes."
       }
     },
     "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. ADR 0062 did it a third time: player1WinShare moved from the mirror to the exploring run, which took the shipped content from 285.77 to 42.77 with the content unchanged. ADR 0064 did it a fourth time: tierUsageShare reads the lower Wilson bound of a package's top share against a band of 0.8, not the raw share against the even split every package's floor sits at. ADR 0065 did it a fifth: tierWinSpread reads the lower Newcombe bound of a package's win gap, not the raw gap. ADR 0068 did it a sixth: the mirror's rounds band moved from 8-16 to 10-15 and the exploit floor from 8 to 10, the length the game is designed for. ADR 0071 did it a seventh: that band moved from the mirror to the exploring run. Refreshing the exploit panel on 2026-09-24 did it a sixth time, and again on 2026-09-29: the evaluation reads other agents. ADR 0090 did it again: `tierDamageSpread` left the targets, because a raw ratio of hits per target cannot see a spell's cost, reach or riders, and the three packages it held outside its band were each split that way on purpose; it is still reported. Compare scores only across runs judged by the same set read from the same runs.",
@@ -148,6 +178,60 @@
         "scale": 2,
         "weight": 2,
         "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Eight rounds is the floor a match is held to (ADR 0086; ADR 0068 had raised it from eight to ten), read on the exploring run since ADR 0071, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the exploring run's own 8-to-14 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-brute-brute",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-occultist-occultist",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-prowler-prowler",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-brute-occultist",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-brute-prowler",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
+      },
+      {
+        "metric": "winRateA",
+        "on": "opening-occultist-prowler",
+        "min": 0.4,
+        "max": 0.6,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Every tier-1 opening should be a choice and none a trap or a lock (ADR 0109): the forced opening scores between 40 and 60 % against Greedy's. On 95a78999, against the Greedy that opened two Brutes, Brute + Warped read 0.702 and Warped + Warped 0.099. The band is wide because a forced opening is played by Greedy after round 1 and plays the opening no better than Greedy plays it."
       }
     ]
   },
