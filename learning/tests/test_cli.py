@@ -433,6 +433,8 @@ def test_a_planning_search_names_a_whole_round_at_once(tmp_path: Path, fake_engi
                 str(index),
                 "--cache",
                 str(cache),
+                "--repo",
+                str(tmp_path),
                 "--engine",
                 *fake_engine,
             ]
