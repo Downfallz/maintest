@@ -109,7 +109,8 @@ def existing(name: str, kind: str = "file") -> Path:
 
 
 def read_json(name: str) -> dict:
-    return json.loads(existing(name).read_text())  # NOSONAR -- see existing()
+    # Resolved and checked by existing(), as the note above it says.
+    return json.loads(existing(name).read_text())  # NOSONAR
 
 
 def load_content(data: Path) -> tuple[dict, dict]:
@@ -129,7 +130,8 @@ def previous(page: str | None, label: str | None) -> dict | None:
     """What the previous report said of each spell, read from the data block of its page."""
     if page is None:
         return None
-    match = DATA_BLOCK.search(existing(page).read_text())  # NOSONAR -- see existing()
+    # Resolved and checked by existing(), as the note above it says.
+    match = DATA_BLOCK.search(existing(page).read_text())  # NOSONAR
     if not match:
         raise SystemExit(f"{page} has no data block: is it a spells report?")
     old = json.loads(match.group(1))
@@ -344,7 +346,8 @@ def main() -> None:
     page = (HERE / "page.html").read_text()
     block = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     out = existing(str(Path(args.out).resolve().parent), "dir") / Path(args.out).name
-    out.write_text(page.replace("__DATA__", block, 1))  # NOSONAR -- see existing()
+    # Resolved and checked by existing(), as the note above it says.
+    out.write_text(page.replace("__DATA__", block, 1))  # NOSONAR
     print(
         f"{out}: content {data['contentHash']}, {data['matches']} matches, "
         f"{data['totalVariety']} casts (variety), {data['totalMirror']} (mirror), "
