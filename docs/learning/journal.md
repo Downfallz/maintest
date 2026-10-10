@@ -4,6 +4,37 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-10. Greedy opened on two Brutes, and one Warped beside one Brute beat it 70 % (ADR 0108)
+
+Content `95a78999` (main after #319). Greedy against Greedy, seeds 1 to 400 played from both seats, 800 matches a
+line, a forced opening applied to one seat only and only to its round-1 picks; everything after round 1 is
+Greedy's own play.
+
+- **What Greedy opened.** Two Brutes, in all 800 mirrors; lookahead-39 too, 588 of its 600 round-1 picks. At
+  round 1 Guard's package reads 6.70 against 6.15 for Shock's or Poison Slash's: defense 5 at 0.65 and an energy
+  kept, against 3 damage, on the same 1.5 initiative. Each pick was read alone, so the second valued Brute as
+  highly as the first had.
+- **What each opening is worth against it** (score of the forced side, 95 % Wilson interval):
+
+  | opening | score | rounds |
+  | --- | --- | --- |
+  | Brute + Brute (control) | 50.0 % (47 to 53) | 12.2 |
+  | **Brute + Warped** | **70.2 % (67 to 73)** | 12.1 |
+  | Brute + Predator | 49.4 % (46 to 53) | 10.6 |
+  | Predator + Predator | 43.8 % (40 to 47) | 10.4 |
+  | Warped + Warped | 9.9 % (8 to 12) | 9.3 |
+
+- **The fix.** A package is read against what the team's picks of the round teach as well as what the creature
+  knows (ADR 0108). Against the Greedy before it: 66.5 % (63 to 70) on these seeds, 62.1 % (59 to 65) on 800
+  matches from seed 300000. Reading against every spell the allies know instead scored 60.4 %. The new Greedy
+  opens Brute + Warped in every mirror; its mirror (seeds 5000 to 5399) lasts 10.4 rounds against 12.3, with
+  2.8 % at the cap against 6.2 %, and plays 1 037 Warped creatures of about 2 300 where the old one played
+  almost none. Archmage becomes the capstone it buys most.
+- **What it does not settle.** The opening is now always the same, so the three tier-1 families are still not
+  opened evenly, and two of a family read poorly against it. What each opening is worth goes into the tuner's
+  objective next (ADR 0109). The Predator creatures of the new mirror are on the winning side 36 % of the time,
+  but they are 129, picked late and only by the third creature: no reading of the family's strength.
+
 ## 2026-10-09. Titan sunders 2 instead of ignoring stuns, and Apex adds 3 (ADR 0106)
 
 Content `95a78999` (from `f2ae0013`, main at the round cap of 20). Every reading below is a mirror on main's
