@@ -126,6 +126,7 @@ def previous(page: Path | None, label: str | None) -> dict | None:
     return {
         "label": label or old.get("generated") or "rapport précédent",
         "contentHash": old["contentHash"],
+        "agent": old.get("varietyAgent", ""),
         "spells": spells,
     }
 
@@ -166,6 +167,13 @@ def build(args: argparse.Namespace) -> dict:
     variety = json.loads(Path(args.variety).read_text())
     mirror = json.loads(Path(args.mirror).read_text())
     before = previous(Path(args.before) if args.before else None, args.label)
+    # A share another exploring agent read moved for that reason too: it is no comparison of the content.
+    comparable = before is not None and before["agent"].lower() == variety["agentA"]["agent"].lower()
+    if before is not None and not comparable:
+        print(
+            f"The previous report read {before['agent']!r}, this one {variety['agentA']['agent']!r}: "
+            "no comparison."
+        )
     by_variety = {short(o["spell"]): o for o in variety["spellOutcomes"]}
     by_mirror = {short(o["spell"]): o for o in mirror["spellOutcomes"]}
     total_variety = sum(int(o["resolved"]) for o in variety["spellOutcomes"])
@@ -243,6 +251,9 @@ def build(args: argparse.Namespace) -> dict:
         "note": args.note,
         "contentHash": variety["stamp"]["contentHash"][:8],
         "matches": variety["matches"],
+        # In self-play the engine counts the spells of the first seating only: the swapped one replays it.
+        "castMatches": variety["matches"] // 2 if variety.get("selfPlay") else variety["matches"],
+        "mirrorCastMatches": mirror["matches"] // 2 if mirror.get("selfPlay") else mirror["matches"],
         "rounds": variety["averageRounds"],
         "capShare": variety["roundCapShare"],
         "mirrorRounds": mirror["averageRounds"],
@@ -253,7 +264,9 @@ def build(args: argparse.Namespace) -> dict:
         "packages": packages,
         "capstones": capstones,
         "starting": [spell_row(s, 0) for s in STARTING_KIT if s in spells],
-        "before": {"label": before["label"], "contentHash": before["contentHash"]} if before else None,
+        "before": {"label": before["label"], "contentHash": before["contentHash"], "comparable": comparable}
+        if before
+        else None,
     }
 
 

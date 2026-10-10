@@ -17,7 +17,12 @@ The arguments, if any, name the content to read: a branch, a PR number, or nothi
 
 ## Steps
 
-Work in the scratchpad (`$S` below), not in the repository: the runs write large files.
+Work in the scratchpad, not in the repository: the runs write large files. Set it first, in every shell the
+steps use (the session's scratchpad directory, or any empty directory outside the repository):
+
+```bash
+S=<the scratchpad directory>/spells-report && mkdir -p "$S"
+```
 
 1. **Build the content and the engine** at the commit asked for (a worktree if it is not the checkout):
 
@@ -36,8 +41,9 @@ Work in the scratchpad (`$S` below), not in the repository: the runs write large
    $CLI evaluate --p1 explore:0.2:lookahead --p2 explore:0.2:lookahead --seeds benchmarks/benchmark-seeds.json --out $S/variety.json
    ```
 
-   The mirror takes about a minute and the recorded run two. The variety run is 400 lookahead matches, 30 to
-   60 minutes: run it in the background, tell the owner when to expect the page, and do not poll it. If
+   Each evaluation plays every seed twice, seats swapped; in self-play the engine counts the spells of the
+   first seating only, so the casts rest on 200 independent matches and the page says so. The mirror takes
+   about a minute and the recorded run two. The variety run is 400 lookahead matches, 30 to 60 minutes: run it in the background, tell the owner when to expect the page, and do not poll it. If
    `knobs.json` names other agents than these, play the ones it names.
 
 3. **Fetch the previous page** for the comparison column: `Artifact` with `action: "read"`, the url above and
@@ -53,7 +59,8 @@ Work in the scratchpad (`$S` below), not in the repository: the runs write large
    ```
 
    The previous page names itself (`generated`), so `--label` is needed only for the report of 2026-10-04,
-   which predates the field: `--label "4 oct."`. Write the note from the commits and the journal since the
+   which predates the field: `--label "4 oct."`. If the previous report read another exploring agent, the
+   script says so and the page leaves the comparison column empty rather than crediting the content with it. Write the note from the commits and the journal since the
    previous report's content hash, in French, in a dozen words.
 
 5. **Publish** with `Artifact`, `url` set to the link above and `file_path` to the built page. The page already

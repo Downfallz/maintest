@@ -129,7 +129,7 @@ tr.thin td { opacity: 0.62; }
     <summary>Comment lire ce tableau</summary>
     <dl>
       <dt>Lancés (explorateur)</dt>
-      <dd>Combien de fois le sort a vraiment résolu sur 400 matchs joués par le lookahead qui explore : 4 décisions sur 5 il joue au mieux, la 5e au hasard. C'est le run sur lequel le tuner juge les paquets. Le hasard garantit qu'un sort jamais choisi est quand même essayé de temps en temps.</dd>
+      <dd>Combien de fois le sort a vraiment résolu dans les matchs joués par le lookahead qui explore contre lui-même, comptés une fois par seed : le moteur rejoue chaque seed sièges inversés, et ce second match, identique au premier quand les deux camps sont le même bot, n'ajoute aucun lancer indépendant. Le bot joue au mieux 4 décisions sur 5, la 5e au hasard. C'est le run sur lequel le tuner juge les paquets. Le hasard garantit qu'un sort jamais choisi est quand même essayé de temps en temps.</dd>
       <dt>Part dans le paquet</dt>
       <dd>Sa part des lancers de son paquet. Deux sorts à parts égales feraient 50 / 50. Au-dessus de 80 %, l'autre sort du paquet ne sert presque à rien ; c'est la cible <span class="mono">tierUsageShare</span> du tuner, qui lit la borne basse de cette part pour ne pas punir un paquet sur trois lancers.</dd>
       <dt>Depuis le rapport précédent</dt>
@@ -165,9 +165,9 @@ const data = JSON.parse(document.getElementById("data").textContent);
 const pct = (x) => x == null ? "—" : Math.round(x * 100) + " %";
 const fmt = (n) => n.toLocaleString("fr-CA");
 
-document.getElementById("eyebrow").textContent = [`Contenu ${data.contentHash}`, data.note, data.before ? `comparé au ${data.before.label} (${data.before.contentHash})` : null].filter(Boolean).join(" · ");
+document.getElementById("eyebrow").textContent = [`Contenu ${data.contentHash}`, data.note, data.before ? (data.before.comparable ? `comparé au ${data.before.label} (${data.before.contentHash})` : `pas comparé au ${data.before.label} : l'explorateur a changé`) : null].filter(Boolean).join(" · ");
 document.getElementById("runmeta").textContent =
-  `${data.matches} matchs explorateurs (${fmt(data.totalVariety)} sorts résolus) et ${data.matches} matchs greedy contre greedy (${fmt(data.totalMirror)} sorts résolus). Mêmes seeds que le tuner (benchmark).`;
+  `Lancers comptés sur ${data.castMatches} matchs indépendants de l'explorateur (${fmt(data.totalVariety)} sorts résolus) et ${data.mirrorCastMatches} matchs greedy contre greedy (${fmt(data.totalMirror)} sorts résolus) ; durées sur les ${data.matches} matchs joués, sièges inversés compris. Mêmes seeds que le tuner (benchmark).`;
 document.getElementById("stats").innerHTML = [
   [data.rounds.toFixed(1), "rondes, explorateur"],
   [pct(data.capShare), "à la limite de 20, explorateur"],
@@ -199,6 +199,7 @@ function packageFlags(p) {
 const pills = (list) => list.map(([k, t]) => `<span class="pill ${k}">${t}</span>`).join("");
 
 function delta(s) {
+  if (!data.before?.comparable) return '<span class="delta flat">—</span>';
   if (!s.before) return '<span class="delta new">nouveau</span>';
   if (s.share == null || s.before.share == null) return '<span class="delta flat">—</span>';
   const d = Math.round((s.share - s.before.share) * 100);
@@ -264,13 +265,13 @@ function summary() {
   const crush = all.filter((s) => s.pkg.total >= 20 && s.share >= 0.8).sort((a, b) => b.share - a.share);
   const dead = all.filter((s) => s.landed < 20).sort((a, b) => a.landed - b.landed);
   const ignored = data.packages.filter((p) => p.greedyTotal < 20).sort((a, b) => a.greedyTotal - b.greedyTotal);
-  const moved = all.filter((s) => s.before && s.before.share != null && s.share != null)
+  const moved = all.filter((s) => data.before?.comparable && s.before && s.before.share != null && s.share != null)
     .map((s) => ({ ...s, d: s.share - s.before.share }))
     .filter((s) => Math.abs(s.d) >= 0.15)
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 6);
   const li = (items) => items.map((t) => `<li>${t}</li>`).join("") || "<li>Aucun</li>";
   const cards = [
-    ["var(--bad)", "Presque jamais lancés", "Moins de 20 lancers en 400 matchs, même avec le hasard de l'explorateur.",
+    ["var(--bad)", "Presque jamais lancés", `Moins de 20 lancers en ${data.castMatches} matchs, même avec le hasard de l'explorateur.`,
       li(dead.map((s) => `${s.name} <small>${s.pkg.name} · ${s.landed} lancers</small>`))],
     ["var(--bad)", "Écrasent leur paquet", "80 % ou plus des lancers de leur paquet : l'autre sort est vendu pour rien.",
       li(crush.map((s) => `${s.name} <small>${s.pkg.name} · ${pct(s.share)}</small>`))],
