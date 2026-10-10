@@ -1,0 +1,315 @@
+<title>Sorts joués et délaissés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a ledger read package by package, summary first, one table per package level.
+   Filled by scripts/spells-report/report.py, which writes the readings into the data block below. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #18202b;
+  --muted: #5d6877;
+  --line: #d9dee6;
+  --accent: #2c5f8f;
+  --accent-soft: #e3edf7;
+  --bad: #b8402b;
+  --bad-soft: #f8e4df;
+  --warn: #9a6512;
+  --warn-soft: #f6ecd8;
+  --good: #2e7a4d;
+  --good-soft: #e1f1e7;
+  --bar: #2c5f8f;
+  --bar-track: #e7ebf1;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --surface: #1a2029; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2c3542;
+    --accent: #7fb0e0; --accent-soft: #1d2c3d; --bad: #ef8a74; --bad-soft: #3a211c;
+    --warn: #e2b260; --warn-soft: #362a16; --good: #78c99a; --good-soft: #17301f;
+    --bar: #7fb0e0; --bar-track: #263040; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --surface: #1a2029; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2c3542;
+  --accent: #7fb0e0; --accent-soft: #1d2c3d; --bad: #ef8a74; --bad-soft: #3a211c;
+  --warn: #e2b260; --warn-soft: #362a16; --good: #78c99a; --good-soft: #17301f;
+  --bar: #7fb0e0; --bar-track: #263040; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.meta { color: var(--muted); font-size: 0.95rem; }
+.mono, td.num, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card h3 { display: flex; gap: 8px; align-items: center; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.card li { font-size: 0.95rem; }
+.card li small { color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+details.guide { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+details.guide summary { cursor: pointer; font-family: var(--display); font-weight: 700; }
+.guide dl { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 8px 18px; margin: 14px 0 0; }
+.guide dt { font-weight: 600; }
+.guide dd { margin: 0; color: var(--muted); }
+@media (max-width: 640px) { .guide dl { grid-template-columns: 1fr; } .guide dd { margin-bottom: 8px; } }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 0; margin: 0; padding: 0; min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.controls button { font: 600 0.9rem var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.controls button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.level { display: grid; gap: 12px; }
+.level > p { color: var(--muted); }
+.table-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.93rem; }
+th { text-align: left; font: 600 0.72rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 10px 10px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { text-align: right; }
+tr.pkg td { background: var(--accent-soft); border-bottom: 1px solid var(--line); padding-block: 10px; }
+tr.pkg .pname { font-family: var(--display); font-weight: 700; font-size: 1rem; }
+tr.pkg .pinfo { color: var(--muted); font-size: 0.85rem; margin-left: 8px; }
+tr.thin td { opacity: 0.62; }
+.sname { font-weight: 600; }
+.what { color: var(--muted); font-size: 0.85rem; }
+.bar { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.track { flex: 1; height: 8px; border-radius: 4px; background: var(--bar-track); overflow: hidden; }
+.fill { height: 100%; background: var(--bar); border-radius: 4px; }
+.fill.hot { background: var(--bad); }
+.fill.cold { background: var(--warn); }
+.pill { display: inline-block; font: 600 0.75rem var(--body); padding: 2px 8px; border-radius: 999px; margin: 0 4px 4px 0; white-space: nowrap; }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+.footnote { color: var(--muted); font-size: 0.9rem; }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width 0.3s ease; } }
+</style>
+<style>
+.delta { font: 600 0.75rem var(--mono); white-space: nowrap; }
+.delta.up { color: var(--good); }
+.delta.down { color: var(--bad); }
+.delta.flat, .delta.new { color: var(--muted); }
+.caps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.cap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.cap .passive { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); }
+.cap dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 0.93rem; }
+.cap dt { color: var(--muted); }
+.cap dd { margin: 0; text-align: right; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font: 700 1.25rem var(--display); }
+.stat span { color: var(--muted); font-size: 0.85rem; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1>Sorts joués et délaissés</h1>
+    <p>Chaque sort du catalogue, regroupé par paquet, avec combien les bots le lancent et dans quelle part de son paquet. Un paquet s'achète d'un coup avec tous ses sorts : un sort qui ne prend presque aucun lancer de son paquet est vendu pour rien.</p>
+    <p class="meta" id="runmeta"></p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section class="summary" id="summary" aria-label="En bref"></section>
+
+  <details class="guide">
+    <summary>Comment lire ce tableau</summary>
+    <dl>
+      <dt>Lancés (explorateur)</dt>
+      <dd>Combien de fois le sort a vraiment résolu dans les matchs joués par le lookahead qui explore contre lui-même, comptés une fois par seed : le moteur rejoue chaque seed sièges inversés, et ce second match, identique au premier quand les deux camps sont le même bot, n'ajoute aucun lancer indépendant. Le bot joue au mieux 4 décisions sur 5, la 5e au hasard. C'est le run sur lequel le tuner juge les paquets. Le hasard garantit qu'un sort jamais choisi est quand même essayé de temps en temps.</dd>
+      <dt>Part dans le paquet</dt>
+      <dd>Sa part des lancers de son paquet. Deux sorts à parts égales feraient 50 / 50. Au-dessus de 80 %, l'autre sort du paquet ne sert presque à rien ; c'est la cible <span class="mono">tierUsageShare</span> du tuner, qui lit la borne basse de cette part pour ne pas punir un paquet sur trois lancers.</dd>
+      <dt>Depuis le rapport précédent</dt>
+      <dd>L'écart de cette part avec le rapport précédent, mêmes seeds et même explorateur, en points. « nouveau » : le sort n'existait pas, ou pas sous ce nom.</dd>
+      <dt>Lancés (greedy)</dt>
+      <dd>La même chose dans le miroir greedy contre greedy, sans hasard : ce que le bot choisit vraiment quand il joue au mieux d'un coup. Un paquet à zéro ici, greedy ne l'achète tout simplement pas.</dd>
+      <dt>Victoire quand lancé</dt>
+      <dd>Part de victoires des camps qui ont lancé ce sort au moins une fois. Attention, c'est une corrélation : un sort de fin de partie est lancé par le camp qui est déjà en train de gagner. À lire en gros écarts, pas au point près.</dd>
+      <dt>Lignes pâles</dt>
+      <dd>Moins de 30 lancers : trop peu pour que la part ou la victoire veuillent dire grand-chose. Les paquets de niveau 3 arrivent tard dans la partie, ils ont toujours moins de lancers.</dd>
+    </dl>
+  </details>
+
+  <fieldset class="controls">
+    <legend class="sr-only">Filtre</legend>
+    <button type="button" id="f-all" aria-pressed="true">Tous les sorts</button>
+    <button type="button" id="f-issues" aria-pressed="false">Seulement ceux à regarder</button>
+  </fieldset>
+
+  <div id="levels" class="level"></div>
+
+  <section class="level" aria-labelledby="caps-title">
+    <h2 id="caps-title">Niveau 4 — les capstones</h2>
+    <p>Ils n'apprennent aucun sort : ils vendent un passif, donc ils n'apparaissent pas dans les lancers. Leurs achats sont lus dans des matchs enregistrés sur ce même contenu, nommés sur chaque carte. « Seul » compte les matchs où un seul camp l'a acheté ; ce camp a souvent atteint le niveau 4 parce qu'il menait déjà, donc la victoire le flatte.</p>
+    <div class="caps" id="caps"></div>
+  </section>
+
+  <p class="footnote" id="footnote"></p>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const data = JSON.parse(document.getElementById("data").textContent);
+const pct = (x) => x == null ? "—" : Math.round(x * 100) + " %";
+const fmt = (n) => n.toLocaleString("fr-CA");
+
+function sinceText() {
+  if (!data.before) return null;
+  if (!data.before.comparable) return `pas comparé au ${data.before.label} : l'explorateur a changé`;
+  return `comparé au ${data.before.label} (${data.before.contentHash})`;
+}
+document.getElementById("eyebrow").textContent = [`Contenu ${data.contentHash}`, data.note, sinceText()].filter(Boolean).join(" · ");
+document.getElementById("runmeta").textContent =
+  `Lancers comptés sur ${data.castMatches} matchs indépendants de l'explorateur (${fmt(data.totalVariety)} sorts résolus) et ${data.mirrorCastMatches} matchs greedy contre greedy (${fmt(data.totalMirror)} sorts résolus) ; durées sur les ${data.matches} matchs joués, sièges inversés compris. Mêmes seeds que le tuner (benchmark).`;
+document.getElementById("stats").innerHTML = [
+  [data.rounds.toFixed(1), "rondes, explorateur"],
+  [pct(data.capShare), "à la limite de 20, explorateur"],
+  [data.mirrorRounds.toFixed(1), "rondes, greedy"],
+  [pct(data.mirrorCapShare), "à la limite de 20, greedy"],
+].map(([v, l]) => `<div class="stat"><b class="num">${v}</b><span>${l}</span></div>`).join("");
+
+const LEVELS = {
+  1: ["Niveau 1 — l'ouverture", "Achetés au round 1. Chaque créature en prend un, et c'est le choix qui ouvre la suite. Réglés à la main depuis le 9 octobre : le tuner n'y touche plus."],
+  2: ["Niveau 2", "Achetés au milieu de la partie, chacun derrière son paquet de niveau 1."],
+  3: ["Niveau 3", "Achetés tard : moins de rounds pour les lancer, donc toujours moins de lancers. Comparez les sorts d'un même paquet entre eux plutôt qu'aux autres niveaux."],
+};
+
+function verdicts(s, p) {
+  const out = [];
+  if (s.landed < 20) out.push(["bad", "Presque jamais lancé"]);
+  if (p.total >= 20 && s.share >= 0.8) out.push(["bad", "Écrase son paquet"]);
+  else if (p.total >= 20 && s.share != null && s.share <= 0.2) out.push(["warn", "Éclipsé dans son paquet"]);
+  if (s.global >= 0.1) out.push(["info", `Partout : ${pct(s.global)} de tous les lancers`]);
+  if (s.greedy >= 800) out.push(["info", "Favori de greedy"]);
+  return out;
+}
+function packageFlags(p) {
+  const out = [];
+  if (p.greedyTotal < 20) out.push(["warn", "Greedy ne l'achète presque pas"]);
+  if (p.wilsonTop != null && p.wilsonTop > 0.8) out.push(["bad", "Pénalisé par le tuner"]);
+  return out;
+}
+const pills = (list) => list.map(([k, t]) => `<span class="pill ${k}">${t}</span>`).join("");
+
+function delta(s) {
+  if (!data.before?.comparable) return '<span class="delta flat">—</span>';
+  if (!s.before) return '<span class="delta new">nouveau</span>';
+  if (s.share == null || s.before.share == null) return '<span class="delta flat">—</span>';
+  const d = Math.round((s.share - s.before.share) * 100);
+  if (Math.abs(d) < 3) return `<span class="delta flat">≈ ${Math.round(s.before.share * 100)} %</span>`;
+  return `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : "−"}${Math.abs(d)} pts</span>`;
+}
+
+function fillClass(share) {
+  if (share == null) return "";
+  if (share >= 0.8) return "hot";
+  return share <= 0.2 ? "cold" : "";
+}
+
+function spellRow(s, verdictList) {
+  return `<tr class="${s.landed < 30 ? "thin" : ""}">
+    <td><div class="sname">${s.name}</div><div class="what">${s.who} — ${s.what}${s.crit ? ` · crit ${s.crit} %` : ""}</div></td>
+    <td class="num">${s.cost}</td>
+    <td class="num">${fmt(s.landed)}</td>
+    <td><div class="bar"><div class="track"><div class="fill ${fillClass(s.share)}" style="width:${Math.round((s.share ?? 0) * 100)}%"></div></div><span class="num">${pct(s.share)}</span></div></td>
+    <td>${delta(s)}</td>
+    <td class="num">${fmt(s.greedy)}</td>
+    <td class="num">${pct(s.win)}</td>
+    <td>${pills(verdictList) || '<span class="pill good">Rien à signaler</span>'}</td>
+  </tr>`;
+}
+
+// A package's heading row and its spells' rows, or nothing when the filter keeps only what needs a look.
+function packageRows(p, onlyIssues) {
+  const flags = packageFlags(p);
+  const spells = p.spells.map((s) => ({ s, v: verdicts(s, p) }));
+  const needsLook = flags.length || spells.some((r) => r.v.some(([k]) => k !== "info"));
+  if (onlyIssues && !needsLook) return "";
+  const parent = p.parent ? `après ${p.parent}` : `famille ${p.family}`;
+  const head = `<tr class="pkg"><td colspan="8"><span class="pname">${p.name}</span><span class="pinfo">${parent} · +${p.initiative} initiative · ${fmt(p.total)} lancés (explorateur) · ${fmt(p.greedyTotal)} (greedy)</span> ${pills(flags)}</td></tr>`;
+  return head + spells.map(({ s, v }) => spellRow(s, v)).join("");
+}
+
+function levelSection(level, rows) {
+  const [title, blurb] = LEVELS[level];
+  const since = data.before ? data.before.label : "précédent";
+  const section = document.createElement("section");
+  section.className = "level";
+  section.innerHTML = `<h2>${title}</h2><p>${blurb}</p><div class="table-box"><table>
+    <thead><tr><th>Sort</th><th class="num">Coût</th><th class="num">Lancés (explorateur)</th><th>Part dans le paquet</th><th>Depuis le ${since}</th><th class="num">Lancés (greedy)</th><th class="num">Victoire quand lancé</th><th>À retenir</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  return section;
+}
+
+function render(onlyIssues) {
+  const host = document.getElementById("levels");
+  host.innerHTML = "";
+  for (const level of [1, 2, 3]) {
+    const rows = data.packages.filter((p) => p.level === level).map((p) => packageRows(p, onlyIssues)).join("");
+    if (rows) host.appendChild(levelSection(level, rows));
+  }
+  const start = data.starting.map((s) => `${s.name} ${fmt(s.landed)} (greedy ${fmt(s.greedy)})`).join(" · ");
+  document.getElementById("footnote").textContent = `Kit de départ, que toutes les créatures connaissent : ${start}.`;
+}
+
+function capstones() {
+  const line = (r) => `${fmt(r.bought)} achats · seul ${r.aloneWon}/${r.alone}`;
+  const host = document.getElementById("caps");
+  host.closest("section").hidden = !data.capstones.length;
+  host.innerHTML = data.capstones.map((c) => `
+    <article class="cap">
+      <h3>${c.name} <span class="pinfo">famille ${c.family}</span></h3>
+      <div class="passive">${c.passive}</div>
+      <dl>${c.runs.length ? c.runs.map((r) => `<dt>${r.label}, ${fmt(r.matches)} matchs</dt><dd class="num">${line(r)}</dd>`).join("") : "<dt>Aucun match enregistré</dt><dd>—</dd>"}</dl>
+    </article>`).join("");
+}
+
+function summary() {
+  const all = data.packages.flatMap((p) => p.spells.map((s) => ({ ...s, pkg: p })));
+  const crush = all.filter((s) => s.pkg.total >= 20 && s.share >= 0.8).sort((a, b) => b.share - a.share);
+  const dead = all.filter((s) => s.landed < 20).sort((a, b) => a.landed - b.landed);
+  const ignored = data.packages.filter((p) => p.greedyTotal < 20).sort((a, b) => a.greedyTotal - b.greedyTotal);
+  const moved = all.filter((s) => data.before?.comparable && s.before && s.before.share != null && s.share != null)
+    .map((s) => ({ ...s, d: s.share - s.before.share }))
+    .filter((s) => Math.abs(s.d) >= 0.15)
+    .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 6);
+  const li = (items) => items.map((t) => `<li>${t}</li>`).join("") || "<li>Aucun</li>";
+  const cards = [
+    ["var(--bad)", "Presque jamais lancés", `Moins de 20 lancers en ${data.castMatches} matchs, même avec le hasard de l'explorateur.`,
+      li(dead.map((s) => `${s.name} <small>${s.pkg.name} · ${s.landed} lancers</small>`))],
+    ["var(--bad)", "Écrasent leur paquet", "80 % ou plus des lancers de leur paquet : l'autre sort est vendu pour rien.",
+      li(crush.map((s) => `${s.name} <small>${s.pkg.name} · ${pct(s.share)}</small>`))],
+    ["var(--warn)", "Paquets que greedy n'achète pas", "Moins de 20 lancers dans le miroir greedy : le bot qui joue au mieux ne les choisit pas.",
+      li(ignored.map((p) => `${p.name} <small>niveau ${p.level} · ${p.greedyTotal} lancers</small>`))],
+    ["var(--accent)", "Ce qui a le plus bougé", "Part dans le paquet, écart d'au moins 15 points avec le rapport précédent.",
+      li(moved.map((s) => `${s.name} <small>${s.pkg.name} · ${pct(s.before.share)} → ${pct(s.share)}</small>`))],
+  ];
+  document.getElementById("summary").innerHTML = cards.map(([c, t, d, l]) =>
+    `<article class="card"><h3><span class="dot" style="background:${c}"></span>${t}</h3><p class="meta">${d}</p><ul>${l}</ul></article>`).join("");
+}
+
+function setFilter(onlyIssues) {
+  document.getElementById("f-all").setAttribute("aria-pressed", String(!onlyIssues));
+  document.getElementById("f-issues").setAttribute("aria-pressed", String(onlyIssues));
+  render(onlyIssues);
+}
+document.getElementById("f-all").addEventListener("click", () => setFilter(false));
+document.getElementById("f-issues").addEventListener("click", () => setFilter(true));
+summary();
+render(false);
+capstones();
+</script>

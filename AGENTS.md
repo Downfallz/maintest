@@ -38,8 +38,9 @@ learning/                      The Python training project (uv, ruff, pytest) an
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
 infra/                         The hosted table on Azure (ADR 0080-0082): main.bicep, the one-time bootstrap.sh, and README.md.
 Dockerfile                     The table's image, built and tried by .github/workflows/deploy.yml before it is pushed and deployed.
-scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md), and
-                               sweep-weight.py, which measures one agent scoring weight alone (ADR 0037).
+scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md),
+                               sweep-weight.py, which measures one agent scoring weight alone (ADR 0037), and
+                               spells-report/, the page of the spells the bots cast and leave (/spells-report).
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
