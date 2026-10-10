@@ -230,6 +230,22 @@ public sealed class HeuristicAgentTests
     }
 
     /// <summary>
+    /// A package is read against what the team is buying this round (ADR 0108). On its own Guard's package beats
+    /// Jab's for Two, its defense buff on top of the initiative both buy. With One buying Guard's package this
+    /// round, Guard adds nothing more, both are worth their initiative alone, and the tie keeps the first option.
+    /// </summary>
+    [Fact]
+    public void Evolution_reads_a_package_against_what_the_team_is_buying_this_round()
+    {
+        var board = Board(enemyHealth: 20);
+        var options = new EvolutionOptions(1, [new EvolutionOption(Two, [TestContent.JabPack, TestContent.GuardPack])]);
+
+        Agent.DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(Two, TestContent.GuardPack));
+        Agent.DecideEvolution(board with { EvolutionChoices = [new EvolutionChoice(One, TestContent.GuardPack)] }, options).Choice
+            .ShouldBe(new EvolutionChoice(Two, TestContent.JabPack));
+    }
+
+    /// <summary>
     /// The reordering the initiative weight exists for (ADR 0018): in this catalogue Guard is worth 1 in
     /// combat against Strike's 3.15, and wins the pick anyway because unlocking it buys 6 initiative. At a
     /// weight of zero the same board picks Strike, so it is the price and not the ordering that decides.
