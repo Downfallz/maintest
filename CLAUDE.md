@@ -11,7 +11,8 @@
   `component-designer` (what is in the box), `rulebook-writer` (the rulebook and the player aid),
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
 - Skills in `.claude/skills/`: `/adr` (create a decision record), `/new-aggregate` (scaffold an aggregate with
-  tests), `/verify` (build, tests, format check, the CI gate).
+  tests), `/verify` (build, tests, format check, the CI gate), `/spells-report` (the spells the bots cast and
+  leave, package by package, rebuilt and republished to the owner's report page).
 - `.claude/hooks/session-start.sh` installs the .NET SDK on Claude Code on the web when it is missing. It
   tries Microsoft's `dotnet-install.sh` first, then the distribution's own `dotnet-sdk-<channel>` package,
   because a session's network policy decides which of the two is reachable. If neither works it says so and
