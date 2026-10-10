@@ -1,11 +1,10 @@
 {
-  "why": "The lookahead's weights refitted with the anticipation of ADR 0104 on. lookahead-37 was searched without it, and on the 60 unseen seeds 995377 to 995436 it beats Greedy 82 matches in 120 without it and 74 with it, a paired difference of -0.058 (-0.145 to +0.028): not settled, and measured on weights that never played with it. So this rung starts from lookahead-37 and plays every candidate as the lookahead does on main now, anticipating, against Greedy. On the first 120 benchmark seeds rather than 60, since the best of 16 on 60 scored 0.758 where the hold-out read 0.688; and 4 rounds of 8, which the search spread over runners (#310) and the faster scorer (#308) make about an hour. What would make it a rung: a set that, played with the anticipation, beats lookahead-37 played without it against Greedy on the 60 unseen seeds, 82 of 120. If none does, the anticipation is switched off for the lookahead.",
-  "initial": "learning/weights/lookahead/lookahead-37.json",
+  "why": "A new exploiter for the tuner's panel, against the Greedy of ADR 0108, which reads a purchase against what its team is buying and now opens Brute + Warped instead of two Brutes. The panel was searched against the old Greedy and has gone stale against the new one: on content 95a78999 and the 200 benchmark seeds mirrored, mixture-mean beats it 0.748 in 10.1 rounds, kill-first 0.540, search-21 0.480, search-19 0.403, and search-23, the newest, 0.200. The exploit term reads the best of the panel, so it is reading one set while three of five have stopped being exploiters at all. This rung starts from mixture-mean, the one that still is, against Greedy alone, because Greedy is the player the exploit term measures the content against (ADR 0052); search-23 is the hold-out's check, so a set that only learned Greedy shows. 5 rounds of 12, seed 0. What would make it a rung: a set that beats mixture-mean's 0.748 against Greedy on seeds it never saw, without falling below it against search-23. Whatever it finds joins the panel rather than replacing a member (ADR 0052).",
+  "initial": "learning/weights/mixture-mean.json",
   "opponent": "greedy",
-  "check_opponent": "none",
-  "kind": "lookahead",
-  "seeds": "learning/experiments/lookahead-seeds-120.json",
-  "iterations": 4,
-  "population": 8,
+  "check_opponent": "heuristic:learning/weights/search-23.json",
+  "kind": "heuristic",
+  "iterations": 5,
+  "population": 12,
   "seed": 0
 }
