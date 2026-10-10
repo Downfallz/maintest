@@ -112,3 +112,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0104](0104-a-creature-saves-for-the-package-it-would-buy.md) | A creature saves for the package it would buy the round before it may buy | Proposed |
 | [0105](0105-the-engine-plays-the-tables-round-cap.md) | The engine plays the table's round cap of twenty | Accepted |
 | [0106](0106-titan-sunders-defense-instead-of-ignoring-stuns.md) | Make Titan's passive sunder defense instead of ignoring stuns | Proposed |
+| [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) | A creature may declare a spell it cannot pay for yet | Accepted |

@@ -19,7 +19,7 @@ Fill the setup table's values in before the first Match.
 | 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Tier, **face down**, both Players at once. **One Tier a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** buys them all. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
 | 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
-| 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
+| 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known; short of Energy, it Fizzles at its slot. | 5.6 |
 | 7 | Combat | **Activation** | Walk the timeline **once**. At each slot: can it act? If not, flip it with no targets: **Fizzle**. Otherwise choose targets on the board **as it stands**, flip the card and name them together, and **resolve it now**, before the next slot. A Team wiped **ends the Match here**. | 5.7, 5.8 |
 | 8 | End | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
 | 9 | End | **Finalization** | Check the **Round cap**. Advance the Round marker or end the Match. | 5.10 |

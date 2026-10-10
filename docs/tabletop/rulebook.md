@@ -475,21 +475,19 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 Player.
 **Result.** Take one card from your hand and put it **face down** in that Creature's intent slot. An Intent is
 legal when that Creature knows the Spell — it is a starting Spell, or one of the Creature's package cards
-teaches it — and its Energy rail is at or above the Spell's printed cost. Every Creature on the timeline gets
-exactly one.
+teaches it. Its Energy does not have to cover the cost yet: an ally acting earlier may give it Energy, an
+**Overdrive** for one. If its rail is still below the cost when its slot comes up, it Fizzles. Every Creature
+on the timeline gets exactly one.
 
 **Declaring is not reserving.** The Energy is not spent now. It is checked again when the Creature's slot
 comes up and spent when its action resolves, and by then it may be gone. **Nor can you change your mind:** at
 your slot you choose targets, never another Spell.
 
-Your opponent can count the cost against your public Energy rail without seeing your card. That is why the
-Energy rails stay face up.
+The Energy rails stay face up, because the check at the slot reads them.
 
 > **Example.** Creature 1 has Energy 3 and knows, among others, Emberstorm (cost 3), Strike (cost 2) and
-> Crushing Stomp (cost 4). It may declare Emberstorm or Strike. It may not declare Crushing Stomp: 3 is less
-> than 4. Player 1 declares Emberstorm.
-> Player 2 can see the 3 on the rail, so they know Crushing Stomp is not under that card. They do not know
-> whether Emberstorm or Strike is.
+> Crushing Stomp (cost 4). It may declare any of them. Crushing Stomp would Fizzle unless an ally gives it a
+> point of Energy before its slot. Player 1 declares Emberstorm.
 > Later this Round, Creature 5 acts before Creature 1 and casts **Soul Feast** on it: `Damage 7` and
 > **`Energy -3`**. Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Emberstorm's 3:
 > its card is flipped with no targets and Fizzles. Strike's 2 would have Fizzled the same way. See
@@ -684,7 +682,7 @@ first one that applies ends the action.
 | 1 | **The Creature is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
 | 2 | **The Creature is stunned.** | A **Crushing Stomp**, a **Crash**, a **Deep Freeze** or a **Paralyzing Barb** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
 | 3 | **The Creature no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
-| 4 | **The Creature cannot afford the cost now.** | A **Claim**, a **Blood Hunt** or a **Soul Feast** in an earlier slot drained its Energy below the cost. They are the only Spells in the catalogue that take Energy. |
+| 4 | **The Creature cannot afford the cost now.** | It was declared on a Spell it could not pay for, and no ally gave it the Energy in time. Or a **Claim**, a **Blood Hunt** or a **Soul Feast** in an earlier slot drained its Energy below the cost; they are the only Spells in the catalogue that take Energy. |
 | 5 | **The Spell has no legal target.** | Nothing on the board is a target its card allows. With today's cards this cannot happen: an `Ally` or `Self` Spell always has its living caster, and an `Enemy` Spell runs out of targets only when the other Team is wiped, which has already ended the Match ([7.2](#72-the-end-of-a-match)). |
 
 Causes 1, 2 and 4 are the ones you will see. Causes 3 and 5 exist in the rules and cannot be reached with

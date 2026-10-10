@@ -12,7 +12,7 @@ namespace DownfallArena.Domain.Tests.Matches.Rules.Combat;
 public sealed class IntentRulesTests
 {
     [Fact]
-    public void A_player_declares_a_known_affordable_spell_for_an_own_living_unstunned_creature()
+    public void A_player_declares_a_known_spell_for_an_own_living_unstunned_creature()
     {
         var living = Arena.FourCreatures();
         Arena.Find(living, Arena.Archer).TakeDamage(99);
@@ -26,16 +26,17 @@ public sealed class IntentRulesTests
         Validate(PlayerSlot.Player1, Arena.Archer, Arena.Strike, creatures).Error.ShouldBe(CombatErrors.ActorDead);
         Validate(PlayerSlot.Player2, Arena.Ghoul, Arena.Strike, creatures).Error.ShouldBe(CombatErrors.ActorStunned);
         Validate(PlayerSlot.Player1, Arena.Knight, Arena.Guard, creatures).Error.ShouldBe(CombatErrors.SpellNotKnown);
-        Validate(PlayerSlot.Player2, Arena.Wraith, Arena.Guard, creatures).Error.ShouldBe(CombatErrors.NotEnoughEnergy);
     }
 
+    /// <summary>
+    /// The price is checked when the slot comes up, not when the card goes down (ADR 0107): a creature short of
+    /// energy now may be given it by an ally acting earlier, and the plan is the player's to make.
+    /// </summary>
     [Fact]
-    public void Energy_makes_a_spell_affordable()
+    public void A_spell_the_creature_cannot_afford_yet_may_still_be_declared()
     {
         var living = Arena.FourCreatures();
-        var wraith = Arena.Find(living, Arena.Wraith);
-        wraith.Learn(Arena.Guard);
-        wraith.GainEnergy(1);
+        Arena.Find(living, Arena.Wraith).Learn(Arena.Guard);
 
         Validate(PlayerSlot.Player2, Arena.Wraith, Arena.Guard, Arena.Snapshots(living)).IsSuccess.ShouldBeTrue();
     }

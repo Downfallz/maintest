@@ -9,8 +9,13 @@
 // One row per allied Creature: what it knows, which of those it could cast right now, and whether it has
 // already declared. `intent` is the Intent section of the options, absent outside intent selection -- and when
 // it is absent nothing is castable, which is the truth rather than a fallback.
+//
+// `short` marks a spell the creature knows and cannot pay for now, which the host still offers (ADR 0107): it may
+// be declared on a plan -- an ally's Overdrive earlier in the round -- and fizzles at its slot if the energy never
+// comes. It stays drawn like a card that cannot be cast, so the plan is the player's choice and not the default.
 export function handRows(allies, intent, intents) {
   const castable = new Map((intent?.creatures ?? []).map(one => [one.creature, new Set(one.castableSpells ?? [])]));
+  const short = new Map((intent?.creatures ?? []).map(one => [one.creature, new Set(one.unaffordableSpells ?? [])]));
   const declared = declaredBy(intents);
   return (allies ?? []).map(creature => ({
     creature: creature?.id,
@@ -18,8 +23,29 @@ export function handRows(allies, intent, intents) {
     spells: (creature?.knownSpells ?? []).map(spell => ({
       spell,
       castable: castable.get(creature?.id)?.has(spell) === true,
+      short: short.get(creature?.id)?.has(spell) === true,
     })),
   }));
+}
+
+// Every spell the host lets this creature declare, the ones it can pay for first: the order the number keys
+// follow, so a key never lands on a plan before the casts that need none.
+export function declarableSpells(option) {
+  return [...(option?.castableSpells ?? []), ...(option?.unaffordableSpells ?? [])];
+}
+
+// How much energy a spell is short of, for its card and its Declare button; 0 when it is not short, and null when
+// either number is unknown -- a catalogue that failed to load leaves the page on raw ids, and a guess of 0 would
+// tell a player a spell the host calls short needs nothing.
+export function energyShortfall(cost, energy) {
+  if (!Number.isFinite(cost) || !Number.isFinite(energy)) return null;
+  return Math.max(0, cost - energy);
+}
+
+// The shortfall as the host reads it: its guide carries the energy left after paying, below zero when short.
+// Null when the guide does not speak to it.
+export function guidedShortfall(guide) {
+  return Number.isFinite(guide?.energyAfterCost) ? Math.max(0, -guide.energyAfterCost) : null;
 }
 
 // The Creatures that have something face down, from the seat's own intents.

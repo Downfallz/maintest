@@ -1,3 +1,4 @@
+using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
@@ -78,6 +79,24 @@ public sealed class PlayerOptionsProjectionTests
 
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Quick)).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
+    }
+
+    /// <summary>On one energy a round, Slam's 2 is out of reach at round 1: offered apart, to plan on (ADR 0107).</summary>
+    [Fact]
+    public void Intent_lists_the_spells_a_creature_cannot_pay_for_yet_apart_from_the_ones_it_can()
+    {
+        var match = new MatchStore().Started(RuleSet.Create(2, 1, 2, 30, 2.0));
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.BothPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        MatchStore.ChooseStandard(match);
+
+        var option = Options(match, PlayerSlot.Player1).Intent.ShouldNotBeNull().Creatures.Single(one => one.Creature == CreatureId.From(1));
+
+        option.CastableSpells.ShouldBe([TestContent.Jab, TestContent.Strike]);
+        option.UnaffordableSpells.ShouldBe([TestContent.Slam]);
+        PlayerDecisionCheck.Validate(Options(match, PlayerSlot.Player1), PlayerDecision.DeclareIntent(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]

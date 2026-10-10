@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { backText, declaredBy, faceDown, handRows } from './hand.js';
+import { backText, declarableSpells, declaredBy, energyShortfall, faceDown, guidedShortfall, handRows } from './hand.js';
 
 const allies = [
   { id: 1, knownSpells: ['spell:basic_attack:v1', 'spell:heavy_strike:v1'] },
@@ -17,9 +17,33 @@ test('the hand holds every known spell, with the castable ones marked', () => {
 
   assert.deepEqual(rows.map(row => row.creature), [1, 2]);
   assert.deepEqual(rows[0].spells, [
-    { spell: 'spell:basic_attack:v1', castable: true },
-    { spell: 'spell:heavy_strike:v1', castable: false },
+    { spell: 'spell:basic_attack:v1', castable: true, short: false },
+    { spell: 'spell:heavy_strike:v1', castable: false, short: false },
   ]);
+});
+
+// A spell the creature cannot pay for now is still offered by the host (ADR 0107), marked apart from the castable
+// ones: not castable, but short, which is what lets the page draw it dim and still take a tap on it.
+test('a spell the creature cannot pay for yet is marked short, never castable', () => {
+  const intent = { creatures: [{ creature: 1, castableSpells: ['spell:basic_attack:v1'], unaffordableSpells: ['spell:heavy_strike:v1'] }] };
+
+  const rows = handRows(allies, intent, []);
+
+  assert.deepEqual(rows[0].spells[1], { spell: 'spell:heavy_strike:v1', castable: false, short: true });
+  assert.deepEqual(declarableSpells(intent.creatures[0]), ['spell:basic_attack:v1', 'spell:heavy_strike:v1']);
+  assert.deepEqual(declarableSpells(undefined), []);
+  assert.equal(energyShortfall(3, 1), 2);
+  assert.equal(energyShortfall(1, 4), 0);
+});
+
+// A catalogue that failed to load leaves the page on raw ids: no cost, and a guess of 0 would tell the player a
+// spell the host calls short needs nothing. The host's guide is read first, and unknown stays unknown.
+test('a shortfall nobody can compute is unknown, never zero, and the host guide wins', () => {
+  assert.equal(energyShortfall(undefined, 1), null);
+  assert.equal(energyShortfall(3, undefined), null);
+  assert.equal(guidedShortfall({ energyAfterCost: -2 }), 2);
+  assert.equal(guidedShortfall({ energyAfterCost: 1 }), 0);
+  assert.equal(guidedShortfall(undefined), null);
 });
 
 // Outside intent selection there is no Intent section, and then nothing is castable -- which is the truth

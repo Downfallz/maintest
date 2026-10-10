@@ -34,8 +34,8 @@ listed in [spells.md](spells.md).
   round, evolution picks per opportunity, the first evolution round and the interval between opportunities,
   the round cap, and the critical multiplier (ADR 0056).
 
-- Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell and can
-  afford it; the sub-phase completes when every creature on the timeline has one. Binding targets checks the
+- Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell, whatever
+  its energy: the price is checked when its slot comes up (ADR 0107); the sub-phase completes when every creature on the timeline has one. Binding targets checks the
   spell's targeting spec fully (count, duplicates, origin, existence, death) against the board as it stands,
   any failure blocks the action, and the action resolves as soon as its targets are confirmed (ADR 0083). A
   creature that cannot act when its slot comes up -- dead, stunned, unable to pay or to cast, or with no legal
@@ -137,7 +137,8 @@ listed in [spells.md](spells.md).
       side holds two places in a tie passes through it without asking anyone.
 3. **Combat**
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
-      valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
+      valid if the Creature knows the Spell, whether or not it can pay for it yet: the cost is checked when its
+      slot comes up, and a Creature still short then fizzles (ADR 0107). Completes when every such Creature
       has an Intent.
    2. `Activation` (ADR 0083): following the timeline, one slot at a time, the Creature's Intent is revealed,
       its owner chooses targets on the board as it stands, and **the action resolves as soon as they are

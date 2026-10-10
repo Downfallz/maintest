@@ -464,6 +464,34 @@ test('an already visible hand does not move when the question changes', () => {
   assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
+test('a spell the creature cannot pay for yet stays dim, says what it is short, and can still be declared', async () => {
+  const p = page(); const sent = [];
+  p.view.board.allies[0].energy = 1;
+  p.view.options = { intent: { creatures: [{ creature: 1, castableSpells: ['one'], unaffordableSpells: ['two'] }] } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  const short = held(p).children[1];
+  assert.match(short.className, /\bshort\b/);
+  assert.doesNotMatch(short.className, /\bcastable\b/, 'drawn like a card that cannot be cast');
+  assert.match(short.className, /\boffered\b/);
+  assert.match(short.textContent, /2 energy short now/);
+  short.events.click();
+  assert.equal(p.state.chosen, 'two');
+  assert.equal(p.nodes.choices.children[0].textContent, 'Declare Second card · may fizzle');
+  assert.match(held(p).children[1].textContent, /fizzles unless it gains 2 energy first/);
+  await p.nodes.choices.children[0].click();
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
+});
+
+test('a short spell whose cost the page cannot read warns without claiming a number', () => {
+  const p = page();
+  p.state.cards.delete('two');
+  p.view.options = { intent: { creatures: [{ creature: 1, castableSpells: ['one'], unaffordableSpells: ['two'] }] } };
+  p.draw();
+  const short = held(p).children[1];
+  assert.match(short.textContent, /Not enough energy now/);
+  assert.doesNotMatch(short.textContent, /0 energy short/);
+});
+
 test('a card tap selects; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
