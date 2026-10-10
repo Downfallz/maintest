@@ -66,7 +66,8 @@ details.guide summary { cursor: pointer; font-family: var(--display); font-weigh
 .guide dd { margin: 0; color: var(--muted); }
 @media (max-width: 640px) { .guide dl { grid-template-columns: 1fr; } .guide dd { margin-bottom: 8px; } }
 
-.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border: 0; margin: 0; padding: 0; min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .controls button { font: 600 0.9rem var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
 .controls button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -143,10 +144,11 @@ tr.thin td { opacity: 0.62; }
     </dl>
   </details>
 
-  <div class="controls" role="group" aria-label="Filtre">
+  <fieldset class="controls">
+    <legend class="sr-only">Filtre</legend>
     <button type="button" id="f-all" aria-pressed="true">Tous les sorts</button>
     <button type="button" id="f-issues" aria-pressed="false">Seulement ceux à regarder</button>
-  </div>
+  </fieldset>
 
   <div id="levels" class="level"></div>
 
@@ -165,7 +167,12 @@ const data = JSON.parse(document.getElementById("data").textContent);
 const pct = (x) => x == null ? "—" : Math.round(x * 100) + " %";
 const fmt = (n) => n.toLocaleString("fr-CA");
 
-document.getElementById("eyebrow").textContent = [`Contenu ${data.contentHash}`, data.note, data.before ? (data.before.comparable ? `comparé au ${data.before.label} (${data.before.contentHash})` : `pas comparé au ${data.before.label} : l'explorateur a changé`) : null].filter(Boolean).join(" · ");
+function sinceText() {
+  if (!data.before) return null;
+  if (!data.before.comparable) return `pas comparé au ${data.before.label} : l'explorateur a changé`;
+  return `comparé au ${data.before.label} (${data.before.contentHash})`;
+}
+document.getElementById("eyebrow").textContent = [`Contenu ${data.contentHash}`, data.note, sinceText()].filter(Boolean).join(" · ");
 document.getElementById("runmeta").textContent =
   `Lancers comptés sur ${data.castMatches} matchs indépendants de l'explorateur (${fmt(data.totalVariety)} sorts résolus) et ${data.mirrorCastMatches} matchs greedy contre greedy (${fmt(data.totalMirror)} sorts résolus) ; durées sur les ${data.matches} matchs joués, sièges inversés compris. Mêmes seeds que le tuner (benchmark).`;
 document.getElementById("stats").innerHTML = [
@@ -207,42 +214,53 @@ function delta(s) {
   return `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : "−"}${Math.abs(d)} pts</span>`;
 }
 
+function fillClass(share) {
+  if (share == null) return "";
+  if (share >= 0.8) return "hot";
+  return share <= 0.2 ? "cold" : "";
+}
+
+function spellRow(s, verdictList) {
+  return `<tr class="${s.landed < 30 ? "thin" : ""}">
+    <td><div class="sname">${s.name}</div><div class="what">${s.who} — ${s.what}${s.crit ? ` · crit ${s.crit} %` : ""}</div></td>
+    <td class="num">${s.cost}</td>
+    <td class="num">${fmt(s.landed)}</td>
+    <td><div class="bar"><div class="track"><div class="fill ${fillClass(s.share)}" style="width:${Math.round((s.share ?? 0) * 100)}%"></div></div><span class="num">${pct(s.share)}</span></div></td>
+    <td>${delta(s)}</td>
+    <td class="num">${fmt(s.greedy)}</td>
+    <td class="num">${pct(s.win)}</td>
+    <td>${pills(verdictList) || '<span class="pill good">Rien à signaler</span>'}</td>
+  </tr>`;
+}
+
+// A package's heading row and its spells' rows, or nothing when the filter keeps only what needs a look.
+function packageRows(p, onlyIssues) {
+  const flags = packageFlags(p);
+  const spells = p.spells.map((s) => ({ s, v: verdicts(s, p) }));
+  const needsLook = flags.length || spells.some((r) => r.v.some(([k]) => k !== "info"));
+  if (onlyIssues && !needsLook) return "";
+  const parent = p.parent ? `après ${p.parent}` : `famille ${p.family}`;
+  const head = `<tr class="pkg"><td colspan="8"><span class="pname">${p.name}</span><span class="pinfo">${parent} · +${p.initiative} initiative · ${fmt(p.total)} lancés (explorateur) · ${fmt(p.greedyTotal)} (greedy)</span> ${pills(flags)}</td></tr>`;
+  return head + spells.map(({ s, v }) => spellRow(s, v)).join("");
+}
+
+function levelSection(level, rows) {
+  const [title, blurb] = LEVELS[level];
+  const since = data.before ? data.before.label : "précédent";
+  const section = document.createElement("section");
+  section.className = "level";
+  section.innerHTML = `<h2>${title}</h2><p>${blurb}</p><div class="table-box"><table>
+    <thead><tr><th>Sort</th><th class="num">Coût</th><th class="num">Lancés (explorateur)</th><th>Part dans le paquet</th><th>Depuis le ${since}</th><th class="num">Lancés (greedy)</th><th class="num">Victoire quand lancé</th><th>À retenir</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+  return section;
+}
+
 function render(onlyIssues) {
   const host = document.getElementById("levels");
   host.innerHTML = "";
   for (const level of [1, 2, 3]) {
-    const pkgs = data.packages.filter((p) => p.level === level);
-    let rows = "";
-    for (const p of pkgs) {
-      const flags = packageFlags(p);
-      const spellRows = p.spells.map((s) => ({ s, v: verdicts(s, p) }));
-      const keep = !onlyIssues || flags.length || spellRows.some((r) => r.v.some(([k]) => k !== "info"));
-      if (!keep) continue;
-      const parent = p.parent ? `après ${p.parent} · ` : `famille ${p.family} · `;
-      rows += `<tr class="pkg"><td colspan="8"><span class="pname">${p.name}</span><span class="pinfo">${parent}+${p.initiative} initiative · ${fmt(p.total)} lancés (explorateur) · ${fmt(p.greedyTotal)} (greedy)</span> ${pills(flags)}</td></tr>`;
-      for (const { s, v } of spellRows) {
-        const cls = s.share == null ? "" : s.share >= 0.8 ? "hot" : s.share <= 0.2 ? "cold" : "";
-        const thin = s.landed < 30 ? "thin" : "";
-        rows += `<tr class="${thin}">
-          <td><div class="sname">${s.name}</div><div class="what">${s.who} — ${s.what}${s.crit ? ` · crit ${s.crit} %` : ""}</div></td>
-          <td class="num">${s.cost}</td>
-          <td class="num">${fmt(s.landed)}</td>
-          <td><div class="bar"><div class="track"><div class="fill ${cls}" style="width:${Math.round((s.share ?? 0) * 100)}%"></div></div><span class="num">${pct(s.share)}</span></div></td>
-          <td>${delta(s)}</td>
-          <td class="num">${fmt(s.greedy)}</td>
-          <td class="num">${s.win == null ? "—" : pct(s.win)}</td>
-          <td>${pills(v) || '<span class="pill good">Rien à signaler</span>'}</td>
-        </tr>`;
-      }
-    }
-    if (!rows) continue;
-    const [title, blurb] = LEVELS[level];
-    const section = document.createElement("section");
-    section.className = "level";
-    section.innerHTML = `<h2>${title}</h2><p>${blurb}</p><div class="table-box"><table>
-      <thead><tr><th>Sort</th><th class="num">Coût</th><th class="num">Lancés (explorateur)</th><th>Part dans le paquet</th><th>Depuis le ${data.before ? data.before.label : "précédent"}</th><th class="num">Lancés (greedy)</th><th class="num">Victoire quand lancé</th><th>À retenir</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
-    host.appendChild(section);
+    const rows = data.packages.filter((p) => p.level === level).map((p) => packageRows(p, onlyIssues)).join("");
+    if (rows) host.appendChild(levelSection(level, rows));
   }
   const start = data.starting.map((s) => `${s.name} ${fmt(s.landed)} (greedy ${fmt(s.greedy)})`).join(" · ");
   document.getElementById("footnote").textContent = `Kit de départ, que toutes les créatures connaissent : ${start}.`;
