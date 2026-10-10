@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { backText, declarableSpells, declaredBy, energyShortfall, faceDown, handRows } from './hand.js';
+import { backText, declarableSpells, declaredBy, energyShortfall, faceDown, guidedShortfall, handRows } from './hand.js';
 
 const allies = [
   { id: 1, knownSpells: ['spell:basic_attack:v1', 'spell:heavy_strike:v1'] },
@@ -34,6 +34,16 @@ test('a spell the creature cannot pay for yet is marked short, never castable', 
   assert.deepEqual(declarableSpells(undefined), []);
   assert.equal(energyShortfall(3, 1), 2);
   assert.equal(energyShortfall(1, 4), 0);
+});
+
+// A catalogue that failed to load leaves the page on raw ids: no cost, and a guess of 0 would tell the player a
+// spell the host calls short needs nothing. The host's guide is read first, and unknown stays unknown.
+test('a shortfall nobody can compute is unknown, never zero, and the host guide wins', () => {
+  assert.equal(energyShortfall(undefined, 1), null);
+  assert.equal(energyShortfall(3, undefined), null);
+  assert.equal(guidedShortfall({ energyAfterCost: -2 }), 2);
+  assert.equal(guidedShortfall({ energyAfterCost: 1 }), 0);
+  assert.equal(guidedShortfall(undefined), null);
 });
 
 // Outside intent selection there is no Intent section, and then nothing is castable -- which is the truth

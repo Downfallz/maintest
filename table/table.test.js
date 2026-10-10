@@ -482,6 +482,16 @@ test('a spell the creature cannot pay for yet stays dim, says what it is short, 
   assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'two', asked: 1 });
 });
 
+test('a short spell whose cost the page cannot read warns without claiming a number', () => {
+  const p = page();
+  p.state.cards.delete('two');
+  p.view.options = { intent: { creatures: [{ creature: 1, castableSpells: ['one'], unaffordableSpells: ['two'] }] } };
+  p.draw();
+  const short = held(p).children[1];
+  assert.match(short.textContent, /Not enough energy now/);
+  assert.doesNotMatch(short.textContent, /0 energy short/);
+});
+
 test('a card tap selects; the fixed button declares once with the asking identity', async () => {
   const p = page(); const sent = [];
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();

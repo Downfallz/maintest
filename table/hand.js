@@ -34,9 +34,18 @@ export function declarableSpells(option) {
   return [...(option?.castableSpells ?? []), ...(option?.unaffordableSpells ?? [])];
 }
 
-// How much energy a spell is short of, for its card and its Declare button; 0 when it is not short.
+// How much energy a spell is short of, for its card and its Declare button; 0 when it is not short, and null when
+// either number is unknown -- a catalogue that failed to load leaves the page on raw ids, and a guess of 0 would
+// tell a player a spell the host calls short needs nothing.
 export function energyShortfall(cost, energy) {
-  return Math.max(0, (Number(cost) || 0) - (Number(energy) || 0));
+  if (!Number.isFinite(cost) || !Number.isFinite(energy)) return null;
+  return Math.max(0, cost - energy);
+}
+
+// The shortfall as the host reads it: its guide carries the energy left after paying, below zero when short.
+// Null when the guide does not speak to it.
+export function guidedShortfall(guide) {
+  return Number.isFinite(guide?.energyAfterCost) ? Math.max(0, -guide.energyAfterCost) : null;
 }
 
 // The Creatures that have something face down, from the seat's own intents.

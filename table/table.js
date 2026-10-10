@@ -3,7 +3,7 @@ import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats, isOperator, operatorToken } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
-import { declarableSpells, energyShortfall, handRows } from './hand.js';
+import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, talentPalette } from './mat.js';
@@ -893,18 +893,28 @@ function spellGroup(type, cards) {
   return group;
 }
 
-function availabilityText(spell, offered, chosen, reference, short = 0) {
+function availabilityText(spell, offered, chosen, reference, short = null) {
   // A plan rather than a cast: the card says what it is short of and that it fizzles without it (ADR 0107).
-  if (offered && spell.short) return chosen ? `✓ Selected · fizzles unless it gains ${short} energy first` : `${short} energy short now · select to plan →`;
+  if (offered && spell.short) return plannedText(short, chosen);
   if (offered) return chosen ? '✓ Selected · declare above' : 'Select card →';
   if (reference) return 'Spell reference';
   return spell.castable ? 'Available' : 'Not available now';
 }
 
-// How much energy a creature is short of for one of its spells, from its card and the creature's board.
+// How much energy a creature is short of for one of its spells: the host's guide first, then the card's cost
+// against the creature's board, and null when neither is known.
 function shortOf(state, current, creature, spell) {
+  const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell) : null;
+  const guided = guidedShortfall(guide);
+  if (guided !== null) return guided;
   const energy = (current.view.board.allies ?? []).find(ally => ally.id === creature)?.energy;
   return energyShortfall(state.cards.get(spell)?.cost, energy);
+}
+
+// What a short card says: how much it lacks when that is known, and a plain warning when it is not.
+function plannedText(short, chosen) {
+  if (chosen) return short === null ? '✓ Selected · fizzles unless it gains the energy first' : `✓ Selected · fizzles unless it gains ${short} energy first`;
+  return short === null ? 'Not enough energy now · select to plan →' : `${short} energy short now · select to plan →`;
 }
 
 // The asked creature's declarable card: numbered for the keyboard, and selected by a tap.
