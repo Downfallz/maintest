@@ -11,8 +11,8 @@ table. The tuner had no reading of it: the mirror is Greedy against itself, whic
 exploring run opens at random one decision in five, which mixes every opening into one average.
 
 Against the Greedy of ADR 0108, which opens Brute + Warped, the six openings forced on one side score, on content
-`95a78999` and the 200 benchmark seeds played from both seats: Brute + Warped 0.497 (its own opening), Warped +
-Predator 0.390, Predator + Predator 0.357, Warped + Warped 0.312, Brute + Brute 0.307, Brute + Predator 0.212.
+`95a78999` and the 200 benchmark seeds played from both seats: Brute + Warped 0.500 (its own opening), Predator +
+Predator 0.435, Warped + Predator 0.390, Brute + Brute 0.350, Warped + Warped 0.282, Brute + Predator 0.220.
 
 ## Decision
 
@@ -27,8 +27,8 @@ Greedy, and holds each one's win rate between 0.40 and 0.60 (scale 0.05, weight 
   away silently: a pass that makes one opening a trap scores worse for it.
 - Good: the reading is Greedy's, so it is deterministic, cheap and comparable from pass to pass: about 45
   seconds an evaluation on a four-core machine, six of them, beside a candidate of 31 to 53 minutes today.
-- Bad: every score before it is incomparable with every score after it. On `95a78999` the six add five readings
-  below their band, the furthest Brute + Predator at 0.212.
+- Bad: every score before it is incomparable with every score after it. On `95a78999` the six add four readings
+  below their band, the furthest Brute + Predator at 0.220.
 - Bad: a forced opening is played by Greedy after round 1, so an opening Greedy plays badly reads worse than it is.
   The band is wide for that reason, and an opening below it is a question before it is a verdict.
 - Neutral: Greedy's own opening scores 0.5 against itself by construction; it is read anyway, because content
