@@ -4,6 +4,27 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-10. The tuner reads what each tier-1 opening is worth (ADR 0109)
+
+Content `95a78999`, the Greedy of ADR 0108, the 200 benchmark seeds played from both seats. Agent A is
+`opening:<package>+<package>`, Greedy forced to buy that opening with its two round-1 picks; agent B is Greedy,
+which opens Brute + Warped.
+
+| opening | win rate of the forced side (95 % interval) | rounds |
+| --- | --- | --- |
+| Brute + Warped | 0.497 (0.49 to 0.50) | 10.63 |
+| Warped + Predator | 0.390 (0.35 to 0.43) | 10.23 |
+| Predator + Predator | 0.357 (0.30 to 0.42) | 10.46 |
+| Warped + Warped | 0.312 (0.27 to 0.36) | 10.03 |
+| Brute + Brute | 0.307 (0.26 to 0.36) | 11.85 |
+| Brute + Predator | 0.212 (0.16 to 0.26) | 10.26 |
+
+- Each is a target of the objective, held between 0.40 and 0.60 at scale 0.05 and weight 1: five of the six sit
+  below their band today, the furthest Brute + Predator, which against the Greedy before ADR 0108 read 0.494.
+  Every score from here on is incomparable with every score before it.
+- Brute + Brute fell from 0.500 to 0.307 and Warped + Warped rose from 0.099 to 0.312 against the new Greedy:
+  what an opening is worth depends on what it meets, which is why the readings are against the mirror's player.
+
 ## 2026-10-09. Titan sunders 2 instead of ignoring stuns, and Apex adds 3 (ADR 0106)
 
 Content `95a78999` (from `f2ae0013`, main at the round cap of 20). Every reading below is a mirror on main's

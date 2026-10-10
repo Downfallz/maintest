@@ -137,7 +137,8 @@ jobs:
       contents: write
       actions: read
     # A candidate costs one content build plus one evaluation per agent the objective names: three entries of
-    # one agent and a panel of five on `exploit` since ADR 0052, eight evaluations in all. **On this runner a
+    # one agent and a panel of five on `exploit` since ADR 0052, eight evaluations in all, and six Greedy
+    # evaluations of the tier-1 openings since ADR 0109, about 45 seconds each on four cores. **On this runner a
     # candidate is about 88 seconds** on content 9659f610 (tune 16 played 20 in 29m13s); tune 10 measured
     # 61.7 on a smaller catalogue, and `data/balance/README.md` prices one at 30 on a four-core machine. The
     # number that has to fit a job is the runner's.
