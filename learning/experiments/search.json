@@ -1,10 +1,11 @@
 {
-  "why": "A new exploiter for the tuner's panel, against the Greedy of ADR 0108, which reads a purchase against what its team is buying and now opens Brute + Warped instead of two Brutes. The panel was searched against the old Greedy and has gone stale against the new one: on content 95a78999 and the 200 benchmark seeds mirrored, mixture-mean beats it 0.748 in 10.1 rounds, kill-first 0.540, search-21 0.480, search-19 0.403, and search-23, the newest, 0.200. The exploit term reads the best of the panel, so it is reading one set while three of five have stopped being exploiters at all. This rung starts from mixture-mean, the one that still is, against Greedy alone, because Greedy is the player the exploit term measures the content against (ADR 0052); search-23 is the hold-out's check, so a set that only learned Greedy shows. 5 rounds of 12, seed 0. What would make it a rung: a set that beats mixture-mean's 0.748 against Greedy on seeds it never saw, without falling below it against search-23. Whatever it finds joins the panel rather than replacing a member (ADR 0052).",
-  "initial": "learning/weights/mixture-mean.json",
-  "opponent": "greedy",
-  "check_opponent": "heuristic:learning/weights/search-23.json",
-  "kind": "heuristic",
-  "iterations": 5,
-  "population": 12,
+  "why": "The lookahead's rung against the Greedy of ADR 0108, which reads a purchase against what its team is buying and opens Brute + Warped. lookahead-39 was searched against the Greedy that opened two Brutes, and its rollouts are played by the heuristic on its own weights, which reads purchases the new way too: both its opponent and its own guesses changed under it. On content 95a78999 it now opens Brute + Warped on all 24 sides of 12 mirrors, but Warped + Warped forced on one side still scores 0.64 (0.50 to 0.78) against it on 25 seeds mirrored, and against search-40, the heuristic's new rung, it reads 0.475 (0.31 to 0.64) on 20 unseen seeds mirrored: the bot the table seats first is no stronger than one-move weights twenty times cheaper. So this rung starts from lookahead-39 and plays every candidate as the lookahead against Greedy and against search-40 on the 60 lookahead seeds, so that a set cannot climb by learning one of the two. 60 seeds rather than #313's 120 because the hold-out replays both agents against both opponents on as many unseen seeds, four lookahead evaluations in the final job: on 120 that is about 6h40 against its six hours (Codex on #328), on 60 about 3h20. 4 rounds of 8, seed 0. What would make it a rung: a set that beats lookahead-39 against both Greedy and search-40 on the unseen seeds the hold-out replays.",
+  "initial": "learning/weights/lookahead/lookahead-39.json",
+  "opponent": "greedy,heuristic:learning/weights/search-40.json",
+  "check_opponent": "none",
+  "kind": "lookahead",
+  "seeds": "learning/experiments/lookahead-seeds-60.json",
+  "iterations": 4,
+  "population": 8,
   "seed": 0
 }
