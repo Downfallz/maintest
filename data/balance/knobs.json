@@ -23,6 +23,7 @@
       },
       "exploit": {
         "p1": [
+          "heuristic:learning/weights/search-40.json",
           "heuristic:learning/weights/search-23.json",
           "heuristic:learning/weights/search-21.json",
           "heuristic:learning/weights/kill-first.json",

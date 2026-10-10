@@ -172,8 +172,8 @@ and so does the one reachable move measured so far — Crushing Stomp at the wea
 set is searched against that catalogue too, which is why the win rate is no longer what this term scores: the
 panel closes the current catalogue in 5.785 rounds and the moved one in 7.63, and **that** is what the
 objective reads (ADR 0053, and the 2026-09-17 entries for how the three earlier prices of that same move,
-116, 55 and 0, were each an artefact of which agent was asked). A candidate costs five evaluations here and
-fourteen in all since the openings (eight before ADR 0109), which is the price of the reading. Only
+116, 55 and 0, were each an artefact of which agent was asked). A candidate costs six evaluations here and
+fifteen in all since the openings and `search-40` (eight before ADR 0109), which is the price of the reading. Only
 agent A is read as a panel: agent B is the opponent it is measured against, and `check-knobs` refuses a list
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
@@ -182,7 +182,7 @@ The six `opening-<a>-<b>` evaluations read what each tier-1 opening is worth, th
 ([ADR 0109](../../docs/adr/0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md)): agent A is
 `opening:<a>+<b>`, Greedy whose two round-1 picks buy those packages, and agent B is Greedy, which opens its
 own way. Each holds `winRateA` between 0.40 and 0.60, so no opening is a trap and none a lock. They add six
-Greedy evaluations to every candidate, fourteen in all.
+Greedy evaluations to every candidate, fifteen in all with the panel's sixth member, `search-40`.
 
 Most targets read a metric of the whole run. Two read a **package** instead — the spells one evolution pick
 buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
@@ -280,9 +280,9 @@ leaves a one-in-four chance that any given knob is never tried, and the first fu
 on `lightning_bolt`'s energy cost — one move worth more than everything the search did find. `--no-sweep`
 skips it when you want a quick look rather than an answer.
 
-Every candidate costs one content build plus one evaluation per **agent** the objective names, which is fourteen:
+Every candidate costs one content build plus one evaluation per **agent** the objective names, which is fifteen:
 eight since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md) seated a panel of five
-on `exploit`, three entries of one agent and five of it, and six more since
+on `exploit`, three entries of one agent and five of it, a sixth member since `search-40`, and six more since
 [ADR 0109](../../docs/adr/0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) read the tier-1 openings. On the 200 benchmark seeds an evaluation is about
 **3.8 seconds** on a four-core machine, so a candidate is about **30 seconds** across the eight, where it was
 14 across the four (ADR 0030 plays the 400 matches of an evaluation at once; it was 7 seconds an evaluation
