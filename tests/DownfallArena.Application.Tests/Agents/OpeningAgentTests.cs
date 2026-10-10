@@ -53,6 +53,17 @@ public sealed class OpeningAgentTests
         agent.DecideEvolution(board, options).Choice.ShouldBe(Greedy.DecideEvolution(board, options).Choice);
     }
 
+    /// <summary>An inner agent that may pass, a policy or an exploring agent, still buys the opening it is named for.</summary>
+    [Fact]
+    public void A_pass_from_the_inner_agent_still_buys_the_opening()
+    {
+        var passing = Substitute.For<IPlayerAgent>();
+        passing.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var agent = new OpeningAgent([TestContent.JabPack], passing);
+
+        agent.DecideEvolution(Board(round: 1), BothCanBuyEither).Choice.ShouldBe(new EvolutionChoice(One, TestContent.JabPack));
+    }
+
     /// <summary>Past round 1 the agent is its inner agent, purchases included.</summary>
     [Fact]
     public void After_round_one_the_agent_decides_as_its_inner_agent()
@@ -85,6 +96,7 @@ public sealed class OpeningAgentTests
         agent.Opening.ShouldBe([TestContent.JabPack, TestContent.GuardPack]);
         Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("opening:nowhere"), Rules, new TestRandom(1)));
         Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("opening:"), Rules, new TestRandom(1)));
+        Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("opening:tier:jab:v1"), Rules, new TestRandom(1)));
     }
 
     [Fact]

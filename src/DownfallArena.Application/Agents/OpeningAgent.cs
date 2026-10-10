@@ -35,7 +35,17 @@ public sealed class OpeningAgent : IPlayerAgent
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(options);
-        return _inner.DecideEvolution(board, board.RoundNumber == 1 ? Restricted(board, options) : options);
+        if (board.RoundNumber != 1 || Next(board) is not { } next || Restricted(options, next) is not { } restricted)
+        {
+            return _inner.DecideEvolution(board, options);
+        }
+
+        // An inner agent that may pass (a policy, an exploring agent) would leave the opening unbought, and the
+        // reading would no longer be the opening it is named for.
+        var decision = _inner.DecideEvolution(board, restricted);
+        return decision.Choice is null
+            ? EvolutionDecision.Unlock(new EvolutionChoice(restricted.Creatures[0].Creature, next))
+            : decision;
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _inner.DecideSpeed(board, creature);
@@ -47,10 +57,10 @@ public sealed class OpeningAgent : IPlayerAgent
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => _inner.DecideTargets(board, options);
 
     /// <summary>
-    /// The options narrowed to the next package of the opening the round has not bought yet: the round's picks
-    /// so far are taken off the list one for one, so an opening of two Brutes buys Brute twice.
+    /// The next package of the opening the round has not bought yet, or <c>null</c> once it is all bought: the
+    /// round's picks so far are taken off the list one for one, so an opening of two Brutes buys Brute twice.
     /// </summary>
-    private EvolutionOptions Restricted(PlayerBoardState board, EvolutionOptions options)
+    private TierId? Next(PlayerBoardState board)
     {
         var left = Opening.ToList();
         foreach (var choice in board.EvolutionChoices)
@@ -58,16 +68,16 @@ public sealed class OpeningAgent : IPlayerAgent
             left.Remove(choice.Tier);
         }
 
-        if (left.Count == 0)
-        {
-            return options;
-        }
+        return left.Count == 0 ? null : left[0];
+    }
 
-        var next = left[0];
+    /// <summary>The options narrowed to that package, or <c>null</c> when no creature can buy it.</summary>
+    private static EvolutionOptions? Restricted(EvolutionOptions options, TierId next)
+    {
         var able = options.Creatures
             .Where(option => option.AvailableTiers.Contains(next))
             .Select(option => option with { AvailableTiers = [next] })
             .ToList();
-        return able.Count == 0 ? options : options with { Creatures = able };
+        return able.Count == 0 ? null : options with { Creatures = able };
     }
 }

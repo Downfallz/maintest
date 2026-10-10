@@ -131,7 +131,8 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
 
     /// <summary>
     /// The packages an opening spec names before its inner agent, joined by <c>+</c>, each by its name alone --
-    /// <c>opening:brute+occultist</c> -- or by its id, and read as the latest version the content carries.
+    /// <c>opening:brute+occultist</c> -- and read as the latest version the content carries. Not by its id:
+    /// the colons of <c>tier:brute:v1</c> are where a spec's inner agent starts.
     /// </summary>
     private List<TierId> Packages(AgentSpec spec)
     {
@@ -146,9 +147,8 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
 
     private TierId Package(string name, AgentSpec spec)
     {
-        var plain = name.StartsWith("tier:", StringComparison.OrdinalIgnoreCase) ? name.Split(':')[1] : name;
         return resources.Tiers
-            .Where(tier => string.Equals(tier.Id.Name, plain, StringComparison.OrdinalIgnoreCase))
+            .Where(tier => string.Equals(tier.Id.Name, name, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(tier => tier.Id.Version)
             .Select(tier => tier.Id)
             .FirstOrDefault()
