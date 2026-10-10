@@ -275,7 +275,9 @@ position and critical chance on the card itself (on a phone's compact cards, und
 **Full details**). The plain/critical effects against the current targets appear at the
 Target step, before the cast is confirmed: during Intent a growing preview moved the
 cards under the player's finger, so it stays out of the fixed decision. Choosing speed shows the Quick/Standard trade and each spell's critical
-chance. Unaffordable cards keep the engine's reason visible. Caster effects appear
+chance. A card the creature cannot pay for yet stays dimmed and keeps the engine's reason, but can still be
+selected as a plan: it says how much energy it is short of, the Declare button says it may fizzle, and it
+fizzles at its slot unless an ally gives it the energy first (ADR 0106). Caster effects appear
 once, separately from target effects.
 
 Candidates a spell would treat alike share one preview line (`Creatures 1, 2, 3 · Heal 4`).

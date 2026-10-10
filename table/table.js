@@ -3,7 +3,7 @@ import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats, isOperator, operatorToken } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
-import { handRows } from './hand.js';
+import { declarableSpells, energyShortfall, handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, talentPalette } from './mat.js';
@@ -785,7 +785,7 @@ function handRow(state, row, asked, current) {
   // Tappable only on the creature being asked: every row says what its creature could cast, which is what
   // makes the hand readable, but only one creature is being asked at a time.
   const card = spell => reference ? speedSpell(state, spell, row.creature, current)
-    : heldCard(state, spell, active && spell.castable, row.creature, current);
+    : heldCard(state, spell, active && (spell.castable || spell.short), row.creature, current);
   const types = active ? spellTypes(state, row.spells) : null;
   if (types) {
     held.className += ' grouped-spells';
@@ -845,7 +845,7 @@ function speedSpell(state, spell, creature, current) {
 function heldCard(state, spell, offered, creature, current, reference = false) {
   const face = document.createElement('div');
   const chosen = offered && spell.spell === state.chosen;
-  face.className = ['card held', reference && 'reference', spell.castable && 'castable', offered && 'offered', chosen && 'chosen']
+  face.className = ['card held', reference && 'reference', spell.castable && 'castable', spell.short && 'short', offered && 'offered', chosen && 'chosen']
     .filter(Boolean)
     .join(' ');
 
@@ -862,7 +862,7 @@ function heldCard(state, spell, offered, creature, current, reference = false) {
   }
   const availability = document.createElement('span');
   availability.className = 'card-availability';
-  availability.textContent = availabilityText(spell, offered, chosen, reference);
+  availability.textContent = availabilityText(spell, offered, chosen, reference, shortOf(state, current, creature, spell.spell));
   face.append(availability);
   if (offered) offerCard(state, current, face, availability, spell, creature, chosen);
   return face;
@@ -893,15 +893,23 @@ function spellGroup(type, cards) {
   return group;
 }
 
-function availabilityText(spell, offered, chosen, reference) {
+function availabilityText(spell, offered, chosen, reference, short = 0) {
+  // A plan rather than a cast: the card says what it is short of and that it fizzles without it (ADR 0106).
+  if (offered && spell.short) return chosen ? `✓ Selected · fizzles unless it gains ${short} energy first` : `${short} energy short now · select to plan →`;
   if (offered) return chosen ? '✓ Selected · declare above' : 'Select card →';
   if (reference) return 'Spell reference';
   return spell.castable ? 'Available' : 'Not available now';
 }
 
-// The asked creature's castable card: numbered for the keyboard, and selected by a tap.
+// How much energy a creature is short of for one of its spells, from its card and the creature's board.
+function shortOf(state, current, creature, spell) {
+  const energy = (current.view.board.allies ?? []).find(ally => ally.id === creature)?.energy;
+  return energyShortfall(state.cards.get(spell)?.cost, energy);
+}
+
+// The asked creature's declarable card: numbered for the keyboard, and selected by a tap.
 function offerCard(state, current, face, availability, spell, creature, chosen) {
-  const offeredSpells = current.view.options.intent?.creatures?.find(one => one.creature === creature)?.castableSpells ?? [];
+  const offeredSpells = declarableSpells(current.view.options.intent?.creatures?.find(one => one.creature === creature));
   const number = offeredSpells.indexOf(spell.spell) + 1;
   if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
   face.dataset.focus = `card-${creature}-${spell.spell}`;
@@ -2478,11 +2486,10 @@ function tieOrderButtons(state, current) {
 function intentButtons(state, current) {
   const view = current.view;
   const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
-  const castable = option?.castableSpells ?? [];
-  const chosen = castable.includes(state.chosen) ? state.chosen : null;
+  const chosen = declarableSpells(option).includes(state.chosen) ? state.chosen : null;
 
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
-  const confirm = button(chosen === null ? 'Select a spell' : `Declare ${name}`, () => {
+  const confirm = button(declareLabel(chosen, name, option), () => {
     confirm.disabled = true;
     return declareChosen(state, current);
   });
@@ -2492,10 +2499,16 @@ function intentButtons(state, current) {
   return [confirm];
 }
 
+// A plan says so on the button that commits it: a spell the creature cannot pay for yet may fizzle (ADR 0106).
+function declareLabel(chosen, name, option) {
+  if (chosen === null) return 'Select a spell';
+  return (option?.unaffordableSpells ?? []).includes(chosen) ? `Declare ${name} · may fizzle` : `Declare ${name}`;
+}
+
 function chooseCard(state, current, spell) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
-  if (!option?.castableSpells?.includes(spell)) return;
+  if (!declarableSpells(option).includes(spell)) return;
   // The second tap on the chosen card declares it, as the Declare button does: the rows do not move between the
   // two taps, so the finger lands on the card it chose.
   if (state.chosen === spell) return declareChosen(state, current);
@@ -2510,7 +2523,7 @@ function declareChosen(state, current) {
   if (!canInteract(state, current, 'Intent')) return;
   const view = current.view;
   const option = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature);
-  if (!option?.castableSpells?.includes(state.chosen)) return;
+  if (!declarableSpells(option).includes(state.chosen)) return;
   return submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: state.chosen });
 }
 
@@ -2918,7 +2931,7 @@ function keyboardDecision(state, event) {
       if (offered[number] !== undefined) { state.ordered = tap(view.options.tieOrder.ties, state.ordered, offered[number]); redraw(state); }
     }
     if (view.waitingFor === 'Intent') {
-      const spell = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature)?.castableSpells?.[number];
+      const spell = declarableSpells(view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature))[number];
       if (spell) { state.chosen = spell; redraw(state); }
     }
     if (view.waitingFor === 'Target') {

@@ -5,6 +5,7 @@ using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Matches.Projections;
 
@@ -32,7 +33,14 @@ public sealed class DecisionGuideProjection(IGameResources resources, RuleSet ru
     {
         var spell = resources.GetSpell(id);
         var intent = new CombatIntent(actor.Id, id);
+        // Declaring no longer asks the price (ADR 0106), but the guide reads the board as it stands: a spell the
+        // creature cannot pay for now says so, and its effects are not previewed on energy it does not have.
         var check = IntentRules.ValidateIntent(board.Slot, intent, creatures, resources);
+        if (check.IsSuccess && actor.Energy < spell.Stats.Cost)
+        {
+            check = Result.Failure(CombatErrors.NotEnoughEnergy);
+        }
+
         var slot = board.Timeline.FirstOrDefault(one => one.Creature == actor.Id);
         var speed = slot?.Speed ?? board.SpeedChoices.FirstOrDefault(one => one.Creature == actor.Id)?.Speed;
         var position = board.Timeline.ToList().FindIndex(one => one.Creature == actor.Id);

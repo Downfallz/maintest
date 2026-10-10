@@ -62,7 +62,7 @@ spine of this plan: each one needs a shape a hand can execute.
 | `DecideEvolution` | On an opportunity Round: one Tier for one Creature, face down, up to the picks the schedule gives (ADR 0056, ADR 0066, ADR 0089) | A **purchase track** printed on the Automa mat: pick *n* is named in advance. No decision at all. | the Automa file |
 | `DecideSpeed` | `Quick` or `Standard` for every living, unstunned Creature | One printed line, or a face on the drawn card | the card |
 | `DecideTieOrder` | Order its own tied Creatures inside the Places its side holds (ADR 0063) | Fixed: by printed Creature number, ascending. No decision. | nothing |
-| `DecideIntent` | One hidden Spell per Creature on the timeline, known and affordable | The **Automa deck**: one card drawn face down per Creature | the deck |
+| `DecideIntent` | One hidden Spell per Creature on the timeline, known and, for the Automa, affordable | The **Automa deck**: one card drawn face down per Creature | the deck |
 | `DecideTargets` | A legal target set at its Activation slot, on the board as it stands (ADR 0083) | The **priority card**: one chain, every tiebreak printed | the card |
 
 Two properties of the engine make this possible at all, and both are already decided:
@@ -76,7 +76,8 @@ Two properties of the engine make this possible at all, and both are already dec
 
 ### Why the deck names a selector, not a Spell
 
-An Intent is only legal if the Creature knows the Spell and can afford it (`IntentRules`). A card that named
+An Intent is only legal if the Creature knows the Spell (`IntentRules`), and the Automa, like every agent,
+declares only what it can pay for now (ADR 0106). A card that named
 `spell:heavy_strike` would be unplayable for any Creature that has not bought the package teaching it, which
 is most Creatures for most of the Match.
 

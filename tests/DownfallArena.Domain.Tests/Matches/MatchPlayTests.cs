@@ -170,6 +170,51 @@ public sealed class MatchPlayTests
         round.NextSlot.ShouldNotBeNull().Owner.ShouldBe(PlayerSlot.Player1);
     }
 
+    /// <summary>
+    /// A creature declared on a spell it could not pay for, and given the energy before its slot -- an ally's
+    /// Overdrive earlier in the timeline, here put on it by hand -- casts it like any other (ADR 0106).
+    /// </summary>
+    [Fact]
+    public void A_spell_declared_without_the_energy_is_cast_when_the_energy_arrives_before_its_slot()
+    {
+        var match = Table.Started();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        Table.ChooseStandard(match);
+        Table.CreatureNumber(match, 3).LoseEnergy(99);
+
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue("declared with no energy at all");
+        Table.CreatureNumber(match, 3).GainEnergy(10);
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.Timeline[0].Creature.ShouldBe(CreatureId.From(3));
+        match.DomainEvents.OfType<CombatActionResolved>().ShouldBeEmpty("it can pay, so its owner is asked for targets");
+        round.NextSlot.ShouldNotBeNull().Creature.ShouldBe(CreatureId.From(3));
+    }
+
+    /// <summary>A creature declared on a spell it could not pay for, and still short when its slot comes up, fizzles (ADR 0106).</summary>
+    [Fact]
+    public void A_spell_declared_without_the_energy_fizzles_when_the_energy_never_arrives()
+    {
+        var match = Table.Started();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        Table.ChooseStandard(match);
+        Table.CreatureNumber(match, 3).LoseEnergy(99);
+
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem().Resolution.FizzleReason.ShouldBe(CombatErrors.NotEnoughEnergy);
+    }
+
     /// <summary>One action that kills the last creature of both teams, its target and its caster, is a draw.</summary>
     [Fact]
     public void An_action_that_wipes_both_teams_ends_the_match_in_a_draw_on_the_spot()

@@ -81,7 +81,7 @@ public static class PlayerOptionsProjection
         var own = snapshots.Where(creature => creature.Owner == slot).ToDictionary(creature => creature.Id);
         var creatures = IntentRules.Evaluate(round).Missing
             .Where(own.ContainsKey)
-            .Select(id => new IntentOption(id, CastableSpells(own[id], resources)))
+            .Select(id => new IntentOption(id, CastableSpells(own[id], resources), UnaffordableSpells(own[id], resources)))
             .ToList();
 
         return creatures.Count == 0
@@ -113,4 +113,7 @@ public static class PlayerOptionsProjection
 
     private static List<SpellId> CastableSpells(CreatureSnapshot creature, IGameResources resources) =>
         [.. creature.KnownSpells.Where(spell => resources.GetSpell(spell).Stats.Cost <= creature.Energy).OrderBy(spell => spell.Value, StringComparer.Ordinal)];
+
+    private static List<SpellId> UnaffordableSpells(CreatureSnapshot creature, IGameResources resources) =>
+        [.. creature.KnownSpells.Where(spell => resources.GetSpell(spell).Stats.Cost > creature.Energy).OrderBy(spell => spell.Value, StringComparer.Ordinal)];
 }

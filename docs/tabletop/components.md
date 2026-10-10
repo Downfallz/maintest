@@ -650,7 +650,7 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | Zone | Line | From | Why it is on the card |
 | --- | --- | --- | --- |
 | Head | Name | `name` | |
-| Head | Energy cost, as a numeral in a filled circle | `energyCost` | An Intent is only legal if the Creature can afford it (`IntentRules.cs:50-69`), checked against a public Energy rail |
+| Head | Energy cost, as a numeral in a filled circle | `energyCost` | Checked when the Creature's slot comes up, against a public Energy rail; a Creature short of it Fizzles (ADR 0106) |
 | Head | Every package that teaches it, with its level: `Revenant . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `e6f72578` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
@@ -962,7 +962,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
 | The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. The token comes off at the Cleanup that ends the Stun, when the dock's Stun token becomes an Immune token ([3.2](#32-the-condition-dock-and-the-countdown)); nothing goes in the Speed slot for the immunity, since an immune Creature takes a Speed card. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a pick moves off the mat lies on that Creature's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
-| The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
+| The Energy rail being face up | The cost is checked when the Creature's slot comes up (ADR 0106), and both Players must be able to read that check. Energy is public in the engine's own projection, so the rail is public too. |
 
 **The Speed slot is sized for a card now**, not a token (Part 6, question 14). A Speed card is poker size
 ([2.6](#26-the-speed-card)), so the slot is a 90 x 65 mm rectangle, the card laid landscape with about a
