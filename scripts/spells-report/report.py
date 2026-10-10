@@ -97,7 +97,7 @@ def passive_text(passive: dict) -> str:
 
 # The paths below are the operator's own files, named on the command line of a local tool: the runs this
 # session played and the page it writes. `existing` resolves each one and refuses what is not a file or a
-# directory, so the reads and the write marked NOSONAR (pythonsecurity:S2083, path traversal) touch only
+# directory, so the reads and the write the analyser flags (pythonsecurity:S2083, path traversal) touch only
 # what the operator named, which is the tool's whole job.
 
 
