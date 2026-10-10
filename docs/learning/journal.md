@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-10-10. search-40 joins the exploit panel: the panel had gone stale against the team-aware Greedy
+## 2026-10-10. search-40 takes search-23's seat in the exploit panel, which had gone stale against the team-aware Greedy
 
 Content `95a78999`, the Greedy of ADR 0108. The exploit term reads the best of a panel of searched sets against
 Greedy (ADR 0052), and every member was searched against the Greedy that opened two Brutes. Against the new one,
@@ -33,9 +33,10 @@ on the 200 benchmark seeds mirrored:
   did not learn Greedy alone: against `search-23`, which it never played, it gains more still.
 - **What it changed.** Energy 0.16 to -0.46, kill 7.21 to 7.62, stun 4.06 to 4.35, initiative 1.98 to 2.14,
   defense 0.73 to 0.64, damage 1.03 to 1.09, a pressure of 0.05; heal and bleed barely move.
-- **The panel** gains it as a sixth member rather than losing one (ADR 0052): a candidate costs one more
-  evaluation, fifteen in all. The members that no longer beat Greedy stay, because a set that says nothing on
-  this catalogue may be the one that sees the hole in the next.
+- **The panel** takes it in and lets `search-23` go, the set that beats Greedy least (0.200), which is the rule
+  the panel has kept since ADR 0052: five evaluations a candidate, fourteen in all with the openings.
+  `search-19` stays for the reason it stayed on 2026-10-05, and `search-21` and `kill-first` because a set that
+  says little on this catalogue may be the one that sees the hole in the next.
 
 ## 2026-10-10. The tuner reads what each tier-1 opening is worth (ADR 0109)
 
