@@ -134,6 +134,24 @@ public sealed class CandidateTermsTests
     }
 
     /// <summary>
+    /// An unlock's terms are read against what the round's picks already teach, as the heuristic reads them (ADR
+    /// 0108): with One buying Guard's package this round, Guard's package sells Two nothing but its initiative.
+    /// </summary>
+    [Fact]
+    public void An_unlocks_terms_read_what_the_rounds_picks_already_teach()
+    {
+        var board = Board(enemyHealth: 20) with { EvolutionChoices = [new EvolutionChoice(One, TestContent.GuardPack)] };
+        var creatures = Foresight.Creatures(board);
+        var two = creatures.First(creature => creature.Id == Two);
+        var buying = new HashSet<SpellId>([TestContent.Guard]);
+
+        var terms = Terms.Evolution(board, new EvolutionOptions(1, [new EvolutionOption(Two, [TestContent.GuardPack])]));
+
+        Apply(terms[0]).ShouldBe(Scorer.PurchaseValue(two, TestContent.GuardPack, creatures, buying), 1e-5);
+        Apply(terms[0]).ShouldBeLessThan(Scorer.PurchaseValue(two, TestContent.GuardPack, creatures));
+    }
+
+    /// <summary>
     /// The invariant the whole channel rests on, over a played match: every intent and every target set the
     /// heuristic chose scores best, under its own weights, among the terms recorded beside it. A policy whose
     /// candidate weights are the heuristic's therefore plays the heuristic's combat decisions. The round the match

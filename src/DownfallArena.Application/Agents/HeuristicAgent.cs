@@ -39,13 +39,13 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         EvolutionChoice? best = null;
         var bestScore = double.NegativeInfinity;
-        var buying = Buying(board);
+        var buying = Buying(board, resources);
         foreach (var option in options.Creatures)
         {
-            var actor = Holding(creatures.First(creature => creature.Id == option.Creature), buying);
+            var actor = creatures.First(creature => creature.Id == option.Creature);
             foreach (var tier in option.AvailableTiers)
             {
-                var score = _scorer.PurchaseValue(actor, tier, creatures);
+                var score = _scorer.PurchaseValue(actor, tier, creatures, buying);
                 if (score > bestScore)
                 {
                     best = new EvolutionChoice(option.Creature, tier);
@@ -57,13 +57,9 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         return best is null ? EvolutionDecision.Pass : EvolutionDecision.Unlock(best);
     }
 
-    /// <summary>The spells the player's picks of this round teach: what the rest of its picks are read against.</summary>
-    private HashSet<SpellId> Buying(PlayerBoardState board) =>
+    /// <summary>The spells the player's picks of this round teach: what the rest of its picks are read against (ADR 0108).</summary>
+    internal static HashSet<SpellId> Buying(PlayerBoardState board, IGameResources resources) =>
         [.. board.EvolutionChoices.SelectMany(choice => resources.GetTier(choice.Tier).Spells)];
-
-    /// <summary>The creature as a purchase reads it: knowing what it knows and what its team is buying this round.</summary>
-    private static CreatureSnapshot Holding(CreatureSnapshot actor, HashSet<SpellId> buying) =>
-        buying.IsSubsetOf(actor.KnownSpells) ? actor : actor with { KnownSpells = new HashSet<SpellId>([.. actor.KnownSpells, .. buying]) };
 
     /// <summary>
     /// The order the roll-off left. The scorer reads one action at a time and has no view of which of two of
