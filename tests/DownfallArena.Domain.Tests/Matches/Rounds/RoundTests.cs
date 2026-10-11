@@ -244,7 +244,7 @@ public sealed class RoundTests
         AdvanceTo(round, RoundSubPhase.Activation);
         var knightAction = CombatAction.Choose(Knight, Guard, [Knight]);
 
-        round.SubmitAction(knightAction, CombatDeclaration.AtActivation).IsSuccess.ShouldBeTrue();
+        round.SubmitChosenAction(knightAction).IsSuccess.ShouldBeTrue();
 
         round.ActionOf(Knight).ShouldBe(knightAction);
     }
@@ -272,9 +272,31 @@ public sealed class RoundTests
         AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
         round.SetTimeline(Timeline);
         AdvanceTo(round, RoundSubPhase.Activation);
-        round.SubmitAction(CombatAction.Choose(Knight, Strike, [Ghoul]), CombatDeclaration.AtActivation).IsSuccess.ShouldBeTrue();
+        round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])).IsSuccess.ShouldBeTrue();
 
         Should.Throw<InvalidOperationException>(round.SkipSlot);
+    }
+
+    [Fact]
+    public void An_intent_in_a_round_that_declares_none_is_an_invariant_violation()
+    {
+        var round = PlannedRound();
+        round.Advance();
+
+        Should.Throw<InvalidOperationException>(() => round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])));
+    }
+
+    [Fact]
+    public void A_chosen_action_is_refused_outside_activation_and_out_of_turn()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Timeline);
+
+        round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])).Error.ShouldBe(RoundErrors.TargetingNotOpen);
+
+        AdvanceTo(round, RoundSubPhase.Activation);
+        round.SubmitChosenAction(CombatAction.Choose(Ghoul, Strike, [Knight])).Error.ShouldBe(RoundErrors.NotThisCreaturesTurn);
     }
 
     [Fact]

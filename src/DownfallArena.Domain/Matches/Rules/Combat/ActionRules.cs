@@ -18,35 +18,19 @@ public static class ActionRules
 {
     public static Result ValidateAction(PlayerSlot slot, CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IGameResources resources)
     {
-        ArgumentNullException.ThrowIfNull(action);
-        ArgumentNullException.ThrowIfNull(creatures);
-        ArgumentNullException.ThrowIfNull(resources);
-
-        var actor = creatures.FirstOrDefault(candidate => candidate.Id == action.Actor);
-        if (actor is null)
+        var checkedActor = ActorAndSpell(slot, action, creatures, resources);
+        if (checkedActor.IsFailure)
         {
-            return Result.Failure(CombatErrors.UnknownCreature);
+            return checkedActor;
         }
 
-        if (actor.Owner != slot)
-        {
-            return Result.Failure(CombatErrors.NotYourCreature);
-        }
-
-        var canAct = IntentRules.CanAct(actor, action.Spell, resources);
-        if (canAct.IsFailure)
-        {
-            return canAct;
-        }
-
-        var spell = resources.GetSpell(action.Spell);
+        var (actor, spell) = checkedActor.Value;
         if (!TargetingRules.LegalTargets(actor, spell, creatures).IsCastable)
         {
             return action.Targets.Count == 0 ? Result.Success() : Result.Failure(CombatErrors.NoLegalTarget);
         }
 
-        var report = TargetingRules.Check(actor, spell, action.Targets, creatures);
-        return report.FirstFailure is { } failure ? Result.Failure(failure.Error) : Result.Success();
+        return Targets(actor, spell, action, creatures);
     }
 
     /// <summary>
@@ -57,51 +41,27 @@ public static class ActionRules
     /// </summary>
     public static Result ValidateChosenAction(PlayerSlot slot, CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IGameResources resources)
     {
-        ArgumentNullException.ThrowIfNull(action);
-        ArgumentNullException.ThrowIfNull(creatures);
-        ArgumentNullException.ThrowIfNull(resources);
-
-        var actor = creatures.FirstOrDefault(candidate => candidate.Id == action.Actor);
-        if (actor is null)
+        var checkedActor = ActorAndSpell(slot, action, creatures, resources);
+        if (checkedActor.IsFailure)
         {
-            return Result.Failure(CombatErrors.UnknownCreature);
+            return checkedActor;
         }
 
-        if (actor.Owner != slot)
-        {
-            return Result.Failure(CombatErrors.NotYourCreature);
-        }
-
-        var canAct = IntentRules.CanAct(actor, action.Spell, resources);
-        if (canAct.IsFailure)
-        {
-            return canAct;
-        }
-
-        var spell = resources.GetSpell(action.Spell);
-        if (!TargetingRules.LegalTargets(actor, spell, creatures).IsCastable)
-        {
-            return Result.Failure(CombatErrors.NoLegalTarget);
-        }
-
-        var report = TargetingRules.Check(actor, spell, action.Targets, creatures);
-        return report.FirstFailure is { } failure ? Result.Failure(failure.Error) : Result.Success();
+        var (actor, spell) = checkedActor.Value;
+        return TargetingRules.LegalTargets(actor, spell, creatures).IsCastable
+            ? Targets(actor, spell, action, creatures)
+            : Result.Failure(CombatErrors.NoLegalTarget);
     }
 
     /// <summary>
     /// Whether a creature that declared no intent can take its slot (ADR 0110): alive, not stunned, and knowing a
     /// spell it can pay for now with a legal target. The failure says why not, and its owner is not asked.
     /// </summary>
-    public static Result CanChooseAnAction(CreatureId actorId, IReadOnlyList<CreatureSnapshot> creatures, IGameResources resources)
+    public static Result CanChooseAnAction(CreatureSnapshot actor, IReadOnlyList<CreatureSnapshot> creatures, IGameResources resources)
     {
+        ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(creatures);
         ArgumentNullException.ThrowIfNull(resources);
-
-        var actor = creatures.FirstOrDefault(candidate => candidate.Id == actorId);
-        if (actor is null)
-        {
-            return Result.Failure(CombatErrors.UnknownCreature);
-        }
 
         if (actor.IsDead)
         {
@@ -149,6 +109,39 @@ public static class ActionRules
         }
 
         return TargetingRules.LegalTargets(actor, resources.GetSpell(intent.Spell), creatures).IsCastable;
+    }
+
+    /// <summary>
+    /// What an action checks under either declaration before its targets: the actor is in the match and its
+    /// owner's, alive, unstunned, knows the spell and can pay for it now.
+    /// </summary>
+    private static Result<(CreatureSnapshot Actor, Spell Spell)> ActorAndSpell(PlayerSlot slot, CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IGameResources resources)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(creatures);
+        ArgumentNullException.ThrowIfNull(resources);
+
+        var actor = creatures.FirstOrDefault(candidate => candidate.Id == action.Actor);
+        if (actor is null)
+        {
+            return Result.Failure<(CreatureSnapshot, Spell)>(CombatErrors.UnknownCreature);
+        }
+
+        if (actor.Owner != slot)
+        {
+            return Result.Failure<(CreatureSnapshot, Spell)>(CombatErrors.NotYourCreature);
+        }
+
+        var canAct = IntentRules.CanAct(actor, action.Spell, resources);
+        return canAct.IsFailure
+            ? Result.Failure<(CreatureSnapshot, Spell)>(canAct.Error)
+            : Result.Success((actor, resources.GetSpell(action.Spell)));
+    }
+
+    private static Result Targets(CreatureSnapshot actor, Spell spell, CombatAction action, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var report = TargetingRules.Check(actor, spell, action.Targets, creatures);
+        return report.FirstFailure is { } failure ? Result.Failure(failure.Error) : Result.Success();
     }
 
     public static ActionGateResult Evaluate(Round round)

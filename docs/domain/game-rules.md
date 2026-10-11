@@ -46,13 +46,7 @@ listed in [spells.md](spells.md).
   the target's total defense, floor zero. A lasting effect, an effect on the caster and energy are not
   multiplied. The energy cost is spent, instant
   effects apply, lasting effects attach as conditions. At the start of a round living creatures gain the rule
-  set's energy and bleeds deal their summed damage, ignoring defense.
-  A rule set may declare no intent instead (`AtActivation`, ADR 0110): `IntentSelection` passes through without
-  asking anyone, and at each slot the owner submits a spell the creature knows and can pay for now with its
-  targets, a spell with no legal target refused rather than cast on nothing. A creature with nothing it can
-  cast when its slot comes up -- dead, stunned, or no spell it can pay for on a legal target -- is skipped
-  without its owner being asked, and nothing resolves for it. The default rule set declares hidden intents;
-  no host offers the other mode yet. At cleanup every condition counts one
+  set's energy and bleeds deal their summed damage, ignoring defense. At cleanup every condition counts one
   round down, except that the first countdown after an application does not count: a one-round stun applied
   in combat stuns the creature for the whole next round. A creature whose stun ends at cleanup is immune to
   stun through the next round, and a stun on a stunned or immune creature is ignored (ADR 0072).
@@ -65,6 +59,13 @@ listed in [spells.md](spells.md).
   does to its own caster are left alone. Each family closes with a level-4 capstone opened by any of its
   level-3 packages and teaching no spell: Titan (sunder 2; stun immunity until 2026-10-09), Archmage (+1
   energy at upkeep), Apex (+3 damage; +2 until 2026-10-09).
+
+- Combat declaration (ADR 0110): a rule set may declare no intent instead of hidden ones (`AtActivation`).
+  `IntentSelection` then passes through without asking anyone, and at each slot the owner submits a spell the
+  creature knows and can pay for now with its targets; a spell with no legal target is refused rather than
+  cast on nothing. A creature with nothing it can cast when its slot comes up -- dead, stunned, or no spell it
+  can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. The
+  default rule set declares hidden intents, and no host offers the other mode yet.
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the

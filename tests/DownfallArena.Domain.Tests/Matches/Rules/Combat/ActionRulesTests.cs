@@ -155,7 +155,7 @@ public sealed class ActionRulesTests
     {
         var creatures = Arena.Snapshots(Arena.FourCreatures());
 
-        ActionRules.CanChooseAnAction(Arena.Knight, creatures, Arena.Resources).IsSuccess.ShouldBeTrue();
+        CanChoose(Arena.Knight, creatures).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public sealed class ActionRulesTests
         var living = Arena.FourCreatures();
         Arena.Find(living, Arena.Knight).TakeDamage(99);
 
-        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.ActorDead);
+        CanChoose(Arena.Knight, Arena.Snapshots(living)).Error.ShouldBe(CombatErrors.ActorDead);
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class ActionRulesTests
         var living = Arena.FourCreatures();
         Arena.Find(living, Arena.Knight).Apply(Stun.For(1)).ShouldNotBeNull();
 
-        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.ActorStunned);
+        CanChoose(Arena.Knight, Arena.Snapshots(living)).Error.ShouldBe(CombatErrors.ActorStunned);
     }
 
     /// <summary>
@@ -188,15 +188,26 @@ public sealed class ActionRulesTests
         Arena.Find(living, Arena.Ghoul).TakeDamage(99);
         Arena.Find(living, Arena.Wraith).TakeDamage(99);
 
-        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.NothingToCast);
+        CanChoose(Arena.Knight, Arena.Snapshots(living)).Error.ShouldBe(CombatErrors.NothingToCast);
     }
 
     [Fact]
-    public void An_unknown_creature_cannot_choose_an_action()
+    public void A_spell_is_castable_now_when_it_can_be_paid_for_and_has_a_legal_target()
     {
-        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.Learn(Arena.Guard);
+        var poor = Arena.Snapshots(living);
+        knight.GainEnergy(1);
+        var paid = Arena.Snapshots(living);
+        Arena.Find(living, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(living, Arena.Wraith).TakeDamage(99);
+        var alone = Arena.Snapshots(living);
 
-        ActionRules.CanChooseAnAction(CreatureId.From(9), creatures, Arena.Resources).Error.ShouldBe(CombatErrors.UnknownCreature);
+        ActionRules.IsCastableNow(poor[0], Arena.Strike, poor, Arena.Resources).ShouldBeTrue();
+        ActionRules.IsCastableNow(poor[0], Arena.Guard, poor, Arena.Resources).ShouldBeFalse("it costs one energy");
+        ActionRules.IsCastableNow(paid[0], Arena.Guard, paid, Arena.Resources).ShouldBeTrue();
+        ActionRules.IsCastableNow(alone[0], Arena.Strike, alone, Arena.Resources).ShouldBeFalse("no enemy is left to strike");
     }
 
     [Fact]
@@ -227,6 +238,9 @@ public sealed class ActionRulesTests
         IReadOnlyList<CreatureId> targets,
         IReadOnlyList<CreatureSnapshot> creatures) =>
         ActionRules.ValidateAction(slot, CombatAction.Bind(new CombatIntent(actor, spell), targets), creatures, Arena.Resources);
+
+    private static Result CanChoose(CreatureId actor, IReadOnlyList<CreatureSnapshot> creatures) =>
+        ActionRules.CanChooseAnAction(creatures.Single(creature => creature.Id == actor), creatures, Arena.Resources);
 
     private static Result Choose(
         PlayerSlot slot,

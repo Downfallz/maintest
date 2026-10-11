@@ -224,6 +224,10 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Success();
     }
 
+    /// <summary>
+    /// Declares a creature's hidden intent. Under <see cref="CombatDeclaration.AtActivation" /> the round never
+    /// waits on intents, so this is refused as it is outside the sub-phase (ADR 0110).
+    /// </summary>
     public Result SubmitIntent(PlayerSlot slot, CombatIntent intent)
     {
         ArgumentNullException.ThrowIfNull(intent);
@@ -278,7 +282,9 @@ public sealed class Match : AggregateRoot<MatchId>
             return validated;
         }
 
-        var accepted = round.SubmitAction(action, declaration);
+        var accepted = declaration == CombatDeclaration.AtActivation
+            ? round.SubmitChosenAction(action)
+            : round.SubmitAction(action);
         if (accepted.IsFailure)
         {
             return accepted;
@@ -420,12 +426,16 @@ public sealed class Match : AggregateRoot<MatchId>
             return false;
         }
 
-        var able = ActionRules.CanChooseAnAction(slot.Creature, Snapshots(), _resources);
+        var creatures = Snapshots();
+        var actor = creatures.FirstOrDefault(creature => creature.Id == slot.Creature)
+            ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline but not in the match.");
+        var able = ActionRules.CanChooseAnAction(actor, creatures, _resources);
         if (able.IsSuccess)
         {
             return false;
         }
 
+        // No elimination check, unlike an activation: a skip moves the cursor and changes no creature.
         round.SkipSlot();
         RaiseDomainEvent(new SlotSkipped(Id, round.Id, slot.Creature, able.Error));
         return true;

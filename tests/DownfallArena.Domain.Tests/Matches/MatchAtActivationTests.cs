@@ -3,6 +3,7 @@ using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Matches.Rules.Planning;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -118,6 +119,26 @@ public sealed class MatchAtActivationTests
         match.DomainEvents.Skip(seen).OfType<SlotSkipped>().ShouldHaveSingleItem()
             .ShouldBe(new SlotSkipped(match.Id, RoundId.From(1), CreatureId.From(3), CombatErrors.ActorDead));
         match.DomainEvents.Skip(seen).OfType<ActionRevealed>().Select(revealed => revealed.Action.Actor).ShouldNotContain(CreatureId.From(3));
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// A creature stunned after planning -- by an earlier slot, here by hand -- is skipped the same way, with the
+    /// stun as the reason (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void A_creature_stunned_before_its_slot_is_skipped_without_its_owner_being_asked()
+    {
+        var match = Table.Started(Table.TwoOnTwoAtActivation());
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        Table.CreatureNumber(match, 3).Apply(Stun.For(1)).ShouldNotBeNull();
+        var seen = match.DomainEvents.Count;
+
+        Table.StrikeFirstLivingEnemy(match);
+
+        match.DomainEvents.Skip(seen).OfType<SlotSkipped>().ShouldHaveSingleItem()
+            .ShouldBe(new SlotSkipped(match.Id, RoundId.From(1), CreatureId.From(3), CombatErrors.ActorStunned));
         match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(2);
     }
 
