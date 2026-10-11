@@ -1380,6 +1380,10 @@ MEANINGS: Mapping[str, str] = {
 }
 
 
+#: The evaluations that read one tier-1 opening each (ADR 0109): `opening-<package>-<package>`.
+OPENING_PREFIX = "opening-"
+
+
 def _played_line(result: TuneResult) -> str:
     """How many versions the search tried, and how many of them the engine actually had to play.
 
@@ -1585,6 +1589,9 @@ def _meaning(target: Target, objective: Objective) -> str:
     Two targets may read the same metric from two evaluations — the objective plays `mirror` and `skill` over
     the same seeds — and two rows reading "how often the first side wins" would be one row said twice.
     """
+    if target.metric == "winRateA" and target.on.startswith(OPENING_PREFIX):
+        # An opening's evaluation is named by its packages, which say more than the run's name in brackets.
+        return f"what the forced opening {target.on.removeprefix(OPENING_PREFIX).replace('-', ' + ')} scores"
     said = MEANINGS.get(target.metric, target.key)
     shared = sum(1 for other in objective.targets if other.metric == target.metric) > 1
     return f"{said} ({target.on})" if shared else said
