@@ -234,6 +234,79 @@ public sealed class RoundTests
         Should.Throw<InvalidOperationException>(() => round.SubmitAction(CombatAction.Bind(new CombatIntent(Knight, Strike), [])));
     }
 
+    /// <summary>A round that declares no intent binds whatever spell the slot's creature casts (ADR 0110).</summary>
+    [Fact]
+    public void At_activation_a_slot_binds_an_action_with_no_intent_to_match()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Timeline);
+        AdvanceTo(round, RoundSubPhase.Activation);
+        var knightAction = CombatAction.Choose(Knight, Guard, [Knight]);
+
+        round.SubmitChosenAction(knightAction).IsSuccess.ShouldBeTrue();
+
+        round.ActionOf(Knight).ShouldBe(knightAction);
+    }
+
+    [Fact]
+    public void A_skipped_slot_moves_the_cursor_with_no_action_bound()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Timeline);
+        AdvanceTo(round, RoundSubPhase.Activation);
+
+        round.SkipSlot();
+
+        round.ActivationCursor.Index.ShouldBe(1);
+        round.WasSkipped(Knight).ShouldBeTrue();
+        round.ActionOf(Knight).ShouldBeNull();
+        round.WasSkipped(Ghoul).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_slot_with_a_bound_action_cannot_be_skipped()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Timeline);
+        AdvanceTo(round, RoundSubPhase.Activation);
+        round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])).IsSuccess.ShouldBeTrue();
+
+        Should.Throw<InvalidOperationException>(round.SkipSlot);
+    }
+
+    [Fact]
+    public void An_intent_in_a_round_that_declares_none_is_an_invariant_violation()
+    {
+        var round = PlannedRound();
+        round.Advance();
+
+        Should.Throw<InvalidOperationException>(() => round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])));
+    }
+
+    [Fact]
+    public void A_chosen_action_is_refused_outside_activation_and_out_of_turn()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Timeline);
+
+        round.SubmitChosenAction(CombatAction.Choose(Knight, Strike, [Ghoul])).Error.ShouldBe(RoundErrors.TargetingNotOpen);
+
+        AdvanceTo(round, RoundSubPhase.Activation);
+        round.SubmitChosenAction(CombatAction.Choose(Ghoul, Strike, [Knight])).Error.ShouldBe(RoundErrors.NotThisCreaturesTurn);
+    }
+
+    [Fact]
+    public void A_slot_skipped_outside_activation_is_an_invariant_violation()
+    {
+        var round = PlannedRound();
+
+        Should.Throw<InvalidOperationException>(round.SkipSlot);
+    }
+
     [Fact]
     public void A_slot_activated_without_a_bound_action_is_an_invariant_violation()
     {

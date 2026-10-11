@@ -26,6 +26,7 @@ public sealed class Round : Entity<RoundId>
     private readonly HashSet<PlayerSlot> _evolutionPasses = [];
     private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
     private readonly Dictionary<CreatureId, CombatAction> _actions = [];
+    private readonly HashSet<CreatureId> _skipped = [];
     private readonly Dictionary<PlayerSlot, IReadOnlyList<CreatureId>> _tieOrders = [];
 
     private Round(RoundId id)
@@ -44,15 +45,15 @@ public sealed class Round : Entity<RoundId>
     public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
 
     /// <summary>
-    /// How far combat has walked the timeline: the slots before it have been revealed, targeted and resolved
-    /// (ADR 0083).
+    /// How far combat has walked the timeline: the slots before it have been activated, each resolved or skipped
+    /// (ADR 0083, 0110).
     /// </summary>
     public TurnCursor ActivationCursor { get; private set; } = TurnCursor.Start;
 
     public bool IsCombatResolved => ActivationCursor.IsEnd(Timeline.Count);
 
     /// <summary>
-    /// The slot whose intent is revealed, targeted and resolved next, or <c>null</c> when every slot has been.
+    /// The slot activated next, or <c>null</c> when every slot has been.
     /// </summary>
     public ActivationSlot? NextSlot => IsCombatResolved ? null : Timeline[ActivationCursor.Index];
 
@@ -217,6 +218,12 @@ public sealed class Round : Entity<RoundId>
     public CombatAction? ActionOf(CreatureId creature) => _actions.GetValueOrDefault(creature);
 
     /// <summary>
+    /// Whether the creature's slot was passed over with no action, because it had nothing it could cast when the
+    /// slot came up and no Intent to reveal (<see cref="CombatDeclaration.AtActivation" />, ADR 0110).
+    /// </summary>
+    public bool WasSkipped(CreatureId creature) => _skipped.Contains(creature);
+
+    /// <summary>
     /// Accepts the targeted action for the intent at the cursor. The cursor moves once the match has resolved
     /// it, with <see cref="MarkSlotActivated"/>.
     /// </summary>
@@ -224,6 +231,47 @@ public sealed class Round : Entity<RoundId>
     {
         ArgumentNullException.ThrowIfNull(action);
 
+        var open = SlotFor(action);
+        if (open.IsFailure)
+        {
+            return open;
+        }
+
+        var intent = IntentOf(action.Actor)
+            ?? throw new InvalidOperationException($"Creature {action.Actor} is on the timeline without an intent.");
+
+        if (intent.Spell != action.Spell)
+        {
+            return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
+        }
+
+        return Bind(action);
+    }
+
+    /// <summary>
+    /// Accepts an action whose spell was chosen at the slot, with no intent declared before it (ADR 0110). An
+    /// intent held by the creature is an invariant violation: the round it belongs to declares none.
+    /// </summary>
+    internal Result SubmitChosenAction(CombatAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var open = SlotFor(action);
+        if (open.IsFailure)
+        {
+            return open;
+        }
+
+        if (HasIntent(action.Actor))
+        {
+            throw new InvalidOperationException($"Creature {action.Actor} holds an intent in a round that declares none.");
+        }
+
+        return Bind(action);
+    }
+
+    private Result SlotFor(CombatAction action)
+    {
         if (SubPhase != RoundSubPhase.Activation)
         {
             return Result.Failure(RoundErrors.TargetingNotOpen);
@@ -234,19 +282,11 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.NothingLeftToReveal);
         }
 
-        if (slot.Creature != action.Actor)
-        {
-            return Result.Failure(RoundErrors.NotThisCreaturesTurn);
-        }
+        return slot.Creature == action.Actor ? Result.Success() : Result.Failure(RoundErrors.NotThisCreaturesTurn);
+    }
 
-        var intent = IntentOf(slot.Creature)
-            ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline without an intent.");
-
-        if (intent.Spell != action.Spell)
-        {
-            return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
-        }
-
+    private Result Bind(CombatAction action)
+    {
         // A slot is bound once and activated at once (ADR 0083): a second binding before the cursor moves
         // would replace an action that already resolved, or is resolving.
         if (_actions.ContainsKey(action.Actor))
@@ -273,6 +313,25 @@ public sealed class Round : Entity<RoundId>
             throw new InvalidOperationException($"Creature {slot.Creature} is activated without a bound action.");
         }
 
+        ActivationCursor = ActivationCursor.MoveNext();
+    }
+
+    /// <summary>
+    /// Moves the cursor past the slot at it with no action bound: its creature had nothing to cast (ADR 0110). A
+    /// slot that already holds an action and a wrong sub-phase are invariant violations.
+    /// </summary>
+    internal void SkipSlot()
+    {
+        RequireSubPhase(RoundSubPhase.Activation, "skip a slot");
+
+        var slot = NextSlot
+            ?? throw new InvalidOperationException($"Round {Number}: combat is already resolved.");
+        if (_actions.ContainsKey(slot.Creature))
+        {
+            throw new InvalidOperationException($"Creature {slot.Creature} is skipped with an action already bound.");
+        }
+
+        _skipped.Add(slot.Creature);
         ActivationCursor = ActivationCursor.MoveNext();
     }
 

@@ -3,7 +3,8 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Domain.Matches.Rounds;
 
 /// <summary>
-/// A revealed intent bound to its targets.
+/// A Spell bound to its targets at its Activation slot: a revealed Intent's Spell, or one chosen at the slot when
+/// the rule set declares no Intent (ADR 0110).
 /// </summary>
 public sealed record CombatAction
 {
@@ -25,6 +26,16 @@ public sealed record CombatAction
         ArgumentNullException.ThrowIfNull(intent);
         ArgumentNullException.ThrowIfNull(targets);
         return new CombatAction(intent.Actor, intent.Spell, [.. targets]);
+    }
+
+    /// <summary>
+    /// An action whose Spell is chosen at the slot together with its targets, with no Intent declared before
+    /// (<see cref="CombatDeclaration.AtActivation" />, ADR 0110).
+    /// </summary>
+    public static CombatAction Choose(CreatureId actor, SpellId spell, IReadOnlyList<CreatureId> targets)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+        return new CombatAction(actor, spell, [.. targets]);
     }
 
     public bool Equals(CombatAction? other) =>

@@ -60,6 +60,13 @@ listed in [spells.md](spells.md).
   level-3 packages and teaching no spell: Titan (sunder 2; stun immunity until 2026-10-09), Archmage (+1
   energy at upkeep), Apex (+3 damage; +2 until 2026-10-09).
 
+- Combat declaration (ADR 0110): a rule set may declare no intent instead of hidden ones (`AtActivation`).
+  `IntentSelection` then passes through without asking anyone, and at each slot the owner submits a spell the
+  creature knows and can pay for now with its targets; a spell with no legal target is refused rather than
+  cast on nothing. A creature with nothing it can cast when its slot comes up -- dead, stunned, or no spell it
+  can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. The
+  default rule set declares hidden intents, and no host offers the other mode yet.
+
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the
   driver then runs the automatic steps and the progression gates until the round waits on a player again. A
@@ -183,7 +190,7 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
   spells: three gaps the inherited spells fall into ([spells.md](spells.md)).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
-- Declaring the Spell at the slot together with its targets instead of as a hidden Intent before combat: a
-  second combat declaration mode, built beside today's rule and measured at the table before either is
-  dropped (ADR 0110, [free-activation-plan.md](free-activation-plan.md)).
+- Declaring the Spell at the slot together with its targets instead of as a hidden Intent before combat: the
+  engine plays both (ADR 0110), and the table decides which one stays
+  ([free-activation-plan.md](free-activation-plan.md)).
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.
