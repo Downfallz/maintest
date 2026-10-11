@@ -100,6 +100,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
 | Activation | The Combat sub-phase that walks the timeline once: at each slot the Intent is revealed, its owner binds targets on the board as it stands, and the Combat action resolves on confirmation; a Creature that cannot act is revealed with no targets and fizzles without its owner being asked (ADR 0083). | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
+| Combat declaration | When a Rule set has a Creature choose its Spell: `HiddenIntent`, an Intent before combat (today's rule), or `AtActivation`, together with its targets when its Activation slot comes up (ADR 0110). | open |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
 | Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act when its slot comes up (dead, stunned, unable to pay or to cast, or with no legal target); its targeting failing globally or losing every target is the same, though no command reaches it since ADR 0083. | decided |
 | Targeting report | Every targeting failure of a Combat action at once: global ones (count, duplicates, self-only) and per-target ones (unknown, dead, wrong origin). | decided |

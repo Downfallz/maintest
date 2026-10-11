@@ -183,4 +183,7 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
   spells: three gaps the inherited spells fall into ([spells.md](spells.md)).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
+- Declaring the Spell at the slot together with its targets instead of as a hidden Intent before combat: a
+  second combat declaration mode, built beside today's rule and measured at the table before either is
+  dropped (ADR 0110, [free-activation-plan.md](free-activation-plan.md)).
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.

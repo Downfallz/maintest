@@ -378,6 +378,10 @@ ADR-sized change that would reset every measurement:
 authorised only when a playtest names the specific problem it solves. Setup asymmetry stays outside the
 alpha recommendation.
 
+**Amended by the owner (2026-10-11):** the freeze is lifted for one experiment, declaring the Spell at the
+slot instead of as a hidden Intent (ADR 0110). It is built as a second rule-set mode beside the frozen rule,
+which stays the default, so the playtest compares the two rather than replacing one.
+
 The unresolved question is the shape of a match for a human: handling growing spellbooks, wanting the
 next Evolution pick, recognising defensive counterplay, and feeling a transformation's payoff. Neither
 stable health leads nor symmetric starting creatures establish a design defect. Playtests should identify
