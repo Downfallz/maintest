@@ -159,6 +159,37 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
+    /// The spell and targets with the best score on the board as it stands, under a rule set that declares no
+    /// intent (ADR 0110): every earlier slot has resolved, so nobody is expected gone, and the targets are the
+    /// ones each spell was scored on. A cast that can end the match first; ties go to the first spell in ordinal
+    /// id order, as an intent's do.
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var creatures = Creatures(board);
+        var actor = creatures.First(creature => creature.Id == options.Actor);
+        var speed = SpeedOf(board, actor.Id);
+        var stillToAct = Foresight.StillToAct(board, actor.Id);
+        ChosenAction? best = null;
+        var bestValue = (Wins: false, Score: double.NegativeInfinity);
+        foreach (var spell in options.SpellIds.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        {
+            var found = _scorer.Best(actor, spell, creatures, ActionScorer.NoneGone, speed, stillToAct, board.RoundNumber);
+            var value = found is { } scored ? (scored.Wins, scored.Score) : (false, 0.0);
+            if (value.CompareTo(bestValue) > 0)
+            {
+                best = new ChosenAction(spell, found is { } targeted ? targeted.Targets : []);
+                bestValue = value;
+            }
+        }
+
+        return best ?? throw new InvalidOperationException("The options offer no castable spell.");
+    }
+
+    /// <summary>
     /// What a creature chose in the Speed sub-phase, which decides whether its cast can crit at all. Both
     /// decisions that use it -- the intent and its targets -- come after that sub-phase, so the choice is
     /// always there; Standard is the answer to a board asked out of order, not a creature that picked it.

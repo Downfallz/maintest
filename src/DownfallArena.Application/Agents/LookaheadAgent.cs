@@ -305,6 +305,14 @@ public sealed class LookaheadAgent(
     }
 
     /// <summary>
+    /// Not yet (ADR 0110): this agent plays a round declared before combat out from its first slot, and a round
+    /// that declares no intent needs its own search from the activation cursor. The default would replay slots
+    /// that have already resolved, so it is refused rather than played wrong.
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) =>
+        throw new NotSupportedException("The lookahead and the minimax do not play a rule set that declares no intent yet (ADR 0110).");
+
+    /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
     /// the actor casting that spell on the best targets the board offers when its slot comes. Ties go to the
     /// first spell in ordinal id order.

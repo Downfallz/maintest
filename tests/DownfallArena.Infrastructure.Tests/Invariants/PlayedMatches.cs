@@ -20,6 +20,8 @@ namespace DownfallArena.Infrastructure.Tests.Invariants;
 /// agent never makes: odd speed choices, spells no argmax picks, ties both sides hold.</item>
 /// <item>The <c>search-23</c> mirror reaches the far end of a match. It stacks permanent defense past the
 /// ceiling of ten, trades stuns, and runs to the round cap in most of its matches (journal, 2026-09-24).</item>
+/// <item>A random and an exploring mirror again, under a rule set that declares no intent (ADR 0110): every
+/// invariant holds whichever rule chose the spell, and a skipped slot replaces a fizzle there.</item>
 /// </list>
 /// Seeds are fixed, so a failing invariant names a match that replays.
 /// </summary>
@@ -33,6 +35,9 @@ public sealed class PlayedMatches : IAsyncLifetime
 
     public static RuleSet Rules => RuleSet.Default;
 
+    /// <summary>The same rules with the spell chosen at the slot (ADR 0110).</summary>
+    public static RuleSet RulesAtActivation => Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
     public IReadOnlyList<PlayedMatch> Matches { get; private set; } = [];
 
     public async ValueTask InitializeAsync()
@@ -40,24 +45,30 @@ public sealed class PlayedMatches : IAsyncLifetime
         var random = await PlayAsync(AgentSpec.Random, matches: 120, baseSeed: 5000);
         var exploring = await PlayAsync(Exploring, matches: 80, baseSeed: 7000);
         var stacking = await PlayAsync(Stacking, matches: 30, baseSeed: 9000);
-        Matches = [.. random, .. exploring, .. stacking];
+        var randomAtActivation = await PlayAsync(AgentSpec.Random, matches: 60, baseSeed: 11000, RulesAtActivation);
+        var exploringAtActivation = await PlayAsync(Exploring, matches: 40, baseSeed: 13000, RulesAtActivation);
+        Matches = [.. random, .. exploring, .. stacking, .. randomAtActivation, .. exploringAtActivation];
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    /// <summary>A mirror of <paramref name="agent"/>, one match a seed from <paramref name="baseSeed"/>.</summary>
-    public async Task<IReadOnlyList<PlayedMatch>> PlayAsync(AgentSpec agent, int matches, int baseSeed)
+    /// <summary>
+    /// A mirror of <paramref name="agent"/>, one match a seed from <paramref name="baseSeed"/>, on
+    /// <paramref name="rules"/> or the default ones.
+    /// </summary>
+    public async Task<IReadOnlyList<PlayedMatch>> PlayAsync(AgentSpec agent, int matches, int baseSeed, RuleSet? rules = null)
     {
+        rules ??= Rules;
         var log = new MatchEventLog();
         var services = new ServiceCollection().AddApplication().AddInfrastructure(randomSeed: baseSeed);
         services.AddSingleton(Resources);
         services.AddSingleton<IDomainEventListener>(log);
         await using var provider = services.BuildServiceProvider();
 
-        var roster = Enumerable.Repeat(Resources.Creatures.First().Id, Rules.TeamSize).ToList();
+        var roster = Enumerable.Repeat(Resources.Creatures.First().Id, rules.TeamSize).ToList();
         var scenario = new SimulationScenario
         {
-            RuleSet = Rules,
+            RuleSet = rules,
             Player1Roster = roster,
             Player2Roster = roster,
             Player1Agent = agent,
@@ -67,6 +78,6 @@ public sealed class PlayedMatches : IAsyncLifetime
         };
         var batch = await provider.GetRequiredService<BatchRunner>().RunAsync(scenario);
 
-        return [.. batch.Results.OrderBy(result => result.Index).Select(result => new PlayedMatch(result, log.Of(result.MatchId)))];
+        return [.. batch.Results.OrderBy(result => result.Index).Select(result => new PlayedMatch(result, log.Of(result.MatchId), rules.CombatDeclaration))];
     }
 }

@@ -2,6 +2,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources.Effects;
 
@@ -192,6 +193,69 @@ public sealed class MatchInvariantTests(PlayedMatches played) : IClassFixture<Pl
         var second = await played.PlayAsync(PlayedMatches.Exploring, matches: 12, baseSeed: 7000);
 
         second.Select(Fingerprint).ShouldBe(first.Select(Fingerprint));
+    }
+
+    /// <summary>
+    /// ADR 0110: a rule set that declares no intent never asks for one, and every slot of a round is either an
+    /// action revealed and resolved or a slot skipped, in timeline order, until the round ends or the match does.
+    /// </summary>
+    [Fact]
+    public void At_activation_every_slot_is_acted_or_skipped_and_no_intent_is_declared()
+    {
+        var atActivation = played.Matches.Where(match => match.Declaration == CombatDeclaration.AtActivation).ToList();
+
+        var violations = atActivation
+            .Where(match => match.Events.OfType<IntentSubmitted>().Any() || !EverySlotTakenInOrder(match.Events))
+            .Select(match => $"{match}: an intent was declared, or a slot was neither acted nor skipped in its turn");
+
+        atActivation.ShouldNotBeEmpty();
+        violations.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Every creature starts with Focus, which is free and lands on its caster, so with today's content a
+    /// creature is skipped only when it died or was stunned after planning (ADR 0110). A skip for anything else
+    /// is a creature the rules left with nothing to cast, which the content says cannot happen.
+    /// </summary>
+    [Fact]
+    public void At_activation_a_creature_is_skipped_only_when_dead_or_stunned()
+    {
+        var reasons = played.Matches.SelectMany(match => match.Events.OfType<SlotSkipped>().Select(skipped => (match, skipped))).ToList();
+
+        reasons.ShouldNotBeEmpty("random mirrors kill creatures before their slot");
+        reasons.Where(entry => entry.skipped.Reason != CombatErrors.ActorDead && entry.skipped.Reason != CombatErrors.ActorStunned)
+            .Select(entry => $"{entry.match}: {entry.skipped.Actor} skipped for {entry.skipped.Reason.Code}")
+            .ShouldBeEmpty();
+    }
+
+    private static bool EverySlotTakenInOrder(IReadOnlyList<IMatchEvent> events)
+    {
+        IReadOnlyList<ActivationSlot> timeline = [];
+        var next = 0;
+        for (var index = 0; index < events.Count; index++)
+        {
+            // A wipe ends the round mid-timeline (ADR 0083): only the last round may stop short of its end.
+            var last = index >= events.Count - 2;
+            switch (events[index])
+            {
+                case TimelineBuilt built:
+                    (timeline, next) = (built.Timeline.Slots, 0);
+                    break;
+                case TiesOrdered ordered:
+                    (timeline, next) = (ordered.Timeline.Slots, 0);
+                    break;
+                case ActionRevealed revealed when next >= timeline.Count || revealed.Action.Actor != timeline[next].Creature:
+                case SlotSkipped skipped when next >= timeline.Count || skipped.Actor != timeline[next].Creature:
+                    return false;
+                case ActionRevealed or SlotSkipped:
+                    next++;
+                    break;
+                case RoundEnded when next != timeline.Count && !last:
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     private int ExpectedDefense(CreatureSnapshot creature)

@@ -177,6 +177,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Player board state | The projection of a Match for one Player: both teams as Snapshots, the round position, their own hidden choices, the public timeline and revealed actions. | decided |
 | Player options | The projection of the one decision a Player can make in the current Sub-phase, with everything they may pick from; built from the Progression gates and the targeting rules. | decided |
 | Player agent | Something that decides for a Player from their Player options: a bot, a script, a UI adapter. | decided |
+| Chosen action | What a Player agent answers when the Rule set declares no Intent: one Spell among the ones its Creature can cast now, and its targets (ADR 0110). | decided |
 | Random agent | The Player agent that picks uniformly among the options; the floor every other agent is measured against. | decided |
 | Greedy agent | The deterministic Player agent with a one-step lookahead on the domain rules and the built-in Scoring weights; the baseline of the Benchmark digest. | decided |
 | Purse | The energy a Creature will hold at the start of next round if it spends what an action costs now: its Energy, less the cost, plus what the action gives it, plus a round's gain. The agents price an action by the spell its purse unlocks (ADR 0096). | decided |

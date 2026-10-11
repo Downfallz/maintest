@@ -163,4 +163,6 @@ internal sealed class SeatAgent : IPlayerAgent
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Deciding(board).Agent.DecideIntent(board, intentOption);
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Deciding(board).Agent.DecideTargets(board, options);
+
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => Deciding(board).Agent.DecideAction(board, options);
 }

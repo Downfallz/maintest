@@ -112,6 +112,13 @@ internal sealed record CliOptions
     public MatchFormat? Format { get; init; }
 
     /// <summary>
+    /// When a creature chooses its spell: <c>hidden-intent</c>, today's rule, or <c>at-activation</c>, with its
+    /// targets at its slot (ADR 0110). None plays the rule set as it stands, so every command line written before
+    /// this option existed plays the same game it did.
+    /// </summary>
+    public CombatDeclaration? Declaration { get; init; }
+
+    /// <summary>
     /// Where <c>studio --export</c> writes what the read-only routes answer, for a studio served without this
     /// host behind it (ADR 0023). Null serves the page instead.
     /// </summary>
@@ -125,7 +132,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -142,14 +149,16 @@ internal sealed record CliOptions
 
     private const string FormatOption = "--format";
 
+    private const string DeclarationOption = "--declaration";
+
     private static readonly string[] Known =
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption,
+        "--who", FormatOption, DeclarationOption,
     ];
 
-    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption];
+    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
 
     /// <summary>What describes the table a host starts with, which a lobby host starts without.</summary>
     private static readonly string[] LobbyConflicts = [SeedOption, HandoverOption, "--p1", "--p2", "--who"];
@@ -181,6 +190,7 @@ internal sealed record CliOptions
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue(HandoverOption, out var handover) ? ParseHandover(handover) : null,
             Format = values.TryGetValue(FormatOption, out var format) ? MatchFormat.Parse(format) : null,
+            Declaration = values.TryGetValue(DeclarationOption, out var declaration) ? ParseDeclaration(declaration) : null,
             Rules = values.GetValueOrDefault("--rules"),
             Who = values.GetValueOrDefault("--who"),
             Recording = !flags.Contains("--no-record") && !flags.Contains(PracticeOption),
@@ -232,6 +242,13 @@ internal sealed record CliOptions
             return "'--format' is not for studio: the studio authors content and plays no match of its own.";
         }
 
+        // The same reason as the format: one digest per content hash, measured on the default rule (ADR 0110).
+        // The table is refused until its seats and its page can ask for a spell at the slot.
+        if (values.ContainsKey(DeclarationOption) && command is "benchmark" or "studio" or "table")
+        {
+            return $"'--declaration' is not for {command}: it is for play, human, simulate and evaluate (ADR 0110).";
+        }
+
         return flags.Contains("--no-record") && values.ContainsKey(RecordOption)
             ? "'--no-record' and '--record' ask for opposite things; pass one or neither."
             : null;
@@ -267,6 +284,14 @@ internal sealed record CliOptions
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
     private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
+
+    /// <summary>A combat declaration as a command line names it (ADR 0110); anything else is one line, not a stack.</summary>
+    private static CombatDeclaration ParseDeclaration(string text) => text switch
+    {
+        "hidden-intent" => CombatDeclaration.HiddenIntent,
+        "at-activation" => CombatDeclaration.AtActivation,
+        _ => throw new ArgumentException($"'{text}' is not a combat declaration: hidden-intent or at-activation.", nameof(text)),
+    };
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
     private static int ParseTraces(string text)

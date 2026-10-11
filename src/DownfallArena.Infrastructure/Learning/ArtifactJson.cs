@@ -1,5 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using DownfallArena.Application.Learning;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Infrastructure.Learning.Json;
@@ -23,7 +26,11 @@ public static class ArtifactJson
 
     private static JsonSerializerOptions Create(bool indented)
     {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = indented };
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = indented,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { OmitTheDefaultCombatDeclaration } },
+        };
         options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new VersionedIdConverterFactory());
         options.Converters.Add(new CreatureIdConverter());
@@ -34,5 +41,23 @@ public static class ArtifactJson
         options.Converters.Add(new CriticalChanceConverter());
         options.Converters.Add(new KindedObjectConverterFactory(typeof(Effect), typeof(EffectOutcome), typeof(IDomainEvent)));
         return options;
+    }
+
+    /// <summary>
+    /// A rule-set stamp names its combat declaration only when it is not today's rule (ADR 0110): the stamps
+    /// written before the field existed, and the readers that compare them as written (the Python stamps, the
+    /// viewer), then read a default run as the same game they always did.
+    /// </summary>
+    private static void OmitTheDefaultCombatDeclaration(JsonTypeInfo type)
+    {
+        if (type.Type != typeof(RuleSetStamp))
+        {
+            return;
+        }
+
+        foreach (var property in type.Properties.Where(property => property.PropertyType == typeof(CombatDeclaration)))
+        {
+            property.ShouldSerialize = (_, value) => value is not CombatDeclaration.HiddenIntent;
+        }
     }
 }

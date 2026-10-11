@@ -102,6 +102,27 @@ public sealed class ExploringAgent : IPlayerAgent
         return sets[_source.NextInt32(0, sets.Count)];
     }
 
+    /// <summary>
+    /// Every spell on offer with every legal target set of it, the pairs the encoder lists, with equal weight: one
+    /// draw for the pair rather than a spell and then a set, so a spell with many target sets is not starved
+    /// (ADR 0110).
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (!Explores())
+        {
+            return _inner.DecideAction(board, options);
+        }
+
+        var pairs = options.Spells
+            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)))
+            .ToList();
+        return pairs.Count > 0
+            ? pairs[_source.NextInt32(0, pairs.Count)]
+            : throw new InvalidOperationException("The options offer no castable spell.");
+    }
+
     /// <summary>One draw per decision, so the rate is the share of decisions and not of matches or rounds.</summary>
     private bool Explores() => _source.NextDouble() < Rate;
 }
