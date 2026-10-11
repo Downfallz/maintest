@@ -93,6 +93,75 @@ public sealed class RecordingAgentTests
         steps[2].Code.TargetMask.ShouldBe(0b1000);
     }
 
+    /// <summary>
+    /// ADR 0110. A spell and its targets chosen at once are recorded as the two steps a declared intent makes: the
+    /// spell among the spells on offer, then its targets among the spell's. The wrapped agent is asked the one
+    /// decision it makes, and nothing else.
+    /// </summary>
+    [Fact]
+    public void An_action_is_asked_once_and_recorded_as_an_intent_step_then_a_targets_step()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        var chosen = new ChosenAction(TestContent.Strike, [CreatureId.From(4)]);
+        inner.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>()).Returns(chosen);
+        var steps = new List<StepRecord>();
+        var board = Board();
+        var options = new ActionOptions(
+            CreatureId.From(1),
+            [
+                new TargetOptions(CreatureId.From(1), TestContent.Jab, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])),
+                new TargetOptions(CreatureId.From(1), TestContent.Strike, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])),
+            ]);
+
+        var action = new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideAction(board, options);
+
+        action.ShouldBe(chosen);
+        inner.Received(1).DecideAction(board, options);
+        inner.DidNotReceive().DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>());
+        inner.DidNotReceive().DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>());
+        steps.Select(step => step.Kind).ShouldBe([ActionKind.Intent, ActionKind.Targets]);
+        steps.Select(step => step.Action).ShouldBe(["intent:0:spell:strike:v1", "targets:0:spell:strike:v1:3"]);
+        steps[0].Candidates.ShouldBe(["intent:0:spell:jab:v1", "intent:0:spell:strike:v1"]);
+        steps[1].Candidates.ShouldBe(["targets:0:spell:strike:v1:2", "targets:0:spell:strike:v1:3"]);
+        steps.ShouldAllBe(step => step.Observation == Observations.Build(board));
+    }
+
+    /// <summary>
+    /// ADR 0110. On a whole match that declares no intent every decision is still a step among its candidates,
+    /// and the action steps are the intent and targets pairs the encoder knows. The counting agent takes the
+    /// interface's default action, which asks it an intent and then targets, so each action counts as two.
+    /// </summary>
+    [Fact]
+    public async Task Under_activation_declaration_every_step_of_a_match_is_among_its_candidates()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo().WithCombatDeclaration(CombatDeclaration.AtActivation), new TestRandom(42));
+        var steps = new List<StepRecord>();
+        var player1 = new CountingAgent(new RandomAgent(new TestRandom(1)));
+        var player2 = new CountingAgent(new RandomAgent(new TestRandom(2)));
+
+        var outcome = await Handlers.Driver(store.Workflow).PlayAsync(
+            match.Id,
+            new RecordingAgent(player1, Observations, Actions, Terms, steps),
+            new RecordingAgent(player2, Observations, Actions, Terms, steps),
+            TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        steps.Count.ShouldBe(player1.Decisions + player2.Decisions);
+        steps.ShouldAllBe(step => step.Candidates.Contains(step.Action));
+        steps.Count(step => step.Kind == ActionKind.Intent).ShouldBe(steps.Count(step => step.Kind == ActionKind.Targets));
+        steps.Count(step => step.Kind == ActionKind.Intent).ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public void An_action_without_its_board_or_options_is_rejected()
+    {
+        var agent = new RecordingAgent(new RandomAgent(new TestRandom(1)), Observations, Actions, Terms, []);
+
+        Should.Throw<ArgumentNullException>(() => agent.DecideAction(null!, new ActionOptions(CreatureId.From(1), [])));
+        Should.Throw<ArgumentNullException>(() => agent.DecideAction(Board(), null!));
+    }
+
     [Fact]
     public void A_choice_the_options_do_not_offer_is_refused()
     {

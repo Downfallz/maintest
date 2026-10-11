@@ -50,6 +50,26 @@ public sealed class RunStampTests
         RuleSetStamp.Of(RuleSet.Create(3, 1, 2, 10, 1.5, 2, 3)).ShouldBe(new RuleSetStamp(3, 1, 2, 10, 1.5, 2, 3));
     }
 
+    /// <summary>ADR 0110: a run that chooses spells at the slot is not the game of one that declares them, so the stamp says which.</summary>
+    [Fact]
+    public void A_rule_set_stamp_carries_the_combat_declaration()
+    {
+        var rules = MatchStore.TwoOnTwo();
+
+        RuleSetStamp.Of(rules).CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        RuleSetStamp.Of(rules.WithCombatDeclaration(CombatDeclaration.AtActivation))
+            .ShouldBe(new RuleSetStamp(2, 2, 2, 30, 2.0, 1, 2, CombatDeclaration.AtActivation));
+    }
+
+    [Fact]
+    public void Two_runs_that_differ_only_in_their_combat_declaration_differ_on_the_rules()
+    {
+        var stamp = Stamp();
+
+        stamp.DifferencesFrom(stamp with { RuleSet = RuleSetStamp.Of(MatchStore.TwoOnTwo().WithCombatDeclaration(CombatDeclaration.AtActivation)) })
+            .ShouldBe(["rules"]);
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {

@@ -23,6 +23,14 @@ public sealed class ExploringAgentTests
     private static readonly CreatureId Three = CreatureId.From(3);
     private static readonly CreatureId Four = CreatureId.From(4);
 
+    /// <summary>Creature 1 at its slot, able to Slam one or both enemies or Strike either.</summary>
+    private static readonly ActionOptions SlamOrStrike = new(
+        One,
+        [
+            new TargetOptions(One, TestContent.Slam, new LegalTargets(1, 2, [Three, Four])),
+            new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+        ]);
+
     /// <summary>A draw of 0.999 is above any rate at most 0.99, so every decision is the greedy one.</summary>
     [Fact]
     public void Below_its_rate_the_agent_decides_exactly_as_greedy_does()
@@ -112,6 +120,46 @@ public sealed class ExploringAgentTests
         targets.ShouldBe(wanted);
     }
 
+    /// <summary>ADR 0110: a draw above the rate leaves the action to the inner agent, asked as an action.</summary>
+    [Fact]
+    public void Below_its_rate_the_action_is_the_inner_agents_own()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        var chosen = new ChosenAction(TestContent.Strike, [Four]);
+        inner.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>()).Returns(chosen);
+        var board = Board(enemyHealth: 20);
+
+        var action = new ExploringAgent(0.5, inner, new ScriptedRandom(999)).DecideAction(board, SlamOrStrike);
+
+        action.ShouldBe(chosen);
+        inner.Received(1).DecideAction(board, SlamOrStrike);
+    }
+
+    /// <summary>
+    /// ADR 0110. Exploring an action draws once over every (spell, target set) pair the options allow, with equal
+    /// weight: Slam's three target sets and Strike's two are five candidates, so a spell with more sets is not
+    /// starved by a draw of the spell first. The inner agent is not asked.
+    /// </summary>
+    [Theory]
+    [InlineData(0u, "spell:slam:v1", new[] { 3 })]
+    [InlineData(1u, "spell:slam:v1", new[] { 4 })]
+    [InlineData(2u, "spell:slam:v1", new[] { 3, 4 })]
+    [InlineData(3u, "spell:strike:v1", new[] { 3 })]
+    [InlineData(4u, "spell:strike:v1", new[] { 4 })]
+    public void Above_its_rate_every_spell_and_target_set_pair_shares_the_weight(uint draw, string spell, int[] targets)
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+
+        var action = new ExploringAgent(1.0, inner, new ScriptedRandom(0, draw)).DecideAction(Board(enemyHealth: 20), SlamOrStrike);
+
+        action.ShouldBe(new ChosenAction(SpellId.Parse(spell), [.. targets.Select(CreatureId.From)]));
+        inner.DidNotReceive().DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>());
+    }
+
+    [Fact]
+    public void Exploring_an_action_with_no_spell_on_offer_is_a_bug() =>
+        Should.Throw<InvalidOperationException>(() => Agent(1.0, new ScriptedRandom(0)).DecideAction(Board(enemyHealth: 20), new ActionOptions(One, [])));
+
     [Fact]
     public void An_uncastable_spell_binds_no_target_and_no_castable_spell_is_a_bug()
     {
@@ -142,6 +190,7 @@ public sealed class ExploringAgentTests
         Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideEvolution(Board(enemyHealth: 20), null!));
         Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideIntent(Board(enemyHealth: 20), null!));
         Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideTargets(Board(enemyHealth: 20), null!));
+        Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideAction(Board(enemyHealth: 20), null!));
     }
 
     [Theory]

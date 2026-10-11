@@ -545,6 +545,66 @@ public sealed class LookaheadAgentTests
         Should.Throw<ArgumentException>(() => factory.Create(AgentSpec.Parse("lookahead:2x0"), Rules, new TestRandom(1)));
     }
 
+    /// <summary>
+    /// ADR 0110. The search plays a round declared before combat out from its first slot, so asked for an
+    /// action under a rule set that declares no intent it refuses rather than replay slots that have resolved.
+    /// </summary>
+    [Fact]
+    public void A_searching_agent_refuses_to_choose_an_action()
+    {
+        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]))]);
+        var board = PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
+
+        Should.Throw<NotSupportedException>(() => Agent.DecideAction(board, options));
+    }
+
+    /// <summary>
+    /// ADR 0110. The factory refuses a searching agent for such a rule set when it builds it, wrapped or not, so
+    /// a batch fails before its first match rather than on its first slot.
+    /// </summary>
+    [Theory]
+    [InlineData("lookahead")]
+    [InlineData("minimax")]
+    [InlineData("lookahead:2x3")]
+    [InlineData("minimax:greedy")]
+    [InlineData("explore:0.2:lookahead")]
+    [InlineData("opening:jab:minimax")]
+    public void The_factory_refuses_a_searching_agent_for_a_rule_set_that_declares_no_intent(string spec)
+    {
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        Should.Throw<ArgumentException>(() => Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)))
+            .Message.ShouldContain("ADR 0110");
+    }
+
+    [Theory]
+    [InlineData("lookahead")]
+    [InlineData("minimax")]
+    [InlineData("lookahead:2x3")]
+    [InlineData("minimax:greedy")]
+    [InlineData("explore:0.2:lookahead")]
+    [InlineData("opening:jab:minimax")]
+    public void The_factory_still_builds_a_searching_agent_for_the_hidden_intent_rule(string spec)
+    {
+        var agent = Handlers.Agents().Create(AgentSpec.Parse(spec), Rules, new TestRandom(1));
+
+        agent.ShouldNotBeNull();
+        Rules.CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+    }
+
+    /// <summary>The agents that read the board as it stands are built for either rule (ADR 0110).</summary>
+    [Theory]
+    [InlineData("random")]
+    [InlineData("greedy")]
+    [InlineData("explore:0.2")]
+    [InlineData("opening:jab")]
+    public void The_factory_builds_an_agent_that_reads_the_board_as_it_stands_for_a_rule_set_that_declares_no_intent(string spec)
+    {
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)).ShouldNotBeNull();
+    }
+
     /// <summary>The depth is part of the stamp, and what the agent reads is still the weights file after it.</summary>
     [Fact]
     public void A_spec_that_reads_the_rounds_after_a_move_stamps_as_the_weights_it_reads()

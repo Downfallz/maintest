@@ -162,6 +162,104 @@ public sealed class PlayerDecisionCheckTests
         PlayerDecisionCheck.Validate(target, PlayerDecision.BindTargets([legal.Candidates[0]])).IsSuccess.ShouldBeTrue();
     }
 
+    /// <summary>ADR 0110: the creature at its slot chooses a spell and its targets in one decision.</summary>
+    [Fact]
+    public void An_action_carries_its_creature_its_spell_and_a_copy_of_its_targets()
+    {
+        List<CreatureId> targets = [Theirs];
+
+        var decision = PlayerDecision.Act(Mine, TestContent.Strike, targets);
+        targets.Add(CreatureId.From(4));
+
+        decision.Kind.ShouldBe(PlayerOptionsKind.Action);
+        decision.Creature.ShouldBe(Mine);
+        decision.Spell.ShouldBe(TestContent.Strike);
+        decision.Targets.ShouldBe([Theirs]);
+    }
+
+    [Fact]
+    public void An_action_without_a_target_list_is_rejected() =>
+        Should.Throw<ArgumentNullException>(() => PlayerDecision.Act(Mine, TestContent.Strike, null!));
+
+    [Fact]
+    public void An_action_the_options_offer_is_accepted()
+    {
+        var options = Acting();
+
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Strike, [Theirs])).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Slam, [Theirs, CreatureId.From(4)])).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void An_action_for_a_creature_other_than_the_one_at_its_slot_is_refused()
+    {
+        var refused = PlayerDecisionCheck.Validate(Acting(), PlayerDecision.Act(Theirs, TestContent.Strike, [Theirs]));
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.Error.ShouldBe(DecisionErrors.CreatureNotOffered);
+    }
+
+    [Fact]
+    public void An_action_with_a_spell_the_options_do_not_offer_is_refused()
+    {
+        var refused = PlayerDecisionCheck.Validate(Acting(), PlayerDecision.Act(Mine, TestContent.Guard, [Mine]));
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.Error.ShouldBe(DecisionErrors.SpellNotOffered);
+    }
+
+    /// <summary>The targets of an action are read against the chosen spell's, exactly as a binding's are.</summary>
+    [Fact]
+    public void An_action_s_targets_are_checked_against_its_spell_as_a_binding_is()
+    {
+        var options = Acting();
+
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Strike, [])).Error.ShouldBe(DecisionErrors.TooFewTargets);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Strike, [Theirs, CreatureId.From(4)])).Error.ShouldBe(DecisionErrors.TooManyTargets);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Slam, [Theirs, Theirs])).Error.ShouldBe(DecisionErrors.DuplicateTarget);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Act(Mine, TestContent.Strike, [Mine])).Error.ShouldBe(DecisionErrors.TargetNotOffered);
+    }
+
+    [Fact]
+    public void A_target_binding_is_not_what_an_action_slot_is_waiting_for()
+    {
+        PlayerDecisionCheck.Validate(Acting(), PlayerDecision.BindTargets([Theirs])).Error.ShouldBe(DecisionErrors.NotPending);
+        PlayerDecisionCheck.Validate(Targeting(new LegalTargets(1, 1, [Theirs])), PlayerDecision.Act(Mine, TestContent.Strike, [Theirs])).Error.ShouldBe(DecisionErrors.NotPending);
+    }
+
+    /// <summary>
+    /// ADR 0110. The check agrees with the projection a seat is served and with the match itself: on a real
+    /// match that declares no intent, every slot is answered with the first spell and the first target the
+    /// options offer, and the match takes each one.
+    /// </summary>
+    [Fact]
+    public void Everything_the_projection_offers_at_activation_on_a_real_match_is_accepted()
+    {
+        var match = new MatchStore().Started(MatchStore.TwoOnTwo().WithCombatDeclaration(CombatDeclaration.AtActivation));
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+
+        var next = match.CurrentRound.ShouldNotBeNull().NextSlot.ShouldNotBeNull();
+        var options = PlayerOptionsProjection.Build(match, next.Owner, TestContent.Resources);
+        var offered = options.Action.ShouldNotBeNull().Spells[0];
+        var decision = PlayerDecision.Act(offered.Actor, offered.Spell, [offered.LegalTargets.Candidates[0]]);
+
+        PlayerDecisionCheck.Validate(options, decision).IsSuccess.ShouldBeTrue();
+        match.SubmitAction(next.Owner, CombatAction.Bind(new CombatIntent(offered.Actor, offered.Spell), decision.Targets)).IsSuccess.ShouldBeTrue();
+    }
+
+    /// <summary>Creature 1 at its slot, able to cast Slam on up to two enemies or Strike on one.</summary>
+    private static PlayerOptions Acting() => new()
+    {
+        Kind = PlayerOptionsKind.Action,
+        Action = new ActionOptions(
+            Mine,
+            [
+                new TargetOptions(Mine, TestContent.Slam, new LegalTargets(1, 2, [Theirs, CreatureId.From(4)])),
+                new TargetOptions(Mine, TestContent.Strike, new LegalTargets(1, 1, [Theirs, CreatureId.From(4)])),
+            ]),
+    };
+
     private static PlayerOptions Targeting(LegalTargets legal) => new()
     {
         Kind = PlayerOptionsKind.Target,

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
@@ -94,6 +95,53 @@ public sealed class ArtifactJsonTests
         JsonSerializer.Serialize(started, ArtifactJson.LineOptions)
             .ShouldBe("""{"kind":"RoundStarted","matchId":"00000000-0000-0000-0000-00000000abcd","roundId":1}""");
     }
+
+    /// <summary>
+    /// ADR 0110. A stamp of today's rule names no combat declaration, so it is written exactly as every stamp
+    /// before the field existed was, and the readers that compare stamps as written read the same game.
+    /// </summary>
+    [Fact]
+    public void A_rule_set_stamp_of_the_hidden_intent_rule_names_no_combat_declaration()
+    {
+        var stamp = RuleSetStamp.Of(RuleSet.Create(2, 2, 2, 30, 2.0));
+
+        var json = JsonSerializer.Serialize(stamp, ArtifactJson.LineOptions);
+
+        json.ShouldBe("""{"teamSize":2,"energyPerRound":2,"evolutionPicksPerOpportunity":2,"roundCap":30,"criticalMultiplier":2,"firstEvolutionRound":1,"evolutionInterval":2}""");
+        JsonSerializer.Serialize(stamp, ArtifactJson.DocumentOptions).ShouldNotContain("combatDeclaration");
+    }
+
+    [Fact]
+    public void A_rule_set_stamp_of_the_activation_rule_names_its_combat_declaration()
+    {
+        var stamp = RuleSetStamp.Of(RuleSet.Create(2, 2, 2, 30, 2.0, combatDeclaration: CombatDeclaration.AtActivation));
+
+        var json = JsonSerializer.Serialize(stamp, ArtifactJson.LineOptions);
+
+        json.ShouldBe("""{"teamSize":2,"energyPerRound":2,"evolutionPicksPerOpportunity":2,"roundCap":30,"criticalMultiplier":2,"firstEvolutionRound":1,"evolutionInterval":2,"combatDeclaration":"AtActivation"}""");
+    }
+
+    /// <summary>The stamp is written inside a run stamp, and the rule holds there too.</summary>
+    [Fact]
+    public void A_run_stamp_names_the_combat_declaration_only_when_it_is_not_the_default()
+    {
+        var hidden = StampWith(CombatDeclaration.HiddenIntent);
+        var atActivation = StampWith(CombatDeclaration.AtActivation);
+
+        JsonSerializer.Serialize(hidden, ArtifactJson.DocumentOptions).ShouldNotContain("combatDeclaration");
+        JsonSerializer.Serialize(atActivation, ArtifactJson.LineOptions).ShouldContain("\"combatDeclaration\":\"AtActivation\"");
+    }
+
+    private static RunStamp StampWith(CombatDeclaration declaration) => new()
+    {
+        EngineVersion = "abc123def456",
+        ContentHash = "test-content",
+        RuleSet = RuleSetStamp.Of(RuleSet.Create(2, 2, 2, 30, 2.0, combatDeclaration: declaration)),
+        FeatureSchema = "features:v1",
+        Player1Agent = "greedy",
+        Player2Agent = "random",
+        BaseSeed = 1,
+    };
 
     [Fact]
     public void Documents_are_indented_and_lines_are_not()

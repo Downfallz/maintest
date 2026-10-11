@@ -54,6 +54,29 @@ public sealed class EvaluationRunnerTests
         evaluation.AgentA.SpellUsage.Values.Sum().ShouldBe(evaluation.AgentA.Actions, "every declared intent resolves once, fizzled or not");
     }
 
+    /// <summary>
+    /// ADR 0110. Under a rule set that declares no intent, the spell a side chose at its slot is counted as a
+    /// declared one is. Every chosen action resolves exactly once there -- a slot that cannot act is skipped,
+    /// not fizzled -- so each agent's usage adds up to its actions.
+    /// </summary>
+    [Fact]
+    public async Task Under_activation_declaration_the_spells_chosen_at_the_slot_are_counted()
+    {
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+        var store = new MatchStore();
+        var combat = new CombatStatsRecorder(store.Repository);
+        var runner = new EvaluationRunner(Handlers.Runner(store.WorkflowWith(combat), new TestRandomFactory()), combat);
+        var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), "Greedy", "Random", 1);
+        var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = AgentSpec.Greedy, AgentB = AgentSpec.Random, Seeds = [1, 2] };
+
+        var evaluation = await runner.RunAsync(scenario, stamp, TestContext.Current.CancellationToken);
+
+        evaluation.AgentA.SpellUsage.Values.Sum().ShouldBeGreaterThan(0);
+        evaluation.AgentA.SpellUsage.Values.Sum().ShouldBe(evaluation.AgentA.Actions);
+        evaluation.AgentB.SpellUsage.Values.Sum().ShouldBe(evaluation.AgentB.Actions);
+        evaluation.SpellOutcomes.ShouldNotBeEmpty();
+    }
+
     [Fact]
     public async Task Without_a_combat_listener_the_rates_read_zero()
     {
