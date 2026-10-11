@@ -7,7 +7,7 @@ first.
 ## 2026-10-11. Tuning pass 27: Body Slam's ward at 2, and the Predator openings come back
 
 Content `95a78999` to `3ae51e9f`, the first pass with the Greedy of ADR 0108, the six opening targets of ADR
-0109 and `search-40` in the exploit panel (run 38092515038, seed 0, 3 rounds of 2, 180 catalogues in 4h39).
+0109 and `search-40` in the exploit panel (run 38092515038, seed 0, 1 round of 2 after the opening sweep, 180 catalogues in 4h39).
 
 - **What it moved.** Two knobs: Body Slam's caster defense 3 to 2 (Ironhide, Brute's level 2) and Ice Grip's
   critical chance 0.40 to 0.45 (Stormborn, Warped's level 2). Tier 1 is untouched, as it has to be.
