@@ -12,7 +12,8 @@ public sealed record RuleSet
         int roundCap,
         double criticalMultiplier,
         int firstEvolutionRound,
-        int evolutionInterval)
+        int evolutionInterval,
+        CombatDeclaration combatDeclaration)
     {
         TeamSize = teamSize;
         EnergyPerRound = energyPerRound;
@@ -21,14 +22,15 @@ public sealed record RuleSet
         CriticalMultiplier = criticalMultiplier;
         FirstEvolutionRound = firstEvolutionRound;
         EvolutionInterval = evolutionInterval;
+        CombatDeclaration = combatDeclaration;
     }
 
     /// <summary>
     /// The prototype's values: three creatures, two energy per round, two evolution picks in an opportunity that
     /// comes at round 1 and every second round after it, double damage on a crit (ADR 0056), and the table's
-    /// twenty rounds where the prototype had thirty (ADR 0105).
+    /// twenty rounds where the prototype had thirty (ADR 0105), with a hidden Intent declared before combat.
     /// </summary>
-    public static RuleSet Default { get; } = new(3, 2, 2, 20, 2.0, 1, 2);
+    public static RuleSet Default { get; } = new(3, 2, 2, 20, 2.0, 1, 2, CombatDeclaration.HiddenIntent);
 
     public int TeamSize { get; }
 
@@ -68,6 +70,12 @@ public sealed record RuleSet
     /// <summary>How many rounds apart the opportunities are: 1 is every round, 2 is every other round.</summary>
     public int EvolutionInterval { get; }
 
+    /// <summary>
+    /// When a Creature chooses its Spell: as a hidden Intent before combat, or with its targets at its slot
+    /// (ADR 0110).
+    /// </summary>
+    public CombatDeclaration CombatDeclaration { get; }
+
     public static RuleSet Create(
         int teamSize,
         int energyPerRound,
@@ -75,7 +83,8 @@ public sealed record RuleSet
         int roundCap,
         double criticalMultiplier,
         int firstEvolutionRound = 1,
-        int evolutionInterval = 2)
+        int evolutionInterval = 2,
+        CombatDeclaration combatDeclaration = CombatDeclaration.HiddenIntent)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(teamSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(teamSize, MatchFormat.MaxTeamSize);
@@ -89,7 +98,12 @@ public sealed record RuleSet
             throw new ArgumentOutOfRangeException(nameof(criticalMultiplier), criticalMultiplier, "The critical multiplier must be a finite number of at least 1.");
         }
 
-        return new RuleSet(teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound, evolutionInterval);
+        if (!Enum.IsDefined(combatDeclaration))
+        {
+            throw new ArgumentOutOfRangeException(nameof(combatDeclaration), combatDeclaration, "Unknown combat declaration.");
+        }
+
+        return new RuleSet(teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound, evolutionInterval, combatDeclaration);
     }
 
     /// <summary>
@@ -100,7 +114,16 @@ public sealed record RuleSet
     public RuleSet InFormat(MatchFormat format) =>
         format.TeamSize == TeamSize
             ? this
-            : Create(format.TeamSize, EnergyPerRound, EvolutionPicksPerOpportunity, RoundCap, CriticalMultiplier, FirstEvolutionRound, EvolutionInterval);
+            : Create(format.TeamSize, EnergyPerRound, EvolutionPicksPerOpportunity, RoundCap, CriticalMultiplier, FirstEvolutionRound, EvolutionInterval, CombatDeclaration);
+
+    /// <summary>
+    /// The same rule set with another combat declaration (ADR 0110): every value kept, so that the two rules are
+    /// compared on one rule set and never on two that drift apart.
+    /// </summary>
+    public RuleSet WithCombatDeclaration(CombatDeclaration declaration) =>
+        declaration == CombatDeclaration
+            ? this
+            : Create(TeamSize, EnergyPerRound, EvolutionPicksPerOpportunity, RoundCap, CriticalMultiplier, FirstEvolutionRound, EvolutionInterval, declaration);
 
     /// <summary>
     /// Whether this round offers an evolution opportunity. This is the schedule, and it is asked here by the

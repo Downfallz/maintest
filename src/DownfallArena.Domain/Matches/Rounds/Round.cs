@@ -26,6 +26,7 @@ public sealed class Round : Entity<RoundId>
     private readonly HashSet<PlayerSlot> _evolutionPasses = [];
     private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
     private readonly Dictionary<CreatureId, CombatAction> _actions = [];
+    private readonly HashSet<CreatureId> _skipped = [];
     private readonly Dictionary<PlayerSlot, IReadOnlyList<CreatureId>> _tieOrders = [];
 
     private Round(RoundId id)
@@ -217,10 +218,17 @@ public sealed class Round : Entity<RoundId>
     public CombatAction? ActionOf(CreatureId creature) => _actions.GetValueOrDefault(creature);
 
     /// <summary>
-    /// Accepts the targeted action for the intent at the cursor. The cursor moves once the match has resolved
-    /// it, with <see cref="MarkSlotActivated"/>.
+    /// Whether the creature's slot was passed over with no action, because it had nothing it could cast when the
+    /// slot came up and no Intent to reveal (<see cref="CombatDeclaration.AtActivation" />, ADR 0110).
     /// </summary>
-    internal Result SubmitAction(CombatAction action)
+    public bool WasSkipped(CreatureId creature) => _skipped.Contains(creature);
+
+    /// <summary>
+    /// Accepts the targeted action for the slot at the cursor. Under <see cref="CombatDeclaration.HiddenIntent" />
+    /// it must cast the creature's Intent; under <see cref="CombatDeclaration.AtActivation" /> there is none to
+    /// match (ADR 0110). The cursor moves once the match has resolved it, with <see cref="MarkSlotActivated"/>.
+    /// </summary>
+    internal Result SubmitAction(CombatAction action, CombatDeclaration declaration = CombatDeclaration.HiddenIntent)
     {
         ArgumentNullException.ThrowIfNull(action);
 
@@ -239,12 +247,19 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.NotThisCreaturesTurn);
         }
 
-        var intent = IntentOf(slot.Creature)
-            ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline without an intent.");
-
-        if (intent.Spell != action.Spell)
+        if (declaration == CombatDeclaration.HiddenIntent)
         {
-            return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
+            var intent = IntentOf(slot.Creature)
+                ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline without an intent.");
+
+            if (intent.Spell != action.Spell)
+            {
+                return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
+            }
+        }
+        else if (HasIntent(slot.Creature))
+        {
+            throw new InvalidOperationException($"Creature {slot.Creature} holds an intent in a round that declares none.");
         }
 
         // A slot is bound once and activated at once (ADR 0083): a second binding before the cursor moves
@@ -273,6 +288,25 @@ public sealed class Round : Entity<RoundId>
             throw new InvalidOperationException($"Creature {slot.Creature} is activated without a bound action.");
         }
 
+        ActivationCursor = ActivationCursor.MoveNext();
+    }
+
+    /// <summary>
+    /// Moves the cursor past the slot at it with no action bound: its creature had nothing to cast (ADR 0110). A
+    /// slot that already holds an action and a wrong sub-phase are invariant violations.
+    /// </summary>
+    internal void SkipSlot()
+    {
+        RequireSubPhase(RoundSubPhase.Activation, "skip a slot");
+
+        var slot = NextSlot
+            ?? throw new InvalidOperationException($"Round {Number}: combat is already resolved.");
+        if (_actions.ContainsKey(slot.Creature))
+        {
+            throw new InvalidOperationException($"Creature {slot.Creature} is skipped with an action already bound.");
+        }
+
+        _skipped.Add(slot.Creature);
         ActivationCursor = ActivationCursor.MoveNext();
     }
 

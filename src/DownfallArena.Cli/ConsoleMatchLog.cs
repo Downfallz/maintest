@@ -33,6 +33,7 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
             TimelineBuilt timeline => "Timeline: " + string.Join(", ", timeline.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
             TiesOrdered ordered => "Ties ordered: " + string.Join(", ", ordered.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
             ActionRevealed revealed => $"Creature {revealed.Action.Actor} reveals {revealed.Action.Spell.Value} on [{string.Join(", ", revealed.Action.Targets)}].",
+            SlotSkipped skipped => $"Creature {skipped.Actor} is skipped ({skipped.Reason.Code}).",
             CombatActionResolved resolved => Describe(resolved),
             OngoingEffectsApplied ongoing => Describe(ongoing),
             MatchEnded ended => ended.Outcome.IsDraw

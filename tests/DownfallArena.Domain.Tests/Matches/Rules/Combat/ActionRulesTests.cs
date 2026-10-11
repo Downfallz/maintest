@@ -120,6 +120,85 @@ public sealed class ActionRulesTests
         ActionRules.CanTakeItsSlot(new CombatIntent(Arena.Knight, Arena.Strike), Arena.Snapshots(living), Arena.Resources).ShouldBeFalse();
     }
 
+    /// <summary>A spell chosen at the slot is checked as an action is, its price included (ADR 0110).</summary>
+    [Fact]
+    public void A_chosen_action_needs_a_spell_the_creature_can_pay_for_now_and_targets_that_satisfy_it()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Learn(Arena.Guard);
+        var creatures = Arena.Snapshots(living);
+
+        Choose(PlayerSlot.Player1, Arena.Knight, Arena.Strike, [Arena.Ghoul], creatures).IsSuccess.ShouldBeTrue();
+        Choose(PlayerSlot.Player2, Arena.Knight, Arena.Strike, [Arena.Ghoul], creatures).Error.ShouldBe(CombatErrors.NotYourCreature);
+        Choose(PlayerSlot.Player1, Arena.Knight, Arena.Slam, [Arena.Ghoul], creatures).Error.ShouldBe(CombatErrors.SpellNotKnown);
+        Choose(PlayerSlot.Player1, Arena.Knight, Arena.Guard, [Arena.Knight], creatures).Error.ShouldBe(CombatErrors.NotEnoughEnergy);
+        Choose(PlayerSlot.Player1, Arena.Knight, Arena.Strike, [Arena.Archer], creatures).Error.ShouldBe(CombatErrors.EnemiesOnly);
+    }
+
+    /// <summary>
+    /// A revealed intent with no legal target is cast on nothing and fizzles; a spell chosen at the slot is
+    /// refused instead, because its owner can choose another (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void A_chosen_spell_without_a_legal_target_is_refused_rather_than_cast_on_nothing()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(living, Arena.Wraith).TakeDamage(99);
+        var creatures = Arena.Snapshots(living);
+
+        Choose(PlayerSlot.Player1, Arena.Knight, Arena.Strike, [], creatures).Error.ShouldBe(CombatErrors.NoLegalTarget);
+    }
+
+    [Fact]
+    public void A_creature_with_a_spell_it_can_cast_now_can_choose_an_action()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        ActionRules.CanChooseAnAction(Arena.Knight, creatures, Arena.Resources).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_dead_creature_cannot_choose_an_action()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).TakeDamage(99);
+
+        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.ActorDead);
+    }
+
+    [Fact]
+    public void A_stunned_creature_cannot_choose_an_action()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Apply(Stun.For(1)).ShouldNotBeNull();
+
+        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.ActorStunned);
+    }
+
+    /// <summary>
+    /// Strike has no target once both enemies are dead, and Guard costs one energy the knight does not have: no
+    /// spell it knows can be cast, so its slot is skipped (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void A_creature_with_nothing_it_can_pay_for_on_a_legal_target_cannot_choose_an_action()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Learn(Arena.Guard);
+        Arena.Find(living, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(living, Arena.Wraith).TakeDamage(99);
+
+        ActionRules.CanChooseAnAction(Arena.Knight, Arena.Snapshots(living), Arena.Resources).Error.ShouldBe(CombatErrors.NothingToCast);
+    }
+
+    [Fact]
+    public void An_unknown_creature_cannot_choose_an_action()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        ActionRules.CanChooseAnAction(CreatureId.From(9), creatures, Arena.Resources).Error.ShouldBe(CombatErrors.UnknownCreature);
+    }
+
     [Fact]
     public void Null_arguments_are_rejected()
     {
@@ -148,4 +227,12 @@ public sealed class ActionRulesTests
         IReadOnlyList<CreatureId> targets,
         IReadOnlyList<CreatureSnapshot> creatures) =>
         ActionRules.ValidateAction(slot, CombatAction.Bind(new CombatIntent(actor, spell), targets), creatures, Arena.Resources);
+
+    private static Result Choose(
+        PlayerSlot slot,
+        CreatureId actor,
+        SpellId spell,
+        IReadOnlyList<CreatureId> targets,
+        IReadOnlyList<CreatureSnapshot> creatures) =>
+        ActionRules.ValidateChosenAction(slot, CombatAction.Choose(actor, spell, targets), creatures, Arena.Resources);
 }

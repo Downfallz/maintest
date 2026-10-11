@@ -254,7 +254,9 @@ public sealed class Match : AggregateRoot<MatchId>
 
     /// <summary>
     /// Binds the targets of the creature whose slot has come up and resolves its action at once (ADR 0083). Only
-    /// the owner of that creature may do so. When the action wipes a team, the match ends on it.
+    /// the owner of that creature may do so. Under <see cref="CombatDeclaration.AtActivation" /> the action also
+    /// names the spell, any the creature can cast now (ADR 0110). When the action wipes a team, the match ends on
+    /// it.
     /// </summary>
     public Result SubmitAction(PlayerSlot slot, CombatAction action)
     {
@@ -267,13 +269,16 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         var round = ActiveRound;
-        var validated = ActionRules.ValidateAction(slot, action, Snapshots(), _resources);
+        var declaration = RuleSet.CombatDeclaration;
+        var validated = declaration == CombatDeclaration.AtActivation
+            ? ActionRules.ValidateChosenAction(slot, action, Snapshots(), _resources)
+            : ActionRules.ValidateAction(slot, action, Snapshots(), _resources);
         if (validated.IsFailure)
         {
             return validated;
         }
 
-        var accepted = round.SubmitAction(action);
+        var accepted = round.SubmitAction(action, declaration);
         if (accepted.IsFailure)
         {
             return accepted;
@@ -371,7 +376,7 @@ public sealed class Match : AggregateRoot<MatchId>
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
             RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
-            RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
+            RoundSubPhase.IntentSelection => AdvanceIf(RuleSet.CombatDeclaration == CombatDeclaration.AtActivation || IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.Activation => ActivateUnavailableSlot(round) || AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.Cleanup => Automatic(() => Cleanup(round, creatures)),
             RoundSubPhase.Finalization => FinalizeRound(),
@@ -381,10 +386,16 @@ public sealed class Match : AggregateRoot<MatchId>
 
     /// <summary>
     /// A creature that cannot take its slot is revealed with no targets and fizzles, without its owner being
-    /// asked (ADR 0083). Returns whether a slot was activated this way.
+    /// asked (ADR 0083); with no intent to reveal, it is skipped instead (ADR 0110). Returns whether a slot was
+    /// passed this way.
     /// </summary>
     private bool ActivateUnavailableSlot(Round round)
     {
+        if (RuleSet.CombatDeclaration == CombatDeclaration.AtActivation)
+        {
+            return SkipUnavailableSlot(round);
+        }
+
         if (round.PeekNextIntent() is not { } intent || ActionRules.CanTakeItsSlot(intent, Snapshots(), _resources))
         {
             return false;
@@ -399,6 +410,24 @@ public sealed class Match : AggregateRoot<MatchId>
 
         RaiseDomainEvent(new ActionRevealed(Id, round.Id, action));
         Activate(round, action);
+        return true;
+    }
+
+    private bool SkipUnavailableSlot(Round round)
+    {
+        if (round.NextSlot is not { } slot)
+        {
+            return false;
+        }
+
+        var able = ActionRules.CanChooseAnAction(slot.Creature, Snapshots(), _resources);
+        if (able.IsSuccess)
+        {
+            return false;
+        }
+
+        round.SkipSlot();
+        RaiseDomainEvent(new SlotSkipped(Id, round.Id, slot.Creature, able.Error));
         return true;
     }
 

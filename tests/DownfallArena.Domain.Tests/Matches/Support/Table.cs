@@ -21,6 +21,10 @@ internal static class Table
 
     public static RuleSet TwoOnTwo(int roundCap = 30) => RuleSet.Create(2, 2, 2, roundCap, 2.0);
 
+    /// <summary>The same two-on-two, with the spell chosen at the slot rather than declared before (ADR 0110).</summary>
+    public static RuleSet TwoOnTwoAtActivation(int roundCap = 30) =>
+        TwoOnTwo(roundCap).WithCombatDeclaration(CombatDeclaration.AtActivation);
+
     public static Match Empty(RuleSet? rules = null, IRandomSource? random = null) =>
         Match.Create(MatchId.New(), Arena.Resources, rules ?? TwoOnTwo(), random ?? new FixedRandom(0.99));
 
@@ -114,6 +118,34 @@ internal static class Table
             match.SubmitAction(slot.Owner, CombatAction.Bind(intent, [target])).IsSuccess.ShouldBeTrue();
         }
 
+        return ResolvedSince(match, seen);
+    }
+
+    /// <summary>
+    /// <see cref="HitFirstLivingEnemy" /> under a rule set that declares no intent: each creature chooses Strike at
+    /// its slot, on the first living enemy (ADR 0110).
+    /// </summary>
+    public static List<CombatActionResolved> StrikeFirstLivingEnemy(Match match)
+    {
+        var seen = match.DomainEvents.Count;
+        var round = match.CurrentRound.ShouldNotBeNull();
+        while (match.State == MatchState.InProgress && round.SubPhase == RoundSubPhase.Activation && round.NextSlot is { } slot)
+        {
+            var enemy = slot.Owner == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
+            var target = Living(match, enemy).First().Id;
+            match.SubmitAction(slot.Owner, CombatAction.Choose(slot.Creature, Arena.Strike, [target])).IsSuccess.ShouldBeTrue();
+        }
+
+        return ResolvedSince(match, seen);
+    }
+
+    /// <summary>Plays one full round with the scripted moves, the spells chosen at their slots (ADR 0110).</summary>
+    public static List<CombatActionResolved> PlayRoundAtActivation(Match match)
+    {
+        var seen = match.DomainEvents.Count;
+        PassEvolution(match);
+        ChooseStandard(match);
+        StrikeFirstLivingEnemy(match);
         return ResolvedSince(match, seen);
     }
 

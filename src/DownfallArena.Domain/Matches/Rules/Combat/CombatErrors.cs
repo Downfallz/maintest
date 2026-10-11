@@ -36,5 +36,7 @@ public static class CombatErrors
 
     public static readonly DomainError NoLegalTarget = new("Combat.NoLegalTarget", "This spell has no legal target right now; the intent is revealed without targets and fizzles.");
 
+    public static readonly DomainError NothingToCast = new("Combat.NothingToCast", "The creature knows no spell it can pay for and cast on a legal target right now.");
+
     public static readonly DomainError AllTargetsInvalid = new("Combat.AllTargetsInvalid", "None of the chosen targets is valid any more.");
 }
