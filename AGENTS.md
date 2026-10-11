@@ -52,8 +52,9 @@ tests/
 docs/
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
-  domain/       Glossary (ubiquitous language), game rules, the spell catalogue, and a planned change with
-                the audit it is measured against (tier-evolution-plan.md, tier-evolution-inventory.md).
+  domain/       Glossary (ubiquitous language), game rules, the spell catalogue, a planned change with
+                the audit it is measured against (tier-evolution-plan.md, tier-evolution-inventory.md), and
+                the plan for a second combat declaration mode (free-activation-plan.md, ADR 0110).
   tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook),
                 plus the plan for the Automa, the opponent a person executes from printed components (automa.md).
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.

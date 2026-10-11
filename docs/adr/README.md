@@ -115,3 +115,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) | A creature may declare a spell it cannot pay for yet | Accepted |
 | [0108](0108-a-purchase-is-read-against-what-the-team-is-buying.md) | Read a purchase against what the team is buying this round | Proposed |
 | [0109](0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) | Let the tuner read what each tier-1 opening is worth | Proposed |
+| [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Proposed |
