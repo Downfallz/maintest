@@ -1375,6 +1375,34 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
     assert "(skill)" in text
 
 
+def test_an_opening_target_reads_as_the_opening_it_scores() -> None:
+    """Every opening reads `winRateA`, as `skill` does, and none is playing well against playing at random."""
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"skill": {}, "opening-brute-prowler": {}},
+        targets=(
+            Target(metric="winRateA", on="skill", minimum=0.65, scale=0.1, weight=1),
+            Target(
+                metric="winRateA", on="opening-brute-prowler", minimum=0.4, maximum=0.6, scale=0.05, weight=1
+            ),
+        ),
+    )
+    metrics = {"skill": {"winRateA": 1.0}, "opening-brute-prowler": {"winRateA": 0.2}}
+    candidate = Candidate(
+        iteration=0,
+        moves=(),
+        score=objective.score(metrics),
+        breakdown=objective.breakdown(metrics),
+        metrics=metrics,
+    )
+    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), documents={}, files={})
+
+    text = format_result(result, objective)
+
+    assert "what the forced opening brute + prowler scores" in text
+    assert "playing at random (opening-brute-prowler)" not in text
+
+
 def one_tier(**resolved: int) -> tuple[Content, dict]:
     """Spells one package teaches, with the casts each landed, as `metrics_of` reads the pair."""
     spells = {alias: json.loads(json.dumps(ATTACK)) | {"id": f"{alias}:v1"} for alias in resolved}
