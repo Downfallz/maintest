@@ -20,7 +20,7 @@
   "casterEffects": [
     {
       "kind": "DefenseBuff",
-      "amount": 3,
+      "amount": 2,
       "durationRounds": 3
     }
   ]
