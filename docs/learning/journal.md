@@ -25,7 +25,9 @@ Content `95a78999` to `3ae51e9f`, the first pass with the Greedy of ADR 0108, th
   | Warped + Warped | 0.285 (0.24 to 0.33) | 0.279 (0.24 to 0.32) |
   | Brute + Warped | 0.500 | 0.500 |
 
-  The Greedy mirror is unmoved: 10.3 rounds, none at the cap. Every other target stays inside its band.
+  The Greedy mirror lasts 10.3 rounds on both catalogues on these seeds, none at the cap; on the benchmark seeds
+  its digests read 9.83 rounds for `95a78999` and 10.31 for `3ae51e9f`, half a round longer, still none at the
+  cap. Every other target stays inside its band.
 - **How.** Nothing about Predator changed: Greedy's own line got weaker. It buys Ironhide behind its Brute, and a
   Body Slam that wards 2 instead of 3 is a little less of a wall, so every opening it is measured against comes
   closer to even. Greedy still never opens Predator, since it reads Predator and Warped alike at round 1 and the
