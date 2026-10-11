@@ -47,8 +47,9 @@ What it underweights:
    Standard creature keeps its critical *and* chooses its spell with more of the round resolved. Quick buys
    tempo only. Expect the Quick share to fall and the last slot of the timeline to be the strongest. This
    is measurable with the bots before anyone sits at a table.
-3. **Time at the table moves from parallel to serial.** In mode A both players think at once during
-   Intent selection, six decisions each, and then each slot is a target choice. In mode B one player
+3. **Time at the table moves from parallel to serial.** In mode A at a cardboard table, both players think
+   at once during Intent selection, six decisions each, and then each slot is a target choice (the app
+   does not ask them at once yet, §5). In mode B one player
    thinks while the other waits, at every slot: six to twelve serial decisions a round over eight to
    fourteen rounds. The handoff says this is the lesser problem. The content review's priority 1 is
    spellbook decision load, so it is not the lesser problem for this project; it is the one being tested.
@@ -145,10 +146,10 @@ Mode A is the default at every step, CI stays green, the digest never moves unti
 | 2 | The decision model and the one-step agents | Application, Cli (console only) | `Action` kind, options, decision, check, projection, driver; `DecideAction` on every agent and wrapper; `IntentCounter`; `RoundRollout`; `play`/`simulate`/`evaluate` can name the mode; `benchmark` refuses it. Random, Greedy, Heuristic, Opening, Explore, Policy play mode B. |
 | 3 | The searching agents in mode B | Application | The combined search from the cursor; mode-aware guesses; `RoundRolloutTests` in both modes; a measurement of lookahead and minimax against Greedy in mode B in the journal. |
 | 4 | Recording and encoding | Application (Learning), learning/ | `ActionKind.Act`, encoder, terms, recorder, stamp; a mode B dataset recorded and a clone trained as a smoke test; `compare-stamps` tells the modes apart. |
-| 5 | The table host | Cli | `RuleSetFile`, `TableDecisionBody`, `HumanSeat`, journal, gate, seat agent, API payload; `TableRestorer` rebuilds a mode B table; tests mirrored. |
+| 5 | The table host | Application (driver), Cli | `RuleSetFile`, `TableDecisionBody`, `HumanSeat`, journal, gate, seat agent, API payload; `TableRestorer` rebuilds a mode B table; tests mirrored. `MatchDriver` asks both seats' Speed and Intent at once, as ADR 0092 does for picks, so mode A keeps its parallel phase in the app (§5). |
 | 6 | The table page and the viewer | table/, viewer/ | The slot screen; phase guide and texts per mode; viewer fallbacks; `node --test` green in both modes. Practice stays mode A. |
 | 7 | The bot reading | docs (journal), scripts | The A/B table of §5 on the same seeds and content, with the caveat that strength does not compare across modes. No tuning pass. |
-| 8 | The table playtest | none | The seven scenarios of the handoff played in both modes on the app (hotseat first: no cardboard changes), the human measures of §5 recorded in the session notes. |
+| 8 | The table playtest | none | The seven scenarios of the handoff played in both modes on the app, no cardboard changes. Rules and feel can be tried in hotseat; the time readings of §5 come from two people on two devices. |
 | 9a | Drop | all | One PR removes the mode: the flag makes it a clean removal. ADR 0110 is marked Deprecated, with the numbers. |
 | 9b | Adopt | all | A second ADR supersedes parts of 0010, 0070, 0083 and 0107; mode B becomes the default; a mode B benchmark digest; a tuning pass under mode B; rulebook, player aid, components, Automa rewritten; mode A removed one or two releases later. |
 
@@ -173,10 +174,31 @@ With the bots, same seeds, same content, both modes, in the journal:
 Caveat to write at the top of the entry: every bot is better informed in mode B, so a win rate across modes
 measures nothing; only the shape of the system does.
 
-At the table, from `decisions.jsonl` (every entry is stamped `At`): seconds per round, per activation and
-per Intent-selection sub-phase in mode A, so the parallel-versus-serial question of §1 gets a number. And
-the handoff's human questions: did the late actor feel like a counter, did Overdrive combos feel earned or
-free, did anyone miss the bluff.
+At the table, from `notes.jsonl` and not from `decisions.jsonl`: a journal entry is stamped only when an
+answer is accepted, so the gap between two of them mixes resolution, handover and waiting. A `Decision` note
+carries `elapsedMs`, measured from the moment the question was served to a person looking at it
+(`DecisionClock`), with its round and sub-phase. From it:
+
+- thinking time per decision, per activation in mode B and per Intent in mode A, summed per seat and round;
+- time per round, from the earliest served moment (`At` less `elapsedMs`) to the last accepted one, both
+  seats together; that sum against the per-seat sums is the parallel-versus-serial question of §1.
+
+Only seats a person held have notes, so the time readings need two people. They also need mode A's
+Intent selection to be parallel in the app, as it is in cardboard, and today it is not, for two reasons:
+
+- in hotseat, the pass-the-device screen serializes it;
+- on two devices too, because `MatchDriver` asks both seats at once only for Evolution (ADR 0092), and
+  asks Speed and Intent seat by seat, so Player 2 waits for Player 1's last Intent.
+
+Measured as it stands, mode A would lose a parallel phase it has at the table, and mode B would be credited
+with the saving. PR 5 therefore asks both seats' Speed and Intent at once, the way ADR 0092 asks their
+picks: the decisions are hidden from each other and independent, and the answers are still submitted in
+seat order, so the engine sees the same commands. The time readings come from two people on two devices
+after that. If they turn out too coarse, round start and end stamps in the notes are a small addition to
+the same PR.
+
+And the handoff's human questions: did the late actor feel like a counter, did Overdrive combos feel earned
+or free, did anyone miss the bluff.
 
 ## 6. Stop rule
 
