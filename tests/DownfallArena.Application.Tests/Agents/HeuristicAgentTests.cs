@@ -283,6 +283,98 @@ public sealed class HeuristicAgentTests
         greedy.DecideEvolution(board, evolution).Choice.ShouldBe(Agent.DecideEvolution(board, evolution).Choice);
     }
 
+    /// <summary>ADR 0110: the action is the spell and the targets that score best together, as an intent's spell would.</summary>
+    [Fact]
+    public void An_action_is_the_spell_and_targets_with_the_best_score()
+    {
+        var board = Board(enemyHealth: 20);
+        var options = new ActionOptions(Two, [OnEitherEnemy(Two, TestContent.Rend), OnEitherEnemy(Two, TestContent.Strike)]);
+
+        Agent.DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Rend, [Three]), "a bleed of 19 is worth more than 3 damage");
+    }
+
+    [Fact]
+    public void An_action_that_kills_goes_to_the_creature_it_kills()
+    {
+        var board = Board(enemyHealth: 20, enemy2Health: 3);
+        var options = new ActionOptions(One, [OnEitherEnemy(One, TestContent.Strike)]);
+
+        Agent.DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+    }
+
+    [Fact]
+    public void An_action_takes_a_kill_now_over_a_bleed()
+    {
+        var board = Board(enemyHealth: 3);
+        var options = new ActionOptions(Two, [OnEitherEnemy(Two, TestContent.Rend), OnEitherEnemy(Two, TestContent.Strike)]);
+
+        Agent.DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Three]), "a kill beats a bleed");
+    }
+
+    /// <summary>ADR 0099, at the slot: with kills priced at nothing and bleeds at ten, the cast that wins the match still comes first.</summary>
+    [Fact]
+    public void An_action_that_wins_the_match_outranks_any_score_whatever_the_weights()
+    {
+        var agent = new HeuristicAgent(ScoringWeights.Default with { Kill = 0, Bleed = 10 }, TestContent.Resources, Rules);
+        var board = Board(enemyHealth: 3, enemy2Health: 0);
+        var options = new ActionOptions(Two, [OnlyAt(Two, TestContent.Rend, Three), OnlyAt(Two, TestContent.Strike, Three)]);
+
+        agent.DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Three]));
+    }
+
+    /// <summary>Jab carries Strike's numbers exactly, so the two tie, and the tie goes to the first in ordinal id order whatever order they are listed in.</summary>
+    [Fact]
+    public void Tied_actions_go_to_the_first_spell_in_ordinal_id_order()
+    {
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Jab]);
+        var options = new ActionOptions(One, [OnEitherEnemy(One, TestContent.Strike), OnEitherEnemy(One, TestContent.Jab)]);
+
+        Agent.DecideAction(board, options).Spell.ShouldBe(TestContent.Jab);
+    }
+
+    /// <summary>
+    /// ADR 0110. At the slot every earlier slot has resolved, so nobody is expected gone: the action reads the
+    /// board as it stands. Here an ally's declared Strike would make the declared-intent reading spend One's
+    /// round on Guard (see <see cref="A_creature_does_not_aim_at_an_enemy_its_own_team_already_kills_first" />);
+    /// the action takes the kill, which is what tells this reading from declaring and then binding.
+    /// </summary>
+    [Fact]
+    public void An_action_reads_the_board_as_it_stands_and_expects_nobody_gone()
+    {
+        var board = WithAllyStriking(OneEnemyToKill());
+
+        Agent.DecideAction(board, GuardOrStrike()).ShouldBe(new ChosenAction(TestContent.Strike, [Three]));
+        Agent.DecideIntent(board, new IntentOption(One, [TestContent.Guard, TestContent.Strike])).ShouldBe(TestContent.Guard, "which is what declaring first would have chosen");
+    }
+
+    [Fact]
+    public void An_action_with_no_spell_on_offer_is_a_bug()
+    {
+        Should.Throw<InvalidOperationException>(() => Agent.DecideAction(Board(enemyHealth: 20), new ActionOptions(One, [])));
+    }
+
+    /// <summary>
+    /// The greedy agent forwards the action to the heuristic agent it is, rather than taking the interface's
+    /// default: on this board the default would declare Guard, and the heuristic agent's own reading strikes.
+    /// </summary>
+    [Fact]
+    public void The_greedy_agent_chooses_the_action_the_heuristic_agent_with_the_built_in_weights_does()
+    {
+        var greedy = new GreedyAgent(TestContent.Resources, Rules);
+        var board = WithAllyStriking(OneEnemyToKill());
+
+        greedy.DecideAction(board, GuardOrStrike()).ShouldBe(Agent.DecideAction(board, GuardOrStrike()));
+        greedy.DecideAction(board, GuardOrStrike()).Spell.ShouldBe(TestContent.Strike);
+    }
+
+    /// <summary>One, on the board of <see cref="OneEnemyToKill" />, able to guard itself or strike either enemy.</summary>
+    private static ActionOptions GuardOrStrike() =>
+        new(One, [new TargetOptions(One, TestContent.Guard, new LegalTargets(1, 1, [One])), OnEitherEnemy(One, TestContent.Strike)]);
+
+    private static TargetOptions OnEitherEnemy(CreatureId actor, SpellId spell) => new(actor, spell, new LegalTargets(1, 1, [Three, Four]));
+
+    private static TargetOptions OnlyAt(CreatureId actor, SpellId spell, CreatureId target) => new(actor, spell, new LegalTargets(1, 1, [target]));
+
     [Fact]
     public async Task Greedy_plays_a_match_to_its_end_and_replays_identically()
     {
@@ -305,6 +397,8 @@ public sealed class HeuristicAgentTests
         Should.Throw<ArgumentNullException>(() => Agent.DecideIntent(board, null!));
         Should.Throw<ArgumentNullException>(() => Agent.DecideTargets(null!, new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, []))));
         Should.Throw<InvalidOperationException>(() => Agent.DecideIntent(board, new IntentOption(One, [])));
+        Should.Throw<ArgumentNullException>(() => Agent.DecideAction(null!, new ActionOptions(One, [])));
+        Should.Throw<ArgumentNullException>(() => Agent.DecideAction(board, null!));
         Agent.Weights.ShouldBe(ScoringWeights.Default);
     }
 

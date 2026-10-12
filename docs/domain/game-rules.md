@@ -65,7 +65,9 @@ listed in [spells.md](spells.md).
   creature knows and can pay for now with its targets; a spell with no legal target is refused rather than
   cast on nothing. A creature with nothing it can cast when its slot comes up -- dead, stunned, or no spell it
   can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. The
-  default rule set declares hidden intents, and no host offers the other mode yet.
+  default rule set declares hidden intents. `play`, `human`, `simulate` and `evaluate` play the other with
+  `--declaration at-activation`; the table refuses it until its seats can ask for an action, and the lookahead and
+  minimax agents refuse it.
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the

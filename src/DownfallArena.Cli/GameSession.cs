@@ -50,8 +50,20 @@ internal sealed class GameSession
         // command below reads the result: the roster is sized from it, the feature schema describes it, and the
         // run stamp carries it. A command that took the default while the match played another would stamp a
         // dataset with the wrong board.
-        _rules = options.Format is { } format ? Rules.InFormat(format) : Rules;
+        _rules = RulesOf(options);
         _schema = FeatureSchema.Build(_resources, _rules);
+    }
+
+    /// <summary>
+    /// The rule set a command line plays: the engine default, in the format <c>--format</c> named and with the
+    /// combat declaration <c>--declaration</c> named (ADR 0110). The table reads its own, <c>--rules</c> first.
+    /// </summary>
+    internal static RuleSet RulesOf(CliOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var rules = options.Format is { } format ? Rules.InFormat(format) : Rules;
+        return options.Declaration is { } declaration ? rules.WithCombatDeclaration(declaration) : rules;
     }
 
     private List<CreatureDefinitionId> Roster => [.. Enumerable.Repeat(_resources.Creatures.First().Id, _rules.TeamSize)];
@@ -95,8 +107,10 @@ internal sealed class GameSession
     /// </summary>
     public void PrintStamp()
     {
+        // Named only when it is not today's rule, so the line every earlier run printed is unchanged (ADR 0110).
+        var declared = _rules.CombatDeclaration == CombatDeclaration.AtActivation ? ", spells chosen at activation" : string.Empty;
         var seed = UsesSessionSeed ? $" Seed {_seed}." : string.Empty;
-        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Format {_rules.Format}, {_rules.EvolutionPicksUsableInAnOpportunity} pick(s) an opportunity.{seed}");
+        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Format {_rules.Format}, {_rules.EvolutionPicksUsableInAnOpportunity} pick(s) an opportunity{declared}.{seed}");
     }
 
     private bool UsesSessionSeed => !_options.Practice && _options.Command is not "benchmark" && (_options.Command is not "evaluate" || _options.Seeds is null);

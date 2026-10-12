@@ -24,5 +24,11 @@ public enum PlayerOptionsKind
     /// </summary>
     Target,
 
+    /// <summary>
+    /// The player's creature whose slot has come up chooses a spell and its targets together, under a rule set
+    /// that declares no intent; the action resolves on confirmation (ADR 0110).
+    /// </summary>
+    Action,
+
     Ended,
 }

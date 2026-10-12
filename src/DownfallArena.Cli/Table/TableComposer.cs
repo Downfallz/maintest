@@ -44,6 +44,14 @@ internal sealed class TableComposer
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(rules);
 
+        // The seats, the journal and the page ask a person for an intent and then targets; until they can ask
+        // for a spell at the slot, a table on a rule set that declares no intent would wait on a question no
+        // seat can answer (ADR 0110, PR 5 of free-activation-plan.md).
+        if (rules.CombatDeclaration != CombatDeclaration.HiddenIntent)
+        {
+            throw new ArgumentException("The table does not play a rule set that declares no intent yet (ADR 0110).", nameof(rules));
+        }
+
         _services = services;
         _rules = rules;
         _store = store;

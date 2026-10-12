@@ -84,5 +84,14 @@ internal sealed class IntentCounter : IMatchRecorder
         }
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+
+        /// <summary>A spell chosen at the slot is counted as a declared one is: the spell a side chose to cast (ADR 0110).</summary>
+        public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(board);
+            var chosen = inner.DecideAction(board, options);
+            counter.Count(matchId, board.Slot, chosen.Spell);
+            return chosen;
+        }
     }
 }

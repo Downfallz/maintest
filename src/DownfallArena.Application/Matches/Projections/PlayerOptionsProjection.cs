@@ -36,6 +36,7 @@ public static class PlayerOptionsProjection
             RoundSubPhase.Speed => Speed(round, slot, snapshots),
             RoundSubPhase.TieOrder => TieOrder(round, slot),
             RoundSubPhase.IntentSelection => Intent(round, slot, snapshots, resources),
+            RoundSubPhase.Activation when match.RuleSet.CombatDeclaration == CombatDeclaration.AtActivation => Action(round, slot, snapshots, resources),
             RoundSubPhase.Activation => Target(round, slot, snapshots, resources),
             _ => Waiting(round),
         };
@@ -108,6 +109,30 @@ public static class PlayerOptionsProjection
             Kind = PlayerOptionsKind.Target,
             SubPhase = round.SubPhase,
             Target = new TargetOptions(actor.Id, intent.Spell, legal),
+        };
+    }
+
+    private static PlayerOptions Action(Round round, PlayerSlot slot, IReadOnlyList<CreatureSnapshot> snapshots, IGameResources resources)
+    {
+        // As for a target: the match only waits on a slot whose creature has something to cast; one that has
+        // nothing is skipped on its own (ADR 0110).
+        if (round.NextSlot is not { } next || next.Owner != slot)
+        {
+            return Waiting(round);
+        }
+
+        var actor = snapshots.First(creature => creature.Id == next.Creature);
+        var spells = actor.KnownSpells
+            .Where(spell => ActionRules.IsCastableNow(actor, spell, snapshots, resources))
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
+            .Select(spell => new TargetOptions(actor.Id, spell, TargetingRules.LegalTargets(actor, resources.GetSpell(spell), snapshots)))
+            .ToList();
+
+        return new PlayerOptions
+        {
+            Kind = PlayerOptionsKind.Action,
+            SubPhase = round.SubPhase,
+            Action = new ActionOptions(actor.Id, spells),
         };
     }
 

@@ -21,4 +21,6 @@ public sealed record PlayerOptions
     public IntentOptions? Intent { get; init; }
 
     public TargetOptions? Target { get; init; }
+
+    public ActionOptions? Action { get; init; }
 }

@@ -1,3 +1,5 @@
+using DownfallArena.Domain.Matches;
+
 namespace DownfallArena.Cli.Tests;
 
 public sealed class CliOptionsTests
@@ -76,6 +78,45 @@ public sealed class CliOptionsTests
     public void Practice_refuses_a_format_with_the_rest_of_what_it_supplies_itself() =>
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--practice", "--format", "2v2"]))
             .Message.ShouldContain("--practice");
+
+    /// <summary>ADR 0110: a command names the combat declaration it plays, as the usage line spells it.</summary>
+    [Theory]
+    [InlineData("hidden-intent", CombatDeclaration.HiddenIntent)]
+    [InlineData("at-activation", CombatDeclaration.AtActivation)]
+    public void A_command_plays_the_combat_declaration_it_is_given(string text, CombatDeclaration declaration) =>
+        CliOptions.Parse(["simulate", "--declaration", text]).Declaration.ShouldBe(declaration);
+
+    /// <summary>Absent is not hidden-intent: it is the rule set as it stands, so every earlier command line keeps its meaning.</summary>
+    [Fact]
+    public void A_command_given_no_declaration_plays_the_rule_set_as_it_stands() =>
+        CliOptions.Parse(["play"]).Declaration.ShouldBeNull();
+
+    [Theory]
+    [InlineData("AtActivation")]
+    [InlineData("free")]
+    [InlineData("")]
+    public void A_declaration_the_engine_does_not_know_is_refused_while_parsing(string text) =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--declaration", text]))
+            .Message.ShouldContain("not a combat declaration");
+
+    /// <summary>
+    /// The benchmark's digest is per content hash and measured on the default rule, the studio plays no match,
+    /// and the table cannot ask a seat for a spell at its slot yet (ADR 0110): each refuses the option by name.
+    /// </summary>
+    [Theory]
+    [InlineData("benchmark")]
+    [InlineData("studio")]
+    [InlineData("table")]
+    public void A_command_that_plays_no_declaration_of_its_own_refuses_one(string command) =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse([command, "--declaration", "at-activation"]))
+            .Message.ShouldContain($"'--declaration' is not for {command}");
+
+    [Theory]
+    [InlineData("play")]
+    [InlineData("human")]
+    [InlineData("evaluate")]
+    public void The_commands_that_play_matches_take_a_declaration(string command) =>
+        CliOptions.Parse([command, "--declaration", "at-activation"]).Declaration.ShouldBe(CombatDeclaration.AtActivation);
 
     [Fact]
     public void An_unknown_option_names_itself()

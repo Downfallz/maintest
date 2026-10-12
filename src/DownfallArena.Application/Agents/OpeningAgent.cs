@@ -56,6 +56,8 @@ public sealed class OpeningAgent : IPlayerAgent
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => _inner.DecideTargets(board, options);
 
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => _inner.DecideAction(board, options);
+
     /// <summary>
     /// The next package of the opening the round has not bought yet, or <c>null</c> once it is all bought: the
     /// round's picks so far are taken off the list one for one, so an opening of two Brutes buys Brute twice.

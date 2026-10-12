@@ -23,4 +23,6 @@ public sealed class GreedyAgent(IGameResources resources, RuleSet rules) : IPlay
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => _inner.DecideIntent(board, intentOption);
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => _inner.DecideTargets(board, options);
+
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => _inner.DecideAction(board, options);
 }

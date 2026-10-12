@@ -9,6 +9,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Matches.Driving;
@@ -82,6 +83,50 @@ public sealed class MatchDriverTests
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => inner.DecideIntent(board, intentOption);
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+    }
+
+    /// <summary>
+    /// ADR 0110. A rule set that declares no intent is played to its end by the driver alone: every slot asks its
+    /// owner for a spell and its targets at once, and no intent is ever submitted.
+    /// </summary>
+    [Fact]
+    public async Task Under_activation_declaration_a_greedy_and_a_random_agent_play_a_match_to_its_end_without_an_intent()
+    {
+        var store = new MatchStore();
+        var rules = MatchStore.TwoOnTwo().WithCombatDeclaration(CombatDeclaration.AtActivation);
+        var match = store.Started(rules, new TestRandom(42));
+        var events = new EventLog();
+        store.Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>())
+            .Returns(call => events.RecordAsync(call.Arg<Match>()));
+
+        var outcome = await Driver(store).PlayAsync(match.Id, new GreedyAgent(TestContent.Resources, rules), new RandomAgent(new TestRandom(1)), TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        match.State.ShouldBe(MatchState.Ended);
+        outcome.Value.ShouldBe(match.Outcome);
+        events.All.OfType<IntentSubmitted>().ShouldBeEmpty();
+        events.All.OfType<ActionRevealed>().ShouldNotBeEmpty();
+    }
+
+    /// <summary>
+    /// ADR 0110. Under that rule the driver asks for an action at each slot and submits what it is given; it never
+    /// asks for an intent, nor for targets on their own.
+    /// </summary>
+    [Fact]
+    public async Task Under_activation_declaration_each_slot_is_asked_for_an_action_and_never_for_an_intent()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1).WithCombatDeclaration(CombatDeclaration.AtActivation), new TestRandom(1));
+        var agent = Scripted(TestContent.Strike);
+        agent.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>())
+            .Returns(call => new ChosenAction(call.Arg<ActionOptions>().Spells[0].Spell, FreshTarget(call.Arg<PlayerBoardState>(), call.Arg<ActionOptions>().Spells[0])));
+
+        var outcome = await Driver(store).PlayAsync(match.Id, agent, agent, TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        agent.Received(4).DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>());
+        agent.DidNotReceive().DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>());
+        agent.DidNotReceive().DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>());
     }
 
     [Fact]
@@ -237,6 +282,21 @@ public sealed class MatchDriverTests
         await Driver(store).PlayAsync(match.Id, new RandomAgent(new TestRandom(seed + 1)), new RandomAgent(new TestRandom(seed + 2)), TestContext.Current.CancellationToken);
 
         return (match.Outcome, recorder.Rounds, recorder.Resolutions);
+    }
+
+    /// <summary>Every event the match raised, in the order it raised them.</summary>
+    private sealed class EventLog
+    {
+        private readonly List<IDomainEvent> _all = [];
+
+        public IReadOnlyList<IDomainEvent> All => _all;
+
+        public Task RecordAsync(Match match)
+        {
+            _all.AddRange(match.DomainEvents);
+            match.ClearDomainEvents();
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class EventRecorder

@@ -32,6 +32,7 @@ public static class PlayerDecisionCheck
             PlayerOptionsKind.TieOrder => TieOrder(Section(options.TieOrder), decision),
             PlayerOptionsKind.Intent => Intent(Section(options.Intent), decision),
             PlayerOptionsKind.Target => Targets(Section(options.Target), decision),
+            PlayerOptionsKind.Action => Action(Section(options.Action), decision),
             _ => Result.Failure(DecisionErrors.NotPending),
         };
     }
@@ -89,6 +90,20 @@ public static class PlayerDecisionCheck
         // energy arrives first, which is the declaring player's plan to make.
         return offered.Offers(decision.Spell)
             ? Result.Success()
+            : Result.Failure(DecisionErrors.SpellNotOffered);
+    }
+
+    private static Result Action(ActionOptions options, PlayerDecision decision)
+    {
+        if (decision.Creature != options.Actor)
+        {
+            return Result.Failure(DecisionErrors.CreatureNotOffered);
+        }
+
+        // Every spell offered has a legal target (ADR 0110), so the target arm below never meets the empty
+        // binding it allows a revealed intent.
+        return options.For(decision.Spell) is { } offered
+            ? Targets(offered, decision)
             : Result.Failure(DecisionErrors.SpellNotOffered);
     }
 

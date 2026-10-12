@@ -4,6 +4,7 @@ using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
 using NSubstitute;
 
@@ -83,6 +84,23 @@ public sealed class OpeningAgentTests
         var board = Board(round: 1);
 
         agent.DecideEvolution(board, BothCanBuyEither).Choice.ShouldBe(Greedy.DecideEvolution(board, BothCanBuyEither).Choice);
+    }
+
+    /// <summary>ADR 0110: an opening only buys packages, so the action at a slot is its inner agent's own, asked as an action.</summary>
+    [Fact]
+    public void An_action_is_the_inner_agents_own()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        var chosen = new ChosenAction(TestContent.Strike, [CreatureId.From(4)]);
+        inner.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>()).Returns(chosen);
+        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)]))]);
+        var board = Board(round: 1);
+
+        var action = new OpeningAgent([TestContent.JabPack], inner).DecideAction(board, options);
+
+        action.ShouldBe(chosen);
+        inner.Received(1).DecideAction(board, options);
+        inner.DidNotReceive().DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>());
     }
 
     /// <summary>The spec names packages by name, joined by '+', and Greedy plays them unless a third segment names another agent.</summary>

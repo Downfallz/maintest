@@ -160,6 +160,66 @@ public sealed class PlayerOptionsProjectionTests
         hit.Health.Value.ShouldBe(hit.MaxHealth.Value - 3, "the strike before this slot has already resolved");
     }
 
+    /// <summary>
+    /// ADR 0110. On one energy a round Slam's 2 is out of reach at round 1, so creature 1, which bought Jab and
+    /// Slam and acts first on the initiative they bring, is offered Jab and Strike only, in ordinal id order,
+    /// each with the targets it has on the board as it stands.
+    /// </summary>
+    [Fact]
+    public void Under_activation_declaration_the_creature_at_its_slot_is_offered_every_spell_it_can_cast_now_with_its_targets()
+    {
+        var match = new MatchStore().Started(RuleSet.Create(2, 1, 2, 30, 2.0, combatDeclaration: CombatDeclaration.AtActivation));
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.BothPack)).IsSuccess.ShouldBeTrue();
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+
+        var player1 = Options(match, PlayerSlot.Player1);
+
+        match.CurrentRound.ShouldNotBeNull().NextSlot.ShouldNotBeNull().Creature.ShouldBe(CreatureId.From(1));
+        player1.Kind.ShouldBe(PlayerOptionsKind.Action);
+        player1.SubPhase.ShouldBe(RoundSubPhase.Activation);
+        player1.Target.ShouldBeNull();
+        player1.Action.ShouldBe(new ActionOptions(
+            CreatureId.From(1),
+            [
+                new TargetOptions(CreatureId.From(1), TestContent.Jab, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])),
+                new TargetOptions(CreatureId.From(1), TestContent.Strike, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])),
+            ]));
+    }
+
+    [Fact]
+    public void Under_activation_declaration_the_seat_whose_creature_is_not_at_the_slot_waits()
+    {
+        var match = new MatchStore().Started(MatchStore.TwoOnTwo().WithCombatDeclaration(CombatDeclaration.AtActivation));
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+        var next = match.CurrentRound.ShouldNotBeNull().NextSlot.ShouldNotBeNull();
+        var other = next.Owner == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
+
+        var waiting = Options(match, other);
+
+        waiting.Kind.ShouldBe(PlayerOptionsKind.Waiting);
+        waiting.SubPhase.ShouldBe(RoundSubPhase.Activation);
+        waiting.Action.ShouldBeNull();
+        Options(match, next.Owner).Action.ShouldNotBeNull().Actor.ShouldBe(next.Creature);
+    }
+
+    /// <summary>The default rule set declares intents, so its slot asks for targets only, as it always has (ADR 0110).</summary>
+    [Fact]
+    public void Under_the_hidden_intent_rule_activation_offers_a_target_and_never_an_action()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+        MatchStore.DeclareStrikes(match);
+
+        var player1 = Options(match, PlayerSlot.Player1);
+
+        match.RuleSet.CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        player1.Kind.ShouldBe(PlayerOptionsKind.Target);
+        player1.Action.ShouldBeNull();
+    }
+
     [Fact]
     public void Null_arguments_are_rejected()
     {

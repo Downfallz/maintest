@@ -136,6 +136,11 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
             case PlayerOptionsKind.Target:
                 await TargetAsync(matchId, slot, agent, board, Section(options.Target), cancellationToken);
                 return true;
+            case PlayerOptionsKind.Action:
+                var offered = Section(options.Action);
+                var chosen = agent.DecideAction(board, offered);
+                Accept(await commands.SubmitAction.HandleAsync(new SubmitAction(matchId, slot, offered.Actor, chosen.Spell, chosen.Targets), cancellationToken));
+                return true;
             default:
                 return false;
         }

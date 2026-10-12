@@ -22,7 +22,7 @@ public sealed record PlayerDecision
     /// <summary>The creature the decision is about; none for a pass, and none for a target binding.</summary>
     public CreatureId? Creature { get; private init; }
 
-    /// <summary>The spell declared; none for an evolution decision, a speed choice or a target binding.</summary>
+    /// <summary>The spell declared or chosen; none for an evolution decision, a speed choice or a target binding.</summary>
     public SpellId? Spell { get; private init; }
 
     /// <summary>The package bought; none for anything but a purchase.</summary>
@@ -30,7 +30,10 @@ public sealed record PlayerDecision
 
     public Speed? Speed { get; private init; }
 
-    /// <summary>The targets bound to the intent being revealed. Empty when the spell has no legal target.</summary>
+    /// <summary>
+    /// The targets bound to the intent being revealed, or to the spell chosen at the slot. Empty when a revealed
+    /// spell has no legal target.
+    /// </summary>
     public IReadOnlyList<CreatureId> Targets { get; private init; } = [];
 
     /// <summary>The player's tied creatures, first to act first; empty for anything but a tie order.</summary>
@@ -58,6 +61,16 @@ public sealed record PlayerDecision
 
     public static PlayerDecision DeclareIntent(CreatureId creature, SpellId spell) =>
         new(PlayerOptionsKind.Intent) { Creature = creature, Spell = spell };
+
+    /// <summary>
+    /// Chooses a spell and its targets at once for the creature whose slot has come up, under a rule set that
+    /// declares no intent (ADR 0110).
+    /// </summary>
+    public static PlayerDecision Act(CreatureId creature, SpellId spell, IReadOnlyList<CreatureId> targets)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+        return new(PlayerOptionsKind.Action) { Creature = creature, Spell = spell, Targets = [.. targets] };
+    }
 
     public static PlayerDecision BindTargets(IReadOnlyList<CreatureId> targets)
     {

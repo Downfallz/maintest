@@ -74,6 +74,7 @@ node --test studio/*.test.js table/*.test.js   # the static pages' own tests (AD
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content; refuses a critical chance off the d20's twentieths and a creature with a chance of its own (ADR 0100)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --format 1v1   # the same, 1 creature a side; --format takes 3v3|2v2|1v1 (or the team size alone) on play, human, simulate, evaluate and table, and moves nothing but the team size. Not on benchmark: its digest is committed per content hash, so every format would be verified against the same one
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --declaration at-activation   # each creature chooses its spell with its targets at its slot instead of declaring a hidden intent (ADR 0110); on play, human, simulate and evaluate; refused by benchmark, studio and table, and by the lookahead and minimax agents until they have a search for it
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces (--traces N caps the traces; 0 keeps none)
