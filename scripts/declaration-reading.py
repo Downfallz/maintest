@@ -94,7 +94,7 @@ class Reading:
     exchanges_by_seed: dict[int, tuple[int, int]] = field(default_factory=dict)
     repertoires: list[int] = field(default_factory=list)
 
-    def read(self, trace: dict, catalogue: Catalogue) -> None:
+    def read(self, trace: dict) -> None:
         """One match: its outcome, then round by round its timeline, its casts and its exchange."""
         outcome = trace["outcome"]
         self.matches += 1
@@ -114,6 +114,10 @@ class Reading:
             elif kind == "TimelineBuilt":
                 slots = event["timeline"]["slots"]
                 speeds = {slot["creature"]: slot["speed"] for slot in slots}
+                # Every creature on a timeline counts in the repertoire average, one that landed no cast as
+                # zero spells: leaving it out would read the side that loses creatures early as more varied.
+                for slot in slots:
+                    cast.setdefault(slot["creature"], set())
                 self.slots += len(slots)
                 self.quick_slots += sum(slot["speed"] == "Quick" for slot in slots)
             elif kind == "IntentSubmitted":
@@ -124,16 +128,14 @@ class Reading:
                 self.skipped[event["reason"]["code"]] += 1
             elif kind == "CombatActionResolved":
                 resolved.append(event)
-                self._cast(event["resolution"], speeds, cast, catalogue)
+                self._cast(event["resolution"], speeds, cast)
             elif kind == "RoundEnded":
                 self._exchange(resolved)
         self.repertoires.extend(len(spells) for spells in cast.values())
         played = self.exchanges - before
         self.exchanges_by_seed[trace["seed"]] = (played["won"], played["lost"])
 
-    def _cast(
-        self, resolution: dict, speeds: dict[int, str], cast: dict[int, set[str]], catalogue: Catalogue
-    ) -> None:
+    def _cast(self, resolution: dict, speeds: dict[int, str], cast: dict[int, set[str]]) -> None:
         if resolution["fizzled"]:
             self.fizzled[resolution["fizzleReason"]["code"]] += 1
             return
@@ -159,9 +161,12 @@ class Reading:
         last = next(creature["owner"] for creature in before if creature["id"] == actor)
         lost = {side: _health(before, side) - _health(after, side) for side in SIDES}
         other = SIDES[1 - SIDES.index(last)]
-        self.exchanges[
-            "won" if lost[last] < lost[other] else "lost" if lost[last] > lost[other] else "even"
-        ] += 1
+        if lost[last] < lost[other]:
+            self.exchanges["won"] += 1
+        elif lost[last] > lost[other]:
+            self.exchanges["lost"] += 1
+        else:
+            self.exchanges["even"] += 1
 
     def summary(self, catalogue: Catalogue) -> dict:
         landed = sum(self.landed.values())
@@ -220,7 +225,9 @@ def paired_difference(first: Reading, second: Reading) -> tuple[float, float, fl
             shares.append(_share(won, won + lost))
         return shares[1] - shares[0]
 
-    draw = random.Random(0)  # NOSONAR: a fixed resampling seed, so the interval reads the same every run
+    # A fixed seed for the resampling, so the interval reads the same on every run. Nothing here is secret,
+    # which is what the analyser's rule on pseudorandom generators (python:S2245) is about.
+    draw = random.Random(0)  # NOSONAR
     resampled = sorted(difference(draw.choices(seeds, k=len(seeds))) for _ in range(RESAMPLES))
     return difference(seeds), resampled[int(0.025 * RESAMPLES)], resampled[int(0.975 * RESAMPLES) - 1]
 
@@ -348,7 +355,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for declaration in DECLARATIONS:
         reading = Reading()
         for trace in traces(arguments.agent, declaration, arguments.seed, arguments.matches, arguments.chunk):
-            reading.read(trace, catalogue)
+            reading.read(trace)
         readings[declaration] = reading
         print(f"{declaration}: {reading.matches} matches read.", file=sys.stderr)
     summaries = {declaration: reading.summary(catalogue) for declaration, reading in readings.items()}
