@@ -64,6 +64,20 @@ internal sealed class ConsoleAgent(TextReader input, TextWriter output) : IPlaye
         return intentOption.CastableSpells[index ?? 0];
     }
 
+    /// <summary>
+    /// A spell then its targets at the slot, under a rule set that declares no intent (ADR 0110): the same menus
+    /// as a declaration and a binding, asked one after the other on the board as it stands.
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        ShowBoard(board);
+        var index = Pick($"Action of creature {options.Actor}", [.. options.SpellIds.Select(spell => spell.Value)]);
+        var offered = options.Spells[index ?? 0];
+        return new ChosenAction(offered.Spell, DecideTargets(board, offered));
+    }
+
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

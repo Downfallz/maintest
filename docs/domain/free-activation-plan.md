@@ -101,10 +101,11 @@ Moves, by layer:
   `MatchDriver` (one new case; the `SubmitAction` command and handler already carry the spell),
   `IPlayerAgent.DecideAction` with a default that calls `DecideIntent` then `DecideTargets` on the current
   board. Every wrapper must forward it explicitly or the default runs on the wrapper and bypasses the inner
-  agent: Greedy, Opening, Exploring, Recording, `IntentCounter.CountingAgent`, `Journaled`, `SeatAgent`,
-  `PracticeAgent`, test doubles. `ExploringAgent` draws uniformly over (spell, target set) pairs, not two
-  stages. `IntentCounter` counts in the new method or the spells report goes blank. `RoundRollout.Combat`
-  gets a no-intent branch.
+  agent: Greedy, Opening, Exploring, Recording, `IntentCounter.CountingAgent`, `SeatAgent` (PR 2), and the
+  table's `HumanSeat`, `Journaled` and `PracticeAgent` (PR 5, until when a table refuses the mode).
+  `PlayerAgentContractTests` names every agent left on the default and why. `ExploringAgent` draws uniformly
+  over (spell, target set) pairs, not two stages. `IntentCounter` counts in the new method or the spells
+  report goes blank. `RoundRollout.Combat` gets a no-intent branch with the lookahead (PR 3).
 - **Lookahead and minimax**: the one real piece of new logic. `DecideIntent` plays out from slot 0 on a
   board that, at Activation, already contains the earlier slots, so the default cannot be used. A combined
   search from `ActivationCursor` over castable spells times target sets, reusing `PlayOut`, `First`,
@@ -145,9 +146,9 @@ Mode A is the default at every step, CI stays green, the digest never moves unti
 | 1 | The mode in the engine | Domain | `RuleSet.CombatDeclaration`; `IntentSelection` passes through; `SubmitAction` takes any castable spell; `SlotSkipped`; domain tests mirrored. `benchmark` passes unchanged. |
 | 2 | The decision model and the one-step agents | Application, Cli (console only) | `Action` kind, options, decision, check, projection, driver; `DecideAction` on every agent and wrapper; `IntentCounter`; `play`/`human`/`simulate`/`evaluate` name the mode with `--declaration`, and `benchmark`, `studio` and `table` refuse it; the rule-set stamp carries the mode, written only when it is not the default; a mode B fixture in `Invariants/PlayedMatches` runs every invariant, since it plays through the driver. Random, Greedy, Heuristic, Opening, Explore, Policy play mode B; the lookahead and minimax are refused when built. A recording writes a chosen action as an Intent step and a Targets step until PR 4. |
 | 3 | The searching agents in mode B | Application | The combined search from the cursor; mode-aware guesses; `RoundRollout` without an intent pass, its only reader being the lookahead; `RoundRolloutTests` in both modes; a measurement of lookahead and minimax against Greedy in mode B in the journal. |
-| 4 | Recording and encoding | Application (Learning), learning/ | `ActionKind.Act`, encoder, terms, recorder, stamp; a mode B dataset recorded and a clone trained as a smoke test; `compare-stamps` tells the modes apart. |
+| 4 | Recording and encoding | Application (Learning), learning/ | `ActionKind.Act`, encoder, terms, recorder; a mode B dataset recorded and a clone trained as a smoke test; `compare-stamps` tells the modes apart (the stamp carries the mode since PR 2). Until then a chosen action is recorded as an Intent step and a Targets step, where the exploring agent's uniform pair draw explores a spell in proportion to its target sets; the `Act` encoding is what makes the draw and the record agree. The policy agent plays mode B through the default until its `Act` keys exist. |
 | 5 | The table host | Application (driver), Cli | `RuleSetFile`, `TableDecisionBody`, `HumanSeat`, journal, gate, seat agent, API payload; `TableRestorer` rebuilds a mode B table; tests mirrored. `MatchDriver` asks both seats' Speed and Intent at once, as ADR 0092 does for picks, so mode A keeps its parallel phase in the app (§5). |
-| 6 | The table page and the viewer | table/, viewer/ | The slot screen; phase guide and texts per mode; viewer fallbacks; `node --test` green in both modes. Practice stays mode A. |
+| 6 | The table page and the viewer | table/, viewer/ | The slot screen; phase guide and texts per mode; viewer fallbacks; the viewer's rules row names the declaration, since it already flags two runs of different modes as different rules; `node --test` green in both modes. Practice stays mode A. |
 | 7 | The bot reading | docs (journal), scripts | The A/B table of §5 on the same seeds and content, with the caveat that strength does not compare across modes. No tuning pass. |
 | 8 | The table playtest | none | The seven scenarios of the handoff played in both modes on the app, no cardboard changes. Rules and feel can be tried in hotseat; the time readings of §5 come from two people on two devices. |
 | 9a | Drop | all | One PR removes the mode: the flag makes it a clean removal. ADR 0110 is marked Deprecated, with the numbers. |

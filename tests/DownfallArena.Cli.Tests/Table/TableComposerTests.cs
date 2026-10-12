@@ -1,6 +1,7 @@
 using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,19 @@ public sealed class TableComposerTests
         }
 
         repository.Count.ShouldBe(0, "the match of a table that never opened should have been forgotten");
+    }
+
+    /// <summary>
+    /// The seats and the page ask a person for an intent; a table on a rule set that declares none would wait on
+    /// a question nobody can answer, so it is refused before anything opens (ADR 0110, until plan PR 5).
+    /// </summary>
+    [Fact]
+    public void A_host_on_a_rule_set_that_declares_no_intent_is_refused()
+    {
+        using var hosted = new HostedTables();
+        var rules = HostedTables.Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        Should.Throw<ArgumentException>(() => new TableComposer(hosted.Services, rules, store: null)).ParamName.ShouldBe("rules");
     }
 
     /// <summary>A store whose writes under <c>traces/</c> fail, as a storage outage would fail the first checkpoint.</summary>
