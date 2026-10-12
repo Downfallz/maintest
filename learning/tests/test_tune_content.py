@@ -276,6 +276,40 @@ def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
     assert "Scored on" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize(
+    ("given", "handed"),
+    [([], []), (["--declaration", "at-activation"], ["--declaration", "at-activation"])],
+)
+def test_score_content_hands_the_declaration_to_every_evaluation_and_nothing_when_none_is_given(
+    tmp_path: Path, given: list[str], handed: list[str]
+) -> None:
+    """How a catalogue is read under spells chosen at the slot (ADR 0110, plan PR 7), on the same bands."""
+    builder = tmp_path / "fake_builder.py"
+    builder.write_text(FAKE_BUILDER, encoding="utf-8")
+    engine = tmp_path / "fake_engine.py"
+    logging = 'Path(__file__).with_name("argv.jsonl").open("a").write(json.dumps(sys.argv[1:]) + "\\n")\n'
+    engine.write_text(FAKE_ENGINE + logging, encoding="utf-8")
+    (tmp_path / "template.json").write_text(json.dumps(evaluation_json(0.5, 0.5)), encoding="utf-8")
+    data = tmp_path / "data"
+    content_tree(data)
+    knobs = data / "balance" / "knobs.json"
+    knobs.parent.mkdir()
+    knobs.write_text(json.dumps(knobs_document()), encoding="utf-8")
+    seeds = tmp_path / "seeds.json"
+    seeds.write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
+    common = ["-o", str(tmp_path / "out"), "--seeds", str(seeds), "--knobs", str(knobs), "--data", str(data)]
+    hosts = ["--repo", str(tmp_path), "--engine", sys.executable, str(engine)]
+
+    code = cli.main(["score-content", *common, *hosts, "--builder", sys.executable, str(builder), *given])
+
+    assert code == 0
+    calls = [json.loads(line) for line in (tmp_path / "argv.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert calls
+    assert all(call[0] == "evaluate" and call[call.index("--out") + 2 :] == handed for call in calls)
+    written = json.loads((tmp_path / "out" / "score.json").read_text(encoding="utf-8"))
+    assert written["declaration"] == (handed[1] if handed else "hidden-intent")
+
+
 def test_a_catalogue_already_played_is_not_played_again(tmp_path: Path) -> None:
     """The engine is deterministic, so replaying a catalogue costs half a minute and buys nothing."""
     content = catalogue(tmp_path)

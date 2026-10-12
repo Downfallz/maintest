@@ -75,6 +75,8 @@ RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
 REPO_HELP = "the engine repository root (default: cwd)"
 DATA_HELP = "the authored content directory"
 OUTPUT_HELP = "the directory the model is written to"
+#: The engine's `--declaration` values (src/DownfallArena.Cli/CombatDeclarationText.cs).
+DECLARATIONS = ("hidden-intent", "at-activation")
 
 
 def _add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
@@ -257,6 +259,11 @@ def _add_score_content(commands: argparse._SubParsersAction) -> None:
     )
     score.add_argument(
         "--builder", nargs="+", help="the data builder command prefix (default: the built assembly)"
+    )
+    score.add_argument(
+        "--declaration",
+        choices=DECLARATIONS,
+        help="play every evaluation under this combat declaration (ADR 0110); default: the rule set's",
     )
     score.set_defaults(handler=_score_content)
 
@@ -689,6 +696,7 @@ def _content_engine(arguments: argparse.Namespace, objective: Objective, workdir
         data=arguments.data,
         workdir=workdir,
         builder=tuple(builder) if builder else DATA_BUILDER_COMMAND,
+        declaration=getattr(arguments, "declaration", None),
     )
 
 
@@ -785,7 +793,9 @@ def _score_content(arguments: argparse.Namespace) -> int:
     score = score_content(evaluator, objective, content)
     arguments.output.mkdir(parents=True, exist_ok=True)
     path = arguments.output / "score.json"
-    path.write_text(json.dumps(score.to_json(), indent=2) + "\n", encoding="utf-8")
+    # Which declaration it was played under, since two scores under different ones never compare (ADR 0110).
+    written = {**score.to_json(), "declaration": arguments.declaration or DECLARATIONS[0]}
+    path.write_text(json.dumps(written, indent=2) + "\n", encoding="utf-8")
     print(format_score(score, objective))
     print(f"\nWritten to '{path}'.")
     return 0

@@ -656,6 +656,9 @@ class ContentEngine:
     data: Path
     workdir: Path
     builder: Sequence[str] = DATA_BUILDER_COMMAND
+    #: The engine's ``--declaration``, or ``None`` for the rule set's own, hidden intents (ADR 0110). Handed
+    #: to every evaluation, so a catalogue can be read under spells chosen at the slot against the same bands.
+    declaration: str | None = None
 
 
 class EngineContentEvaluator:
@@ -672,6 +675,7 @@ class EngineContentEvaluator:
         self._data = Path(host.data).resolve()
         self._workdir = Path(host.workdir).resolve()
         self._builder = tuple(host.builder)
+        self._declaration = ("--declaration", host.declaration) if host.declaration else ()
         self._candidate = self._workdir / "data"
         self._workdir.mkdir(parents=True, exist_ok=True)
         # A fresh copy, not an overlay: a run into a directory an earlier run used would otherwise keep
@@ -734,6 +738,7 @@ class EngineContentEvaluator:
                 str(schema),
                 "--out",
                 str(output),
+                *self._declaration,
             ],
             f"The evaluation '{name}' as '{p1}'",
         )
