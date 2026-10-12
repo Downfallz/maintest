@@ -521,7 +521,7 @@ public sealed class LookaheadAgent(
             }
 
             var reply = declared[enemy];
-            foreach (var spell in Castable(snapshot))
+            foreach (var spell in ReplyCandidates(snapshot))
             {
                 declared[enemy] = spell;
                 var replied = PlayOut(board, start, fromSlot, actor, declared, candidate);
@@ -877,6 +877,17 @@ public sealed class LookaheadAgent(
         var castable = Castable(ally);
         return castable.Count == 0 ? null : _oneStep.DecideIntent(board, new IntentOption(ally.Id, castable));
     }
+
+    /// <summary>
+    /// The spells a reply can force on an enemy. Declared before combat, the ones it can afford then. Chosen at
+    /// its slot (ADR 0110), every spell it knows: an earlier ally can give it the energy for one it cannot afford
+    /// before the round, and <see cref="AtItsSlot"/> plays a forced spell only when it can be cast there, so one
+    /// still out of reach plays as the enemy's own choice and costs the floor nothing.
+    /// </summary>
+    private List<SpellId> ReplyCandidates(CreatureSnapshot enemy) =>
+        rules.CombatDeclaration == CombatDeclaration.AtActivation
+            ? [.. enemy.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal)]
+            : Castable(enemy);
 
     /// <summary>The spells a creature knows and can afford, in ordinal id order.</summary>
     private List<SpellId> Castable(CreatureSnapshot creature) =>

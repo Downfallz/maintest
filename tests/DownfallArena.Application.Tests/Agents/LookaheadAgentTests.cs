@@ -632,6 +632,42 @@ public sealed class LookaheadAgentTests
         chosen.ShouldBe(new ChosenAction(TestContent.Strike, [Four]), "killing Four is the move no reply can answer");
     }
 
+    /// <summary>
+    /// Four starts the round with no energy and knows Strike, Bolt and Hex, the last two at two energy. Three,
+    /// ahead of it, can only Gift two energy, and gives it to Four for the Bolt it unlocks, so at Four's slot both
+    /// are affordable. Priced at next to nothing by these weights, Hex's stun is not what Four would choose, but it is the
+    /// reply that costs One's side most: it takes the kill Two would make on Four on the last slot. The minimax has to try
+    /// a spell the enemy can only pay for at its slot (ADR 0110), not only the ones it could when the round began.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_the_minimax_tries_a_reply_the_enemy_can_only_afford_when_its_slot_comes()
+    {
+        var gifter = CreatureDefinitionId.Parse("creature:gifter:v1");
+        var hexer = CreatureDefinitionId.Parse("creature:hexer:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(gifter, Gift.Id), Definition(hexer, TestContent.Strike, Bolt.Id, Hex.Id)],
+            [.. TestContent.Resources.Spells, Gift, Bolt, Hex],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        // One is immune to a stun, so Two, who still has to act, is the one a Hex can take anything from.
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { StunImmunityRounds = 1 };
+        var two = Boards.Creature(2, PlayerSlot.Player1);
+        var three = Boards.Creature(3, PlayerSlot.Player2) with { DefinitionId = gifter, KnownSpells = new HashSet<SpellId> { Gift.Id } };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = hexer, Health = Health.Of(5), Energy = Energy.Of(0), KnownSpells = new HashSet<SpellId> { TestContent.Strike, Bolt.Id, Hex.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one, two], [three, four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(One, PlayerSlot.Player1), Slot(Three, PlayerSlot.Player2), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+        var weights = ScoringWeights.Default with { Stun = 0.5 };
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        var replies = new LookaheadAgent(weights, resources, rules, adversarial: true).Replies(board, One, TestContent.Strike);
+
+        replies[Four].ShouldBe(Hex.Id);
+    }
+
     /// <summary>ADR 0110: the factory builds every searching agent for a rule set that declares no intent.</summary>
     [Theory]
     [InlineData("lookahead")]
@@ -792,6 +828,21 @@ public sealed class LookaheadAgentTests
     private static Spell Gamble { get; } = Spell.Create(
         SpellId.Parse("spell:gamble:v1"), "Gamble", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.Of(1)),
         TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(2)]);
+
+    /// <summary>Two energy to an ally, for free: how an enemy comes to afford at its slot what it could not before.</summary>
+    private static Spell Gift { get; } = Spell.Create(
+        SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
+
+    /// <summary>Five damage on an enemy, for two energy: what makes a Gift worth giving.</summary>
+    private static Spell Bolt { get; } = Spell.Create(
+        SpellId.Parse("spell:bolt:v1"), "Bolt", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(2), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(5)]);
+
+    /// <summary>A one-round stun on an enemy, for two energy.</summary>
+    private static Spell Hex { get; } = Spell.Create(
+        SpellId.Parse("spell:hex:v1"), "Hex", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(2), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Stun.For(1)]);
 
     /// <summary>A free spell that gives its caster energy: what still resolves when every paid spell would fizzle.</summary>
     private static Spell Rest { get; } = Spell.Create(
