@@ -12,10 +12,28 @@ export function isAsked(view) {
 }
 
 // The seat on screen: the one the match is asking, else the one holding the device, else the first held. The
-// order matters -- the asked seat wins, because a question is the only thing that needs answering.
-export function activeSeat(views, holder) {
+// order matters -- an asked seat wins, because a question is the only thing that needs answering, and of two
+// asked seats the one holding the device does: both seats are asked their picks, speeds and intents at once
+// (ADR 0092, ADR 0111), and the player with the device answers theirs before passing it. `holding` keeps the
+// holder's seat on screen for one poll although only the other is asked (see `holdsOn`).
+export function activeSeat(views, holder, holding = false) {
   if (!views || views.length === 0) return null;
-  return views.find(one => isAsked(one.view)) ?? views.find(one => one.seat === holder) ?? views[0];
+  const held = views.find(one => one.seat === holder);
+  if (held && (holding || isAsked(held.view))) return held;
+  return views.find(one => isAsked(one.view)) ?? held ?? views[0];
+}
+
+// Whether to keep the holder's seat on screen for this poll although only the other seat is asked. That is
+// what the moment between two of the holder's own questions looks like when both seats are asked at once: the
+// host is writing the last answer down and has not asked the next, while the other seat is already waiting.
+// Without this a poll landing there would put the pass screen up in the middle of one player's speeds. One
+// poll only -- the holder was asked on the poll before -- so a player who has answered everything hands the
+// device over a poll later, never not at all.
+export function holdsOn(previous, views, holder) {
+  const was = previous?.find(one => one.seat === holder);
+  const now = views?.find(one => one.seat === holder);
+  return Boolean(was && now && isAsked(was.view) && !isAsked(now.view) &&
+    views.some(one => one.seat !== holder && isAsked(one.view)));
 }
 
 // The fence stands while the seat being asked is not the one that said it is holding the device. On one phone

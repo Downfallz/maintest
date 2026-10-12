@@ -23,12 +23,13 @@ namespace DownfallArena.Cli.Table;
 /// table carry on from where the earlier host left them.
 /// </para>
 /// <para>
-/// A line is matched to the seat it belongs to rather than to its place in the file: the two seats pick their
-/// packages at once (ADR 0092), so which of them answered first is not a fact the record can promise to
-/// repeat. Within a seat the order is the order of its questions, and a line that does not answer the
-/// question its seat is asked is a divergence. A swap line is applied when the next decision after it is
-/// answered, whichever seat that is: a swap names a round the match has not reached, so where exactly it is
-/// applied before that round makes no difference to where it lands.
+/// A line is matched to the seat it belongs to rather than to its place in the file: the two seats are asked their
+/// packages, speeds and intents at once (ADR 0092, ADR 0111), so which of them answered first is not a fact the
+/// record can promise to repeat; the driver hands the match their answers in seat order either way. Within a seat
+/// the order is the order of its questions, and a line that does not answer the question its seat is asked is a
+/// divergence. A swap line is applied when the next decision after it is answered, whichever seat that is: a swap
+/// names a round the match has not reached, so where exactly it is applied before that round makes no difference to
+/// where it lands.
 /// </para>
 /// </remarks>
 internal sealed class DecisionJournal

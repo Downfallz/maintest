@@ -97,7 +97,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0089](0089-pick-packages-face-down-and-reveal-them-together.md) | Pick packages face down and reveal them together | Accepted |
 | [0090](0090-score-whether-a-package-spell-earns-its-pick-not-how-hard-it-hits.md) | Score whether a package's spell earns its pick, not how hard it hits | Accepted |
 | [0091](0091-a-table-survives-the-host-that-played-it.md) | A table survives the host that played it, rebuilt from its seed and its decisions | Accepted |
-| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted |
+| [0092](0092-a-table-waits-for-its-players-then-both-pick-at-once.md) | A table waits for its players, then both pick their first package at once | Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) |
 | [0093](0093-a-drain-that-leaves-an-enemy-unable-to-pay-is-priced-as-a-stun.md) | A drain that leaves an enemy unable to pay is priced as a stun | Accepted |
 | [0094](0094-the-lookahead-prices-a-purchase-by-playing-rounds-out.md) | The lookahead prices a purchase by playing rounds out | Proposed |
 | [0095](0095-the-tuner-reads-packages-on-a-run-that-buys-them-well.md) | The tuner reads packages on a run that buys them well | Proposed |
@@ -116,3 +116,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0108](0108-a-purchase-is-read-against-what-the-team-is-buying.md) | Read a purchase against what the team is buying this round | Proposed |
 | [0109](0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) | Let the tuner read what each tier-1 opening is worth | Proposed |
 | [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Proposed |
+| [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed |

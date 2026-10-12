@@ -18,9 +18,9 @@ public sealed class RecordingAgent(
     ICollection<StepRecord> steps,
     Func<PlayerBoardState, Decider>? deciding = null) : IPlayerAgent
 {
-    // The two seats are asked their package picks at once (ADR 0092), and both record through the encoders and
-    // the one list they share. Everything that touches those is done under the list's lock; the decision
-    // itself, which a person may take minutes over, is not.
+    // The two seats are asked their package picks at once (ADR 0092), and at a table their speeds and intents
+    // too (ADR 0111), and both record through the encoders and the one list they share. Everything that touches those is done under the
+    // list's lock; the decision itself, which a person may take minutes over, is not.
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);

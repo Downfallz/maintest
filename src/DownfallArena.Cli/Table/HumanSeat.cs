@@ -27,6 +27,10 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
     private long _asked;
 
+    // The round the question being asked belongs to, and the speeds and intents answered in it.
+    private int? _round;
+    private readonly List<(int? Round, PlayerDecision Decision)> _given = [];
+
     /// <summary>
     /// Whether the person has reached their seat: a request carrying its token has arrived (ADR 0092). The
     /// match begins once every person has, which is what a table waiting for its players waits for.
@@ -77,6 +81,11 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
                 return false;
             }
 
+            if (decision.Kind is PlayerOptionsKind.Speed or PlayerOptionsKind.Intent)
+            {
+                _given.Add((_round, decision));
+            }
+
             // Stop waiting here rather than where the decision is picked up. The seat is answered the moment
             // this returns, but the thread it unblocks needs a scheduler before it can say so: a page polling
             // in that window would be shown the question it just answered, and a second tap on it would be
@@ -84,6 +93,21 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
             _question = null;
             _answer = null;
             return true;
+        }
+    }
+
+    /// <summary>
+    /// The speeds and intents this seat has answered in a round, whether or not the match has them yet. Both seats
+    /// are asked theirs at once and the answers are handed to the match only when both are done (ADR 0111), so
+    /// until then the board does not show a player what they have just chosen; this is what the host adds to it.
+    /// Answers of earlier rounds are forgotten as a later one is asked about.
+    /// </summary>
+    public IReadOnlyList<PlayerDecision> Given(int? round)
+    {
+        lock (_gate)
+        {
+            _given.RemoveAll(given => given.Round != round);
+            return [.. _given.Select(given => given.Decision)];
         }
     }
 
@@ -113,7 +137,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
-        Ask(new Question(PlayerOptionsKind.Speed, creature)) is { } decision ? Required(decision.Speed) : Speed.Standard;
+        Ask(new Question(PlayerOptionsKind.Speed, creature), board?.RoundNumber) is { } decision ? Required(decision.Speed) : Speed.Standard;
 
     public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
         Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null))?.Order ?? [];
@@ -121,7 +145,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);
-        if (Ask(new Question(PlayerOptionsKind.Intent, intentOption.Creature)) is { } decision)
+        if (Ask(new Question(PlayerOptionsKind.Intent, intentOption.Creature), board?.RoundNumber) is { } decision)
         {
             return Required(decision.Spell);
         }
@@ -161,7 +185,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     }
 
     /// <summary>The person's answer, or <c>null</c> from a seat that has been released: nobody is answering.</summary>
-    private PlayerDecision? Ask(Question shape)
+    private PlayerDecision? Ask(Question shape, int? round = null)
     {
         // Stamped here rather than at the call sites, which name the shape and have no reason to know
         // that two askings of it are two things.
@@ -176,6 +200,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
             _question = question;
             _answer = answer;
+            _round = round;
         }
 
         try

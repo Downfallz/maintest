@@ -24,7 +24,8 @@ holds, whether or not this host still has its table, deletes one or several (a t
 closed first) and exports one or several as a zip of run directories: unzipped under `runs/`, each is what
 `train-clone`, `export-csv` and the viewer read. A table with a person in it waits for every person to
 reach their seat before its first question, showing whoever is here the code that brings the other, and then
-asks both players their first package pick at the same time (ADR 0092). A table page shows an **Admin** link in its header to the
+asks both players their first package pick at the same time (ADR 0092), as it then asks their speeds and
+their intents (ADR 0111). On one screen the player holding it answers theirs before it is passed. A table page shows an **Admin** link in its header to the
 operator's own browser (the panel keeps the token, or the platform's sign-in says so) and to nobody else.
 `/lobby`, the panel's former address, redirects. A host that starts over a store rebuilds every table the
 host before it left open, from the seed and the decisions it recorded (`decisions.jsonl`, `table.json`,

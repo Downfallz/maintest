@@ -3,6 +3,7 @@ using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 
@@ -16,6 +17,13 @@ namespace DownfallArena.Application.Matches.Driving;
 /// </summary>
 public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandlers queries)
 {
+    /// <summary>
+    /// Whether both seats are asked their speeds and their intents at once, as they are asked their picks (ADR
+    /// 0111). A table sets it, where two people would otherwise wait on each other; bots answer at once, so a
+    /// simulation leaves it off and keeps the order of its events and of its recorded steps fixed by the seed.
+    /// </summary>
+    public bool AsksSpeedsAndIntentsTogether { get; init; }
+
     public async Task<Result<MatchOutcome>> PlayAsync(MatchId matchId, IPlayerAgent player1, IPlayerAgent player2, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(player1);
@@ -24,7 +32,7 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         while (true)
         {
             var progressed = false;
-            if (await EvolveTogetherAsync(matchId, player1, player2, cancellationToken))
+            if (await AskTogetherAsync(matchId, player1, player2, cancellationToken))
             {
                 continue;
             }
@@ -50,7 +58,18 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
                     return Result.Failure<MatchOutcome>(options.Error);
                 }
 
-                progressed |= await ActAsync(matchId, slot, agent, board.Value, options.Value, cancellationToken);
+                if (await ActAsync(matchId, slot, agent, board.Value, options.Value, cancellationToken))
+                {
+                    progressed = true;
+
+                    // Asking speeds and intents at once, one answer and then the top of the loop again: an answer
+                    // can open a question both seats are asked at once -- a tie order taken, the intents come
+                    // next -- and the second seat read in this pass would be asked it alone (ADR 0111).
+                    if (AsksSpeedsAndIntentsTogether)
+                    {
+                        break;
+                    }
+                }
             }
 
             if (!progressed)
@@ -61,31 +80,57 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
     }
 
     /// <summary>
-    /// Both players' package picks, asked at once when both are being asked (ADR 0092). The picks are made face
-    /// down and revealed together (ADR 0089), so neither board shows the other's choice and the two questions
-    /// are independent: asking them in turn only made the second player wait for the first. The answers are
-    /// still submitted in seat order, so the engine sees exactly the commands it saw before. False when the
-    /// match is not at that moment, and the loop below plays the seats in turn as it always did.
+    /// Both players asked at once, when both are being asked the same thing and neither can see the other's
+    /// answer: their package picks (ADR 0092), and at a table their speeds and their intents (ADR 0111). Each is
+    /// made face down and revealed together, so the two questions are independent and asking them in turn only
+    /// made the second player wait for the first. Each seat answers all of its own on its own thread, then the
+    /// answers are submitted in seat order, so a rebuilt table replays the commands it recorded in the order it
+    /// recorded them. False when the match is not at such a moment, and the loop below plays the seats in turn.
     /// </summary>
-    private async Task<bool> EvolveTogetherAsync(MatchId matchId, IPlayerAgent player1, IPlayerAgent player2, CancellationToken cancellationToken)
+    private async Task<bool> AskTogetherAsync(MatchId matchId, IPlayerAgent player1, IPlayerAgent player2, CancellationToken cancellationToken)
     {
         var first = await AskingAsync(matchId, PlayerSlot.Player1, cancellationToken);
         var second = await AskingAsync(matchId, PlayerSlot.Player2, cancellationToken);
-        if (first is not { } one || second is not { } two)
+        if (first is not { } one || second is not { } two || one.Options.Kind != two.Options.Kind)
         {
             return false;
         }
 
-        var decisions = await Task.WhenAll(
-            Task.Run(() => player1.DecideEvolution(one.Board, one.Options), cancellationToken),
-            Task.Run(() => player2.DecideEvolution(two.Board, two.Options), cancellationToken));
-        await SubmitEvolutionAsync(matchId, PlayerSlot.Player1, decisions[0], cancellationToken);
-        await SubmitEvolutionAsync(matchId, PlayerSlot.Player2, decisions[1], cancellationToken);
-        return true;
+        if (one.Options.Kind != PlayerOptionsKind.Evolution && !AsksSpeedsAndIntentsTogether)
+        {
+            return false;
+        }
+
+        switch (one.Options.Kind)
+        {
+            case PlayerOptionsKind.Evolution:
+                var picks = await Task.WhenAll(
+                    Task.Run(() => player1.DecideEvolution(one.Board, Section(one.Options.Evolution)), cancellationToken),
+                    Task.Run(() => player2.DecideEvolution(two.Board, Section(two.Options.Evolution)), cancellationToken));
+                await SubmitEvolutionAsync(matchId, PlayerSlot.Player1, picks[0], cancellationToken);
+                await SubmitEvolutionAsync(matchId, PlayerSlot.Player2, picks[1], cancellationToken);
+                return true;
+            case PlayerOptionsKind.Speed:
+                var speeds = await Task.WhenAll(
+                    Task.Run(() => Speeds(player1, one.Board, Section(one.Options.Speed)), cancellationToken),
+                    Task.Run(() => Speeds(player2, two.Board, Section(two.Options.Speed)), cancellationToken));
+                await SubmitSpeedsAsync(matchId, PlayerSlot.Player1, speeds[0], cancellationToken);
+                await SubmitSpeedsAsync(matchId, PlayerSlot.Player2, speeds[1], cancellationToken);
+                return true;
+            case PlayerOptionsKind.Intent:
+                var intents = await Task.WhenAll(
+                    Task.Run(() => Intents(player1, one.Board, Section(one.Options.Intent)), cancellationToken),
+                    Task.Run(() => Intents(player2, two.Board, Section(two.Options.Intent)), cancellationToken));
+                await SubmitIntentsAsync(matchId, PlayerSlot.Player1, intents[0], cancellationToken);
+                await SubmitIntentsAsync(matchId, PlayerSlot.Player2, intents[1], cancellationToken);
+                return true;
+            default:
+                return false;
+        }
     }
 
-    /// <summary>A seat's board and its evolution options, when a package pick is what it is being asked for; null otherwise.</summary>
-    private async Task<(PlayerBoardState Board, EvolutionOptions Options)?> AskingAsync(MatchId matchId, PlayerSlot slot, CancellationToken cancellationToken)
+    /// <summary>A seat's board and options, when it is being asked something; null otherwise.</summary>
+    private async Task<(PlayerBoardState Board, PlayerOptions Options)?> AskingAsync(MatchId matchId, PlayerSlot slot, CancellationToken cancellationToken)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(matchId, slot), cancellationToken);
         if (board.IsFailure || board.Value.State != MatchState.InProgress)
@@ -94,9 +139,45 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         }
 
         var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(matchId, slot), cancellationToken);
-        return options.IsSuccess && options.Value.Kind == PlayerOptionsKind.Evolution && options.Value.Evolution is { } evolution
-            ? (board.Value, evolution)
-            : null;
+        return options.IsSuccess ? (board.Value, options.Value) : null;
+    }
+
+    /// <summary>A speed for every creature still without one, each read on the same board, as the seat-by-seat loop reads them.</summary>
+    private static List<(CreatureId Creature, Speed Speed)> Speeds(IPlayerAgent agent, PlayerBoardState board, SpeedOptions options) =>
+        [.. options.Missing.Select(creature => (creature, agent.DecideSpeed(board, creature)))];
+
+    /// <summary>
+    /// An intent for every creature, each declared on the board its owner would read after declaring the ones
+    /// before it (ADR 0039). Nothing is submitted until both seats are done, so that board is the one the match
+    /// would serve, built here: an intent changes nothing on its owner's board but the owner's own intents, and
+    /// nothing at all on the other's (MatchDriverTests holds the two to each other).
+    /// </summary>
+    private static List<CombatIntent> Intents(IPlayerAgent agent, PlayerBoardState board, IntentOptions options)
+    {
+        var declared = new List<CombatIntent>();
+        foreach (var option in options.Creatures)
+        {
+            var current = board with { Intents = [.. board.Intents, .. declared] };
+            declared.Add(new CombatIntent(option.Creature, agent.DecideIntent(current, option)));
+        }
+
+        return declared;
+    }
+
+    private async Task SubmitSpeedsAsync(MatchId matchId, PlayerSlot slot, List<(CreatureId Creature, Speed Speed)> speeds, CancellationToken cancellationToken)
+    {
+        foreach (var (creature, speed) in speeds)
+        {
+            Accept(await commands.SubmitSpeedChoice.HandleAsync(new SubmitSpeedChoice(matchId, slot, creature, speed), cancellationToken));
+        }
+    }
+
+    private async Task SubmitIntentsAsync(MatchId matchId, PlayerSlot slot, List<CombatIntent> intents, CancellationToken cancellationToken)
+    {
+        foreach (var intent in intents)
+        {
+            Accept(await commands.SubmitIntent.HandleAsync(new SubmitIntent(matchId, slot, intent.Actor, intent.Spell), cancellationToken));
+        }
     }
 
     private async Task<bool> ActAsync(MatchId matchId, PlayerSlot slot, IPlayerAgent agent, PlayerBoardState board, PlayerOptions options, CancellationToken cancellationToken)
