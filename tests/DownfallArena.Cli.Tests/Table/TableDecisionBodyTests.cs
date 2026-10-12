@@ -82,6 +82,7 @@ public sealed class TableDecisionBodyTests
     [InlineData(null)]
     [InlineData("Nonsense")]
     [InlineData("Intent")]
+    [InlineData("Action")]
     public void A_body_that_names_no_kind_or_is_missing_what_its_kind_needs_is_refused(string? kind)
     {
         new TableDecisionBody { Kind = kind }.ToDecision(out var problem).ShouldBeNull();
@@ -89,11 +90,23 @@ public sealed class TableDecisionBodyTests
         problem.ShouldContain("not a decision this seat can make");
     }
 
-    /// <summary>The refusal says what was expected, and the four kinds are the engine's own.</summary>
+    /// <summary>The refusal says what was expected, and the kinds are the engine's own.</summary>
     [Fact]
-    public void The_kinds_a_body_may_name_are_the_five_the_engine_asks_about()
+    public void The_kinds_a_body_may_name_are_the_six_the_engine_asks_about()
     {
-        TableDecisionBody.Kinds.ShouldBe("Evolution, Speed, TieOrder, Intent, Target");
+        TableDecisionBody.Kinds.ShouldBe("Evolution, Speed, TieOrder, Intent, Target, Action");
+    }
+
+    /// <summary>
+    /// A spell chosen at the slot (ADR 0110) names the creature, the spell and its targets in one body, the
+    /// targets in the order they were tapped.
+    /// </summary>
+    [Fact]
+    public void An_action_names_its_creature_its_spell_and_its_targets()
+    {
+        var body = new TableDecisionBody { Kind = "Action", Creature = 2, Spell = "spell:pummel:v1", Targets = [4, 3] };
+
+        body.ToDecision(out _).ShouldBe(PlayerDecision.Act(CreatureId.From(2), SpellId.Parse("spell:pummel:v1"), [CreatureId.From(4), CreatureId.From(3)]));
     }
 
     [Fact]

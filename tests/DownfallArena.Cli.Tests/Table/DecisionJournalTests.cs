@@ -54,6 +54,43 @@ public sealed class DecisionJournalTests : IDisposable
         (await Board(replayed, PlayerSlot.Player2)).ShouldBe(await Board(played.Session, PlayerSlot.Player2));
     }
 
+    /// <summary>
+    /// Under a rule set that declares no intent (ADR 0110) a spell chosen at the slot is one line, with its targets,
+    /// and the replay hands it back as the action it was.
+    /// </summary>
+    [Fact]
+    public async Task An_action_chosen_at_the_slot_is_one_line_and_replays_as_that_action()
+    {
+        var request = HostedTables.Bots with { Declaration = CombatDeclaration.AtActivation };
+        var rules = _hosted.Composer.RulesFor(request);
+        var played = await _hosted.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);
+        var outcome = await played.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        outcome.IsSuccess.ShouldBeTrue();
+        await Finished(played);
+        var recorded = await _hosted.Stored!.JournalAsync(played.Id, TestContext.Current.CancellationToken);
+        recorded.ShouldContain(entry => entry.Kind == "Action" && entry.Spell != null && entry.Targets != null);
+        recorded.ShouldNotContain(entry => entry.Kind == "Intent" || entry.Kind == "Target");
+
+        var journal = new DecisionJournal(new FileArtifactWriter(Path.Combine(_hosted.RunsDirectory, "replay")), TimeProvider.System, recorded);
+        var seat1 = new SeatAgent(new Occupant(new Never(), "nobody"));
+        var seat2 = new SeatAgent(new Occupant(new Never(), "nobody"));
+        using var replayed = await TableSession.StartAsync(
+            _hosted.Services,
+            rules,
+            request.Seed!.Value,
+            seat1,
+            seat2,
+            new TableStart((_, seat) => journal.Around(seat, ReferenceEquals(seat, seat1) ? PlayerSlot.Player1 : PlayerSlot.Player2)),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var again = await replayed.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        again.IsSuccess.ShouldBeTrue(again.IsFailure ? again.Error.Message : null);
+        again.Value.ShouldBe(outcome.Value);
+        journal.Exhausted.IsCompletedSuccessfully.ShouldBeTrue();
+        (await Board(replayed, PlayerSlot.Player1)).ShouldBe(await Board(played.Session, PlayerSlot.Player1));
+    }
+
     [Fact]
     public async Task A_line_that_does_not_answer_the_question_asked_is_a_divergence_and_the_replay_is_refused()
     {

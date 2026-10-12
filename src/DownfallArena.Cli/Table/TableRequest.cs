@@ -18,7 +18,11 @@ namespace DownfallArena.Cli.Table;
 /// How many creatures a side brings. None plays the host's own rule set, which is the default the panel's
 /// chooser opens on; a format named here plays that rule set in that format and nothing else of it changes.
 /// </param>
-internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, string? Who, int? Handover, int? Seed, MatchFormat? Format = null)
+/// <param name="Declaration">
+/// When a creature's spell is chosen (ADR 0110). None plays the host's own; one named here plays the host's rule
+/// set with that declaration, as a format plays it with that team size.
+/// </param>
+internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, string? Who, int? Handover, int? Seed, MatchFormat? Format = null, CombatDeclaration? Declaration = null)
 {
     /// <summary>The word the admin panel uses for a seat a person plays; anything else names an agent.</summary>
     public const string Person = "person";
@@ -46,7 +50,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         TableRequestBody? posted;
         try
         {
-            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody(null, null, null, null, null, null) : JsonSerializer.Deserialize<TableRequestBody>(body, Web);
+            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody(null, null, null, null, null, null, null) : JsonSerializer.Deserialize<TableRequestBody>(body, Web);
         }
         catch (JsonException exception)
         {
@@ -78,6 +82,18 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
             format = wanted;
         }
 
+        CombatDeclaration? declaration = null;
+        if (!string.IsNullOrWhiteSpace(posted.Declaration))
+        {
+            if (!CombatDeclarationText.TryParse(posted.Declaration, out var named))
+            {
+                problem = CombatDeclarationText.Unknown(posted.Declaration.Trim());
+                return Nothing;
+            }
+
+            declaration = named;
+        }
+
         var player1 = Seat(posted.Player1, "player1", ref problem);
         var player2 = Seat(posted.Player2, "player2", ref problem);
         if (problem is not null)
@@ -86,7 +102,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
 
         var who = string.IsNullOrWhiteSpace(posted.Who) ? null : posted.Who.Trim();
-        return new TableRequest(player1, player2, who, posted.Handover, posted.Seed, format);
+        return new TableRequest(player1, player2, who, posted.Handover, posted.Seed, format, declaration);
     }
 
     private static readonly TableRequest Nothing = new(null, null, null, null, null);
@@ -113,5 +129,5 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
     }
 
     /// <summary>The JSON the admin panel posts.</summary>
-    private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed, string? Format);
+    private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed, string? Format, string? Declaration);
 }

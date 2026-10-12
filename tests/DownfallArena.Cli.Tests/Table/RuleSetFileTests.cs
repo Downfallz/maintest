@@ -30,6 +30,22 @@ public sealed class RuleSetFileTests : IDisposable
         rules.EvolutionInterval.ShouldBe(3);
     }
 
+    /// <summary>
+    /// When a spell is chosen is part of the rule set a table plays (ADR 0110): a file says it the way the
+    /// command line does, and one that says nothing declares hidden intents.
+    /// </summary>
+    [Fact]
+    public void A_rule_set_file_names_when_a_spell_is_chosen_and_says_it_on_the_line_it_prints()
+    {
+        var atActivation = RuleSetFile.Read(Written("""{"combatDeclaration":"at-activation"}"""));
+
+        atActivation.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
+        RuleSetFile.Read(Written("""{"teamSize":2}""")).CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        RuleSetFile.Describe(atActivation, "b.json").ShouldContain("crit, spells chosen at activation (b.json)");
+        Should.Throw<ArgumentException>(() => RuleSetFile.Read(Written("""{"combatDeclaration":"atActivation"}""")))
+            .Message.ShouldContain("not a combat declaration");
+    }
+
     /// <summary>The tabletop numbers, so a file only has to say what it changes.</summary>
     [Fact]
     public void A_number_the_file_leaves_out_is_the_tabletop_one_rather_than_the_simulator_s()

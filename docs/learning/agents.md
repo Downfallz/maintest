@@ -80,8 +80,8 @@ Decisions:
   is refused: a policy that learned `act:` keys and no `intent:` key is not seated under hidden intents,
   since every intent would score its fallback (the feature schema does not carry the mode). The exploring agent
   draws one (spell, target set) pair with equal weight, the pairs a recording lists as one `Act` step; the opening agent and the wrappers ask the agent they wrap. The
-  lookahead and the minimax search the action from the slot (below, "At the slot"), and the table refuses the
-  rule set until its seats can ask for an action (plan, PR 5).
+  lookahead and the minimax search the action from the slot (below, "At the slot"). The table plays the rule
+  set with bots in both seats, and seats a person once its page can ask for an action (plan, PR 6).
 - **Speed**: Quick when some castable spell kills an enemy without a critical. Otherwise Standard only when the
   critical it keeps raises the best expected score among the castable spells, Quick when it does not: a creature
   that cannot crit, or whose weights do not price what its critical adds, gains nothing by waiting (ADR 0084).

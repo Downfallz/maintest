@@ -59,6 +59,8 @@ internal sealed record TableDecisionBody
                 return PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell));
             case "Target":
                 return PlayerDecision.BindTargets([.. (Targets ?? []).Select(CreatureId.From)]);
+            case "Action" when Creature is { } creature && Spell is { } spell:
+                return PlayerDecision.Act(CreatureId.From(creature), SpellId.Parse(spell), [.. (Targets ?? []).Select(CreatureId.From)]);
             default:
                 problem = $"'{Kind}' is not a decision this seat can make, or it is missing what its kind needs.";
                 return null;
@@ -73,5 +75,5 @@ internal sealed record TableDecisionBody
     public static string Kinds => string.Join(", ", Decidable);
 
     private static readonly PlayerOptionsKind[] Decidable =
-        [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Intent, PlayerOptionsKind.Target];
+        [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Intent, PlayerOptionsKind.Target, PlayerOptionsKind.Action];
 }

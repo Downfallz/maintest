@@ -19,10 +19,9 @@ public sealed class PlayerAgentContractTests
         // It reads the board as it stands: its intent then its targets is its action.
         ["RandomAgent"] = "reads the board as it stands",
 
-        // The table's seats: a table refuses a rule set that declares no intent until plan PR 5 (TableComposer).
-        ["HumanSeat"] = "table seat, plan PR 5",
-        ["Journaled"] = "table seat, plan PR 5",
-        ["PracticeAgent"] = "table seat, plan PR 5",
+        // Practice plays its own rule set, which declares hidden intents (PracticeScenario.Rules), and its recipes
+        // are written as intents; nothing ever asks it for an action.
+        ["PracticeAgent"] = "practice plays hidden intents",
     };
 
     [Fact]

@@ -100,21 +100,26 @@ public sealed class CliOptionsTests
             .Message.ShouldContain("not a combat declaration");
 
     /// <summary>
-    /// The benchmark's digest is per content hash and measured on the default rule, the studio plays no match,
-    /// and the table cannot ask a seat for a spell at its slot yet (ADR 0110): each refuses the option by name.
+    /// The benchmark's digest is per content hash and measured on the default rule, and the studio plays no match
+    /// (ADR 0110): each refuses the option by name. Practice plays its own rules and refuses it too.
     /// </summary>
     [Theory]
     [InlineData("benchmark")]
     [InlineData("studio")]
-    [InlineData("table")]
     public void A_command_that_plays_no_declaration_of_its_own_refuses_one(string command) =>
         Should.Throw<ArgumentException>(() => CliOptions.Parse([command, "--declaration", "at-activation"]))
             .Message.ShouldContain($"'--declaration' is not for {command}");
+
+    [Fact]
+    public void Practice_refuses_a_declaration_since_it_plays_rules_of_its_own() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--practice", "--declaration", "at-activation"]))
+            .Message.ShouldContain("--practice");
 
     [Theory]
     [InlineData("play")]
     [InlineData("human")]
     [InlineData("evaluate")]
+    [InlineData("table")]
     public void The_commands_that_play_matches_take_a_declaration(string command) =>
         CliOptions.Parse([command, "--declaration", "at-activation"]).Declaration.ShouldBe(CombatDeclaration.AtActivation);
 

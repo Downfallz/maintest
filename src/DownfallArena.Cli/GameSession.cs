@@ -56,7 +56,8 @@ internal sealed class GameSession
 
     /// <summary>
     /// The rule set a command line plays: the engine default, in the format <c>--format</c> named and with the
-    /// combat declaration <c>--declaration</c> named (ADR 0110). The table reads its own, <c>--rules</c> first.
+    /// combat declaration <c>--declaration</c> named (ADR 0110). The table reads its own, <c>--rules</c> first
+    /// (<see cref="TableRules" />).
     /// </summary>
     internal static RuleSet RulesOf(CliOptions options)
     {
@@ -150,13 +151,14 @@ internal sealed class GameSession
 
     /// <summary>
     /// The rule set a table host starts with: the file <c>--rules</c> named or the engine default, in the
-    /// format <c>--format</c> named when it named one. The admin panel then asks per table (ADR 0081), and
-    /// this is the default its chooser opens on.
+    /// format <c>--format</c> named and with the combat declaration <c>--declaration</c> named, when they named
+    /// one. The admin panel then asks per table (ADR 0081), and this is the default its chooser opens on.
     /// </summary>
     private RuleSet TableRules()
     {
         var rules = _options.Rules is { } path ? Table.RuleSetFile.Read(path) : Rules;
-        return _options.Format is { } format ? rules.InFormat(format) : rules;
+        rules = _options.Format is { } format ? rules.InFormat(format) : rules;
+        return _options.Declaration is { } declaration ? rules.WithCombatDeclaration(declaration) : rules;
     }
 
     public IPlayerAgent Agent(AgentSpec spec, int slot) =>

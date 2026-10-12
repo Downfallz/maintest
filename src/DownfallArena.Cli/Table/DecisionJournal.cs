@@ -315,5 +315,19 @@ internal sealed class DecisionJournal
             journal.Record(slot, PlayerDecision.BindTargets(targets));
             return targets;
         }
+
+        public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            if (journal.Recorded(slot, PlayerOptionsKind.Action, options.Actor) is { } line)
+            {
+                var recorded = line.ToDecision();
+                return new ChosenAction(recorded.Spell!, recorded.Targets);
+            }
+
+            var chosen = inner.DecideAction(board, options);
+            journal.Record(slot, PlayerDecision.Act(options.Actor, chosen.Spell, chosen.Targets));
+            return chosen;
+        }
     }
 }

@@ -88,6 +88,112 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
+    /// A person who concedes while asked to bind targets, or to choose an action at the slot (ADR 0110), ends the
+    /// session with its outcome. The released seat's answer passes through the recording seat, which refuses
+    /// anything its options never offered; an empty target set was such an answer and left the session open.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_concession_while_asked_at_the_slot_closes_the_session_with_its_outcome(bool atActivation)
+    {
+        var table = await Recording(atActivation ? AtActivation : Rules);
+        await PlayUntilTheSlot(table);
+
+        (await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Token)).Status.ShouldBe(200);
+
+        var outcome = await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        outcome.IsSuccess.ShouldBeTrue(outcome.IsFailure ? outcome.Error.Message : null);
+        outcome.Value.Reason.ShouldBe(MatchEndReason.Concession);
+    }
+
+    /// <summary>
+    /// At the slot a person's action is one step, so it is one Decision note: over a whole match the notes stay
+    /// one a decision, which is what puts each duration beside its step (playtest-app.md 5.3).
+    /// </summary>
+    [Fact]
+    public async Task An_action_at_the_slot_is_one_decision_note_over_a_whole_match()
+    {
+        var table = await Recording(AtActivation);
+        var decided = 0;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        while (!table.Session.IsOver)
+        {
+            timeout.Token.ThrowIfCancellationRequested();
+            switch (table.Person.Waiting)
+            {
+                case { Kind: PlayerOptionsKind.Evolution }:
+                    await Post(table, """{"kind":"Evolution","pass":true}""");
+                    decided++;
+                    break;
+                case { Kind: PlayerOptionsKind.Speed, Creature: { } creature }:
+                    await Post(table, $$"""{"kind":"Speed","creature":{{creature.Value}},"speed":"Standard"}""");
+                    decided++;
+                    break;
+                case { Kind: PlayerOptionsKind.TieOrder }:
+                    await Post(table, $$"""{"kind":"TieOrder","order":[{{string.Join(",", await TiedOf(table))}}]}""");
+                    break;
+                case { Kind: PlayerOptionsKind.Action }:
+                    await Post(table, await FirstAction(table));
+                    decided++;
+                    break;
+                default:
+                    await Task.Delay(5, timeout.Token);
+                    break;
+            }
+        }
+
+        var notes = Notes(table).Where(note => note.GetProperty("kind").GetString() == "Decision").ToList();
+        notes.Count.ShouldBe(decided);
+        notes.Count(note => note.GetProperty("subPhase").GetString() == "Activation").ShouldBeGreaterThan(0);
+        notes.ShouldNotContain(note => note.GetProperty("subPhase").GetString() == "IntentSelection");
+    }
+
+    private static readonly RuleSet AtActivation = RuleSet.Create(2, 2, 1, 6, 2.0, combatDeclaration: CombatDeclaration.AtActivation);
+
+    /// <summary>Passes, goes Standard and keeps any tie order until the seat is asked to target or to act.</summary>
+    private static async Task PlayUntilTheSlot((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    {
+        for (var attempt = 0; attempt < 600; attempt++)
+        {
+            switch (table.Person.Waiting)
+            {
+                case { Kind: PlayerOptionsKind.Target or PlayerOptionsKind.Action }:
+                    return;
+                case { Kind: PlayerOptionsKind.Evolution }:
+                    await Post(table, """{"kind":"Evolution","pass":true}""");
+                    break;
+                case { Kind: PlayerOptionsKind.Speed, Creature: { } creature }:
+                    await Post(table, $$"""{"kind":"Speed","creature":{{creature.Value}},"speed":"Standard"}""");
+                    break;
+                case { Kind: PlayerOptionsKind.TieOrder }:
+                    await Post(table, $$"""{"kind":"TieOrder","order":[{{string.Join(",", await TiedOf(table))}}]}""");
+                    break;
+                case { Kind: PlayerOptionsKind.Intent, Creature: { } creature }:
+                    await Post(table, $$"""{"kind":"Intent","creature":{{creature.Value}},"spell":"spell:strike:v1"}""");
+                    break;
+                default:
+                    await Task.Delay(10, TestContext.Current.CancellationToken);
+                    break;
+            }
+        }
+
+        throw new InvalidOperationException($"The seat never reached its slot; it is waiting for {table.Person.Waiting?.Kind.ToString() ?? "nothing"}.");
+    }
+
+    /// <summary>The first spell the seat is served with its first legal target set.</summary>
+    private static async Task<string> FirstAction((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    {
+        using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var action = payload.RootElement.GetProperty("options").GetProperty("action");
+        var spell = action.GetProperty("spells")[0];
+        var legal = spell.GetProperty("legalTargets");
+        var targets = legal.GetProperty("candidates").EnumerateArray().Take(Math.Max(1, legal.GetProperty("minTargets").GetInt32())).Select(target => target.GetInt32());
+        return $$"""{"kind":"Action","creature":{{action.GetProperty("actor").GetInt32()}},"spell":"{{spell.GetProperty("spell").GetString()}}","targets":[{{string.Join(",", targets)}}]}""";
+    }
+
+    /// <summary>
     /// A tie order records no step, so it writes no Decision note either: the n-th note of a seat is its n-th
     /// step, by order and nothing else (playtest-app.md 5.3), and one note too many would put every later
     /// duration beside the wrong decision (ADR 0063).
@@ -410,7 +516,9 @@ public sealed class PlaytestNotesTests : IDisposable
         answer.Status.ShouldBe(204, Text(answer));
     }
 
-    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(TimeProvider? clock = null)
+    private Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(TimeProvider? clock = null) => Recording(Rules, clock);
+
+    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(RuleSet rules, TimeProvider? clock = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -420,21 +528,21 @@ public sealed class PlaytestNotesTests : IDisposable
 
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var person = new HumanSeat(_stopping.Token);
-        var bot = new GreedyAgent(resources, Rules);
+        var bot = new GreedyAgent(resources, rules);
         var run = PlaytestRun.Open(
             new FileArtifactStore(_runs),
-            new PlaytestSetup(resources, Rules, Seed: 7, "human:mk", "greedy"),
+            new PlaytestSetup(resources, rules, Seed: 7, "human:mk", "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             clock ?? _clock);
-        await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
+        await run.StartAsync(CatalogueProjection.Build(resources, rules), _stopping.Token);
 
-        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), new TableStart(run.Wrap), cancellationToken: _stopping.Token);
+        var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), new TableStart(run.Wrap), cancellationToken: _stopping.Token);
         const string token = "token-of-player-1";
         var api = new TableApi(
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(resources, Rules),
+            CatalogueProjection.Build(resources, rules),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             run);
 
