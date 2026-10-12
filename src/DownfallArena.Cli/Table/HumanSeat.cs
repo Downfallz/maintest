@@ -100,14 +100,14 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// The speeds and intents this seat has answered in a round, whether or not the match has them yet. Both seats
     /// are asked theirs at once and the answers are handed to the match only when both are done (ADR 0111), so
     /// until then the board does not show a player what they have just chosen; this is what the host adds to it.
-    /// Answers of earlier rounds are forgotten as a later one is asked about.
+    /// Answers of earlier rounds are forgotten when the seat is asked about a later one, never by a reader: a poll
+    /// that read its board before the round moved on must not take the new round's answers with it.
     /// </summary>
     public IReadOnlyList<PlayerDecision> Given(int? round)
     {
         lock (_gate)
         {
-            _given.RemoveAll(given => given.Round != round);
-            return [.. _given.Select(given => given.Decision)];
+            return [.. _given.Where(given => given.Round == round).Select(given => given.Decision)];
         }
     }
 
@@ -201,6 +201,10 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
             _question = question;
             _answer = answer;
             _round = round;
+            if (round is not null)
+            {
+                _given.RemoveAll(given => given.Round != round);
+            }
         }
 
         try

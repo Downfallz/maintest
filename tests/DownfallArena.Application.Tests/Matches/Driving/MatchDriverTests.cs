@@ -140,7 +140,9 @@ public sealed class MatchDriverTests
         store.Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>())
             .Returns(call => events.RecordAsync(call.Arg<Match>()));
 
-        (await Driver(store, together: true).PlayAsync(match.Id, new Slow(new RandomAgent(new TestRandom(1))), new RandomAgent(new TestRandom(2)), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        using var answered = new SemaphoreSlim(0);
+
+        (await Driver(store, together: true).PlayAsync(match.Id, new Behind(new RandomAgent(new TestRandom(1)), answered), new Ahead(new RandomAgent(new TestRandom(2)), answered), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         foreach (var round in events.All.OfType<IMatchEvent>().GroupBy(Round))
         {
@@ -246,16 +248,17 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
-    /// An agent that takes its time over every speed and intent, so the other seat finishes first: what is then
-    /// submitted first is the seat order, not the order the answers came in.
+    /// Seat 1's agent, answering each speed and intent only once seat 2 has answered one: what is then submitted
+    /// first is the seat order, not the order the answers came in. A seat with fewer creatures standing gives up
+    /// waiting rather than hang.
     /// </summary>
-    private sealed class Slow(IPlayerAgent inner) : IPlayerAgent
+    private sealed class Behind(IPlayerAgent inner, SemaphoreSlim answered) : IPlayerAgent
     {
         public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => inner.DecideEvolution(board, options);
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
         {
-            Thread.Sleep(20);
+            answered.Wait(TimeSpan.FromMilliseconds(500));
             return inner.DecideSpeed(board, creature);
         }
 
@@ -263,8 +266,32 @@ public sealed class MatchDriverTests
 
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
         {
-            Thread.Sleep(20);
+            answered.Wait(TimeSpan.FromMilliseconds(500));
             return inner.DecideIntent(board, intentOption);
+        }
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+    }
+
+    /// <summary>Seat 2's agent, saying so each time it has answered a speed or an intent.</summary>
+    private sealed class Ahead(IPlayerAgent inner, SemaphoreSlim answered) : IPlayerAgent
+    {
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => inner.DecideEvolution(board, options);
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
+        {
+            var speed = inner.DecideSpeed(board, creature);
+            answered.Release();
+            return speed;
+        }
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
+        {
+            var spell = inner.DecideIntent(board, intentOption);
+            answered.Release();
+            return spell;
         }
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);

@@ -1,6 +1,7 @@
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
@@ -135,6 +136,38 @@ public sealed class HumanSeatTests
 
         targets.ShouldBe([CreatureId.From(3)]);
     }
+
+    /// <summary>
+    /// The speeds and intents a seat has answered in a round are what its board shows until the match has them
+    /// (ADR 0111). A reader still on an earlier round -- a poll that read its board just before the round moved
+    /// on -- is told of none, and takes none of the newer round's away with it.
+    /// </summary>
+    [Fact]
+    public async Task A_reader_of_an_earlier_round_leaves_the_answers_of_the_current_one_alone()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var asked = Task.Run(() => seat.DecideSpeed(BoardIn(2), Creature), TestContext.Current.CancellationToken);
+        await WaitingFor(seat, PlayerOptionsKind.Speed);
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), Asking(seat)).ShouldBeTrue();
+        await asked;
+
+        var stale = seat.Given(1);
+
+        stale.ShouldBeEmpty();
+        seat.Given(2).ShouldBe([PlayerDecision.ChooseSpeed(Creature, Speed.Quick)]);
+    }
+
+    /// <summary>A board in a round, which is all a seat reads of the board it is asked on.</summary>
+    private static PlayerBoardState BoardIn(int round) => new()
+    {
+        MatchId = MatchId.New(),
+        Slot = PlayerSlot.Player1,
+        State = MatchState.InProgress,
+        ContentHash = "hash",
+        RoundNumber = round,
+        Allies = [],
+        Enemies = [],
+    };
 
     /// <summary>A tie order is asked of the player, not of one creature, so any order answers it.</summary>
     [Fact]
