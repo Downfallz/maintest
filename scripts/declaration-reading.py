@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import shutil
 import subprocess
 import sys
@@ -29,6 +28,8 @@ from collections import Counter
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "learning" / "src"))
 
@@ -225,10 +226,12 @@ def paired_difference(first: Reading, second: Reading) -> tuple[float, float, fl
             shares.append(_share(won, won + lost))
         return shares[1] - shares[0]
 
-    # A fixed seed for the resampling, so the interval reads the same on every run. Nothing here is secret,
-    # which is what the analyser's rule on pseudorandom generators (python:S2245) is about.
-    draw = random.Random(0)  # NOSONAR
-    resampled = sorted(difference(draw.choices(seeds, k=len(seeds))) for _ in range(RESAMPLES))
+    # A fixed seed for the resampling, so the interval reads the same on every run.
+    rng = np.random.default_rng(0)
+    resampled = sorted(
+        difference([seeds[index] for index in rng.integers(0, len(seeds), len(seeds))])
+        for _ in range(RESAMPLES)
+    )
     return difference(seeds), resampled[int(0.025 * RESAMPLES)], resampled[int(0.975 * RESAMPLES) - 1]
 
 
