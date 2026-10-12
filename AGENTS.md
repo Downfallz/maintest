@@ -39,7 +39,8 @@ models/                        Trained policies (policy.json, small, committed w
 infra/                         The hosted table on Azure (ADR 0080-0082): main.bicep, the one-time bootstrap.sh, and README.md.
 Dockerfile                     The table's image, built and tried by .github/workflows/deploy.yml before it is pushed and deployed.
 scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md),
-                               sweep-weight.py, which measures one agent scoring weight alone (ADR 0037), and
+                               sweep-weight.py, which measures one agent scoring weight alone (ADR 0037),
+                               declaration-reading.py, the shape of the matches under each combat declaration (ADR 0110), and
                                spells-report/, the page of the spells the bots cast and leave (/spells-report).
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
@@ -90,8 +91,9 @@ uv sync --project learning && uv run --project learning ruff check learning && (
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md); --kind lookahead|minimax tunes them for that reading instead; --opponent greedy,heuristic:<w.json>,random scores each candidate as the mean over the list, ranking any candidate that falls below the start against one of them last, so it cannot learn one opponent; `<spec>@<n>` seats one on the first n seeds only, how the lookahead fits in a panel
 uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it; a new leader has to win on benchmarks/confirmation-seeds.json too (ADR 0074), --no-confirm skips that; --sweep-shard I/N plays one slice of the opening sweep into swept-I.json and --swept <files> hands a search all of them, which is how tune.yml plays the sweep in sixty-four jobs side by side
-uv run --project learning score-content -o runs/score --seeds unseen.json   # play the content as it stands on a seed file, no search: how a proposal is checked on seeds it was not searched on
+uv run --project learning score-content -o runs/score --seeds unseen.json   # play the content as it stands on a seed file, no search: how a proposal is checked on seeds it was not searched on; --declaration at-activation plays every evaluation with spells chosen at the slot (ADR 0110)
 uv run --project learning python scripts/sweep-weight.py energy 0.2 0.3 0.4   # one scoring weight alone, on fixed content (ADR 0037); one sweep at a time
+uv run --project learning python scripts/declaration-reading.py --agent greedy   # the same agent against itself on the same seeds under both combat declarations, read from traces: rounds, Quick share, the last actor, fizzles, spell shares; no win rate across the two (ADR 0110)
 # the same two searches run on GitHub Actions, each able to push a proposal branch: "Tune the catalogue" changes the content, "Search the agent weights" adds what it found next to greedy.json (docs/learning/training.md)
 # a pull request touching learning/experiments/search.json runs that search with what the file says, the way one touching next.json runs the loop; a committed experiment reports and never applies (learning/experiments/README.md)
 # "Learning loop" runs scripts/iterate.sh there on learning/experiments/next.json, and with commit=true proposes a policy that clears its bar under models/ (models/README.md)
