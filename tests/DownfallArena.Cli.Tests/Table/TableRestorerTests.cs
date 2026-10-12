@@ -47,7 +47,7 @@ public sealed class TableRestorerTests : IDisposable
     {
         var table = await Opened(HostedTables.OnePerson);
         var person = table.Seats[0].Person!;
-        await PlayUntilIntent(table, person);
+        await PlayUntil(table, person, PlayerOptionsKind.Intent);
         var asked = person.Waiting.ShouldNotBeNull();
         var board = await Board(table.Session, PlayerSlot.Player1);
         var code = _earlier.Codes.Of(table.Seats[0]).ShouldNotBeNull();
@@ -79,6 +79,38 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         (await _after.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).Count.ShouldBe(journal.Count + 1);
+    }
+
+    /// <summary>
+    /// A table opened to choose spells at the slot (ADR 0110) comes back choosing them there: the record keeps
+    /// the declaration it played, so the replay feeds its actions to a match that asks for them, whatever the
+    /// host's own rule set says.
+    /// </summary>
+    [Fact]
+    public async Task A_table_that_chooses_spells_at_the_slot_is_rebuilt_in_that_declaration_at_the_same_question()
+    {
+        var table = await Opened(HostedTables.OnePerson with { Declaration = CombatDeclaration.AtActivation });
+        var person = table.Seats[0].Person!;
+        await PlayUntil(table, person, PlayerOptionsKind.Action);
+        var asked = person.Waiting.ShouldNotBeNull();
+        var options = await table.Session.Queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken);
+        var offered = options.Value.Action.ShouldNotBeNull().Spells[0];
+        await Post(table, asked, $$"""{"kind":"Action","creature":{{asked.Creature!.Value.Value}},"spell":"{{offered.Spell}}","targets":[{{offered.LegalTargets.Candidates[0].Value}}]}""");
+        var next = await Waiting(person);
+        var board = await Board(table.Session, PlayerSlot.Player1);
+        var journal = await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken);
+
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        (await _before.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Declaration.ShouldBe("at-activation");
+        journal.ShouldContain(entry => entry.Kind == "Action");
+        journal.ShouldNotContain(entry => entry.Kind == "Intent" || entry.Kind == "Target");
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        rebuilt.Session.Rules.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
+        var waiting = await Waiting(rebuilt.Seats[0].Person!);
+        waiting.Kind.ShouldBe(next.Kind);
+        waiting.Creature.ShouldBe(next.Creature);
+        (await Board(rebuilt.Session, PlayerSlot.Player1)).ShouldBe(board);
     }
 
     [Fact]
@@ -130,7 +162,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_record_whose_decisions_no_longer_fit_the_match_is_not_rebuilt()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         var store = new FileArtifactStore(_runs);
         var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
         journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
@@ -151,7 +183,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_rebuilt_match_that_does_not_agree_with_the_checkpointed_boards_is_not_kept()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         await Task.Delay(200, TestContext.Current.CancellationToken);
         var path = Path.Combine(_runs, table.Id, "traces", $"{table.Session.MatchId}.json");
         var trace = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
@@ -173,7 +205,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_host_that_stops_leaves_its_open_tables_open_for_the_next_one()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
 
         _earlier.Dispose();
         await Task.WhenAny(table.Session.Outcome);
@@ -189,7 +221,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_rebuilt_table_closed_by_the_operator_marks_its_record_closed()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
         var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
 
@@ -204,7 +236,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_replay_that_is_refused_leaves_the_run_as_the_earlier_host_wrote_it()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         await Task.Delay(200, TestContext.Current.CancellationToken);
         var store = new FileArtifactStore(_runs);
         var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
@@ -225,7 +257,7 @@ public sealed class TableRestorerTests : IDisposable
     public async Task A_place_held_before_the_rebuild_is_not_taken_by_it()
     {
         var table = await Opened(HostedTables.OnePerson);
-        await PlayUntilIntent(table, table.Seats[0].Person!);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
         using var one = new TableRegistry(mostUnderWay: 1);
         using var held = one.Reserve().ShouldNotBeNull();
 
@@ -293,16 +325,17 @@ public sealed class TableRestorerTests : IDisposable
 
     /// <summary>
     /// Passes the evolution, then goes Quick with every creature, keeping any tie order, until the seat is asked
-    /// an intent. Through the table's API, as a page plays: that is where a decision is checkpointed into the
-    /// trace, which is what a rebuild is held against.
+    /// the kind named: an intent, or an action at the slot under a rule set that declares none (ADR 0110).
+    /// Through the table's API, as a page plays: that is where a decision is checkpointed into the trace, which
+    /// is what a rebuild is held against.
     /// </summary>
-    private static async Task PlayUntilIntent(PlayedTable table, HumanSeat person)
+    private static async Task PlayUntil(PlayedTable table, HumanSeat person, PlayerOptionsKind kind)
     {
         for (var attempt = 0; attempt < 600; attempt++)
         {
             switch (person.Waiting)
             {
-                case { Kind: PlayerOptionsKind.Intent }:
+                case { Kind: var asked } when asked == kind:
                     return;
                 case { Kind: PlayerOptionsKind.Evolution } question:
                     await Post(table, question, """{"kind":"Evolution","pass":true}""");
@@ -321,7 +354,7 @@ public sealed class TableRestorerTests : IDisposable
             }
         }
 
-        throw new InvalidOperationException($"The seat never reached Intent; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+        throw new InvalidOperationException($"The seat never reached {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
     }
 
     private static async Task Post(PlayedTable table, HumanSeat.Question question, string body)

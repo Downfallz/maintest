@@ -136,7 +136,28 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return Ask(new Question(PlayerOptionsKind.Target, options.Actor))?.Targets ?? [];
+
+        // Released: the ended match refuses whatever is handed to it, but a recording seat checks the answer
+        // against the options before the match sees it, and refuses an answer they never offered as a bug. So a
+        // released seat hands back the first set the options offer, which is nobody's choice either.
+        return Ask(new Question(PlayerOptionsKind.Target, options.Actor))?.Targets ?? TargetSets.Of(options.LegalTargets).FirstOrDefault() ?? [];
+    }
+
+    /// <summary>
+    /// A spell and its targets chosen together when the creature's slot comes up (ADR 0110): one question, about
+    /// the creature at the slot, answered by one tap.
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (Ask(new Question(PlayerOptionsKind.Action, options.Actor)) is { } decision)
+        {
+            return new ChosenAction(Required(decision.Spell), decision.Targets);
+        }
+
+        // Released: as for targets, the first pair the options offer, which the recording seat accepts and the
+        // ended match refuses.
+        return TargetSets.Pairs(options).FirstOrDefault() ?? new ChosenAction(Nothing, []);
     }
 
     /// <summary>The person's answer, or <c>null</c> from a seat that has been released: nobody is answering.</summary>
@@ -185,8 +206,8 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     /// <summary>
     /// What the match is asking this seat. The creature is the one being asked about for a speed choice, an
-    /// intent and a target binding, and none for evolution or a tie order, which are asked of the player rather
-    /// than of one creature.
+    /// intent, a target binding and an action chosen at the slot, and none for evolution or a tie order, which
+    /// are asked of the player rather than of one creature.
     /// </summary>
     /// <param name="Asked">
     /// Which asking this is, counted by the seat. It exists so that two questions of the same shape are two
@@ -206,7 +227,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
                 return false;
             }
 
-            // Evolution names its own creature and a tie order names several; the other three are asked about one
+            // Evolution names its own creature and a tie order names several; the other four are asked about one
             // creature, and the answer is for it.
             return Kind is PlayerOptionsKind.Evolution or PlayerOptionsKind.TieOrder || Creature is null || decision.Creature is null || decision.Creature == Creature;
         }

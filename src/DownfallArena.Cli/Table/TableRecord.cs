@@ -55,6 +55,13 @@ internal sealed record TableRecord
     /// </summary>
     public string? Format { get; init; }
 
+    /// <summary>
+    /// The combat declaration the table played (ADR 0110), resolved like <see cref="Format" /> and for the same
+    /// reason: a replay feeds the rebuilt match the decisions of one declaration. Null in a record written before
+    /// a table could play another, which was always <c>hidden-intent</c>.
+    /// </summary>
+    public string? Declaration { get; init; }
+
     public required IReadOnlyList<RecordedSeat> Seats { get; init; }
 
     public required string PilotToken { get; init; }
@@ -77,6 +84,7 @@ internal sealed record TableRecord
             Who = request.Who,
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
+            Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
             Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
             PilotToken = table.Pilot.Token,
             Status = Open,
@@ -91,7 +99,8 @@ internal sealed record TableRecord
             Who,
             Handover,
             Seed,
-            Domain.Matches.MatchFormat.TryParse(Format, out var format) ? format : null);
+            Domain.Matches.MatchFormat.TryParse(Format, out var format) ? format : null,
+            CombatDeclarationText.TryParse(Declaration, out var declaration) ? declaration : Domain.Matches.CombatDeclaration.HiddenIntent);
 }
 
 /// <summary>One seat as the record keeps it: its token, the code its person types, and whether there is one.</summary>

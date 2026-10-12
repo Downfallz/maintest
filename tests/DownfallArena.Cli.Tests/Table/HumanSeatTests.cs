@@ -88,6 +88,54 @@ public sealed class HumanSeatTests
         seat.Waiting.ShouldBeNull("a released seat is never waiting");
     }
 
+    /// <summary>
+    /// A spell chosen at the slot (ADR 0110) is one question about the creature at the slot, and the action the
+    /// seat is answered with is the one the match receives, spell and targets together.
+    /// </summary>
+    [Fact]
+    public async Task An_action_at_the_slot_is_one_question_answered_with_the_spell_and_its_targets()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var pummel = SpellId.Parse("spell:pummel:v1");
+        var options = new ActionOptions(Creature, [new TargetOptions(Creature, pummel, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)]))]);
+        var asked = Task.Run(() => seat.DecideAction(null!, options), TestContext.Current.CancellationToken);
+
+        await WaitingFor(seat, PlayerOptionsKind.Action);
+        seat.Waiting.ShouldNotBeNull().Creature.ShouldBe(Creature);
+        seat.Submit(PlayerDecision.DeclareIntent(Creature, pummel), Asking(seat)).ShouldBeFalse("an intent does not answer an action");
+        seat.Submit(PlayerDecision.Act(Creature, pummel, [CreatureId.From(4)]), Asking(seat)).ShouldBeTrue();
+
+        (await asked).ShouldBe(new ChosenAction(pummel, [CreatureId.From(4)]));
+    }
+
+    /// <summary>
+    /// A released seat answers nobody's choice, and a recording seat refuses an answer its options never offered
+    /// before the ended match can refuse it as late. So what it hands back is the first pair on offer.
+    /// </summary>
+    [Fact]
+    public void A_released_seat_asked_for_an_action_hands_back_the_first_pair_its_options_offer()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var pummel = SpellId.Parse("spell:pummel:v1");
+        seat.Release();
+
+        var chosen = seat.DecideAction(null!, new ActionOptions(Creature, [new TargetOptions(Creature, pummel, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)]))]));
+
+        chosen.ShouldBe(new ChosenAction(pummel, [CreatureId.From(3)]));
+    }
+
+    /// <summary>The same for a target binding: the first set its options offer, never a set they do not.</summary>
+    [Fact]
+    public void A_released_seat_asked_for_targets_hands_back_the_first_set_its_options_offer()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        seat.Release();
+
+        var targets = seat.DecideTargets(null!, new TargetOptions(Creature, SpellId.Parse("spell:pummel:v1"), new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])));
+
+        targets.ShouldBe([CreatureId.From(3)]);
+    }
+
     /// <summary>A tie order is asked of the player, not of one creature, so any order answers it.</summary>
     [Fact]
     public async Task A_tie_order_is_answered_with_the_order_the_seat_is_given()

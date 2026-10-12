@@ -102,7 +102,8 @@ Moves, by layer:
   `IPlayerAgent.DecideAction` with a default that calls `DecideIntent` then `DecideTargets` on the current
   board. Every wrapper must forward it explicitly or the default runs on the wrapper and bypasses the inner
   agent: Greedy, Opening, Exploring, Recording, `IntentCounter.CountingAgent`, `SeatAgent` (PR 2), and the
-  table's `HumanSeat`, `Journaled` and `PracticeAgent` (PR 5, until when a table refuses the mode).
+  table's `HumanSeat` and `Journaled` (PR 5). `PracticeAgent` stays on the default: practice plays its own
+  hidden-intent rules (`PracticeScenario.Rules`) and refuses `--declaration`.
   `PlayerAgentContractTests` names every agent left on the default and why. `ExploringAgent` draws uniformly
   over (spell, target set) pairs, not two stages. `IntentCounter` counts in the new method or the spells
   report goes blank. `RoundRollout.Combat` gets a no-intent branch with the lookahead (PR 3).
@@ -149,14 +150,16 @@ Mode A is the default at every step, CI stays green, the digest never moves unti
 | 2 | The decision model and the one-step agents | Application, Cli (console only) | `Action` kind, options, decision, check, projection, driver; `DecideAction` on every agent and wrapper; `IntentCounter`; `play`/`human`/`simulate`/`evaluate` name the mode with `--declaration`, and `benchmark`, `studio` and `table` refuse it; the rule-set stamp carries the mode, written only when it is not the default; a mode B fixture in `Invariants/PlayedMatches` runs every invariant, since it plays through the driver. Random, Greedy, Heuristic, Opening, Explore, Policy play mode B; the lookahead and minimax are refused when built, until PR 3. A recording wrote a chosen action as an Intent step and a Targets step until PR 4. |
 | 3 | The searching agents in mode B | Application | The combined search from the cursor; mode-aware guesses; `RoundRollout` without an intent pass, its only reader being the lookahead; `RoundRolloutTests` in both modes; a measurement of lookahead and minimax against Greedy in mode B in the journal. |
 | 4 | Recording and encoding | Application (Learning), learning/ | `ActionKind.Act`, encoder, terms, recorder; a mode B dataset recorded and a clone trained as a smoke test; `compare-stamps` tells the modes apart (the stamp carries the mode since PR 2). A chosen action is one `Act` step among every (spell, target set) pair, which is what the exploring agent's pair draw is uniform over. A policy that learned `act:` keys scores them; one fitted on hidden intents declares then targets on the keys it knows. |
-| 5 | The table host | Application (driver), Cli | `RuleSetFile`, `TableDecisionBody`, `HumanSeat`, journal, gate, seat agent, API payload; `TableRestorer` rebuilds a mode B table; tests mirrored. `MatchDriver` asks both seats' Speed and Intent at once, as ADR 0092 does for picks, so mode A keeps its parallel phase in the app (§5). |
-| 6 | The table page and the viewer | table/, viewer/ | The slot screen; phase guide and texts per mode; viewer fallbacks; the viewer's rules row names the declaration, since it already flags two runs of different modes as different rules; `node --test` green in both modes. Practice stays mode A. |
+| 5 | The table host | Cli | `RuleSetFile` (`combatDeclaration`), `--declaration` on `table`, a table request's and a table record's `declaration` (a rebuilt table comes back in it), the admin listing; `TableDecisionBody` and the journal carry an `Action`; `HumanSeat` asks one question at the slot; `TableRestorer` rebuilds a mode B table; tests mirrored. The gate, the seat agent and the API payload needed nothing: they already carry what PR 2 added. Until PR 6 a mode B table seats only bots, since the page cannot ask a person for an action. |
+| 5b | Both seats at once | Application (driver), table/ | An ADR amending 0092: `MatchDriver` asks both seats' Speed and Intent at once, as it asks their picks, and submits the answers in seat order, so mode A keeps its parallel phase in the app (§5) and the engine sees the same commands. The hotseat page keeps the device with the seat that is still answering instead of handing it over between two of its questions. Split from PR 5 because it changes the default mode and the hotseat screen, which the table host for mode B does not. |
+| 6 | The table page and the viewer | table/, viewer/ | The slot screen; the admin panel's declaration chooser, beside its format chooser; phase guide and texts per mode; viewer fallbacks; the viewer's rules row names the declaration, since it already flags two runs of different modes as different rules; `node --test` green in both modes. Practice stays mode A. |
 | 7 | The bot reading | docs (journal), scripts | The A/B table of §5 on the same seeds and content, with the caveat that strength does not compare across modes. No tuning pass. |
 | 8 | The table playtest | none | The seven scenarios of the handoff played in both modes on the app, no cardboard changes. Rules and feel can be tried in hotseat; the time readings of §5 come from two people on two devices. |
 | 9a | Drop | all | One PR removes the mode: the flag makes it a clean removal. ADR 0110 is marked Deprecated, with the numbers. |
 | 9b | Adopt | all | A second ADR supersedes parts of 0010, 0070, 0083 and 0107; mode B becomes the default; a mode B benchmark digest; a tuning pass under mode B; rulebook, player aid, components, Automa rewritten; mode A removed one or two releases later. |
 
-PRs 1 to 4 are sequential. PR 5 depends on 2. PR 6 depends on 5. PR 7 needs 3. PR 8 needs 6. PR 3 is the
+PRs 1 to 4 are sequential. PR 5 depends on 2. PR 6 depends on 5. PR 7 needs 3. PR 8 needs 6, and its time
+readings need 5b. PR 3 is the
 one with design risk; 4 is small.
 
 ## 5. What to measure
@@ -194,7 +197,7 @@ Intent selection to be parallel in the app, as it is in cardboard, and today it 
   asks Speed and Intent seat by seat, so Player 2 waits for Player 1's last Intent.
 
 Measured as it stands, mode A would lose a parallel phase it has at the table, and mode B would be credited
-with the saving. PR 5 therefore asks both seats' Speed and Intent at once, the way ADR 0092 asks their
+with the saving. PR 5b therefore asks both seats' Speed and Intent at once, the way ADR 0092 asks their
 picks: the decisions are hidden from each other and independent, and the answers are still submitted in
 seat order, so the engine sees the same commands. The time readings come from two people on two devices
 after that. If they turn out too coarse, round start and end stamps in the notes are a small addition to

@@ -636,7 +636,9 @@ public sealed partial class TableApiTests : IDisposable
             .ShouldBe(payload.RootElement.GetProperty("waitingFor").GetString());
     }
 
-    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated()
+    private Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated() => Seated(Rules);
+
+    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token)> Seated(RuleSet rules)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -645,15 +647,15 @@ public sealed partial class TableApiTests : IDisposable
             logMatchToConsole: false);
 
         var person = new HumanSeat(_stopping.Token);
-        var bot = new GreedyAgent(_host.Services.GetRequiredService<IGameResources>(), Rules);
-        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
+        var bot = new GreedyAgent(_host.Services.GetRequiredService<IGameResources>(), rules);
+        var session = await TableSession.StartAsync(_host.Services, rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), cancellationToken: _stopping.Token);
 
         const string token = "token-of-player-1";
         var api = new TableApi(
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules),
+            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), rules),
             _host.Services.GetRequiredService<MatchTraceRecorder>());
 
         await Waiting(person, "Evolution");

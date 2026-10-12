@@ -392,6 +392,23 @@ public sealed class AdminApiTests : IDisposable
         listed.GetProperty("format").GetString().ShouldBe("2v2", "the host's default is untouched by a table that asked for another format");
     }
 
+    /// <summary>
+    /// When a spell is chosen is a table's as well (ADR 0110): the panel is told the two a table may be opened
+    /// with and this host's, and a table opened to choose at the slot says so in the list beside its format.
+    /// </summary>
+    [Fact]
+    public async Task A_table_is_opened_with_the_combat_declaration_it_was_asked_for()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy","declaration":"at-activation"}""", OperatorToken, null)).Status.ShouldBe(201);
+
+        var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null))).RootElement;
+        listed.GetProperty("declarations").EnumerateArray().Select(declaration => declaration.GetString()).ShouldBe(["hidden-intent", "at-activation"]);
+        listed.GetProperty("declaration").GetString().ShouldBe("hidden-intent", "the host's own");
+        listed.GetProperty("tables").EnumerateArray().Single().GetProperty("declaration").GetString().ShouldBe("at-activation");
+    }
+
     [Fact]
     public async Task A_table_asked_for_in_no_format_plays_this_host_s_own()
     {

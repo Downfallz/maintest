@@ -121,6 +121,10 @@ internal sealed class AdminApi
                 // (ADR 0054). The host's own is in the list whether or not it is one of the three offered.
                 formats = Formats().Select(format => new { value = format.ToString(), teamSize = format.TeamSize, picks = _composer.Rules.InFormat(format).EvolutionPicksUsableInAnOpportunity }).ToArray(),
                 format = _composer.Rules.Format.ToString(),
+
+                // When a spell is chosen (ADR 0110), the host's and the ones a table may be opened with.
+                declarations = new[] { CombatDeclarationText.HiddenIntent, CombatDeclarationText.AtActivation },
+                declaration = CombatDeclarationText.Of(_composer.Rules.CombatDeclaration),
                 recording = _composer.Records,
                 agents = _agents.Select(agent => new { value = agent.Value, label = agent.Label, featured = agent.Featured }).ToArray(),
                 tables = await Task.WhenAll(_registry.All().Select(DescribedAsync)),
@@ -336,6 +340,7 @@ internal sealed class AdminApi
             // The format this table is playing, which is not necessarily the host's: the panel opens one per
             // table, so a row that showed the host's would name the wrong game.
             format = table.Session.Rules.Format.ToString(),
+            declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
 
             // Waiting for its people to reach their seats (ADR 0092): no question has been asked yet.
             waiting = !table.Session.HasBegun && !table.IsOver,

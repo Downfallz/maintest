@@ -71,7 +71,7 @@ internal sealed record JournalEntry
             Spell = decision.Spell?.ToString(),
             Tier = decision.Tier?.ToString(),
             Speed = decision.Speed?.ToString(),
-            Targets = decision.Kind == PlayerOptionsKind.Target ? [.. decision.Targets.Select(target => target.Value)] : null,
+            Targets = decision.Kind is PlayerOptionsKind.Target or PlayerOptionsKind.Action ? [.. decision.Targets.Select(target => target.Value)] : null,
             Order = decision.Kind == PlayerOptionsKind.TieOrder ? [.. decision.Order.Select(creature => creature.Value)] : null,
             Pass = decision.IsPass,
         };

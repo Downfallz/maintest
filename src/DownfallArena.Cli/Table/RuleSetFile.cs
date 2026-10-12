@@ -34,15 +34,27 @@ internal sealed record RuleSetFile
 
     public int EvolutionInterval { get; init; } = 2;
 
+    /// <summary>
+    /// When a creature's spell is chosen (ADR 0110): <c>hidden-intent</c>, declared face down before combat, or
+    /// <c>at-activation</c>, chosen with its targets when its slot comes up. Absent means the first.
+    /// </summary>
+    public string? CombatDeclaration { get; init; }
+
     public static RuleSet Read(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (!File.Exists(path))
         {
-            throw new ArgumentException($"Rule set '{path}' not found. It is a JSON object of teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound and evolutionInterval.", nameof(path));
+            throw new ArgumentException($"Rule set '{path}' not found. It is a JSON object of teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound, evolutionInterval and combatDeclaration.", nameof(path));
         }
 
         var file = Parse(path);
+        var declaration = Domain.Matches.CombatDeclaration.HiddenIntent;
+        if (file.CombatDeclaration is { } named && !CombatDeclarationText.TryParse(named, out declaration))
+        {
+            throw new ArgumentException($"Rule set '{path}' is not playable: {CombatDeclarationText.Unknown(named)}", nameof(path));
+        }
+
         try
         {
             return RuleSet.Create(
@@ -52,7 +64,8 @@ internal sealed record RuleSetFile
                 file.RoundCap,
                 file.CriticalMultiplier,
                 file.FirstEvolutionRound,
-                file.EvolutionInterval);
+                file.EvolutionInterval,
+                declaration);
         }
         catch (ArgumentOutOfRangeException exception)
         {
@@ -69,7 +82,8 @@ internal sealed record RuleSetFile
 
         // The usable picks, not the allowance: in 1v1 the allowance is two and one is all a side can take
         // (ADR 0066), and a line that read "2 picks" of a game that gives one would be the wrong line.
-        return $"Rules {rules.Format}, {rules.EnergyPerRound} energy, {rules.EvolutionPicksUsableInAnOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit ({where})";
+        var declared = rules.CombatDeclaration == Domain.Matches.CombatDeclaration.AtActivation ? ", spells chosen at activation" : string.Empty;
+        return $"Rules {rules.Format}, {rules.EnergyPerRound} energy, {rules.EvolutionPicksUsableInAnOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit{declared} ({where})";
     }
 
     private static RuleSetFile Parse(string path)

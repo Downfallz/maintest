@@ -243,10 +243,9 @@ internal sealed record CliOptions
         }
 
         // The same reason as the format: one digest per content hash, measured on the default rule (ADR 0110).
-        // The table is refused until its seats and its page can ask for a spell at the slot.
-        if (values.ContainsKey(DeclarationOption) && command is "benchmark" or "studio" or "table")
+        if (values.ContainsKey(DeclarationOption) && command is "benchmark" or "studio")
         {
-            return $"'--declaration' is not for {command}: it is for play, human, simulate and evaluate (ADR 0110).";
+            return $"'--declaration' is not for {command}: it is for play, human, simulate, evaluate and table (ADR 0110).";
         }
 
         return flags.Contains("--no-record") && values.ContainsKey(RecordOption)
@@ -286,12 +285,8 @@ internal sealed record CliOptions
     private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
 
     /// <summary>A combat declaration as a command line names it (ADR 0110); anything else is one line, not a stack.</summary>
-    private static CombatDeclaration ParseDeclaration(string text) => text switch
-    {
-        "hidden-intent" => CombatDeclaration.HiddenIntent,
-        "at-activation" => CombatDeclaration.AtActivation,
-        _ => throw new ArgumentException($"'{text}' is not a combat declaration: hidden-intent or at-activation.", nameof(text)),
-    };
+    private static CombatDeclaration ParseDeclaration(string text) =>
+        CombatDeclarationText.TryParse(text, out var declaration) ? declaration : throw new ArgumentException(CombatDeclarationText.Unknown(text), nameof(text));
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
     private static int ParseTraces(string text)

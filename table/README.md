@@ -38,6 +38,12 @@ curl -H "X-Seat-Token: <operator token>" -H "Content-Type: application/json" \
   -d '{"player1":"person","player2":"greedy","who":"mk"}' http://127.0.0.1:5099/api/tables
 ```
 
+A table chooses spells at the slot instead of declaring hidden intents (ADR 0110) when the host was started
+with `--declaration at-activation`, when its `--rules` file says `"combatDeclaration": "at-activation"`, or
+when the request that opens it says `"declaration": "at-activation"`. Until this page can ask a person for
+the action at the slot (plan PR 6 of [free-activation-plan.md](../docs/domain/free-activation-plan.md)),
+such a table seats two bots and refuses a person.
+
 ## Preview
 
 Earlier visual baseline, before the desktop workspace and floating atlas. These illustrative fixtures are

@@ -44,14 +44,6 @@ internal sealed class TableComposer
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(rules);
 
-        // The seats, the journal and the page ask a person for an intent and then targets; until they can ask
-        // for a spell at the slot, a table on a rule set that declares no intent would wait on a question no
-        // seat can answer (ADR 0110, PR 5 of free-activation-plan.md).
-        if (rules.CombatDeclaration != CombatDeclaration.HiddenIntent)
-        {
-            throw new ArgumentException("The table does not play a rule set that declares no intent yet (ADR 0110).", nameof(rules));
-        }
-
         _services = services;
         _rules = rules;
         _store = store;
@@ -66,20 +58,29 @@ internal sealed class TableComposer
     public bool Records => _store is not null;
 
     /// <summary>
+    /// Whether a person may sit at a table that chooses spells at the slot. Not yet: the page cannot ask for an
+    /// action until plan PR 6 of free-activation-plan.md, and a person asked one would wait on a screen that
+    /// offers nothing. The host's own tests play that seat through the API, which can.
+    /// </summary>
+    internal bool SeatsPersonsAtTheSlot { get; init; }
+
+    /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
     /// <c>--rules</c> named, or either of them in the format <c>--format</c> named.
     /// </summary>
     public RuleSet Rules => _rules;
 
     /// <summary>
-    /// The rule set a table plays: this host's, in the format the request asked for. Only the team size moves;
-    /// the energy, the schedule, the round cap and the critical multiplier stay the host's, so a format is a
-    /// choice about the match and never a second rule set to keep in agreement with this one.
+    /// The rule set a table plays: this host's, in the format and with the combat declaration the request asked
+    /// for. Only the team size and when a spell is chosen move; the energy, the schedule, the round cap and the
+    /// critical multiplier stay the host's, so a format or a declaration is a choice about the match and never
+    /// a second rule set to keep in agreement with this one.
     /// </summary>
     public RuleSet RulesFor(TableRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return request.Format is { } format ? _rules.InFormat(format) : _rules;
+        var rules = request.Format is { } format ? _rules.InFormat(format) : _rules;
+        return request.Declaration is { } declaration ? rules.WithCombatDeclaration(declaration) : rules;
     }
 
     /// <summary>The cards and the round shape of one rule set, built once per rule set this host plays.</summary>
@@ -91,6 +92,14 @@ internal sealed class TableComposer
 
     /// <summary>The bots the pilot is offered for a seat, in the order they are offered; empty offers only what the page knows.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
+
+    private void RefuseAPersonAtTheSlot(TableRequest request, RuleSet rules)
+    {
+        if (rules.CombatDeclaration == CombatDeclaration.AtActivation && !SeatsPersonsAtTheSlot && (request.Player1 is null || request.Player2 is null))
+        {
+            throw new ArgumentException("A person cannot sit at a table that chooses spells at the slot yet: the page asks for an action from plan PR 6 of free-activation-plan.md. Seat two bots, or play it with 'play --declaration at-activation'.", nameof(request));
+        }
+    }
 
     /// <summary>
     /// Composes and starts a table. The recording is opened before the match, so the files exist before
@@ -212,6 +221,7 @@ internal sealed class TableComposer
             // bot created against another rule set than the match plays would score a board that is not the
             // board, and a rebuilt table has to come back in the format it was recorded in (ADR 0091).
             var rules = RulesFor(request);
+            RefuseAPersonAtTheSlot(request, rules);
 
             // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
