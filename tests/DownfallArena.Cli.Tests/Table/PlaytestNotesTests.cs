@@ -42,9 +42,32 @@ public sealed class PlaytestNotesTests : IDisposable
         _stopping.Dispose();
         _host?.Dispose();
         _content.Dispose();
-        if (Directory.Exists(_runs))
+        DeleteRuns();
+    }
+
+    /// <summary>
+    /// Removes the runs, waiting out a table still writing to them. Cancelling does not wait for the driver,
+    /// and since both seats are asked at once (ADR 0111) the bot's answer can still be journaled after the
+    /// test is done, adding a file under the delete: "directory not empty" (seen in CI). A few short waits let
+    /// the writer finish; a directory still busy after them is a real leak and fails the test.
+    /// </summary>
+    private void DeleteRuns()
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(_runs, recursive: true);
+            try
+            {
+                if (Directory.Exists(_runs))
+                {
+                    Directory.Delete(_runs, recursive: true);
+                }
+
+                return;
+            }
+            catch (IOException) when (attempt < 10)
+            {
+                Thread.Sleep(100);
+            }
         }
     }
 
