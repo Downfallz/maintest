@@ -153,7 +153,8 @@ export function revealedText(action, cards) {
 
 // Keep only confirmed public actions: never consult private intents or infer a spellbook choice.
 // Resolution events also recover the previous round after reload, without retaining another seat's state.
-export function liveChoice(creature, board, entries) {
+// `atTheSlot` is a game that declares nothing (ADR 0110): a creature yet to act has no spell, hidden or not.
+export function liveChoice(creature, board, entries, atTheSlot = false) {
   const round = board?.roundNumber;
   const events = (entries ?? []).filter(entry => entry?.event?.kind === 'CombatActionResolved' &&
     entry.event.resolution?.action?.actor === creature?.id);
@@ -161,7 +162,8 @@ export function liveChoice(creature, board, entries) {
   const resolved = events.filter(entry => roundOf(entry) === round).at(-1)?.event.resolution;
   const action = (board?.revealedActions ?? []).find(one => one.actor === creature?.id) ?? resolved?.action;
   const index = (board?.timeline ?? []).findIndex(slot => slot.creature === creature?.id);
-  const status = !action ? 'Hidden until reveal' : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
+  const passed = index >= 0 && index < (board?.activationCursor ?? 0);
+  const status = !action ? (!atTheSlot ? 'Hidden until reveal' : passed ? 'Skipped' : 'Chooses at its turn') : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
     : resolved || (index >= 0 && index < (board?.activationCursor ?? 0)) ? 'Resolved' : 'Revealed';
   const previous = events.filter(entry => roundOf(entry) === round - 1).at(-1);
   return { round, action, status, previous: previous ? { round: roundOf(previous), action: previous.event.resolution.action } : null };

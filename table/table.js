@@ -12,6 +12,7 @@ import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreK
 import { healthChange, playbackBoard, playbackChanges } from './replay.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
+import { actionDecision, askedKey, slotView } from './slot.js';
 import { practice, storage } from './startup.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -243,7 +244,14 @@ function ruleLine(catalogue) {
   // the same interval and a different game, and this line exists to tell two games apart at a glance.
   const every = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
   const cadence = `${every} from round ${rules.firstEvolutionRound}`;
-  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
+  const declared = atTheSlot(catalogue) ? ' · spells chosen at the slot' : '';
+  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit${declared} · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
+}
+
+// Whether the game being played chooses each spell at its creature's slot instead of declaring it face down
+// (ADR 0110). The host says so on the rules it serves, and only when it does: the hidden intent is the default.
+function atTheSlot(catalogue) {
+  return catalogue?.rules?.combatDeclaration === 'AtActivation';
 }
 
 // Only one poll can be in flight. An old response must never replace a newer decision.
@@ -325,13 +333,34 @@ async function poll(state) {
 
   if (state.sending) return;
   state.holding = holdsOn(state.views, views, state.holder);
-  state.views = views;
-  render(state, views);
+  state.rawViews = views;
+  state.views = drawnViews(state);
+  render(state, state.views);
   if (!state.catalogue) await load(state);
 }
 
 function redraw(state) {
-  if (state.views.length > 0) render(state, state.views);
+  if (state.views.length === 0) return;
+  state.views = drawnViews(state);
+  render(state, state.views);
+}
+
+// The seats as the page draws them: an action at the slot (ADR 0110) as its spell screen until this seat has
+// chosen a spell for that very asking, and as that spell's target screen after (slot.js). Built from what the
+// host last answered on every redraw, so choosing or going back is a redraw and never a poll.
+function drawnViews(state) {
+  return (state.rawViews ?? state.views).map(one => {
+    // An action this page has just had accepted is answered: the host replies with nothing, so until the next
+    // poll the last one still holds the question, and drawing it would put the cards back up for an action
+    // already resolving -- one more tap and the host refuses it as late.
+    if (one.view?.waitingFor === 'Action' && `${one.seat}/${one.view.waitingAsked}` === state.answered) {
+      return { ...one, view: { ...one.view, waitingFor: null, waitingCreature: null } };
+    }
+    const chosen = askedKey(one.seat, slotView(one.view)) === state.asked ? state.chosen : null;
+    const view = slotView(one.view, chosen);
+    // Any other question is drawn as it was asked, and the seat stays the very object it was.
+    return view === one.view ? one : { ...one, view };
+  });
 }
 
 function showTab(state, name) {
@@ -419,7 +448,7 @@ function render(state, views) {
   // refused as stale (409) leaves the choice standing, and the next question of the same seat is very often a
   // different creature that knows the same spell -- which would arrive with a card already selected and one tap
   // from being committed, through the confirmation that exists to stop exactly that.
-  const asked = `${current.seat}/${view.waitingAsked ?? ''}/${view.waitingFor ?? ''}/${view.waitingCreature ?? ''}`;
+  const asked = askedKey(current.seat, view);
   if (asked !== state.asked) {
     state.shown = current.seat;
     state.asked = asked;
@@ -719,7 +748,10 @@ function renderBoard(state, current, spellbook = current) {
     playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
     ticks: replay ? [] : noticeTicks(state, board),
-    draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
+    // At the slot the spell is chosen before its targets, so the row shows it while they are picked (ADR 0110).
+    draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen
+      : isAsked(view) && view.askedAs === 'Action' && view.waitingFor === 'Target' ? view.options.target?.spell ?? null : null,
+    atTheSlot: view.askedAs === 'Action',
     targeting: isAsked(view) && view.waitingFor === 'Target',
     candidates: !replay && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
@@ -1833,7 +1865,9 @@ function titleOf(state, view) {
   switch (view.waitingFor) {
     case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · buy a package`;
     case 'Speed': return `Creature ${view.waitingCreature} · choose speed`;
-    case 'Intent': return `Creature ${view.waitingCreature} · choose spell`;
+    case 'Intent': return view.askedAs === 'Action'
+      ? `Creature ${view.waitingCreature} · your turn: choose a spell`
+      : `Creature ${view.waitingCreature} · choose spell`;
     case 'TieOrder': return 'Tied: which of your creatures acts first?';
     case 'Target': {
       const spell = view.options.target?.spell;
@@ -1932,8 +1966,13 @@ function renderPhaseGuide(state, view, seat) {
     ['Evolve', ['Evolution'], 'Buy whole packages with shared team picks. At most one per creature this opportunity, or pass.'],
     ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
     ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.'],
-    ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
-    ['Combat', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.'],
+    ...(atTheSlot(state.catalogue) ? [
+      ['Spells', ['IntentSelection'], 'Nothing is declared: each creature chooses its spell when its turn comes.'],
+      ['Combat', ['Activation'], 'In turn order, each creature\'s owner chooses a spell and its targets, and it resolves at once. A creature that cannot act is skipped.'],
+    ] : [
+      ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
+      ['Combat', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.'],
+    ]),
     ['Cleanup', ['Cleanup', 'Finalization'], 'Conditions count down, then the next round begins.'],
   ];
   // An opponent action of an earlier round being read keeps the dock on that round's combat: the battlefield under
@@ -2497,6 +2536,13 @@ function tieOrderButtons(state, current) {
 // twice; the rows keep their place so that the second tap on the card is the same commitment.
 function intentButtons(state, current) {
   const view = current.view;
+  // At the slot the card is the start of the action and leads to its targets: there is nothing to confirm here.
+  if (view.askedAs === 'Action') {
+    const hint = document.createElement('p');
+    hint.className = 'target-instruction';
+    hint.textContent = 'Tap a card to choose its targets.';
+    return [hint];
+  }
   const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
   const chosen = declarableSpells(option).includes(state.chosen) ? state.chosen : null;
 
@@ -2521,6 +2567,9 @@ function chooseCard(state, current, spell) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
   if (!declarableSpells(option).includes(spell)) return;
+  // At the slot the card is the start of the action, not a declaration: tapping it goes straight to its targets,
+  // where the action is confirmed, and nothing is sent before (ADR 0110).
+  if (current.view.askedAs === 'Action') return chooseForTheSlot(state, spell);
   // The second tap on the chosen card declares it, as the Declare button does: the rows do not move between the
   // two taps, so the finger lands on the card it chose.
   if (state.chosen === spell) return declareChosen(state, current);
@@ -2536,7 +2585,20 @@ function declareChosen(state, current) {
   const view = current.view;
   const option = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature);
   if (!declarableSpells(option).includes(state.chosen)) return;
+  if (view.askedAs === 'Action') return chooseForTheSlot(state, state.chosen);
   return submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: state.chosen });
+}
+
+// The spell of an action at the slot, or none to choose again: the page moves between the spell screen and the
+// spell's target screen, and the targets of one spell never carry over to another.
+function chooseForTheSlot(state, spell) {
+  if (!element('phase-notice').hidden) hidePhaseNotice(state);
+  state.chosen = spell;
+  state.picked = [];
+  // The other screen of the same asking is guided to as a new question is: on a phone the hand gives way to the
+  // targets, and a player left scrolled down the hand would be looking at nothing.
+  state.guidedAsking = null;
+  redraw(state);
 }
 
 // The host's candidate set and bounds apply equally to the board shortcut and the sheet's confirmation.
@@ -2548,7 +2610,8 @@ function canCastTargets(state, view) {
 
 function castTargets(state, current) {
   if (!canInteract(state, current, 'Target') || !canCastTargets(state, current.view)) return;
-  return submit(state, current, { kind: 'Target', targets: [...state.picked] });
+  const decision = current.view.askedAs === 'Action' ? actionDecision(current.view, state.picked) : { kind: 'Target', targets: [...state.picked] };
+  return submit(state, current, decision);
 }
 
 function pick(state, current, candidate) {
@@ -2589,7 +2652,8 @@ function targetButtons(state, current) {
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
   if (legal.candidates.length < legal.minTargets) {
-    return [context, button('No legal target — cast anyway', () => submit(state, current, { kind: 'Target', targets: [] }))];
+    const nothing = current.view.askedAs === 'Action' ? actionDecision(current.view, []) : { kind: 'Target', targets: [] };
+    return [context, button('No legal target — cast anyway', () => submit(state, current, nothing))];
   }
 
   // No button a candidate: the tap is on the creature's own row, where its health, its defense and what is
@@ -2607,7 +2671,15 @@ function targetButtons(state, current) {
     void castTargets(state, current);
   });
   confirm.disabled = !canCastTargets(state, current.view);
-  return [context, targetRemovals(state, current), help, confirm];
+  if (current.view.askedAs !== 'Action') return [context, targetRemovals(state, current), help, confirm];
+
+  // At the slot the spell is still the player's to change until the targets are confirmed (ADR 0110).
+  const back = button('Choose another spell', () => {
+    if (canInteract(state, current, 'Target')) chooseForTheSlot(state, null);
+  });
+  back.className = 'secondary';
+  back.dataset.focus = 'slot-back';
+  return [context, targetRemovals(state, current), help, back, confirm];
 }
 
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
@@ -2744,6 +2816,7 @@ async function submit(state, current, decision) {
     state.chosen = null;
     state.ordered = [];
     state.error = '';
+    if (current.view.askedAs === 'Action') state.answered = `${current.seat}/${current.view.waitingAsked}`;
     state.stepSeen ??= new Map();
     state.stepSeen.set(current.seat, Math.max(state.stepSeen.get(current.seat) ?? -1, latestResolution(current.view.roundEvents) ?? -1));
   } catch {
@@ -2962,7 +3035,7 @@ function keyboardDecision(state, event) {
 }
 
 function enemyChoice(state, creature, board, entries) {
-  const choice = liveChoice(creature, board, entries);
+  const choice = liveChoice(creature, board, entries, atTheSlot(state.catalogue));
   const box = document.createElement('div');
   box.className = `round-choice ${choice.action ? 'public' : 'hidden-choice'}`;
   const heading = document.createElement('span');
@@ -3008,7 +3081,7 @@ function ownChoice(state, creature, marks) {
   box.className = 'round-choice private-choice';
   const heading = document.createElement('span');
   heading.className = 'choice-round';
-  heading.textContent = `Round ${board.roundNumber} · ${intent ? 'Not revealed' : 'Not declared'}`;
+  heading.textContent = `Round ${board.roundNumber} · ${intent ? 'Not revealed' : marks.atTheSlot ? 'Not cast' : 'Not declared'}`;
   const name = document.createElement('strong');
   name.className = 'choice-spell';
   name.textContent = state.cards.get(spell)?.name ?? spell;
@@ -3017,7 +3090,7 @@ function ownChoice(state, creature, marks) {
   targets.textContent = active && marks.targeting && marks.picked.length
     ? `Selecting → ${marks.picked.map(id => `Creature ${id}`).join(', ')} · not confirmed`
     : 'No targets chosen yet';
-  box.title = intent ? 'Only you can see this choice' : 'Preview · confirm to declare';
+  box.title = intent ? 'Only you can see this choice' : marks.atTheSlot ? 'Preview · confirm to cast' : 'Preview · confirm to declare';
   box.append(heading, name, targets);
   return box;
 }
@@ -3066,7 +3139,7 @@ function navigateChoices(state, current, event) {
     else focus(next ?? active);
     return;
   }
-  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-', 'declare-'], Target: ['target-', 'mini-target-'] }[view.waitingFor];
+  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-', 'declare-'], Target: ['target-', 'mini-target-', 'slot-'] }[view.waitingFor];
   if (!prefixes) return;
   const controls = prefixes.flatMap(nodes).filter(node => node.checkVisibility?.() ?? true);
   if (!controls.length) return;

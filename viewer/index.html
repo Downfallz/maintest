@@ -234,7 +234,7 @@
       const rows = [
         ['Engine', stamp.engineVersion, 'engine'], ['Content', stamp.contentHash, 'content'],
         ['Format', format(rules), 'rules'],
-        ['Rules', `energy ${rules.energyPerRound}, picks ${picksAnOpportunity(rules)}, cap ${rules.roundCap}, crit x${rules.criticalMultiplier}`, 'rules'],
+        ['Rules', `energy ${rules.energyPerRound}, picks ${picksAnOpportunity(rules)}, cap ${rules.roundCap}, crit x${rules.criticalMultiplier}${rules.combatDeclaration === 'AtActivation' ? ', spells chosen at the slot' : ''}`, 'rules'],
         ['Schema', stamp.featureSchema, 'schema'], ['Agents', `${stamp.player1Agent} vs ${stamp.player2Agent}`, 'agents'], ['Base seed', stamp.baseSeed, 'seed'],
       ];
       const list = el('dl', { class: 'stamp' });
@@ -602,14 +602,31 @@
       for (const outcome of landed(entry)) addOutcome(side.effects, outcome);
     }
 
+    // Whether the match declared its spells face down. Under a rule set that declares none (ADR 0110) a spell is
+    // chosen at the slot and revealed as it is chosen, so what each side chose is read off the actions revealed.
+    // The trace's stamp says which; a trace without one is read by whether it holds any intent at all.
+    function declares(trace) {
+      const rules = trace.stamp?.ruleSet;
+      if (rules) return rules.combatDeclaration !== 'AtActivation';
+      return trace.entries.some(({ event }) => event.kind === 'IntentSubmitted');
+    }
+
+    // The spell a creature chose, and who chose it: its intent, or its action revealed at the slot when there are none.
+    function chosenSpell(event, declared) {
+      if (declared) return event.kind === 'IntentSubmitted' ? event.intent : null;
+      return event.kind === 'ActionRevealed' ? event.action : null;
+    }
+
     function matchSummary(trace) {
       const owner = ownersOf(trace);
-      const blank = () => ({ intents: {}, actions: 0, fizzles: 0, crits: 0, energy: 0, effects: {}, bleedTaken: 0 });
+      const declared = declares(trace);
+      const blank = () => ({ intents: {}, actions: 0, fizzles: 0, crits: 0, energy: 0, effects: {}, bleedTaken: 0, declared });
       const sides = { [PLAYER1]: blank(), [PLAYER2]: blank() };
       for (const { event } of trace.entries) {
-        if (event.kind === 'IntentSubmitted' && sides[event.slot]) {
-          const intents = sides[event.slot].intents;
-          const spell = spellName(event.intent.spell);
+        const chosen = chosenSpell(event, declared);
+        if (chosen && sides[owner[chosen.actor]]) {
+          const intents = sides[owner[chosen.actor]].intents;
+          const spell = spellName(chosen.spell);
           intents[spell] = (intents[spell] || 0) + 1;
         } else if (event.kind === RESOLVED && sides[owner[event.resolution.action.actor]]) {
           addResolution(sides[owner[event.resolution.action.actor]], event);
@@ -674,10 +691,12 @@
 
       let bledOut = 0;
       const upkeepKillers = new Map();
+      const declared = declares(trace);
       for (const { event, player1 } of trace.entries) {
         let resolved = null;
-        if (event.kind === 'IntentSubmitted') {
-          countIntent(rows.get(event.intent?.actor), event.intent.spell);
+        const chosen = chosenSpell(event, declared);
+        if (chosen) {
+          countIntent(rows.get(chosen.actor), chosen.spell);
         } else if (event.kind === RESOLVED) {
           resolved = event;
           creditResolution(rows, spells, rows.get(event.resolution.action.actor), event);
@@ -868,7 +887,7 @@
           stat('Crits', side.actions ? pct(side.crits / side.actions) : '-', `${side.crits} of ${side.actions}`),
           stat('Energy spent', side.energy, 'over the match'),
         ]),
-        el('p', {}, `Intents: ${intents}`),
+        el('p', {}, `${side.declared ? 'Intents' : 'Spells chosen at the slot'}: ${intents}`),
         el('p', {}, `From resolved actions: ${effects}`),
         el('p', {}, `Bleed taken between rounds: ${side.bleedTaken}`),
       ]);
@@ -925,7 +944,7 @@
 
       const bled = bledOut ? `; ${bledOut} bled out between rounds, which is a death no creature is credited with` : '';
       return el('div', { class: 'card wide' }, [
-        el('div', { class: 'title' }, [el('h3', {}, 'Every creature'), el('span', { class: 'muted' }, `a struck-through row died; the spell after a name is the one it declared most${bled}`)]),
+        el('div', { class: 'title' }, [el('h3', {}, 'Every creature'), el('span', { class: 'muted' }, `a struck-through row died; the spell after a name is the one it chose most${bled}`)]),
         el('div', { class: 'scroll' }, [table]),
       ]);
     }

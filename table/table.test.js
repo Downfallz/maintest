@@ -17,6 +17,7 @@ import * as replay from './replay.js';
 import * as guidance from './guidance.js';
 import * as waiting from './waiting.js';
 import * as practice from './practice.js';
+import * as slot from './slot.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -68,7 +69,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -89,7 +90,8 @@ function page() {
     board: { roundNumber: 1, subPhase: 'IntentSelection', allies: [{ id: 1, name: 'First', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one', 'two'] }], enemies: [{ id: 2, health: 10, maxHealth: 20 }], intents: [], timeline: [] }, feed: [],
   };
   const current = { seat: 'player1', view, transport: { seat: async () => ({ ok: true, body: view }), decide: async () => ({ ok: true }) } };
-  state.views = [current]; state.seats = [current];
+  // What the host answered and what is drawn of it: the same until a question is an action at the slot (slot.js).
+  state.views = [current]; state.rawViews = state.views; state.seats = [current];
   return { context, document, nodes, state, view, current, timers, delays, draw: () => context.render(state, state.views) };
 }
 
@@ -590,7 +592,7 @@ test('in-flight confirmation ignores additional card taps', async () => {
 
 test('a detached card from an earlier asking cannot select or declare on the next one', async () => {
   const p = page(); p.draw(); const stale = held(p).children[0];
-  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  p.state.views = p.state.rawViews = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await stale.events.click();
   assert.equal(p.state.chosen, null); assert.equal(p.state.sending, false);
 });
@@ -852,7 +854,7 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
   p.state.inspectClass = 'tier:two:v1'; p.draw();
   const unlock = unlocks(p)[0];
   await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].tier, 'tier:two:v1'); assert.equal(sent[0].spell, undefined);
-  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  p.state.views = p.state.rawViews = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await unlock.events.click(); assert.equal(sent.length, 1);
 });
 
@@ -1564,7 +1566,7 @@ test('a stale or handed-over tie control cannot submit or change a later questio
   const p = page(); const sent = []; p.view.waitingFor = 'TieOrder'; p.view.options = { tieOrder: { ties: [[1, 3]] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   const controls = p.nodes.choices.querySelectorAll('[data-focus]');
-  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  p.state.views = p.state.rawViews = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await controls.find(node => node.dataset.focus === 'tie-keep').click();
   controls.find(node => node.dataset.focus === 'tie-3').click();
   assert.equal(sent.length, 0); assert.deepEqual([...p.state.ordered], []);
@@ -1822,4 +1824,116 @@ test('a capstone offer card prints its passive and its any-of requirement', () =
   const text = p.nodes.choices.textContent;
   assert.match(text, /Held: Immune to stun/);
   assert.match(text, /Requires one of: Second package \/ First package/);
+});
+
+// ADR 0110: a creature whose slot has come up, under a rule set that declares no intent, is asked one Action.
+function atTheSlot(p) {
+  p.view.waitingFor = 'Action';
+  p.view.board.subPhase = 'Activation';
+  p.view.options = { kind: 'Action', action: { actor: 1, spells: [
+    { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } },
+    { actor: 1, spell: 'two', legalTargets: { candidates: [1], minTargets: 1, maxTargets: 1 } },
+  ] } };
+  p.state.catalogue.rules = { ...p.state.catalogue.rules, combatDeclaration: 'AtActivation' };
+  p.context.redraw(p.state);
+}
+
+test('at its slot a card leads to its targets, and confirming them posts one action', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  atTheSlot(p);
+  assert.match(p.nodes.asking.textContent, /your turn: choose a spell/);
+
+  held(p).children[0].events.click();
+  assert.equal(p.state.chosen, 'one');
+  assert.equal(p.state.views[0].view.waitingFor, 'Target', 'the spell screen gives way to its targets');
+  assert.equal(sent.length, 0, 'nothing is sent before the targets');
+  p.nodes.enemies.children[0].events.click();
+  assert.deepEqual([...p.state.picked], [2]);
+  p.nodes.choices.children.at(-1).click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ kind: 'Action', creature: 1, spell: 'one', targets: [2], asked: 1 }]);
+});
+
+test('at its slot the spell can be changed until the targets are confirmed, and its targets go with it', () => {
+  const p = page();
+  atTheSlot(p);
+  held(p).children[0].events.click();
+  p.nodes.enemies.children[0].events.click();
+  assert.deepEqual([...p.state.picked], [2]);
+
+  p.nodes.choices.children.find(node => node.textContent === 'Choose another spell').click();
+
+  assert.equal(p.state.chosen, null);
+  assert.deepEqual([...p.state.picked], []);
+  assert.equal(p.state.views[0].view.waitingFor, 'Intent');
+});
+
+test('an action the host has accepted does not put its cards back up before the next poll', async () => {
+  const p = page();
+  atTheSlot(p);
+  held(p).children[0].events.click();
+  p.nodes.enemies.children[0].events.click();
+
+  p.nodes.choices.children.at(-1).click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.doesNotMatch(p.nodes.asking.textContent, /choose a spell/);
+  assert.equal(p.state.views[0].view.waitingFor, null);
+  p.view.waitingAsked += 1; await p.context.refresh(p.state);
+  assert.match(p.nodes.asking.textContent, /your turn: choose a spell/, 'the next asking, polled, is drawn as asked');
+});
+
+test('a refused action stays on its targets, with the reason, to be tried again', async () => {
+  const p = page();
+  p.current.transport.decide = async () => ({ ok: false, status: 409, body: { message: 'Not your turn any more.' } });
+  atTheSlot(p);
+  held(p).children[0].events.click();
+  p.nodes.enemies.children[0].events.click();
+
+  p.nodes.choices.children.at(-1).click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(p.state.views[0].view.waitingFor, 'Target');
+  assert.equal(p.state.error, 'Not your turn any more.');
+});
+
+test('at the slot Escape goes back to the cards and Enter casts the picked targets', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  atTheSlot(p);
+  held(p).children[0].events.click();
+  p.context.keyboardDecision(p.state, { key: 'Escape', preventDefault() {}, target: null });
+  assert.equal(p.state.views[0].view.waitingFor, 'Intent');
+
+  held(p).children[0].events.click();
+  p.nodes.enemies.children[0].events.keydown({ key: 'Enter', preventDefault() {} });
+  p.nodes.enemies.children[0].events.keydown({ key: 'Enter', preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ kind: 'Action', creature: 1, spell: 'one', targets: [2], asked: 1 }]);
+});
+
+test('a new asking at the slot starts on the cards, whatever was chosen for the last one', () => {
+  const p = page();
+  atTheSlot(p);
+  held(p).children[0].events.click();
+  assert.equal(p.state.views[0].view.waitingFor, 'Target');
+
+  p.view.waitingAsked += 1; p.view.waitingCreature = 1; p.context.redraw(p.state);
+
+  assert.equal(p.state.chosen, null);
+  assert.equal(p.state.views[0].view.waitingFor, 'Intent');
+});
+
+test('a game that chooses spells at the slot says so on its rule line and in its phase guide', () => {
+  const p = page();
+  const rules = { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2, firstEvolutionRound: 1, evolutionInterval: 2 };
+
+  atTheSlot(p);
+
+  assert.match(p.context.ruleLine({ contentHash: 'abcdef', rules: { ...rules, combatDeclaration: 'AtActivation' } }), /spells chosen at the slot/);
+  assert.doesNotMatch(p.context.ruleLine({ contentHash: 'abcdef', rules }), /at the slot/);
+  assert.match(JSON.stringify(p.nodes), /chooses its spell when its turn comes|chooses a spell and its targets/);
 });

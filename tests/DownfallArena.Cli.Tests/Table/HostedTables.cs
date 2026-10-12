@@ -35,8 +35,7 @@ internal sealed class HostedTables : IDisposable
             seed: 7,
             logMatchToConsole: false);
         var opened = store?.Invoke(RunsDirectory);
-        // A person at the slot is played through the API here, which can ask for an action before the page can.
-        Composer = new TableComposer(_host.Services, Rules, opened) { SeatsPersonsAtTheSlot = true };
+        Composer = new TableComposer(_host.Services, Rules, opened);
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

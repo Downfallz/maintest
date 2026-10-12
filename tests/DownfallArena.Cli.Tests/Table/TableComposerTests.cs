@@ -50,20 +50,18 @@ public sealed class TableComposerTests
     }
 
     /// <summary>
-    /// Until the page can ask for an action (plan PR 6), a person seated at a table that chooses spells at the
-    /// slot would wait on a screen offering nothing, so such a table is refused before it opens; two bots are not.
+    /// A table that chooses spells at the slot seats a person like any other (ADR 0110): the page asks them for
+    /// the action when their creature's slot comes up.
     /// </summary>
     [Fact]
-    public async Task A_table_that_chooses_spells_at_the_slot_seats_no_person_until_the_page_can_ask_for_an_action()
+    public async Task A_table_that_chooses_spells_at_the_slot_seats_a_person()
     {
         using var hosted = new HostedTables();
-        var host = new TableComposer(hosted.Services, HostedTables.Rules, store: null);
 
-        var refused = await Should.ThrowAsync<ArgumentException>(() => host.ComposeAsync(HostedTables.OnePerson with { Declaration = CombatDeclaration.AtActivation }, TestContext.Current.CancellationToken));
-        using var bots = await host.ComposeAsync(HostedTables.Bots with { Declaration = CombatDeclaration.AtActivation }, TestContext.Current.CancellationToken);
+        using var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson with { Declaration = CombatDeclaration.AtActivation }, TestContext.Current.CancellationToken);
 
-        refused.Message.ShouldContain("page");
-        bots.Session.Rules.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
+        table.Session.Rules.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
+        table.Seats[0].Person.ShouldNotBeNull();
     }
 
     /// <summary>A store whose writes under <c>traces/</c> fail, as a storage outage would fail the first checkpoint.</summary>
