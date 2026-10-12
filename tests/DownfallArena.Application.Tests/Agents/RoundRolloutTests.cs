@@ -41,6 +41,35 @@ public sealed class RoundRolloutTests
         await RollsAsTheMatchPlays(seed, Rules, MatchStore.Roster(Rules), Greedy(Rules), PlayerSlot.Player2);
     }
 
+    /// <summary>
+    /// The same equivalence under a rule set that declares no intent (ADR 0110): the rollout asks each slot for an
+    /// action and skips a creature with nothing to cast, as the match does, so the two still end alike.
+    /// </summary>
+    [Theory]
+    [InlineData(1u)]
+    [InlineData(2u)]
+    [InlineData(3u)]
+    [InlineData(4u)]
+    [InlineData(5u)]
+    [InlineData(6u)]
+    public async Task A_rollout_plays_the_match_the_match_plays_when_spells_are_chosen_at_the_slot(uint seed)
+    {
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+        await RollsAsTheMatchPlays(seed, rules, MatchStore.Roster(rules), Greedy(rules), PlayerSlot.Player1);
+        await RollsAsTheMatchPlays(seed, rules, MatchStore.Roster(rules), Greedy(rules), PlayerSlot.Player2);
+    }
+
+    /// <summary>Bleeders at the slot, so a creature dies at upkeep or before its slot and is skipped (ADR 0110).</summary>
+    [Theory]
+    [InlineData(1u)]
+    [InlineData(2u)]
+    [InlineData(3u)]
+    public async Task A_rollout_plays_the_upkeep_and_the_skips_the_match_plays_when_spells_are_chosen_at_the_slot(uint seed)
+    {
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+        await RollsAsTheMatchPlays(seed, rules, [TestContent.Bleeder, TestContent.Main], Greedy(rules), PlayerSlot.Player1);
+    }
+
     /// <summary>Bleeders, whose Rend can wipe a team at the upkeep, before anyone is asked anything (ADR 0083).</summary>
     [Theory]
     [InlineData(1u)]

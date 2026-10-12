@@ -546,22 +546,53 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
-    /// ADR 0110. The search plays a round declared before combat out from its first slot, so asked for an
-    /// action under a rule set that declares no intent it refuses rather than replay slots that have resolved.
+    /// ADR 0110: the round of <see cref="Targets_go_to_the_enemy_whose_death_changes_the_rest_of_the_round" />,
+    /// with the spell chosen at the slot. The search reads every spell and target set from this slot on, and
+    /// Four, still ahead, chooses at its own slot: killing it is still what keeps Two alive.
     /// </summary>
     [Fact]
-    public void A_searching_agent_refuses_to_choose_an_action()
+    public void At_the_slot_the_action_goes_to_the_enemy_whose_death_changes_the_rest_of_the_round()
     {
-        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]))]);
-        var board = PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
 
-        Should.Throw<NotSupportedException>(() => Agent.DecideAction(board, options));
+        AtActivation().DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
     }
 
     /// <summary>
-    /// ADR 0110. The factory refuses a searching agent for such a rule set when it builds it, wrapped or not, so
-    /// a batch fails before its first match rather than on its first slot.
+    /// ADR 0110: the round of <see cref="The_intent_is_the_spell_whose_round_ends_best_not_the_one_that_scores_best_on_its_own" />
+    /// at the slot. Declared before combat, the stun wins there because the strike's target is left to the one-step
+    /// reading, which cannot tell the two kills apart and leaves Four to kill Two. Chosen at the slot, the spell
+    /// and its target are read together: the strike on Four keeps Two alive, and Two then finishes Three, which
+    /// ends the match inside the round and outranks the stun.
     /// </summary>
+    [Fact]
+    public void At_the_slot_a_spell_and_its_target_are_read_together()
+    {
+        var weights = ScoringWeights.Default with { Stun = 0 };
+        var board = FourAboutToKillTwo() with
+        {
+            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack), FourAboutToKillTwo().Allies[1]],
+            Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(weights, TestContent.Resources, rules).DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+        new LookaheadAgent(weights, TestContent.Resources, Rules).DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike])).ShouldBe(TestContent.Slam, "declared before combat");
+    }
+
+    /// <summary>
+    /// Nobody declares under this rule, so the lookahead takes no creature still ahead to have chosen anything:
+    /// each chooses at its slot (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void At_the_slot_no_creature_ahead_is_taken_to_have_chosen_a_spell()
+    {
+        AtActivation().Replies(FourAboutToKillTwo(), One, TestContent.Strike).Values.ShouldAllBe(spell => spell == null);
+    }
+
+    /// <summary>ADR 0110: the factory builds every searching agent for a rule set that declares no intent.</summary>
     [Theory]
     [InlineData("lookahead")]
     [InlineData("minimax")]
@@ -569,12 +600,29 @@ public sealed class LookaheadAgentTests
     [InlineData("minimax:greedy")]
     [InlineData("explore:0.2:lookahead")]
     [InlineData("opening:jab:minimax")]
-    public void The_factory_refuses_a_searching_agent_for_a_rule_set_that_declares_no_intent(string spec)
+    public void The_factory_builds_a_searching_agent_for_a_rule_set_that_declares_no_intent(string spec)
     {
         var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
 
-        Should.Throw<ArgumentException>(() => Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)))
-            .Message.ShouldContain("ADR 0110");
+        Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task Lookahead_plays_a_match_at_the_slot_to_its_end_and_replays_identically()
+    {
+        var first = await DigestAsync(declaration: CombatDeclaration.AtActivation);
+        var second = await DigestAsync(declaration: CombatDeclaration.AtActivation);
+
+        first.Entries.Count.ShouldBe(4);
+        first.DifferencesFrom(second).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Minimax_reading_ahead_plays_a_match_at_the_slot_to_its_end()
+    {
+        var digest = await DigestAsync("minimax:1x1", CombatDeclaration.AtActivation);
+
+        digest.Entries.Count.ShouldBe(4);
     }
 
     [Theory]
@@ -670,6 +718,9 @@ public sealed class LookaheadAgentTests
         first.DifferencesFrom(second).ShouldBeEmpty();
         first.AgentA.ShouldBe("Lookahead:1x2");
     }
+
+    private static LookaheadAgent AtActivation() =>
+        new(ScoringWeights.Default, TestContent.Resources, Rules.WithCombatDeclaration(CombatDeclaration.AtActivation));
 
     private static PlayerBoardState FourAboutToKillTwo()
     {
@@ -858,11 +909,11 @@ public sealed class LookaheadAgentTests
     private static ActivationSlot Slot(CreatureId creature, PlayerSlot owner) =>
         new(owner, creature, Speed.Standard, Initiative.Of(5));
 
-    private static async Task<BenchmarkDigest> DigestAsync(string agentA = "lookahead")
+    private static async Task<BenchmarkDigest> DigestAsync(string agentA = "lookahead", CombatDeclaration declaration = CombatDeclaration.HiddenIntent)
     {
         var store = new MatchStore();
         var runner = new EvaluationRunner(Handlers.Runner(store.Workflow, new TestRandomFactory()));
-        var rules = MatchStore.TwoOnTwo(roundCap: 8);
+        var rules = MatchStore.TwoOnTwo(roundCap: 8).WithCombatDeclaration(declaration);
         var spec = AgentSpec.Parse(agentA);
         var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), spec.ToString(), "Greedy", 1);
         var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = spec, AgentB = AgentSpec.Greedy, Seeds = [3, 4] };
