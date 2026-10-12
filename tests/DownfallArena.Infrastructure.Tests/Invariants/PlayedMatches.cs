@@ -20,8 +20,9 @@ namespace DownfallArena.Infrastructure.Tests.Invariants;
 /// agent never makes: odd speed choices, spells no argmax picks, ties both sides hold.</item>
 /// <item>The <c>search-23</c> mirror reaches the far end of a match. It stacks permanent defense past the
 /// ceiling of ten, trades stuns, and runs to the round cap in most of its matches (journal, 2026-09-24).</item>
-/// <item>A random and an exploring mirror again, under a rule set that declares no intent (ADR 0110): every
-/// invariant holds whichever rule chose the spell, and a skipped slot replaces a fizzle there.</item>
+/// <item>A random, an exploring and a minimax mirror again, under a rule set that declares no intent (ADR 0110):
+/// every invariant holds whichever rule chose the spell, and a skipped slot replaces a fizzle there. The minimax
+/// plays every round out from the slot, so its rollouts walk the same rules the match does.</item>
 /// </list>
 /// Seeds are fixed, so a failing invariant names a match that replays.
 /// </summary>
@@ -47,7 +48,8 @@ public sealed class PlayedMatches : IAsyncLifetime
         var stacking = await PlayAsync(Stacking, matches: 30, baseSeed: 9000);
         var randomAtActivation = await PlayAsync(AgentSpec.Random, matches: 60, baseSeed: 11000, RulesAtActivation);
         var exploringAtActivation = await PlayAsync(Exploring, matches: 40, baseSeed: 13000, RulesAtActivation);
-        Matches = [.. random, .. exploring, .. stacking, .. randomAtActivation, .. exploringAtActivation];
+        var searchingAtActivation = await PlayAsync(AgentSpec.Parse("minimax"), matches: 3, baseSeed: 15000, RulesAtActivation);
+        Matches = [.. random, .. exploring, .. stacking, .. randomAtActivation, .. exploringAtActivation, .. searchingAtActivation];
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;

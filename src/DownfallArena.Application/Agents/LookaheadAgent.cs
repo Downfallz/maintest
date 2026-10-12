@@ -29,15 +29,18 @@ namespace DownfallArena.Application.Agents;
 /// What has been declared or revealed is read as it is. The round is played on the plain roll, which is what
 /// makes a combat move deterministic and the digest replayable; a critical that would change the answer is a
 /// chance, not a reading. A purchase's rollouts do roll, on dice derived from one seed the agent draws when it
-/// is made, so the agent is deterministic for a seed, as the exploring agent is.
+/// is made, so the agent is deterministic for a seed, as the exploring agent is. Under a rule set that declares no
+/// intent (ADR 0110) nothing is hidden but the dice: every creature still ahead chooses its spell at its own slot,
+/// on the board that slot finds, and the search reads it there (<see cref="DecideAction"/>).
 /// </para>
 /// <para>
 /// Adversarial, it is the minimax agent: an enemy slot that is still ahead is not guessed but played as the
 /// reply that costs the actor most among the spells that enemy can cast, one enemy at a time in timeline
 /// order, the others held at what was already taken for them. That reads the round against an opponent who
-/// sees the actor's move, which no opponent in this game does, since intents are simultaneous: it is the
-/// floor of what the move is worth, not its expectation, and whether a floor plays better than a guess is
-/// what the journal measures.
+/// sees the actor's move, which no opponent does while intents are simultaneous: it is the floor of what the move
+/// is worth, not its expectation, and whether a floor plays better than a guess is what the journal measures.
+/// Under a rule set that declares no intent, an enemy after the actor does see its move, and the floor reads an
+/// opponent the game has.
 /// </para>
 /// <para>
 /// Speed is the heuristic agent's: the round it plans has no timeline yet to play out. The tie order is this
@@ -263,7 +266,8 @@ public sealed class LookaheadAgent(
         }
 
         var creatures = Creatures(board);
-        var guesses = Guesses(board, creatures);
+        // Under a rule set that declares no intent nobody has a spell before its slot: each chooses at it (ADR 0110).
+        var guesses = rules.CombatDeclaration == CombatDeclaration.AtActivation ? Undeclared(board, actor: null) : Guesses(board, creatures);
         var bestValue = RoundValue.Lowest;
         foreach (var order in Orders(options.Ties))
         {
@@ -305,12 +309,39 @@ public sealed class LookaheadAgent(
     }
 
     /// <summary>
-    /// Not yet (ADR 0110): this agent plays a round declared before combat out from its first slot, and a round
-    /// that declares no intent needs its own search from the activation cursor. The default would replay slots
-    /// that have already resolved, so it is refused rather than played wrong.
+    /// The spell and targets whose round ends best, under a rule set that declares no intent (ADR 0110): every
+    /// spell on offer with every legal target set of it, the round played out from this slot on the board as it
+    /// stands, every earlier slot having resolved. Ties go to the first pair, spells in ordinal id order.
+    /// <para>
+    /// Nobody declared anything, so every creature still ahead chooses its spell at its own slot, on the board
+    /// that slot finds: an ally as the agent this one is built on would, an enemy as the scorer would. What the
+    /// hidden-intent reading has to guess before combat is read here where the match decides it, and the
+    /// minimax's worst reply is the one an enemy that sees the actor's move can actually make.
+    /// </para>
     /// </summary>
-    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) =>
-        throw new NotSupportedException("The lookahead and the minimax do not play a rule set that declares no intent yet (ADR 0110).");
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var ahead = Creatures(board);
+        var undeclared = Undeclared(board, options.Actor);
+        var speed = SpeedOf(board, options.Actor);
+        RoundValue Round(CombatAction action, bool worst) => worst
+            ? Worst(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(undeclared), _ => action)
+            : PlayOut(board, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(undeclared), _ => action);
+        var candidates = options.Spells
+            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => CombatAction.Choose(options.Actor, offered.Spell, targets)))
+            .Select(action => new Candidate<CombatAction>(action, Round(action, adversarial), (_scorer.Wins(action, ahead), _scorer.Expected(action, ahead, speed: speed))))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            throw new InvalidOperationException("The options offer no castable spell.");
+        }
+
+        var chosen = First(candidates, candidate => Round(candidate.Option, worst: true)).Option;
+        return new ChosenAction(chosen.Spell, chosen.Targets);
+    }
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
@@ -438,7 +469,8 @@ public sealed class LookaheadAgent(
     /// What this agent takes every other creature on the timeline to play when the actor declares a candidate:
     /// an ally's declared spell or the one the heuristic agent would declare for it, an enemy's guessed spell,
     /// or, for the minimax agent, the reply that costs the actor most. A reading a test or a viewer can ask
-    /// for; the decisions above are made on it.
+    /// for; the decisions above are made on it. Under a rule set that declares no intent nobody is taken to have
+    /// chosen anything before its slot, so only the minimax's replies are named (ADR 0110).
     /// </summary>
     public IReadOnlyDictionary<CreatureId, SpellId?> Replies(PlayerBoardState board, CreatureId actor, SpellId candidate)
     {
@@ -446,10 +478,11 @@ public sealed class LookaheadAgent(
         ArgumentNullException.ThrowIfNull(candidate);
 
         var creatures = Creatures(board);
-        var declared = DeclaredSpells(board, creatures, actor, candidate);
+        var atActivation = rules.CombatDeclaration == CombatDeclaration.AtActivation;
+        var declared = atActivation ? Undeclared(board, actor) : DeclaredSpells(board, creatures, actor, candidate);
         if (adversarial)
         {
-            Worst(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
+            Worst(board, creatures, creatures, atActivation ? board.ActivationCursor : 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
         }
 
         return declared;
@@ -488,7 +521,7 @@ public sealed class LookaheadAgent(
             }
 
             var reply = declared[enemy];
-            foreach (var spell in Castable(snapshot))
+            foreach (var spell in ReplyCandidates(snapshot))
             {
                 declared[enemy] = spell;
                 var replied = PlayOut(board, start, fromSlot, actor, declared, candidate);
@@ -541,10 +574,11 @@ public sealed class LookaheadAgent(
         var ahead = start;
         var value = 0.0;
         var stopped = false;
+        List<CombatAction> played = [];
         for (var index = fromSlot; index < board.Timeline.Count; index++)
         {
             var creature = board.Timeline[index].Creature;
-            var action = creature == actor ? candidate(ahead) : Guess(board, ahead, creature, declared[creature]);
+            var action = creature == actor ? candidate(ahead) : Other(board, ahead, creature, declared[creature], index, played);
             if (action is null)
             {
                 stopped |= creature == actor && ahead.First(snapshot => snapshot.Id == creature) is { IsDead: true } or { IsStunned: true };
@@ -554,6 +588,7 @@ public sealed class LookaheadAgent(
             // The timeline knows what each creature chose, and the actor's roll is the one that can crit, so the
             // rollout has to read the real speed here or it prices a critical a Quick actor cannot roll.
             var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical, board.Timeline[index].Speed);
+            played.Add(action);
             stopped |= creature == actor && Stops(advanced.Resolution.FizzleReason);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             // The slots after this one are the creatures still to act, so a drain on one that has already acted
@@ -681,6 +716,63 @@ public sealed class LookaheadAgent(
         return spell is null || snapshot.IsDead || snapshot.IsStunned ? null : BestTargets(board, ahead, creature, spell);
     }
 
+    /// <summary>What a creature other than the actor plays at its slot, under the rule set's declaration.</summary>
+    private CombatAction? Other(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId creature, SpellId? spell, int index, IReadOnlyList<CombatAction> played) =>
+        rules.CombatDeclaration == CombatDeclaration.AtActivation
+            ? AtItsSlot(board, ahead, creature, spell, index, played)
+            : Guess(board, ahead, creature, spell);
+
+    /// <summary>
+    /// What a creature other than the actor plays at its slot when nobody declares (ADR 0110): nothing when it has
+    /// nothing to cast, as its slot would be skipped; the spell a minimax reply forces on it, when it can cast it
+    /// there; otherwise its own choice on the board it finds -- an ally's the agent this one is built on would
+    /// make, an enemy's the scorer's. Unlike <see cref="Guess"/>, the spell is read at the slot: that is the
+    /// information this rule gives every creature, so reading it here is the match and not clairvoyance.
+    /// </summary>
+    private CombatAction? AtItsSlot(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId creature, SpellId? forced, int index, IReadOnlyList<CombatAction> played)
+    {
+        var snapshot = ahead.First(candidate => candidate.Id == creature);
+        if (ActionRules.CanChooseAnAction(snapshot, ahead, resources).IsFailure)
+        {
+            return null;
+        }
+
+        // The creatures after this slot are the ones still to act, as the heuristic agent reads them when it
+        // chooses at its slot in the match: a guard against a threat that has already spent itself is not one.
+        var stillToAct = board.Timeline.Skip(index + 1).Select(slot => slot.Creature).ToHashSet();
+        if (forced is { } reply && ActionRules.IsCastableNow(snapshot, reply, ahead, resources))
+        {
+            return BestTargets(board, ahead, creature, reply, stillToAct);
+        }
+
+        if (snapshot.Owner != board.Slot)
+        {
+            return GreedyIntent(board, snapshot, ahead, stillToAct) is { } spell ? BestTargets(board, ahead, creature, spell, stillToAct) : null;
+        }
+
+        // The board the ally's agent would be shown at that slot: the creatures as the round has left them, and
+        // every action since the cursor revealed, the actor's own included, as the match's projection shows it.
+        var view = board with
+        {
+            Phase = RoundPhase.Combat,
+            SubPhase = RoundSubPhase.Activation,
+            Allies = [.. ahead.Where(other => other.Owner == board.Slot)],
+            Enemies = [.. ahead.Where(other => other.Owner != board.Slot)],
+            RevealedActions = [.. board.RevealedActions, .. played],
+            ActivationCursor = index,
+        };
+        var chosen = _oneStep.DecideAction(view, ActionOptions.Of(snapshot, ahead, resources));
+        return CombatAction.Choose(creature, chosen.Spell, chosen.Targets);
+    }
+
+    /// <summary>
+    /// Every creature on the timeline but the actor, with no spell: under a rule set that declares no intent each
+    /// one chooses at its slot (<see cref="AtItsSlot"/>), and a minimax reply is the only spell ever set here.
+    /// </summary>
+    private static Dictionary<CreatureId, SpellId?> Undeclared(PlayerBoardState board, CreatureId? actor) =>
+        board.Timeline.Select(slot => slot.Creature).Where(creature => creature != actor).Distinct()
+            .ToDictionary(creature => creature, _ => (SpellId?)null);
+
     /// <summary>
     /// The spell every creature but the actor is taken to have declared, on the board before combat. An ally
     /// that has declared: its declared spell. An ally that has not: what the heuristic agent would declare
@@ -786,6 +878,17 @@ public sealed class LookaheadAgent(
         return castable.Count == 0 ? null : _oneStep.DecideIntent(board, new IntentOption(ally.Id, castable));
     }
 
+    /// <summary>
+    /// The spells a reply can force on an enemy. Declared before combat, the ones it can afford then. Chosen at
+    /// its slot (ADR 0110), every spell it knows: an earlier ally can give it the energy for one it cannot afford
+    /// before the round, and <see cref="AtItsSlot"/> plays a forced spell only when it can be cast there, so one
+    /// still out of reach plays as the enemy's own choice and costs the floor nothing.
+    /// </summary>
+    private List<SpellId> ReplyCandidates(CreatureSnapshot enemy) =>
+        rules.CombatDeclaration == CombatDeclaration.AtActivation
+            ? [.. enemy.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal)]
+            : Castable(enemy);
+
     /// <summary>The spells a creature knows and can afford, in ordinal id order.</summary>
     private List<SpellId> Castable(CreatureSnapshot creature) =>
         [.. creature.KnownSpells
@@ -793,7 +896,7 @@ public sealed class LookaheadAgent(
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)];
 
     /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it: a cast that can end the match first (ADR 0099), then the best score.</summary>
-    private SpellId? GreedyIntent(PlayerBoardState board, CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
+    private SpellId? GreedyIntent(PlayerBoardState board, CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         SpellId? best = null;
         var bestValue = (Wins: false, Score: double.NegativeInfinity);
@@ -804,7 +907,7 @@ public sealed class LookaheadAgent(
                 continue;
             }
 
-            if (_scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id), round: board.RoundNumber) is { } found && (found.Wins, found.Score).CompareTo(bestValue) > 0)
+            if (_scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id), stillToAct: stillToAct, round: board.RoundNumber) is { } found && (found.Wins, found.Score).CompareTo(bestValue) > 0)
             {
                 best = spell;
                 bestValue = (found.Wins, found.Score);
@@ -815,10 +918,10 @@ public sealed class LookaheadAgent(
     }
 
     /// <summary>The spell on its best targets by the one-step reading, or nothing when it has no legal target.</summary>
-    private CombatAction? BestTargets(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell)
+    private CombatAction? BestTargets(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         var snapshot = ahead.First(candidate => candidate.Id == actor);
-        return _scorer.Best(snapshot, spell, ahead, speed: SpeedOf(board, actor), round: board.RoundNumber) is { } found
+        return _scorer.Best(snapshot, spell, ahead, speed: SpeedOf(board, actor), stillToAct: stillToAct, round: board.RoundNumber) is { } found
             ? CombatAction.Bind(new CombatIntent(actor, spell), found.Targets)
             : null;
     }

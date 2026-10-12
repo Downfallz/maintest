@@ -121,18 +121,11 @@ public static class PlayerOptionsProjection
             return Waiting(round);
         }
 
-        var actor = snapshots.First(creature => creature.Id == next.Creature);
-        var spells = actor.KnownSpells
-            .Where(spell => ActionRules.IsCastableNow(actor, spell, snapshots, resources))
-            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
-            .Select(spell => new TargetOptions(actor.Id, spell, TargetingRules.LegalTargets(actor, resources.GetSpell(spell), snapshots)))
-            .ToList();
-
         return new PlayerOptions
         {
             Kind = PlayerOptionsKind.Action,
             SubPhase = round.SubPhase,
-            Action = new ActionOptions(actor.Id, spells),
+            Action = ActionOptions.Of(snapshots.First(creature => creature.Id == next.Creature), snapshots, resources),
         };
     }
 

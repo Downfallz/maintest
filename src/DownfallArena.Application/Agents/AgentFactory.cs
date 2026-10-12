@@ -65,13 +65,6 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     /// </summary>
     private LookaheadAgent Searching(AgentSpec spec, RuleSet rules, IRandomSource random, bool adversarial)
     {
-        // Refused when the agent is built rather than at its first combat move: a batch that would fail on its
-        // first slot fails before its first match instead (ADR 0110).
-        if (rules.CombatDeclaration == CombatDeclaration.AtActivation)
-        {
-            throw new ArgumentException($"'{spec}' cannot play a rule set that declares no intent yet: the lookahead and the minimax read a round declared before combat (ADR 0110).", nameof(spec));
-        }
-
         var (combat, rest) = Depth(spec);
         if (Searched(rest) is { } searched)
         {

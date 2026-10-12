@@ -77,8 +77,8 @@ Decisions:
   intent and the targets read on the one board both decisions see when the spell is chosen at the slot. The
   random agent and the policy agent declare and target in turn, on the default; the exploring agent draws one
   (spell, target set) pair with equal weight; the opening agent and the wrappers ask the agent they wrap. The
-  lookahead and the minimax refuse the rule set until they have a search from the activation cursor (plan,
-  PR 3), and the table refuses it until its seats can ask for an action (plan, PR 5).
+  lookahead and the minimax search the action from the slot (below, "At the slot"), and the table refuses the
+  rule set until its seats can ask for an action (plan, PR 5).
 - **Speed**: Quick when some castable spell kills an enemy without a critical. Otherwise Standard only when the
   critical it keeps raises the best expected score among the castable spells, Quick when it does not: a creature
   that cannot crit, or whose weights do not price what its critical adds, gains nothing by waiting (ADR 0084).
@@ -233,6 +233,35 @@ is not the expectation, and the question the journal answers is whether a floor 
 Allies and the actor's own targets are read exactly as the lookahead reads them. `Replies` on the agent hands
 out, for a board, an actor and a candidate, the spell each other creature was taken to play, which is how a
 test or a viewer sees the difference between the two.
+
+## At the slot
+
+Under a rule set that declares no intent (ADR 0110) the lookahead and the minimax decide the one move the
+slot asks for, a spell and its targets, and both readings change where they guessed:
+
+- **Candidates** are every spell on offer with every legal target set of it, each played out from the
+  activation cursor on the board as it stands. The actor's own slot is now, so the fallback to the one-step
+  reading when the guess has the actor stopped before its slot has nothing to guard against.
+- **The creatures still ahead choose at their own slot**, on the board that slot finds: an ally as the agent
+  the search is built on would choose, shown the board its slot would show (the cursor there, every action
+  since the real cursor revealed); an enemy as the scorer would, the creatures after its slot being the ones
+  still to act, which is how the heuristic agent reads its own slot. That is the reading the hidden-intent
+  rule had to refuse as clairvoyant (journal, 2026-09-16); here it is the information every creature has.
+  The tie order reads its seatings the same way, nobody taken to have chosen before its slot.
+- **The minimax's worst reply** forces a spell on an enemy still ahead, which plays it at its slot if it can
+  and chooses freely if it cannot. An enemy that comes after the actor does see the actor's move under this
+  rule, so the floor is no longer against an opponent no game has.
+- **A rollout** past the round (`lookahead:<rounds>x<rollouts>`) and a purchase's rollouts play their rounds
+  the same way, each slot asked for an action and a creature with nothing to cast skipped
+  (`RoundRolloutTests` holds them to the match in both rules).
+
+Asking the agent the search is built on at every ally slot ahead, in every playout, is what this costs. Built
+on the heuristic agent it is cheap: a minimax mirror plays a match at the slot in about a third of the time it
+takes with hidden intents. Built on another searching agent (`lookahead:lookahead`) it multiplies, since that
+agent searches at every ally slot of every playout; nothing refuses it, and nothing measures it either.
+
+The measurement against Greedy on the benchmark seeds, both rules side by side, is in the journal
+(2026-10-12).
 
 ## Built-in weights
 

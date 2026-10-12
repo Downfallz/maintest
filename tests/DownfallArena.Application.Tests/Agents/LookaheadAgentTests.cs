@@ -546,22 +546,129 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
-    /// ADR 0110. The search plays a round declared before combat out from its first slot, so asked for an
-    /// action under a rule set that declares no intent it refuses rather than replay slots that have resolved.
+    /// ADR 0110: the round of <see cref="Targets_go_to_the_enemy_whose_death_changes_the_rest_of_the_round" />,
+    /// with the spell chosen at the slot. The search reads every spell and target set from this slot on, and
+    /// Four, still ahead, chooses at its own slot: killing it is still what keeps Two alive.
     /// </summary>
     [Fact]
-    public void A_searching_agent_refuses_to_choose_an_action()
+    public void At_the_slot_the_action_goes_to_the_enemy_whose_death_changes_the_rest_of_the_round()
     {
-        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]))]);
-        var board = PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
 
-        Should.Throw<NotSupportedException>(() => Agent.DecideAction(board, options));
+        AtActivation().DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
     }
 
     /// <summary>
-    /// ADR 0110. The factory refuses a searching agent for such a rule set when it builds it, wrapped or not, so
-    /// a batch fails before its first match rather than on its first slot.
+    /// ADR 0110: the round of <see cref="The_intent_is_the_spell_whose_round_ends_best_not_the_one_that_scores_best_on_its_own" />
+    /// at the slot. Declared before combat, the stun wins there because the strike's target is left to the one-step
+    /// reading, which cannot tell the two kills apart and leaves Four to kill Two. Chosen at the slot, the spell
+    /// and its target are read together: the strike on Four keeps Two alive, and Two then finishes Three, which
+    /// ends the match inside the round and outranks the stun.
     /// </summary>
+    [Fact]
+    public void At_the_slot_a_spell_and_its_target_are_read_together()
+    {
+        var weights = ScoringWeights.Default with { Stun = 0 };
+        var board = FourAboutToKillTwo() with
+        {
+            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack), FourAboutToKillTwo().Allies[1]],
+            Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(weights, TestContent.Resources, rules).DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+        new LookaheadAgent(weights, TestContent.Resources, Rules).DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike])).ShouldBe(TestContent.Slam, "declared before combat");
+    }
+
+    /// <summary>
+    /// Nobody declares under this rule, so the lookahead takes no creature still ahead to have chosen anything:
+    /// each chooses at its slot (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void At_the_slot_no_creature_ahead_is_taken_to_have_chosen_a_spell()
+    {
+        AtActivation().Replies(FourAboutToKillTwo(), One, TestContent.Strike).Values.ShouldAllBe(spell => spell == null);
+    }
+
+    /// <summary>
+    /// An ally still ahead is asked by the agent the search is built on, on the board it would be shown at its
+    /// slot: the round as the playout left it, the cursor at that slot, and every action since the real cursor
+    /// revealed, the actor's own first (ADR 0110). Here One kills Four, so Two is asked at the third slot with
+    /// One's strike the one action revealed.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_an_ally_ahead_is_asked_on_the_board_its_slot_would_show()
+    {
+        var board = FourAboutToKillTwo();
+        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Four]))]);
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>()).Returns(new ChosenAction(TestContent.Strike, [Three]));
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, inner: inner).DecideAction(board, options);
+
+        inner.Received().DecideAction(
+            Arg.Is<PlayerBoardState>(view =>
+                view.ActivationCursor == 2
+                && view.SubPhase == RoundSubPhase.Activation
+                && view.RevealedActions.Count == 1
+                && view.RevealedActions[0].Actor == One
+                && view.Enemies.Single(enemy => enemy.Id == Four).IsDead),
+            Arg.Is<ActionOptions>(offered => offered.Actor == Two));
+    }
+
+    /// <summary>The minimax decides an action at the slot among the pairs on offer, its floor read from this slot on.</summary>
+    [Fact]
+    public void At_the_slot_the_minimax_chooses_among_the_pairs_on_offer()
+    {
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        var chosen = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, adversarial: true).DecideAction(board, options);
+
+        chosen.ShouldBe(new ChosenAction(TestContent.Strike, [Four]), "killing Four is the move no reply can answer");
+    }
+
+    /// <summary>
+    /// Four starts the round with no energy and knows Strike, Bolt and Hex, the last two at two energy. Three,
+    /// ahead of it, can only Gift two energy, and gives it to Four for the Bolt it unlocks, so at Four's slot both
+    /// are affordable. Priced at next to nothing by these weights, Hex's stun is not what Four would choose, but it is the
+    /// reply that costs One's side most: it takes the kill Two would make on Four on the last slot. The minimax has to try
+    /// a spell the enemy can only pay for at its slot (ADR 0110), not only the ones it could when the round began.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_the_minimax_tries_a_reply_the_enemy_can_only_afford_when_its_slot_comes()
+    {
+        var gifter = CreatureDefinitionId.Parse("creature:gifter:v1");
+        var hexer = CreatureDefinitionId.Parse("creature:hexer:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(gifter, Gift.Id), Definition(hexer, TestContent.Strike, Bolt.Id, Hex.Id)],
+            [.. TestContent.Resources.Spells, Gift, Bolt, Hex],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        // One is immune to a stun, so Two, who still has to act, is the one a Hex can take anything from.
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { StunImmunityRounds = 1 };
+        var two = Boards.Creature(2, PlayerSlot.Player1);
+        var three = Boards.Creature(3, PlayerSlot.Player2) with { DefinitionId = gifter, KnownSpells = new HashSet<SpellId> { Gift.Id } };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = hexer, Health = Health.Of(5), Energy = Energy.Of(0), KnownSpells = new HashSet<SpellId> { TestContent.Strike, Bolt.Id, Hex.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one, two], [three, four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(One, PlayerSlot.Player1), Slot(Three, PlayerSlot.Player2), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+        var weights = ScoringWeights.Default with { Stun = 0.5 };
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        var replies = new LookaheadAgent(weights, resources, rules, adversarial: true).Replies(board, One, TestContent.Strike);
+
+        replies[Four].ShouldBe(Hex.Id);
+    }
+
+    /// <summary>ADR 0110: the factory builds every searching agent for a rule set that declares no intent.</summary>
     [Theory]
     [InlineData("lookahead")]
     [InlineData("minimax")]
@@ -569,12 +676,29 @@ public sealed class LookaheadAgentTests
     [InlineData("minimax:greedy")]
     [InlineData("explore:0.2:lookahead")]
     [InlineData("opening:jab:minimax")]
-    public void The_factory_refuses_a_searching_agent_for_a_rule_set_that_declares_no_intent(string spec)
+    public void The_factory_builds_a_searching_agent_for_a_rule_set_that_declares_no_intent(string spec)
     {
         var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
 
-        Should.Throw<ArgumentException>(() => Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)))
-            .Message.ShouldContain("ADR 0110");
+        Handlers.Agents().Create(AgentSpec.Parse(spec), rules, new TestRandom(1)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task Lookahead_plays_a_match_at_the_slot_to_its_end_and_replays_identically()
+    {
+        var first = await DigestAsync(declaration: CombatDeclaration.AtActivation);
+        var second = await DigestAsync(declaration: CombatDeclaration.AtActivation);
+
+        first.Entries.Count.ShouldBe(4);
+        first.DifferencesFrom(second).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Minimax_reading_ahead_plays_a_match_at_the_slot_to_its_end()
+    {
+        var digest = await DigestAsync("minimax:1x1", CombatDeclaration.AtActivation);
+
+        digest.Entries.Count.ShouldBe(4);
     }
 
     [Theory]
@@ -671,6 +795,9 @@ public sealed class LookaheadAgentTests
         first.AgentA.ShouldBe("Lookahead:1x2");
     }
 
+    private static LookaheadAgent AtActivation() =>
+        new(ScoringWeights.Default, TestContent.Resources, Rules.WithCombatDeclaration(CombatDeclaration.AtActivation));
+
     private static PlayerBoardState FourAboutToKillTwo()
     {
         var one = Boards.Creature(1, PlayerSlot.Player1);
@@ -701,6 +828,21 @@ public sealed class LookaheadAgentTests
     private static Spell Gamble { get; } = Spell.Create(
         SpellId.Parse("spell:gamble:v1"), "Gamble", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.Of(1)),
         TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(2)]);
+
+    /// <summary>Two energy to an ally, for free: how an enemy comes to afford at its slot what it could not before.</summary>
+    private static Spell Gift { get; } = Spell.Create(
+        SpellId.Parse("spell:gift:v1"), "Gift", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Ally), [EnergyGain.Of(2)]);
+
+    /// <summary>Five damage on an enemy, for two energy: what makes a Gift worth giving.</summary>
+    private static Spell Bolt { get; } = Spell.Create(
+        SpellId.Parse("spell:bolt:v1"), "Bolt", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(2), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(5)]);
+
+    /// <summary>A one-round stun on an enemy, for two energy.</summary>
+    private static Spell Hex { get; } = Spell.Create(
+        SpellId.Parse("spell:hex:v1"), "Hex", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(2), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Stun.For(1)]);
 
     /// <summary>A free spell that gives its caster energy: what still resolves when every paid spell would fizzle.</summary>
     private static Spell Rest { get; } = Spell.Create(
@@ -858,11 +1000,11 @@ public sealed class LookaheadAgentTests
     private static ActivationSlot Slot(CreatureId creature, PlayerSlot owner) =>
         new(owner, creature, Speed.Standard, Initiative.Of(5));
 
-    private static async Task<BenchmarkDigest> DigestAsync(string agentA = "lookahead")
+    private static async Task<BenchmarkDigest> DigestAsync(string agentA = "lookahead", CombatDeclaration declaration = CombatDeclaration.HiddenIntent)
     {
         var store = new MatchStore();
         var runner = new EvaluationRunner(Handlers.Runner(store.Workflow, new TestRandomFactory()));
-        var rules = MatchStore.TwoOnTwo(roundCap: 8);
+        var rules = MatchStore.TwoOnTwo(roundCap: 8).WithCombatDeclaration(declaration);
         var spec = AgentSpec.Parse(agentA);
         var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), spec.ToString(), "Greedy", 1);
         var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = spec, AgentB = AgentSpec.Greedy, Seeds = [3, 4] };

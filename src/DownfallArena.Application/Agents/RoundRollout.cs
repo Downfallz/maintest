@@ -19,7 +19,10 @@ namespace DownfallArena.Application.Agents;
 /// <see cref="Advance.StartOfRound"/>, an evolution's purchases revealed together through
 /// <see cref="Advance.Buy"/>, the speeds, the turn order from <see cref="TimelineBuilder"/> and the tie
 /// orders each seat gives, every intent declared before anything resolves, each slot in turn -- a slot the creature cannot
-/// take fizzles unasked, as <see cref="ActionRules.CanTakeItsSlot"/> says -- then the cleanup and the outcome.
+/// take fizzles unasked, as <see cref="ActionRules.CanTakeItsSlot"/> says -- then the cleanup and the outcome. Under a
+/// rule set that declares no intent there is no declaration: each slot asks its creature for a spell and targets
+/// together, and a creature with nothing to cast is skipped, as <see cref="ActionRules.CanChooseAnAction"/> says
+/// (ADR 0110).
 /// Every decision is the agent's, asked on the board state its seat would be shown, so a rollout plays the
 /// way that agent plays the match. A sub-phase added to the round has to be added here too.
 /// </para>
@@ -166,6 +169,11 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         }
 
         var timeline = Ordered(origin, board, round, TimelineBuilder.Build(board, [.. speeds[PlayerSlot.Player1], .. speeds[PlayerSlot.Player2]], random), speeds);
+        if (rules.CombatDeclaration == CombatDeclaration.AtActivation)
+        {
+            return Activate(origin, board, round, timeline, speeds, random, ref score);
+        }
+
         var slots = timeline.Slots;
         var intents = new Dictionary<PlayerSlot, List<CombatIntent>> { [PlayerSlot.Player1] = [], [PlayerSlot.Player2] = [] };
         foreach (var slot in slots)
@@ -195,11 +203,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
 
             var action = CombatAction.Bind(intent, targets);
             revealed.Add(action);
-            var advanced = Advance.Action(action, board, resources, rules, random, slot.Speed);
-            var sign = slot.Owner == seat ? 1 : -1;
-            var stillToAct = slots.Skip(index + 1).Select(later => later.Creature).ToHashSet();
-            score += sign * scorer.Score(advanced.Resolution, board, stillToAct: stillToAct);
-            board = advanced.Board;
+            board = Resolve(action, board, slots, index, seat, random, ref score);
             if (Advance.Elimination(board) is { } wiped)
             {
                 return (board, wiped);
@@ -207,6 +211,61 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         }
 
         return (board, null);
+    }
+
+    /// <summary>
+    /// Combat under a rule set that declares no intent (ADR 0110): each slot in turn, its creature asked for a spell
+    /// and its targets on the board as it stands, or skipped when it has nothing to cast.
+    /// </summary>
+    private (IReadOnlyList<CreatureSnapshot> Board, MatchOutcome? Wiped) Activate(
+        PlayerBoardState origin,
+        IReadOnlyList<CreatureSnapshot> board,
+        int round,
+        CombatTimeline timeline,
+        Dictionary<PlayerSlot, List<SpeedChoice>> speeds,
+        IRandomSource random,
+        ref double score)
+    {
+        var slots = timeline.Slots;
+        var seat = origin.Slot;
+        List<CombatAction> revealed = [];
+        for (var index = 0; index < slots.Count; index++)
+        {
+            var slot = slots[index];
+            var actor = board.First(creature => creature.Id == slot.Creature);
+            if (ActionRules.CanChooseAnAction(actor, board, resources).IsFailure)
+            {
+                continue;
+            }
+
+            var view = Planned(View(origin, board, slot.Owner, round, RoundSubPhase.Activation), timeline, speeds[slot.Owner], [])
+                with
+            { RevealedActions = [.. revealed], ActivationCursor = index };
+            var chosen = player.DecideAction(view, ActionOptions.Of(actor, board, resources));
+            var action = CombatAction.Choose(actor.Id, chosen.Spell, chosen.Targets);
+            revealed.Add(action);
+            board = Resolve(action, board, slots, index, seat, random, ref score);
+            if (Advance.Elimination(board) is { } wiped)
+            {
+                return (board, wiped);
+            }
+        }
+
+        return (board, null);
+    }
+
+    /// <summary>
+    /// Resolves the action at a slot on the rules' dice and adds what it is worth to the score, the seat's for and
+    /// the other's against, the creatures after the slot being the ones still to act. Returns the board it leaves.
+    /// </summary>
+    private IReadOnlyList<CreatureSnapshot> Resolve(CombatAction action, IReadOnlyList<CreatureSnapshot> board, IReadOnlyList<ActivationSlot> slots, int index, PlayerSlot seat, IRandomSource random, ref double score)
+    {
+        var slot = slots[index];
+        var advanced = Advance.Action(action, board, resources, rules, random, slot.Speed);
+        var sign = slot.Owner == seat ? 1 : -1;
+        var stillToAct = slots.Skip(index + 1).Select(later => later.Creature).ToHashSet();
+        score += sign * scorer.Score(advanced.Resolution, board, stillToAct: stillToAct);
+        return advanced.Board;
     }
 
     /// <summary>
