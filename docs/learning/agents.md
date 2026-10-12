@@ -76,7 +76,9 @@ Decisions:
   set on the board as it stands, with nobody written off, and the spell and set with the best score. It is the
   intent and the targets read on the one board both decisions see when the spell is chosen at the slot. The
   random agent declares and targets in turn, on the default; the policy agent scores every pair's `act:` key
-  when it learned any, and declares then targets on the keys it knows when it did not; the exploring agent
+  when it learned any, and declares then targets on the keys it knows when it did not. The other way round
+  is refused: a policy that learned `act:` keys and no `intent:` key is not seated under hidden intents,
+  since every intent would score its fallback (the feature schema does not carry the mode). The exploring agent
   draws one (spell, target set) pair with equal weight, the pairs a recording lists as one `Act` step; the opening agent and the wrappers ask the agent they wrap. The
   lookahead and the minimax search the action from the slot (below, "At the slot"), and the table refuses the
   rule set until its seats can ask for an action (plan, PR 5).

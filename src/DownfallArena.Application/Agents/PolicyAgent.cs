@@ -10,7 +10,9 @@ namespace DownfallArena.Application.Agents;
 /// candidate actions the options offer in the same order a dataset records them, scores each key with the
 /// policy, and takes the best, the first on a tie. What the Python side's <c>Policy.choose</c> does, so a
 /// policy plays identically on both sides. A policy that weighs candidate terms (ADR 0051) is handed each
-/// candidate's terms, read the way the dataset recorded them; one that does not never pays for them.
+/// candidate's terms, read the way the dataset recorded them; one that does not never pays for them. The one
+/// place the two sides part: at the slot (ADR 0110), a policy that never learned an <c>act:</c> key declares
+/// then targets here, where <c>Policy.choose</c> scored on such a step would take the first pair at fallback.
 /// </summary>
 public sealed class PolicyAgent(PolicyFile policy, ObservationBuilder observations, ActionEncoder actions, CandidateTerms terms) : IPlayerAgent
 {
@@ -99,9 +101,7 @@ public sealed class PolicyAgent(PolicyFile policy, ObservationBuilder observatio
         }
 
         var slots = Slots(board);
-        var pairs = options.Spells
-            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)))
-            .Select(pair => (pair, actions.Act(slots, options.Actor, pair.Spell, pair.Targets)));
+        var pairs = TargetSets.Pairs(options).Select(pair => (pair, actions.Act(slots, options.Actor, pair.Spell, pair.Targets)));
         return Best(board, pairs, policy.ReadsCandidateTerms ? terms.Action(board, options) : null);
     }
 

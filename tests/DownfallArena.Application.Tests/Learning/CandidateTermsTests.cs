@@ -185,6 +185,42 @@ public sealed class CandidateTermsTests
         }
     }
 
+    /// <summary>
+    /// ADR 0110: the terms of an action at the slot are each offered spell's target sets as a target decision
+    /// reads them, in the order the encoder lists the pairs, so the term recorded next to a candidate is its own.
+    /// </summary>
+    [Fact]
+    public void An_actions_terms_are_each_spells_target_sets_in_the_order_the_pairs_are_listed()
+    {
+        var board = Board(enemyHealth: 20, fourthHealth: 3);
+        var rend = new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three, Four]));
+        var strike = new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
+        var options = new ActionOptions(Two, [rend, strike]);
+
+        var terms = Terms.Action(board, options);
+
+        terms.Count.ShouldBe(TargetSets.Pairs(options).Count());
+        terms.SelectMany(vector => vector).ShouldBe(Terms.Targets(board, rend).Concat(Terms.Targets(board, strike)).SelectMany(vector => vector));
+        terms.Select(vector => string.Join(',', vector)).Distinct().Count().ShouldBe(4, "every pair reads its own terms");
+    }
+
+    /// <summary>
+    /// A spell with no legal target lists no pair, so it reads no vector either: the zero vector a target
+    /// decision gets for it would shift every later pair's terms onto the wrong candidate.
+    /// </summary>
+    [Fact]
+    public void A_spell_with_no_legal_target_reads_no_terms_among_an_actions()
+    {
+        var board = Board(enemyHealth: 20, fourthHealth: 3);
+        var strike = new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
+        var options = new ActionOptions(Two, [new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [])), strike]);
+
+        var terms = Terms.Action(board, options);
+
+        TargetSets.Pairs(options).Select(pair => pair.Spell).ShouldBe([TestContent.Strike, TestContent.Strike]);
+        terms.SelectMany(vector => vector).ShouldBe(Terms.Targets(board, strike).SelectMany(vector => vector));
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
@@ -196,6 +232,9 @@ public sealed class CandidateTermsTests
         Should.Throw<ArgumentNullException>(() => Terms.Intent(board, null!));
         Should.Throw<ArgumentNullException>(() => Terms.Targets(null!, new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, []))));
         Should.Throw<ArgumentNullException>(() => Terms.Targets(board, null!));
+        Should.Throw<ArgumentNullException>(() => Terms.Action(null!, new ActionOptions(One, [])));
+        Should.Throw<ArgumentNullException>(() => Terms.Action(board, null!));
+        Should.Throw<ArgumentNullException>(() => TargetSets.Pairs(null!));
     }
 
     private static double Apply(IReadOnlyList<float> terms) => ScoringWeights.Default.Apply(Vector(terms));

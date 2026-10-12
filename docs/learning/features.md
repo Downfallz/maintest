@@ -247,10 +247,15 @@ Action encoding (`ActionEncoder`, same phase). Every key names the acting creatu
 | Speed | `speed:<slot>:Quick` or `speed:<slot>:Standard` | (Speed, slot, -1, 0 or 1, 0) |
 | Intent | `intent:<slot>:<spell id>` | (Intent, slot, spell index or -1, -1, 0) |
 | Targets | `targets:<slot>:<spell id>:<board slots ascending, comma-separated>` | (Targets, slot, spell index or -1, -1, one bit per target board slot) |
+| Act (ADR 0110) | `act:<slot>:<spell id>:<board slots ascending, comma-separated>` | (Act, slot, spell index or -1, -1, one bit per target board slot) |
 
 The spell is part of a target action because the observation does not carry the actor's intent and two spells
 can share a legal target set. A spell that cannot be cast (no legal candidate left) has the single action
 `targets:<slot>:<spell id>:` with an empty mask: the engine reveals it with no targets and it fizzles. `ActionEncoder.Candidates(slots, options)` lists
 the actions a `PlayerOptions` offers in a stable order: every unlock then `pass`; both speeds per creature;
 every castable spell per creature; every combination of legal targets of the allowed sizes, smallest first,
-in candidate order.
+in candidate order; and, under a rule set that declares no intent, every offered spell in the options' order
+with every legal target set of it in that same order (`TargetSets.Pairs`), a spell with no legal target
+listing none. An act has its own key rather than reusing `targets:`, because there the spell was chosen with
+the target and not declared before combat: the two decisions are read under different rules and must not
+share a row.

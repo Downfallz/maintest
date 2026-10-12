@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from conftest import SPELL_A, SPELL_B, write_run
+from conftest import ACT_A, SPELL_A, SPELL_B, write_run
 from downfall_learning.artifacts import build_dataset, load_run
 from downfall_learning.policy import LinearScorer
 from downfall_learning.report import TrainingLog
@@ -99,6 +99,21 @@ def test_sharing_by_kind_fits_one_regression_per_kind_and_a_scalar_per_action(tm
     rows = {tuple(row) for row in policy.weights}
     assert len(rows) == 1, "every key of one kind answers the board with the same row"
     assert len(set(policy.bias)) > 1, "and only the scalar tells two of them apart"
+
+
+def test_an_action_chosen_at_the_slot_is_a_decision_kind_of_its_own(tmp_path: Path) -> None:
+    hidden = load_run(write_run(tmp_path / "hidden", matches=80, with_evolution=False))
+    at_slot = load_run(
+        write_run(tmp_path / "at-slot", matches=80, seed=1, with_evolution=False, combat_kind="Act")
+    )
+    dataset = build_dataset([hidden, at_slot])
+
+    policy = train_value(dataset, ValueOptions(alpha=0.01, seed=2, share="kind"))
+
+    assert policy.metrics["regressions"] == 2, "Intent and Act each get a regression of their own"
+    rows = dict(zip(policy.action_keys, (tuple(row) for row in policy.weights), strict=True))
+    assert rows[SPELL_A] == rows[SPELL_B]
+    assert rows[ACT_A] != rows[SPELL_A]
 
 
 def test_sharing_by_action_keeps_a_row_of_its_own_for_every_action(tmp_path: Path) -> None:

@@ -113,7 +113,9 @@ Moves, by layer:
   spell at its slot, which is what the journal called clairvoyant and refused for mode A, and is exact in
   mode B. The minimax floor becomes the right reading for enemies still ahead.
 - **Learning**: `ActionKind.Act`, `ActionEncoder.Candidates` (union of the target candidates over castable
-  spells; the `targets:{slot}:{spell}:{targets}` key already carries the spell), `CandidateTerms`,
+  spells, under an `act:{slot}:{spell}:{targets}` key of its own: a `targets:` key already carries the spell,
+  but a spell chosen with its target is another decision than one declared before combat, and the two must
+  not share a policy row), `CandidateTerms`,
   `RecordingAgent`, `RuleSetStamp`. No feature schema bump: the observation does not encode intents and
   the mode sits in the stamp. Python: nothing required; a note in `train_value`'s kind list.
 - **Cli**: `RuleSetFile` (+ field, `Describe`, the not-found message), `TableDecisionBody` (kind `Action`

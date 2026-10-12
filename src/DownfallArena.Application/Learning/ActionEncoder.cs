@@ -18,6 +18,9 @@ public sealed class ActionEncoder(FeatureSchema schema)
     /// <summary>What every key of a spell and its targets chosen at the slot starts with (ADR 0110).</summary>
     public const string ActKeyPrefix = "act:";
 
+    /// <summary>What every key of a declared intent starts with.</summary>
+    public const string IntentKeyPrefix = "intent:";
+
     public FeatureSchema Schema => schema;
 
     public static EncodedAction Pass() => new(PassKey, ActionCode.Pass);
@@ -46,7 +49,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
         ArgumentNullException.ThrowIfNull(intent);
 
         var slot = slots.SlotOf(intent.Actor);
-        return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"intent:{slot}:{intent.Spell.Value}"), new ActionCode(ActionKind.Intent, slot, schema.SpellIndex(intent.Spell), -1, 0));
+        return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"{IntentKeyPrefix}{slot}:{intent.Spell.Value}"), new ActionCode(ActionKind.Intent, slot, schema.SpellIndex(intent.Spell), -1, 0));
     }
 
     /// <summary>
@@ -116,7 +119,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
 
     /// <summary>Every spell on offer with every legal target set of it, spells in the options' order (ADR 0110).</summary>
     private IEnumerable<EncodedAction> ActCandidates(BoardSlots slots, ActionOptions options) =>
-        options.Spells.SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => Act(slots, options.Actor, offered.Spell, targets)));
+        TargetSets.Pairs(options).Select(pair => Act(slots, options.Actor, pair.Spell, pair.Targets));
 
     private IEnumerable<EncodedAction> TargetCandidates(BoardSlots slots, TargetOptions options)
     {

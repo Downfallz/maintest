@@ -115,9 +115,7 @@ public sealed class ExploringAgent : IPlayerAgent
             return _inner.DecideAction(board, options);
         }
 
-        var pairs = options.Spells
-            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)))
-            .ToList();
+        var pairs = TargetSets.Pairs(options).ToList();
         return pairs.Count > 0
             ? pairs[_source.NextInt32(0, pairs.Count)]
             : throw new InvalidOperationException("The options offer no castable spell.");
