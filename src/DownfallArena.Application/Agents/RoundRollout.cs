@@ -203,11 +203,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
 
             var action = CombatAction.Bind(intent, targets);
             revealed.Add(action);
-            var advanced = Advance.Action(action, board, resources, rules, random, slot.Speed);
-            var sign = slot.Owner == seat ? 1 : -1;
-            var stillToAct = slots.Skip(index + 1).Select(later => later.Creature).ToHashSet();
-            score += sign * scorer.Score(advanced.Resolution, board, stillToAct: stillToAct);
-            board = advanced.Board;
+            board = Resolve(action, board, slots, index, seat, random, ref score);
             if (Advance.Elimination(board) is { } wiped)
             {
                 return (board, wiped);
@@ -248,11 +244,7 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
             var chosen = player.DecideAction(view, ActionOptions.Of(actor, board, resources));
             var action = CombatAction.Choose(actor.Id, chosen.Spell, chosen.Targets);
             revealed.Add(action);
-            var advanced = Advance.Action(action, board, resources, rules, random, slot.Speed);
-            var sign = slot.Owner == seat ? 1 : -1;
-            var stillToAct = slots.Skip(index + 1).Select(later => later.Creature).ToHashSet();
-            score += sign * scorer.Score(advanced.Resolution, board, stillToAct: stillToAct);
-            board = advanced.Board;
+            board = Resolve(action, board, slots, index, seat, random, ref score);
             if (Advance.Elimination(board) is { } wiped)
             {
                 return (board, wiped);
@@ -260,6 +252,20 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         }
 
         return (board, null);
+    }
+
+    /// <summary>
+    /// Resolves the action at a slot on the rules' dice and adds what it is worth to the score, the seat's for and
+    /// the other's against, the creatures after the slot being the ones still to act. Returns the board it leaves.
+    /// </summary>
+    private IReadOnlyList<CreatureSnapshot> Resolve(CombatAction action, IReadOnlyList<CreatureSnapshot> board, IReadOnlyList<ActivationSlot> slots, int index, PlayerSlot seat, IRandomSource random, ref double score)
+    {
+        var slot = slots[index];
+        var advanced = Advance.Action(action, board, resources, rules, random, slot.Speed);
+        var sign = slot.Owner == seat ? 1 : -1;
+        var stillToAct = slots.Skip(index + 1).Select(later => later.Creature).ToHashSet();
+        score += sign * scorer.Score(advanced.Resolution, board, stillToAct: stillToAct);
+        return advanced.Board;
     }
 
     /// <summary>

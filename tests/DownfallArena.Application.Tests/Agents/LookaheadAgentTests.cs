@@ -592,6 +592,46 @@ public sealed class LookaheadAgentTests
         AtActivation().Replies(FourAboutToKillTwo(), One, TestContent.Strike).Values.ShouldAllBe(spell => spell == null);
     }
 
+    /// <summary>
+    /// An ally still ahead is asked by the agent the search is built on, on the board it would be shown at its
+    /// slot: the round as the playout left it, the cursor at that slot, and every action since the real cursor
+    /// revealed, the actor's own first (ADR 0110). Here One kills Four, so Two is asked at the third slot with
+    /// One's strike the one action revealed.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_an_ally_ahead_is_asked_on_the_board_its_slot_would_show()
+    {
+        var board = FourAboutToKillTwo();
+        var options = new ActionOptions(One, [new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Four]))]);
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideAction(Arg.Any<PlayerBoardState>(), Arg.Any<ActionOptions>()).Returns(new ChosenAction(TestContent.Strike, [Three]));
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, inner: inner).DecideAction(board, options);
+
+        inner.Received().DecideAction(
+            Arg.Is<PlayerBoardState>(view =>
+                view.ActivationCursor == 2
+                && view.SubPhase == RoundSubPhase.Activation
+                && view.RevealedActions.Count == 1
+                && view.RevealedActions[0].Actor == One
+                && view.Enemies.Single(enemy => enemy.Id == Four).IsDead),
+            Arg.Is<ActionOptions>(offered => offered.Actor == Two));
+    }
+
+    /// <summary>The minimax decides an action at the slot among the pairs on offer, its floor read from this slot on.</summary>
+    [Fact]
+    public void At_the_slot_the_minimax_chooses_among_the_pairs_on_offer()
+    {
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        var chosen = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, adversarial: true).DecideAction(board, options);
+
+        chosen.ShouldBe(new ChosenAction(TestContent.Strike, [Four]), "killing Four is the move no reply can answer");
+    }
+
     /// <summary>ADR 0110: the factory builds every searching agent for a rule set that declares no intent.</summary>
     [Theory]
     [InlineData("lookahead")]

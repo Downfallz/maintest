@@ -243,15 +243,22 @@ slot asks for, a spell and its targets, and both readings change where they gues
   activation cursor on the board as it stands. The actor's own slot is now, so the fallback to the one-step
   reading when the guess has the actor stopped before its slot has nothing to guard against.
 - **The creatures still ahead choose at their own slot**, on the board that slot finds: an ally as the agent
-  the search is built on would choose, an enemy as the scorer would. That is the reading the hidden-intent
-  rule had to refuse as clairvoyant (journal, 2026-09-16); here it is the match, since every creature does
-  see the earlier slots before it chooses.
+  the search is built on would choose, shown the board its slot would show (the cursor there, every action
+  since the real cursor revealed); an enemy as the scorer would, the creatures after its slot being the ones
+  still to act, which is how the heuristic agent reads its own slot. That is the reading the hidden-intent
+  rule had to refuse as clairvoyant (journal, 2026-09-16); here it is the information every creature has.
+  The tie order reads its seatings the same way, nobody taken to have chosen before its slot.
 - **The minimax's worst reply** forces a spell on an enemy still ahead, which plays it at its slot if it can
   and chooses freely if it cannot. An enemy that comes after the actor does see the actor's move under this
   rule, so the floor is no longer against an opponent no game has.
 - **A rollout** past the round (`lookahead:<rounds>x<rollouts>`) and a purchase's rollouts play their rounds
   the same way, each slot asked for an action and a creature with nothing to cast skipped
   (`RoundRolloutTests` holds them to the match in both rules).
+
+Asking the agent the search is built on at every ally slot ahead, in every playout, is what this costs. Built
+on the heuristic agent it is cheap: a minimax mirror plays a match at the slot in about a third of the time it
+takes with hidden intents. Built on another searching agent (`lookahead:lookahead`) it multiplies, since that
+agent searches at every ally slot of every playout; nothing refuses it, and nothing measures it either.
 
 The measurement against Greedy on the benchmark seeds, both rules side by side, is in the journal
 (2026-10-12).
