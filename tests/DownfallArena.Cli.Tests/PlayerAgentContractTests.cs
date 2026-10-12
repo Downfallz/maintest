@@ -16,9 +16,8 @@ public sealed class PlayerAgentContractTests
     /// <summary>The agents that rely on the default, each for a reason.</summary>
     private static readonly Dictionary<string, string> OnTheDefault = new(StringComparer.Ordinal)
     {
-        // They read the board as it stands: their intent then their targets is their action.
+        // It reads the board as it stands: its intent then its targets is its action.
         ["RandomAgent"] = "reads the board as it stands",
-        ["PolicyAgent"] = "reads the board as it stands until the action encoding of plan PR 4",
 
         // The table's seats: a table refuses a rule set that declares no intent until plan PR 5 (TableComposer).
         ["HumanSeat"] = "table seat, plan PR 5",

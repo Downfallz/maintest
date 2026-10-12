@@ -75,8 +75,9 @@ Decisions:
 - **Action**, under a rule set that declares no intent (ADR 0110): for each spell on offer, the best target
   set on the board as it stands, with nobody written off, and the spell and set with the best score. It is the
   intent and the targets read on the one board both decisions see when the spell is chosen at the slot. The
-  random agent and the policy agent declare and target in turn, on the default; the exploring agent draws one
-  (spell, target set) pair with equal weight; the opening agent and the wrappers ask the agent they wrap. The
+  random agent declares and targets in turn, on the default; the policy agent scores every pair's `act:` key
+  when it learned any, and declares then targets on the keys it knows when it did not; the exploring agent
+  draws one (spell, target set) pair with equal weight, the pairs a recording lists as one `Act` step; the opening agent and the wrappers ask the agent they wrap. The
   lookahead and the minimax search the action from the slot (below, "At the slot"), and the table refuses the
   rule set until its seats can ask for an action (plan, PR 5).
 - **Speed**: Quick when some castable spell kills an enemy without a critical. Otherwise Standard only when the

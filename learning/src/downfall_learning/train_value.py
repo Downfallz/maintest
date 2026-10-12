@@ -16,12 +16,12 @@ key, and on a 1000-match exploring dataset the median key has 60 of them -- only
 examples as there are features, so 549 regressions are underdetermined and the rows add variance rather than
 signal (journal, ci-10: r2 -0.2876 against a baselineR2 of 0.1355).
 
-``share="kind"`` fits one regression per **decision kind** instead -- Evolve, Speed, Intent, Targets -- each
-over every step of that kind, and leaves each key only a scalar of its own. The position-dependence is then
-fitted on tens of thousands of steps rather than sixty, and what a key keeps for itself is a mean, which sixty
-samples determine well. It buys that with expressiveness: every Intent now answers the board the same way, and
-only the scalar tells two spells apart. Which trade wins is a measurement, not an argument, so both are here
-and the journal reports them on one dataset.
+``share="kind"`` fits one regression per **decision kind** instead -- Evolve, Speed, Intent, Targets, Act --
+each over every step of that kind, and leaves each key only a scalar of its own. The position-dependence is
+then fitted on tens of thousands of steps rather than sixty, and what a key keeps for itself is a mean, which
+sixty samples determine well. It buys that with expressiveness: every Intent now answers the board the same
+way, and only the scalar tells two spells apart. Which trade wins is a measurement, not an argument, so both
+are here and the journal reports them on one dataset.
 
 The file the two produce is identical in shape: ``share="kind"`` writes its kind row into every key of that
 kind, so ``policy.json``, its readers and the engine's ``PolicyAgent`` are untouched. That the file then holds
@@ -221,8 +221,9 @@ def _per_kind(fitting: _Fitting) -> _Fitted:
     One regression per decision kind, and a scalar per key on what that leaves (ADR 0045).
 
     The kind of a key is read from the dataset's own ``kinds`` rather than parsed out of the key text, so the
-    grouping is the engine's (``Evolve``, ``Speed``, ``Intent``, ``Targets``) and cannot drift from it. Every
-    key of a kind is written the same row: the file keeps one row per key, and only the scalar differs.
+    grouping is the engine's (``Evolve``, ``Speed``, ``Intent``, ``Targets``, and ``Act`` for a spell chosen
+    at the slot, ADR 0110) and cannot drift from it. Every key of a kind is written the same row: the file
+    keeps one row per key, and only the scalar differs.
     """
     weights = np.zeros((len(fitting.keys), fitting.features))
     bias = np.full(len(fitting.keys), fitting.fallback)

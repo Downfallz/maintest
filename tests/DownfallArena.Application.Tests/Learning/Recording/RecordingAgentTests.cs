@@ -94,12 +94,12 @@ public sealed class RecordingAgentTests
     }
 
     /// <summary>
-    /// ADR 0110. A spell and its targets chosen at once are recorded as the two steps a declared intent makes: the
-    /// spell among the spells on offer, then its targets among the spell's. The wrapped agent is asked the one
-    /// decision it makes, and nothing else.
+    /// ADR 0110. A spell and its targets chosen at once are recorded as the one step they are: every (spell,
+    /// target set) pair on offer as a candidate, in the options' spell order, and the pair chosen. The wrapped
+    /// agent is asked the one decision it makes, and nothing else.
     /// </summary>
     [Fact]
-    public void An_action_is_asked_once_and_recorded_as_an_intent_step_then_a_targets_step()
+    public void An_action_is_asked_once_and_recorded_as_one_step_among_every_pair_on_offer()
     {
         var inner = Substitute.For<IPlayerAgent>();
         var chosen = new ChosenAction(TestContent.Strike, [CreatureId.From(4)]);
@@ -119,17 +119,17 @@ public sealed class RecordingAgentTests
         inner.Received(1).DecideAction(board, options);
         inner.DidNotReceive().DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>());
         inner.DidNotReceive().DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>());
-        steps.Select(step => step.Kind).ShouldBe([ActionKind.Intent, ActionKind.Targets]);
-        steps.Select(step => step.Action).ShouldBe(["intent:0:spell:strike:v1", "targets:0:spell:strike:v1:3"]);
-        steps[0].Candidates.ShouldBe(["intent:0:spell:jab:v1", "intent:0:spell:strike:v1"]);
-        steps[1].Candidates.ShouldBe(["targets:0:spell:strike:v1:2", "targets:0:spell:strike:v1:3"]);
-        steps.ShouldAllBe(step => step.Observation == Observations.Build(board));
+        var step = steps.ShouldHaveSingleItem();
+        step.Kind.ShouldBe(ActionKind.Act);
+        step.Action.ShouldBe("act:0:spell:strike:v1:3");
+        step.Candidates.ShouldBe(["act:0:spell:jab:v1:2", "act:0:spell:jab:v1:3", "act:0:spell:strike:v1:2", "act:0:spell:strike:v1:3"]);
+        step.CandidateTerms.Count.ShouldBe(step.Candidates.Count);
+        step.Observation.ShouldBe(Observations.Build(board));
     }
 
     /// <summary>
     /// ADR 0110. On a whole match that declares no intent every decision is still a step among its candidates,
-    /// and the action steps are the intent and targets pairs the encoder knows. The counting agent takes the
-    /// interface's default action, which asks it an intent and then targets, so each action counts as two.
+    /// and every combat step is an action: no intent and no target binding is recorded.
     /// </summary>
     [Fact]
     public async Task Under_activation_declaration_every_step_of_a_match_is_among_its_candidates()
@@ -147,10 +147,9 @@ public sealed class RecordingAgentTests
             TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
-        steps.Count.ShouldBe(player1.Decisions + player2.Decisions);
         steps.ShouldAllBe(step => step.Candidates.Contains(step.Action));
-        steps.Count(step => step.Kind == ActionKind.Intent).ShouldBe(steps.Count(step => step.Kind == ActionKind.Targets));
-        steps.Count(step => step.Kind == ActionKind.Intent).ShouldBeGreaterThan(0);
+        steps.ShouldNotContain(step => step.Kind == ActionKind.Intent || step.Kind == ActionKind.Targets);
+        steps.Count(step => step.Kind == ActionKind.Act).ShouldBeGreaterThan(0);
     }
 
     [Fact]

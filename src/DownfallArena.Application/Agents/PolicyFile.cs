@@ -32,6 +32,13 @@ public sealed record PolicyFile
 
     public required IReadOnlyList<string> ActionKeys { get; init; }
 
+    /// <summary>Whether the policy learned any key that starts so: whether it has seen that kind of decision at all.</summary>
+    public bool Learned(string keyPrefix)
+    {
+        ArgumentNullException.ThrowIfNull(keyPrefix);
+        return ActionKeys.Any(key => key.StartsWith(keyPrefix, StringComparison.Ordinal));
+    }
+
     public required IReadOnlyList<IReadOnlyList<double>> Weights { get; init; }
 
     public required IReadOnlyList<double> Bias { get; init; }

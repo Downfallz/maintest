@@ -100,7 +100,7 @@ One line per decision of one player (`RecordingAgent`):
 | --- | --- |
 | `matchId`, `slot` | Which match, which player. |
 | `round`, `subPhase` | Where in the match the decision was taken. |
-| `kind` | `Pass`, `Evolve`, `Speed`, `Intent`, or `Targets`. |
+| `kind` | `Pass`, `Evolve`, `Speed`, `Intent`, `Targets`, or `Act`: a spell and its targets chosen together at the slot, under a rule set that declares no intent, keyed `act:<slot>:<spell>:<target slots>` (ADR 0110). |
 | `observation` | `schemaId` and `features`, the observation of the board at that decision. |
 | `candidates` | The keys of every action the options offered, in candidate order. |
 | `action` | The key of the chosen action, always one of `candidates`. |

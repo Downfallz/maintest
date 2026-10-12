@@ -103,10 +103,9 @@ public sealed class ExploringAgent : IPlayerAgent
     }
 
     /// <summary>
-    /// Every spell on offer with every legal target set of it, with equal weight: one draw for the pair rather
-    /// than a spell and then a set, so a spell with many target sets is not starved (ADR 0110). The encoder lists
-    /// no such pair yet, and a recording writes the pair as an intent step and a targets step, where a spell with
-    /// more target sets is explored more often; the encoding of plan PR 4 is what makes the two agree.
+    /// Every spell on offer with every legal target set of it, the pairs the encoder lists, with equal weight: one
+    /// draw for the pair rather than a spell and then a set, so a spell with many target sets is not starved
+    /// (ADR 0110).
     /// </summary>
     public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
     {

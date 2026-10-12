@@ -80,6 +80,31 @@ public sealed class PolicyAgent(PolicyFile policy, ObservationBuilder observatio
             policy.ReadsCandidateTerms ? terms.Targets(board, options) : null);
     }
 
+    /// <summary>
+    /// A spell and its targets chosen at the slot (ADR 0110). A policy that learned such actions scores every
+    /// (spell, target set) pair the encoder lists, as a dataset recorded them. One fitted only on hidden intents
+    /// has never seen an <c>act:</c> key, and every pair would be scored at its fallback: it declares and targets
+    /// in turn instead, on keys it did learn, which is the best it can say of a decision it never saw.
+    /// </summary>
+    public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (!policy.Learned(ActionEncoder.ActKeyPrefix))
+        {
+            var spell = DecideIntent(board, new IntentOption(options.Actor, options.SpellIds));
+            var offered = options.For(spell) ?? throw new InvalidOperationException($"The policy chose {spell}, which the options do not offer.");
+            return new ChosenAction(spell, DecideTargets(board, offered));
+        }
+
+        var slots = Slots(board);
+        var pairs = options.Spells
+            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)))
+            .Select(pair => (pair, actions.Act(slots, options.Actor, pair.Spell, pair.Targets)));
+        return Best(board, pairs, policy.ReadsCandidateTerms ? terms.Action(board, options) : null);
+    }
+
     private BoardSlots Slots(PlayerBoardState board) => BoardSlots.Of(board, observations.Schema.TeamSize);
 
     /// <summary>

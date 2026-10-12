@@ -71,6 +71,42 @@ public sealed class PolicyAgentTests
         agent.DecideTargets(board, new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, []))).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// ADR 0110: a policy that learned actions at the slot scores every (spell, target set) pair on its key, the
+    /// spell and the target together.
+    /// </summary>
+    [Fact]
+    public void An_action_at_the_slot_is_the_pair_whose_key_scores_best()
+    {
+        var options = new ActionOptions(
+            Two,
+            [
+                new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three, Four])),
+                new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+            ]);
+        var agent = Agent(Policy(("act:1:spell:strike:v1:3", 2.0), ("act:1:spell:rend:v1:2", 1.0)));
+
+        agent.DecideAction(Board(enemyHealth: 20), options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+    }
+
+    /// <summary>
+    /// A policy fitted on hidden intents never saw an <c>act:</c> key; scored on them, every pair would sit at its
+    /// fallback. It declares and targets in turn on the keys it did learn instead (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void A_policy_that_never_learned_an_action_declares_then_targets_on_the_keys_it_knows()
+    {
+        var options = new ActionOptions(
+            Two,
+            [
+                new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three, Four])),
+                new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+            ]);
+        var agent = Agent(Policy((RendIntent, 1.0), (StrikeIntent, 2.0), ("targets:1:spell:strike:v1:3", 1.0)));
+
+        agent.DecideAction(Board(enemyHealth: 20), options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+    }
+
     [Fact]
     public void Speed_and_evolution_follow_their_keys()
     {
