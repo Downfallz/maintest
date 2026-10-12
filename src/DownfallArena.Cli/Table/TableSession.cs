@@ -124,7 +124,8 @@ internal sealed class TableSession : IDisposable
         // threads share this match, and the container's driver would hand a host an unguarded read side.
         var gate = new TableGate();
         var queries = gate.Around(services.GetRequiredService<MatchQueryHandlers>());
-        var driver = new MatchDriver(gate.Around(services.GetRequiredService<MatchCommandHandlers>()), queries);
+        // Both seats are asked their speeds and intents at once, as at the cardboard table (ADR 0111).
+        var driver = new MatchDriver(gate.Around(services.GetRequiredService<MatchCommandHandlers>()), queries) { AsksSpeedsAndIntentsTogether = true };
         var concede = gate.Guarding(services.GetRequiredService<ICommandHandler<Concede, Result>>());
         var played1 = start?.Wrap?.Invoke(matchId, player1) ?? player1;
         var played2 = start?.Wrap?.Invoke(matchId, player2) ?? player2;

@@ -405,6 +405,38 @@ public sealed partial class TableApiTests : IDisposable
         body.ShouldContain("\"enemies\"");
     }
 
+    /// <summary>
+    /// Both seats are asked their speeds and intents at once, and the answers reach the match together once both
+    /// are done (ADR 0111). Until then the seat's own board still shows what its person has chosen, so the second
+    /// creature's intent is chosen beside the first's, as it is when the match has it (ADR 0039).
+    /// </summary>
+    [Fact]
+    public async Task A_seat_s_board_shows_the_speeds_and_intents_it_has_answered_before_the_match_has_them()
+    {
+        var table = await Seated();
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+        await Waiting(table.Person, "Speed");
+        var first = table.Person.Waiting!.Creature!.Value.Value;
+
+        await Post(table, $$"""{"kind":"Speed","creature":{{first}},"speed":"Standard"}""");
+        await Waiting(table.Person, "Speed");
+        using var speeds = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var second = table.Person.Waiting!.Creature!.Value.Value;
+        await Post(table, $$"""{"kind":"Speed","creature":{{second}},"speed":"Standard"}""");
+        await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Standard"}""", until: PlayerOptionsKind.Intent);
+        var declaring = table.Person.Waiting!.Creature!.Value.Value;
+        await Post(table, $$"""{"kind":"Intent","creature":{{declaring}},"spell":"spell:strike:v1"}""");
+        await Waiting(table.Person, "Intent");
+        using var intents = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+
+        speeds.RootElement.GetProperty("board").GetProperty("speedChoices").EnumerateArray()
+            .Select(choice => choice.GetProperty("creature").GetInt32()).ShouldBe([first]);
+        intents.RootElement.GetProperty("board").GetProperty("intents").EnumerateArray()
+            .Select(intent => intent.GetProperty("actor").GetInt32()).ShouldBe([declaring]);
+        (await table.Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(table.Session.MatchId, PlayerSlot.Player1), TestContext.Current.CancellationToken))
+            .Value.Intents.ShouldBeEmpty("the match has none of them until the seat is done");
+    }
+
     [Fact]
     public async Task A_decision_of_another_kind_than_the_one_pending_is_a_refusal_and_not_the_end_of_the_session()
     {

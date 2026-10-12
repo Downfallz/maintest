@@ -176,6 +176,56 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         return board.Intents.Count(intent => !revealed.Contains(intent.Actor));
     }
 
+    /// <summary>
+    /// A seat's board with the speeds and intents its person has answered and the match does not have yet. Both
+    /// seats are asked theirs at once and the answers reach the match together once both are done (ADR 0111);
+    /// until then the board would show a player none of what they have just chosen, which is the very thing
+    /// they choose the next creature's on (ADR 0039). Once the match has an answer, its own copy is the one shown.
+    /// </summary>
+    private static PlayerBoardState WithAnswers(PlayerBoardState board, HumanSeat? person)
+    {
+        var given = person?.Given(board.RoundNumber) ?? [];
+        if (given.Count == 0)
+        {
+            return board;
+        }
+
+        var speeds = given
+            .Where(answer => answer.Kind == PlayerOptionsKind.Speed && !board.SpeedChoices.Any(choice => choice.Creature == answer.Creature))
+            .Select(answer => new SpeedChoice(answer.Creature!.Value, answer.Speed!.Value));
+        var intents = given
+            .Where(answer => answer.Kind == PlayerOptionsKind.Intent && !board.Intents.Any(intent => intent.Actor == answer.Creature))
+            .Select(answer => new CombatIntent(answer.Creature!.Value, answer.Spell!));
+        return board with { SpeedChoices = [.. board.SpeedChoices, .. speeds], Intents = [.. board.Intents, .. intents] };
+    }
+
+    /// <summary>
+    /// Whether an answer can have set a command off, which is when the trace is worth waiting for and keeping.
+    /// One of a seat's speeds or intents does not until its last, and the last does not while the other person
+    /// is still being asked theirs: the answers reach the match together (ADR 0111). Waiting for a trace that
+    /// cannot grow costs the player its whole bound, a quarter of a second a tap with the buttons held, and the
+    /// checkpoint it writes is the one already written. A pick is asked the same way, one at a time.
+    /// </summary>
+    private bool SetsOff(TableSeat seat, HumanSeat person, PlayerDecision decision, PlayerOptions options, int? round)
+    {
+        var owed = decision.Kind switch
+        {
+            PlayerOptionsKind.Speed => options.Speed?.Missing.Count ?? 0,
+            PlayerOptionsKind.Intent => options.Intent?.Creatures.Count ?? 0,
+            PlayerOptionsKind.Evolution => 0,
+            _ => -1,
+        };
+        if (owed < 0)
+        {
+            return true;
+        }
+
+        var answered = person.Given(round).Count(given => given.Kind == decision.Kind);
+        return answered >= owed && Seat(Other(seat.Slot))?.Person?.Waiting?.Kind != decision.Kind;
+    }
+
+    private TableSeat? Seat(PlayerSlot slot) => seats.FirstOrDefault(seat => seat.Slot == slot);
+
     private TableSeat? Holder(string? token) =>
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
@@ -287,7 +337,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var (waiting, board, options) = snapshot.Value;
+        var (waiting, answered, options) = snapshot.Value;
+        var board = WithAnswers(answered, seat.Person);
 
         // How many cards the other side has face down, and nothing else about them. At a table that number is
         // public -- face-down cards are countable -- so it is served, as a count computed here rather than as
@@ -341,7 +392,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
                 // a player who taps one believes the thing they noticed was written down.
                 recording = run is not null,
-                opponentIntents = opponent.IsSuccess ? StillFaceDown(opponent.Value) : 0,
+                opponentIntents = opponent.IsSuccess ? StillFaceDown(WithAnswers(opponent.Value, Seat(Other(seat.Slot))?.Person)) : 0,
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
                 // event are dropped here and the other seat's hidden decisions never reach the wire
@@ -522,7 +573,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
 
-        await RecordAsync(seat.Slot, round, subPhase, accepted, traced);
+        await RecordAsync(seat.Slot, round, subPhase, accepted, traced, SetsOff(seat, person, decision, options.Value, round));
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -533,7 +584,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced, bool setsOff)
     {
         if (run is not { } recording || accepted is null)
         {
@@ -543,6 +594,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         try
         {
             await recording.DecidedAsync(session.MatchId, slot, round, subPhase, accepted, CancellationToken.None);
+            if (!setsOff)
+            {
+                return;
+            }
 
             // The trace, as far as the match has got -- and not until the command this decision caused has
             // finished raising everything it raises.

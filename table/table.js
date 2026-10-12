@@ -1,5 +1,5 @@
 import { httpTransport } from './transport.js';
-import { activeSeat, isAsked, needsPass } from './seats.js';
+import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats, isOperator, operatorToken } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
@@ -85,9 +85,10 @@ function tidy() {
 function start(seats, holder = null, practicing = false) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
+  // `holding` keeps the holder's seat on screen for a poll between two of their own questions (seats.js).
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
   const state = {
-    seats, views: [], holder, shown: null, asked: null, practice: practicing,
+    seats, views: [], holder, holding: false, shown: null, asked: null, practice: practicing,
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
@@ -323,6 +324,7 @@ async function poll(state) {
   }
 
   if (state.sending) return;
+  state.holding = holdsOn(state.views, views, state.holder);
   state.views = views;
   render(state, views);
   if (!state.catalogue) await load(state);
@@ -365,7 +367,7 @@ function showBoard(state, open) {
   if (!returning) return;
   if (element('board').contains(document.activeElement)) element('board-toggle').focus({ preventScroll: true });
   globalThis.scrollTo?.(0, state.boardReturn ?? 0);
-  const current = activeSeat(state.views, state.holder);
+  const current = activeSeat(state.views, state.holder, state.holding);
   if (current && !state.playback && !needsPass(current, state.holder)) guideDecision(state, current);
 }
 
@@ -410,7 +412,7 @@ function restorePosition(saved) {
 const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');
 
 function render(state, views) {
-  const current = activeSeat(views, state.holder);
+  const current = activeSeat(views, state.holder, state.holding);
   const view = current.view;
 
   // What the seat is being asked, as an identity. A choice belongs to one question and to no other: a decision
@@ -555,7 +557,7 @@ function guideDecision(state, current) {
 
 // A handler can outlive its DOM node or its question. Only the visible seat's current asking may act.
 function canInteract(state, current, kind) {
-  const active = activeSeat(state.views, state.holder);
+  const active = activeSeat(state.views, state.holder, state.holding);
   return !state.playback && !state.step && !state.sending && !current.view.over && !current.view.playedByBot &&
     current.view.waitingFor === kind && current.seat === state.shown &&
     active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
@@ -2875,7 +2877,7 @@ function keyboardDecision(state, event) {
   }
   const target = event.target;
   if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName?.toUpperCase())) return;
-  const current = activeSeat(state.views, state.holder);
+  const current = activeSeat(state.views, state.holder, state.holding);
   if (!current || needsPass(current, state.holder) || state.sending) return;
   const key = event.key.toLowerCase();
   if (key !== 'escape' && target?.closest?.('#phase-dock') && !target.closest('#mini-board')) return;

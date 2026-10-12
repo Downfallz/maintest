@@ -2,7 +2,7 @@
 
 Date: 2026-10-02
 
-Status: Accepted. Amends [0054](0054-a-table-for-two-people-at-one-screen.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md)
+Status: Accepted, amended by [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md). Amends [0054](0054-a-table-for-two-people-at-one-screen.md) and [0081](0081-a-host-of-tables-found-by-their-tokens.md)
 
 ## Context
 

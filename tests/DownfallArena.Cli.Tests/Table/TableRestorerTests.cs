@@ -329,12 +329,15 @@ public sealed class TableRestorerTests : IDisposable
     /// Through the table's API, as a page plays: that is where a decision is checkpointed into the trace, which
     /// is what a rebuild is held against.
     /// </summary>
-    private static async Task PlayUntil(PlayedTable table, HumanSeat person, PlayerOptionsKind kind)
+    private async Task PlayUntil(PlayedTable table, HumanSeat person, PlayerOptionsKind kind)
     {
         for (var attempt = 0; attempt < 600; attempt++)
         {
             switch (person.Waiting)
             {
+                case { Kind: PlayerOptionsKind.Intent } when kind == PlayerOptionsKind.Intent:
+                    await OtherSeatDeclared(table);
+                    return;
                 case { Kind: var asked } when asked == kind:
                     return;
                 case { Kind: PlayerOptionsKind.Evolution } question:
@@ -355,6 +358,33 @@ public sealed class TableRestorerTests : IDisposable
         }
 
         throw new InvalidOperationException($"The seat never reached {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+    }
+
+    /// <summary>
+    /// The bot in the other seat is asked its intents at the same time as the person (ADR 0111), and writes each
+    /// one down as it declares it. A test that reads the record waits for them, or it reads the record half way.
+    /// </summary>
+    private async Task OtherSeatDeclared(PlayedTable table)
+    {
+        for (var attempt = 0; attempt < 300; attempt++)
+        {
+            try
+            {
+                var journal = await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken);
+                if (journal.Count(entry => entry.Slot == "player2" && entry.Kind == "Intent") == HostedTables.Rules.TeamSize)
+                {
+                    return;
+                }
+            }
+            catch (JsonException)
+            {
+                // A line still on its way into the file.
+            }
+
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        throw new InvalidOperationException("The bot in the other seat never wrote its intents down.");
     }
 
     private static async Task Post(PlayedTable table, HumanSeat.Question question, string body)
