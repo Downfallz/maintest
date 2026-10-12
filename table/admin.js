@@ -50,6 +50,23 @@ export function defaultFormat(answer) {
   return formats(answer).some(format => format.value === wanted) ? wanted : '3v3';
 }
 
+// When a table's spells are chosen (ADR 0110), as the host offers them: declared face down before combat, the
+// default, or chosen with their targets when each creature's slot comes up. The words are the page's; the values
+// are the host's, and a host that names none offers the default alone.
+const DECLARATION_LABELS = { 'hidden-intent': 'Hidden intents', 'at-activation': 'Chosen at the slot' };
+
+export function declarations(answer) {
+  const offered = Array.isArray(answer?.declarations) && answer.declarations.length > 0 ? answer.declarations : ['hidden-intent'];
+  return offered.map(value => ({ value, label: DECLARATION_LABELS[value] ?? value }));
+}
+
+// The declaration the chooser shows: the operator's pick while the host offers it, else the host's own.
+export function declarationToShow(answer, chosen = null) {
+  const offered = declarations(answer).map(one => one.value);
+  if (chosen !== null && offered.includes(chosen)) return chosen;
+  return offered.includes(answer?.declaration) ? answer.declaration : offered[0];
+}
+
 // What the chooser should show: the operator's own pick when they have made one and the host still offers it,
 // and otherwise the host's default. Pure, and separate from the chooser it fills, because "an operator at a
 // 1v1 host silently opens 3v3 tables" is a bug worth a test that needs no browser.
@@ -137,13 +154,15 @@ export function signInNeeded(answer) {
 
 // What the form asks for, or the reason it is not asked at all. The host checks all of this again; this is so
 // a typo reads as a sentence rather than as a 400.
-export function openAsked({ player1, player2, who, handover, format }) {
+export function openAsked({ player1, player2, who, handover, format, declaration }) {
   if (!player1 || !player2) return { problem: 'Choose who sits in each seat.' };
   if (player1 !== 'person' && player2 !== 'person') return { problem: 'At least one seat is a person: two bots need no table.' };
 
   const asked = { player1, player2 };
   const wanted = (format ?? '').trim();
   if (wanted) asked.format = wanted;
+  const declared = (declaration ?? '').trim();
+  if (declared) asked.declaration = declared;
   const initials = (who ?? '').trim();
   if (initials) asked.who = initials;
 
@@ -164,6 +183,7 @@ export function tableRows(list) {
     id: table.id,
     state: stateOf(table),
     format: table.format ?? null,
+    declaration: table.declaration ?? null,
     seats: (table.seats ?? []).map(seat => ({
       slot: seat.slot,
       seated: seat.seated ?? 'nobody',
@@ -281,6 +301,9 @@ function card(row, transport, redraw) {
 
   const list = document.createElement('dl');
   if (row.format) list.append(...line('Format', document.createTextNode(row.format)));
+  if (row.declaration && row.declaration !== 'hidden-intent') {
+    list.append(...line('Spells', document.createTextNode(DECLARATION_LABELS[row.declaration] ?? row.declaration)));
+  }
   for (const seat of row.seats) {
     const shown = seat.code
       ? [document.createTextNode(`${seat.seated} · code `), Object.assign(document.createElement('strong'), { className: 'code', textContent: seat.code }), document.createTextNode(' · '), anchor(seat.join, 'join link')]
@@ -371,6 +394,20 @@ async function start() {
   let offered = null;
   let offeredFormats = null;
   let formatChosen = false;
+  let offeredDeclarations = null;
+  let declarationChosen = false;
+
+  function fillDeclarations(answer) {
+    const list = declarations(answer);
+    const key = list.map(one => one.value).join('|');
+    const chosen = declarationChosen ? element('declaration').value : null;
+    if (key !== offeredDeclarations) {
+      offeredDeclarations = key;
+      element('declaration').replaceChildren(...list.map(one => option(one.value, one.label)));
+    }
+
+    element('declaration').value = declarationToShow(answer, chosen);
+  }
 
   function fillFormats(answer) {
     const list = formats(answer);
@@ -392,6 +429,7 @@ async function start() {
 
   function fillPickers(answer) {
     fillFormats(answer);
+    fillDeclarations(answer);
     const list = seatable(answer);
     const key = list.map(agent => agent.value).join('|');
     if (key === offered) return;
@@ -464,6 +502,7 @@ async function start() {
       who: element('who').value,
       handover: element('handover').value,
       format: element('format').value,
+      declaration: element('declaration').value,
     });
     const told = element('said');
     if (asking.problem) {
@@ -482,6 +521,7 @@ async function start() {
 
   // From here the chooser is the operator's: a redraw stops moving it, including back to the host's default.
   element('format').addEventListener('change', () => { formatChosen = true; });
+  element('declaration').addEventListener('change', () => { declarationChosen = true; });
 
   element('sessions').addEventListener('change', armTools);
   element('sessions-all').addEventListener('change', () => {

@@ -66,8 +66,8 @@ listed in [spells.md](spells.md).
   cast on nothing. A creature with nothing it can cast when its slot comes up -- dead, stunned, or no spell it
   can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. The
   default rule set declares hidden intents. `play`, `human`, `simulate`, `evaluate` and `table` play the
-  other with `--declaration at-activation`, every agent included; the table seats only bots in it until its
-  page can ask a person for an action.
+  other with `--declaration at-activation`, every agent included, and so does a table with people at it,
+  whose page asks each player for the action at their creature's slot.
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the

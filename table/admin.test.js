@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formatToShow, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formatToShow, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -259,4 +259,29 @@ test('a format that gives no pick at all says so', () => {
 
 test('a format the host sends no pick count for is named on its own', () => {
   assert.deepEqual(formats({ formats: [{ value: '4v4' }] }).map(format => format.label), ['4v4']);
+});
+
+// ADR 0110: a table may choose its spells at the slot. The values are the host's; the words are the panel's.
+test('the declarations a chooser offers come from the host, worded for the operator', () => {
+  const answer = { declaration: 'hidden-intent', declarations: ['hidden-intent', 'at-activation'] };
+
+  assert.deepEqual(declarations(answer), [
+    { value: 'hidden-intent', label: 'Hidden intents' },
+    { value: 'at-activation', label: 'Chosen at the slot' },
+  ]);
+  assert.deepEqual(declarations(null).map(one => one.value), ['hidden-intent'], 'a host that names none offers the default alone');
+});
+
+test('the declaration chooser keeps the operator\'s pick and otherwise opens on the host\'s own', () => {
+  const answer = { declaration: 'at-activation', declarations: ['hidden-intent', 'at-activation'] };
+
+  assert.equal(declarationToShow(answer), 'at-activation');
+  assert.equal(declarationToShow(answer, 'hidden-intent'), 'hidden-intent');
+  assert.equal(declarationToShow({ declarations: ['hidden-intent'] }, 'at-activation'), 'hidden-intent');
+});
+
+test('a table asked to choose its spells at the slot says so, and one on the default says nothing', () => {
+  assert.equal(openAsked({ player1: 'person', player2: 'greedy', declaration: 'at-activation' }).declaration, 'at-activation');
+  assert.equal(openAsked({ player1: 'person', player2: 'greedy', declaration: '' }).declaration, undefined);
+  assert.equal(tableRows({ tables: [{ id: 't', declaration: 'at-activation', seats: [] }] })[0].declaration, 'at-activation');
 });

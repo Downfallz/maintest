@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, statPairs } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, liveChoice, revealedText, statPairs } from './board.js';
 
 const creature = { id: 1, health: 14, maxHealth: 20, energy: 2, totalDefense: 3, currentInitiative: 7 };
 
@@ -212,4 +212,21 @@ test('a row badges the damage bonus and upkeep energy its packages give', () => 
     ['damage +2 on every hit', 'Quick']);
   assert.deepEqual(badges({ id: 1, damageBonus: 0, passive: { upkeepEnergy: 1 } }, []), ['energy +1 at every upkeep']);
   assert.deepEqual(badges({ id: 1, damageBonus: '2', passive: 'none' }, []), []);
+});
+
+// ADR 0110: a game that chooses each spell at its slot declares nothing, so there is nothing hidden to wait for.
+test('a creature yet to act in a game that chooses at the slot is shown as choosing at its turn', () => {
+  const creature = { id: 4 };
+  const board = { roundNumber: 1, revealedActions: [], timeline: [{ creature: 4 }], activationCursor: 0 };
+
+  assert.equal(liveChoice(creature, board, [], true).status, 'Chooses at its turn');
+  assert.equal(liveChoice(creature, board, []).status, 'Hidden until reveal');
+});
+
+// A creature dead or stunned when its slot came up is skipped without being asked (ADR 0110): no action, ever.
+test('a creature whose slot has passed without an action, in a game that chooses at the slot, was skipped', () => {
+  const board = { roundNumber: 1, revealedActions: [], timeline: [{ creature: 4 }, { creature: 5 }], activationCursor: 1 };
+
+  assert.equal(liveChoice({ id: 4 }, board, [], true).status, 'Skipped');
+  assert.equal(liveChoice({ id: 5 }, board, [], true).status, 'Chooses at its turn');
 });

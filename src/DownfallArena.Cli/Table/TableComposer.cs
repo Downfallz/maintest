@@ -58,13 +58,6 @@ internal sealed class TableComposer
     public bool Records => _store is not null;
 
     /// <summary>
-    /// Whether a person may sit at a table that chooses spells at the slot. Not yet: the page cannot ask for an
-    /// action until plan PR 6 of free-activation-plan.md, and a person asked one would wait on a screen that
-    /// offers nothing. The host's own tests play that seat through the API, which can.
-    /// </summary>
-    internal bool SeatsPersonsAtTheSlot { get; init; }
-
-    /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
     /// <c>--rules</c> named, or either of them in the format <c>--format</c> named.
     /// </summary>
@@ -92,14 +85,6 @@ internal sealed class TableComposer
 
     /// <summary>The bots the pilot is offered for a seat, in the order they are offered; empty offers only what the page knows.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
-
-    private void RefuseAPersonAtTheSlot(TableRequest request, RuleSet rules)
-    {
-        if (rules.CombatDeclaration == CombatDeclaration.AtActivation && !SeatsPersonsAtTheSlot && (request.Player1 is null || request.Player2 is null))
-        {
-            throw new ArgumentException("A person cannot sit at a table that chooses spells at the slot yet: the page asks for an action from plan PR 6 of free-activation-plan.md. Seat two bots, or play it with 'play --declaration at-activation'.", nameof(request));
-        }
-    }
 
     /// <summary>
     /// Composes and starts a table. The recording is opened before the match, so the files exist before
@@ -221,7 +206,6 @@ internal sealed class TableComposer
             // bot created against another rule set than the match plays would score a board that is not the
             // board, and a rebuilt table has to come back in the format it was recorded in (ADR 0091).
             var rules = RulesFor(request);
-            RefuseAPersonAtTheSlot(request, rules);
 
             // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
