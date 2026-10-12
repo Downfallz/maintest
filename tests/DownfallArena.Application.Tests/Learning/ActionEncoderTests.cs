@@ -120,6 +120,44 @@ public sealed class ActionEncoderTests
         candidates.ShouldAllBe(candidate => candidate.Code.SpellIndex == Schema.SpellIndex(TestContent.Slam));
     }
 
+    /// <summary>
+    /// ADR 0110: an action at the slot lists every spell on offer with every legal target set of it, spells in
+    /// the options' order, each as one <c>act:</c> key that names the spell and the targets.
+    /// </summary>
+    [Fact]
+    public void Action_candidates_pair_every_spell_on_offer_with_every_target_set_of_it()
+    {
+        var options = new PlayerOptions
+        {
+            Kind = PlayerOptionsKind.Action,
+            Action = new ActionOptions(
+                One,
+                [
+                    new TargetOptions(One, TestContent.Slam, new LegalTargets(1, 2, [Three, Four])),
+                    new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three])),
+                ]),
+        };
+
+        var candidates = Encoder.Candidates(Slots, options);
+
+        candidates.Select(candidate => candidate.Key).ShouldBe(["act:0:spell:slam:v1:2", "act:0:spell:slam:v1:3", "act:0:spell:slam:v1:2,3", "act:0:spell:strike:v1:2"]);
+        candidates.ShouldAllBe(candidate => candidate.Code.Kind == ActionKind.Act);
+        candidates.Select(candidate => candidate.Code.TargetMask).ShouldBe([0b0100, 0b1000, 0b1100, 0b0100]);
+        candidates[^1].Code.SpellIndex.ShouldBe(Schema.SpellIndex(TestContent.Strike));
+    }
+
+    /// <summary>An action at the slot and a revealed intent's targets are different decisions, so different keys (ADR 0110).</summary>
+    [Fact]
+    public void A_spell_and_targets_chosen_at_the_slot_are_another_action_than_targets_bound_to_an_intent()
+    {
+        var act = Encoder.Act(Slots, One, TestContent.Strike, [Three]);
+        var targets = Encoder.Targets(Slots, One, TestContent.Strike, [Three]);
+
+        act.Key.ShouldBe("act:0:spell:strike:v1:2");
+        act.Key.ShouldNotBe(targets.Key);
+        act.Code.ShouldBe(targets.Code with { Kind = ActionKind.Act });
+    }
+
     [Fact]
     public void The_same_targets_for_another_spell_are_another_action()
     {

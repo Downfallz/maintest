@@ -85,9 +85,8 @@ public sealed class RecordingAgent(
     }
 
     /// <summary>
-    /// A spell and its targets chosen at once (ADR 0110), recorded as the two steps a declared intent makes: the
-    /// spell among the ones on offer, then the targets among the spell's. The wrapped agent is asked the one
-    /// decision it makes, and both steps are read off its answer on the same board.
+    /// A spell and its targets chosen at once (ADR 0110), recorded as the one step it is: every (spell, target
+    /// set) pair on offer as a candidate, and the pair the wrapped agent chose.
     /// </summary>
     public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
     {
@@ -95,20 +94,12 @@ public sealed class RecordingAgent(
         ArgumentNullException.ThrowIfNull(options);
 
         var slots = Slots(board);
-        var intentOption = new IntentOption(options.Actor, options.SpellIds);
-        var (intentCandidates, intentTerms) = Shared(() => (
-            actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Intent, SubPhase = board.SubPhase, Intent = new IntentOptions([intentOption]) }),
-            terms.Intent(board, intentOption)));
+        var (candidates, candidateTerms) = Shared(() => (
+            actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Action, SubPhase = board.SubPhase, Action = options }),
+            terms.Action(board, options)));
         var (who, named) = Deciding(board);
         var chosen = who.DecideAction(board, options);
-        var offered = options.For(chosen.Spell)
-            ?? throw new InvalidOperationException($"The agent chose {chosen.Spell}, which the options do not offer.");
-        Shared(() =>
-        {
-            Record(board, intentCandidates, intentTerms, actions.Intent(slots, new CombatIntent(options.Actor, chosen.Spell)), named);
-            var targetCandidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Target, SubPhase = board.SubPhase, Target = offered });
-            Record(board, targetCandidates, terms.Targets(board, offered), actions.Targets(slots, options.Actor, chosen.Spell, chosen.Targets), named);
-        });
+        Shared(() => Record(board, candidates, candidateTerms, actions.Act(slots, options.Actor, chosen.Spell, chosen.Targets), named));
         return chosen;
     }
 

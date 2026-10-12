@@ -79,6 +79,19 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
                 : ScoreTerms.Zero))];
     }
 
+    /// <summary>
+    /// One vector per (spell, target set) pair the action options offer, in <see cref="TargetSets.Pairs"/> order
+    /// (ADR 0110): each spell's target sets as <see cref="Targets"/> reads them. A spell with no legal target
+    /// lists no pair, so it gets no vector here either, not the zero vector a target decision would get.
+    /// </summary>
+    public IReadOnlyList<IReadOnlyList<float>> Action(PlayerBoardState board, ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        return [.. options.Spells.Where(offered => offered.LegalTargets.IsCastable).SelectMany(offered => Targets(board, offered))];
+    }
+
     /// <summary>One vector per legal target set in <see cref="TargetSets"/> order; one zero vector for an uncastable spell.</summary>
     public IReadOnlyList<IReadOnlyList<float>> Targets(PlayerBoardState board, TargetOptions options)
     {

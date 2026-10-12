@@ -103,10 +103,9 @@ public sealed class ExploringAgent : IPlayerAgent
     }
 
     /// <summary>
-    /// Every spell on offer with every legal target set of it, with equal weight: one draw for the pair rather
-    /// than a spell and then a set, so a spell with many target sets is not starved (ADR 0110). The encoder lists
-    /// no such pair yet, and a recording writes the pair as an intent step and a targets step, where a spell with
-    /// more target sets is explored more often; the encoding of plan PR 4 is what makes the two agree.
+    /// Every spell on offer with every legal target set of it, the pairs the encoder lists, with equal weight: one
+    /// draw for the pair rather than a spell and then a set, so a spell with many target sets is not starved
+    /// (ADR 0110).
     /// </summary>
     public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options)
     {
@@ -116,9 +115,7 @@ public sealed class ExploringAgent : IPlayerAgent
             return _inner.DecideAction(board, options);
         }
 
-        var pairs = options.Spells
-            .SelectMany(offered => TargetSets.Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)))
-            .ToList();
+        var pairs = TargetSets.Pairs(options).ToList();
         return pairs.Count > 0
             ? pairs[_source.NextInt32(0, pairs.Count)]
             : throw new InvalidOperationException("The options offer no castable spell.");

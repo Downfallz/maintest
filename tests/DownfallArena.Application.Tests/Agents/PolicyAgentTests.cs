@@ -71,6 +71,66 @@ public sealed class PolicyAgentTests
         agent.DecideTargets(board, new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, []))).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// ADR 0110: a policy that learned actions at the slot scores every (spell, target set) pair on its key, the
+    /// spell and the target together.
+    /// </summary>
+    [Fact]
+    public void An_action_at_the_slot_is_the_pair_whose_key_scores_best()
+    {
+        var options = new ActionOptions(
+            Two,
+            [
+                new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three, Four])),
+                new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+            ]);
+        var agent = Agent(Policy(("act:1:spell:strike:v1:3", 2.0), ("act:1:spell:rend:v1:2", 1.0)));
+
+        agent.DecideAction(Board(enemyHealth: 20), options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+    }
+
+    /// <summary>
+    /// A policy fitted on hidden intents never saw an <c>act:</c> key; scored on them, every pair would sit at its
+    /// fallback. It declares and targets in turn on the keys it did learn instead (ADR 0110).
+    /// </summary>
+    [Fact]
+    public void A_policy_that_never_learned_an_action_declares_then_targets_on_the_keys_it_knows()
+    {
+        var options = new ActionOptions(
+            Two,
+            [
+                new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three, Four])),
+                new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+            ]);
+        var agent = Agent(Policy((RendIntent, 1.0), (StrikeIntent, 2.0), ("targets:1:spell:strike:v1:3", 1.0)));
+
+        agent.DecideAction(Board(enemyHealth: 20), options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+    }
+
+    /// <summary>
+    /// ADR 0051 at the slot: the candidate weights read each (spell, target set) pair's own terms, in the order the
+    /// pairs are listed. Weighing the kill alone, only Strike on creature 4, at three health and the last of the
+    /// three pairs, scores above zero; without the weights every pair ties and the first is taken. The one
+    /// <c>act:</c> key, for another slot, only says the policy chooses at the slot.
+    /// </summary>
+    [Fact]
+    public void Candidate_weights_read_each_pairs_own_terms_at_the_slot()
+    {
+        var killOnly = new double[ScoreTerms.Count];
+        killOnly[ScoreTerms.Names.ToList().IndexOf("kill")] = 1.0;
+        var policy = Policy(("act:0:spell:strike:v1:2", 0.0)) with { Fallback = 0.0 };
+        var board = Board(enemyHealth: 20, fourthHealth: 3);
+        var options = new ActionOptions(
+            Two,
+            [
+                new TargetOptions(Two, TestContent.Rend, new LegalTargets(1, 1, [Three])),
+                new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [Three, Four])),
+            ]);
+
+        Agent(policy with { CandidateTermNames = ScoreTerms.Names, CandidateWeights = killOnly }).DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Strike, [Four]));
+        Agent(policy).DecideAction(board, options).ShouldBe(new ChosenAction(TestContent.Rend, [Three]));
+    }
+
     [Fact]
     public void Speed_and_evolution_follow_their_keys()
     {
@@ -98,6 +158,39 @@ public sealed class PolicyAgentTests
         Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:other.json"), Rules, new TestRandom(1))).Message.ShouldContain(Schema.Id);
         Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:reordered.json"), Rules, new TestRandom(1))).Message.ShouldContain("order");
         Should.Throw<ArgumentException>(() => factory.Create(new AgentSpec(AgentKind.Policy), Rules, new TestRandom(1)));
+    }
+
+    /// <summary>
+    /// The feature schema does not carry the declaration mode, so a policy that only ever chose at the slot would
+    /// score every intent at its fallback under hidden intents. It is refused there and seated where it learned
+    /// (ADR 0110); the other way round, a policy that never chose at the slot declares then targets.
+    /// </summary>
+    [Fact]
+    public void The_factory_refuses_a_policy_that_only_chose_at_the_slot_under_hidden_intents()
+    {
+        var source = Substitute.For<IPolicySource>();
+        source.Load("slot.json").Returns(Policy(("act:1:spell:strike:v1:3", 1.0)));
+        source.Load("both.json").Returns(Policy(("act:1:spell:strike:v1:3", 1.0), (StrikeIntent, 1.0)));
+        source.Load("hidden.json").Returns(Policy((StrikeIntent, 1.0)));
+        var factory = Handlers.Agents(source);
+        var atActivation = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:slot.json"), Rules, new TestRandom(1))).Message.ShouldContain("--declaration at-activation");
+        factory.Create(AgentSpec.Parse("policy:slot.json"), atActivation, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();
+        factory.Create(AgentSpec.Parse("policy:both.json"), Rules, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();
+        factory.Create(AgentSpec.Parse("policy:hidden.json"), atActivation, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();
+    }
+
+    [Fact]
+    public void A_policy_knows_which_kinds_of_decision_it_learned_and_reads_them_again_on_other_keys()
+    {
+        var policy = Policy(("act:1:spell:strike:v1:3", 1.0), ("pass", 0.0));
+
+        policy.Learned("act:").ShouldBeTrue();
+        policy.Learned("intent:").ShouldBeFalse();
+        policy.Learned("act:1:").ShouldBeFalse("a kind is the text up to the first colon");
+        (policy with { ActionKeys = [StrikeIntent, "pass"] }).Learned("intent:").ShouldBeTrue("a copy with other keys reads its own");
+        Should.Throw<ArgumentException>(() => policy.Learned("act"));
     }
 
     /// <summary>

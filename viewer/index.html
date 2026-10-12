@@ -274,8 +274,10 @@
 
     function spellUsage(steps) {
       const usage = {};
-      for (const step of steps.filter(s => s.kind === 'Intent')) {
-        const spell = step.action.split(':').slice(2).join(':');
+      // An Act step (ADR 0110) names its spell between the slot and the target slots: act:<slot>:<spell>:<targets>.
+      for (const step of steps.filter(s => s.kind === 'Intent' || s.kind === 'Act')) {
+        const parts = step.action.split(':');
+        const spell = (step.kind === 'Act' ? parts.slice(2, -1) : parts.slice(2)).join(':');
         usage[spell] = usage[spell] || { [PLAYER1]: 0, [PLAYER2]: 0 };
         usage[spell][step.slot] += 1;
       }

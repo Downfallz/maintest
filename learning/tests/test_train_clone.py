@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from conftest import SPELL_A, SPELL_B, write_run
+from conftest import ACT_A, ACT_B, SPELL_A, SPELL_B, write_run
 from downfall_learning.artifacts import build_dataset, load_run
 from downfall_learning.report import TrainingLog
 from downfall_learning.train_clone import (
@@ -36,6 +36,19 @@ def test_cloning_learns_the_rule_the_data_followed(tmp_path: Path) -> None:
     assert sum(row.get("best", False) for row in rows) == 1
     assert all("accuracy" in row and "loss" in row for row in rows)
     assert rows[0]["stamp"]["featureSchema"] == dataset.schema_id
+
+
+def test_cloning_learns_the_rule_from_spells_chosen_at_the_slot(tmp_path: Path) -> None:
+    dataset = build_dataset(
+        [load_run(write_run(tmp_path / "run", matches=60, combat_kind="Act"))], kinds=["Act"]
+    )
+
+    policy = train_clone(dataset, CloneOptions(epochs=15, alpha=1e-3, seed=1))
+
+    assert policy.action_keys == (ACT_A, ACT_B)
+    assert policy.metrics["accuracy"] > 0.9
+    assert policy.choose([0.5, 0.3, 1.0, 0.9, 1.0, 0.2], [ACT_A, ACT_B]) == ACT_A
+    assert policy.choose([0.5, 0.3, 1.0, 0.2, 1.0, 0.9], [ACT_A, ACT_B]) == ACT_B
 
 
 def test_cloning_over_several_kinds_keeps_every_action_key(tmp_path: Path) -> None:

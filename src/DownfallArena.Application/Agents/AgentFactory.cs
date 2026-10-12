@@ -219,6 +219,14 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             throw new InvalidDataException($"Policy '{spec.Path}' names its features in another order than feature schema '{schema.Id}'.");
         }
 
+        // The schema does not carry the declaration mode (the observation encodes no intent), so a policy that
+        // only ever chose at the slot would score every intent at its fallback and play the first spell listed.
+        // The other way round is safe: a policy that never chose at the slot declares, then targets (ADR 0110).
+        if (rules.CombatDeclaration == CombatDeclaration.HiddenIntent && policy.Learned(ActionEncoder.ActKeyPrefix) && !policy.Learned(ActionEncoder.IntentKeyPrefix))
+        {
+            throw new InvalidDataException($"Policy '{spec.Path}' learned to choose spells at the slot and never to declare an intent; play it with '--declaration at-activation'.");
+        }
+
         return new PolicyAgent(policy, new ObservationBuilder(schema), new ActionEncoder(schema), new CandidateTerms(resources, rules));
     }
 }

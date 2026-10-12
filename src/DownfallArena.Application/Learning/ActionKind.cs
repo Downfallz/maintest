@@ -10,4 +10,7 @@ public enum ActionKind
     Speed,
     Intent,
     Targets,
+
+    /// <summary>A spell and its targets chosen together at the slot, under a rule set that declares no intent (ADR 0110).</summary>
+    Act,
 }

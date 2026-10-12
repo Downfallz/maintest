@@ -1,3 +1,4 @@
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -19,6 +20,18 @@ public static class TargetSets
         }
 
         return Enumerable.Range(legal.MinTargets, legal.MaxTargets - legal.MinTargets + 1).SelectMany(size => Combinations(legal.Candidates, size));
+    }
+
+    /// <summary>
+    /// Every spell the action options offer with every legal target set of it (ADR 0110): spells in the options'
+    /// order, each spell's sets in <see cref="Of"/> order, and nothing for a spell with no legal target. The one
+    /// order the encoder lists, the candidate terms read and the agents choose in, so a recorded candidate and
+    /// its terms stay aligned.
+    /// </summary>
+    public static IEnumerable<ChosenAction> Pairs(ActionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.Spells.SelectMany(offered => Of(offered.LegalTargets).Select(targets => new ChosenAction(offered.Spell, targets)));
     }
 
     /// <summary>All subsets of the given size, in candidate order.</summary>

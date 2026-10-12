@@ -81,7 +81,7 @@ def _add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
     parser.add_argument("-o", "--output", type=Path, required=True, help=OUTPUT_HELP)
     parser.add_argument(
-        "--kinds", nargs="*", help="keep only these decision kinds (Evolve, Speed, Intent, Targets)"
+        "--kinds", nargs="*", help="keep only these decision kinds (Evolve, Speed, Intent, Targets, Act)"
     )
     parser.add_argument(
         "--validation", type=float, default=0.2, help="share of matches held out (default 0.2)"

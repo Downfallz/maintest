@@ -28,6 +28,9 @@ FEATURE_NAMES = (
 SPELL_A = "intent:0:spell:a:v1"
 SPELL_B = "intent:0:spell:b:v1"
 UNLOCK = "evolve:0:spell:c:v1"
+# The same two spells chosen with their target at the slot, as a rule set without intents records them.
+ACT_A = "act:0:spell:a:v1:3"
+ACT_B = "act:0:spell:b:v1:3"
 
 
 def stamp_json(**overrides: Any) -> dict[str, Any]:
@@ -69,6 +72,7 @@ def write_run(
     with_evolution: bool = True,
     with_terms: bool = False,
     rule_on_terms: bool = False,
+    combat_kind: str = "Intent",
 ) -> Path:
     """Writes a run whose intents follow ``rule`` and whose returns follow the health margin of the episode.
 
@@ -81,7 +85,14 @@ def write_run(
     candidate with the higher kill term rather than what ``rule`` says of the observation, and the return is
     half that term averaged over the episode's intents: what a learner can only recover from the terms, and
     exactly the taken term's half when the episode has one intent.
+
+    With ``combat_kind="Act"`` the combat steps are actions chosen at the slot (ADR 0110), keyed ``ACT_A`` and
+    ``ACT_B``: the same rule and the same returns, recorded the way a rule set that declares no intent does.
     """
+    combat_keys = (
+        {SPELL_A: ACT_A, SPELL_B: ACT_B} if combat_kind == "Act" else {SPELL_A: SPELL_A, SPELL_B: SPELL_B}
+    )
+    combat_phase = "Activation" if combat_kind == "Act" else "Intent"
     rng = np.random.default_rng(seed)
     stamp = dict(stamp or stamp_json())
     directory.mkdir(parents=True, exist_ok=True)
@@ -106,7 +117,8 @@ def write_run(
                 if rule_on_terms and kills is not None:
                     action = (SPELL_A, SPELL_B)[int(np.argmax(kills))]
                     taken_kills.append(float(kills.max()))
-                steps.append(step.write("Intent", "Intent", (SPELL_A, SPELL_B), action, kills))
+                candidates = (combat_keys[SPELL_A], combat_keys[SPELL_B])
+                steps.append(step.write(combat_phase, combat_kind, candidates, combat_keys[action], kills))
             if taken_kills:
                 return_value = 0.5 * float(np.mean(taken_kills))
             episodes.append(

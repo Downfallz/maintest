@@ -20,6 +20,7 @@ public sealed record PolicyFile
 
     private Dictionary<string, int>? _index;
     private IReadOnlyList<string>? _indexedKeys;
+    private KeyKinds? _kinds;
 
     public required string Kind { get; init; }
 
@@ -49,6 +50,30 @@ public sealed record PolicyFile
 
     /// <summary>Whether a candidate's terms move its score, so an agent only reads them when they do.</summary>
     public bool ReadsCandidateTerms => CandidateWeights is not null;
+
+    /// <summary>
+    /// Whether the policy learned any key of that kind, named by its prefix up to and including the colon
+    /// (<c>act:</c>, <c>intent:</c>): whether it has seen that kind of decision at all.
+    /// </summary>
+    public bool Learned(string kindPrefix)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(kindPrefix);
+        if (!kindPrefix.EndsWith(':'))
+        {
+            throw new ArgumentException($"A kind prefix ends with its colon: '{kindPrefix}'.", nameof(kindPrefix));
+        }
+
+        // Asked on every decision an agent falls back on, so the kinds are read once; one reference holds both
+        // the keys and their kinds, so a copy made with 'with' and given other keys reads them again.
+        var kinds = _kinds;
+        if (kinds is null || !ReferenceEquals(kinds.Keys, ActionKeys))
+        {
+            kinds = new KeyKinds(ActionKeys, [.. ActionKeys.Select(key => key[..(key.IndexOf(':', StringComparison.Ordinal) + 1)])]);
+            _kinds = kinds;
+        }
+
+        return kinds.Prefixes.Contains(kindPrefix);
+    }
 
     /// <summary>Eight hex digits of the file's content, the version a policy agent's spec carries.</summary>
     public required string Fingerprint { get; init; }
@@ -219,4 +244,6 @@ public sealed record PolicyFile
 
         return _index;
     }
+
+    private sealed record KeyKinds(IReadOnlyList<string> Keys, HashSet<string> Prefixes);
 }

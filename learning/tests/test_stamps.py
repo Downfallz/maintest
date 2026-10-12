@@ -28,6 +28,8 @@ def test_identical_stamps_differ_nowhere() -> None:
         ({"contentHash": "d" * 64}, "content"),
         ({"engineVersion": "abcdef123456-dirty"}, "engine"),
         ({"ruleSet": {**stamp_json()["ruleSet"], "roundCap": 20}}, "rules"),
+        # A run whose spells are chosen at the slot is another game (ADR 0110); a default stamp names no mode.
+        ({"ruleSet": {**stamp_json()["ruleSet"], "combatDeclaration": "AtActivation"}}, "rules"),
         ({"featureSchema": "features:v1+ba9876543210"}, "schema"),
         ({"player2Agent": "Random"}, "agents"),
         ({"baseSeed": 2}, "seed"),
