@@ -44,7 +44,7 @@ internal sealed class PracticeRun : IAsyncDisposable
         {
             var services = host.Services;
             var resources = services.GetRequiredService<IGameResources>();
-            var rules = PracticeScenario.Rules;
+            var rules = scenario.Rules;
             var person = new HumanSeat(stopping.Token);
             var fallback = new GreedyAgent(resources, rules);
             var player1 = new SeatAgent(new Occupant(new PracticeAgent(scenario, fallback, person), "practice"));

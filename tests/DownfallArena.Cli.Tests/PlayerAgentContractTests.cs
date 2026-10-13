@@ -18,10 +18,6 @@ public sealed class PlayerAgentContractTests
     {
         // It reads the board as it stands: its intent then its targets is its action.
         ["RandomAgent"] = "reads the board as it stands",
-
-        // Practice plays its own rule set, which declares hidden intents (PracticeScenario.Rules), and its recipes
-        // are written as intents; nothing ever asks it for an action.
-        ["PracticeAgent"] = "practice plays hidden intents",
     };
 
     [Fact]

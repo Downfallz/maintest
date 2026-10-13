@@ -33,6 +33,7 @@ from downfall_learning.knobs import (
 )
 from downfall_learning.mean_policy import mean_policy
 from downfall_learning.paired import format_paired, paired_difference
+from downfall_learning.playtest_timing import TimingError, format_timing, load_session, read_timing
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
@@ -366,6 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_mean_policy(commands)
     _add_jackknife(commands)
     _add_paired(commands)
+    _add_playtest_timing(commands)
 
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
@@ -422,6 +424,24 @@ def _add_paired(commands: argparse._SubParsersAction) -> None:
     paired.add_argument("second", type=Path, help="another evaluation.json on the same seeds and content")
     paired.add_argument("-o", "--output", type=Path, help="write paired.json here as well as printing it")
     paired.set_defaults(handler=_paired)
+
+
+def _add_playtest_timing(commands: argparse._SubParsersAction) -> None:
+    timing = commands.add_parser(
+        "playtest-timing",
+        help="the time per decision and per round of recorded playtests, by combat declaration (ADR 0110)",
+    )
+    timing.add_argument(
+        "sessions", nargs="+", type=Path, help="recorded session directories (runs/playtest/<id>/)"
+    )
+    timing.add_argument(
+        "--two-devices",
+        action="store_true",
+        help="these sessions were played by two people on two devices, so their rounds are timed too; "
+        "nothing a session records tells two devices from one hotseat screen",
+    )
+    timing.add_argument("-o", "--output", type=Path, help="write the summaries here as well as printing them")
+    timing.set_defaults(handler=_playtest_timing)
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -591,6 +611,25 @@ def _paired(arguments: argparse.Namespace) -> int:
     result = paired_difference(arguments.first, arguments.second, arguments.output)
     print(format_paired(result))
     if arguments.output is not None:
+        print(f"\nWritten to '{arguments.output}'.")
+    return 0
+
+
+def _playtest_timing(arguments: argparse.Namespace) -> int:
+    try:
+        sessions = [load_session(directory) for directory in arguments.sessions]
+    except TimingError as error:
+        print(error, file=sys.stderr)
+        return 1
+    for session in sessions:
+        if session.unreadable:
+            print(
+                f"{session.name}: {session.unreadable} unreadable line(s) of notes skipped.", file=sys.stderr
+            )
+    summaries = read_timing(sessions, arguments.two_devices)
+    print(format_timing(summaries))
+    if arguments.output is not None:
+        arguments.output.write_text(json.dumps(summaries, indent=2) + "\n", encoding="utf-8")
         print(f"\nWritten to '{arguments.output}'.")
     return 0
 
@@ -872,6 +911,10 @@ def jackknife_command() -> int:
 
 def paired_command() -> int:
     return _run("paired")
+
+
+def playtest_timing_command() -> int:
+    return _run("playtest-timing")
 
 
 def compare_stamps_command() -> int:

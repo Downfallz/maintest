@@ -55,6 +55,104 @@ public sealed class PracticeTableTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// The recipes at the slot set up the boards the free-activation playtest asks about
+    /// (docs/tabletop/free-activation-playtest.md): each is checked for the one thing it exists to show.
+    /// </summary>
+    [Fact]
+    public async Task A_recipe_at_the_slot_plays_spells_chosen_at_the_slot()
+    {
+        var (table, view, token) = await Started("slot-armor");
+        await using var _ = table;
+
+        view["waitingFor"]!.GetValue<string>().ShouldBe("Action");
+        var catalogue = Json(await table.HandleAsync("GET", "/api/catalogue", "", token));
+        catalogue["rules"]!["combatDeclaration"]!.GetValue<string>().ShouldBe("AtActivation");
+    }
+
+    [Fact]
+    public async Task The_armor_recipe_asks_the_person_after_the_enemy_has_cast_Carapace()
+    {
+        var (table, view, _) = await Started("slot-armor");
+        await using var _ = table;
+
+        view["board"]!["enemies"]![0]!["totalDefense"]!.GetValue<int>().ShouldBe(3);
+        Revealed(view).ShouldContain("spell:full_plate:v1");
+        view["waitingCreature"]!.GetValue<int>().ShouldBe(view["board"]!["allies"]![0]!["id"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task The_overdrive_recipe_makes_Fury_payable_before_the_person_chooses()
+    {
+        var (table, view, _) = await Started("slot-overdrive");
+        await using var _ = table;
+
+        Revealed(view).ShouldContain("spell:adrenaline_tonic:v1");
+        view["board"]!["allies"]![0]!["energy"]!.GetValue<int>().ShouldBe(4);
+        Offered(view).ShouldContain("spell:enraged_charge:v1");
+    }
+
+    [Fact]
+    public async Task The_drain_recipe_takes_Fury_out_of_reach_before_the_person_chooses()
+    {
+        var (table, view, _) = await Started("slot-drain");
+        await using var _ = table;
+
+        Revealed(view).ShouldContain("spell:extort:v1");
+        view["board"]!["allies"]![0]!["energy"]!.GetValue<int>().ShouldBe(2);
+        Offered(view).ShouldNotContain("spell:enraged_charge:v1");
+        Offered(view).ShouldContain("spell:reckless_swing:v1");
+    }
+
+    [Fact]
+    public async Task The_stun_recipe_skips_the_stunned_creature_and_asks_the_next()
+    {
+        var (table, view, _) = await Started("slot-stun");
+        await using var _ = table;
+
+        var allies = view["board"]!["allies"]!;
+        allies[0]!["isStunned"]!.GetValue<bool>().ShouldBeTrue();
+        view["waitingCreature"]!.GetValue<int>().ShouldBe(allies[1]!["id"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task The_chain_recipe_hands_the_person_their_three_allies_acting_first_in_round_five()
+    {
+        var (table, view, _) = await Started("slot-chain");
+        await using var _ = table;
+
+        view["board"]!["roundNumber"]!.GetValue<int>().ShouldBe(5);
+        var slots = view["board"]!["timeline"]!.AsArray();
+        slots.Take(3).ShouldAllBe(slot => slot!["owner"]!.GetValue<string>() == "Player1");
+        view["waitingCreature"]!.GetValue<int>().ShouldBe(slots[0]!["creature"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task The_chain_recipe_opens_on_the_ally_that_can_cast_Contagion()
+    {
+        var (table, view, _) = await Started("slot-chain");
+        await using var _ = table;
+
+        Offered(view).ShouldContain("spell:infectious_blast:v1");
+    }
+
+    /// <summary>A started recipe and the person's first view of it; the caller disposes the table.</summary>
+    private async Task<(PracticeTable Table, JsonNode View, string Token)> Started(string scenario)
+    {
+        var table = new PracticeTable(Options(), "practice-token");
+        var start = await table.HandleAsync("POST", "/api/practice", $$"""{"scenario":"{{scenario}}"}""", "practice-token");
+        start.Status.ShouldBe(200, Encoding.UTF8.GetString(start.Body));
+        var token = Json(start)["seatToken"]!.GetValue<string>();
+        var view = Json(await table.HandleAsync("GET", "/api/seat/player1", "", token));
+        return (table, view, token);
+    }
+
+    private static List<string> Revealed(JsonNode view) =>
+        [.. view["board"]!["revealedActions"]!.AsArray().Select(action => action!["spell"]!.GetValue<string>())];
+
+    private static List<string> Offered(JsonNode view) =>
+        [.. view["options"]!["action"]!["spells"]!.AsArray().Select(option => option!["spell"]!.GetValue<string>())];
+
     [Fact]
     public async Task Restart_reproduces_the_board_but_revokes_the_old_seat_and_its_pending_decision()
     {
@@ -82,7 +180,7 @@ public sealed class PracticeTableTests : IDisposable
         (await table.HandleAsync("POST", "/api/practice", "{}", "unknown")).Status.ShouldBe(403);
         (await table.HandleAsync("GET", "/api/seat/player1", "", "practice-token")).Status.ShouldBe(409);
         var state = Json(await table.HandleAsync("GET", "/api/practice", "", "practice-token"));
-        state["scenarios"]!.AsArray().Count.ShouldBe(4);
+        state["scenarios"]!.AsArray().Count.ShouldBe(9);
         state["active"].ShouldBeNull();
         var started = Json(await table.HandleAsync("POST", "/api/practice", """{"scenario":"targeting"}""", "practice-token"));
         var seat = started["seatToken"]!.GetValue<string>();
@@ -135,6 +233,11 @@ public sealed class PracticeTableTests : IDisposable
     [InlineData("multiclass")]
     [InlineData("stun")]
     [InlineData("resolution")]
+    [InlineData("slot-armor")]
+    [InlineData("slot-overdrive")]
+    [InlineData("slot-drain")]
+    [InlineData("slot-stun")]
+    [InlineData("slot-chain")]
     public async Task A_person_can_continue_every_recipe_to_a_real_outcome(string scenario)
     {
         await using var table = new PracticeTable(Options(), "practice-token");
@@ -190,6 +293,12 @@ public sealed class PracticeTableTests : IDisposable
             case "Target":
                 var legal = options["target"]!["legalTargets"]!;
                 reply["targets"] = new JsonArray([.. legal["candidates"]!.AsArray().Take(legal["maxTargets"]!.GetValue<int>()).Select(one => one!.DeepClone())]);
+                break;
+            case "Action":
+                var first = options["action"]!["spells"]![0]!;
+                var targets = first["legalTargets"]!;
+                reply["spell"] = first["spell"]!.DeepClone();
+                reply["targets"] = new JsonArray([.. targets["candidates"]!.AsArray().Take(targets["maxTargets"]!.GetValue<int>()).Select(one => one!.DeepClone())]);
                 break;
             default:
                 throw new InvalidOperationException($"Unexpected question {kind}.");

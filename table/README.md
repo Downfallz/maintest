@@ -317,6 +317,16 @@ replay. `--bind <your LAN IPv4 address>` and `--port N` also work for a phone.
 | Build a multiclass creature | Round 3, evolution | Add a different level-1 package to Brute or take a level-2 upgrade |
 | Interrupt an action | Round 5, Paralyzing Barb targets | Stun before an enemy acts; follow skipped actions and later immunity |
 | Read a layered resolution | Round 5, Void Pulse targets | Follow multiple targets, bleed and Deranged Charge's caster effect |
+| At the slot: answer an armor | Round 3, your Stormborn's action | The enemy Ironhide has cast Carapace: strike through it or turn to another enemy |
+| At the slot: an ally's Overdrive | Round 3, your Frenzied's action | Your Blighted's Overdrive has just made Fury payable |
+| At the slot: drained before your turn | Round 3, your Frenzied's action | The enemy Oppressor's Claim has drained an energy: Fury is out of reach |
+| At the slot: stunned before your turn | Round 3, your next creature's action | The enemy Oppressor's Crash stunned your first creature, whose slot is skipped |
+| At the slot: three allies in a row | Round 5, your three creatures act first | Open with Contagion, follow up, finish |
+
+The five "At the slot" scenarios play a rule set that chooses each spell at its creature's slot (ADR 0110):
+nothing is declared, and the person picks a card then its targets when the creature's turn comes. They set up
+the boards the free-activation playtest asks about (`docs/tabletop/free-activation-playtest.md`); the rule line
+says "spells chosen at the slot".
 
 Practice uses seed 17 and a ten-round cap, plays its setup through the actual engine,
 and continues normally after handing player 1 to you. It writes no playtest files or

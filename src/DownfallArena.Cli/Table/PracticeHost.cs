@@ -24,7 +24,7 @@ internal static class PracticeHost
         ConsoleCancelEventHandler cancel = (_, args) => { args.Cancel = true; stopping.Cancel(); };
         Console.CancelKeyPress += cancel;
         Console.WriteLine($"Practice table: {server.Url}?practice={token}");
-        Console.WriteLine($"Four reproducible scenarios. Seed {PracticeScenario.Seed}. Nothing is recorded. Ctrl+C to stop.");
+        Console.WriteLine($"{PracticeScenario.All.Count} reproducible scenarios. Seed {PracticeScenario.Seed}. Nothing is recorded. Ctrl+C to stop.");
         try
         {
             await server.RunAsync(stopping.Token);
