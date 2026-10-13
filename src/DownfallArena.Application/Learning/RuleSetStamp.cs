@@ -10,7 +10,8 @@ namespace DownfallArena.Application.Learning;
 /// different progression: the same catalogue bought two packages a round and bought every other round is two
 /// games, and two runs of them are not comparable (ADR 0056). So is the combat declaration (ADR 0110): a run that
 /// chooses spells at the slot is not the game of one that declares them before combat. An artifact writes it
-/// only when it is not the default, so every stamp written before it reads the same as one written after.
+/// only when it is not the hidden intent, the rule every stamp written before the field played, so those read
+/// as written; since ADR 0112 made spells chosen at the slot the default, every new stamp names it.
 /// </remarks>
 public sealed record RuleSetStamp(
     int TeamSize,

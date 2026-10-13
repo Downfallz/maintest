@@ -32,7 +32,7 @@ public sealed class RuleSetFileTests : IDisposable
 
     /// <summary>
     /// When a spell is chosen is part of the rule set a table plays (ADR 0110): a file says it the way the
-    /// command line does, and one that says nothing declares hidden intents.
+    /// command line does, and one that says nothing plays the engine's, spells chosen at the slot (ADR 0112).
     /// </summary>
     [Fact]
     public void A_rule_set_file_names_when_a_spell_is_chosen_and_says_it_on_the_line_it_prints()
@@ -40,7 +40,8 @@ public sealed class RuleSetFileTests : IDisposable
         var atActivation = RuleSetFile.Read(Written("""{"combatDeclaration":"at-activation"}"""));
 
         atActivation.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
-        RuleSetFile.Read(Written("""{"teamSize":2}""")).CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        RuleSetFile.Read(Written("""{"combatDeclaration":"hidden-intent"}""")).CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        RuleSetFile.Read(Written("""{"teamSize":2}""")).CombatDeclaration.ShouldBe(RuleSet.Default.CombatDeclaration);
         RuleSetFile.Describe(atActivation, "b.json").ShouldContain("crit, spells chosen at activation (b.json)");
         Should.Throw<ArgumentException>(() => RuleSetFile.Read(Written("""{"combatDeclaration":"atActivation"}""")))
             .Message.ShouldContain("not a combat declaration");
@@ -92,7 +93,7 @@ public sealed class RuleSetFileTests : IDisposable
     {
         var described = RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 2), "tabletop.json");
 
-        described.ShouldBe("Rules 4v4, 3 energy, 1 picks every 2 rounds from 1, 12 rounds, x1.5 crit (tabletop.json)");
+        described.ShouldBe("Rules 4v4, 3 energy, 1 picks every 2 rounds from 1, 12 rounds, x1.5 crit, hidden intents (tabletop.json)");
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public sealed class RuleSetFileTests : IDisposable
     public void A_one_against_one_says_the_one_pick_it_gives_rather_than_the_allowance()
     {
         RuleSetFile.Describe(RuleSet.Create(1, 2, 2, 12, 2.0, 1, 2), "solo.json")
-            .ShouldBe("Rules 1v1, 2 energy, 1 picks every 2 rounds from 1, 12 rounds, x2 crit (solo.json)");
+            .ShouldBe("Rules 1v1, 2 energy, 1 picks every 2 rounds from 1, 12 rounds, x2 crit, hidden intents (solo.json)");
     }
 
     /// <summary>A rule set that offers a pick every round says so in words rather than in an interval of 1.</summary>
@@ -111,7 +112,7 @@ public sealed class RuleSetFileTests : IDisposable
     public void A_rule_set_that_offers_every_round_says_every_round()
     {
         RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 1), "every.json")
-            .ShouldBe("Rules 4v4, 3 energy, 1 picks every round, 12 rounds, x1.5 crit (every.json)");
+            .ShouldBe("Rules 4v4, 3 energy, 1 picks every round, 12 rounds, x1.5 crit, hidden intents (every.json)");
     }
 
     /// <summary>Playing the default is allowed; not saying so is not.</summary>

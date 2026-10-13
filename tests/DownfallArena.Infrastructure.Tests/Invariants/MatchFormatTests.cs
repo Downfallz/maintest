@@ -107,6 +107,6 @@ public sealed class MatchFormatTests
             BaseSeed = baseSeed,
         });
 
-        return [.. batch.Results.OrderBy(result => result.Index).Select(result => new PlayedMatch(result, log.Of(result.MatchId)))];
+        return [.. batch.Results.OrderBy(result => result.Index).Select(result => new PlayedMatch(result, log.Of(result.MatchId), rules.CombatDeclaration))];
     }
 }

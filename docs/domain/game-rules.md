@@ -60,14 +60,14 @@ listed in [spells.md](spells.md).
   level-3 packages and teaching no spell: Titan (sunder 2; stun immunity until 2026-10-09), Archmage (+1
   energy at upkeep), Apex (+3 damage; +2 until 2026-10-09).
 
-- Combat declaration (ADR 0110): a rule set may declare no intent instead of hidden ones (`AtActivation`).
-  `IntentSelection` then passes through without asking anyone, and at each slot the owner submits a spell the
+- Combat declaration (ADR 0110, 0112): the default rule set declares no intent (`AtActivation`).
+  `IntentSelection` passes through without asking anyone, and at each slot the owner submits a spell the
   creature knows and can pay for now with its targets; a spell with no legal target is refused rather than
   cast on nothing. A creature with nothing it can cast when its slot comes up -- dead, stunned, or no spell it
-  can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. The
-  default rule set declares hidden intents. `play`, `human`, `simulate`, `evaluate` and `table` play the
-  other with `--declaration at-activation`, every agent included, and so does a table with people at it,
-  whose page asks each player for the action at their creature's slot.
+  can pay for on a legal target -- is skipped without its owner being asked, and nothing resolves for it. A
+  rule set may still declare hidden intents (`HiddenIntent`, the default until ADR 0112): `play`, `human`,
+  `simulate`, `evaluate` and `table` play it with `--declaration hidden-intent`, every agent included, and so
+  does a table with people at it, until mode A is removed.
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the
@@ -145,18 +145,22 @@ listed in [spells.md](spells.md).
       places; the other side's places do not move. Completes when every such Player has; a Round where no
       side holds two places in a tie passes through it without asking anyone.
 3. **Combat**
-   1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
+   1. `IntentSelection`: passes through without asking anyone under the default rule set (ADR 0112). Under
+      hidden intents, each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell, whether or not it can pay for it yet: the cost is checked when its
       slot comes up, and a Creature still short then fizzles (ADR 0107). Completes when every such Creature
       has an Intent.
-   2. `Activation` (ADR 0083): following the timeline, one slot at a time, the Creature's Intent is revealed,
-      its owner chooses targets on the board as it stands, and **the action resolves as soon as they are
-      confirmed**, before the next slot comes up. Its Spell and targets become public together, never before.
-      The targets must satisfy the Spell's targeting spec (origin, scope, count). A Creature that cannot act
-      when its slot comes up -- dead, stunned, no longer knowing or able to pay for the Spell, or left with no
-      legal target -- is revealed all the same, with no targets, and fizzles at no cost: its owner is not
-      asked. A Team wiped by an action ends the Match there. Otherwise the sub-phase completes when the cursor
-      reaches the end of the timeline. An action resolves in this order:
+   2. `Activation` (ADR 0083): following the timeline, one slot at a time, the Creature's owner chooses a
+      Spell it can pay for and its targets on the board as it stands (ADR 0112) -- under hidden intents, the
+      Creature's Intent is revealed and its owner chooses only the targets -- and **the action resolves as soon
+      as they are confirmed**, before the next slot comes up. Its Spell and targets become public together,
+      never before. The targets must satisfy the Spell's targeting spec (origin, scope, count). A Creature that
+      cannot act when its slot comes up -- dead, stunned, or with nothing it can pay for on a legal target -- is
+      skipped: its owner is not asked and nothing resolves (`SlotSkipped`). Under hidden intents a Creature that
+      cannot act -- dead, stunned, no longer knowing or able to pay for the Spell of its Intent, or left with no
+      legal target for it -- is revealed all the same, with no targets, and fizzles at no cost; its owner is not
+      asked either. A Team wiped by an action ends the Match there. Otherwise the sub-phase completes when the
+      cursor reaches the end of the timeline. An action resolves in this order:
       - the energy cost is spent;
       - the actor's Damage bonus -- its Passives' and its Damage buffs' -- is added to each damage it deals a
         target, and to nothing it does to itself (ADR 0101);
@@ -192,7 +196,4 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
   spells: three gaps the inherited spells fall into ([spells.md](spells.md)).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
-- Declaring the Spell at the slot together with its targets instead of as a hidden Intent before combat: the
-  engine plays both (ADR 0110), and the table decides which one stays
-  ([free-activation-plan.md](free-activation-plan.md)).
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.

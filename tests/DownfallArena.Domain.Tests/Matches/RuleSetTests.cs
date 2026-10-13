@@ -15,7 +15,8 @@ public sealed class RuleSetTests
             roundCap: 20,
             criticalMultiplier: 2.0,
             firstEvolutionRound: 1,
-            evolutionInterval: 2));
+            evolutionInterval: 2,
+            combatDeclaration: CombatDeclaration.AtActivation));
     }
 
     /// <summary>
@@ -36,21 +37,22 @@ public sealed class RuleSetTests
             roundCap: RuleSet.Default.RoundCap,
             criticalMultiplier: RuleSet.Default.CriticalMultiplier,
             firstEvolutionRound: RuleSet.Default.FirstEvolutionRound,
-            evolutionInterval: RuleSet.Default.EvolutionInterval));
+            evolutionInterval: RuleSet.Default.EvolutionInterval,
+            combatDeclaration: RuleSet.Default.CombatDeclaration));
     }
 
-    /// <summary>Today's rule stays the default while the two are compared (ADR 0110).</summary>
+    /// <summary>The owner adopted spells chosen at the slot after the playtest (ADR 0112).</summary>
     [Fact]
-    public void The_default_rule_set_declares_a_hidden_intent_before_combat() =>
-        RuleSet.Default.CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+    public void The_default_rule_set_chooses_each_spell_at_its_slot() =>
+        RuleSet.Default.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
 
     [Fact]
     public void Another_combat_declaration_leaves_every_other_value_alone()
     {
-        var atActivation = RuleSet.Default.WithCombatDeclaration(CombatDeclaration.AtActivation);
+        var hiddenIntent = RuleSet.Default.WithCombatDeclaration(CombatDeclaration.HiddenIntent);
 
-        atActivation.CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
-        atActivation.ShouldBe(RuleSet.Create(
+        hiddenIntent.CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
+        hiddenIntent.ShouldBe(RuleSet.Create(
             teamSize: RuleSet.Default.TeamSize,
             energyPerRound: RuleSet.Default.EnergyPerRound,
             evolutionPicksPerOpportunity: RuleSet.Default.EvolutionPicksPerOpportunity,
@@ -58,18 +60,18 @@ public sealed class RuleSetTests
             criticalMultiplier: RuleSet.Default.CriticalMultiplier,
             firstEvolutionRound: RuleSet.Default.FirstEvolutionRound,
             evolutionInterval: RuleSet.Default.EvolutionInterval,
-            combatDeclaration: CombatDeclaration.AtActivation));
-        atActivation.ShouldNotBe(RuleSet.Default);
+            combatDeclaration: CombatDeclaration.HiddenIntent));
+        hiddenIntent.ShouldNotBe(RuleSet.Default);
     }
 
     [Fact]
     public void The_combat_declaration_a_rule_set_already_has_leaves_it_as_it_is() =>
-        RuleSet.Default.WithCombatDeclaration(CombatDeclaration.HiddenIntent).ShouldBeSameAs(RuleSet.Default);
+        RuleSet.Default.WithCombatDeclaration(CombatDeclaration.AtActivation).ShouldBeSameAs(RuleSet.Default);
 
     [Fact]
     public void A_format_keeps_the_combat_declaration() =>
-        RuleSet.Default.WithCombatDeclaration(CombatDeclaration.AtActivation).InFormat(MatchFormat.Parse("1v1"))
-            .CombatDeclaration.ShouldBe(CombatDeclaration.AtActivation);
+        RuleSet.Default.WithCombatDeclaration(CombatDeclaration.HiddenIntent).InFormat(MatchFormat.Parse("1v1"))
+            .CombatDeclaration.ShouldBe(CombatDeclaration.HiddenIntent);
 
     [Fact]
     public void An_unknown_combat_declaration_is_rejected() =>

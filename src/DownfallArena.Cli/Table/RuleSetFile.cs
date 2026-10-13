@@ -36,7 +36,8 @@ internal sealed record RuleSetFile
 
     /// <summary>
     /// When a creature's spell is chosen (ADR 0110): <c>hidden-intent</c>, declared face down before combat, or
-    /// <c>at-activation</c>, chosen with its targets when its slot comes up. Absent means the first.
+    /// <c>at-activation</c>, chosen with its targets when its slot comes up. Absent means the engine's, the second
+    /// since ADR 0112.
     /// </summary>
     public string? CombatDeclaration { get; init; }
 
@@ -49,7 +50,9 @@ internal sealed record RuleSetFile
         }
 
         var file = Parse(path);
-        var declaration = Domain.Matches.CombatDeclaration.HiddenIntent;
+        // A file that names no declaration plays the engine's (ADR 0112), unlike its numbers, which default to the
+        // tabletop's: when a spell is chosen is the game's rule, not a number a table tunes.
+        var declaration = RuleSet.Default.CombatDeclaration;
         if (file.CombatDeclaration is { } named && !CombatDeclarationText.TryParse(named, out declaration))
         {
             throw new ArgumentException($"Rule set '{path}' is not playable: {CombatDeclarationText.Unknown(named)}", nameof(path));
@@ -82,7 +85,7 @@ internal sealed record RuleSetFile
 
         // The usable picks, not the allowance: in 1v1 the allowance is two and one is all a side can take
         // (ADR 0066), and a line that read "2 picks" of a game that gives one would be the wrong line.
-        var declared = rules.CombatDeclaration == Domain.Matches.CombatDeclaration.AtActivation ? ", spells chosen at activation" : string.Empty;
+        var declared = rules.CombatDeclaration == Domain.Matches.CombatDeclaration.AtActivation ? ", spells chosen at activation" : ", hidden intents";
         return $"Rules {rules.Format}, {rules.EnergyPerRound} energy, {rules.EvolutionPicksUsableInAnOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit{declared} ({where})";
     }
 

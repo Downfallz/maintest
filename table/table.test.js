@@ -1935,5 +1935,6 @@ test('a game that chooses spells at the slot says so on its rule line and in its
 
   assert.match(p.context.ruleLine({ contentHash: 'abcdef', rules: { ...rules, combatDeclaration: 'AtActivation' } }), /spells chosen at the slot/);
   assert.doesNotMatch(p.context.ruleLine({ contentHash: 'abcdef', rules }), /at the slot/);
+  assert.match(p.context.ruleLine({ contentHash: 'abcdef', rules }), /hidden intents/, 'the other rule is named too since ADR 0112');
   assert.match(JSON.stringify(p.nodes), /chooses its spell when its turn comes|chooses a spell and its targets/);
 });

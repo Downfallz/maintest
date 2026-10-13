@@ -11,8 +11,8 @@ namespace DownfallArena.Domain.Matches;
 public enum CombatDeclaration
 {
     /// <summary>
-    /// Today's rule and the default: every Creature on the timeline declares a hidden Intent before combat, and at
-    /// its slot its owner chooses only the targets (ADR 0083, 0107).
+    /// The rule before ADR 0112 and its default until then: every Creature on the timeline declares a hidden Intent
+    /// before combat, and at its slot its owner chooses only the targets (ADR 0083, 0107).
     /// </summary>
     HiddenIntent,
 

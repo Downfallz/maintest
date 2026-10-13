@@ -175,7 +175,7 @@ public sealed class PolicyAgentTests
         var factory = Handlers.Agents(source);
         var atActivation = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
 
-        Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:slot.json"), Rules, new TestRandom(1))).Message.ShouldContain("--declaration at-activation");
+        Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:slot.json"), Rules, new TestRandom(1))).Message.ShouldContain("without '--declaration hidden-intent'");
         factory.Create(AgentSpec.Parse("policy:slot.json"), atActivation, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();
         factory.Create(AgentSpec.Parse("policy:both.json"), Rules, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();
         factory.Create(AgentSpec.Parse("policy:hidden.json"), atActivation, new TestRandom(1)).ShouldBeOfType<PolicyAgent>();

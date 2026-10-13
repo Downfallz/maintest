@@ -5,5 +5,6 @@
   "firstEvolutionRound": 1,
   "evolutionInterval": 2,
   "roundCap": 20,
-  "criticalMultiplier": 2.0
+  "criticalMultiplier": 2.0,
+  "combatDeclaration": "at-activation"
 }

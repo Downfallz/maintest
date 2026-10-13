@@ -28,9 +28,10 @@ public sealed record RuleSet
     /// <summary>
     /// The prototype's values: three creatures, two energy per round, two evolution picks in an opportunity that
     /// comes at round 1 and every second round after it, double damage on a crit (ADR 0056), and the table's
-    /// twenty rounds where the prototype had thirty (ADR 0105), with a hidden Intent declared before combat.
+    /// twenty rounds where the prototype had thirty (ADR 0105), and each spell chosen with its targets at its
+    /// creature's slot (ADR 0112), where the prototype declared a hidden Intent before combat.
     /// </summary>
-    public static RuleSet Default { get; } = new(3, 2, 2, 20, 2.0, 1, 2, CombatDeclaration.HiddenIntent);
+    public static RuleSet Default { get; } = new(3, 2, 2, 20, 2.0, 1, 2, CombatDeclaration.AtActivation);
 
     public int TeamSize { get; }
 
@@ -84,6 +85,8 @@ public sealed record RuleSet
         double criticalMultiplier,
         int firstEvolutionRound = 1,
         int evolutionInterval = 2,
+        // The declaration the callers of this factory were written against, and not Default's since ADR 0112:
+        // the hidden intent's own tests and recipes name no declaration, and removing mode A removes this.
         CombatDeclaration combatDeclaration = CombatDeclaration.HiddenIntent)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(teamSize, 1);

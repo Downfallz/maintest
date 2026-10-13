@@ -29,7 +29,7 @@ public static class ArtifactJson
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             WriteIndented = indented,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { OmitTheDefaultCombatDeclaration } },
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { OmitTheHiddenIntentDeclaration } },
         };
         options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new VersionedIdConverterFactory());
@@ -44,11 +44,12 @@ public static class ArtifactJson
     }
 
     /// <summary>
-    /// A rule-set stamp names its combat declaration only when it is not today's rule (ADR 0110): the stamps
-    /// written before the field existed, and the readers that compare them as written (the Python stamps, the
-    /// viewer), then read a default run as the same game they always did.
+    /// A rule-set stamp names its combat declaration only when it is not the hidden intent (ADR 0110), the rule
+    /// every stamp written before the field existed played: the readers that compare them as written (the Python
+    /// stamps, the viewer) read those as the same game, and since ADR 0112 made the other one the default, every
+    /// new run names it.
     /// </summary>
-    private static void OmitTheDefaultCombatDeclaration(JsonTypeInfo type)
+    private static void OmitTheHiddenIntentDeclaration(JsonTypeInfo type)
     {
         if (type.Type != typeof(RuleSetStamp))
         {

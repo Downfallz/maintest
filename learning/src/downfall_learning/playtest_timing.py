@@ -96,7 +96,8 @@ def load_session(directory: Path) -> Session:
     if not notes.is_file() or not manifest.is_file():
         raise TimingError(f"{directory}: no {NOTES} and {MANIFEST} here; is it a recorded session?")
     rules = json.loads(manifest.read_text(encoding="utf-8")).get("stamp", {}).get("ruleSet", {})
-    # The stamp names the declaration only when it is not the default (ADR 0110, PR 2).
+    # The stamp names the declaration only when it is not the hidden intent (ADR 0110, PR 2), the rule every
+    # stamp before the field played.
     session = Session(directory.name, rules.get("combatDeclaration", HIDDEN_INTENT))
     for line in notes.read_text(encoding="utf-8").splitlines():
         if not line.strip():

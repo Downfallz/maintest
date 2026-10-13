@@ -1,7 +1,7 @@
 # 0010. Rounds are driven by a phase and sub-phase state machine
 
 Date: 2026-09-08
-Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md)
+Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules
 
 ## Context
 
