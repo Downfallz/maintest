@@ -122,3 +122,23 @@ for (const scenario of ['stun', 'resolution']) {
     }
   });
 }
+
+// A recipe at the slot (ADR 0110): the enemy's Claim has drained the Berserker before its turn, so the page
+// asks for its spell with Fury already out of reach, and the card chosen with its targets resolves as one
+// action.
+test('slot-drain asks for the spell at the slot, with Fury out of reach', async ({ page }) => {
+  await open(page, 'slot-drain');
+  await expect(page.locator('#rules')).toContainText('spells chosen at the slot');
+  await expect(page.locator('#asking')).toContainText('your turn: choose a spell');
+  const cards = page.locator('#own-hand .offered').filter({ visible: true });
+  await expect(cards.filter({ hasText: 'Wild Swing' })).toHaveCount(1);
+  await expect(cards.filter({ hasText: 'Fury' })).toHaveCount(0);
+  const asked = (await (await fetch(`${url}api/seat/player1`, { headers: { 'X-Seat-Token': (await state()).seatToken } })).json()).waitingAsked;
+  await cards.filter({ hasText: 'Wild Swing' }).click();
+  await page.locator('[data-focus^="target-"], [data-focus^="mini-target-"]').filter({ visible: true }).first().click();
+  const answered = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
+  await page.locator('#choices button', { hasText: /^Cast on/ }).click();
+  const response = await answered;
+  expect(response.status()).toBe(204);
+  expect(JSON.parse(response.request().postData())).toMatchObject({ kind: 'Action', spell: 'spell:reckless_swing:v1', asked });
+});
