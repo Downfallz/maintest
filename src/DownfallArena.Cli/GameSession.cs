@@ -108,8 +108,9 @@ internal sealed class GameSession
     /// </summary>
     public void PrintStamp()
     {
-        // Named only when it is not today's rule, so the line every earlier run printed is unchanged (ADR 0110).
-        var declared = _rules.CombatDeclaration == CombatDeclaration.AtActivation ? ", spells chosen at activation" : string.Empty;
+        // Named either way: the hidden intent was the default until ADR 0112, so a line naming neither would mean
+        // one rule in an older log and the other in a newer one.
+        var declared = _rules.CombatDeclaration == CombatDeclaration.AtActivation ? ", spells chosen at activation" : ", hidden intents";
         var seed = UsesSessionSeed ? $" Seed {_seed}." : string.Empty;
         Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Format {_rules.Format}, {_rules.EvolutionPicksUsableInAnOpportunity} pick(s) an opportunity{declared}.{seed}");
     }

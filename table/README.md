@@ -39,12 +39,12 @@ curl -H "X-Seat-Token: <operator token>" -H "Content-Type: application/json" \
   -d '{"player1":"person","player2":"greedy","who":"mk"}' http://127.0.0.1:5099/api/tables
 ```
 
-A table chooses spells at the slot instead of declaring hidden intents (ADR 0110) when the host was started
-with `--declaration at-activation`, when its `--rules` file says `"combatDeclaration": "at-activation"`, or
-when the request that opens it says `"declaration": "at-activation"` -- the admin panel's **Spells** chooser.
-Nothing is declared there: when a creature's slot comes up, its player taps one of its castable cards, picks
-that spell's targets on the battlefield and confirms, and the action resolves. Until the targets are confirmed,
-**Choose another spell** goes back to the cards (`slot.js`).
+A table chooses spells at the slot (ADR 0110), the default since ADR 0112. It declares hidden intents instead
+when the host was started with `--declaration hidden-intent`, when its `--rules` file says
+`"combatDeclaration": "hidden-intent"`, or when the request that opens it says `"declaration": "hidden-intent"`
+-- the admin panel's **Spells** chooser. At the slot nothing is declared: when a creature's slot comes up, its
+player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
+action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
 ## Preview
 

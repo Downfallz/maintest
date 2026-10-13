@@ -1,7 +1,7 @@
 # 0107. A creature may declare a spell it cannot pay for yet
 
 Date: 2026-10-10
-Status: Accepted
+Status: Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules
 
 ## Context
 

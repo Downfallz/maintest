@@ -1,16 +1,18 @@
 # Free activation: review and plan
 
-Status: planning only. Nothing here is implemented. The plan is committed so the work of
-[ADR 0110](../adr/0110-a-rule-set-may-declare-spells-at-activation.md) has a fixed reference; that commit is a
-decision to build the switch and measure it, not to adopt the rule.
+Status: PRs 0 to 8 are built, and the owner adopted mode B on 2026-10-13
+([ADR 0112](../adr/0112-spells-are-chosen-at-the-slot-by-default.md)); row 9b lists what is left. The plan was
+committed so the work of [ADR 0110](../adr/0110-a-rule-set-may-declare-spells-at-activation.md) had a fixed
+reference; that commit was a decision to build the switch and measure it, not to adopt the rule.
 Date: 2026-10-11.
 
 It reviews a design handoff brought to the owner on 2026-10-11 ("Suppression de l'Intent caché : choix du
 sort et de la cible à l'activation"), which proposed choosing the spell and its targets together at the slot.
 
-Vocabulary used here: **mode A** is today's rule (`HiddenIntent`: a hidden Intent per creature, then targets
-at the slot, ADR 0083 and 0107). **Mode B** is the proposal (`AtActivation`: spell and targets chosen
-together at the slot).
+Vocabulary used here: **mode A** is the rule the plan was written under (`HiddenIntent`: a hidden Intent per
+creature, then targets at the slot, ADR 0083 and 0107). **Mode B** is the proposal (`AtActivation`: spell and
+targets chosen together at the slot), the default since ADR 0112. The sections below are the plan as written
+on 2026-10-11, so "today" and "the default" in them mean mode A.
 
 ## 1. Verdict
 
@@ -69,7 +71,7 @@ place the combat phase has a mind game. The flag is cheap enough to let the tabl
 
 | Question | Recommendation |
 | --- | --- |
-| Where the mode lives | `RuleSet.CombatDeclaration` enum: `HiddenIntent` (default) and `AtActivation`. JSON key `combatDeclaration` in `RuleSetFile`, defaulting to `hiddenIntent` so every existing file and caller is unchanged. Mirrored in `RuleSetStamp` so runs and policies of the two modes never compare as the same rules. |
+| Where the mode lives | `RuleSet.CombatDeclaration` enum: `HiddenIntent` (default) and `AtActivation`. JSON key `combatDeclaration` in `RuleSetFile`, defaulting to `hiddenIntent` so every existing file and caller is unchanged (both defaults became `AtActivation` with ADR 0112). Mirrored in `RuleSetStamp` so runs and policies of the two modes never compare as the same rules. |
 | The sub-phase | Keep `IntentSelection` in the enum and the flow table; in mode B the gate passes through it without asking anyone, the way `TieOrder` already passes through a round with no ties. Removing it breaks `RoundFlow`, `RoundFlowTests` and the observation encoder (sub-phase 5/9, 6/9) for nothing. |
 | Declaring a spell one cannot pay | No, in mode B. The slot check is the only check; `ActionRules.ValidateAction` already does it. ADR 0107 stays valid for mode A. |
 | No legal cast | Skipped, owner not asked, as ADR 0083 rules. With today's content only death and stun get there, since every creature starts with Focus; the engine does not rely on that. |
@@ -158,7 +160,7 @@ Mode A is the default at every step, CI stays green, the digest never moves unti
 | 7 | The bot reading | docs (journal), scripts, learning/ | The A/B table of §5 on the same seeds and content, with the caveat that strength does not compare across modes. No tuning pass. As built: `scripts/declaration-reading.py` reads the shape from traces of one agent against itself under both modes, and `score-content --declaration at-activation` reads the bands (journal, 2026-10-12). The Quick share cannot be read with the bots, because no agent's speed decision reads the mode. |
 | 8 | The table playtest | docs, Cli (practice), learning/ | The seven scenarios of the handoff played in both modes on the app, no cardboard changes. Rules and feel can be tried in hotseat; the time readings of §5 come from two people on two devices. As built: `docs/tabletop/free-activation-playtest.md` (the protocol, and the owner's first readings), five practice recipes at the slot for the scenarios a board can be set up for (1, 2, 3, 4, 7), and `playtest-timing` (learning/), which reads the time per decision and per round out of recorded sessions. The time readings wait for two people. |
 | 9a | Drop | all | One PR removes the mode: the flag makes it a clean removal. ADR 0110 is marked Deprecated, with the numbers. |
-| 9b | Adopt | all | A second ADR supersedes parts of 0010, 0070, 0083 and 0107; mode B becomes the default; a mode B benchmark digest; a tuning pass under mode B; rulebook, player aid, components, Automa rewritten; mode A removed one or two releases later. |
+| 9b | Adopt | all | A second ADR supersedes parts of 0010, 0070, 0083 and 0107; mode B becomes the default; a mode B benchmark digest; a tuning pass under mode B; rulebook, player aid, components, Automa rewritten; mode A removed one or two releases later. Chosen by the owner on 2026-10-13, in steps: ADR 0112, the default and the digest first; then the tuning pass; then the rulebook and its companions; mode A's removal last. |
 
 PRs 1 to 4 are sequential. PR 5 depends on 2. PR 6 depends on 5. PR 7 needs 3. PR 8 needs 6, and its time
 readings need 5b. PR 3 is the

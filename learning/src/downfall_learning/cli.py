@@ -78,6 +78,9 @@ DATA_HELP = "the authored content directory"
 OUTPUT_HELP = "the directory the model is written to"
 #: The engine's `--declaration` values (src/DownfallArena.Cli/CombatDeclarationText.cs).
 DECLARATIONS = ("hidden-intent", "at-activation")
+#: What the engine plays when no `--declaration` is given: `RuleSet.Default`'s, spells chosen at the slot
+#: since ADR 0112. Written into what a run records, so a record says which game it read without the engine.
+ENGINE_DECLARATION = "at-activation"
 
 
 def _add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
@@ -833,7 +836,7 @@ def _score_content(arguments: argparse.Namespace) -> int:
     arguments.output.mkdir(parents=True, exist_ok=True)
     path = arguments.output / "score.json"
     # Which declaration it was played under, since two scores under different ones never compare (ADR 0110).
-    written = {**score.to_json(), "declaration": arguments.declaration or DECLARATIONS[0]}
+    written = {**score.to_json(), "declaration": arguments.declaration or ENGINE_DECLARATION}
     path.write_text(json.dumps(written, indent=2) + "\n", encoding="utf-8")
     print(format_score(score, objective))
     print(f"\nWritten to '{path}'.")

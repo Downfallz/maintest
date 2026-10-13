@@ -656,8 +656,8 @@ class ContentEngine:
     data: Path
     workdir: Path
     builder: Sequence[str] = DATA_BUILDER_COMMAND
-    #: The engine's ``--declaration``, or ``None`` for the rule set's own, hidden intents (ADR 0110). Handed
-    #: to every evaluation, so a catalogue can be read under spells chosen at the slot against the same bands.
+    #: The engine's ``--declaration``, or ``None`` for the rule set's own, spells chosen at the slot since ADR
+    #: 0112. Handed to every evaluation, so a catalogue can be read under either declaration against one band.
     declaration: str | None = None
 
 

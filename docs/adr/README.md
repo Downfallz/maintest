@@ -15,7 +15,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0007](0007-shared-kernel-project.md) | A dependency-free SharedKernel project below Domain | Accepted |
 | [0008](0008-messaging-without-a-mediator.md) | Use cases and domain events without a mediator library | Accepted |
 | [0009](0009-game-data-pipeline.md) | Keep the data builder: one consolidated, hashed game schema | Accepted |
-| [0010](0010-round-phases-and-sub-phases.md) | Rounds are driven by a phase and sub-phase state machine | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
+| [0010](0010-round-phases-and-sub-phases.md) | Rounds are driven by a phase and sub-phase state machine | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0011](0011-win-condition-and-round-cap.md) | Win condition: last team standing, with a round cap | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
 | [0012](0012-effect-taxonomy.md) | A closed taxonomy of spell effects | Accepted |
 | [0013](0013-learning-stack.md) | Learning stack: Python trains, the engine records and hosts policies, a static viewer | Accepted |
@@ -75,7 +75,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
 | [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) and [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) |
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
-| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) |
+| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
 | [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
 | [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |
@@ -88,7 +88,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted |
 | [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
 | [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted |
-| [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted |
+| [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md) | An action resolves when its targets are confirmed | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0084](0084-a-creature-waits-only-for-a-critical-worth-waiting-for.md) | A creature waits only for a critical worth waiting for | Accepted |
 | [0085](0085-a-denied-kill-reads-the-enemies-still-to-act.md) | A denied kill reads the enemies still to act | Accepted |
 | [0086](0086-a-match-lasts-eight-to-fourteen-rounds.md) | A match lasts eight to fourteen rounds | Accepted |
@@ -112,8 +112,9 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0104](0104-a-creature-saves-for-the-package-it-would-buy.md) | A creature saves for the package it would buy the round before it may buy | Proposed |
 | [0105](0105-the-engine-plays-the-tables-round-cap.md) | The engine plays the table's round cap of twenty | Accepted |
 | [0106](0106-titan-sunders-defense-instead-of-ignoring-stuns.md) | Make Titan's passive sunder defense instead of ignoring stuns | Proposed |
-| [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) | A creature may declare a spell it cannot pay for yet | Accepted |
+| [0107](0107-a-creature-may-declare-a-spell-it-cannot-pay-for-yet.md) | A creature may declare a spell it cannot pay for yet | Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules |
 | [0108](0108-a-purchase-is-read-against-what-the-team-is-buying.md) | Read a purchase against what the team is buying this round | Proposed |
 | [0109](0109-the-tuner-reads-what-each-tier-1-opening-is-worth.md) | Let the tuner read what each tier-1 opening is worth | Proposed |
-| [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Proposed |
+| [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Accepted, its default changed by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) |
 | [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed |
+| [0112](0112-spells-are-chosen-at-the-slot-by-default.md) | Choose each spell at its creature's slot by default | Accepted |

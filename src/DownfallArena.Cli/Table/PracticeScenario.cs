@@ -16,12 +16,12 @@ internal sealed record PracticeScenario(
     string Goal,
     int Round,
     PlayerOptionsKind Question,
-    CombatDeclaration Declaration = CombatDeclaration.HiddenIntent,
+    CombatDeclaration Declaration,
     int? AllyIndex = 0)
 {
     public const int Seed = 17;
 
-    private static readonly RuleSet HiddenIntents = RuleSet.Create(3, 2, 2, 10, 2.0);
+    private static readonly RuleSet HiddenIntents = RuleSet.Create(3, 2, 2, 10, 2.0, combatDeclaration: CombatDeclaration.HiddenIntent);
     private static readonly RuleSet AtTheSlot = RuleSet.Create(3, 2, 2, 10, 2.0, combatDeclaration: CombatDeclaration.AtActivation);
 
     // The page lists the recipes and plays the rules the match serves it; a rule set per recipe is not its to read.
@@ -30,10 +30,10 @@ internal sealed record PracticeScenario(
 
     public static IReadOnlyList<PracticeScenario> All { get; } =
     [
-        new("targeting", "Choose your target", "Compare Shock on each enemy. Select a target, read the preview, then confirm: it resolves at once.", 1, PlayerOptionsKind.Target),
-        new("multiclass", "Build a multiclass creature", "Round 3: your first creature already owns Brute. Compare another level-1 package with its level-2 upgrades in the talent atlas.", 3, PlayerOptionsKind.Evolution),
-        new("stun", "Interrupt an action", "Cast Paralyzing Barb before the enemy acts. Watch its action fizzle when its turn comes, then inspect stun and the immunity left after it expires.", 5, PlayerOptionsKind.Target),
-        new("resolution", "Read a layered resolution", "Choose the targets of Void Pulse. It resolves at once; replay the round from its recap to step through damage, bleed and caster effects.", 5, PlayerOptionsKind.Target),
+        new("targeting", "Choose your target", "Hidden intents. Compare Shock on each enemy. Select a target, read the preview, then confirm: it resolves at once.", 1, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
+        new("multiclass", "Build a multiclass creature", "Hidden intents. Round 3: your first creature already owns Brute. Compare another level-1 package with its level-2 upgrades in the talent atlas.", 3, PlayerOptionsKind.Evolution, CombatDeclaration.HiddenIntent),
+        new("stun", "Interrupt an action", "Hidden intents. Cast Paralyzing Barb before the enemy acts. Watch its action fizzle when its turn comes, then inspect stun and the immunity left after it expires.", 5, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
+        new("resolution", "Read a layered resolution", "Hidden intents. Choose the targets of Void Pulse. It resolves at once; replay the round from its recap to step through damage, bleed and caster effects.", 5, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
         new("slot-armor", "At the slot: answer an armor", "Spells chosen at the slot. The enemy Ironhide casts Carapace before your creature acts. Choose your spell and its target knowing it: strike through the armor, or turn to another enemy.", 3, PlayerOptionsKind.Action, CombatDeclaration.AtActivation),
         new("slot-overdrive", "At the slot: an ally's Overdrive", "Spells chosen at the slot. Your Blighted casts Overdrive before your Frenzied acts, and Fury becomes payable. Choose with the energy it brought.", 3, PlayerOptionsKind.Action, CombatDeclaration.AtActivation),
         new("slot-drain", "At the slot: drained before your turn", "Spells chosen at the slot. The enemy Oppressor's Claim drains an energy from your Frenzied before it acts, and Fury is out of reach. Choose what is left.", 3, PlayerOptionsKind.Action, CombatDeclaration.AtActivation),

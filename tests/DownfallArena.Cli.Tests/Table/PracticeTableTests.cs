@@ -56,6 +56,23 @@ public sealed class PracticeTableTests : IDisposable
     }
 
     /// <summary>
+    /// The four recipes written before ADR 0112 keep the hidden intent they were written for, whatever the
+    /// engine's default, and say so in their goal.
+    /// </summary>
+    [Theory]
+    [InlineData("targeting")]
+    [InlineData("multiclass")]
+    [InlineData("stun")]
+    [InlineData("resolution")]
+    public void A_recipe_written_for_hidden_intents_plays_hidden_intents(string id)
+    {
+        var scenario = PracticeScenario.All.Single(one => one.Id == id);
+
+        scenario.Rules.CombatDeclaration.ShouldBe(Domain.Matches.CombatDeclaration.HiddenIntent);
+        scenario.Goal.ShouldStartWith("Hidden intents.");
+    }
+
+    /// <summary>
     /// The recipes at the slot set up the boards the free-activation playtest asks about
     /// (docs/tabletop/free-activation-playtest.md): each is checked for the one thing it exists to show.
     /// </summary>

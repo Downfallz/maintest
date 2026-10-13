@@ -269,7 +269,7 @@ test('the declarations a chooser offers come from the host, worded for the opera
     { value: 'hidden-intent', label: 'Hidden intents' },
     { value: 'at-activation', label: 'Chosen at the slot' },
   ]);
-  assert.deepEqual(declarations(null).map(one => one.value), ['hidden-intent'], 'a host that names none offers the default alone');
+  assert.deepEqual(declarations(null).map(one => one.value), ['hidden-intent'], 'a host older than the field offers the hidden intent it played');
 });
 
 test('the declaration chooser keeps the operator\'s pick and otherwise opens on the host\'s own', () => {

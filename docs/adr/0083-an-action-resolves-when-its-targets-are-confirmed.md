@@ -2,7 +2,7 @@
 
 Date: 2026-09-28
 
-Status: Accepted
+Status: Accepted, amended by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules
 
 Supersedes the two-step combat of [ADR 0010](0010-round-phases-and-sub-phases.md),
 [0069](0069-reveal-all-spells-before-targeting.md) and [0070](0070-reveal-spells-with-confirmed-targets.md)

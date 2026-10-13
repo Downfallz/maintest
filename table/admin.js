@@ -301,7 +301,9 @@ function card(row, transport, redraw) {
 
   const list = document.createElement('dl');
   if (row.format) list.append(...line('Format', document.createTextNode(row.format)));
-  if (row.declaration && row.declaration !== 'hidden-intent') {
+  // Named for every table: since ADR 0112 the default is at the slot, and a table opened on hidden intents, or
+  // rebuilt from a record of one, is the one a reader needs to see.
+  if (row.declaration) {
     list.append(...line('Spells', document.createTextNode(DECLARATION_LABELS[row.declaration] ?? row.declaration)));
   }
   for (const seat of row.seats) {

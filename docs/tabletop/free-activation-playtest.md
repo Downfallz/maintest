@@ -1,10 +1,11 @@
 # The free-activation playtest
 
-Status: open. First readings from the owner on 2026-10-13; no time readings yet.
+Status: the owner adopted mode B on 2026-10-13 (ADR 0112), on the first readings below and before the time
+readings, which stay open.
 
 This is PR 8 of [free-activation-plan.md](../domain/free-activation-plan.md) ([ADR 0110](../adr/0110-a-rule-set-may-declare-spells-at-activation.md)):
 the questions only people can answer about choosing each spell at its creature's slot (**mode B**, `AtActivation`)
-rather than declaring it face down before combat (**mode A**, `HiddenIntent`, the default). The bots answered
+rather than declaring it face down before combat (**mode A**, `HiddenIntent`, the default until ADR 0112). The bots answered
 what they could (journal, 2026-10-12): the shape of the matches barely moves, and the balance bands move only for
 the forced openings. They could not say whether the hidden declaration is missed, whether a late slot feels like a
 counter, or whether a round is faster at the table.
@@ -16,8 +17,8 @@ Nothing here changes a rule or a number. The decision comes after, under the sto
 **Rules and feel**, one person, in hotseat or against a bot:
 
 ```bash
-dotnet run --project src/DownfallArena.Cli -- table --declaration at-activation --p2 greedy   # mode B against Greedy
-dotnet run --project src/DownfallArena.Cli -- table --p2 greedy                              # mode A, the same
+dotnet run --project src/DownfallArena.Cli -- table --p2 greedy                              # mode B against Greedy, the default since ADR 0112
+dotnet run --project src/DownfallArena.Cli -- table --declaration hidden-intent --p2 greedy   # mode A, the same
 dotnet run --project src/DownfallArena.Cli -- table --practice                              # the scenarios below, set up
 ```
 
@@ -26,8 +27,8 @@ The admin panel opens either mode too: its **Spells** chooser beside the format.
 **Time**, two people on two devices (a phone each, or a phone and a laptop):
 
 ```bash
-dotnet run --project src/DownfallArena.Cli -- table --declaration at-activation --bind <your LAN address> --who <initials>
 dotnet run --project src/DownfallArena.Cli -- table --bind <your LAN address> --who <initials>
+dotnet run --project src/DownfallArena.Cli -- table --declaration hidden-intent --bind <your LAN address> --who <initials>
 uv run --project learning playtest-timing runs/playtest/<id>/ runs/playtest/<id>/ --two-devices
 ```
 
@@ -87,6 +88,6 @@ scenarios 1, 2, 4, 5, 6 and 7 the way the plan hoped, and raise one balance poin
 - **Is the hidden declaration missed?** Not asked yet in these words; it is half of the stop rule.
 - **Energy Drain under mode B.** Scenario 3 says it lost weight. The bots agree that it is rarely cast (0.1 % to
   0.5 % of the landed casts, journal 2026-10-12) in both modes, so a change to the drains is a content question
-  for either mode, measured with `score-content --declaration at-activation` against the bands before and after.
+  for either mode, measured with `score-content` (mode B since ADR 0112) against the bands before and after.
 - **A second player.** Every reading here is the owner's. The plan's stop rule reads "nobody misses it", not "one
   player does not".

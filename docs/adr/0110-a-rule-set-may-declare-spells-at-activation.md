@@ -1,7 +1,7 @@
 # 0110. A rule set may declare spells at activation
 
 Date: 2026-10-11
-Status: Proposed
+Status: Accepted, its default changed by [0112](0112-spells-are-chosen-at-the-slot-by-default.md)
 
 ## Context
 

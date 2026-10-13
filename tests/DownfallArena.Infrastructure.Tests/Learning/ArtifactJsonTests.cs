@@ -97,7 +97,7 @@ public sealed class ArtifactJsonTests
     }
 
     /// <summary>
-    /// ADR 0110. A stamp of today's rule names no combat declaration, so it is written exactly as every stamp
+    /// ADR 0110. A stamp of the hidden intent names no combat declaration, so it is written exactly as every stamp
     /// before the field existed was, and the readers that compare stamps as written read the same game.
     /// </summary>
     [Fact]
@@ -123,7 +123,7 @@ public sealed class ArtifactJsonTests
 
     /// <summary>The stamp is written inside a run stamp, and the rule holds there too.</summary>
     [Fact]
-    public void A_run_stamp_names_the_combat_declaration_only_when_it_is_not_the_default()
+    public void A_run_stamp_names_the_combat_declaration_only_when_it_is_not_the_hidden_intent()
     {
         var hidden = StampWith(CombatDeclaration.HiddenIntent);
         var atActivation = StampWith(CombatDeclaration.AtActivation);

@@ -1,7 +1,7 @@
 # 0070. Reveal spells together with confirmed targets
 
 Date: 2026-09-19
-Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md)
+Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md), and by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) for the default rules
 Supersedes: [0069](0069-reveal-all-spells-before-targeting.md)
 
 ## Context

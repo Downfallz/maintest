@@ -244,12 +244,14 @@ function ruleLine(catalogue) {
   // the same interval and a different game, and this line exists to tell two games apart at a glance.
   const every = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
   const cadence = `${every} from round ${rules.firstEvolutionRound}`;
-  const declared = atTheSlot(catalogue) ? ' · spells chosen at the slot' : '';
+  // Named either way, as the host's own start-up line does: the default changed (ADR 0112).
+  const declared = atTheSlot(catalogue) ? ' · spells chosen at the slot' : ' · hidden intents';
   return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit${declared} · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
 }
 
 // Whether the game being played chooses each spell at its creature's slot instead of declaring it face down
-// (ADR 0110). The host says so on the rules it serves, and only when it does: the hidden intent is the default.
+// (ADR 0110), the default since ADR 0112. The host's rules say which, and an older host that names none plays
+// hidden intents.
 function atTheSlot(catalogue) {
   return catalogue?.rules?.combatDeclaration === 'AtActivation';
 }

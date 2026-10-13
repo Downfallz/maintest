@@ -112,9 +112,9 @@ internal sealed record CliOptions
     public MatchFormat? Format { get; init; }
 
     /// <summary>
-    /// When a creature chooses its spell: <c>hidden-intent</c>, today's rule, or <c>at-activation</c>, with its
-    /// targets at its slot (ADR 0110). None plays the rule set as it stands, so every command line written before
-    /// this option existed plays the same game it did.
+    /// When a creature chooses its spell: <c>at-activation</c>, with its targets at its slot, the default since
+    /// ADR 0112, or <c>hidden-intent</c>, declared face down before combat (ADR 0110). None plays the rule set as
+    /// it stands, which a command line written before ADR 0112 finds changed: it played hidden intents then.
     /// </summary>
     public CombatDeclaration? Declaration { get; init; }
 

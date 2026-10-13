@@ -278,7 +278,7 @@ def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
 
 @pytest.mark.parametrize(
     ("given", "handed"),
-    [([], []), (["--declaration", "at-activation"], ["--declaration", "at-activation"])],
+    [([], []), (["--declaration", "hidden-intent"], ["--declaration", "hidden-intent"])],
 )
 def test_score_content_hands_the_declaration_to_every_evaluation_and_nothing_when_none_is_given(
     tmp_path: Path, given: list[str], handed: list[str]
@@ -307,7 +307,7 @@ def test_score_content_hands_the_declaration_to_every_evaluation_and_nothing_whe
     assert calls
     assert all(call[0] == "evaluate" and call[call.index("--out") + 2 :] == handed for call in calls)
     written = json.loads((tmp_path / "out" / "score.json").read_text(encoding="utf-8"))
-    assert written["declaration"] == (handed[1] if handed else "hidden-intent")
+    assert written["declaration"] == (handed[1] if handed else "at-activation")
 
 
 def test_a_catalogue_already_played_is_not_played_again(tmp_path: Path) -> None:
