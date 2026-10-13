@@ -9,9 +9,10 @@ Date: 2026-10-11.
 It reviews a design handoff brought to the owner on 2026-10-11 ("Suppression de l'Intent caché : choix du
 sort et de la cible à l'activation"), which proposed choosing the spell and its targets together at the slot.
 
-Vocabulary used here: **mode A** is today's rule (`HiddenIntent`: a hidden Intent per creature, then targets
-at the slot, ADR 0083 and 0107). **Mode B** is the proposal (`AtActivation`: spell and targets chosen
-together at the slot).
+Vocabulary used here: **mode A** is the rule the plan was written under (`HiddenIntent`: a hidden Intent per
+creature, then targets at the slot, ADR 0083 and 0107). **Mode B** is the proposal (`AtActivation`: spell and
+targets chosen together at the slot), the default since ADR 0112. The sections below are the plan as written
+on 2026-10-11, so "today" and "the default" in them mean mode A.
 
 ## 1. Verdict
 
@@ -70,7 +71,7 @@ place the combat phase has a mind game. The flag is cheap enough to let the tabl
 
 | Question | Recommendation |
 | --- | --- |
-| Where the mode lives | `RuleSet.CombatDeclaration` enum: `HiddenIntent` (default) and `AtActivation`. JSON key `combatDeclaration` in `RuleSetFile`, defaulting to `hiddenIntent` so every existing file and caller is unchanged. Mirrored in `RuleSetStamp` so runs and policies of the two modes never compare as the same rules. |
+| Where the mode lives | `RuleSet.CombatDeclaration` enum: `HiddenIntent` (default) and `AtActivation`. JSON key `combatDeclaration` in `RuleSetFile`, defaulting to `hiddenIntent` so every existing file and caller is unchanged (both defaults became `AtActivation` with ADR 0112). Mirrored in `RuleSetStamp` so runs and policies of the two modes never compare as the same rules. |
 | The sub-phase | Keep `IntentSelection` in the enum and the flow table; in mode B the gate passes through it without asking anyone, the way `TieOrder` already passes through a round with no ties. Removing it breaks `RoundFlow`, `RoundFlowTests` and the observation encoder (sub-phase 5/9, 6/9) for nothing. |
 | Declaring a spell one cannot pay | No, in mode B. The slot check is the only check; `ActionRules.ValidateAction` already does it. ADR 0107 stays valid for mode A. |
 | No legal cast | Skipped, owner not asked, as ADR 0083 rules. With today's content only death and stun get there, since every creature starts with Focus; the engine does not rely on that. |
