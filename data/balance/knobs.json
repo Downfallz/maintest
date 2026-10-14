@@ -104,8 +104,8 @@
         "on": "mirror",
         "max": 0.15,
         "scale": 0.05,
-        "weight": 1,
-        "why": "Agent A's share of declarations that fizzled. Both agents are the same in a mirrored run, so A is the content's own rate. Mostly targets dying before the action resolves, so it falls on its own as matches lengthen. 21.4% at the last measured run."
+        "weight": 0,
+        "why": "Agent A's share of declarations that fizzled. Both agents are the same in a mirrored run, so A is the content's own rate. It was mostly targets dying between a hidden declaration and its slot. Since ADR 0112 spells are chosen at the slot, a slot lost to death or a stun is skipped rather than fizzled, and this reads 0 on every catalogue, so its weight is 0 and it scores nothing (tuning pass 28). It stays listed, as the exploit win rate does, because the report still prints it: a nonzero reading would mean a cast resolved into nothing at the slot, which is a bug to look for, not a balance to tune. A share of skipped slots would be its replacement; the engine does not count one yet."
       },
       {
         "metric": "spellEntropyA",
@@ -795,7 +795,7 @@
         "Always paid in the caster's blood: dark magic costs life in this line",
         "One ally: the group ward is Wraithguard at tier 3"
       ],
-      "note": "Authored at 3.1 a round in the check-knobs reading, which prices defense without the threat it stands against -- the same blind spot that reads Brace and Carapace low. Recast on one ally it stacks, bounded by the cap on defense buffs (ADR 0076) and by the caster bleeding each cast. No evaluation has measured it yet.",
+      "note": "Authored at 3.1 a round in the check-knobs reading, which prices defense without the threat it stands against -- the same blind spot that reads Brace and Carapace low. Recast on one ally it stacks, bounded by the cap on defense buffs (ADR 0076) and by the caster bleeding each cast. Tuning pass 28, the first under spells chosen at the slot (ADR 0112), lengthened its ward from 2 rounds to 3, the top of its box: it was the one move the search kept, and it lifted the forced Warped + Warped opening from 0.242 to 0.297 against Greedy on the search seeds, and from 0.273 to 0.291 on seeds no candidate saw (journal, 2026-10-14). A pass that wants more from it has to move its amount or widen the box.",
       "knobs": [
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
