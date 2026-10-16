@@ -583,6 +583,26 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
+    /// A slot choice log is handed what the slot read: every spell the actor could cast, each at the best of its
+    /// target sets, beside the one chosen. That is the counterfactual a spell is measured on decision by decision.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_the_log_is_handed_every_castable_spell_beside_the_one_chosen()
+    {
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var log = Substitute.For<ISlotChoiceLog>();
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, log: log).DecideAction(board, options);
+
+        log.Received(1).Record(Arg.Is<SlotChoice>(choice =>
+            choice.Actor == One
+            && choice.Chosen == TestContent.Strike
+            && choice.Spells.Select(spell => spell.Spell).Order().SequenceEqual(options.Spells.Select(offered => offered.Spell).Order())));
+    }
+
+    /// <summary>
     /// Nobody declares under this rule, so the lookahead takes no creature still ahead to have chosen anything:
     /// each chooses at its slot (ADR 0110).
     /// </summary>

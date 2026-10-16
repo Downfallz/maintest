@@ -1,5 +1,6 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Recording;
@@ -11,6 +12,7 @@ using DownfallArena.Application.Ports;
 using DownfallArena.Application.Simulation;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Agents;
 using DownfallArena.Infrastructure.Evaluation;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
@@ -93,6 +95,11 @@ internal sealed class GameSession
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+        }
+
+        if (cliOptions.SlotLog is { } slotLog)
+        {
+            serviceCollection.AddSingleton<ISlotChoiceLog>(_ => new JsonLinesSlotChoiceLog(slotLog));
         }
 
         if (cliOptions.Command is "evaluate" or "benchmark")

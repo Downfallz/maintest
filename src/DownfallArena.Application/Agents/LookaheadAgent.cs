@@ -1,3 +1,4 @@
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
@@ -67,7 +68,8 @@ public sealed class LookaheadAgent(
     IPlayerAgent? inner = null,
     IRandomSource? random = null,
     PurchaseReading? purchases = null,
-    CombatReading? combat = null) : IPlayerAgent
+    CombatReading? combat = null,
+    ISlotChoiceLog? log = null) : IPlayerAgent
 {
     /// <summary>
     /// The agent that plays every seat this one has to guess: an ally that has not declared as the round is
@@ -340,8 +342,26 @@ public sealed class LookaheadAgent(
         }
 
         var chosen = First(candidates, candidate => Round(candidate.Option, worst: true)).Option;
+        log?.Record(Read(board, options.Actor, chosen.Spell, candidates));
         return new ChosenAction(chosen.Spell, chosen.Targets);
     }
+
+    /// <summary>
+    /// The slot as it was read: each spell at the best of its target sets, round outcome first and score second,
+    /// the order <see cref="RoundValue"/> keeps. A spell is worth its best cast because that is the cast the
+    /// agent would have made with it.
+    /// </summary>
+    private static SlotChoice Read(PlayerBoardState board, CreatureId actor, SpellId chosen, List<Candidate<CombatAction>> candidates) =>
+        new(
+            board.MatchId,
+            board.RoundNumber ?? 0,
+            board.Slot,
+            actor,
+            chosen,
+            [.. candidates
+                .GroupBy(candidate => candidate.Option.Spell)
+                .Select(spell => (spell.Key, Best: spell.Max(candidate => candidate.Played)))
+                .Select(spell => new SpellValue(spell.Key, spell.Best.Outcome, spell.Best.Score))]);
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with

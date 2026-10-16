@@ -12,7 +12,7 @@ namespace DownfallArena.Application.Agents;
 /// <summary>
 /// The registry of the agents the engine ships: one case per <see cref="AgentKind"/>.
 /// </summary>
-public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource weights, IPolicySource policies) : IAgentFactory
+public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource weights, IPolicySource policies, ISlotChoiceLog? log = null) : IAgentFactory
 {
     private readonly ConcurrentDictionary<RuleSet, FeatureSchema> _schemas = new();
 
@@ -68,10 +68,10 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         var (combat, rest) = Depth(spec);
         if (Searched(rest) is { } searched)
         {
-            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random, combat: combat);
+            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random, combat: combat, log: log);
         }
 
-        return new LookaheadAgent(rest.Path is null ? ScoringWeights.Default : Weights(rest), resources, rules, adversarial, random: random, combat: combat);
+        return new LookaheadAgent(rest.Path is null ? ScoringWeights.Default : Weights(rest), resources, rules, adversarial, random: random, combat: combat, log: log);
     }
 
     /// <summary>

@@ -25,6 +25,13 @@ internal sealed record CliOptions
     public string? Trace { get; init; }
 
     /// <summary>
+    /// The file a searching agent writes each slot it reads into: every spell it could cast there and what the
+    /// best cast of each was worth, beside the one it chose (<c>--slot-log</c>). Read by
+    /// <c>scripts/slot-choices.py</c>, which turns it into each spell's worth decision by decision.
+    /// </summary>
+    public string? SlotLog { get; init; }
+
+    /// <summary>
     /// How many match traces <c>--record</c> writes; null keeps one per match. Zero leaves the trace recorder
     /// unregistered altogether, which is what a dataset large enough to train on wants: a trace costs two board
     /// projections per event and about twenty times the disk of the steps it is recorded beside.
@@ -132,7 +139,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -151,11 +158,13 @@ internal sealed record CliOptions
 
     private const string DeclarationOption = "--declaration";
 
+    private const string SlotLogOption = "--slot-log";
+
     private static readonly string[] Known =
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -183,6 +192,7 @@ internal sealed record CliOptions
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
             Record = values.GetValueOrDefault(RecordOption),
             Trace = values.GetValueOrDefault("--trace"),
+            SlotLog = values.GetValueOrDefault(SlotLogOption),
             Traces = values.TryGetValue("--traces", out var traces) ? ParseTraces(traces) : null,
             Player1 = AgentSpec.Parse(values.GetValueOrDefault("--p1") ?? "random"),
             Player2 = AgentSpec.Parse(values.GetValueOrDefault("--p2") ?? "random"),
@@ -227,6 +237,11 @@ internal sealed record CliOptions
         if (flags.Contains(PlatformAuthOption) && command != "table")
         {
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        if (values.ContainsKey(SlotLogOption) && command is not ("play" or "simulate" or "evaluate"))
+        {
+            return "'--slot-log' is for play, simulate and evaluate: it records what a searching agent read at each slot of the matches they play.";
         }
 
         // The digest is committed per content hash and nothing else (ADR 0013, decision I), so a benchmark of
