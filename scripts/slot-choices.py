@@ -54,28 +54,33 @@ def read(paths: list[str]) -> dict[str, dict]:
         lambda: {"offered": 0, "chosen": 0, "best": 0, "behind": [], "loses": 0}
     )
     for path in paths:
-        for line in Path(path).read_text().splitlines():
-            slot = json.loads(line)
-            values = [
-                (entry["outcome"], entry.get("robust", 0), entry["score"], short(entry["spell"]))
-                for entry in slot["spells"]
-            ]
-            if len(values) < 2:
-                continue  # one castable spell is no choice, and says nothing about any spell's worth
-            top_outcome, top_robust, top_score, _ = max(values)
-            for outcome, robust, score, spell in values:
-                reading = spells[spell]
-                reading["offered"] += 1
-                if outcome < top_outcome:
-                    reading["loses"] += 1
-                    continue
-                # A win the enemy's reply undoes is behind every win it does not, whatever it scores.
-                gap = top_score - score if robust >= top_robust else max(top_score - score, CLOSE + 1e-9)
-                reading["behind"].append(gap)
-                if gap <= 1e-9:
-                    reading["best"] += 1
-            spells[short(slot["chosen"])]["chosen"] += 1
+        # A log this process's own user named on its command line.
+        for line in Path(path).read_text().splitlines():  # NOSONAR
+            tally(spells, json.loads(line))
     return spells
+
+
+def tally(spells: dict[str, dict], slot: dict) -> None:
+    """One slot's spells, each against the best cast of the slot."""
+    values = [
+        (entry["outcome"], entry.get("robust", 0), entry["score"], short(entry["spell"]))
+        for entry in slot["spells"]
+    ]
+    if len(values) < 2:
+        return  # one castable spell is no choice, and says nothing about any spell's worth
+    top_outcome, top_robust, top_score, _ = max(values)
+    for outcome, robust, score, spell in values:
+        reading = spells[spell]
+        reading["offered"] += 1
+        if outcome < top_outcome:
+            reading["loses"] += 1
+            continue
+        # A win the enemy's reply undoes is behind every win it does not, whatever it scores.
+        gap = top_score - score if robust >= top_robust else max(top_score - score, CLOSE + 1e-9)
+        reading["behind"].append(gap)
+        if gap <= 1e-9:
+            reading["best"] += 1
+    spells[short(slot["chosen"])]["chosen"] += 1
 
 
 def summary(spells: dict[str, dict], package: dict[str, str], names: dict[str, str]) -> list[dict]:
@@ -120,7 +125,8 @@ def main() -> None:
             f"{row['best']:>6.1%} {row['close']:>6.1%} {gap:>6} {row['loses']:>6.1%}"
         )
     if args.out:
-        Path(args.out).write_text(json.dumps(rows, indent=2) + "\n")
+        # A path this process's own user named on its command line.
+        Path(args.out).write_text(json.dumps(rows, indent=2) + "\n")  # NOSONAR
 
 
 if __name__ == "__main__":
