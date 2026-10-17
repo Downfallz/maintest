@@ -61,6 +61,8 @@ declaration and are rewritten when mode A goes anyway.
 - Done here: `RuleSet.Default`, `RuleSetFile` (an absent declaration), the start-up lines that name the
   declaration either way (`GameSession.PrintStamp`, `RuleSetFile.Describe`, the table page's rule line), the
   benchmark digest of `3ae51e9f`, `docs/tabletop/playtest.rules.json`, the invariants' hidden-intent batch.
-- A tuning pass under mode B: the forced openings, and the fizzle band.
+- A tuning pass under mode B: the forced openings, and the fizzle band. Pass 28 (journal, 2026-10-14) retired
+  the fizzle band (weight 0); its one content move, Bonewall's ward at 3 rounds, was rejected, and Warped + Warped
+  and Brute + Brute stay under their band for a design decision.
 - The rulebook, the player aid, the components and the Automa.
 - Removing mode A, `RuleSet.Create`'s default parameter with it.
