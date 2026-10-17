@@ -1,3 +1,4 @@
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
@@ -67,7 +68,8 @@ public sealed class LookaheadAgent(
     IPlayerAgent? inner = null,
     IRandomSource? random = null,
     PurchaseReading? purchases = null,
-    CombatReading? combat = null) : IPlayerAgent
+    CombatReading? combat = null,
+    ISlotChoiceLog? log = null) : IPlayerAgent
 {
     /// <summary>
     /// The agent that plays every seat this one has to guess: an ally that has not declared as the round is
@@ -339,9 +341,28 @@ public sealed class LookaheadAgent(
             throw new InvalidOperationException("The options offer no castable spell.");
         }
 
-        var chosen = First(candidates, candidate => Round(candidate.Option, worst: true)).Option;
+        var ranked = Rank(candidates, candidate => Round(candidate.Option, worst: true));
+        var chosen = Best(ranked).Candidate.Option;
+        log?.Record(Read(board, options.Actor, chosen.Spell, ranked));
         return new ChosenAction(chosen.Spell, chosen.Targets);
     }
+
+    /// <summary>
+    /// The slot as it was read: each spell at the best of its target sets by the key the choice was made on, so a
+    /// spell is logged at the cast the agent would have made with it -- the one that still wins against the
+    /// enemy's worst reply, where two casts win, rather than the one that scores more.
+    /// </summary>
+    private static SlotChoice Read(PlayerBoardState board, CreatureId actor, SpellId chosen, List<RankedCandidate<CombatAction>> ranked) =>
+        new(
+            board.MatchId,
+            board.RoundNumber ?? 0,
+            board.Slot,
+            actor,
+            chosen,
+            [.. ranked
+                .GroupBy(candidate => candidate.Candidate.Option.Spell)
+                .Select(spell => (Spell: spell.Key, Read: Best(spell).Key))
+                .Select(spell => new SpellValue(spell.Spell, spell.Read.Outcome, spell.Read.Robust, spell.Read.Score))]);
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
@@ -452,18 +473,24 @@ public sealed class LookaheadAgent(
     /// the weakest spell in the catalogue came to be cast three times more often than the greedy agent casts it.
     /// </para>
     /// </summary>
-    private Candidate<T> First<T>(List<Candidate<T>> candidates, Func<Candidate<T>, RoundValue> worstOf)
+    private Candidate<T> First<T>(List<Candidate<T>> candidates, Func<Candidate<T>, RoundValue> worstOf) =>
+        Best(Rank(candidates, worstOf)).Candidate;
+
+    /// <summary>Every candidate with the key <see cref="First{T}"/> ranks it by, worst replies read only where it reads them.</summary>
+    private List<RankedCandidate<T>> Rank<T>(List<Candidate<T>> candidates, Func<Candidate<T>, RoundValue> worstOf)
     {
         // Nothing is above the top, so reaching it is matching it, without comparing two doubles for equality.
         var top = candidates.Max(candidate => candidate.Played.Outcome);
         var read = !adversarial && top > 0 && candidates.Count(candidate => candidate.Played.Outcome >= top) > 1;
-        var ranked = candidates
-            .Select(candidate => (
-                Candidate: candidate,
-                Key: (candidate.Played.Outcome, Robust: read && candidate.Played.Outcome >= top ? worstOf(candidate).Outcome : 0, candidate.Played.Score, candidate.OneStep.Wins, candidate.OneStep.Score)))
-            .ToList();
-        return ranked.Skip(1).Aggregate(ranked[0], (best, candidate) => candidate.Key.CompareTo(best.Key) > 0 ? candidate : best).Candidate;
+        return [.. candidates.Select(candidate => new RankedCandidate<T>(
+            candidate,
+            (candidate.Played.Outcome, read && candidate.Played.Outcome >= top ? worstOf(candidate).Outcome : 0, candidate.Played.Score, candidate.OneStep.Wins, candidate.OneStep.Score)))];
     }
+
+    private static RankedCandidate<T> Best<T>(IEnumerable<RankedCandidate<T>> ranked) =>
+        ranked.Aggregate((best, candidate) => candidate.Key.CompareTo(best.Key) > 0 ? candidate : best);
+
+    private readonly record struct RankedCandidate<T>(Candidate<T> Candidate, (double Outcome, double Robust, double Score, bool Wins, double OneStep) Key);
 
     /// <summary>
     /// What this agent takes every other creature on the timeline to play when the actor declares a candidate:

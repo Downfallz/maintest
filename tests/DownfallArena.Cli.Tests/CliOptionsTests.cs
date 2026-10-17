@@ -79,6 +79,15 @@ public sealed class CliOptionsTests
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--practice", "--format", "2v2"]))
             .Message.ShouldContain("--practice");
 
+    [Fact]
+    public void A_command_that_plays_matches_records_its_slots_where_it_is_told() =>
+        CliOptions.Parse(["evaluate", "--slot-log", "slots.jsonl"]).SlotLog.ShouldBe("slots.jsonl");
+
+    [Fact]
+    public void The_table_refuses_a_slot_log_because_it_is_for_the_commands_that_play_bots_against_bots() =>
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--slot-log", "slots.jsonl"]))
+            .Message.ShouldContain("'--slot-log' is for play, simulate and evaluate");
+
     /// <summary>ADR 0110: a command names the combat declaration it plays, as the usage line spells it.</summary>
     [Theory]
     [InlineData("hidden-intent", CombatDeclaration.HiddenIntent)]
