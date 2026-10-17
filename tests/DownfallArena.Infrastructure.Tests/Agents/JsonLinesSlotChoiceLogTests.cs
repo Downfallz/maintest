@@ -20,8 +20,8 @@ public sealed class JsonLinesSlotChoiceLogTests
 
         using (var log = new JsonLinesSlotChoiceLog(path))
         {
-            log.Record(new SlotChoice(MatchId.New(), 3, PlayerSlot.Player2, CreatureId.From(5), strike, [new SpellValue(strike, 0, 3), new SpellValue(wait, 0, 0.5)]));
-            log.Record(new SlotChoice(MatchId.New(), 4, PlayerSlot.Player1, CreatureId.From(1), wait, [new SpellValue(wait, 1, 2)]));
+            log.Record(new SlotChoice(MatchId.New(), 3, PlayerSlot.Player2, CreatureId.From(5), strike, [new SpellValue(strike, 0, 0, 3), new SpellValue(wait, 0, 0, 0.5)]));
+            log.Record(new SlotChoice(MatchId.New(), 4, PlayerSlot.Player1, CreatureId.From(1), wait, [new SpellValue(wait, 1, 0, 2)]));
         }
 
         var lines = File.ReadAllLines(path);

@@ -603,6 +603,26 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
+    /// The log ranks the spells the way the choice did: outcome, then the outcome against the enemy's worst reply,
+    /// then score. Read on outcome and score alone, a spell was logged at a winning cast the agent had passed over
+    /// because the enemy's reply undoes it, and the chosen spell read as behind it.
+    /// </summary>
+    [Fact]
+    public void At_the_slot_the_spell_chosen_is_logged_at_the_top_of_the_order_it_was_chosen_on()
+    {
+        var board = FourAboutToKillTwo();
+        var options = ActionOptions.Of(board.Allies[0], [.. board.Allies, .. board.Enemies], TestContent.Resources);
+        var log = Substitute.For<ISlotChoiceLog>();
+        SlotChoice? logged = null;
+        log.Record(Arg.Do<SlotChoice>(choice => logged = choice));
+        var rules = Rules.WithCombatDeclaration(CombatDeclaration.AtActivation);
+
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, rules, log: log).DecideAction(board, options);
+
+        logged.ShouldNotBeNull().Spells.MaxBy(spell => (spell.Outcome, spell.Robust, spell.Score))!.Spell.ShouldBe(logged.Chosen);
+    }
+
+    /// <summary>
     /// Nobody declares under this rule, so the lookahead takes no creature still ahead to have chosen anything:
     /// each chooses at its slot (ADR 0110).
     /// </summary>
