@@ -19,8 +19,10 @@ Its digest is committed beside the old one.
 - **Why not just a bigger number.** Three of the six are permanent defense that stacks when cast again, and
   stacked permanent defense is what stalls a match: `roundCapShare`'s own note says so, and the owner's
   rejection of pass 28's Bonewall move was the same stall. So the change is the shape, not the amount: heavy
-  and short, deciding the round it lands in, gone after. Cast every round, a buff of two rounds is at most two
-  copies, which the cap on defense buffs holds to 10 anyway (ADR 0076).
+  and short, deciding the rounds it covers, gone after. A duration counts full rounds after the cast's own
+  (`Condition.RemainingRounds`), so +7 for 2 rounds holds through the rest of the round it is cast in and the
+  two after. Cast every round, that is at most three copies, 21, which the cap on defense buffs holds to 10
+  (ADR 0076); permanent, it had no ceiling but that cap.
 - **Four versions on the same 200 benchmark seeds, both seats.** Greedy against itself (mirror), and
   `explore:0.2:lookahead` against itself (variety, with the slot log):
 
@@ -33,8 +35,8 @@ Its digest is committed beside the old one.
 
   An option taken at random would be the best cast about 12 % of the time (some eight castable spells a
   slot). At +7 Carapace is above that, Ironhide is bought more (Carapace offered at 954 slots, 730 before),
-  and nobody spams it. A buff of one round is mostly gone before the enemy's slots come, which is why +8 for
-  one round reads worse than +3 permanent.
+  and nobody spams it. +8 for 1 round covers one round fewer for one more point, and reads worse than +3
+  permanent.
 - **What it costs.** Matches run 0.3 rounds longer and the share over 16 rounds goes from 1.5 % to 2 %; the
   round cap stays at 1 %. All of it inside the band of 8 to 14 rounds, and within what 400 matches can tell
   apart. The owner took +7 without a replay on the confirmation seeds, so this is one seed set: the next
