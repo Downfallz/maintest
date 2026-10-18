@@ -867,8 +867,8 @@ def unbounded(content: Content) -> list[str]:
 
     It is a finding and not an error: the engine plays it, and `full_plate` was authored this way until
     2026-10-17, permanent because nothing implements `SpellType.Passive` yet. It is here so that a tuning pass
-    cannot quietly put a price back to zero on `thundering_seal` or `revenant_guards`, whose permanent halves
-    remain, and ship an unbounded spell with every check green.
+    cannot quietly put a price back to zero on `revenant_guards`, whose permanent half remains, and ship an
+    unbounded spell with every check green.
     """
     return [
         f"{alias} carries a permanent effect and costs no energy, so re-casting it stacks without a brake: "

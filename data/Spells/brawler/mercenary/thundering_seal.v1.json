@@ -1,6 +1,6 @@
 {
   "id": "spell:thundering_seal:v1",
-  "name": "Fortress",
+  "name": "Alpha Roar",
   "spellType": "Defensive",
   "creatureClass": "Mercenary",
   "energyCost": 2,
@@ -13,12 +13,12 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 3,
-      "permanent": true
+      "amount": 4,
+      "durationRounds": 2
     },
     {
-      "kind": "DefenseBuff",
-      "amount": 3,
+      "kind": "DamageBuff",
+      "amount": 2,
       "durationRounds": 2
     }
   ],
