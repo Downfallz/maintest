@@ -4,6 +4,81 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-18. Fortress becomes Alpha Roar: an ally's defense and damage for two rounds
+
+The content goes from `53bef178` to `59f8ee7d`, one spell changed: `thundering_seal` (Tyrant, level 3), renamed
+Alpha Roar / Rugissement alpha by the owner, a mutation in the Tyrant's line rather than a wall. Its digest is
+committed beside the old one. The agents changed first, on `53bef178`, and moved nothing there.
+
+- **The agents.** A damage buff (ADR 0101) was priced at one hit a round whoever held it. It is now the
+  amount times the enemies its holder's widest hitting spell reaches, capped by the enemies standing, over its
+  rounds: nothing on a creature that knows no spell aimed at an enemy, twice on one that hits two
+  (`ActionScorer.HitsARound`). No spell gave a damage buff yet, so the benchmark digest of `53bef178` verified
+  unchanged; `check-knobs` and the studio still read a damage buff at one hit a round, having no board.
+- **Why Fortress.** It was +3 permanent and +3 for two rounds on one ally, for 2 energy. The slot log read it
+  the best cast of its slots 19 % of the time, 7.4 points behind in the median, and re-cast the next round
+  21 % of the time with runs of three: the stack. Timed alone it was worse (+7 for two rounds 10 %, +9 for two
+  12 %, 8 points behind): what the lookahead valued was the stack, and a defensive cast at Tyrant's price
+  loses the slot to Dominate beside it. The owner did not want it at 1 energy.
+- **Three versions on the 200 benchmark seeds, both seats**, Greedy mirror and `explore:0.2:lookahead` with
+  the slot log, all on `53bef178` plus the one spell, the timed ones with the new pricing:
+
+  | `thundering_seal` | best cast | median gap | Dominate best | cast, variety | casting side won | cast again next round | rounds, variety | over 16 | round cap, mirror |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | +3 permanent, +3 for 2 rounds | 19 % | 7.4 | 39 % | 33 | 8 of 23 | 21 % | 10.37 | 2 % | 1 % |
+  | **+4 defense, +2 damage, 2 rounds** | **33 %** | **1.8** | 26 % | 76 | 32 of 48 | 20 % | 10.25 | 1.5 % | 0.5 % |
+  | +3 defense, +3 damage, 2 rounds | 45 % | 0.0 | 32 % | 110 | 42 of 69 | 18 % | 10.27 | 1.5 % | 0.5 % |
+
+  +4 and +2 is a choice beside Dominate where +3 and +3 takes the slot whenever it is offered. Matches get
+  shorter, not longer: an ally that is protected while it hits harder ends the rounds it buys. Greedy rarely
+  buys Tyrant (4 casts in 400 mirrored matches whichever version), so these readings are the lookahead's.
+- **What to watch.** It is re-cast the next round about one time in five, and damage buffs stack: a creature
+  roared at three rounds running hits for +6. That shortens matches rather than stalling them, but it is a
+  snowball the next slot log should read. One seed set, no confirmation replay, the owner's call.
+- **The knobs.** New intent, keep and note; the defense half searched from 3 to 5, the damage half from 1 to 3,
+  their duration from 1 to 2, the cost from 2 to 3. `data/balance/README.md`'s rule on permanent buffs now
+  names Wraithguard alone. The tabletop docs gain a damage buff token (components.md).
+
+## 2026-10-17. Carapace is +7 for two rounds, not +3 permanent
+
+The content goes from `3ae51e9f` to `53bef178`, one spell changed: Carapace (`full_plate`, Ironhide, level 2).
+Its digest is committed beside the old one.
+
+- **Why Carapace.** The slot log (`--slot-log`, read by `scripts/slot-choices.py`) records every castable
+  spell's value at each slot the lookahead decides. Read on `explore:0.2:lookahead` against `lookahead`, 400
+  benchmark matches, 13,817 slots, a few spells were seldom the best cast and far behind when they were not,
+  most of them defensive. Replayed reading four rounds ahead (`lookahead:4x4`, 179 matches on the first 100
+  seeds, the run cut short by a container restart), six of them stayed there: Overdrive, Wraithguard,
+  Fortress, Carapace, Vital Surge and Emberstorm. Carapace was the best cast of its slots 9.6 % of the time,
+  5.5 points behind in the median.
+- **Why not just a bigger number.** Three of the six are permanent defense that stacks when cast again, and
+  stacked permanent defense is what stalls a match: `roundCapShare`'s own note says so, and the owner's
+  rejection of pass 28's Bonewall move was the same stall. So the change is the shape, not the amount: heavy
+  and short, deciding the rounds it covers, gone after. A duration counts full rounds after the cast's own
+  (`Condition.RemainingRounds`), so +7 for 2 rounds holds through the rest of the round it is cast in and the
+  two after. Cast every round, that is at most three copies, 21, which the cap on defense buffs holds to 10
+  (ADR 0076); permanent, it had no ceiling but that cap.
+- **Four versions on the same 200 benchmark seeds, both seats.** Greedy against itself (mirror), and
+  `explore:0.2:lookahead` against itself (variety, with the slot log):
+
+  | Carapace | rounds, mirror / variety | over 16 rounds, variety | round cap, mirror | cast by Greedy | cast again next round | best cast | median gap |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | +3 permanent | 10.1 / 10.25 | 1.5 % | 1 % | 132 | 3 % | 9.6 % | 5.5 |
+  | +5 for 2 rounds | 10.1 / 10.1 | 0.5 % | 0 % | 162 | 6.5 % | 12.5 % | 5.6 |
+  | **+7 for 2 rounds** | 10.4 / 10.4 | 2 % | 1 % | 265 | 1.3 % | 16 % | 5.1 |
+  | +8 for 1 round | 10.1 / 10.2 | 1.5 % | 0 % | 76 | 0 % | 8.7 % | 6.6 |
+
+  An option taken at random would be the best cast about 12 % of the time (some eight castable spells a
+  slot). At +7 Carapace is above that, Ironhide is bought more (Carapace offered at 954 slots, 730 before),
+  and nobody spams it. +8 for 1 round covers one round fewer for one more point, and reads worse than +3
+  permanent.
+- **What it costs.** Matches run 0.3 rounds longer and the share over 16 rounds goes from 1.5 % to 2 %; the
+  round cap stays at 1 %. All of it inside the band of 8 to 14 rounds, and within what 400 matches can tell
+  apart. The owner took +7 without a replay on the confirmation seeds, so this is one seed set: the next
+  tuning pass and the next slot log read it again.
+- **The knobs.** Carapace's entry gets a new intent and keep, its amount searched from 5 to 8 and its duration
+  from 1 to 2 rounds, its cost unchanged. `data/balance/README.md` drops it from the rule on permanent buffs.
+
 ## 2026-10-14. Tuning pass 28, the first under spells chosen at the slot: Bonewall's ward at 3, rejected
 
 The content stays `3ae51e9f`. Pass 28 proposed `dbfb9439` (run 38340294993, seed 0, 1 round of 2 after the

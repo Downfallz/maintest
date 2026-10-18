@@ -13,8 +13,8 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 3,
-      "permanent": true
+      "amount": 7,
+      "durationRounds": 2
     }
   ],
   "enabled": true

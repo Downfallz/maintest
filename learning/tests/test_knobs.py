@@ -1635,7 +1635,7 @@ def test_a_permanent_effect_that_costs_nothing_is_reported_as_unbounded() -> Non
 
 
 def test_a_permanent_effect_with_a_price_on_it_is_not_reported() -> None:
-    """The two energy a round pays is the brake, so `guard` and `thundering_seal` are not this finding."""
+    """Two energy a round is the brake, so a paid permanent buff (`revenant_guards`) is not this finding."""
     content = Content(
         spells={
             "spell:paid": spell(

@@ -859,16 +859,16 @@ def unbounded(content: Content) -> list[str]:
     A permanent effect never expires and re-casting stacks it, exactly as the prototype did. That is priced
     for one cast everywhere it is read -- ``PERMANENT_CONDITION_ROUNDS`` here, ``PermanentConditionRounds`` in
     `ActionScorer` -- and no single-cast reading can see a stack, so raising that number would not find this:
-    at any horizon, one `full_plate` is a point of defense and six are six.
+    at any horizon, one permanent point of defense is a point and six are six.
 
     What decides whether the stack has a brake is the price. A permanent buff that costs energy is bounded by
     the two a round pays; at zero it is bounded by nothing but the round cap, and a creature that spends the
     match re-casting it walks out unhittable. So the reading is the cost, not the magnitude.
 
-    It is a finding and not an error: the engine plays it, and `full_plate` is authored this way today
-    because nothing implements `SpellType.Passive` yet. It is here so that a tuning pass cannot quietly put
-    a price back to zero -- `full_plate`'s own cost knob reaches it -- and ship an unbounded spell with every
-    check green.
+    It is a finding and not an error: the engine plays it, and `full_plate` was authored this way until
+    2026-10-17, permanent because nothing implements `SpellType.Passive` yet. It is here so that a tuning pass
+    cannot quietly put a price back to zero on `revenant_guards`, whose permanent half remains, and ship an
+    unbounded spell with every check green.
     """
     return [
         f"{alias} carries a permanent effect and costs no energy, so re-casting it stacks without a brake: "

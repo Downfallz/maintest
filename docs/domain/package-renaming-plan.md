@@ -129,7 +129,7 @@ The starting kit is being simplified. The locked player-facing names are:
 | T2 | **Ironhide / Blindé** | **Carapace / Carapace** | **Body Slam / Écrasement** |
 | T3 | **Colossus / Colosse** | **Vital Surge / Afflux vital** | **Crushing Stomp / Piétinement** |
 | T2 | **Oppressor / Oppresseur** | **Crash / Fracas** | **Claim / Revendiquer** |
-| T3 | **Tyrant / Tyran** | **Dominate / Dominer** | **Fortress / Forteresse** |
+| T3 | **Tyrant / Tyran** | **Dominate / Dominer** | **Alpha Roar / Rugissement alpha** (Fortress / Forteresse until 2026-10-18) |
 | T1 | **Predator / Prédateur** | **Venom Claw / Griffe venimeuse** | **Quill / Épine** |
 | T2 | **Deathmarked / Condamné** | **Pursuit / Traque** | **Ambush / Embuscade** |
 | T3 | **Deathstalker / Écorcheur** | **Blood Hunt / Chasse sanglante** | **Eviscerate / Éviscérer** |

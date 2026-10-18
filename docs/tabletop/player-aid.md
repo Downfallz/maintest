@@ -103,8 +103,8 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 **Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
 **total**, not the halves.
 
-**Damage bonus** = the `Damage +N on every hit` on the caster's package cards + its Damage buffs. Never on a
-Bleed tick, never on the `Caster:` line.
+**Damage bonus** = the `Damage +N on every hit` on the caster's package cards + its Damage buff tokens.
+Never on a Bleed tick, never on the `Caster:` line.
 
 **Sunder** = the `Every hit ignores N defense` on the caster's package cards. A hit meets the target's total
 Defense **less the Sunder, never below 0**: it never adds damage. No rail moves. Never on the `Caster:` line.
@@ -160,7 +160,7 @@ Creature is ignored.**
 | **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution *(no card applies a buff today)* |
-| **Damage buff** | Read whenever its holder deals a direct hit, added to its Damage bonus *(no card applies it today)* |
+| **Damage buff** | Read whenever its holder deals a direct hit, added to its Damage bonus. A dock token, no rail *(Alpha Roar)* |
 
 **Cleanup, in two moves (§5.9):**
 

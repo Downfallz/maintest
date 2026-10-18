@@ -32,6 +32,13 @@ its amount, so nothing moves: not the package cards, not the uncovered Capstone 
 cascade, and not the 6 Immune tokens, which are the Round of Stun immunity after every Stun (ADR 0072). Where
 this document names Titan, it names the Brute family's Capstone and nothing more.
 
+**Nor for Alpha Roar** (journal, 2026-10-18). Fortress (`thundering_seal`) became Alpha Roar: one ally gets
++4 Defense and a Damage buff of +2, both for 2 Rounds, where it got +3 permanent and +3 for 2 Rounds. It is
+the first Spell to place a Damage buff, and components.md §1.4 gives it a dock token and no rail. With the
+Defense buff +2 and +7 faces that manifest had missed, it reads **198** Condition tokens in 7 kinds where 2.3
+and 3.11 here say 168 in 6. The example of 3.3 is restated with Alpha Roar's numbers, and its point holds;
+its measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -227,10 +234,11 @@ The chit is in use in 4% of realistic readings and nearly 1 in 5 of the stun mir
 
 **A single d10 showing total Defense loses two facts**, which is why components 3.3 keeps two un-floored sums:
 
-1. **Buffs held past 10.** `thundering_seal` (+3 permanent, +3 for 2 rounds) and `revenant_guards` (+3
-   permanent, +4 for 2 rounds) give buffs of 13 and Defense 10 (ADR 0076). When the +4 expires, buffs are 9
-   and Defense 9; a die at 10 reads 10 - 4 = 6. **Realistic profile: buffs past 10 in 6.7% of
-   Creature-Rounds, in 193 of 200 matches; largest buff sum 17.**
+1. **Buffs held past 10.** `thundering_seal` (+4 for 2 rounds since 2026-10-18; +3 permanent and +3 for 2
+   rounds before) and `revenant_guards` (+3 permanent, +4 for 2 rounds) give buffs of 11 and Defense 10
+   (ADR 0076). When one +4 expires, buffs are 7 and Defense 7; a die at 10 reads 10 - 4 = 6. With the old
+   Fortress it was buffs of 13, then 9 and Defense 9, against the same 6. **Realistic profile: buffs past
+   10 in 6.7% of Creature-Rounds, in 193 of 200 matches; largest buff sum 17.**
 2. **The floor.** `infectious_blast` (`Defense -3, permanent`) on a Creature with no buff: Defense 0. Then
    `guard` (+1 for 3 rounds, +1 for 2 rounds; the first was permanent until 2026-10-09, journal 2026-10-09):
    buffs 2, debuffs 3, Defense still 0; a die at 0 reads 2.

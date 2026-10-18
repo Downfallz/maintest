@@ -16,7 +16,8 @@ re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
 2026-10-09); the rows Titan reaches re-read the same day for
 [ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md) (`0a0d8573`), when its Passive
 became a Sunder of 3, and again later that day (`95a78999`), when the Sunder became 2 and Apex's Damage bonus
-3). Phase 1 of [plan.md](plan.md).
+3; the rows `thundering_seal` reaches re-read on 2026-10-18, when Fortress became Alpha Roar, the first Spell
+to give a `DamageBuff` (journal, 2026-10-18)). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -117,7 +118,8 @@ became a Sunder of 3, and again later that day (`95a78999`), when the Sunder bec
   Tier is owned. Titan (Brute) is immune to Stun (a Sunder since ADR 0106, 2 at `95a78999`, below), Archmage
   (Warped) gains 1 more Energy at every Upkeep, Apex (Predator) adds 2 to every direct hit (3 at `95a78999`,
   below), before the critical and the target's Defense. A new lasting kind,
-  `DamageBuff`, raises the same Damage bonus; no Spell gives it. What this moves here:
+  `DamageBuff`, raises the same Damage bonus; no Spell gives it (Alpha Roar does since 2026-10-18, below).
+  What this moves here:
   - **24 Tiers, not 21**, in three families of eight. The rows of 1.3 that count Tiers give both.
   - **Five rows in Part 1 are new**: the Passive's Energy in 1.1, the any-of prerequisite and the Passive in
     1.3, the Damage bonus and Titan's immunity in 1.9. **One in Part 2**: `DamageBuff`. No verdict of an
@@ -138,6 +140,19 @@ became a Sunder of 3, and again later that day (`95a78999`), when the Sunder bec
   **3**, not 2 (ADR 0106: a Sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it, and the
   Predator family won least). Both stay knobs from 1 to 3. Only the amounts in the Damage bonus and Sunder
   rows of 1.9 move; a hit's operations, its tokens and every verdict and tally do not.
+- **Re-read on 2026-10-18 (journal, 2026-10-18).** `thundering_seal` keeps its id and is renamed Alpha Roar
+  (it was Fortress). It still costs 2, reaches one ally and prints no Critical chance. It gives
+  `DefenseBuff` +4 for 2 Rounds and `DamageBuff` +2 for 2 Rounds, where it gave `DefenseBuff` +3 permanent
+  and +3 for 2 Rounds. What this moves here:
+  - **`DamageBuff` has a Spell.** Part 2's row goes from **keep as is** to **needs a component**: a Damage
+    buff token ([components.md](components.md) §1.4). The Damage bonus row of 1.9 gains a second source at the
+    table and stays **restate**.
+  - **One Defense buff Spell carries a permanent half**, `revenant_guards`; two did since 2026-10-17. Part 2's
+    `DefenseBuff` row and Candidate 3 say so.
+  - **`thundering_seal`'s row** keeps its operations (3), its tokens (2) and its verdict.
+  - **A drift older than this change, found on the way**: `shield_bash`'s caster Defense buff is +2, not +3,
+    since 2026-10-11 (tuning pass 27). Its row and the `DefenseBuff` row's values say so now.
+  - **Part 5's tallies**: 131 rows, **keep as is** 38, **restate** 43, **needs a component** 50.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -318,7 +333,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
-| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`, +3 at `95a78999`; no Spell gives a `DamageBuff` | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
+| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`, +3 at `95a78999`; no Spell gave a `DamageBuff` until 2026-10-18, when `thundering_seal` (Alpha Roar) gives +2 for 2 Rounds to one ally | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card, or of a Creature holding a Damage buff, read off the tokens in its dock; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
 | A Sunder takes from the Defense a direct hit meets, never below zero | `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)` (`ResolutionRules.Outcome`), where `sunder` is the caster's Sunder, its Passives' added (`Passive.Sunder`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0106). Titan's 2 at `95a78999`, 3 at `0a0d8573` earlier the same day; from ADR 0101 until then Titan gave stun immunity instead, which this row replaces | 1 more subtraction and 1 more floor per target on a Damage line, on the casts of a Titan owner, read off its Tier card: the target's total Defense less 2, floored, is what the hit then subtracts. No rail moves | **restate** | Nothing, but the Sunder is on a Tier card, not on the Spell card being cast nor on the target's rails, and a hit now has two floors: one on the Defense it meets, one on the damage. Subtracting the Defense and adding the Sunder back overshoots on a target with less Defense than the Sunder, so the rulebook (§5.8, §7.3) and the player aid print the order. |
 | A critical reaches nothing else | Not a lasting Effect, not a Caster effect, not Energy (`ResolutionRules.cs:68,93-95`, ADR 0033, ADR 0031, ADR 0035) | 0, once the boundary is taught as one sentence | **restate** | Nothing. "What the cast puts on a target's Health now" is the whole rule. |
 | Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 22 at `e6f72578` (`hateful_sacrifice`'s 11, doubled) | **restate** | Nothing. |
@@ -390,20 +405,22 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `Regeneration` | 3 (2 on targets: `healing_screech`, `soothing_chant`; 1 on the caster: `latch`) | 3 a Round for 2 Rounds, 2 for 2, 1 for 3 | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | Regeneration tokens in three faces, where there was one. Nothing is lost. |
 | `EnergyRegeneration` | 0 at `813bb91b` (`momentum` until ADR 0078) | none; `momentum`'s was 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Energy regeneration token) while `momentum` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `Stun` | 4 (`crushing_stomp`, `ice_spear`, `protective_slam`, `tranquilizer_dart`) | 2 Rounds (`crushing_stomp`); 1 Round for the other three | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 1 or 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a Stun removes a third of a Team for one or two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
-| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3 (and 1, `guard`'s, until 2026-10-09); timed 1, 3 or 4, for 2 or 3 Rounds | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. Three of the six carry a permanent Defense buff — two of them beside a timed one — and it stacks without a bound: ADR candidate 3. `bone_ward`, `guard` and `shield_bash` are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds. |
+| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3, `revenant_guards`' (and 1, `guard`'s, until 2026-10-09; `full_plate`'s 3 until 2026-10-17; `thundering_seal`'s 3 until 2026-10-18); timed 1, 2, 3, 4 or 7, for 2 or 3 Rounds (`shield_bash`'s 2 was 3 until 2026-10-11; `thundering_seal`'s 4 was 3 until 2026-10-18) | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. One of the six, `revenant_guards`, carries a permanent Defense buff, beside a timed one, and it stacks without a bound: ADR candidate 3. The other five are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds; three until 2026-10-17, when `full_plate`'s permanent +3 became +7 for 2 Rounds; two until 2026-10-18, when `thundering_seal`'s permanent +3 and timed +3 became one +4 for 2 Rounds beside a Damage buff. |
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
-| `DamageBuff` | 0 at `cedcfb61` (new with ADR 0101) | none | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. A Spell that authored a timed one would bring a token, as `InitiativeBuff` would; a permanent one would need a token that never leaves the board, since there is no Damage bonus rail ([components.md](components.md) §1.4). Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
+| `DamageBuff` | 1 since 2026-10-18 (on a target: `thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
 
 Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 31 of 44 Spells,
-one kind, `InitiativeDebuff`, is in two, and three, `EnergyRegeneration`, `InitiativeBuff` and `DamageBuff`,
-are in none (at `938bef5e` it was 23 of 36, seven kinds in one or two, and none in none). Second, the authored
+one kind, `InitiativeDebuff`, is in two, and two, `EnergyRegeneration` and `InitiativeBuff`, are in none
+(three, with `DamageBuff`, until 2026-10-18, when `thundering_seal` gave it one Spell; at `938bef5e` it was
+23 of 36, seven kinds in one or two, and none in none). Second, the authored
 values are
 still small and repetitive, though less than they were: every timed `DefenseDebuff` is 2, an
 `InitiativeDebuff` is 3 or 5, and Durations are only ever 1, 2, 3 or permanent. At `938bef5e` every
 `DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` was exactly 2. A token set is therefore small:
-[components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds.
+[components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds at `e6f72578`, and 198 in 7
+since 2026-10-18.
 
 ---
 
@@ -447,9 +464,10 @@ reproduced. [components.md](components.md) §2.3 defines both strings, measures 
 prints what it measures, at `e6f72578`, and is the number to quote. The flag below marks the seven the first
 measurement found over 110 characters *and* needing a second sentence the rulebook cannot carry for them (a
 Caster effect line, or two Conditions of the same kind on one target): `revenant_guards`, `crazed_specter`,
-`psycho_rush`, `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. components.md §2.4 lays them
-out one effect to a line, and at `e6f72578` names nine more Spells with a Caster effect that take the same
-rule: `ambush`, `bone_ward`, `extort`, `hateful_sacrifice`, `latch`, `momentum`, `parasite_jab`,
+`psycho_rush`, `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. Since 2026-10-18
+`thundering_seal` carries two kinds, not one twice, and keeps the flag for its Damage buff line, which must
+not read as a hit. components.md §2.4 lays them out one effect to a line, and at `e6f72578` names nine more
+Spells with a Caster effect that take the same rule: `ambush`, `bone_ward`, `extort`, `hateful_sacrifice`, `latch`, `momentum`, `parasite_jab`,
 `reckless_swing` and `shield_bash`. Their rows below say the caster line needs its own line on the card,
 which is the same requirement without the old character count. `latch` is the one card whose body needs a
 fifth line. ADR 0042 can only shorten a card: the twenty Spells at zero need print no Critical chance line
@@ -461,9 +479,9 @@ size; this document only reports which rows carry an extra rule.
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
 | `wait` | 0 | self | 1 | 0 | **keep as is** | Nothing. |
-| `full_plate` | 2 | self | 2 | 1 | **needs a component** | A permanent Defense token; it is ADR candidate 3's worst case. |
+| `full_plate` | 2 | self | 2 | 1 | **needs a component** | A timed Defense token, +7 for 2 Rounds, since 2026-10-17. Until then a permanent one, ADR candidate 3's worst case. |
 | `guard` | 1 | 1 ally | 3 | 2 | **needs a component** | Two timed Defense +1 tokens from one cast on one target, one for 3 Rounds and one for 2: one face, two Durations. One was permanent until 2026-10-09. Flagged for card text. |
-| `thundering_seal` | 3 | 1 ally | 3 | 2 | **needs a component** | Two Defense tokens from one cast at amount 3, one permanent and one timed (what `guard` was at amount 1 until 2026-10-09). Flagged for card text. |
+| `thundering_seal` | 3 | 1 ally | 3 | 2 | **needs a component** | Two timed tokens from one cast on one ally, since 2026-10-18 (Alpha Roar): a Defense buff +4 and a Damage buff +2, both for 2 Rounds. The Damage buff is the first a Spell places, and its token is new ([components.md](components.md) §1.4). Until then (Fortress) two Defense tokens at amount 3, one permanent and one timed, what `guard` was at amount 1 until 2026-10-09. Flagged for card text: `Damage +2 on every hit, 2 rounds` must read as a buff, not a hit. |
 | `bone_ward` | 2 | 1 ally | 3 | 2 | **needs a component** | A Defense buff token at +3 for 2 Rounds, and a Bleed 1 on its own caster; the caster line needs its own line on the card. New since PR #245. |
 | `heavy_strike` | 0 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
 | `momentum` | 2 | 1 enemy | 4 | 0 | **restate** | Nothing; the caster Energy needs its own line on the card, or the 2 Energy read as the target's. It deals 3 at `e6f72578`. Read at `813bb91b` (ADR 0078): it was a Self cast at 1 operation and 1 token, **needs a component**, an Energy regeneration token. |
@@ -489,7 +507,7 @@ size; this document only reports which rows carry an extra rule.
 | `protective_slam` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Stun token; one Round lost. It placed an Initiative debuff token until 2026-10-04: the verdict holds, the token changes. |
 | `crushing_stomp` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Stun token, on top of 7 damage at cost 4, the only cost-4 Spell; two Rounds lost, the longest Stun. |
 | `ice_spear` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Stun token; one Round lost. It placed an Initiative debuff token until PR #245: the verdict holds, the token changes. |
-| `shield_bash` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Defense buff token at +3 for 3 Rounds on its own caster; the caster line needs its own line on the card. New since PR #245. |
+| `shield_bash` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Defense buff token at +2 for 3 Rounds on its own caster (+3 until 2026-10-11); the caster line needs its own line on the card. New since PR #245. |
 | `ambush` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 5 on its own caster, for 1 Round. It is applied in Combat, so the Round it lasts is the next one (Candidate 5), and the caster line must say the caster slows itself, not its target. It replaced `shadowstep`, which raised its caster's initiative and had no row here. |
 | `mortal_wound` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Bleed token at 4 a Round for 2 Rounds, the largest Bleed placed on a target, which `crazed_specter` places too since `ad3e4d00`. |
 | `frostbite` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 3, for 1 Round. New since PR #245. |
@@ -609,6 +627,17 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > Re-read on 2026-10-09 (journal, 2026-10-09): `guard`'s first point lasts 3 Rounds, where it was permanent,
 > so three of the six Defense buff Spells carry a permanent half, not four. That is the last option below
 > applied to one Spell. `full_plate` is unchanged, so the reading below stands.
+>
+> Re-read on 2026-10-17 (journal, 2026-10-17): `full_plate` is +7 for 2 Rounds, where it was +3 permanent, the
+> same option applied to a second Spell. Two of the six Defense buff Spells carry a permanent half now,
+> `thundering_seal` and `revenant_guards`, and `full_plate` no longer feeds the line below.
+>
+> Re-read on 2026-10-18 (journal, 2026-10-18): `thundering_seal` is Alpha Roar, +4 Defense and a Damage buff
+> of +2 on one ally, both for 2 Rounds, where it was +3 permanent and +3 for 2 Rounds. The same option applied
+> to a third Spell. One of the six Defense buff Spells carries a permanent half now, `revenant_guards`, at +3
+> on up to 3 allies a cast, and the question below stands for it alone. The Damage buff Alpha Roar gives is
+> timed and stacks, so it is a dock token that leaves, not a second unbounded line: a Damage bonus held for
+> good is still only Apex's, printed on its Tier card.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above
@@ -617,9 +646,9 @@ Round 3: an Evolution pick buys `tier:brute:v1` in Round 1 and another `tier:iro
 the Creature gains 2 Energy every Round. Cast every Round from Round 3, its Defense is 3(k - 2) after Round k.
 The largest single hit in the catalogue is 11 (`hateful_sacrifice`); doubled by a critical that is 22. From
 Round 10 the Creature takes zero from every attack in the game except a Bleed, which ignores Defense.
-`thundering_seal` does the same for an ally at +3 and `revenant_guards` for the whole Team at
-+3 a cast: three of the six Defense buff Spells carry a permanent half (four, with `guard` at +1, until
-2026-10-09). The plan
+`thundering_seal` did the same for an ally at +3 until 2026-10-18, and `revenant_guards` does it for the
+whole Team at +3 a cast: three of the six Defense buff Spells carried a permanent half when this was
+written (four, with `guard` at +1, until 2026-10-09), and one does since 2026-10-18. The plan
 already calls this "probably not what anyone wants"; the table gives the round number.
 
 **The question.** What bounds a permanent stat buff?
@@ -631,8 +660,9 @@ already calls this "probably not what anyone wants"; the table gives the round n
   digest move, and three Spells lose their re-cast value entirely — `full_plate` becomes a once-a-Match cast,
   which is closer to the `Passive` it is authored as.
 - *Remove permanent Durations from the taxonomy and give those halves a long finite Duration.* Costs: a
-  content change on the three Defense buff Spells with a permanent half — four, if `infectious_blast`'s permanent Defense debuff
-  goes with them — and a new content hash; the arc of a Match loses its only permanent gain.
+  content change on the three Defense buff Spells with a permanent half — four, if `infectious_blast`'s
+  permanent Defense debuff goes with them; one, `revenant_guards`, since 2026-10-18 — and a new content
+  hash; the arc of a Match loses its only permanent gain.
 
 ### Candidate 4. A Condition remembers the Spell that applied it
 
@@ -749,8 +779,9 @@ ADR 0072 until 2026-10-07, which was one row short). Since ADR 0083 the enum has
 `DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff`, and `DamageBuff` since ADR 0101. 13 of 13, and at
 `cedcfb61` every one but `EnergyRegeneration`, `InitiativeBuff` and `DamageBuff` has at least one Spell in
 `data/` using it. The first lost its only
-Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04; the third has
-never had one. All three keep their row because the engine keeps the kind.
+Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04; the third had
+none until 2026-10-18, when `thundering_seal` became Alpha Roar. The first two keep their row because the
+engine keeps the kind.
 
 **Spells.** All 45 files under `data/Spells/**` at `e6f72578` appear, each as exactly one row in Part 3: 18
 trivially playable, 18 needing a component or a second reading, 9 expensive. 18 + 18 + 9 = 45. At
@@ -768,8 +799,10 @@ they share, the any-of prerequisite and the Passive, has its rows in 1.3, and ea
 1.1 or 1.9.
 
 **Verdicts.** 131 rows carry exactly one verdict each: 74 in Part 1, 13 in Part 2, 44 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 49, **keep as is** 39, **restate** 43,
-**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read for
+counted over the file rather than recalled: **needs a component** 50, **keep as is** 38, **restate** 43,
+**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read of
+2026-10-18 moved one verdict: Part 2's `DamageBuff` went from **keep as is** to **needs a component** when
+Alpha Roar gave it a Spell; before it they were 49 and 39. The re-read for
 ADR 0101 added six rows: in Part 1, the Passive's Energy (1.1), the any-of prerequisite (1.3), the Damage
 bonus and Titan's immunity (1.9; Titan's Sunder since ADR 0106, still **restate**), all **restate**, and
 the Passive a Tier may give (1.3), **needs a component**; in Part 2, `DamageBuff`, **keep as is**. Before it they were 125 rows, 48, 38 and 39. The re-read
@@ -796,9 +829,9 @@ Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
-| keep as is | 23 | 6 | 10 | 39 |
+| keep as is | 23 | 5 | 10 | 38 |
 | restate | 32 | 1 | 10 | 43 |
-| needs a component | 19 | 6 | 24 | 49 |
+| needs a component | 19 | 7 | 24 | 50 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
 | **Total** | **74** | **13** | **44** | **131** |

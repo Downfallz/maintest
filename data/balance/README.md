@@ -97,8 +97,10 @@ Since 2026-10-09, by the owner's call (journal of the day):
 - The starting kit and the six tier-1 spells keep their entries with an empty knob list: they are settled.
 - No spell costs more than 4 energy, so no cost knob reaches past 4; `check-knobs` and the studio refuse one
   that does.
-- No permanent buff can be searched above what it gives today (Carapace and Fortress stop at 3): permanent,
-  stacking defense is what stalls a match.
+- No permanent buff can be searched above what it gives today (Wraithguard's permanent half stops at 3):
+  permanent, stacking defense is what stalls a match. Carapace left the rule on 2026-10-17 by becoming a timed
+  buff, +7 for two rounds, and Fortress on 2026-10-18 by becoming Alpha Roar, +4 defense and +2 damage for two
+  rounds (journal of each day): short and decisive rather than piling up.
 - A keep that ties two numbers or two spells together (Latch's matched halves, Fury's crit above every other,
   Paralyzing Barb's stun below Crushing Stomp's) is held by the bounds, since the search moves each knob alone.
 
