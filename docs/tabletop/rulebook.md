@@ -533,7 +533,7 @@ Choose targets to satisfy the card's targeting line:
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
 > **Slot 4, Creature 3.** Player 1 declared **Emberstorm** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
-> 1 round`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
+> 2 rounds`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
 > each one it names takes the Damage and a Bleed token. Creature 3 may not switch to another Spell.
 > **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
 > chooses nothing.

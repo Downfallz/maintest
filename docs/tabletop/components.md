@@ -1964,7 +1964,7 @@ it (PR #245 and the content of 2026-10-04). translation.md has rows for all of t
 | --- | --- |
 | `ambush` | 1 Initiative debuff -5 on its own caster (1 round). It replaced `shadowstep`, which placed an Initiative buff +2 there |
 | `frostbite` | 1 Initiative debuff -3 (1 round) |
-| `meteor` | Up to 3 Bleeds 2 (1 round) |
+| `meteor` | Up to 3 Bleeds 2 (2 rounds). 1 round until 2026-10-18 |
 | `latch` | 1 Bleed 1 (3 rounds), and 1 Regeneration 1 on its own caster (3 rounds) |
 | `bone_ward` | 1 Defense buff +3 (2 rounds), and 1 Bleed 1 on its own caster (1 round) |
 | `shield_bash` | 1 Defense buff +2 on its own caster (3 rounds); +3 until 2026-10-11 |
