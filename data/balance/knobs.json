@@ -382,16 +382,17 @@
     "spell:full_plate": {
       "name": "Carapace",
       "class": "Warlord",
-      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is three self-targeted permanent points of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income for three points, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
+      "intent": "Armour the Warlord puts on when the blows come: seven points of defense on itself for two rounds, for one energy. It was three permanent points, cast again to stack, and permanent stacking defense is what stalls a match, so it is heavy and short instead: it decides the round it is cast in and the next, then it is gone, and a creature that keeps it up spends its slot on it every other round rather than once a match. It costs one energy so that it can be cast in the rounds that decide the match.",
       "keep": [
-        "Plate, not a shirt: one cast is armour a creature can feel, and it stacks by being cast again",
-        "Never free: a permanent effect nobody pays for has no brake but the round cap",
+        "Plate, not a shirt: one cast is armour a creature can feel the round it lands",
+        "Never permanent: lasting, stacking armour is a stall the round cap ends (owner, 2026-10-17)",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also half of the Warlord's opener, Ironhide, beside Body Slam, so `restorative_gush` and `crushing_stomp` are only ever as reachable as that package is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
+      "note": "Its price was the whole design while it was permanent, which is why its cost stops at one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable and repeatable. Permanent at 3 it was the best cast of its slots 9.6 % of the time on the lookahead's own reading and 5.5 points behind the best in the median (scripts/slot-choices.py, explore:0.2:lookahead on both seats, 400 benchmark matches): a trap. Timed, on the same seeds (journal, 2026-10-17): +5 for two rounds read 12.5 %, +7 for two rounds 16 %, against about 12 % for an option taken at random; +8 for one round read 8.7 %, because a buff of one round is mostly gone before the enemy's slots come. At +7 Greedy casts it twice as often (132 to 265 casts in 400 mirrored matches), it is cast again the next round 1.3 % of the time, matches run 0.3 rounds longer (10.1 to 10.4) and the round cap stays at 1 %. Two overlapping casts read 14, which the cap on defense buffs holds to 10 (ADR 0076). It is also half of the Warlord's opener, Ironhide, beside Body Slam, so `restorative_gush` and `crushing_stomp` are only ever as reachable as that package is.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:restorative_gush": {

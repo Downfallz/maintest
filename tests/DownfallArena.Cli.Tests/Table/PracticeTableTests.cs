@@ -93,7 +93,8 @@ public sealed class PracticeTableTests : IDisposable
         var (table, view, _) = await Started("slot-armor");
         await using var _ = table;
 
-        view["board"]!["enemies"]![0]!["totalDefense"]!.GetValue<int>().ShouldBe(3);
+        // Carapace's +7 for two rounds since 2026-10-17 (data/balance/knobs.json), +3 permanent before.
+        view["board"]!["enemies"]![0]!["totalDefense"]!.GetValue<int>().ShouldBe(7);
         Revealed(view).ShouldContain("spell:full_plate:v1");
         view["waitingCreature"]!.GetValue<int>().ShouldBe(view["board"]!["allies"]![0]!["id"]!.GetValue<int>());
     }

@@ -573,15 +573,15 @@ moves no rail: it changes what one caster's hit meets, and the target's total De
 everyone else.
 
 > **Example.** Creature 2 is Standard, and its slot comes up. Its card is **Incinerate**: cost 3,
-> `One enemy`, `Damage 10`, `Critical 33%`. Creature 5 cast **Carapace** in an earlier Round, so its Defense
-> buff rail reads 3 and its debuff rail 0: total Defense 3.
+> `One enemy`, `Damage 10`, `Critical 33%`. Creature 5 cast **Carapace** last Round, so its Defense
+> buff rail reads 7 and its debuff rail 0: total Defense 7.
 > Creature 2 is alive and unstunned, its Energy rail reads 4, and Creature 5 is alive. Player 1 flips the card
 > and names Creature 5.
 > Pay: Creature 2's Energy marker goes from 4 to 1.
 > Roll for a critical. **It is a critical.** Multiply the damage by the critical multiplier, 2: 10 becomes 20.
-> **Then** subtract Defense: 20 - 3 = 17. Creature 5 goes from 30 Health to 13.
-> Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
-> (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
+> **Then** subtract Defense: 20 - 7 = 13. Creature 5 goes from 30 Health to 17.
+> Had the roll missed: 10 - 7 = **3** damage. Had you subtracted first and doubled after:
+> (10 - 7) x 2 = **6**, which is not a number in this game. Multiply first. Subtract second.
 >
 > **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +3 on
 > every hit`. It is Standard, and casts **Blood Price** on Creature 1: `Damage 11`, `Caster: Damage 3`,

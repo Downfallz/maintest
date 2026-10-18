@@ -1863,7 +1863,7 @@ keeps both verdicts: `crazed_specter` still **needs a component**, now four Blee
 
 | Spell | What a cast places |
 | --- | --- |
-| `full_plate` | Nothing. +3 on its own Defense buff rail, permanent |
+| `full_plate` | 1 Defense buff +7 on itself (2 rounds). Until 2026-10-17 it placed nothing and moved its own rail +3, permanent |
 | `guard` | 2 Defense buffs +1 on its one target, one for 3 rounds and one for 2. Until 2026-10-09 it placed the 2-round one and moved the rail +1, permanent |
 | `thundering_seal` | 1 Defense buff +3 (2 rounds); +3 on the rail, permanent |
 | `healing_screech` | 1 Regeneration 3 (2 rounds) |

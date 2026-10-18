@@ -609,6 +609,10 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > Re-read on 2026-10-09 (journal, 2026-10-09): `guard`'s first point lasts 3 Rounds, where it was permanent,
 > so three of the six Defense buff Spells carry a permanent half, not four. That is the last option below
 > applied to one Spell. `full_plate` is unchanged, so the reading below stands.
+>
+> Re-read on 2026-10-17 (journal, 2026-10-17): `full_plate` is +7 for 2 Rounds, where it was +3 permanent, the
+> same option applied to a second Spell. Two of the six Defense buff Spells carry a permanent half now,
+> `thundering_seal` and `revenant_guards`, and `full_plate` no longer feeds the line below.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above
