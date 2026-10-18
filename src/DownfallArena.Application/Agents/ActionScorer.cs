@@ -1071,13 +1071,36 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Regeneration regeneration => ScoreTerms.Zero with { Heal = -sign * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth) },
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
-            // A hit a round raised by the amount (ADR 0101): the holder's own direct hits, which it lands on its enemies.
-            DamageBuff buff => ScoreTerms.Zero with { Damage = -sign * buff.Amount * rounds },
+            // Every direct hit its holder lands raised by the amount (ADR 0101), so it is worth the hits the holder
+            // has to land: one a round from a single-target hitter, two from one that hits two, none from a healer.
+            DamageBuff buff => ScoreTerms.Zero with { Damage = -sign * buff.Amount * HitsARound(target, creatures, remaining) * rounds },
             InitiativeBuff buff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, buff.Amount, creatures, remaining) * rounds },
             InitiativeDebuff debuff => ScoreTerms.Zero with { Initiative = -sign * Overtaken(target, -debuff.Amount, creatures, remaining) * rounds },
             DefenseDebuff debuff => DefenseDebuffTerms(sign, target, debuff.Amount, rounds, creatures, remaining),
             _ => ScoreTerms.Zero,
         };
+    }
+
+    /// <summary>
+    /// The direct hits a creature lands in a round at most: the enemies its widest hitting spell reaches, capped
+    /// by the enemies still standing. A hitting spell is one aimed at enemies that deals damage; a creature that
+    /// knows none lands nothing, so a damage buff on it is worth nothing. What it can pay for is not read: the
+    /// buff outlasts the round, and the energy comes back.
+    /// </summary>
+    private int HitsARound(CreatureSnapshot holder, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining)
+    {
+        var enemies = creatures.Count(creature => creature.Owner != holder.Owner && remaining[creature.Id] > 0);
+        var hits = 0;
+        foreach (var known in holder.KnownSpells)
+        {
+            var spell = resources.GetSpell(known);
+            if (spell.Targeting.Origin == TargetOrigin.Enemy && spell.Effects.Any(effect => effect is DamageEffect))
+            {
+                hits = Math.Max(hits, Math.Min(spell.Targeting.MaxTargets ?? enemies, enemies));
+            }
+        }
+
+        return hits;
     }
 
     /// <summary>

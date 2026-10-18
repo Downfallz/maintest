@@ -30,6 +30,9 @@ public sealed class ActionScorerTests
     /// it to 0.3). <c>AgentSpecTests</c> is where the value is pinned.
     /// </summary>
     private static readonly double PerEnergy = ScoringWeights.Default.Energy;
+
+    /// <summary>The damage weight, read for the same reason: what the damage buff tests pin is the hits it is multiplied by.</summary>
+    private static readonly double PerDamage = ScoringWeights.Default.Damage;
     private static readonly CreatureId One = CreatureId.From(1);
     private static readonly CreatureId Two = CreatureId.From(2);
     private static readonly CreatureId Three = CreatureId.From(3);
@@ -592,6 +595,61 @@ public sealed class ActionScorerTests
             board);
 
         (withRecoil - killOnly).ShouldBe(-0.65 * 2 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A damage buff raises every direct hit its holder lands (ADR 0101), so it is worth the hits the holder
+    /// lands: an ally that knows Strike hits one enemy a round, for the amount, over the buff's rounds.
+    /// </summary>
+    [Fact]
+    public void A_damage_buff_on_an_ally_is_priced_by_the_hits_it_lands_a_round()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, DamageBuff.Of(2, Duration.OfRounds(2))), creatures).ShouldBe(PerDamage * 2 * 1 * 2, 1e-9);
+    }
+
+    /// <summary>An ally that knows Slam reaches both enemies with one cast, so each round the buff lands twice.</summary>
+    [Fact]
+    public void A_damage_buff_on_an_ally_that_hits_two_is_worth_twice_as_much()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1).Bought(TestContent.GuardPack).Bought(TestContent.SlamPack);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, DamageBuff.Of(2, Duration.OfRounds(2))), creatures).ShouldBe(PerDamage * 2 * 2 * 2, 1e-9);
+    }
+
+    /// <summary>Slam reaches two, but one enemy is down: the buff lands once a round.</summary>
+    [Fact]
+    public void A_damage_buff_lands_on_no_more_enemies_than_are_standing()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1).Bought(TestContent.GuardPack).Bought(TestContent.SlamPack);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] with { Health = Health.Of(0) } };
+
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, DamageBuff.Of(2, Duration.OfRounds(2))), creatures).ShouldBe(PerDamage * 2 * 1 * 2, 1e-9);
+    }
+
+    /// <summary>A creature that knows no spell aimed at an enemy lands no hit for the buff to raise.</summary>
+    [Fact]
+    public void A_damage_buff_on_an_ally_that_never_hits_is_worth_nothing()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { KnownSpells = new HashSet<SpellId> { TestContent.Guard } };
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+
+        Scorer.Score(Cast(Strike(One, Three), ally.Id, DamageBuff.Of(2, Duration.OfRounds(2))), creatures).ShouldBe(0, 1e-9);
+    }
+
+    [Fact]
+    public void A_damage_buff_given_to_an_enemy_counts_against()
+    {
+        var board = Board(enemyHealth: 20);
+
+        Scorer.Score(Cast(Strike(One, Three), Three, DamageBuff.Of(2, Duration.OfRounds(2))), board).ShouldBe(-PerDamage * 2 * 1 * 2, 1e-9);
     }
 
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>
