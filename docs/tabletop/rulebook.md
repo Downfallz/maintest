@@ -7,7 +7,8 @@ picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04
 2026-10-05, and for the content of 2026-10-06, which removed Basic Attack and renamed the packages and Spells;
 the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09, when its first point became
 three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2 with Apex's Damage bonus
-raised from 2 to 3). Phase 4 of [plan.md](plan.md).
+raised from 2 to 3; Fortress's examples re-read 2026-10-18, when it became Alpha Roar, the first Spell to
+give a Damage buff). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -393,7 +394,7 @@ Then every pick token comes off the mats and the boards.
 > Oppressor, which Creature 3 owns.
 > **The Purchase reveal.** Titan goes face up with Creature 1. No Spell card moves, and the bonus of +0 moves no
 > rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 2
-> ([5.8](#58-resolving-an-action)). Tyrant goes face up with Creature 3: Dominate and Fortress go
+> ([5.8](#58-resolving-an-action)). Tyrant goes face up with Creature 3: Dominate and Alpha Roar go
 > into the hand, and +2 raises its Base initiative. Creature 3 may buy Titan at Round 9.
 
 ### 5.4 Speed
@@ -552,9 +553,11 @@ has happened since. Resolve the action in this order, and do not reorder it:
 2. **Roll for a critical**, once for the whole cast. A Quick Creature does not roll. See
    [6.7](#67-the-critical-roll).
 3. **Apply each effect line to each target.** A Damage line is a direct hit: add the caster's **Damage
-   bonus** to the printed Damage ([7.3](#73-the-three-passives-and-their-timing)), multiply by a critical,
-   then subtract the Defense the hit meets, never below zero. The Defense a hit meets is that target's total
-   Defense less the caster's **Sunder**, never below zero; a caster with no Sunder meets the whole total
+   bonus** to the printed Damage, its package cards' and its Damage buffs' added
+   ([7.1](#71-the-nine-conditions-and-their-timing), [7.3](#73-the-three-passives-and-their-timing)),
+   multiply by a critical, then subtract the Defense the hit meets, never below zero. The Defense a hit
+   meets is that target's total Defense less the caster's **Sunder**, never below zero; a caster with no
+   Sunder meets the whole total
    ([7.3](#73-the-three-passives-and-their-timing)). A Heal is capped by the Health that target is
    missing. An Energy drain takes at most what the target has. A lasting Effect becomes a Condition; see
    [5.9](#59-cleanup) and [Part 7](#part-7-reference-every-condition-the-end-of-a-match-and-every-passive). A
@@ -593,14 +596,26 @@ everyone else.
 >
 > **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 2
 > defense`. It is Standard, and casts **Dominate** on Creatures 4 and 5: cost 3, `Up to 2 enemies`,
-> `Damage 7`, `Critical 50%  d20: 11+`. Creature 6 cast **Fortress** on Creature 5 last Round, so Creature
-> 5's total Defense is 3 + 3 = 6. Creature 4 has no Defense: total Defense 0.
-> The d20 shows 8: no critical. Creature 5: the hit meets 6 - 2 = 4 Defense, and Creature 5 takes
-> 7 - 4 = **3**. Creature 4: 0 - 2 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
+> `Damage 7`, `Critical 50%  d20: 11+`. Creature 6 cast **Alpha Roar** on Creature 5 last Round:
+> `One ally`, `Defense +4, 2 rounds`, `Damage +2 on every hit, 2 rounds`. So Creature 5's Defense buff rail
+> reads 4: total Defense 4. Creature 4 has no Defense: total Defense 0.
+> The d20 shows 8: no critical. Creature 5: the hit meets 4 - 2 = 2 Defense, and Creature 5 takes
+> 7 - 2 = **5**. Creature 4: 0 - 2 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
 > not 9. A Sunder takes Defense away; it never adds damage.
-> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 4 = **10** and Creature 4 takes **14**.
+> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 2 = **12** and Creature 4 takes **14**.
 > No rail moves. Creature 2, with no Sunder, hits Creature 5 next with **Strike**, `Damage 3`, and meets all
-> 6: 0 damage.
+> 4: 0 damage. Creature 5's `Damage +2` changes none of this: it counts when Creature 5 hits, not when it is
+> hit.
+>
+> **Example, a Damage buff.** Later in the same Round, Creature 5's slot comes up. Its dock holds the
+> `Damage +2` token Alpha Roar put there last Round. It casts **Strike** on Creature 3: `Damage 3`,
+> `No critical roll`. Creature 3 has no Defense. Add the bonus: 3 + 2 = **5**. Creature 5 owns no Apex, so the
+> token is the whole of its bonus; with Apex it would be 3 + 3 + 2 = 8.
+> Had Creature 4 also cast Alpha Roar on Creature 5 earlier this Round, there would be two tokens:
+> 3 + 2 + 2 = **7**. A Damage buff stacks, and each one is its own token.
+> The token never touches a Bleed Creature 5 causes, nor its own `Caster:` line. It went into the `new` lane
+> when it landed and into lane `2` at last Round's Cleanup. It slides to lane `1` at this Round's Cleanup and
+> leaves at the next: the Round it was cast in, and two full Rounds after.
 
 ### 5.9 Cleanup
 
@@ -886,19 +901,19 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative. No Spell in the current catalogue applies it | Read once, at Turn order resolution | Stacks | Condition dock |
 | **Initiative debuff** | Lowers Current initiative | The same | Stacks | Condition dock |
-| **Damage buff** | Raises its holder's Damage bonus. No Spell in the current catalogue applies it | Read whenever its holder deals a direct hit | Stacks | Condition dock |
+| **Damage buff** | Raises its holder's Damage bonus. **Alpha Roar** applies it: `Damage +2 on every hit, 2 rounds` | Read whenever its holder deals a direct hit | Stacks | Condition dock. No rail: count the tokens at the hit |
 
 Three sums. The first two floor at zero **after** the subtraction, never before:
 
 - **Total Defense** = base Defense + Defense buffs (at most 10) - Defense debuffs, never below zero.
 - **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below zero.
-- **Damage bonus** = the Damage its package cards print + Damage buffs.
+- **Damage bonus** = the Damage its package cards print + the Damage buff tokens in its dock.
 
 A **permanent** Condition never counts down. Move the rail and put no token on the dock: there is nothing to
 undo and nothing to remember. Permanent and timed Defense buffs share one ceiling of 10 (ADR 0076): stack past
 it and the rail keeps counting, but the Creature's Defense does not. A permanent Damage buff would have no rail
-to move; no Spell applies one, so the box has nothing for it
-([components.md 1.4](components.md#14-condition-tokens)).
+to move; no Spell applies a permanent one, so the box has nothing for it
+([components.md 1.4](components.md#14-condition-tokens)). Alpha Roar's is timed: a token in the dock.
 
 **Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
 of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it
@@ -974,7 +989,9 @@ writing around it. Each one is faithful to the engine; each one is longer than a
    ADR 0106 there is a second such number, Titan's Sunder, and it puts a floor inside the third step: the
    Defense subtracted is the target's total less the Sunder, floored at zero before the hit is. The rule
    still states in two sentences ([5.8](#58-resolving-an-action), step 3); what grew is the arithmetic a
-   Player must hold, which is read off two package cards and one pair of rails.
+   Player must hold, which is read off two package cards and one pair of rails. Since 2026-10-18 the bonus
+   has a second source the flipped card does not show either: Alpha Roar's Damage buff tokens, in the
+   caster's own dock. The Player adds them to the package card's bonus before multiplying.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
    may take fewer) are deliberately not printed on any of the 44 cards because they are true of all of them.
