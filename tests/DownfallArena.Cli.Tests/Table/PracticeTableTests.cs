@@ -106,7 +106,8 @@ public sealed class PracticeTableTests : IDisposable
         await using var _ = table;
 
         Revealed(view).ShouldContain("spell:adrenaline_tonic:v1");
-        view["board"]!["allies"]![0]!["energy"]!.GetValue<int>().ShouldBe(4);
+        // Overdrive's +4 since 2026-10-19 (data/balance/knobs.json), +2 before.
+        view["board"]!["allies"]![0]!["energy"]!.GetValue<int>().ShouldBe(6);
         Offered(view).ShouldContain("spell:enraged_charge:v1");
     }
 

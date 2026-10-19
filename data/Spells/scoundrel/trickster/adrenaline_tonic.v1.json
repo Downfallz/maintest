@@ -13,7 +13,12 @@
   "effects": [
     {
       "kind": "EnergyGain",
-      "amount": 2
+      "amount": 4
+    },
+    {
+      "kind": "DamageBuff",
+      "amount": 1,
+      "durationRounds": 1
     }
   ],
   "enabled": true

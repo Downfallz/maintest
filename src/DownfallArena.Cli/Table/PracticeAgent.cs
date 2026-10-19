@@ -202,7 +202,7 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
     /// <summary>
     /// Focus, which gathers energy, except for the creature a recipe at the slot is about: it spends energy so
     /// that it comes to its slot with exactly what the recipe needs. Two to begin each round, nothing at the
-    /// start: Overdrive finds two and makes four, so Fury (three) becomes payable; Claim finds three and leaves
+    /// start: Overdrive finds two and makes six, so Fury (three) becomes payable; Claim finds three and leaves
     /// two, so Fury is out of reach.
     /// </summary>
     private string Preparation(PlayerBoardState board, int index) =>
