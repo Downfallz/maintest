@@ -17,7 +17,9 @@ re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
 [ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md) (`0a0d8573`), when its Passive
 became a Sunder of 3, and again later that day (`95a78999`), when the Sunder became 2 and Apex's Damage bonus
 3; the rows `thundering_seal` reaches re-read on 2026-10-18, when Fortress became Alpha Roar, the first Spell
-to give a `DamageBuff` (journal, 2026-10-18)). Phase 1 of [plan.md](plan.md).
+to give a `DamageBuff` (journal, 2026-10-18); the rows `adrenaline_tonic` reaches re-read on 2026-10-19,
+when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)). Phase 1 of
+[plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -153,6 +155,19 @@ to give a `DamageBuff` (journal, 2026-10-18)). Phase 1 of [plan.md](plan.md).
   - **A drift older than this change, found on the way**: `shield_bash`'s caster Defense buff is +2, not +3,
     since 2026-10-11 (tuning pass 27). Its row and the `DefenseBuff` row's values say so now.
   - **Part 5's tallies**: 131 rows, **keep as is** 38, **restate** 43, **needs a component** 50.
+- **Re-read on 2026-10-19 (journal, 2026-10-19).** `adrenaline_tonic` keeps its name, Overdrive, and its id.
+  It still costs 1, reaches up to 3 allies and prints no Critical chance. It gives `EnergyGain` 4 and
+  `DamageBuff` +1 for 1 Round, where it gave `EnergyGain` 2 alone. A Duration counts the full Rounds after
+  the cast's own, so the buff holds through the rest of the Round it is cast in and the next. What this
+  moves here:
+  - **`adrenaline_tonic`'s row** goes from 4 operations and no token to 7 and 3: per ally, 1 for the Energy
+    and 1 for the Damage buff, plus the cost. It places tokens, so it goes from **keep as is** to **needs a
+    component**, a Damage buff +1 token ([components.md](components.md) §1.4), and from Part 3's first table
+    to its second: 16 + 19 + 9 = 44.
+  - **Part 2**: `EnergyGain`'s amounts are 1, 2 and 4, and its verdict holds. `DamageBuff` has two Spells,
+    +2 for 2 Rounds and +1 for 1 Round, and stays **needs a component**. The Damage bonus row of 1.9 gains a
+    third source at the table and stays **restate**. The 44 files author 81 Effects (80).
+  - **Part 5's tallies**: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -333,7 +348,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | A `Quick` Creature rolls no critical | `CriticalChanceOf` is 0 for `Quick`, whatever the two chances add up to (`ResolutionRules.cs:85`, #160; game-rules.md, `Speed`). The engine still draws, so a seeded Match reads the same stream whatever the Speed (`ResolutionRules.cs:57-59`) | 1 look at the Speed card already face up on the creature board; 0 rolls | **restate** | Nothing, and it saves a roll. But it is half of the Speed trade, made at `Speed` and paid here, so it must be printed where the Speed is chosen — on the `Quick` card or the player aid — or `Quick` reads as free. |
 | A critical multiplies Damage and a direct Heal, floored | `Multiplied(amount, multiplier)` on `Damage` and `Heal` only (`ResolutionRules.cs:91-92`, ADR 0033) | 1 multiplication per affected Outcome, at a multiplier of 2.0 | **restate** | Nothing. At 2.0 it is a doubling, which is the cheapest arithmetic there is. |
 | The critical applies *before* Defense | `Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value)` (`ResolutionRules.cs:91`) | 1 ordering rule held in the head | **restate** | Nothing, but getting it backwards changes the result, so it must be printed on the player aid. |
-| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`, +3 at `95a78999`; no Spell gave a `DamageBuff` until 2026-10-18, when `thundering_seal` (Alpha Roar) gives +2 for 2 Rounds to one ally | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card, or of a Creature holding a Damage buff, read off the tokens in its dock; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
+| A Damage bonus is added to a direct hit, before the critical and before Defense | `Multiplied(damage.Amount + damageBonus, multiplier) - target.TotalDefense` (`ResolutionRules.Outcome`), where the bonus is the caster's Passives' and Damage buffs' added (`Creature.DamageBonus`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0101). Apex's +2 at `cedcfb61`, +3 at `95a78999`; no Spell gave a `DamageBuff` until 2026-10-18, when `thundering_seal` (Alpha Roar) gives +2 for 2 Rounds to one ally; since 2026-10-19 `adrenaline_tonic` (Overdrive) gives +1 for 1 Round to up to 3 allies | 1 more addition per target on a Damage line, on the casts of an Apex owner, read off its Tier card, or of a Creature holding a Damage buff, read off the tokens in its dock; the ordering rule above gains a step: add, multiply, subtract | **restate** | Nothing, but the bonus is on a Tier card, not on the Spell card being cast, so the order "add, multiply, subtract" must be printed on the player aid beside the critical's. The rulebook's Part 8 reports it as the one number of a hit the flipped card does not show. |
 | A Sunder takes from the Defense a direct hit meets, never below zero | `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)` (`ResolutionRules.Outcome`), where `sunder` is the caster's Sunder, its Passives' added (`Passive.Sunder`), and 0 on a Caster effect; a Bleed tick never reads it (ADR 0106). Titan's 2 at `95a78999`, 3 at `0a0d8573` earlier the same day; from ADR 0101 until then Titan gave stun immunity instead, which this row replaces | 1 more subtraction and 1 more floor per target on a Damage line, on the casts of a Titan owner, read off its Tier card: the target's total Defense less 2, floored, is what the hit then subtracts. No rail moves | **restate** | Nothing, but the Sunder is on a Tier card, not on the Spell card being cast nor on the target's rails, and a hit now has two floors: one on the Defense it meets, one on the damage. Subtracting the Defense and adding the Sunder back overshoots on a target with less Defense than the Sunder, so the rulebook (§5.8, §7.3) and the player aid print the order. |
 | A critical reaches nothing else | Not a lasting Effect, not a Caster effect, not Energy (`ResolutionRules.cs:68,93-95`, ADR 0033, ADR 0031, ADR 0035) | 0, once the boundary is taught as one sentence | **restate** | Nothing. "What the cast puts on a target's Health now" is the whole rule. |
 | Damage minus total Defense, floor zero | `ResolutionRules.cs:91` | 1 subtraction and 1 floor per target, on numbers up to 22 at `e6f72578` (`hateful_sacrifice`'s 11, doubled) | **restate** | Nothing. |
@@ -394,7 +409,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | --- | --- | --- | --- | --- | --- | --- |
 | `Damage` | 31 at `3c9eb083` (30 on targets; 3 on the caster: `hateful_sacrifice`, `reckless_swing`, `summon_minions`, the last on the caster only); 32 and 31 at `ad3e4d00`, with `basic_attack` | amounts 1 to 11, every one of them but 9, which no Spell deals since `crazed_specter` went to 4; 11 is `hateful_sacrifice`. `basic_attack`'s 2 is still dealt to a target by five Spells | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
 | `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 4, 5, 7, 9 | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
-| `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`) and 2 | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
+| `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`), 2 and 4 (`adrenaline_tonic` since 2026-10-19; 2 before) | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
 | `EnergyDrain` | 3 (`extort`, `night_raid`, `soul_devourer`) | amounts 1 (`extort`) and 3; `night_raid`'s 3 on up to 2 enemies (2 on up to 3 at `e6f72578`) | Takes at most what the target has (`Creature.cs:295-307`, ADR 0035) | 1 comparison, 1 token move | **keep as is** | Nothing. |
 
 ### Lasting effects (they become Conditions)
@@ -409,18 +424,19 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
-| `DamageBuff` | 1 since 2026-10-18 (on a target: `thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
+| `DamageBuff` | 2 since 2026-10-19 (on targets: `thundering_seal`, `adrenaline_tonic`); 1 on 2026-10-18 (`thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds (`thundering_seal`); 1 for 1 Round, on up to 3 allies (`adrenaline_tonic`, since 2026-10-19) | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). Two faces since 2026-10-19, +2 and +1, each sized by the supply rule. It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
 
 Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 31 of 44 Spells,
-one kind, `InitiativeDebuff`, is in two, and two, `EnergyRegeneration` and `InitiativeBuff`, are in none
+two kinds, `InitiativeDebuff` and `DamageBuff`, are in two (`DamageBuff` since 2026-10-19), and two,
+`EnergyRegeneration` and `InitiativeBuff`, are in none
 (three, with `DamageBuff`, until 2026-10-18, when `thundering_seal` gave it one Spell; at `938bef5e` it was
 23 of 36, seven kinds in one or two, and none in none). Second, the authored
 values are
 still small and repetitive, though less than they were: every timed `DefenseDebuff` is 2, an
 `InitiativeDebuff` is 3 or 5, and Durations are only ever 1, 2, 3 or permanent. At `938bef5e` every
 `DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` was exactly 2. A token set is therefore small:
-[components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds at `e6f72578`, and 198 in 7
-since 2026-10-18.
+[components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds at `e6f72578`, 198 in 7
+since 2026-10-18, and 216 in 7 since 2026-10-19.
 
 ---
 
@@ -466,7 +482,8 @@ measurement found over 110 characters *and* needing a second sentence the rulebo
 Caster effect line, or two Conditions of the same kind on one target): `revenant_guards`, `crazed_specter`,
 `psycho_rush`, `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. Since 2026-10-18
 `thundering_seal` carries two kinds, not one twice, and keeps the flag for its Damage buff line, which must
-not read as a hit. components.md §2.4 lays them out one effect to a line, and at `e6f72578` names nine more
+not read as a hit. Since 2026-10-19 `adrenaline_tonic` prints the second Damage buff line, in the same words,
+and is not flagged: 88 characters, no Caster effect, one Condition. components.md §2.4 lays them out one effect to a line, and at `e6f72578` names nine more
 Spells with a Caster effect that take the same rule: `ambush`, `bone_ward`, `extort`, `hateful_sacrifice`, `latch`, `momentum`, `parasite_jab`,
 `reckless_swing` and `shield_bash`. Their rows below say the caster line needs its own line on the card,
 which is the same requirement without the old character count. `latch` is the one card whose body needs a
