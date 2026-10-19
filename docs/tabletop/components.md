@@ -86,7 +86,8 @@ What is current, exactly:
   The card keeps 3 body lines, its longest is 32 characters, and no figure of [2.3](#23-the-measurement)
   moves ([2.4](#24-the-seven-that-need-a-second-sentence)). The dock keeps four lanes. One Defense buff
   Spell carries a permanent half now, `revenant_guards`.
-- **Overdrive gives Energy +4 and a Damage buff +1** (journal, 2026-10-19). `adrenaline_tonic` keeps its
+- **Overdrive gives Energy +4 and a Damage buff +1** (journal, 2026-10-19; content `acf0aca5`, which is
+  `7f0c77bd` with that one Spell changed). `adrenaline_tonic` keeps its
   name, its id, its cost of 1, its reach of up to 3 allies and its Critical chance of 0. It gives each target
   `Energy +4` and `Damage +1 on every hit, 1 round`, where it gave `Energy +2` alone. It is the second Spell
   to give a Damage buff, the first at +1 and the first on up to 3 allies, so the Damage buff gets a **+1
@@ -529,7 +530,11 @@ Bleed and Defense face above, so the box gains a **Damage buff +1** face. Same r
 since a Team is 3 Creatures and `Ally` includes the caster, and six slots can cast it in one Round, so 6 x 3
 = **18** at +1. The two faces carry the same words and differ in the numeral, and the numeral is the one
 thing the Player resolving a hit reads off them, so it is printed as large as the 15 mm token takes. The
-token goes in the dock and takes no rail, for the three reasons below, which do not read the amount.
+token goes in the dock and takes no rail, for the three reasons below, which do not read the amount. A
+tuning pass may move the face: `data/balance/knobs.json` searches its amount from 1 to 2, its Duration from 1
+to 2 Rounds and the reach from 2 to 3 allies. At +2 the two Spells share one face, sized by the same rule at
+18, the most one slot places, and the +1 face leaves; at 2 allies the +1 face is 12; a Duration of 2 adds no
+lane ([3.2](#32-the-condition-dock-and-the-countdown)). Content `acf0aca5`.
 
 The token goes in the dock like every other timed Condition, and counts down there
 ([3.2](#32-the-condition-dock-and-the-countdown)). **It takes no rail.** That is the choice
@@ -743,7 +748,8 @@ while Overdrive gave 2, from ADR 0078 until 2026-10-19: 2 from the Round, 4 from
 whose caster line gives the same 2, or on `adrenaline_tonic`. Nothing reaches it from earlier
 Rounds any more: it was 14 while `momentum` placed an Energy regeneration on its own caster, 2 a Round for 3
 Rounds, and three of those overlapping added 6. **An Archmage owner gains 15**, the 1 its Passive adds at the
-Energy gain on top of the 14 (16 at the knob's `max` of 2; 9 and 10 until 2026-10-19). It moves no end and
+Energy gain on top of the 14 (16 at the knob's `max` of 2; 9 and 10 until 2026-10-19). Overdrive's own knob
+runs its Energy from 2 to 5, so a pass can make the Round's most 17, 18 with Archmage. It moves no end and
 no count: a Round that gains 14 is three slots spent on Energy, and the overflow chit below is what any gain
 past 40 takes.
 

@@ -120,7 +120,8 @@ when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)
   Tier is owned. Titan (Brute) is immune to Stun (a Sunder since ADR 0106, 2 at `95a78999`, below), Archmage
   (Warped) gains 1 more Energy at every Upkeep, Apex (Predator) adds 2 to every direct hit (3 at `95a78999`,
   below), before the critical and the target's Defense. A new lasting kind,
-  `DamageBuff`, raises the same Damage bonus; no Spell gives it (Alpha Roar does since 2026-10-18, below).
+  `DamageBuff`, raises the same Damage bonus; no Spell gives it (Alpha Roar does since 2026-10-18, and
+  Overdrive since 2026-10-19, below).
   What this moves here:
   - **24 Tiers, not 21**, in three families of eight. The rows of 1.3 that count Tiers give both.
   - **Five rows in Part 1 are new**: the Passive's Energy in 1.1, the any-of prerequisite and the Passive in
@@ -155,11 +156,11 @@ when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)
   - **A drift older than this change, found on the way**: `shield_bash`'s caster Defense buff is +2, not +3,
     since 2026-10-11 (tuning pass 27). Its row and the `DefenseBuff` row's values say so now.
   - **Part 5's tallies**: 131 rows, **keep as is** 38, **restate** 43, **needs a component** 50.
-- **Re-read on 2026-10-19 (journal, 2026-10-19).** `adrenaline_tonic` keeps its name, Overdrive, and its id.
-  It still costs 1, reaches up to 3 allies and prints no Critical chance. It gives `EnergyGain` 4 and
-  `DamageBuff` +1 for 1 Round, where it gave `EnergyGain` 2 alone. A Duration counts the full Rounds after
-  the cast's own, so the buff holds through the rest of the Round it is cast in and the next. What this
-  moves here:
+- **Re-read on 2026-10-19 (journal, 2026-10-19; content `acf0aca5`).** `adrenaline_tonic` keeps its name,
+  Overdrive, and its id. It still costs 1, reaches up to 3 allies and prints no Critical chance. It gives
+  `EnergyGain` 4 and `DamageBuff` +1 for 1 Round, where it gave `EnergyGain` 2 alone. A Duration counts the
+  full Rounds after the cast's own, so the buff holds through the rest of the Round it is cast in and the
+  next. What this moves here:
   - **`adrenaline_tonic`'s row** goes from 4 operations and no token to 7 and 3: per ally, 1 for the Energy
     and 1 for the Damage buff, plus the cost. It places tokens, so it goes from **keep as is** to **needs a
     component**, a Damage buff +1 token ([components.md](components.md) §1.4), and from Part 3's first table
@@ -424,7 +425,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
-| `DamageBuff` | 2 since 2026-10-19 (on targets: `thundering_seal`, `adrenaline_tonic`); 1 on 2026-10-18 (`thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds (`thundering_seal`); 1 for 1 Round, on up to 3 allies (`adrenaline_tonic`, since 2026-10-19) | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). Two faces since 2026-10-19, +2 and +1, each sized by the supply rule. It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
+| `DamageBuff` | 2 since 2026-10-19 (on targets: `thundering_seal`, `adrenaline_tonic`); 1 from 2026-10-18 (`thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds (`thundering_seal`); 1 for 1 Round, on up to 3 allies (`adrenaline_tonic`, since 2026-10-19) | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). Two faces since 2026-10-19, +2 and +1, each sized by the supply rule. It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
 
 Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 31 of 44 Spells,
 two kinds, `InitiativeDebuff` and `DamageBuff`, are in two (`DamageBuff` since 2026-10-19), and two,
@@ -483,7 +484,8 @@ Caster effect line, or two Conditions of the same kind on one target): `revenant
 `psycho_rush`, `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. Since 2026-10-18
 `thundering_seal` carries two kinds, not one twice, and keeps the flag for its Damage buff line, which must
 not read as a hit. Since 2026-10-19 `adrenaline_tonic` prints the second Damage buff line, in the same words,
-and is not flagged: 88 characters, no Caster effect, one Condition. components.md §2.4 lays them out one effect to a line, and at `e6f72578` names nine more
+and is not flagged: its statline is 88 characters by components.md §2.3's join, it has no Caster effect,
+and it places one Condition. components.md §2.4 lays them out one effect to a line, and at `e6f72578` names nine more
 Spells with a Caster effect that take the same rule: `ambush`, `bone_ward`, `extort`, `hateful_sacrifice`, `latch`, `momentum`, `parasite_jab`,
 `reckless_swing` and `shield_bash`. Their rows below say the caster line needs its own line on the card,
 which is the same requirement without the old character count. `latch` is the one card whose body needs a
@@ -491,7 +493,7 @@ fifth line. ADR 0042 can only shorten a card: the twenty Spells at zero need pri
 at all. Whether that fits is the component-designer's measurement, against a real card size and a real type
 size; this document only reports which rows carry an extra rule.
 
-### Trivially playable — 5 operations or fewer and at most 2 tokens: 17 Spells
+### Trivially playable — 5 operations or fewer and at most 2 tokens: 16 Spells
 
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -502,7 +504,6 @@ size; this document only reports which rows carry an extra rule.
 | `bone_ward` | 2 | 1 ally | 3 | 2 | **needs a component** | A Defense buff token at +3 for 2 Rounds, and a Bleed 1 on its own caster; the caster line needs its own line on the card. New since PR #245. |
 | `heavy_strike` | 0 | 1 enemy | 4 | 0 | **keep as is** | Nothing. |
 | `momentum` | 2 | 1 enemy | 4 | 0 | **restate** | Nothing; the caster Energy needs its own line on the card, or the 2 Energy read as the target's. It deals 3 at `e6f72578`. Read at `813bb91b` (ADR 0078): it was a Self cast at 1 operation and 1 token, **needs a component**, an Energy regeneration token. |
-| `adrenaline_tonic` | 2 | 3 allies | 4 | 0 | **keep as is** | Nothing; three Energy moves and no arithmetic. It inherits the unbounded track of the "Energy has no maximum" row in 1.1. New since PR #245. |
 | `rejuvenate` | 1 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
 | `restorative_gush` | 3 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
 | `restorative_burst` | 3 | 1 ally | 4 | 0 | **keep as is** | Nothing. |
@@ -513,7 +514,7 @@ size; this document only reports which rows carry an extra rule.
 | `healing_screech` | 2 | 1 ally | 5 | 1 | **needs a component** | A Regeneration token. |
 | `poison_slash` | 1 | 1 enemy | 5 | 1 | **needs a component** | A Bleed token. Since ADR 0041 a second Bleed is a second token, not a lost amount. |
 
-### A component, or a second reading — 6 or 7 operations, or 3 tokens: 18 Spells
+### A component, or a second reading — 6 or 7 operations, or 3 tokens: 19 Spells
 
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -535,6 +536,7 @@ size; this document only reports which rows carry an extra rule.
 | `extort` | 2 | 1 enemy | 7 | 0 | **restate** | Nothing; Damage 4 and an Energy drain of 1 on the target, Energy +1 on the caster. The caster line needs its own line on the card, or the gain reads as the target's. New since PR #245. |
 | `hateful_sacrifice` | 3 | 1 enemy | 7 | 0 | **restate** | Nothing; 11 damage, the largest in the catalogue, and 3 back on the caster, which can kill it. Two Health tracks move. |
 | `throwing_star` | 1 | 2 enemies | 7 | 0 | **restate** | Nothing; 2 targets, 3 operations each, and the card must show that the second is optional (1.8). It was **keep as is** at 1 enemy, in the first table, until #172 gave it a second target. |
+| `adrenaline_tonic` | 2 | 3 allies | 7 | 3 | **needs a component** | Up to three Damage buff tokens at +1 for 1 Round, beside `Energy +4` on each ally, from one cast at cost 1, since 2026-10-19 (journal, 2026-10-19): a Damage buff +1 face, the second Damage buff a Spell places ([components.md](components.md) §1.4). The Energy inherits the unbounded track of the "Energy has no maximum" row in 1.1. It was **keep as is** in the first table, at 4 operations and no token, while it gave `Energy +2` alone: the content moved this verdict. New since PR #245. |
 
 ### Expensive — 8 operations or more: 9 Spells
 
@@ -797,7 +799,8 @@ ADR 0072 until 2026-10-07, which was one row short). Since ADR 0083 the enum has
 `cedcfb61` every one but `EnergyRegeneration`, `InitiativeBuff` and `DamageBuff` has at least one Spell in
 `data/` using it. The first lost its only
 Spell, `momentum`, to ADR 0078; the second lost `death_squad` to `night_raid` on 2026-10-04; the third had
-none until 2026-10-18, when `thundering_seal` became Alpha Roar. The first two keep their row because the
+none until 2026-10-18, when `thundering_seal` became Alpha Roar, and a second since 2026-10-19,
+`adrenaline_tonic`. The first two keep their row because the
 engine keeps the kind.
 
 **Spells.** All 45 files under `data/Spells/**` at `e6f72578` appear, each as exactly one row in Part 3: 18
@@ -805,7 +808,8 @@ trivially playable, 18 needing a component or a second reading, 9 expensive. 18 
 `938bef5e` it was 18 + 11 + 7 = 36. `death_squad` and `shadowstep` are gone from `data/` and have no row.
 At `ad3e4d00` the split is the same: `night_raid` at 9 operations and `crazed_specter` at 14 are both still
 expensive, and neither verdict moved. At `3c9eb083` all 44 files appear: `basic_attack` left the first
-table, so 17 + 18 + 9 = 44. By Tier level: 2 at 0 (the starting kit; 3 until `3c9eb083`), 6 at 1, 18 at 2,
+table, so 17 + 18 + 9 = 44. Since 2026-10-19 `adrenaline_tonic`, at 7 operations and 3 tokens, is in the
+second: 16 + 19 + 9 = 44. By Tier level: 2 at 0 (the starting kit; 3 until `3c9eb083`), 6 at 1, 18 at 2,
 18 at 3, which is what the 21 Tiers below level 4 sell: 3 x 2, 9 x 2 and 9 x 2 (a level-2 Tier sold 1 until
 PR #245). The three level-4 Capstones sell none (ADR 0101).
 
@@ -816,8 +820,10 @@ they share, the any-of prerequisite and the Passive, has its rows in 1.3, and ea
 1.1 or 1.9.
 
 **Verdicts.** 131 rows carry exactly one verdict each: 74 in Part 1, 13 in Part 2, 44 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 50, **keep as is** 38, **restate** 43,
+counted over the file rather than recalled: **needs a component** 51, **keep as is** 37, **restate** 43,
 **simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read of
+2026-10-19 moved one verdict: Part 3's `adrenaline_tonic` went from **keep as is** to **needs a component**
+when Overdrive gave its allies a Damage buff; before it they were 50 and 38. The re-read of
 2026-10-18 moved one verdict: Part 2's `DamageBuff` went from **keep as is** to **needs a component** when
 Alpha Roar gave it a Spell; before it they were 49 and 39. The re-read for
 ADR 0101 added six rows: in Part 1, the Passive's Energy (1.1), the any-of prerequisite (1.3), the Damage
@@ -846,9 +852,9 @@ Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
-| keep as is | 23 | 5 | 10 | 38 |
+| keep as is | 23 | 5 | 9 | 37 |
 | restate | 32 | 1 | 10 | 43 |
-| needs a component | 19 | 7 | 24 | 50 |
+| needs a component | 19 | 7 | 25 | 51 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
 | **Total** | **74** | **13** | **44** | **131** |
