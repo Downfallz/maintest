@@ -39,6 +39,13 @@ Defense buff +2 and +7 faces that manifest had missed, it reads **198** Conditio
 and 3.11 here say 168 in 6. The example of 3.3 is restated with Alpha Roar's numbers, and its point holds;
 its measured profiles are not re-run.
 
+**Nor for Overdrive** (journal, 2026-10-19). Overdrive (`adrenaline_tonic`) gives each of up to 3 allies
+Energy +4 and a Damage buff of +1 for 1 Round, where it gave Energy +2 alone. components.md §1.4 gives the
+Damage buff a +1 face of 18 tokens, still a dock token and no rail, and reads **216** Condition tokens in 7
+kinds. 2.3 and 3.11 here still say 168 in 6, and the energy readings of 3.2 are not re-run: a Round can now
+add 14 to one Creature's Energy, not 8 (components.md §1.7), which moves no end: 40 is still the gain no
+play refuses.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -176,7 +183,8 @@ once either way. The brief's 9.5 does not reproduce: the same subtraction on the
 
 **A content observation, not acted on.** Some timed Conditions cost more to handle than they do. A Bleed for
 1 Round is 3 token moves for one tick with the slide dock and 2 with the colour dock: `meteor`,
-`poison_slash`, and the caster lines of `bone_ward`, `crazed_specter` and `revenant_guards`. A timed Defense
+`poison_slash`, and the caster lines of `bone_ward`, `crazed_specter` and `revenant_guards`. `meteor` left
+that list on 2026-10-18, when its Bleed became 2 Rounds. A timed Defense
 buff for 2 Rounds is 6 moves with the slide dock and 4 with the colour dock (place, rail, remove, rail back).
 The brief's examples do not hold at `e6f72578`: `meteor`'s Bleed is 2 a round, `adrenaline_tonic` places no
 Bleed, and `toxic_waves`' is 3 a round for 2 rounds; the only `Bleed 1 a round, 1 round` is `bone_ward`'s

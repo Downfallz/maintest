@@ -10,7 +10,8 @@ Hunt on two enemies, and Death Wail's Bleed on its targets; to the content of 20
 removed, two starting Spells; to the renamed packages and Spells the same day; to the three Capstones of
 ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08; to Brace's first point lasting three Rounds,
 2026-10-09; to Titan's Sunder of ADR 0106 the same day, and to that Sunder lowered to 2 and Apex's Damage
-bonus raised to 3 later that day; to Alpha Roar, the first Spell to give a Damage buff, 2026-10-18). Phase 3
+bonus raised to 3 later that day; to Alpha Roar, the first Spell to give a Damage buff, 2026-10-18; to
+Overdrive's Energy +4 and Damage buff +1, 2026-10-19). Phase 3
 of [plan.md](plan.md). It answers the
 **needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -85,6 +86,19 @@ What is current, exactly:
   The card keeps 3 body lines, its longest is 32 characters, and no figure of [2.3](#23-the-measurement)
   moves ([2.4](#24-the-seven-that-need-a-second-sentence)). The dock keeps four lanes. One Defense buff
   Spell carries a permanent half now, `revenant_guards`.
+- **Overdrive gives Energy +4 and a Damage buff +1** (journal, 2026-10-19; content `acf0aca5`, which is
+  `7f0c77bd` with that one Spell changed). `adrenaline_tonic` keeps its
+  name, its id, its cost of 1, its reach of up to 3 allies and its Critical chance of 0. It gives each target
+  `Energy +4` and `Damage +1 on every hit, 1 round`, where it gave `Energy +2` alone. It is the second Spell
+  to give a Damage buff, the first at +1 and the first on up to 3 allies, so the Damage buff gets a **+1
+  face**, sized by the same rule: up to 3 a cast, 6 slots x 3 = **18** ([1.4](#14-condition-tokens)). Still
+  no rail. The Condition tokens go from 198 to **216**, still in 7 kinds, and the token pieces from 296 to
+  **314**, which the same 2 token sheets hold (about 370 at 15 mm); the paper stays 57. The card goes from
+  2 body lines to 3, its longest 31 characters, so no line wraps; the cards at 2 lines go from 14 to 13 and
+  the body and statline medians from 41 and 68.5 to 43.5 and 69 ([2.3](#23-the-measurement)). The most
+  Energy one Creature gains in a Round goes from 8 to **14**, 15 with Archmage, inside the overflow chit
+  ([1.7](#17-the-energy-track-what-ends-it)). The largest Damage bonus one Creature holds does not move:
+  Alpha Roar's +2 for 2 Rounds still sets it ([1.4](#14-condition-tokens)). The dock keeps four lanes.
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -272,7 +286,7 @@ Totals first, then the derivation of each line.
 | Package cards | 144 |
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
-| Condition tokens | 198 in 7 kinds |
+| Condition tokens | 216 in 7 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
@@ -280,7 +294,7 @@ Totals first, then the derivation of each line.
 
 The paper: 30 sheets of Spell cards, 16 of package cards and 2 of Speed cards (9 a sheet; the last Spell
 sheet and the second Speed sheet hold 3 each), 3 of creature boards (2 a sheet), 2 player mats, 1 for the
-initiative and round tracks, 2 of tokens (296 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
+initiative and round tracks, 2 of tokens (314 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1
 of player aids. 57. Card backs would add 48 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -326,7 +340,9 @@ tokens go from 174 to **180** and the token pieces from 272 to **278**. Both are
 paper stays 57 ([1.4](#14-condition-tokens)). Alpha Roar of 2026-10-18 moved one more: a Damage buff +2
 face, and the Defense buff +2 and +7 faces the content already needed and this manifest had missed, so the
 Condition tokens go from 180 to **198** and the token pieces from 278 to **296**, still on 2 sheets, and the
-paper stays 57 ([1.4](#14-condition-tokens)).
+paper stays 57 ([1.4](#14-condition-tokens)). Overdrive of 2026-10-19 moved one more: a Damage buff +1 face,
+18 tokens, so the Condition tokens go from 198 to **216** and the token pieces from 296 to **314**, still on
+2 sheets, and the paper stays 57 ([1.4](#14-condition-tokens)).
 
 ### 1.1 Spell cards and package cards
 
@@ -456,12 +472,13 @@ for s in S:
 | Defense debuff | -3 | 18 | `noxious_cure` on up to 3 allies; 6 x 3 (-2 until 2026-10-08) | **VALUE** |
 | Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
+| Damage buff | +1 | 18 | `adrenaline_tonic` (Overdrive), up to 3 allies, since 2026-10-19; 6 slots x 3 = 18 | **VALUE** |
 | Damage buff | +2 | 6 | `thundering_seal` (Alpha Roar), one ally, since 2026-10-18: the first Spell to place one; one a cast; 6 x 1 | **VALUE** |
-| **Total** | | **198** | | |
+| **Total** | | **216** | | |
 
 Every timed amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 1,
 2 or 3; a timed Defense buff is 1, 2, 3, 4 or 7; a timed Defense debuff is 2 or 3; an Initiative debuff is 3
-or 5; a Damage buff is 2. No Spell places an Initiative buff. The one permanent Defense debuff,
+or 5; a Damage buff is 1 or 2 (2 alone until 2026-10-19). No Spell places an Initiative buff. The one permanent Defense debuff,
 `infectious_blast`'s -3, moves the rail and takes no token. That is why a token set this small covers a 44-Spell catalogue. At `813bb91b` this table
 read 144 in 7 kinds; what moved it to 150 in 6 is content alone. The Bleed faces are re-dealt (6, 18, 18, 6
 where they were 18, 18, 6, 6) and still total 48; the Regeneration 1 and 2 faces arrive with `latch` and
@@ -479,7 +496,10 @@ the rail with the other; the most one slot places on that face goes from 1 to 2,
 which moves neither, and it places a Damage buff +2, a kind of its own (+6). The same re-read found two
 Defense buff faces the content had already moved and this table had not: `shield_bash`'s +2 since
 2026-10-11 (+6, the +3 face keeping its 6 with `bone_ward`) and `full_plate`'s +7 since 2026-10-17 (+6).
-**198** (+18), in 7 kinds. The timed Defense buffs are +1, +2, +3, +4 and +7, and total 48.
+**198** (+18), in 7 kinds. The timed Defense buffs are +1, +2, +3, +4 and +7, and total 48. On 2026-10-19
+`adrenaline_tonic` (Overdrive) places a Damage buff +1 for 1 Round on up to 3 allies, beside its `Energy +4`:
+a face of its own, 6 slots x 3 (+18). **216**, still in 7 kinds. The Damage buffs are +1 and +2, and total
+24.
 
 **No Energy regeneration token.** At `813bb91b`, and still at `e6f72578`, no Spell authors an
 `EnergyRegeneration`, so the command above prints none and no cast can place one: `momentum`, the only Spell
@@ -504,6 +524,18 @@ Spell authored one, so the command above printed none and the box carried no tok
 (`thundering_seal`) places one now, `Damage +2 on every hit, 2 rounds`, on one ally. A timed one brings a
 face sized by the same rule, as this paragraph said it would: one a cast, 6 slots x 1 = **6** at +2.
 
+**A second face, +1** (2026-10-19). Overdrive (`adrenaline_tonic`) places `Damage +1 on every hit, 1 round`
+on each of up to 3 allies, beside `Energy +4`. A different amount is a different face, as it is for every
+Bleed and Defense face above, so the box gains a **Damage buff +1** face. Same rule: a cast places up to 3,
+since a Team is 3 Creatures and `Ally` includes the caster, and six slots can cast it in one Round, so 6 x 3
+= **18** at +1. The two faces carry the same words and differ in the numeral, and the numeral is the one
+thing the Player resolving a hit reads off them, so it is printed as large as the 15 mm token takes. The
+token goes in the dock and takes no rail, for the three reasons below, which do not read the amount. A
+tuning pass may move the face: `data/balance/knobs.json` searches its amount from 1 to 2, its Duration from 1
+to 2 Rounds and the reach from 2 to 3 allies. At +2 the two Spells share one face, sized by the same rule at
+18, the most one slot places, and the +1 face leaves; at 2 allies the +1 face is 12; a Duration of 2 adds no
+lane ([3.2](#32-the-condition-dock-and-the-countdown)). Content `acf0aca5`.
+
 The token goes in the dock like every other timed Condition, and counts down there
 ([3.2](#32-the-condition-dock-and-the-countdown)). **It takes no rail.** That is the choice
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) made for the Initiative tokens, and not the one
@@ -512,15 +544,15 @@ The token goes in the dock like every other timed Condition, and counts down the
 - **No floor.** The Defense rails exist because the floor applies to the total, not to the halves, so the
   halves must be kept apart. A Damage bonus has no debuff and no floor: it is a plain sum.
 - **One reader, once a slot.** Total Defense is read at every hit any caster lands on the Creature. The
-  Damage bonus is read by one cast only, the holder's own, at its slot: the Player resolving it counts the
-  holder's `Damage +2` tokens and adds the Apex card if it owns one
+  Damage bonus is read by one cast only, the holder's own, at its slot: the Player resolving it adds up the
+  holder's Damage buff tokens, `+2` and `+1` alike, and adds the Apex card if it owns one
   ([3.8](#38-how-a-cast-is-declared-and-resolved-in-components)).
 - **The token is its own undo.** A rail would move twice per buff, when it lands and when it leaves lane `1`.
   The token leaving the dock is the expiry, and nothing else has to move.
 
 A rail would also cost each of the six boards a row, and their room is already open (Part 6, question 15),
 for a number that reads 0 on almost every board. **RULE** (a timed Condition is a dock token) x **VALUE**
-(content: one Spell, one face).
+(content: two Spells, two faces, since 2026-10-19; one and one from 2026-10-18).
 
 How many one Creature can hold. A token stays for the rest of the Round it is cast in and the two after
 ([3.2](#32-the-condition-dock-and-the-countdown)), and every Creature of a Team can cast Alpha Roar on the
@@ -529,6 +561,14 @@ Rounds before, and 2 from its allies' slots earlier in its own Round, since its 
 a Damage bonus of 16, 19 with Apex. The rule's own ceiling for the face is 18 tokens in play, six casts a
 Round for three Rounds; it needs every Creature to cast nothing else, and the 20 blanks cover the 12 past
 the supply.
+
+Overdrive moves neither figure (2026-10-19). A slot puts at most one Damage buff token on a given Creature
+whichever of the two Spells it casts, and Overdrive's is +1 where Alpha Roar's is +2, and lasts a Round less:
+the rest of the Round it is cast in and the one after. So a holder carries at most **5** Overdrive tokens
+when it hits, 3 from the Round before and 2 from its own, +5, and any mix of the two Spells on one holder
+reads less than Alpha Roar's 16 alone. The +1 face's own ceiling is 36 tokens in play, eighteen a Round for two
+Rounds, when all six Creatures cast Overdrive two Rounds running; 18 past its supply, which the 20 blanks
+cover. The two faces cannot reach their ceilings together: a slot casts one Spell.
 
 **A permanent one still has nowhere to go**: every other permanent Condition moves a rail and is discarded,
 and the creature board has no Damage bonus rail. No Spell authors a permanent `DamageBuff`. One that did
@@ -571,7 +611,7 @@ above, and the two cannot happen together: a slot casts one Spell.
 | Target marker | **0**, retired by ADR 0083 (18 before it) | An action resolves as soon as its targets are confirmed, before the next slot comes up (`ActionRules.cs`, the `Activation` sub-phase, ADR 0083), so no cast's targets are still on the table while another's are chosen, and there is nothing for a marker to hold. The owner names each target by pointing at its board and saying its number. The 18 were 6 sets of 3 while every Intent was revealed and targeted before any resolved (`RevealAndTarget`, then `ActionResolution`), so that all six casts' targets could sit on the board at once. | **RULE** (an action resolves on confirmation) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. From ADR 0101 to ADR 0106 a Creature that owned Titan was immune for good and took no token for it, its package card being the record; no Capstone gives Stun immunity now (2026-10-09), and the count never read it. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, that of 2026-10-05 makes it 266 again, Toxic Mend's -3 (2026-10-08) 272, Brace's timed first point (2026-10-09) 278, and Alpha Roar's Damage buff with the two Defense buff faces this manifest had missed (2026-10-18) 296. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. From ADR 0101 to ADR 0106 a Creature that owned Titan was immune for good and took no token for it, its package card being the record; no Capstone gives Stun immunity now (2026-10-09), and the count never read it. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260, and since ADR 0083 took out the 18 target markers, 242; the content of 2026-10-04 makes it 248, that of 2026-10-05 makes it 266 again, Toxic Mend's -3 (2026-10-08) 272, Brace's timed first point (2026-10-09) 278, and Alpha Roar's Damage buff with the two Defense buff faces this manifest had missed (2026-10-18) 296, and Overdrive's Damage buff +1 (2026-10-19) 314. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -686,8 +726,9 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   d=json.load(open(p))
   for e in d['effects']+d.get('casterEffects',[]):
     if 'Energy' in e['kind']: print(d['id'].split(':')[1], e)"
-# wait EnergyGain 2 | restorative_burst EnergyGain 2 | adrenaline_tonic EnergyGain 2 | momentum EnergyGain 2
+# wait EnergyGain 2 | restorative_burst EnergyGain 2 | adrenaline_tonic EnergyGain 4 | momentum EnergyGain 2
 # extort EnergyDrain 1, EnergyGain 1 | night_raid EnergyDrain 3 | soul_devourer EnergyDrain 3
+# adrenaline_tonic read EnergyGain 2 until 2026-10-19
 ```
 
 `momentum`'s `EnergyGain` is its caster effect: it lands on the Creature that casts it, not on the enemy it
@@ -699,13 +740,18 @@ one. A drain takes at most what the target has (`Creature.LoseEnergy`, ADR 0035)
 the rail needs no cell below it. One raid takes at most 6 Energy in all, 3 from each of 2, as it did before
 at 2 from each of 3. No drain adds a component.
 
-The most one Creature can gain in one Round is **8**: 2 from the Round, 4 from its two allies each casting
-`restorative_burst` or `adrenaline_tonic` on it, and 2 from its own Activation slot, spent on `wait`, on
-`momentum`, whose caster line gives the same 2, or on `adrenaline_tonic` with itself among its allies. A
-Creature has one slot, so it is one of them. Nothing reaches it from earlier
+The most one Creature can gain in one Round is **14** since 2026-10-19: 2 from the Round, 8 from its two
+allies each casting `adrenaline_tonic` (Overdrive) on it, and 4 from its own Activation slot, spent on
+`adrenaline_tonic` with itself among its allies. A Creature has one slot, so it is one of them. It was **8**
+while Overdrive gave 2, from ADR 0078 until 2026-10-19: 2 from the Round, 4 from its two allies each casting
+`restorative_burst` or `adrenaline_tonic` on it, and 2 from its own slot, spent on `wait`, on `momentum`,
+whose caster line gives the same 2, or on `adrenaline_tonic`. Nothing reaches it from earlier
 Rounds any more: it was 14 while `momentum` placed an Energy regeneration on its own caster, 2 a Round for 3
-Rounds, and three of those overlapping added 6. **An Archmage owner gains 9**, the 1 its Passive adds at the
-Energy gain on top of the 8 (10 at the knob's `max` of 2).
+Rounds, and three of those overlapping added 6. **An Archmage owner gains 15**, the 1 its Passive adds at the
+Energy gain on top of the 14 (16 at the knob's `max` of 2; 9 and 10 until 2026-10-19). Overdrive's own knob
+runs its Energy from 2 to 5, so a pass can make the Round's most 17, 18 with Archmage. It moves no end and
+no count: a Round that gains 14 is three slots spent on Energy, and the overflow chit below is what any gain
+past 40 takes.
 
 **What a player does at the end of the track.** A Creature whose Energy would pass 40 takes an **Energy
 overflow chit** worth 40 and its marker returns to 0. One chit per Creature is in the box: a second chit means
@@ -782,7 +828,7 @@ renders the effect line, so it is part of the spec and not a hand edit. The tabl
 | `Stun` | `Stun, 2 rounds` |
 | `DefenseBuff` / `DefenseDebuff` | `Defense +3, permanent` / `Defense -2, 1 round` |
 | `InitiativeBuff` / `InitiativeDebuff` | `Initiative +2, 1 round` / `Initiative -3, 1 round` (no card prints an Initiative buff at `e6f72578`; the line stays for the same reason) |
-| `DamageBuff` | `Damage +2 on every hit, 2 rounds` (Alpha Roar, since 2026-10-18). `on every hit` is the Apex card's own words for the same number ([4.1](#41-the-package-card)), and it is what keeps the buff from reading as a hit: `Damage +2` alone is one character from `Damage 2`. 32 characters, inside the 38 a line holds. The table app's screen face prints the same (`EffectLine.cs`) |
+| `DamageBuff` | `Damage +2 on every hit, 2 rounds` (Alpha Roar, since 2026-10-18). `on every hit` is the Apex card's own words for the same number ([4.1](#41-the-package-card)), and it is what keeps the buff from reading as a hit: `Damage +2` alone is one character from `Damage 2`. 32 characters, inside the 38 a line holds. The table app's screen face prints the same (`EffectLine.cs`). Since 2026-10-19 Overdrive prints `Damage +1 on every hit, 1 round`, 31 characters, the same words with a singular Duration |
 
 ### 2.3 The measurement
 
@@ -837,15 +883,20 @@ r('body    ',B);r('statline',S)"
 # widest line (33, 'latch')  lines per card [(2, 14), (3, 24), (4, 6)]
 # body     max (96, 'revenant_guards') median 41.0 min (16, 'wait')
 # statline max (124, 'revenant_guards') median 68.5 min (41, 'rejuvenate')
-# re-run on 2026-10-18, with Alpha Roar's DamageBuff line: the same three lines
+# re-run on 2026-10-18, with Alpha Roar's DamageBuff line: the same three lines; and with Emberstorm's
+#   Bleed for 2 rounds the same day (its body 53 to 54, its statline 77 to 78): the same three lines
+# re-run on 2026-10-19, with Overdrive's Energy +4 and DamageBuff line:
+# widest line (33, 'latch')  lines per card [(2, 13), (3, 25), (4, 6)]
+# body     max (96, 'revenant_guards') median 43.5 min (16, 'wait')
+# statline max (124, 'revenant_guards') median 69.0 min (41, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
-| Body lines per card | 2, 3 or 4 | 14 cards at 2, 24 at 3, 6 at 4 (`crazed_specter`, `extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`), read at `3c9eb083`; 15 at 2 at `ad3e4d00`, with `basic_attack`. No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078, and `crazed_specter` from 3 to 4 with its target Bleed on 2026-10-05; `night_raid` stays at 3. |
-| Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, `Caster: Bleed 1 a round, 1 round` on `bone_ward`, and since 2026-10-18 `Damage +2 on every hit, 2 rounds` on `thundering_seal`. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
-| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. |
-| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. |
+| Body lines per card | 2, 3 or 4 | 14 cards at 2, 24 at 3, 6 at 4 (`crazed_specter`, `extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`), read at `3c9eb083`; 15 at 2 at `ad3e4d00`, with `basic_attack`. No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078, and `crazed_specter` from 3 to 4 with its target Bleed on 2026-10-05; `night_raid` stays at 3. Since 2026-10-19 it is 13 at 2 and 25 at 3: `adrenaline_tonic` went from 2 lines to 3 with its Damage buff. |
+| Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, `Caster: Bleed 1 a round, 1 round` on `bone_ward`, and since 2026-10-18 `Damage +2 on every hit, 2 rounds` on `thundering_seal`. Since 2026-10-19 `Damage +1 on every hit, 1 round` on `adrenaline_tonic` is 31, the next after them. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
+| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. `meteor`'s went from 53 to 54 the same day, and moved nothing. **Since 2026-10-19 the median is 43.5**: `adrenaline_tonic`'s body went from 26, below it, to 60, above it, so the 22nd and 23rd bodies are `soothing_chant`'s 42 and `frostbite`'s 45; with the full word it would be 45. The max and the min do not move. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. Since 2026-10-19 the median is **69**: `adrenaline_tonic`'s statline went from 54 to 88. The max and the min do not move. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -876,9 +927,11 @@ caster for one. `guard` prints one face twice on the same target since 2026-10-0
 over `Defense +1, 2 rounds`: two lines, two tokens, and the two Durations are what put them in different
 lanes of the dock, so they leave a Round apart. `thundering_seal` left the audit's reason on 2026-10-18:
 as Alpha Roar it prints two Conditions of two kinds, not one kind twice. It keeps its row for a reason of
-its own. Its second line is the only Damage buff on a Spell card, and it must not be read as a hit on the
-ally: `Damage +2 on every hit, 2 rounds` says whose hits, and the Duration says it lasts
-([2.2](#22-the-words)). Nine
+its own. Its second line was the only Damage buff on a Spell card until 2026-10-19, and it must not be read
+as a hit on the ally: `Damage +2 on every hit, 2 rounds` says whose hits, and the Duration says it lasts
+([2.2](#22-the-words)). Overdrive (`adrenaline_tonic`) prints the second since 2026-10-19: `Up to 3 allies`
+(14) / `Energy +4` (9) / `Damage +1 on every hit, 1 round` (31), three lines. It is not among the seven: no
+caster line, and two kinds, one each. The same words keep its buff from reading as a hit. Nine
 more Spells carry a Caster effect at `e6f72578` and are not among the audit's seven: `bone_ward`, `extort`,
 `hateful_sacrifice`, `latch`, `momentum`, `ambush`, `parasite_jab`, `reckless_swing` and `shield_bash`. They
 use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damage 3` (8) /
@@ -1131,7 +1184,8 @@ Damage, which is the Spell card's; the bonus is the package card's.
 to its holder's Damage bonus and stacks, and a holder carries at most 8 of them when it hits
 ([1.4](#14-condition-tokens)): +16, and +19 with Apex. `hateful_sacrifice` from that Creature is 30, 60 on a
 critical. It moves nothing either, for the same reason: the rails' end blanks nothing a Creature can reach
-since ADR 0076, whatever the hit.
+since ADR 0076, whatever the hit. Overdrive's Damage buff +1 of 2026-10-19 does not raise it: a slot puts one
+token on a holder either way, and Alpha Roar's is the larger and the longer ([1.4](#14-condition-tokens)).
 
 **Titan's Sunder reads the rails and moves neither** (ADR 0106; 3 at `0a0d8573`, 2 at `95a78999`). A hit
 from a Titan owner meets the target's total Defense less 2, never below zero: the rails still give the total
@@ -1682,7 +1736,10 @@ The track ends at 40 because 2 a Round for 20 Rounds, the table's cap, is the ga
 overflow chit a Creature is in the box on the reasoning that a second means banking over 80. Is one chit a
 Creature right, or should the box carry the theoretical rate (8 a Round for 20 Rounds is 160, so 4 chits a
 Creature; it was 14 a Round, 280 and 7 chits, until ADR 0078 took `momentum`'s Energy regeneration out; an
-Archmage owner gains 9 a Round from Round 8, 173 in all, still 4 chits) and accept the punch-out?
+Archmage owner gains 9 a Round from Round 8, 173 in all, still 4 chits) and accept the punch-out? Since
+2026-10-19 the rate is 14 a Round again, from Overdrive's `Energy +4` this time
+([1.7](#17-the-energy-track-what-ends-it)): 280 in 20 Rounds, 7 chits a Creature, and an Archmage owner's
+15 a Round from Round 8 makes 293, still 7.
 
 ### 5. The condition supply, and what a supply that runs out means
 
@@ -1877,7 +1934,9 @@ ADR 0078 re-read, its spell rows re-read for the content of 2026-10-04, and its 
 from Part 3; 49 of 49. ADR 0101 added one, the Passive a Tier may give, which the package card answers; its
 `DamageBuff` kind was **keep as is** while no Spell gave one ([1.4](#14-condition-tokens)). Alpha Roar
 gives one since 2026-10-18, so translation.md's `DamageBuff` row is **needs a component** and Part 2
-counts 7: 50 of 50, answered by the Damage buff token below. ADR 0078 took two
+counts 7: 50 of 50, answered by the Damage buff token below. Overdrive places Damage buff tokens since
+2026-10-19, so translation.md's `adrenaline_tonic` row is **needs a component** too and Part 3 counts 25:
+51 of 51, answered by the Damage buff +1 face. ADR 0078 took two
 rows out, the
 `EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
 and their verdicts are no longer **needs a component** ([1.4](#14-condition-tokens)). The re-audit was
@@ -1906,7 +1965,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.8 Reveal in timeline order, bind targets at reveal | **No component since ADR 0083.** It was 18 target markers and the `Targeted by` row. The reveal and the resolution are one turn of `Activation` now, so the Spell card turned face up in its intent slot and the targets named aloud are the whole of it, [3.8](#38-how-a-cast-is-declared-and-resolved-in-components). translation.md keeps the row as it measured it, with a note. |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 198 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 216 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
@@ -1924,7 +1983,7 @@ Seven until 2026-10-18, when `DamageBuff` joined them.
 | `DefenseDebuff` | 24 timed tokens: 6 at -2, 18 at -3 (18 at -2 until 2026-10-08); a permanent debuff moves the rail |
 | `InitiativeBuff` | **No token** since the content of 2026-10-04: no Spell places one, so the 18 at +2 left the box ([1.4](#14-condition-tokens)). The rule stays, read with the Base rails, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one). translation.md's row reads **keep as is** since its re-read of 2026-10-04. |
 | `InitiativeDebuff` | 12 tokens: 6 at -3, 6 at -5 |
-| `DamageBuff` | 6 tokens at +2, since 2026-10-18 (Alpha Roar). No rail: the dock's tokens are counted with the Apex card at the holder's hit ([1.4](#14-condition-tokens), [3.8](#38-how-a-cast-is-declared-and-resolved-in-components)) |
+| `DamageBuff` | 24 tokens: 18 at +1 since 2026-10-19 (Overdrive), 6 at +2 since 2026-10-18 (Alpha Roar). No rail: the dock's tokens are counted with the Apex card at the holder's hit ([1.4](#14-condition-tokens), [3.8](#38-how-a-cast-is-declared-and-resolved-in-components)) |
 
 ### The 18 spells
 
@@ -1957,18 +2016,19 @@ keeps both verdicts: `crazed_specter` still **needs a component**, now four Blee
 | `toxic_waves` | Up to 3 Bleeds 3 (2 rounds) |
 
 The Spells that place a token and are not among the audit's 18, because they were authored or reworked after
-it (PR #245 and the content of 2026-10-04). translation.md has rows for all of them since its re-read of
-2026-10-04. The components that answer them are the ones above.
+it (PR #245 and the content of 2026-10-04; `adrenaline_tonic` since 2026-10-19). translation.md has rows for
+all of them since its re-read of 2026-10-04. The components that answer them are the ones above.
 
 | Spell | What a cast places |
 | --- | --- |
 | `ambush` | 1 Initiative debuff -5 on its own caster (1 round). It replaced `shadowstep`, which placed an Initiative buff +2 there |
 | `frostbite` | 1 Initiative debuff -3 (1 round) |
-| `meteor` | Up to 3 Bleeds 2 (1 round) |
+| `meteor` | Up to 3 Bleeds 2 (2 rounds). 1 round until 2026-10-18 |
 | `latch` | 1 Bleed 1 (3 rounds), and 1 Regeneration 1 on its own caster (3 rounds) |
 | `bone_ward` | 1 Defense buff +3 (2 rounds), and 1 Bleed 1 on its own caster (1 round) |
 | `shield_bash` | 1 Defense buff +2 on its own caster (3 rounds); +3 until 2026-10-11 |
 | `soothing_chant` | Up to 3 Regenerations 2 (2 rounds) |
+| `adrenaline_tonic` | Up to 3 Damage buffs +1 (1 round); its `Energy +4` on each moves a rail already on the board. It placed nothing until 2026-10-19, when it gave `Energy +2` alone |
 
 ---
 

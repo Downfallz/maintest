@@ -4,6 +4,59 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-19. Overdrive: +4 energy and +1 on every hit for a round
+
+The content goes from `7f0c77bd` to `acf0aca5`, one spell changed: Overdrive (`adrenaline_tonic`, Blighted,
+level 2), up to three allies for one energy, from `EnergyGain 2` to `EnergyGain 4` and `DamageBuff +1` for one
+round. Its digest is committed beside the old one.
+
+- **Energy alone did not move it.** On `7f0c77bd`'s neighbours, the 200 benchmark seeds, both seats,
+  `explore:0.2:lookahead` with the slot log:
+
+  | Overdrive | best cast | median gap | cast | Toxic Mend best | rounds, variety | over 16 |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | +2 energy (as it was) | 8 % | 9.1 | 80 | 41 % | 10.25 | 1.5 % |
+  | +3 energy | 11 % | 9.2 | 112 | 45 % | 9.99 | 0.5 % |
+  | +4 energy | 12 % | 8.3 | 122 | 43 % | 9.93 | 0 % |
+  | +5 energy | 13 % | 8.5 | 112 | 41 % | 9.88 | 0.5 % |
+  | +3 energy, +1 on every hit for a round | 20 % | 5.0 | 222 | 39 % | 10.08 | 1.5 % |
+
+  Energy for allies is worth what they cast with it, and the round the lookahead plays out rarely holds that
+  cast: the winning side cast it with a slot to spare, and the side that cast it won three matches in four.
+  The damage buff is worth something in the round it lands, and the agents price it by the hits its holders
+  land (2026-10-18). The owner kept the poison out of it.
+- **The owner took +4 and +1 without a replay**, one energy above the last version measured. Blighted was
+  bought more with the damage buff (Overdrive offered at 1,660 slots, 1,234 before), so the next slot log
+  reads this one. `check-knobs` reads it at up to 16.50 a round at the top of its bounds, Toxic Mend at 19.44.
+- **The knobs.** New intent and keep, the energy searched from 2 to 5, the damage buff's amount from 1 to 2
+  and its duration from 1 to 2 rounds. The practice recipe "an ally's Overdrive" now brings the Frenzied
+  from 2 energy to 6, and its test reads 6. The tabletop docs gain a `Damage +1` token (components.md).
+
+## 2026-10-18. Emberstorm burns for two rounds; Overdrive does not move
+
+The content goes from `59f8ee7d` to `7f0c77bd`, one number: Emberstorm's (`meteor`, Stormborn, level 2) bleed
+lasts 2 rounds instead of 1. Its digest is committed beside the old one.
+
+- **Why these two.** They were the two of the six spells the slot log read as traps on 2026-10-16 that are not
+  defensive, so making them better cannot stall a match. Both were read again on `59f8ee7d`, and changed
+  together in each candidate: they sit in different packages, and the slot log reads each spell apart.
+- **Three versions on the 200 benchmark seeds, both seats**, Greedy mirror and `explore:0.2:lookahead` with the
+  slot log:
+
+  | candidate | Emberstorm best / gap | Ice Grip best | Emberstorm cast by Greedy | Overdrive best / gap | Toxic Mend best | rounds, variety | over 16 |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | `59f8ee7d` | 23 % / 2.9 | 18 % | 54 | 8 % / 9.1 | 41 % | 10.25 | 1.5 % |
+  | **bleed for 2 rounds; Overdrive +3 energy** | **33 % / 1.1** | 18 % | 146 | 11 % / 9.2 | 45 % | 9.99 | 0.5 % |
+  | cost 2; Overdrive free | 43 % / 0.5 | 3 % | 607 | 10 % / 9.8 | 45 % | 9.96 | 1 % |
+
+- **Emberstorm.** Its hit of 2 is mostly eaten by defense; the burn is what lands, and it ignores defense. Two
+  rounds of it make the sweep a choice beside Ice Grip, which does not move. A cost of 2 made it the cast of
+  every slot it was offered at and took Ice Grip to 3 %: the cost stays at 3. `check-knobs` now reads it at
+  11.80 a round, above Fury's 8.40, because that reading prices the hit as if no defense met it.
+- **Overdrive does not move**, at +3 energy or free: 8 % to 10 or 11 %, still 9 points behind the best cast in
+  the median. Energy for allies is worth what they cast with it next, and the round the lookahead plays out
+  rarely holds that cast. It stays as it is; what it needs is an identity, the way Fortress needed one.
+
 ## 2026-10-18. Fortress becomes Alpha Roar: an ally's defense and damage for two rounds
 
 The content goes from `53bef178` to `59f8ee7d`, one spell changed: `thundering_seal` (Tyrant, level 3), renamed

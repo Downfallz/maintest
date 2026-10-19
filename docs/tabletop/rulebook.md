@@ -8,7 +8,8 @@ picks face down 2026-10-02, spell examples re-read for the content of 2026-10-04
 the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09, when its first point became
 three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2 with Apex's Damage bonus
 raised from 2 to 3; Fortress's examples re-read 2026-10-18, when it became Alpha Roar, the first Spell to
-give a Damage buff). Phase 4 of [plan.md](plan.md).
+give a Damage buff; Overdrive added to the Damage buff 2026-10-19, when it gave up to 3 allies Energy +4 and
+a Damage buff +1). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -533,7 +534,7 @@ Choose targets to satisfy the card's targeting line:
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
 > **Slot 4, Creature 3.** Player 1 declared **Emberstorm** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
-> 1 round`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
+> 2 rounds`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
 > each one it names takes the Damage and a Bleed token. Creature 3 may not switch to another Spell.
 > **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
 > chooses nothing.
@@ -616,6 +617,10 @@ everyone else.
 > The token never touches a Bleed Creature 5 causes, nor its own `Caster:` line. It went into the `new` lane
 > when it landed and into lane `2` at last Round's Cleanup. It slides to lane `1` at this Round's Cleanup and
 > leaves at the next: the Round it was cast in, and two full Rounds after.
+> Had Creature 6 cast **Overdrive** on Creature 5 earlier this Round (`Up to 3 allies`, `Energy +4`,
+> `Damage +1 on every hit, 1 round`), Creature 5 would also hold a `Damage +1` token: 3 + 2 + 1 = **6**. Add
+> every token, whatever its number. That one goes into lane `1` at this Round's Cleanup and leaves at the
+> next: the Round it was cast in, and one full Round after.
 
 ### 5.9 Cleanup
 
@@ -901,19 +906,20 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative. No Spell in the current catalogue applies it | Read once, at Turn order resolution | Stacks | Condition dock |
 | **Initiative debuff** | Lowers Current initiative | The same | Stacks | Condition dock |
-| **Damage buff** | Raises its holder's Damage bonus. **Alpha Roar** applies it: `Damage +2 on every hit, 2 rounds` | Read whenever its holder deals a direct hit | Stacks | Condition dock. No rail: count the tokens at the hit |
+| **Damage buff** | Raises its holder's Damage bonus. **Alpha Roar** applies it: `Damage +2 on every hit, 2 rounds`; and **Overdrive**, on up to 3 allies: `Damage +1 on every hit, 1 round` | Read whenever its holder deals a direct hit | Stacks | Condition dock. No rail: add up the tokens at the hit |
 
 Three sums. The first two floor at zero **after** the subtraction, never before:
 
 - **Total Defense** = base Defense + Defense buffs (at most 10) - Defense debuffs, never below zero.
 - **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below zero.
-- **Damage bonus** = the Damage its package cards print + the Damage buff tokens in its dock.
+- **Damage bonus** = the Damage its package cards print + the numbers on the Damage buff tokens in its dock.
 
 A **permanent** Condition never counts down. Move the rail and put no token on the dock: there is nothing to
 undo and nothing to remember. Permanent and timed Defense buffs share one ceiling of 10 (ADR 0076): stack past
 it and the rail keeps counting, but the Creature's Defense does not. A permanent Damage buff would have no rail
 to move; no Spell applies a permanent one, so the box has nothing for it
-([components.md 1.4](components.md#14-condition-tokens)). Alpha Roar's is timed: a token in the dock.
+([components.md 1.4](components.md#14-condition-tokens)). Alpha Roar's and Overdrive's are timed: a token in
+the dock for each.
 
 **Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
 of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it
@@ -991,7 +997,9 @@ writing around it. Each one is faithful to the engine; each one is longer than a
    still states in two sentences ([5.8](#58-resolving-an-action), step 3); what grew is the arithmetic a
    Player must hold, which is read off two package cards and one pair of rails. Since 2026-10-18 the bonus
    has a second source the flipped card does not show either: Alpha Roar's Damage buff tokens, in the
-   caster's own dock. The Player adds them to the package card's bonus before multiplying.
+   caster's own dock. The Player adds them to the package card's bonus before multiplying. Since 2026-10-19
+   Overdrive's `Damage +1` tokens sit beside them, so the tokens are of two numbers and are added, not
+   counted.
 3. **Target binding** ([5.7](#57-activation)). Origin, count, a minimum of one, a maximum that may be
    undershot, alive, and no duplicates — six clauses, two of which (`Ally` includes the caster; a multi Spell
    may take fewer) are deliberately not printed on any of the 44 cards because they are true of all of them.
