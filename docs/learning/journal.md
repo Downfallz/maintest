@@ -27,7 +27,8 @@ digest is committed beside the old one.
   bought more (Vital Surge offered at 176 slots, 127 before). At a cost of 2 Renewal Burst would hand back as
   much energy as it costs, the free tempo its first keep rules out. Matches barely lengthen. Tier 3 is reached
   late, so these are 80 to 180 offers a spell: the next slot log reads them again.
-- **The knobs.** Notes added; the heals are searched from 9 to 13 and from 7 to 11. The rulebook's heal
+- **The knobs.** Notes added; the heals are searched from 11 to 13 and from 7 to 10, apart, so a tuning pass cannot
+  make Renewal Burst heal less than Vital Surge, which its keep forbids (Codex on #356). The rulebook's heal
   example is recomputed on Vital Surge's 10.
 
 ## 2026-10-20. Stormborn rebalanced: Emberstorm hits for 3 and burns a round, Ice Grip hits for 3 and slows for two
