@@ -9,7 +9,8 @@ the Capstones and their Passives 2026-10-07; Brace's example re-read 2026-10-09,
 three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2 with Apex's Damage bonus
 raised from 2 to 3; Fortress's examples re-read 2026-10-18, when it became Alpha Roar, the first Spell to
 give a Damage buff; Overdrive added to the Damage buff 2026-10-19, when it gave up to 3 allies Energy +4 and
-a Damage buff +1). Phase 4 of [plan.md](plan.md).
+a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when Emberstorm became a hit of 3
+with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -455,8 +456,8 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 > picks alike. Round 1: Warped for their first and second Creatures. Round 3: Stormborn for their first
 > Creature, and Warped for their third. Warped is +2 and Stormborn +3, so Creatures 1 and 4 read a Base
 > initiative of 10, and the other four read 7. **Two sides that buy alike tie everywhere.**
-> In Round 3, Creature 4 hit Creature 2 with **Ice Grip**, which Stormborn teaches:
-> `Initiative -3, 1 round`. It landed after Round 3's timeline was built, so this is the first Round it
+> In Round 3, Creature 4 hit Creature 2 with **Ice Grip**, which Stormborn teaches: `Damage 3` and
+> `Initiative -3, 2 rounds`. It landed after Round 3's timeline was built, so this is the first Round it
 > changes ([6.6](#66-the-combat-timeline-and-its-tiebreaks)). Creature 2's Current initiative is 7 - 3 = 4.
 > Every other Creature's is its Base initiative.
 > Creatures 1 and 4 chose Quick; the rest chose Standard. The divider goes after the second slot.
@@ -468,7 +469,8 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 > `2nd` on Creature 5. Player 1 holds one Place in the tie and lays nothing. The chits turn: 6 takes Player
 > 2's first Place and 5 the third. 6, then 3, then 5. Creature 2 at 4 is last and rolls nothing.
 > The timeline is **4, 1, 6, 3, 5, 2**.
-> Cleanup of Round 4 takes the Initiative debuff token off lane `1`: from Round 5, Creature 2 reads 7 again.
+> Cleanup of Round 4 slides the Initiative debuff token from lane `2` to lane `1`, so Creature 2 reads 4 in
+> Round 5 too. Cleanup of Round 5 takes it off lane `1`: from Round 6, Creature 2 reads 7 again.
 
 ### 5.6 Intent selection
 
@@ -533,8 +535,8 @@ Choose targets to satisfy the card's targeting line:
 > **Slot 3, Creature 6.** Its card is **Brace**: `One ally`, `Defense +1 for 3 rounds` and `Defense +1 for 2
 > rounds`. Ally includes the caster, so Player 2 may name Creature 6 itself, or Creature 4. Creature 5 is dead
 > and cannot be named.
-> **Slot 4, Creature 3.** Player 1 declared **Emberstorm** (`Up to 3 enemies`, `Damage 2`, `Bleed 2 a round,
-> 2 rounds`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
+> **Slot 4, Creature 3.** Player 1 declared **Emberstorm** (`Up to 3 enemies`, `Damage 3`, `Bleed 2 a round,
+> 1 round`) when three enemies stood. Two stand now, so Emberstorm may name Creature 4, Creature 6, or both, and
 > each one it names takes the Damage and a Bleed token. Creature 3 may not switch to another Spell.
 > **Slot 5, Creature 5.** It is dead. Flip its card with no targets: it Fizzles, costs nothing, and Player 2
 > chooses nothing.
@@ -1071,6 +1073,13 @@ Damage bonus from 2 to 3 (content `95a78999`: `"passive": {"sunder": 2}` in `dat
 `"passive": {"damageBonus": 3}` in `data/Tiers/apex.v1.json`), and §5.3's table and its Capstone example,
 §5.8's two examples, §7.3 and this table were re-read against them. The Sunder example's second target went
 from a Defense of 2 to none, since a Defense equal to the Sunder no longer shows the floor; no rule moved.
+On 2026-10-20 §5.5's and §5.7's examples were re-read against `data/Spells/` (content `5caac923`), which
+changed two Stormborn Spells. Ice Grip prints `Damage 3` and `Initiative -3, 2 rounds`, where it printed
+`Damage 2` and `Initiative -3, 1 round`: §5.5's Creature 2 reads 4 in Rounds 4 and 5, not in Round 4 alone,
+and the timeline of Round 4 does not move. Emberstorm prints `Damage 3` and `Bleed 2 a round, 1 round`. Its
+Bleed lasted 1 Round until 2026-10-18 and 2 Rounds from 2026-10-18 to 2026-10-20, both at `Damage 2`, and
+§5.7's example printed the 2 Rounds in that time. It does no arithmetic with either number, so only the
+printed line moved. No rule moved.
 
 | This book | The specification |
 | --- | --- |

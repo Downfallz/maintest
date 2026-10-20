@@ -13,12 +13,12 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 2
+      "amount": 3
     },
     {
       "kind": "Bleed",
       "amountPerRound": 2,
-      "durationRounds": 2
+      "durationRounds": 1
     }
   ],
   "enabled": true

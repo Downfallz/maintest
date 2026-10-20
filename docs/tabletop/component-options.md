@@ -46,6 +46,14 @@ kinds. 2.3 and 3.11 here still say 168 in 6, and the energy readings of 3.2 are 
 add 14 to one Creature's Energy, not 8 (components.md §1.7), which moves no end: 40 is still the gain no
 play refuses.
 
+**Nor for Emberstorm and Ice Grip** (journal, 2026-10-20). Emberstorm (`meteor`) deals 3, not 2, and its
+Bleed of 2 lasts 1 Round again, where it lasted 2 from 2026-10-18. Ice Grip (`frostbite`) deals 3, not 2, and
+its Initiative -3 lasts 2 Rounds, not 1. components.md §1.4 still reads **216** Condition tokens: a supply
+is one Round of casts, which a Duration does not move. What moves is the Initiative debuff -3 face's ceiling
+in play, 12 to 18. A token's handling moves with its Duration on the slide dock only: Ice Grip's goes from 3
+moves to 4 and each of Emberstorm's from 4 back to 3, and on the colour dock each stays 2 (place and remove;
+2.4 below). The measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -184,7 +192,8 @@ once either way. The brief's 9.5 does not reproduce: the same subtraction on the
 **A content observation, not acted on.** Some timed Conditions cost more to handle than they do. A Bleed for
 1 Round is 3 token moves for one tick with the slide dock and 2 with the colour dock: `meteor`,
 `poison_slash`, and the caster lines of `bone_ward`, `crazed_specter` and `revenant_guards`. `meteor` left
-that list on 2026-10-18, when its Bleed became 2 Rounds. A timed Defense
+that list on 2026-10-18, when its Bleed became 2 Rounds, and came back to it on 2026-10-20, when its Bleed
+went back to 1 Round and its hit rose from 2 to 3. A timed Defense
 buff for 2 Rounds is 6 moves with the slide dock and 4 with the colour dock (place, rail, remove, rail back).
 The brief's examples do not hold at `e6f72578`: `meteor`'s Bleed is 2 a round, `adrenaline_tonic` places no
 Bleed, and `toxic_waves`' is 3 a round for 2 rounds; the only `Bleed 1 a round, 1 round` is `bone_ward`'s
