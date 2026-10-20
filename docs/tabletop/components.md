@@ -11,7 +11,8 @@ removed, two starting Spells; to the renamed packages and Spells the same day; t
 ADR 0101, 2026-10-07; to Toxic Mend's -3, 2026-10-08; to Brace's first point lasting three Rounds,
 2026-10-09; to Titan's Sunder of ADR 0106 the same day, and to that Sunder lowered to 2 and Apex's Damage
 bonus raised to 3 later that day; to Alpha Roar, the first Spell to give a Damage buff, 2026-10-18; to
-Overdrive's Energy +4 and Damage buff +1, 2026-10-19). Phase 3
+Overdrive's Energy +4 and Damage buff +1, 2026-10-19; to Emberstorm's hit of 3 and 1-Round Bleed and Ice
+Grip's hit of 3 and 2-Round slow, 2026-10-20). Phase 3
 of [plan.md](plan.md). It answers the
 **needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -99,6 +100,21 @@ What is current, exactly:
   Energy one Creature gains in a Round goes from 8 to **14**, 15 with Archmage, inside the overflow chit
   ([1.7](#17-the-energy-track-what-ends-it)). The largest Damage bonus one Creature holds does not move:
   Alpha Roar's +2 for 2 Rounds still sets it ([1.4](#14-condition-tokens)). The dock keeps four lanes.
+- **Emberstorm hits for 3 and burns for 1 Round again; Ice Grip hits for 3 and slows for 2 Rounds**
+  (journal, 2026-10-20; content `5caac923`). Neither changes its cost, its reach or its Critical chance.
+  `meteor` prints `Damage 3` and `Bleed 2 a round, 1 round`, where it printed `Damage 2` and a Bleed for 2
+  rounds from 2026-10-18 to 2026-10-20 (for 1 round before). `frostbite` prints `Damage 3` and
+  `Initiative -3, 2 rounds`, where it printed `Damage 2` and `Initiative -3, 1 round`. **No piece count
+  moves.** The supply rule reads one Round of six slots, and a Duration does not move what a Round places:
+  the Bleed-2 face stays 18 and the Initiative debuff -3 face 6 ([1.4](#14-condition-tokens)). What Ice
+  Grip's second Round moves is the -3 face's ceiling in play, 12 to **18**, 12 past its supply, which the 20
+  blanks cover; and the most one Creature reads at a timeline, 3 tokens to **6**, -9 to -18, still floored
+  at zero, so no rail moves ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)). The Condition
+  tokens stay **216** and the token pieces **314**; the paper stays 57. The dock keeps four lanes: 2 Rounds
+  is under the longest Duration, and `data/balance/knobs.json` searches Ice Grip's Duration from 1 to 2 only.
+  No line wraps: `Initiative -3, 2 rounds` is 23 characters. `meteor`'s body goes from 54 to 53 and
+  `frostbite`'s from 45 to 46, and no figure of [2.3](#23-the-measurement) moves. A Damage of 3 moves no
+  rail: the largest hit is still 11.
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -456,7 +472,7 @@ for s in S:
 | Token | Face | Supply | The rule beside the count | Follows |
 | --- | --- | --- | --- | --- |
 | Bleed | 1 a Round | 6 | `latch` and `tranquilizer_dart` on one enemy, `bone_ward` on its own caster; one each; 6 slots x 1 | **VALUE** (content) |
-| Bleed | 2 a Round | 18 | `summon_minions` and `meteor`, each on up to 3 targets; 6 slots x 3 = 18 | **VALUE** (content) |
+| Bleed | 2 a Round | 18 | `summon_minions` and `meteor`, each on up to 3 targets; 6 slots x 3 = 18. `meteor`'s lasts 1 Round, 2 from 2026-10-18 to 2026-10-20, which moved no supply | **VALUE** (content) |
 | Bleed | 3 a Round | 18 | `toxic_waves`, up to 3 targets (`poison_slash` places one); 6 slots x 3 = 18 | **VALUE** |
 | Bleed | 4 a Round | 24 | `crazed_specter` on up to 3 enemies and on its own caster, 4 a cast; `mortal_wound` on a target and `revenant_guards` on its own caster place one each; 6 slots x 4 = 24 | **VALUE** |
 | Regeneration | 1 a Round | 6 | `latch` on its own caster; 6 slots x 1 | **VALUE** |
@@ -470,7 +486,7 @@ for s in S:
 | Defense buff | +7 | 6 | `full_plate` on itself, since 2026-10-17; 6 x 1. This table gave it no face until 2026-10-18 | **VALUE** |
 | Defense debuff | -2 | 6 | `psycho_rush`'s caster debuff; 6 x 1 | **VALUE** |
 | Defense debuff | -3 | 18 | `noxious_cure` on up to 3 allies; 6 x 3 (-2 until 2026-10-08) | **VALUE** |
-| Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1 | **VALUE** |
+| Initiative debuff | -3 | 6 | `frostbite`, one enemy; 6 x 1. For 2 Rounds since 2026-10-20, 1 until then: the supply reads one Round, so it does not move; the ceiling in play does (below) | **VALUE** |
 | Initiative debuff | -5 | 6 | `ambush` on its own caster; 6 x 1 | **VALUE** |
 | Damage buff | +1 | 18 | `adrenaline_tonic` (Overdrive), up to 3 allies, since 2026-10-19; 6 slots x 3 = 18 | **VALUE** |
 | Damage buff | +2 | 6 | `thundering_seal` (Alpha Roar), one ally, since 2026-10-18: the first Spell to place one; one a cast; 6 x 1 | **VALUE** |
@@ -499,7 +515,8 @@ Defense buff faces the content had already moved and this table had not: `shield
 **198** (+18), in 7 kinds. The timed Defense buffs are +1, +2, +3, +4 and +7, and total 48. On 2026-10-19
 `adrenaline_tonic` (Overdrive) places a Damage buff +1 for 1 Round on up to 3 allies, beside its `Energy +4`:
 a face of its own, 6 slots x 3 (+18). **216**, still in 7 kinds. The Damage buffs are +1 and +2, and total
-24.
+24. On 2026-10-20 `meteor`'s Bleed went back to 1 Round and `frostbite`'s Initiative debuff went to 2
+Rounds: Durations, which no face and no supply reads. **216**, unchanged.
 
 **No Energy regeneration token.** At `813bb91b`, and still at `e6f72578`, no Spell authors an
 `EnergyRegeneration`, so the command above prints none and no cast can place one: `momentum`, the only Spell
@@ -597,6 +614,18 @@ Defense, and 16 in ticks, out of 30. A third Round cannot happen: its Start tick
 Creatures with at most 14 Health left, and nothing placed before the first of the two Rounds heals that much
 then. 48 is 24 past the supply, and the 20 blanks cover 20 of them. That is a smaller gap than the Bleed-2 one
 above, and the two cannot happen together: a slot casts one Spell.
+
+**The Initiative debuff -3 face reaches 18 in play** (2026-10-20). Ice Grip's slow lasts 2 Rounds, so its
+token stays for the rest of the Round it is cast in and the two after, as Alpha Roar's does: six casts a
+Round for three Rounds is 18 tokens, 12 past the supply of 6, which the 20 blanks cover. At 1 Round, until
+2026-10-20, it was 12, 6 past. One Creature is the target of at most 3 casts a Round, one from each enemy,
+and Current initiative is read before that Round's casts land, so a timeline reads at most the 6 tokens of
+the two Rounds before: -18, where it read -9. The floor at zero absorbs any excess, so nothing has to show it
+([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)). Ice Grip is the one Spell that places the
+face, at a cost of 1 that 2 Energy a Round pays every Round. So the ceiling needs both Players to buy
+Stormborn for every Creature and play that line, and the line does not end itself: even with a side's three
+casts on one Creature, `Damage 3` nine times over three Rounds is 27 before Defense, under the 30 it starts
+with, though a critical can end it early.
 
 ### 1.5 The rest of the pieces
 
@@ -827,7 +856,7 @@ renders the effect line, so it is part of the spec and not a hand edit. The tabl
 | `EnergyRegeneration` | `Energy regeneration 2 a round, 3 rounds` (no card prints it at `813bb91b` or since; the line stays because the schema still admits the kind, and the generator prints what the build hands it). It is 39 characters, so a Spell that authored one again would wrap and fail the build ([5.6](#56-how-it-is-tested)); whether it then prints `Energy regen` is the maintainer's to decide, not this document's. |
 | `Stun` | `Stun, 2 rounds` |
 | `DefenseBuff` / `DefenseDebuff` | `Defense +3, permanent` / `Defense -2, 1 round` |
-| `InitiativeBuff` / `InitiativeDebuff` | `Initiative +2, 1 round` / `Initiative -3, 1 round` (no card prints an Initiative buff at `e6f72578`; the line stays for the same reason) |
+| `InitiativeBuff` / `InitiativeDebuff` | `Initiative +2, 1 round` / `Initiative -3, 2 rounds` (Ice Grip since 2026-10-20; `Initiative -3, 1 round` until then. No card prints an Initiative buff at `e6f72578`; the line stays for the same reason) |
 | `DamageBuff` | `Damage +2 on every hit, 2 rounds` (Alpha Roar, since 2026-10-18). `on every hit` is the Apex card's own words for the same number ([4.1](#41-the-package-card)), and it is what keeps the buff from reading as a hit: `Damage +2` alone is one character from `Damage 2`. 32 characters, inside the 38 a line holds. The table app's screen face prints the same (`EffectLine.cs`). Since 2026-10-19 Overdrive prints `Damage +1 on every hit, 1 round`, 31 characters, the same words with a singular Duration |
 
 ### 2.3 The measurement
@@ -889,14 +918,17 @@ r('body    ',B);r('statline',S)"
 # widest line (33, 'latch')  lines per card [(2, 13), (3, 25), (4, 6)]
 # body     max (96, 'revenant_guards') median 43.5 min (16, 'wait')
 # statline max (124, 'revenant_guards') median 69.0 min (41, 'rejuvenate')
+# re-run on 2026-10-20, with Emberstorm's Damage 3 and Bleed for 1 round (its body 54 to 53, its statline
+#   78 to 77) and Ice Grip's Damage 3 and Initiative -3 for 2 rounds (its body 45 to 46, its statline 69
+#   to 70): the same three lines as on 2026-10-19
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
 | Body lines per card | 2, 3 or 4 | 14 cards at 2, 24 at 3, 6 at 4 (`crazed_specter`, `extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`), read at `3c9eb083`; 15 at 2 at `ad3e4d00`, with `basic_attack`. No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078, and `crazed_specter` from 3 to 4 with its target Bleed on 2026-10-05; `night_raid` stays at 3. Since 2026-10-19 it is 13 at 2 and 25 at 3: `adrenaline_tonic` went from 2 lines to 3 with its Damage buff. |
 | Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, `Caster: Bleed 1 a round, 1 round` on `bone_ward`, and since 2026-10-18 `Damage +2 on every hit, 2 rounds` on `thundering_seal`. Since 2026-10-19 `Damage +1 on every hit, 1 round` on `adrenaline_tonic` is 31, the next after them. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
-| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. `meteor`'s went from 53 to 54 the same day, and moved nothing. **Since 2026-10-19 the median is 43.5**: `adrenaline_tonic`'s body went from 26, below it, to 60, above it, so the 22nd and 23rd bodies are `soothing_chant`'s 42 and `frostbite`'s 45; with the full word it would be 45. The max and the min do not move. |
-| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. Since 2026-10-19 the median is **69**: `adrenaline_tonic`'s statline went from 54 to 88. The max and the min do not move. |
+| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. `meteor`'s went from 53 to 54 the same day, and moved nothing. **Since 2026-10-19 the median is 43.5**: `adrenaline_tonic`'s body went from 26, below it, to 60, above it, so the 22nd and 23rd bodies are `soothing_chant`'s 42 and `frostbite`'s 45; with the full word it would be 45. The max and the min do not move. **On 2026-10-20 `frostbite`'s body went from 45 to 46** and `meteor`'s from 54 back to 53. The 23rd body is now `healing_screech`'s 45, the length `frostbite`'s left, so the median holds at 43.5; with the full word it would be 45.5 (`noxious_cure`'s 45 and `frostbite`'s 46). `meteor`'s 53 is above the median either way. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. Since 2026-10-19 the median is **69**: `adrenaline_tonic`'s statline went from 54 to 88. The max and the min do not move. On 2026-10-20 `frostbite`'s went from 69 to 70 and `meteor`'s from 78 to 77: the 22nd and 23rd statlines are `healing_screech`'s and `noxious_cure`'s, both 69, so the median holds. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -1230,8 +1262,9 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   for w,es in (('target',d['effects']),('caster',d.get('casterEffects',[]))):
     for e in es:
       if e['kind'].startswith('Initiative'): print(d['id'].split(':')[1],w,e['kind'],e['amount'],e['durationRounds'])"
-# frostbite target InitiativeDebuff 3 1
+# frostbite target InitiativeDebuff 3 2
 # ambush caster InitiativeDebuff 5 1
+# frostbite read 3 1 until 2026-10-20
 ```
 
 A line that read `InitiativeBuff` would raise the Current ceiling above the Base one. While `death_squad`
@@ -1256,8 +1289,11 @@ Current initiative is **not** on a rail. It is Base plus the dock's Initiative b
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
 audit's own count: one marker move, read once. Its ceiling of 35 is the Base rails' own, so it needs no cell
 of its own, and if a buff comes back it is a token in the dock, not a rail. Only 2 Spells in the catalogue
-touch Initiative, `frostbite` on an enemy and `ambush` on its own caster, each for one Round and neither
-permanent, so most boards have nothing to subtract.
+touch Initiative, `frostbite` on an enemy for two Rounds and `ambush` on its own caster for one, neither
+permanent, so most boards have nothing to subtract. `frostbite`'s lasted one Round until 2026-10-20. At two,
+one Creature can carry the tokens of the two Rounds before a timeline: up to 6, -18, where it was 3, -9
+([1.4](#14-condition-tokens)). The floor at zero takes any excess, and no rail reads below Base, so nothing
+here moves.
 
 ### 3.5 The initiative track
 
@@ -1748,7 +1784,9 @@ to three times that for the Durations over one Round - 54 Bleed-2 tokens - which
 unreachable and 30 does not ([1.4](#14-condition-tokens)), though only if both Players play for it. The
 20 blanks cover 20 of the 36 tokens past that supply. Since 2026-10-05 a second face goes past its supply:
 `crazed_specter` takes the Bleed-4 face to 48, 24 past it, over two Rounds ([1.4](#14-condition-tokens)), and
-the same 20 blanks cover 20 of those. Three answers: print one Round's worth and carry the
+the same 20 blanks cover 20 of those. Since 2026-10-20 Ice Grip's two Rounds take the Initiative debuff -3
+face to 18 in play, 12 past its 6, and the blanks cover all 12 ([1.4](#14-condition-tokens)). Three
+answers: print one Round's worth and carry the
 blank-token escape (this manifest); print the rule's ceiling - each face's supply times its own longest
 Duration, which is 330 condition tokens at `ad3e4d00` (294 at `e6f72578`, 204 at `813bb91b`), the Stun's 12
 counted once since it cannot stack - and one more sheet; or bound the rule, which is an engine change and
@@ -2022,8 +2060,8 @@ all of them since its re-read of 2026-10-04. The components that answer them are
 | Spell | What a cast places |
 | --- | --- |
 | `ambush` | 1 Initiative debuff -5 on its own caster (1 round). It replaced `shadowstep`, which placed an Initiative buff +2 there |
-| `frostbite` | 1 Initiative debuff -3 (1 round) |
-| `meteor` | Up to 3 Bleeds 2 (2 rounds). 1 round until 2026-10-18 |
+| `frostbite` | 1 Initiative debuff -3 (2 rounds), beside a `Damage 3` that moves a rail already on the board. 1 round and `Damage 2` until 2026-10-20 |
+| `meteor` | Up to 3 Bleeds 2 (1 round), beside `Damage 3` on each. 2 rounds from 2026-10-18 to 2026-10-20, and 1 round before, both at `Damage 2` |
 | `latch` | 1 Bleed 1 (3 rounds), and 1 Regeneration 1 on its own caster (3 rounds) |
 | `bone_ward` | 1 Defense buff +3 (2 rounds), and 1 Bleed 1 on its own caster (1 round) |
 | `shield_bash` | 1 Defense buff +2 on its own caster (3 rounds); +3 until 2026-10-11 |

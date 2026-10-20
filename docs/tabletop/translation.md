@@ -18,7 +18,9 @@ re-read for the content of 2026-10-06 (`3c9eb083`); the rows the Capstones of
 became a Sunder of 3, and again later that day (`95a78999`), when the Sunder became 2 and Apex's Damage bonus
 3; the rows `thundering_seal` reaches re-read on 2026-10-18, when Fortress became Alpha Roar, the first Spell
 to give a `DamageBuff` (journal, 2026-10-18); the rows `adrenaline_tonic` reaches re-read on 2026-10-19,
-when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)). Phase 1 of
+when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19); the rows `meteor` and
+`frostbite` reach re-read on 2026-10-20, when Emberstorm became a hit of 3 with a 1-Round Bleed and Ice Grip
+a hit of 3 with a 2-Round `InitiativeDebuff` (journal, 2026-10-20)). Phase 1 of
 [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
@@ -169,6 +171,22 @@ when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)
     +2 for 2 Rounds and +1 for 1 Round, and stays **needs a component**. The Damage bonus row of 1.9 gains a
     third source at the table and stays **restate**. The 44 files author 81 Effects (80).
   - **Part 5's tallies**: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
+- **Re-read on 2026-10-20 (journal, 2026-10-20; content `5caac923`).** Two Stormborn Spells moved, and
+  neither changed its cost, its reach or its Critical chance.
+  - **`meteor`** (Emberstorm; cost 3, up to 3 enemies, 0.35) deals 3, not 2, and its Bleed of 2 a Round lasts
+    1 Round again. It lasted 1 Round until 2026-10-18 and 2 Rounds from 2026-10-18 to 2026-10-20.
+  - **`frostbite`** (Ice Grip; cost 1, one enemy, 0.45) deals 3, not 2, and its `InitiativeDebuff` of 3
+    lasts 2 Rounds, not 1. A Duration counts the full Rounds after the cast's own, so the slow holds through
+    the rest of the Round it is cast in and the next two. Current initiative is read once, when the timeline
+    is built, so it lowers two timelines where it lowered one.
+
+  What this moves here:
+  - **Neither row moves its operations, its tokens or its verdict**: `meteor` stays at 14 and 3, `frostbite`
+    at 6 and 1. An amount and a Duration are not steps of a cast.
+  - **Part 2**: `basic_attack`'s 2 is dealt to a target by three Spells, not five. The Bleed values do not
+    move (`meteor`'s 1 Round was already `poison_slash`'s). `InitiativeDebuff` reads 3 for 2 Rounds and 5 for
+    1 Round, where both were 1 Round. The 44 files still author 81 Effects.
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -408,7 +426,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 
 | Effect kind | Spells in `data/` | Values used | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
-| `Damage` | 31 at `3c9eb083` (30 on targets; 3 on the caster: `hateful_sacrifice`, `reckless_swing`, `summon_minions`, the last on the caster only); 32 and 31 at `ad3e4d00`, with `basic_attack` | amounts 1 to 11, every one of them but 9, which no Spell deals since `crazed_specter` went to 4; 11 is `hateful_sacrifice`. `basic_attack`'s 2 is still dealt to a target by five Spells | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
+| `Damage` | 31 at `3c9eb083` (30 on targets; 3 on the caster: `hateful_sacrifice`, `reckless_swing`, `summon_minions`, the last on the caster only); 32 and 31 at `ad3e4d00`, with `basic_attack` | amounts 1 to 11, every one of them but 9, which no Spell deals since `crazed_specter` went to 4; 11 is `hateful_sacrifice`. `basic_attack`'s 2 is still dealt to a target by three Spells (five until 2026-10-20, when `frostbite` and `meteor` went to 3) | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
 | `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 4, 5, 7, 9 | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
 | `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`), 2 and 4 (`adrenaline_tonic` since 2026-10-19; 2 before) | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
 | `EnergyDrain` | 3 (`extort`, `night_raid`, `soul_devourer`) | amounts 1 (`extort`) and 3; `night_raid`'s 3 on up to 2 enemies (2 on up to 3 at `e6f72578`) | Takes at most what the target has (`Creature.cs:295-307`, ADR 0035) | 1 comparison, 1 token move | **keep as is** | Nothing. |
@@ -424,7 +442,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3, `revenant_guards`' (and 1, `guard`'s, until 2026-10-09; `full_plate`'s 3 until 2026-10-17; `thundering_seal`'s 3 until 2026-10-18); timed 1, 2, 3, 4 or 7, for 2 or 3 Rounds (`shield_bash`'s 2 was 3 until 2026-10-11; `thundering_seal`'s 4 was 3 until 2026-10-18) | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. One of the six, `revenant_guards`, carries a permanent Defense buff, beside a timed one, and it stacks without a bound: ADR candidate 3. The other five are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds; three until 2026-10-17, when `full_plate`'s permanent +3 became +7 for 2 Rounds; two until 2026-10-18, when `thundering_seal`'s permanent +3 and timed +3 became one +4 for 2 Rounds beside a Damage buff. |
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
-| `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 (`frostbite`) and 5 (`ambush`), each for 1 Round | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
+| `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 for 2 Rounds (`frostbite`; 1 Round until 2026-10-20) and 5 for 1 Round (`ambush`) | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
 | `DamageBuff` | 2 since 2026-10-19 (on targets: `thundering_seal`, `adrenaline_tonic`); 1 from 2026-10-18 (`thundering_seal`); 0 from `cedcfb61` (new with ADR 0101) until then | 2 for 2 Rounds (`thundering_seal`); 1 for 1 Round, on up to 3 allies (`adrenaline_tonic`, since 2026-10-19) | Added into its holder's Damage bonus, which every direct hit it deals adds before the critical and Defense (`Creature.DamageBonus`, `ResolutionRules.Outcome`); timed or permanent; `Stack` | 1 token per application; 1 sum over the holder's tokens, added at each direct hit it deals | **needs a component** | A Damage buff token in the dock, and no rail: the bonus is a sum with no floor, read by its holder's own cast only, so the tokens are counted at the hit beside the Apex card ([components.md](components.md) §1.4). Two faces since 2026-10-19, +2 and +1, each sized by the supply rule. It was **keep as is** while no card placed one, from `cedcfb61` until 2026-10-18. A permanent one would still need a token that never leaves the board, since there is no Damage bonus rail; none is authored. Apex's bonus is the same number held as a Passive, and its Tier card carries it. |
 
 Two readings the counts make plain. First, the taxonomy is used unevenly: `Damage` is in 31 of 44 Spells,
@@ -528,7 +546,7 @@ size; this document only reports which rows carry an extra rule.
 | `shield_bash` | 2 | 1 enemy | 6 | 1 | **needs a component** | A Defense buff token at +2 for 3 Rounds on its own caster (+3 until 2026-10-11); the caster line needs its own line on the card. New since PR #245. |
 | `ambush` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 5 on its own caster, for 1 Round. It is applied in Combat, so the Round it lasts is the next one (Candidate 5), and the caster line must say the caster slows itself, not its target. It replaced `shadowstep`, which raised its caster's initiative and had no row here. |
 | `mortal_wound` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Bleed token at 4 a Round for 2 Rounds, the largest Bleed placed on a target, which `crazed_specter` places too since `ad3e4d00`. |
-| `frostbite` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 3, for 1 Round. New since PR #245. |
+| `frostbite` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 3, for 2 Rounds, beside a Damage 3, since 2026-10-20; it was 1 Round and Damage 2 until then. It is applied in Combat, so the two Rounds it lowers are the next two timelines (Candidate 5). New since PR #245. |
 | `latch` | 2 | 1 enemy | 6 | 2 | **needs a component** | A Bleed 1 token on the target and a Regeneration 1 token on its own caster, both for 3 Rounds, beside a Damage 1. Its caster line wraps: the one card whose body needs a fifth line (components.md §2.4). New since PR #245. |
 | `tranquilizer_dart` | 3 | 1 enemy | 6 | 2 | **needs a component** | A Stun token and a Bleed 1 token; one Round lost, where it was two. It was in the first table, at 5 operations and 1 token, until PR #245 reworked it. |
 | `summon_minions` | 2 | 3 enemies | 6 | 3 | **needs a component** | Three Bleed tokens and 2 self-damage; the only Spell aimed at enemies that deals them no Damage on the cast. Flagged for card text. |
@@ -549,7 +567,7 @@ size; this document only reports which rows carry an extra rule.
 | `noxious_cure` | 2 | 3 allies | 11 | 3 | **needs a component** | Three Heals and three Defense debuff tokens; the cure shreds the cured. |
 | `infectious_blast` | 3 | 3 enemies | 13 | 3 | **needs a component** | Three permanent Defense debuff tokens at 3 from one cast at cost 1, and 2 damage on each. It was in the middle table, at 4 operations, until PR #247 gave it its Damage. |
 | `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | With `meteor` and `crazed_specter`, the most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |
-| `meteor` | 2 | 3 enemies | 14 | 3 | **needs a component** | Three Bleed tokens at 2 for 2 Rounds (1 Round until 2026-10-18), beside 9 operations of damage at 2 a target. It was **restate** at 11 operations and no token until PR #245 gave it the Bleed: the content moved this verdict. |
+| `meteor` | 2 | 3 enemies | 14 | 3 | **needs a component** | Three Bleed tokens at 2 for 1 Round, beside 9 operations of damage at 3 a target, since 2026-10-20. The Bleed lasted 2 Rounds from 2026-10-18 to 2026-10-20 and 1 Round before, both at 2 a target. It was **restate** at 11 operations and no token until PR #245 gave it the Bleed: the content moved this verdict. |
 | `crazed_specter` | 3 | 3 enemies | 14 | 4 | **needs a component** | 9 operations of damage, a Bleed token at 4 a Round for 2 Rounds on each target, and a Bleed token at 4 for 1 Round on its own caster: four Bleed tokens from one cast, and no critical roll. The target Bleed and the caster Bleed are the same kind on two recipients, so the caster line needs its own line on the card, or the caster's Bleed reads as a second one on each target. Flagged for card text. Read at `ad3e4d00`: at `e6f72578` it dealt 9, rolled 0.38 and placed only the caster's Bleed, 12 operations and 1 token. |
 
 ---
