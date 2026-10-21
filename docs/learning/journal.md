@@ -24,11 +24,14 @@ committed beside the old one.
   | `90aa70db` | 16 % / 31 % | 30 % / 17 % | 529 | 454 | 1,069 | 83 | 90 | 8.87 | 7.2 % | 0.5 % |
   | ward 5; regeneration 4; Whisper 3 | 23 % / 27 % | 18 % / 33 % | 1,017 | 1,033 | 973 | 203 | 245 | 9.37 | 3.8 % | 0.5 % |
   | ward 6; heal 3, 4 for 3 rounds; Whisper 2 for 3 | 25 % / 24 % | 41 % / 16 % | 1,258 | 1,436 | 1,109 | 236 | 341 | 9.56 | 4.5 % | 0.5 % |
+  | **the mix shipped: ward 6; regeneration 4; Whisper 3** | **24 % / 22 %** | **17 % / 32 %** | **1,018** | **1,040** | 950 | 187 | 280 | 9.31 | 5.0 % | 0.5 % |
 
   Both doubled the two packages and lifted the level 3 behind them two to four times, and the matches got
   longer without a stall: the share over 16 rounds did not move. Necrotic was even at a ward of 6; Ethereal was
   even in the first candidate, where in the second Vital Echo took the slot and Whisper fell back to a trap.
-- **The owner took the mix without a replay**: the ward of 6, and the first candidate's Ethereal. Tuning pass 28
+- **The owner took the mix**: the ward of 6, and the first candidate's Ethereal, replayed afterwards on the same
+  400 matches (the last row, Codex on #357): both packages even, both played twice as much, Revenant and
+  Transcendent two and three times, no draw and no more over 16 rounds. Tuning pass 28
   proposed Bonewall for three rounds and the owner rejected it for draws (2026-10-14); the ward stays at two
   rounds, larger. Whisper re-cast every round keeps two chants on an ally, 6 a round: the next slot log reads it.
 - **The knobs.** Notes added; the ward searched from 4 to 7, Whisper's regeneration from 2 to 3. The tabletop
