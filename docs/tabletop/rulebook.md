@@ -866,9 +866,9 @@ bonus to the printed Damage, multiply, then subtract the Defense the hit meets, 
 Defense the hit meets is the target's total Defense less the caster's Sunder, floored at zero. Any other
 order gives a different, wrong number; see the examples in [5.8](#58-resolving-an-action).
 
-> **Example, a Heal.** Creature 2 casts **Vital Surge** on Creature 3: `One ally`, `Heal 7`,
-> `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
-> Creature 3 goes to 30. Two of the fourteen are wasted, because a Heal is capped by the Health missing.
+> **Example, a Heal.** Creature 2 casts **Vital Surge** on Creature 3: `One ally`, `Heal 10`,
+> `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 10 x 2 = 20, and
+> Creature 3 goes to 30. Eight of the twenty are wasted, because a Heal is capped by the Health missing.
 > **Example, what is not multiplied.** Creature 5 casts **Blood Price** on Creature 1: `Damage 11` and
 > `Caster: Damage 3`, `Critical 50%  d20: 11+`. The d20 shows 11, a hit. Creature 1 takes 11 x 2 = 22, less
 > its total Defense. Creature 5 takes exactly **3**, less its own total Defense — the `Caster:` line is never
