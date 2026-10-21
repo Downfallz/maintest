@@ -10,7 +10,8 @@ three Rounds, and Titan's Passive a Sunder of 3 the same day, then a Sunder of 2
 raised from 2 to 3; Fortress's examples re-read 2026-10-18, when it became Alpha Roar, the first Spell to
 give a Damage buff; Overdrive added to the Damage buff 2026-10-19, when it gave up to 3 allies Energy +4 and
 a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when Emberstorm became a hit of 3
-with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow). Phase 4 of [plan.md](plan.md).
+with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo's example re-read
+2026-10-21, when its Regeneration became 4 a Round). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -280,10 +281,10 @@ otherwise have killed it. Doing it the other way round kills Creatures the rules
 **A Bleed can end the Match.** When the Bleed pass leaves a Team with no living Creature, the Match ends
 there, before Evolution ([7.2](#72-the-end-of-a-match)). Both Teams wiped by the same pass is a draw.
 
-> **Example.** Creature 5 is at 1 Health, carries a Regeneration 3 a Round from **Vital Echo**, and a
+> **Example.** Creature 5 is at 1 Health, carries a Regeneration 4 a Round from **Vital Echo**, and a
 > Bleed 3 a Round from **Void Pulse**. Its Defense rails read buffs 3, debuffs 0.
-> Energy regeneration: none. Regeneration: heal 3, to 4 Health. Bleed: 3 damage, and its Defense of 3 does
-> not apply, to 1 Health. Creature 5 survives the Round.
+> Energy regeneration: none. Regeneration: heal 4, to 5 Health. Bleed: 3 damage, and its Defense of 3 does
+> not apply, to 2 Health. Creature 5 survives the Round.
 > In the other order it would have taken 3 from 1 Health, died at 0, and never been healed.
 
 ### 5.3 Evolution
@@ -1079,7 +1080,12 @@ changed two Stormborn Spells. Ice Grip prints `Damage 3` and `Initiative -3, 2 r
 and the timeline of Round 4 does not move. Emberstorm prints `Damage 3` and `Bleed 2 a round, 1 round`. Its
 Bleed lasted 1 Round until 2026-10-18 and 2 Rounds from 2026-10-18 to 2026-10-20, both at `Damage 2`, and
 §5.7's example printed the 2 Rounds in that time. It does no arithmetic with either number, so only the
-printed line moved. No rule moved.
+printed line moved. No rule moved. On 2026-10-21 every example naming Bonewall, Vital Echo or Whisper was
+re-read against `data/Spells/` (content `6198d349`), which changed those three. Bonewall gives
+`Defense +6, 2 rounds`, not `+3`; Vital Echo `Heal 2` and `Regeneration 4 a round, 2 rounds`, not 3; Whisper
+`Regeneration 3 a round, 2 rounds` on up to 3 allies, not 2. §5.2's example heals 4, not 3: Creature 5 goes
+to 5 Health and ends the Round at 2, not 1, and still survives only because healing goes first. §5.3's
+example names Vital Echo and Whisper and no number of theirs, and no example uses Bonewall. No rule moved.
 
 | This book | The specification |
 | --- | --- |

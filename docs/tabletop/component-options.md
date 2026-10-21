@@ -54,6 +54,14 @@ in play, 12 to 18. A token's handling moves with its Duration on the slide dock 
 moves to 4 and each of Emberstorm's from 4 back to 3, and on the colour dock each stays 2 (place and remove;
 2.4 below). The measured profiles are not re-run.
 
+**Nor for Bonewall, Vital Echo and Whisper** (journal, 2026-10-21). Bonewall (`bone_ward`) gives one ally
+Defense +6 for 2 Rounds, not +3; its caster's Bleed of 1 for 1 Round is unchanged. Vital Echo
+(`healing_screech`) regenerates 4 a Round for 2 Rounds, not 3, and Whisper (`soothing_chant`) 3, not 2, on up
+to 3 allies. components.md §1.4 re-deals three faces and still reads **216** Condition tokens in 7 kinds: the
+Defense buff +3 face becomes +6, and the Regeneration faces 1, 2 and 3 become 1, 3 and 4. No Duration moves,
+so no token's handling moves on either dock, and the content observation of 2.4 holds as written. The
+measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
