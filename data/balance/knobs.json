@@ -879,7 +879,7 @@
     "spell:healing_screech": {
       "name": "Vital Echo",
       "class": "Shaman",
-      "intent": "The one heal split between now and later: a quarter of it now and the rest over the next two rounds, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 8 health against `rejuvenate`'s 4 for the same price -- and the step is entirely in the part that has to be bought early.",
+      "intent": "The one heal split between now and later: a fifth of it now and the rest over the next two rounds, 2 and then 4 a round, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 10 health against `rejuvenate`'s 5 for the same price -- and the step is entirely in the part that has to be bought early.",
       "keep": [
         "Most of it is lasting: the instant half is a down payment, never the point",
         "The anticipation heal, not the emergency one: on a creature dying this round it does 2",
