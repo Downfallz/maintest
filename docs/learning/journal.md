@@ -31,7 +31,7 @@ the winner's draw out of 98, not a better set. Nothing is kept.
   `search-40` is likely to come from how the lookahead reads, not from its weights. The rounds it plays out and
   the rollouts it averages (`lookahead:<rounds>x<rollouts>`) are what to measure first (next entry).
 
-## 2026-10-22. The lookahead's horizon buys nothing against search-40
+## 2026-10-22. The lookahead's horizon buys nothing against search-40, and its built-in weights beat lookahead-49's
 
 Content `6198d349`. lookahead-49 was played reading the rounds after each combat move out
 (`lookahead:<rounds>x<rollouts>:<weights>`, docs/learning/agents.md), against `search-40`, on 60 seeds no run
@@ -53,6 +53,23 @@ the plain reading using `paired`:
 - **Where that leaves the lookahead.** Neither six more rounds of its weights (#361) nor its horizon moves it
   past `search-40`; it is even with it, a third time, here 0.492. This is the reading the journal reached
   before on another catalogue: on this game the strength is in the evaluation, not in the horizon.
+- **And the evaluation is where it falls short: the built-in weights beat lookahead-49's.** The same 60 seeds
+  were played against `search-40` with the lookahead on its built-in weights, once guessing the seats it does
+  not play as Greedy (`lookahead`, the default) and once as `search-40`
+  (`lookahead:heuristic:learning/weights/search-40.json`, which keeps the built-in weights as the evaluation,
+  ADR 0055):
+
+  | reading | against `search-40` | rounds | minus lookahead-49 |
+  | --- | --- | --- | --- |
+  | `lookahead`, built-in weights, guessing Greedy | **0.650** (0.56 to 0.74) | 9.2 | +0.158 (+0.034 to +0.283) |
+  | the same, guessing `search-40` | **0.708** (0.62 to 0.79) | 9.5 | +0.217 (+0.099 to +0.334) |
+
+  Both are clear of lookahead-49. Guessing the right opponent adds +0.058 (-0.061 to +0.177) on top, not
+  settled. The searched weights are the weaker evaluation: against damage, lookahead-49 prices a kill 22 times
+  and a stun 19 times where the built-in weights price them 5 and 3, and its matches last 13 rounds where the
+  built-in lookahead's last 9. Since lookahead-34, each of the lookahead's searches started from the last set
+  and was read against it, not against the built-in weights, so a drift that lost to them went unseen.
+  One window of 60 seeds; it wants a second before the table's seats move.
 
 ## 2026-10-21. lookahead-49 replaces lookahead-45, and search-40 holds: both rungs searched again on content 6198d349
 
