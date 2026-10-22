@@ -69,7 +69,23 @@ the plain reading using `paired`:
   and a stun 19 times where the built-in weights price them 5 and 3, and its matches last 13 rounds where the
   built-in lookahead's last 9. Since lookahead-34, each of the lookahead's searches started from the last set
   and was read against it, not against the built-in weights, so a drift that lost to them went unseen.
-  One window of 60 seeds; it wants a second before the table's seats move.
+- **A second window holds it.** On 60 more seeds no run had used (7000000 to 7000059, both seats):
+
+  | reading | against `search-40` | against Greedy | rounds against Greedy |
+  | --- | --- | --- | --- |
+  | `lookahead`, built-in weights, guessing Greedy | **0.592** (0.51 to 0.67) | **0.867** (0.80 to 0.94) | 9.4 |
+  | the same, guessing `search-40` | 0.658 (0.58 to 0.74) | 0.667 (0.58 to 0.75) | 9.4 |
+  | `search-40` | | 0.775 (0.70 to 0.85) | 10.7 |
+
+  The built-in lookahead beats `search-40` on both windows, 0.650 and 0.592. Against Greedy it is at least
+  `search-40`'s equal: +0.092 (-0.014 to +0.197) seed by seed, not settled. Guessing `search-40` adds +0.067
+  (-0.028 to +0.161) against `search-40`, not settled, and costs -0.200 (-0.305 to -0.095) against Greedy,
+  clear of zero: guessing the wrong opponent is worse than guessing a plain one. For the table, where the
+  opponent is a person, that reading is a trap. It is also the cheaper lookahead: its four evaluations on this
+  window took six minutes side by side, where lookahead-49's four on the last window took over half an hour.
+- **The table** seats the built-in lookahead first, then `search-40`, then lookahead-49
+  (`learning/seatable.json`). The lookahead's next search, if there is one, starts from the built-in weights
+  and reads its result against them.
 
 ## 2026-10-21. lookahead-49 replaces lookahead-45, and search-40 holds: both rungs searched again on content 6198d349
 
