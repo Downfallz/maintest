@@ -29,7 +29,30 @@ the winner's draw out of 98, not a better set. Nothing is kept.
   many times its cost a move. `search-40` stays first at the table.
 - **What to ask next.** Six rounds of the nine weights found nothing that holds, so a lookahead that beats
   `search-40` is likely to come from how the lookahead reads, not from its weights. The rounds it plays out and
-  the rollouts it averages (`lookahead:<rounds>x<rollouts>`) are what to measure first.
+  the rollouts it averages (`lookahead:<rounds>x<rollouts>`) are what to measure first (next entry).
+
+## 2026-10-22. The lookahead's horizon buys nothing against search-40
+
+Content `6198d349`. lookahead-49 was played reading the rounds after each combat move out
+(`lookahead:<rounds>x<rollouts>:<weights>`, docs/learning/agents.md), against `search-40`, on 60 seeds no run
+had used (6000000 to 6000059, both seats), the four readings side by side. Each was compared seed by seed with
+the plain reading using `paired`:
+
+| reading | against `search-40` | rounds | minus the plain reading |
+| --- | --- | --- | --- |
+| `lookahead-49`, the round alone | 0.492 (0.40 to 0.58) | 13.2 | |
+| `2x2` | 0.488 (0.40 to 0.58) | 13.0 | -0.004 (-0.038 to +0.030) |
+| `2x4` | 0.488 (0.40 to 0.58) | 12.9 | -0.004 (-0.038 to +0.030) |
+| `4x4` | 0.458 (0.37 to 0.55) | 12.8 | -0.033 (-0.078 to +0.011) |
+
+- **Two rounds ahead changes almost nothing.** `2x2` and `2x4` both score 0.488, and the paired interval is
+  narrow: the horizon is not where lookahead-49 is short of `search-40`.
+- **Four rounds ahead leans the wrong way**, not settled, at about three times the clock a move. The entry of
+  the rounds after a move said why: four rollouts give an outcome in quarters, and once rollouts start ending
+  the match, their dice outrank the round's reading.
+- **Where that leaves the lookahead.** Neither six more rounds of its weights (#361) nor its horizon moves it
+  past `search-40`; it is even with it, a third time, here 0.492. This is the reading the journal reached
+  before on another catalogue: on this game the strength is in the evaluation, not in the horizon.
 
 ## 2026-10-21. lookahead-49 replaces lookahead-45, and search-40 holds: both rungs searched again on content 6198d349
 
