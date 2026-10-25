@@ -87,14 +87,12 @@ public sealed class LookaheadAgent(
     /// tie on dice (ADR 0113) draws from one shared source, and rollouts racing for it would take their draws in
     /// whatever order the threads ran.
     /// </summary>
-    private readonly bool _rolloutsInParallel = inner is null or HeuristicAgent { RollsDice: false } or GreedyAgent { RollsDice: false };
+    public bool RollsOutSideBySide { get; } = inner is null or HeuristicAgent { RollsDice: false } or GreedyAgent { RollsDice: false };
 
     private readonly ActionScorer _scorer = new(resources, rules, weights);
 
     public ScoringWeights Weights => weights;
 
-    /// <summary>Whether its rollouts run side by side, which only an inner agent that draws no dice allows.</summary>
-    public bool RollsOutSideBySide => _rolloutsInParallel;
 
     /// <summary>Whether enemy slots are played as the worst reply rather than as the guessed one: the minimax agent.</summary>
     public bool IsAdversarial => adversarial;
@@ -195,7 +193,7 @@ public sealed class LookaheadAgent(
     /// <summary>The body for every index below the count: side by side when the rollouts may be, else in order.</summary>
     private void Each(int count, Action<int> body)
     {
-        if (_rolloutsInParallel)
+        if (RollsOutSideBySide)
         {
             Parallel.For(0, count, body);
             return;
