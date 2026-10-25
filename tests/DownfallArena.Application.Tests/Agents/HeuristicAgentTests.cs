@@ -7,7 +7,9 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Randomness;
 using DownfallArena.SharedKernel.Stats;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Agents;
 
@@ -243,6 +245,35 @@ public sealed class HeuristicAgentTests
         Agent.DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(Two, TestContent.GuardPack));
         Agent.DecideEvolution(board with { EvolutionChoices = [new EvolutionChoice(One, TestContent.GuardPack)] }, options).Choice
             .ShouldBe(new EvolutionChoice(Two, TestContent.JabPack));
+    }
+
+    /// <summary>
+    /// ADR 0113. The tie of the test above, Jab's package and Guard's both worth their initiative alone once One
+    /// buys Guard's, read by an agent with dice: the dice pick which of the two it buys, where the first option
+    /// took it every time.
+    /// </summary>
+    [Fact]
+    public void A_tie_between_two_purchases_goes_to_the_seats_dice()
+    {
+        var board = Board(enemyHealth: 20) with { EvolutionChoices = [new EvolutionChoice(One, TestContent.GuardPack)] };
+        var options = new EvolutionOptions(1, [new EvolutionOption(Two, [TestContent.JabPack, TestContent.GuardPack])]);
+
+        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules, new ScriptedRandom(0)).DecideEvolution(board, options).Choice
+            .ShouldBe(new EvolutionChoice(Two, TestContent.JabPack));
+        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules, new ScriptedRandom(1)).DecideEvolution(board, options).Choice
+            .ShouldBe(new EvolutionChoice(Two, TestContent.GuardPack));
+    }
+
+    /// <summary>ADR 0113: a purchase worth more than every other is bought without a roll, so the dice move nothing a tie does not.</summary>
+    [Fact]
+    public void A_purchase_worth_more_than_the_others_is_bought_without_a_roll()
+    {
+        var dice = Substitute.For<IRandomSource>();
+        var options = new EvolutionOptions(1, [new EvolutionOption(Two, [TestContent.JabPack, TestContent.GuardPack])]);
+
+        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules, dice).DecideEvolution(Board(enemyHealth: 20), options).Choice
+            .ShouldBe(new EvolutionChoice(Two, TestContent.GuardPack));
+        dice.DidNotReceiveWithAnyArgs().NextInt32(default, default);
     }
 
     /// <summary>

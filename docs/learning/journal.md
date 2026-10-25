@@ -4,32 +4,41 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-10-21. No lookahead rung from lookahead-49: six more rounds found noise
+## 2026-10-25. Greedy breaks a tie between two purchases with its dice, and opens Predator half the time (ADR 0113)
 
-Content `6198d349`. This search (search 61, #361, run 39638339759, closed without merging) asked for a lookahead
-that beats `search-40`. It started from lookahead-49 and played as the lookahead against Greedy and `search-40`
-on 60 seeds drawn fresh from 5000000 to 5900000, 6 rounds of 8, seed 0, 98 evaluations. Best 0.538 on the
-search seeds, where lookahead-49 started at 0.483. The two intervals overlap, and the weights barely moved: stun
-9.08 to 9.55, initiative 3.17 to 3.48, energy 0.13 to 0.29, defense 1.10 to 1.22, heal 1.32 to 1.46.
+Content `6198d349`. At round 1 Warped and Predator are worth exactly the same to the built-in weights: Shock's 4
+with a half chance to crit and Quill's 3 on two enemies both come to 6 expected damage, 3 over Strike, and both
+packages overtake 1.5 initiative, so both read 6.15 beside Brute's 6.70 (printed from `PurchaseTerms` on seed 1).
+The first option in the content's order won the tie, so Greedy opened Brute + Warped in every match and never
+bought a Predator package at all. Now an exact tie between purchases goes to the seat's dice, seeded from the
+match's seed, and only a tie rolls them.
 
-The hold-out was replayed locally on the run's window: 60 seeds no candidate saw (5883488 to 5883547, both
-seats), with the weights the log printed, read with `paired`:
+- **The opening, before and after.** Before, on 40 mirrors (seeds 1 to 40): 80 Brute and 80 Warped of the 160
+  round-1 picks, and no Predator package at any round. After, on 60 (seeds 1 to 60): 120 Brute, 60 Warped and
+  60 Predator of 240, and the Predator family bought later too (Blighted 42 times, Apex 6).
+- **The benchmark mirror** (200 seeds, both seats):
 
-| agent | against Greedy | against `search-40` |
-| --- | --- | --- |
-| found | 0.517 (0.42 to 0.61), 13.9 rounds | 0.400 (0.31 to 0.49), 13.5 rounds |
-| lookahead-49 | 0.575 (0.49 to 0.66), 13.0 rounds | 0.500 (0.42 to 0.58), 13.8 rounds |
+  | Greedy | rounds | over 16 | round cap | draws | Predator casts | casts |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | before | 11.43 | 3.0 % | 0.5 % | 1.5 % | 6 | 9,295 |
+  | after | 10.79 | 2.5 % | 0 | 0.5 % | 1,205 | 8,270 |
 
-Seed by seed, the found set minus lookahead-49 is -0.058 (-0.188 to +0.072) against Greedy and -0.100 (-0.211 to
-+0.011) against `search-40`. Neither difference is settled, and both lean the wrong way. The search's gain was
-the winner's draw out of 98, not a better set. Nothing is kept.
+- **Every tier-1 opening forced against it** (ADR 0109), on the same seeds, before and after:
 
-- **What lookahead-49 is.** Against `search-40` it reads 0.442 on #359's window and 0.500 on this one. Both sit
-  within the ±0.09 that 60 seeds allow, so the honest reading is that it is about even with `search-40`, at
-  many times its cost a move. `search-40` stays first at the table.
-- **What to ask next.** Six rounds of the nine weights found nothing that holds, so a lookahead that beats
-  `search-40` is likely to come from how the lookahead reads, not from its weights. The rounds it plays out and
-  the rollouts it averages (`lookahead:<rounds>x<rollouts>`) are what to measure first (next entry).
+  | opening | against the old Greedy | against the new one |
+  | --- | --- | --- |
+  | Warped + Predator | **0.585** (0.54 to 0.63) | 0.405 (0.36 to 0.45) |
+  | Brute + Predator | 0.526 (0.47 to 0.58) | **0.516** (0.47 to 0.56) |
+  | Brute + Warped | 0.500 | 0.469 (0.42 to 0.51) |
+  | Brute + Brute | 0.459 (0.41 to 0.51) | 0.348 (0.30 to 0.39) |
+  | Predator + Predator | 0.456 (0.39 to 0.52) | 0.350 (0.30 to 0.40) |
+  | Warped + Warped | 0.354 (0.30 to 0.40) | 0.339 (0.30 to 0.38) |
+
+  An opening that beat the old Greedy no longer does: Greedy took a worse opening than one it priced the same.
+  Its old opening, Brute + Warped, reads 0.469 against it, not settled below even.
+- **What moves.** The benchmark digest of `6198d349` is rewritten. Every reading taken with Greedy before this
+  entry, the tuner's mirror and its opening targets among them, was taken with the old one. The spells report
+  of 2026-10-22 read Greedy's casts before this.
 
 ## 2026-10-22. The lookahead's horizon buys nothing against search-40, and its built-in weights beat lookahead-49's
 
@@ -86,6 +95,33 @@ the plain reading using `paired`:
 - **The table** seats the built-in lookahead first, then `search-40`, then lookahead-49
   (`learning/seatable.json`). The lookahead's next search, if there is one, starts from the built-in weights
   and reads its result against them.
+
+## 2026-10-21. No lookahead rung from lookahead-49: six more rounds found noise
+
+Content `6198d349`. This search (search 61, #361, run 39638339759, closed without merging) asked for a lookahead
+that beats `search-40`. It started from lookahead-49 and played as the lookahead against Greedy and `search-40`
+on 60 seeds drawn fresh from 5000000 to 5900000, 6 rounds of 8, seed 0, 98 evaluations. Best 0.538 on the
+search seeds, where lookahead-49 started at 0.483. The two intervals overlap, and the weights barely moved: stun
+9.08 to 9.55, initiative 3.17 to 3.48, energy 0.13 to 0.29, defense 1.10 to 1.22, heal 1.32 to 1.46.
+
+The hold-out was replayed locally on the run's window: 60 seeds no candidate saw (5883488 to 5883547, both
+seats), with the weights the log printed, read with `paired`:
+
+| agent | against Greedy | against `search-40` |
+| --- | --- | --- |
+| found | 0.517 (0.42 to 0.61), 13.9 rounds | 0.400 (0.31 to 0.49), 13.5 rounds |
+| lookahead-49 | 0.575 (0.49 to 0.66), 13.0 rounds | 0.500 (0.42 to 0.58), 13.8 rounds |
+
+Seed by seed, the found set minus lookahead-49 is -0.058 (-0.188 to +0.072) against Greedy and -0.100 (-0.211 to
++0.011) against `search-40`. Neither difference is settled, and both lean the wrong way. The search's gain was
+the winner's draw out of 98, not a better set. Nothing is kept.
+
+- **What lookahead-49 is.** Against `search-40` it reads 0.442 on #359's window and 0.500 on this one. Both sit
+  within the ±0.09 that 60 seeds allow, so the honest reading is that it is about even with `search-40`, at
+  many times its cost a move. `search-40` stays first at the table.
+- **What to ask next.** Six rounds of the nine weights found nothing that holds, so a lookahead that beats
+  `search-40` is likely to come from how the lookahead reads, not from its weights. The rounds it plays out and
+  the rollouts it averages (`lookahead:<rounds>x<rollouts>`) are what to measure first (next entry).
 
 ## 2026-10-21. lookahead-49 replaces lookahead-45, and search-40 holds: both rungs searched again on content 6198d349
 

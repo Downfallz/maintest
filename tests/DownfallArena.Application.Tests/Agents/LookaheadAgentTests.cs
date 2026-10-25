@@ -498,6 +498,31 @@ public sealed class LookaheadAgentTests
             .ShouldBeOfType<LookaheadAgent>().IsAdversarial.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// ADR 0113. A heuristic that breaks a purchase tie on dice holds state, so rollouts played on it run one
+    /// after another: side by side they would take its draws in whatever order the threads ran.
+    /// </summary>
+    [Fact]
+    public void Rollouts_run_side_by_side_only_on_an_inner_agent_that_draws_no_dice()
+    {
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: new GreedyAgent(TestContent.Resources, Rules)).RollsOutSideBySide.ShouldBeTrue();
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: new GreedyAgent(TestContent.Resources, Rules, new TestRandom(1))).RollsOutSideBySide.ShouldBeFalse();
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, inner: new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules, new TestRandom(1))).RollsOutSideBySide.ShouldBeFalse();
+    }
+
+    /// <summary>ADR 0113. A searching spec built on Greedy or a heuristic guesses with it dice-free, as the bare lookahead does, so its rollouts stay side by side.</summary>
+    [Fact]
+    public void A_searching_spec_built_on_a_heuristic_guesses_without_dice()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        factory.Create(AgentSpec.Parse("lookahead:greedy"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>().RollsOutSideBySide.ShouldBeTrue();
+        factory.Create(AgentSpec.Parse("minimax:heuristic:learning/weights/search-40.json"), Rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>().RollsOutSideBySide.ShouldBeTrue();
+        factory.Create(AgentSpec.Parse("greedy"), Rules, new TestRandom(1)).ShouldBeOfType<GreedyAgent>().RollsDice.ShouldBeTrue("a seat plays with its dice");
+    }
+
     /// <summary>What a searching agent reads is its inner agent's file, so that is what its stamp carries.</summary>
     [Fact]
     public void A_searching_spec_stamps_as_the_agent_it_is_built_on()

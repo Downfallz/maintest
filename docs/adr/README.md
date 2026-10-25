@@ -118,3 +118,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0110](0110-a-rule-set-may-declare-spells-at-activation.md) | A rule set may declare spells at activation | Accepted, its default changed by [0112](0112-spells-are-chosen-at-the-slot-by-default.md) |
 | [0111](0111-both-seats-are-asked-their-speeds-and-intents-at-once.md) | At a table, ask both seats their speeds and intents at once | Proposed |
 | [0112](0112-spells-are-chosen-at-the-slot-by-default.md) | Choose each spell at its creature's slot by default | Accepted |
+| [0113](0113-a-tie-between-purchases-goes-to-the-seats-dice.md) | Break a tie between two purchases with the seat's dice | Accepted |
