@@ -16,6 +16,9 @@ public sealed class GreedyAgent(IGameResources resources, RuleSet rules, IRandom
 {
     private readonly HeuristicAgent _inner = new(ScoringWeights.Default, resources, rules, random);
 
+    /// <summary>Whether a purchase tie rolls the seat's dice (ADR 0113).</summary>
+    public bool RollsDice => _inner.RollsDice;
+
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => _inner.DecideEvolution(board, options);
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _inner.DecideSpeed(board, creature);

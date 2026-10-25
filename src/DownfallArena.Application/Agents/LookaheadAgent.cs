@@ -82,15 +82,19 @@ public sealed class LookaheadAgent(
     private readonly IPlayerAgent _oneStep = inner ?? new HeuristicAgent(weights, resources, rules);
 
     /// <summary>
-    /// Whether the purchase rollouts may run side by side: only when every decision in them is the heuristic's,
-    /// which holds no state and draws no dice. An inner agent that explores or plays at random draws from one
-    /// shared source, and rollouts racing for it would take their draws in whatever order the threads ran.
+    /// Whether the purchase rollouts may run side by side: only when every decision in them is a heuristic's that
+    /// draws no dice, and so holds no state. An inner agent that explores, plays at random or breaks a purchase
+    /// tie on dice (ADR 0113) draws from one shared source, and rollouts racing for it would take their draws in
+    /// whatever order the threads ran.
     /// </summary>
-    private readonly bool _rolloutsInParallel = inner is null or HeuristicAgent or GreedyAgent;
+    private readonly bool _rolloutsInParallel = inner is null or HeuristicAgent { RollsDice: false } or GreedyAgent { RollsDice: false };
 
     private readonly ActionScorer _scorer = new(resources, rules, weights);
 
     public ScoringWeights Weights => weights;
+
+    /// <summary>Whether its rollouts run side by side, which only an inner agent that draws no dice allows.</summary>
+    public bool RollsOutSideBySide => _rolloutsInParallel;
 
     /// <summary>Whether enemy slots are played as the worst reply rather than as the guessed one: the minimax agent.</summary>
     public bool IsAdversarial => adversarial;

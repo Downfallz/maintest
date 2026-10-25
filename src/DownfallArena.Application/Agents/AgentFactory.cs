@@ -68,11 +68,25 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         var (combat, rest) = Depth(spec);
         if (Searched(rest) is { } searched)
         {
-            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random), random, combat: combat, log: log);
+            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Guessing(searched, rules, random), random, combat: combat, log: log);
         }
 
         return new LookaheadAgent(rest.Path is null ? ScoringWeights.Default : Weights(rest), resources, rules, adversarial, random: random, combat: combat, log: log);
     }
+
+    /// <summary>
+    /// The agent a searching one plays the seats it guesses as. Greedy and a heuristic are built without dice, as
+    /// the lookahead's own default is: a guess is a prediction, not a seat at the table, and a heuristic that
+    /// rolls for a purchase tie (ADR 0113) would make the rollouts run one after another, and share its dice
+    /// with the search's own.
+    /// </summary>
+    private IPlayerAgent Guessing(AgentSpec spec, RuleSet rules, IRandomSource random) =>
+        spec.Kind switch
+        {
+            AgentKind.Greedy => new GreedyAgent(resources, rules),
+            AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
+            _ => Create(spec, rules, random),
+        };
 
     /// <summary>
     /// How far a searching spec reads a combat move past its round, and the spec with that part taken off. A

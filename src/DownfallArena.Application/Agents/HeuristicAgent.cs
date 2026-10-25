@@ -28,6 +28,9 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
     public ScoringWeights Weights => weights;
 
+    /// <summary>Whether a purchase tie rolls the seat's dice (ADR 0113): an agent that does holds state, so a rollout cannot share it across threads.</summary>
+    public bool RollsDice => random is not null;
+
     /// <summary>
     /// Buys the package worth the most on the current board, its best spell's combat value plus the initiative the
     /// package buys less the part of that spell's cost the actor cannot cover; passes only when nothing can be bought.

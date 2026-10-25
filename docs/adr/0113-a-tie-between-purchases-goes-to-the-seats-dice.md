@@ -24,8 +24,10 @@ When two or more purchases are worth the same, to within 1e-9, the heuristic age
 with the seat's dice: the agent dice a batch already hands each seat, seeded from the match's seed, so a match
 still replays. Only purchases are touched. The agent factory gives the dice to `greedy`, to `heuristic:<file>`
 and to the Greedy an exploring or opening agent wraps. An agent built without dice keeps the first option, as
-before. That is the heuristic a lookahead plays its guesses and rollouts with, and the table's practice
-fallback. A purchase worth more than every other is bought without a roll.
+before. That is the heuristic a lookahead plays its guesses and rollouts with, including the Greedy or
+heuristic a searching spec names (`lookahead:greedy`), and the table's practice fallback. A heuristic with
+dice holds state, so a lookahead built on one plays its rollouts one after another rather than side by side.
+A purchase worth more than every other is bought without a roll.
 
 ## Consequences
 
