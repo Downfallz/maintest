@@ -5,16 +5,24 @@ using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Randomness;
 using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
 /// One-step lookahead with explicit weights: every decision picks the option whose expected outcome scores
-/// best under <see cref="ActionScorer"/>. Deterministic: ties go to the first option in a stable order.
+/// best under <see cref="ActionScorer"/>. Deterministic: ties go to the first option in a stable order, except a
+/// tie between purchases, which the seat's dice break when the agent has them (ADR 0113).
 /// </summary>
-public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resources, RuleSet rules) : IPlayerAgent
+public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, IRandomSource? random = null) : IPlayerAgent
 {
+    /// <summary>
+    /// How close two purchase values have to be to be the same value: far below any difference a weight can make,
+    /// and above the last bits two sums of the same terms in another order can differ by.
+    /// </summary>
+    private const double PurchaseTie = 1e-9;
+
     private readonly ActionScorer _scorer = new(resources, rules, weights);
     private readonly Foresight _foresight = new(new ActionScorer(resources, rules, weights).WithoutUnlocks);
 
@@ -30,6 +38,13 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
     /// highly as the first did, and every team opened on two Brutes; one Warped beside one Brute beat that 70 % of
     /// the time.
     /// </para>
+    /// <para>
+    /// Two purchases worth the same are a coin the seat's dice toss, when the agent has dice (ADR 0113). At round 1
+    /// Warped and Predator are worth exactly the same to the built-in weights -- Shock's 4 with a half chance to
+    /// crit and Quill's 3 on two enemies both come to 6 expected damage, and both packages overtake as much -- so
+    /// the first option in the content's order took every opening, and Greedy never once opened Predator, though
+    /// Warped and Predator beside its Brute beats the opening it took. Without dice the first still wins.
+    /// </para>
     /// </summary>
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
@@ -37,24 +52,27 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         ArgumentNullException.ThrowIfNull(options);
 
         var creatures = Creatures(board);
-        EvolutionChoice? best = null;
-        var bestScore = double.NegativeInfinity;
         var buying = Buying(board, resources);
+        var priced = new List<(EvolutionChoice Choice, double Score)>();
         foreach (var option in options.Creatures)
         {
             var actor = creatures.First(creature => creature.Id == option.Creature);
-            foreach (var tier in option.AvailableTiers)
-            {
-                var score = _scorer.PurchaseValue(actor, tier, creatures, buying);
-                if (score > bestScore)
-                {
-                    best = new EvolutionChoice(option.Creature, tier);
-                    bestScore = score;
-                }
-            }
+            priced.AddRange(option.AvailableTiers.Select(tier => (new EvolutionChoice(option.Creature, tier), _scorer.PurchaseValue(actor, tier, creatures, buying))));
         }
 
-        return best is null ? EvolutionDecision.Pass : EvolutionDecision.Unlock(best);
+        if (priced.Count == 0)
+        {
+            return EvolutionDecision.Pass;
+        }
+
+        var bestScore = priced.Max(entry => entry.Score);
+        if (random is null)
+        {
+            return EvolutionDecision.Unlock(priced.First(entry => entry.Score >= bestScore).Choice);
+        }
+
+        var tied = priced.Where(entry => entry.Score >= bestScore - PurchaseTie).ToList();
+        return EvolutionDecision.Unlock(tied.Count == 1 ? tied[0].Choice : tied[random.NextInt32(0, tied.Count)].Choice);
     }
 
     /// <summary>The spells the player's picks of this round teach: what the rest of its picks are read against (ADR 0108).</summary>

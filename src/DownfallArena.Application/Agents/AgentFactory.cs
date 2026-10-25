@@ -44,8 +44,8 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         return spec.Kind switch
         {
             AgentKind.Random => new RandomAgent(random),
-            AgentKind.Greedy => new GreedyAgent(resources, rules),
-            AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
+            AgentKind.Greedy => new GreedyAgent(resources, rules, random),
+            AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules, random),
             AgentKind.Policy => Trained(spec, rules),
             AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules, random), random),
             AgentKind.Opening => new OpeningAgent(Packages(spec), Explored(spec, rules, random)),
@@ -163,7 +163,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     /// loop on two different players.
     /// </summary>
     private IPlayerAgent Explored(AgentSpec spec, RuleSet rules, IRandomSource random) =>
-        Inner(spec) is { } inner ? Create(inner, rules, random) : new GreedyAgent(resources, rules);
+        Inner(spec) is { } inner ? Create(inner, rules, random) : new GreedyAgent(resources, rules, random);
 
     /// <summary>
     /// The inner agent an exploring spec names, or <c>null</c> for the bare <c>explore:0.2</c> that wraps

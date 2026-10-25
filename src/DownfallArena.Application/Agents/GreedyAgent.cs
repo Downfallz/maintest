@@ -3,16 +3,18 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Randomness;
 
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
-/// The heuristic agent with the built-in weights: the deterministic baseline every learned agent is measured
-/// against, and the agent behind the benchmark digest.
+/// The heuristic agent with the built-in weights: the baseline every learned agent is measured against, and the
+/// agent behind the benchmark digest. Deterministic for a seed: its only draws are the seat's dice, which break a
+/// tie between two purchases worth the same (ADR 0113).
 /// </summary>
-public sealed class GreedyAgent(IGameResources resources, RuleSet rules) : IPlayerAgent
+public sealed class GreedyAgent(IGameResources resources, RuleSet rules, IRandomSource? random = null) : IPlayerAgent
 {
-    private readonly HeuristicAgent _inner = new(ScoringWeights.Default, resources, rules);
+    private readonly HeuristicAgent _inner = new(ScoringWeights.Default, resources, rules, random);
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => _inner.DecideEvolution(board, options);
 

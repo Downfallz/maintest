@@ -5,7 +5,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Agent | Spec | What it does |
 | --- | --- | --- |
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
-| Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
+| Greedy | `greedy` | One-step lookahead with the built-in weights below. The baseline of the benchmark digest, deterministic for a seed: a tie between two purchases worth the same goes to the seat's dice (ADR 0113). |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
 | Lookahead | `lookahead[:<rounds>x<rollouts>][:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. With `<rounds>x<rollouts>` in front (`lookahead:4x4:<weights file>`) it also plays that many rounds after the move out, on that many rollouts, the way it reads a purchase; see [the rounds after a move](#the-rounds-after-a-move). Deterministic for a seed. Speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). It orders its own ties by playing each seating out, and prices a purchase by playing the rounds after it out (ADR 0094). See [the round played out](#the-round-played-out). |
 | Minimax | `minimax[:<rounds>x<rollouts>][:<weights file>\|:<agent>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. It orders its ties as the lookahead does, and reads the rounds after a move the same way when the spec asks for them. Deterministic. See [the worst reply](#the-worst-reply). |
@@ -102,10 +102,14 @@ Decisions:
   cost, so a creature that could not afford it keeps nothing either way and the difference cancels, while
   above the cost the energy the actor keeps already prices every point. The value includes the unlock terms
   (ADR 0096), so a dear package is read with what the buyer's purse reaches next round: that is what moves
-  Greedy off cheap packages it never saves for.
+  Greedy off cheap packages it never saves for. Two packages worth the same, to within 1e-9, are a coin the
+  seat's dice toss (ADR 0113): at round 1 Warped and Predator both read 6.15, and the first option in the
+  content's order took every opening before.
 
-Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
-on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
+Both agents are deterministic for a seed: the same board and the same dice give the same decision, so a Greedy
+versus Greedy evaluation on the benchmark seeds replays exactly. That is what makes the benchmark digest an
+engine-change detector. The dice are the seat's own, seeded from the match's seed, and only a purchase tie
+rolls them; a heuristic built without dice, as the lookahead's guesses are, keeps the first option.
 
 ## The round played out
 
