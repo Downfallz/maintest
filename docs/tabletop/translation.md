@@ -24,8 +24,8 @@ a hit of 3 with a 2-Round `InitiativeDebuff` (journal, 2026-10-20); the rows `bo
 and `soothing_chant` reach re-read on 2026-10-21, when Bonewall's `DefenseBuff` became 6 and the
 `Regeneration` of Vital Echo 4 and of Whisper 3 (journal, 2026-10-21); the rows `revenant_guards` reaches
 re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal, 2026-10-26); and the rows
-`restorative_gush` and `tornado` reach re-read the same day, when Vital Surge's cost became 1 and Whirlwind
-gained a Bleed of 2 for 1 Round (journal, 2026-10-26)). Phase 1 of
+`restorative_gush` and `tornado` reach re-read the same day, when Vital Surge's cost became 1 and Whirlwind's
+`Damage` 8 (journal, 2026-10-26)). Phase 1 of
 [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
@@ -224,27 +224,23 @@ gained a Bleed of 2 for 1 Round (journal, 2026-10-26)). Phase 1 of
     The 44 files still author 81 Effects.
   - **Candidate 3** does not move: the permanent half is still +3 on up to 3 allies.
   - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
-- **Re-read on 2026-10-26 again (journal, 2026-10-26; content `bdaea6c1`, which is `148f37f2` with two Spells
-  changed).** Two Brute level-3 Spells moved, and neither changed its reach or its Critical chance.
+- **Re-read on 2026-10-26 again (journal, 2026-10-26; content `4a168cdf`, which is `148f37f2` with two Spells
+  changed).** Two Brute level-3 Spells moved an amount, and neither changed its reach, its Effects or its
+  Critical chance.
   - **`restorative_gush`** (Vital Surge, Colossus; one ally, 0.5) costs 1, not 2. Its `Heal` of 10 is
     unchanged.
-  - **`tornado`** (Whirlwind, Ravager; cost 3, up to 3 enemies, 0.4) gives each target a `Bleed` of 2 a Round
-    for 1 Round beside its `Damage` 6, which it did not. A Duration counts the full Rounds after the cast's
-    own, so the Bleed ticks once, at the Start of the next Round. It is `meteor`'s Bleed, on a hit twice the
-    size.
+  - **`tornado`** (Whirlwind, Ravager; cost 3, up to 3 enemies, 0.4) deals 8 to each target, not 6. It places
+    nothing, as before.
 
   What this moves here:
-  - **`restorative_gush`'s row does not move**: it stays at 4 operations and no token, **keep as is**. Paying
-    a cost is one operation at 1 as at 2.
-  - **`tornado`'s row** goes from 11 operations and no token to 14 and 3: per enemy, 3 for the Damage and 1 for
-    the Bleed. It places tokens, so it goes from **restate** to **needs a component**, a Bleed 2 token
-    ([components.md](components.md) §1.4, whose Bleed-2 face stays 18: a slot places at most 3 on it, as
-    `summon_minions` and `meteor` already did). It stays in Part 3's third table, at 14 beside `toxic_waves`,
-    `meteor` and `crazed_specter`: 16 + 19 + 9 = 44.
-  - **Part 2**: `Bleed` is in 11 Spells, 9 of them on targets (10 and 8). Its values do not move (`tornado`'s
-    2 for 1 Round was already `meteor`'s), and it stays **needs a component**. The Condition tokens stay 222
-    in 7 kinds. The 44 files author 82 Effects (81).
-  - **Part 5's tallies**: 131 rows, **keep as is** 37, **restate** 42, **needs a component** 52.
+  - **Neither row moves its operations, its tokens or its verdict**: `restorative_gush` stays at 4 and 0,
+    **keep as is**, and `tornado` at 11 and 0, **restate**, in Part 3's third table. Paying a cost is one
+    operation at 1 as at 2, and an amount is not a step of a cast.
+  - **Part 2**: `Damage` still runs 1 to 11 with no 9: 8 was already `ambush`'s, and `reckless_swing` still
+    deals 6. 11 is still the largest, `hateful_sacrifice`'s, so no figure that reads the largest hit moves:
+    not Part 3's `hateful_sacrifice` row, not Candidate 3's 22, not [components.md](components.md) §3.3. The
+    Condition tokens stay 222 in 7 kinds. The 44 files still author 81 Effects.
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -493,7 +489,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 
 | Effect kind | Spells in `data/` | Values used | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
-| `Bleed` | 11 (9 on targets: `crazed_specter`, `latch`, `meteor`, `mortal_wound`, `poison_slash`, `summon_minions`, `tornado`, `toxic_waves`, `tranquilizer_dart`; 3 on the caster: `bone_ward`, `crazed_specter`, `revenant_guards`; `crazed_specter` on both since `ad3e4d00`; `tornado` since 2026-10-26, 10 and 8 before) | 1, 2, 3 or 4 a Round for 1, 2 or 3 Rounds | Damage at the start of each of the Creature's Rounds, ignoring Defense (`UpkeepRules.cs:62-70`); `Stack` (ADR 0041) | 1 token with an amount and a dial per application; 1 sum over the tokens and 1 subtraction a Round | **needs a component** | A Bleed token that shows both numbers, and enough of them: since ADR 0041 a second Bleed is a second token, so one Creature can carry several. |
+| `Bleed` | 10 (8 on targets: `crazed_specter`, `latch`, `meteor`, `mortal_wound`, `poison_slash`, `summon_minions`, `toxic_waves`, `tranquilizer_dart`; 3 on the caster: `bone_ward`, `crazed_specter`, `revenant_guards`; `crazed_specter` on both since `ad3e4d00`) | 1, 2, 3 or 4 a Round for 1, 2 or 3 Rounds | Damage at the start of each of the Creature's Rounds, ignoring Defense (`UpkeepRules.cs:62-70`); `Stack` (ADR 0041) | 1 token with an amount and a dial per application; 1 sum over the tokens and 1 subtraction a Round | **needs a component** | A Bleed token that shows both numbers, and enough of them: since ADR 0041 a second Bleed is a second token, so one Creature can carry several. |
 | `Regeneration` | 3 (2 on targets: `healing_screech`, `soothing_chant`; 1 on the caster: `latch`) | 4 a Round for 2 Rounds (`healing_screech`; 3 until 2026-10-21), 3 for 2 (`soothing_chant`; 2 until 2026-10-21), 1 for 3 (`latch`) | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | Regeneration tokens in three faces, where there was one. Nothing is lost. |
 | `EnergyRegeneration` | 0 at `813bb91b` (`momentum` until ADR 0078) | none; `momentum`'s was 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Energy regeneration token) while `momentum` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `Stun` | 4 (`crushing_stomp`, `ice_spear`, `protective_slam`, `tranquilizer_dart`) | 2 Rounds (`crushing_stomp`); 1 Round for the other three | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 1 or 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a Stun removes a third of a Team for one or two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
@@ -622,11 +618,11 @@ size; this document only reports which rows carry an extra rule.
 | `chain_slash` | 3 | 2 enemies | 8 | 0 | **restate** | Nothing; 2 targets, 3 operations each. |
 | `revenant_guards` | 3 | 3 allies | 8 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 3. The most tokens of any cast, and four lines of card text (components.md §2.4). Flagged. |
 | `night_raid` | 3 | 2 enemies | 9 | 0 | **restate** | Nothing; 6 operations of damage and 2 Energy drains, each a comparison and a token move, in one Activation slot. Read at `ad3e4d00`: it was 13 operations on 3 enemies at `e6f72578`, at Damage 3 and a drain of 2. It replaced `death_squad`, whose row sat in the middle table: 3 allies, 4 operations, 3 Initiative buff tokens, **needs a component**. |
+| `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. Read at `4a168cdf`: it deals 8 a target since 2026-10-26, 6 before, and an amount is not a step of the cast. |
 | `noxious_cure` | 2 | 3 allies | 11 | 3 | **needs a component** | Three Heals and three Defense debuff tokens; the cure shreds the cured. |
 | `infectious_blast` | 3 | 3 enemies | 13 | 3 | **needs a component** | Three permanent Defense debuff tokens at 3 from one cast at cost 1, and 2 damage on each. It was in the middle table, at 4 operations, until PR #247 gave it its Damage. |
-| `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | With `meteor`, `tornado` (since 2026-10-26) and `crazed_specter`, the most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |
+| `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | With `meteor` and `crazed_specter`, the most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |
 | `meteor` | 2 | 3 enemies | 14 | 3 | **needs a component** | Three Bleed tokens at 2 for 1 Round, beside 9 operations of damage at 3 a target, since 2026-10-20. The Bleed lasted 2 Rounds from 2026-10-18 to 2026-10-20 and 1 Round before, both at 2 a target. It was **restate** at 11 operations and no token until PR #245 gave it the Bleed: the content moved this verdict. |
-| `tornado` | 3 | 3 enemies | 14 | 3 | **needs a component** | Three Bleed tokens at 2 for 1 Round, beside 9 operations of damage at 6 a target, since 2026-10-26 (journal, 2026-10-26): `meteor`'s Bleed on twice its hit, on the same Bleed 2 face ([components.md](components.md) §1.4). It was **restate** at 11 operations and no token until then, 9 of them damage arithmetic in one Activation slot: the content moved this verdict. |
 | `crazed_specter` | 3 | 3 enemies | 14 | 4 | **needs a component** | 9 operations of damage, a Bleed token at 4 a Round for 2 Rounds on each target, and a Bleed token at 4 for 1 Round on its own caster: four Bleed tokens from one cast, and no critical roll. The target Bleed and the caster Bleed are the same kind on two recipients, so the caster line needs its own line on the card, or the caster's Bleed reads as a second one on each target. Flagged for card text. Read at `ad3e4d00`: at `e6f72578` it dealt 9, rolled 0.38 and placed only the caster's Bleed, 12 operations and 1 token. |
 
 ---
@@ -900,10 +896,8 @@ they share, the any-of prerequisite and the Passive, has its rows in 1.3, and ea
 1.1 or 1.9.
 
 **Verdicts.** 131 rows carry exactly one verdict each: 74 in Part 1, 13 in Part 2, 44 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 52, **keep as is** 37, **restate** 42,
-**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The second
-re-read of 2026-10-26 moved one verdict: Part 3's `tornado` went from **restate** to **needs a component**
-when Whirlwind gave its targets a Bleed; before it they were 51 and 43. The re-read of
+counted over the file rather than recalled: **needs a component** 51, **keep as is** 37, **restate** 43,
+**simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. The re-read of
 2026-10-19 moved one verdict: Part 3's `adrenaline_tonic` went from **keep as is** to **needs a component**
 when Overdrive gave its allies a Damage buff; before it they were 50 and 38. The re-read of
 2026-10-18 moved one verdict: Part 2's `DamageBuff` went from **keep as is** to **needs a component** when
@@ -935,8 +929,8 @@ Candidate 6, the one question it put to the maintainer, is settled by ADR 0089.
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
 | keep as is | 23 | 5 | 9 | 37 |
-| restate | 32 | 1 | 9 | 42 |
-| needs a component | 19 | 7 | 26 | 52 |
+| restate | 32 | 1 | 10 | 43 |
+| needs a component | 19 | 7 | 25 | 51 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
 | **Total** | **74** | **13** | **44** | **131** |
