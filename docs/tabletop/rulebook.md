@@ -11,7 +11,8 @@ raised from 2 to 3; Fortress's examples re-read 2026-10-18, when it became Alpha
 give a Damage buff; Overdrive added to the Damage buff 2026-10-19, when it gave up to 3 allies Energy +4 and
 a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when Emberstorm became a hit of 3
 with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo's example re-read
-2026-10-21, when its Regeneration became 4 a Round). Phase 4 of [plan.md](plan.md).
+2026-10-21, when its Regeneration became 4 a Round; Wraithguard's mention re-read 2026-10-26, when its timed
+ward became +5). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -1086,6 +1087,10 @@ re-read against `data/Spells/` (content `6198d349`), which changed those three. 
 `Regeneration 3 a round, 2 rounds` on up to 3 allies, not 2. §5.2's example heals 4, not 3: Creature 5 goes
 to 5 Health and ends the Round at 2, not 1, and still survives only because healing goes first. §5.3's
 example names Vital Echo and Whisper and no number of theirs, and no example uses Bonewall. No rule moved.
+On 2026-10-26 every example naming Wraithguard was re-read against `data/Spells/` (content `148f37f2`),
+which changed its timed half: it gives `Defense +5, 2 rounds`, not `+4`, beside its unchanged
+`Defense +3, permanent` and `Caster: Bleed 4 a round, 1 round`. §6.8 names Wraithguard and no number of
+its, and no example uses it. No rule moved.
 
 | This book | The specification |
 | --- | --- |
