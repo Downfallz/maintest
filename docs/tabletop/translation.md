@@ -22,7 +22,8 @@ when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)
 `frostbite` reach re-read on 2026-10-20, when Emberstorm became a hit of 3 with a 1-Round Bleed and Ice Grip
 a hit of 3 with a 2-Round `InitiativeDebuff` (journal, 2026-10-20); the rows `bone_ward`, `healing_screech`
 and `soothing_chant` reach re-read on 2026-10-21, when Bonewall's `DefenseBuff` became 6 and the
-`Regeneration` of Vital Echo 4 and of Whisper 3 (journal, 2026-10-21)). Phase 1 of
+`Regeneration` of Vital Echo 4 and of Whisper 3 (journal, 2026-10-21); the rows `revenant_guards` reaches
+re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal, 2026-10-26)). Phase 1 of
 [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
@@ -208,6 +209,18 @@ and `soothing_chant` reach re-read on 2026-10-21, when Bonewall's `DefenseBuff` 
     2 and 1. Both stay **needs a component**. [components.md](components.md) §1.4 re-deals their faces at the
     same supply: the Defense buff +3 face becomes +6, the Regeneration 2 face leaves, the 3 face goes to 18 and
     a 4 face arrives, and the Condition tokens stay 216. The 44 files still author 81 Effects.
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
+- **Re-read on 2026-10-26 (journal, 2026-10-26; content `148f37f2`, which is `6198d349` with one Spell
+  changed).** **`revenant_guards`** (Wraithguard; cost 3, up to 3 allies, no Critical chance) gives
+  `DefenseBuff` 5 for 2 Rounds, not 4. Its permanent `DefenseBuff` 3 and its caster line, a Bleed of 4 a Round
+  for 1 Round, are unchanged. What this moves here:
+  - **Its row does not move its operations, its tokens or its verdict**: it stays at 8 and 7. An amount is
+    not a step of a cast.
+  - **Part 2**: `DefenseBuff`'s timed values are 1, 2, 4, 5, 6 or 7, where they were 1, 2, 4, 6 or 7. It stays
+    **needs a component**. [components.md](components.md) §1.4 splits the +4 face: it keeps `thundering_seal`
+    alone, 18 to 6, and a +5 face of 18 arrives, so the Condition tokens go from 216 to 222, still in 7 kinds.
+    The 44 files still author 81 Effects.
+  - **Candidate 3** does not move: the permanent half is still +3 on up to 3 allies.
   - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
@@ -461,7 +474,7 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | `Regeneration` | 3 (2 on targets: `healing_screech`, `soothing_chant`; 1 on the caster: `latch`) | 4 a Round for 2 Rounds (`healing_screech`; 3 until 2026-10-21), 3 for 2 (`soothing_chant`; 2 until 2026-10-21), 1 for 3 (`latch`) | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | Regeneration tokens in three faces, where there was one. Nothing is lost. |
 | `EnergyRegeneration` | 0 at `813bb91b` (`momentum` until ADR 0078) | none; `momentum`'s was 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Energy regeneration token) while `momentum` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `Stun` | 4 (`crushing_stomp`, `ice_spear`, `protective_slam`, `tranquilizer_dart`) | 2 Rounds (`crushing_stomp`); 1 Round for the other three | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 1 or 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a Stun removes a third of a Team for one or two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
-| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3, `revenant_guards`' (and 1, `guard`'s, until 2026-10-09; `full_plate`'s 3 until 2026-10-17; `thundering_seal`'s 3 until 2026-10-18); timed 1, 2, 4, 6 or 7, for 2 or 3 Rounds (`shield_bash`'s 2 was 3 until 2026-10-11; `thundering_seal`'s 4 was 3 until 2026-10-18; `bone_ward`'s 6 was 3 until 2026-10-21, so no Spell gives a timed 3 since) | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. One of the six, `revenant_guards`, carries a permanent Defense buff, beside a timed one, and it stacks without a bound: ADR candidate 3. The other five are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds; three until 2026-10-17, when `full_plate`'s permanent +3 became +7 for 2 Rounds; two until 2026-10-18, when `thundering_seal`'s permanent +3 and timed +3 became one +4 for 2 Rounds beside a Damage buff. |
+| `DefenseBuff` | 6 (5 on targets: `bone_ward`, `full_plate`, `guard`, `revenant_guards`, `thundering_seal`; 1 on the caster: `shield_bash`) | permanent 3, `revenant_guards`' (and 1, `guard`'s, until 2026-10-09; `full_plate`'s 3 until 2026-10-17; `thundering_seal`'s 3 until 2026-10-18); timed 1, 2, 4, 5, 6 or 7, for 2 or 3 Rounds (`shield_bash`'s 2 was 3 until 2026-10-11; `thundering_seal`'s 4 was 3 until 2026-10-18; `bone_ward`'s 6 was 3 until 2026-10-21, so no Spell gives a timed 3 since; `revenant_guards`' timed 5 was 4 until 2026-10-26) | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. One of the six, `revenant_guards`, carries a permanent Defense buff, beside a timed one, and it stacks without a bound: ADR candidate 3. The other five are timed only. Four and three until 2026-10-09, when `guard`'s permanent +1 became +1 for 3 Rounds; three until 2026-10-17, when `full_plate`'s permanent +3 became +7 for 2 Rounds; two until 2026-10-18, when `thundering_seal`'s permanent +3 and timed +3 became one +4 for 2 Rounds beside a Damage buff. |
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | 2 for 1 Round; 3 **permanent** (`infectious_blast`) | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 0 at `e6f72578` (`death_squad` until `night_raid` replaced it; `shadowstep`, on its own caster, until `ambush` replaced it) | none; `death_squad`'s was 2 for 1 Round on up to 3 allies | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 0. Unreachable with this content: no card places one | **keep as is** | Nothing. It was **needs a component** (an Initiative buff token) while `death_squad` carried it; the engine keeps the kind, and a Spell that authored one again would bring the token and this verdict back. The box carries none ([components.md](components.md) §1.4). |
 | `InitiativeDebuff` | 2 (1 on a target: `frostbite`; 1 on the caster: `ambush`) | 3 for 2 Rounds (`frostbite`; 1 Round until 2026-10-20) and 5 for 1 Round (`ambush`) | Subtracted, floored at zero (`Creature.cs:111-113`); `Stack` | 1 token and 1 marker move | **needs a component** | An Initiative debuff token, read with the Base initiative track. Nothing is lost. `ice_spear` and `protective_slam`, its two Spells at `938bef5e`, stun now. |
@@ -477,7 +490,8 @@ still small and repetitive, though less than they were: every timed `DefenseDebu
 `InitiativeDebuff` is 3 or 5, and Durations are only ever 1, 2, 3 or permanent. At `938bef5e` every
 `DefenseDebuff`, `InitiativeBuff` and `InitiativeDebuff` was exactly 2. A token set is therefore small:
 [components.md](components.md) §1.4 counts 150 Condition tokens in 6 kinds at `e6f72578`, 198 in 7
-since 2026-10-18, and 216 in 7 since 2026-10-19, which the re-dealt faces of 2026-10-21 do not move.
+since 2026-10-18, 216 in 7 since 2026-10-19, which the re-dealt faces of 2026-10-21 do not move, and 222 in
+7 since 2026-10-26, when `revenant_guards`' timed buff took a +5 face of its own.
 
 ---
 
@@ -697,6 +711,9 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > on up to 3 allies a cast, and the question below stands for it alone. The Damage buff Alpha Roar gives is
 > timed and stacks, so it is a dock token that leaves, not a second unbounded line: a Damage bonus held for
 > good is still only Apex's, printed on its Tier card.
+>
+> Re-read on 2026-10-26 (journal, 2026-10-26): `revenant_guards`' timed half is +5 for 2 Rounds, where it was
+> +4. Its permanent half is still +3 on up to 3 allies a cast, so the question below stands as written.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above

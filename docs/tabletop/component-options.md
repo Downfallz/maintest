@@ -62,6 +62,13 @@ Defense buff +3 face becomes +6, and the Regeneration faces 1, 2 and 3 become 1,
 so no token's handling moves on either dock, and the content observation of 2.4 holds as written. The
 measured profiles are not re-run.
 
+**Nor for Wraithguard's +5** (journal, 2026-10-26). Wraithguard (`revenant_guards`) gives up to 3 allies
+Defense +5 for 2 Rounds, not +4; its Defense +3 permanent and its caster's Bleed of 4 for 1 Round are
+unchanged. components.md §1.4 splits the Defense buff +4 face: it keeps Alpha Roar alone, 6, and a +5 face of
+18 arrives, so it reads **222** Condition tokens in 7 kinds. 2.3 and 3.11 here still say 168 in 6. No
+Duration moves, so no token's handling moves on either dock. The example of 3.3 is restated with the +5, and
+its point holds; its measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -260,10 +267,12 @@ The chit is in use in 4% of realistic readings and nearly 1 in 5 of the stun mir
 **A single d10 showing total Defense loses two facts**, which is why components 3.3 keeps two un-floored sums:
 
 1. **Buffs held past 10.** `thundering_seal` (+4 for 2 rounds since 2026-10-18; +3 permanent and +3 for 2
-   rounds before) and `revenant_guards` (+3 permanent, +4 for 2 rounds) give buffs of 11 and Defense 10
-   (ADR 0076). When one +4 expires, buffs are 7 and Defense 7; a die at 10 reads 10 - 4 = 6. With the old
-   Fortress it was buffs of 13, then 9 and Defense 9, against the same 6. **Realistic profile: buffs past
-   10 in 6.7% of Creature-Rounds, in 193 of 200 matches; largest buff sum 17.**
+   rounds before) and `revenant_guards` (+3 permanent, +5 for 2 rounds since 2026-10-26; +4 before) give
+   buffs of 12 and Defense 10 (ADR 0076). When the +4 expires, buffs are 8 and Defense 8; a die at 10 reads
+   10 - 4 = 6. When the +5 expires first, buffs are 7 and Defense 7; the die reads 10 - 5 = 5. With
+   Wraithguard's +4 it was buffs of 11, then 7 and Defense 7 when either +4 expired, against 6; with the old
+   Fortress beside that +4, buffs of 13, then 9 and Defense 9, against the same 6. **Realistic profile:
+   buffs past 10 in 6.7% of Creature-Rounds, in 193 of 200 matches; largest buff sum 17.**
 2. **The floor.** `infectious_blast` (`Defense -3, permanent`) on a Creature with no buff: Defense 0. Then
    `guard` (+1 for 3 rounds, +1 for 2 rounds; the first was permanent until 2026-10-09, journal 2026-10-09):
    buffs 2, debuffs 3, Defense still 0; a die at 0 reads 2.
