@@ -23,7 +23,9 @@ when Overdrive gave `EnergyGain` 4 and a `DamageBuff` of 1 (journal, 2026-10-19)
 a hit of 3 with a 2-Round `InitiativeDebuff` (journal, 2026-10-20); the rows `bone_ward`, `healing_screech`
 and `soothing_chant` reach re-read on 2026-10-21, when Bonewall's `DefenseBuff` became 6 and the
 `Regeneration` of Vital Echo 4 and of Whisper 3 (journal, 2026-10-21); the rows `revenant_guards` reaches
-re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal, 2026-10-26)). Phase 1 of
+re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal, 2026-10-26); and the rows
+`restorative_gush` and `tornado` reach re-read the same day, when Vital Surge's cost became 1 and Whirlwind's
+`Damage` 8 (journal, 2026-10-26)). Phase 1 of
 [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
@@ -221,6 +223,23 @@ re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal,
     alone, 18 to 6, and a +5 face of 18 arrives, so the Condition tokens go from 216 to 222, still in 7 kinds.
     The 44 files still author 81 Effects.
   - **Candidate 3** does not move: the permanent half is still +3 on up to 3 allies.
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
+- **Re-read on 2026-10-26 again (journal, 2026-10-26; content `4a168cdf`, which is `148f37f2` with two Spells
+  changed).** Two Brute level-3 Spells moved an amount, and neither changed its reach, its Effects or its
+  Critical chance.
+  - **`restorative_gush`** (Vital Surge, Colossus; one ally, 0.5) costs 1, not 2. Its `Heal` of 10 is
+    unchanged.
+  - **`tornado`** (Whirlwind, Ravager; cost 3, up to 3 enemies, 0.4) deals 8 to each target, not 6. It places
+    nothing, as before.
+
+  What this moves here:
+  - **Neither row moves its operations, its tokens or its verdict**: `restorative_gush` stays at 4 and 0,
+    **keep as is**, and `tornado` at 11 and 0, **restate**, in Part 3's third table. Paying a cost is one
+    operation at 1 as at 2, and an amount is not a step of a cast.
+  - **Part 2**: `Damage` still runs 1 to 11 with no 9: 8 was already `ambush`'s, and `reckless_swing` still
+    deals 6. 11 is still the largest, `hateful_sacrifice`'s, so no figure that reads the largest hit moves:
+    not Part 3's `hateful_sacrifice` row, not Candidate 3's 22, not [components.md](components.md) §3.3. The
+    Condition tokens stay 222 in 7 kinds. The 44 files still author 81 Effects.
   - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
@@ -599,7 +618,7 @@ size; this document only reports which rows carry an extra rule.
 | `chain_slash` | 3 | 2 enemies | 8 | 0 | **restate** | Nothing; 2 targets, 3 operations each. |
 | `revenant_guards` | 3 | 3 allies | 8 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 3. The most tokens of any cast, and four lines of card text (components.md §2.4). Flagged. |
 | `night_raid` | 3 | 2 enemies | 9 | 0 | **restate** | Nothing; 6 operations of damage and 2 Energy drains, each a comparison and a token move, in one Activation slot. Read at `ad3e4d00`: it was 13 operations on 3 enemies at `e6f72578`, at Damage 3 and a drain of 2. It replaced `death_squad`, whose row sat in the middle table: 3 allies, 4 operations, 3 Initiative buff tokens, **needs a component**. |
-| `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. |
+| `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. Read at `4a168cdf`: it deals 8 a target since 2026-10-26, 6 before, and an amount is not a step of the cast. |
 | `noxious_cure` | 2 | 3 allies | 11 | 3 | **needs a component** | Three Heals and three Defense debuff tokens; the cure shreds the cured. |
 | `infectious_blast` | 3 | 3 enemies | 13 | 3 | **needs a component** | Three permanent Defense debuff tokens at 3 from one cast at cost 1, and 2 damage on each. It was in the middle table, at 4 operations, until PR #247 gave it its Damage. |
 | `toxic_waves` | 3 | 3 enemies | 14 | 3 | **needs a component** | With `meteor` and `crazed_specter`, the most expensive cast in the game: 9 operations of damage and three Bleed tokens placed. |

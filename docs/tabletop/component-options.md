@@ -69,6 +69,13 @@ unchanged. components.md §1.4 splits the Defense buff +4 face: it keeps Alpha R
 Duration moves, so no token's handling moves on either dock. The example of 3.3 is restated with the +5, and
 its point holds; its measured profiles are not re-run.
 
+**Nor for Vital Surge's cost and Whirlwind's hit** (journal, 2026-10-26, later that day). Vital Surge
+(`restorative_gush`) costs 1, not 2; its Heal of 10 is unchanged. Whirlwind (`tornado`) deals 8 to each of up
+to 3 enemies, not 6, and still places nothing. Neither Spell places a token, so components.md §1.4 still reads
+**222** Condition tokens in 7 kinds, no token's handling moves on either dock, and the content observation of
+2.4 holds as written. The Ravager card's Whirlwind prints 8 where it printed 6, one digit for one digit. No
+count here reads a cost or a hit. The measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to

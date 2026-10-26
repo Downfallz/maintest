@@ -12,7 +12,8 @@ give a Damage buff; Overdrive added to the Damage buff 2026-10-19, when it gave 
 a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when Emberstorm became a hit of 3
 with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo's example re-read
 2026-10-21, when its Regeneration became 4 a Round; Wraithguard's mention re-read 2026-10-26, when its timed
-ward became +5). Phase 4 of [plan.md](plan.md).
+ward became +5, and Vital Surge's example the same day, when its cost became 1 and Whirlwind's hit
+became 8). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -1090,7 +1091,11 @@ example names Vital Echo and Whisper and no number of theirs, and no example use
 On 2026-10-26 every example naming Wraithguard was re-read against `data/Spells/` (content `148f37f2`),
 which changed its timed half: it gives `Defense +5, 2 rounds`, not `+4`, beside its unchanged
 `Defense +3, permanent` and `Caster: Bleed 4 a round, 1 round`. §6.8 names Wraithguard and no number of
-its, and no example uses it. No rule moved.
+its, and no example uses it. No rule moved. Later that day every example naming Vital Surge or Whirlwind was
+re-read against `data/Spells/` (content `4a168cdf`), which changed both: Vital Surge costs 1, not 2, and
+Whirlwind prints `Damage 8`, not `Damage 6`, and still nothing else. §6.7's Heal example quotes Vital
+Surge's targeting, its `Heal 10` and its critical, and not its cost, so it holds as written; no example uses
+Whirlwind. No rule moved.
 
 | This book | The specification |
 | --- | --- |
