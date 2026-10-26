@@ -4,6 +4,42 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-10-26. Vital Surge costs 1, and Whirlwind bleeds
+
+The content goes from `148f37f2` to `bdaea6c1`, two Spells of Brute's level 3. Vital Surge
+(`restorative_gush`, Colossus) costs **1** where it cost 2, and keeps its heal of 10. Whirlwind (`tornado`,
+Ravager) keeps its 6 damage on up to three enemies and gains a **Bleed of 2 for one round** on each. Its digest
+is committed beside the old one.
+
+- **Why.** With Wraithguard they were the three least-cast spells of the spells report of 2026-10-26: Vital
+  Surge 11 times and Whirlwind 15 in 200 independent matches of the exploring lookahead, each well behind the
+  other Spell of its package. Greedy cast Vital Surge 237 times, so the heal was read as worth having by the
+  one-step reading and as too dear by the lookahead.
+- **Three versions each**, on the 200 benchmark seeds, the Greedy of ADR 0113 in the mirror and
+  `explore:0.2:lookahead` with the slot log. The current content is the spells report's runs, its slots read
+  on `6198d349`:
+
+  | version | cast, variety | best cast at its slot | median gap | cast, Greedy | Greedy rounds, over 16, cap |
+  | --- | --- | --- | --- | --- | --- |
+  | Vital Surge as it was (10, cost 2) | 11 | 16 % | 4.3 | 237 | 10.79, 2.5 %, 0 |
+  | 10 and +3 defense for 2 rounds | 24 | 24 % | 3.8 | 371 | 11.08, 3.5 %, 1.5 % |
+  | 10 for **1** energy | 22 | 22 % | 4.0 | 221 | 10.49, 0, 0 |
+  | 13 | 30 | 27 % | 3.8 | 294 | 11.03, 5.5 %, 1.5 % |
+  | Whirlwind as it was (6 on three) | 15 | 20 % | 4.3 | 65 | 10.79, 2.5 %, 0 |
+  | 6 and a **Bleed of 2 for a round** | 31 | 40 % | 0.4 | 203 | 10.41, 1.0 %, 0 |
+  | 7 | 21 | 34 % | 1.8 | 138 | 10.51, 2.5 %, 0.5 % |
+  | 8 | 41 | 48 % | 0.0 | 206 | 10.21, 1.5 %, 0 |
+
+  The heals that grew lengthened Greedy's matches and took some to the cap; the cheap one did not. Whirlwind at
+  8 took its slot from Deranged Charge outright and Colossus's purchases with it, Vital Surge falling to 5
+  casts. The owner took the cheap heal and the bleed.
+- **Together** (content `bdaea6c1`), on the same seeds: Vital Surge cast 24 times, the best cast of its slots
+  28 % of the time and 3.3 behind in the median, Colossus 44 % of its casts; Whirlwind 36 times, 42 % and 0.0
+  behind, Ravager 63 % of its casts against Deranged Charge's 21 casts. The Greedy mirror is 10.19 rounds, 0.5 %
+  past 16 and none at the cap; the variety reading 10.20 rounds, two of 400 matches at the cap.
+- **Shape.** Since Emberstorm became 3 damage and a Bleed of 2 for a round (2026-10-20), Whirlwind is that shape
+  at twice the hit, a tier deeper and in the other family. Its knob note says so.
+
 ## 2026-10-26. Wraithguard's timed ward is +5
 
 The content goes from `6198d349` to `148f37f2`, one number: Wraithguard's timed defense (`revenant_guards`,
