@@ -69,6 +69,14 @@ unchanged. components.md §1.4 splits the Defense buff +4 face: it keeps Alpha R
 Duration moves, so no token's handling moves on either dock. The example of 3.3 is restated with the +5, and
 its point holds; its measured profiles are not re-run.
 
+**Nor for Vital Surge's cost and Whirlwind's Bleed** (journal, 2026-10-26, later that day). Vital Surge
+(`restorative_gush`) costs 1, not 2; its Heal of 10 is unchanged. Whirlwind (`tornado`) gives each of up to 3
+enemies a Bleed of 2 for 1 Round beside its unchanged Damage 6. components.md §1.4 puts that Bleed on the
+Bleed-2 face, which already took 3 a slot, so it still reads **222** Condition tokens in 7 kinds. A cast of
+Whirlwind now places up to 3 tokens, each 3 moves on the slide dock and 2 on the colour dock, and it joins the
+1-Round Bleeds of 2.4's content observation. The Ravager card's Whirlwind gains an effect line. No count here
+reads a cost. The measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to
@@ -206,7 +214,7 @@ once either way. The brief's 9.5 does not reproduce: the same subtraction on the
 
 **A content observation, not acted on.** Some timed Conditions cost more to handle than they do. A Bleed for
 1 Round is 3 token moves for one tick with the slide dock and 2 with the colour dock: `meteor`,
-`poison_slash`, and the caster lines of `bone_ward`, `crazed_specter` and `revenant_guards`. `meteor` left
+`poison_slash`, `tornado` (since 2026-10-26), and the caster lines of `bone_ward`, `crazed_specter` and `revenant_guards`. `meteor` left
 that list on 2026-10-18, when its Bleed became 2 Rounds, and came back to it on 2026-10-20, when its Bleed
 went back to 1 Round and its hit rose from 2 to 3. A timed Defense
 buff for 2 Rounds is 6 moves with the slide dock and 4 with the colour dock (place, rail, remove, rail back).

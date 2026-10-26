@@ -3,7 +3,7 @@
   "name": "Vital Surge",
   "spellType": "Defensive",
   "creatureClass": "Warlord",
-  "energyCost": 2,
+  "energyCost": 1,
   "criticalChance": 0.5,
   "targeting": {
     "origin": "Ally",

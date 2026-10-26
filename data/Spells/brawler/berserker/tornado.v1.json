@@ -14,6 +14,11 @@
     {
       "kind": "Damage",
       "amount": 6
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 2,
+      "durationRounds": 1
     }
   ],
   "enabled": true
