@@ -76,6 +76,12 @@ to 3 enemies, not 6, and still places nothing. Neither Spell places a token, so 
 2.4 holds as written. The Ravager card's Whirlwind prints 8 where it printed 6, one digit for one digit. No
 count here reads a cost or a hit. The measured profiles are not re-run.
 
+**Nor for Fury's hit** (journal, 2026-10-27, "Tuning pass 30"). Fury (`enraged_charge`) deals 6 to one enemy,
+not 7; its cost of 3 and its Critical chance of 0.8 are unchanged, and it still places nothing. components.md
+§1.4 still reads **222** Condition tokens in 7 kinds, no token's handling moves on either dock, and the content
+observation of 2.4 holds as written. The Frenzied card's Fury prints 6 where it printed 7, one digit for one
+digit. No count here reads a hit. The measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to

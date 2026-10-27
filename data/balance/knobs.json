@@ -451,7 +451,7 @@
         "The highest critical chance in the catalogue, or it is just an expensive hit",
         "Expensive enough that it cannot be the every-round attack"
       ],
-      "note": "It reads big per cast on purpose and must be read per round instead: at three energy against an income of two it comes up two rounds in three, so 12.60 a cast is 8.40 a round against `protective_slam`'s 9.02, also at three energy. Read per cast it looks like twice the bolt; read per round it sits just under the Oppressor opener and level with `shield_bash`, which is what a tier-2 opener should be. Its own history is the warning: at 7.00 a cast it was 4.67 a round and fell from 122 landed casts to 32 the moment something at two energy arrived.",
+      "note": "It reads big per cast on purpose and must be read per round instead: at three energy against an income of two it comes up two rounds in three, so 12.60 a cast is 8.40 a round against `protective_slam`'s 9.02, also at three energy. Read per cast it looks like twice the bolt; read per round it sits just under the Oppressor opener and level with `shield_bash`, which is what a tier-2 opener should be. Its own history is the warning: at 7.00 a cast it was 4.67 a round and fell from 122 landed casts to 32 the moment something at two energy arrived. Tuning pass 30 took its damage from 7 to 6 (journal, 2026-10-27): Greedy always opens a Brute and casts Fury 472 times in the 400 benchmark mirrors, so Fury was part of the Greedy every opening is read against, and Warped + Warped came up from 0.285 to 0.385 against it.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
