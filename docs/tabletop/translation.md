@@ -25,7 +25,8 @@ and `soothing_chant` reach re-read on 2026-10-21, when Bonewall's `DefenseBuff` 
 `Regeneration` of Vital Echo 4 and of Whisper 3 (journal, 2026-10-21); the rows `revenant_guards` reaches
 re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal, 2026-10-26); and the rows
 `restorative_gush` and `tornado` reach re-read the same day, when Vital Surge's cost became 1 and Whirlwind's
-`Damage` 8 (journal, 2026-10-26)). Phase 1 of
+`Damage` 8 (journal, 2026-10-26); the rows `enraged_charge` reaches re-read on 2026-10-27, when Fury's `Damage`
+became 6 (journal, 2026-10-27, "Tuning pass 30")). Phase 1 of
 [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
@@ -240,6 +241,20 @@ re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal,
     deals 6. 11 is still the largest, `hateful_sacrifice`'s, so no figure that reads the largest hit moves:
     not Part 3's `hateful_sacrifice` row, not Candidate 3's 22, not [components.md](components.md) §3.3. The
     Condition tokens stay 222 in 7 kinds. The 44 files still author 81 Effects.
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
+- **Re-read on 2026-10-27 (journal, 2026-10-27, "Tuning pass 30"; content `bb18697e`, which is `4a168cdf` with
+  one Spell changed).** One Brute level-2 Spell moved an amount, and changed neither its reach, its Effects nor
+  its Critical chance.
+  - **`enraged_charge`** (Fury, Frenzied; cost 3, one enemy, 0.8) deals 6, not 7. It places nothing, as
+    before.
+
+  What this moves here:
+  - **The row does not move its operations, its tokens or its verdict**: `enraged_charge` stays at 5 and 0,
+    **keep as is**, in Part 3's first table. An amount is not a step of a cast.
+  - **Part 2**: `Damage` still runs 1 to 11 with no 9: 7 is still `crushing_stomp`'s, `chain_slash`'s and
+    `soul_devourer`'s, and 6 was already `reckless_swing`'s. 11 is still the largest, `hateful_sacrifice`'s, so
+    no figure that reads the largest hit moves. The Condition tokens stay 222 in 7 kinds. The 44 files still
+    author 81 Effects.
   - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves

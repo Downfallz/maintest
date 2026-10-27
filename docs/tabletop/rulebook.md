@@ -13,7 +13,7 @@ a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when 
 with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo's example re-read
 2026-10-21, when its Regeneration became 4 a Round; Wraithguard's mention re-read 2026-10-26, when its timed
 ward became +5, and Vital Surge's example the same day, when its cost became 1 and Whirlwind's hit
-became 8). Phase 4 of [plan.md](plan.md).
+became 8; Fury re-read 2026-10-27, when its hit became 6). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -1095,7 +1095,9 @@ its, and no example uses it. No rule moved. Later that day every example naming 
 re-read against `data/Spells/` (content `4a168cdf`), which changed both: Vital Surge costs 1, not 2, and
 Whirlwind prints `Damage 8`, not `Damage 6`, and still nothing else. §6.7's Heal example quotes Vital
 Surge's targeting, its `Heal 10` and its critical, and not its cost, so it holds as written; no example uses
-Whirlwind. No rule moved.
+Whirlwind. No rule moved. On 2026-10-27 every example naming Fury was re-read against `data/Spells/`
+(content `bb18697e`), which changed its hit: it prints `Damage 6`, not `Damage 7`, and still nothing else.
+No example uses Fury. No rule moved.
 
 | This book | The specification |
 | --- | --- |
