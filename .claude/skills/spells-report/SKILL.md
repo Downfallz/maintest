@@ -33,17 +33,19 @@ S=<the scratchpad directory>/spells-report && mkdir -p "$S"
    ```
 
 2. **Play the tuner's two readings** on the benchmark seeds (`data/balance/knobs.json`,
-   `objective.evaluations`: `mirror` and `variety`), and one recorded greedy run for the capstones:
+   `objective.evaluations`: `mirror` and `variety`), and two recorded runs for the purchases: greedy with its
+   traces for the capstones' buyers, and the exploring lookahead without them for its offers:
 
    ```bash
    $CLI evaluate --p1 greedy --p2 greedy --seeds benchmarks/benchmark-seeds.json --out $S/mirror.json
    $CLI simulate --p1 greedy --p2 greedy --seed 1 --matches 200 --record $S/greedy-runs --traces 200 --out $S/greedy.csv
    $CLI evaluate --p1 explore:0.2:lookahead --p2 explore:0.2:lookahead --seeds benchmarks/benchmark-seeds.json --out $S/variety.json
+   $CLI simulate --p1 explore:0.2:lookahead --p2 explore:0.2:lookahead --seed 1 --matches 200 --record $S/variety-runs --traces 0 --out $S/variety-runs.csv
    ```
 
    Each evaluation plays every seed twice, seats swapped; in self-play the engine counts the spells of the
    first seating only, so the casts rest on 200 independent matches and the page says so. The mirror takes
-   about a minute and the recorded run two. The variety run is 400 lookahead matches, 30 to 60 minutes: run it in the background, tell the owner when to expect the page, and do not poll it. If
+   about a minute and the recorded run two. The variety run is 400 lookahead matches, 30 to 60 minutes, and its recorded run 200 more, about 15: run them in the background, tell the owner when to expect the page, and do not poll it. If
    `knobs.json` names other agents than these, play the ones it names.
 
 3. **Fetch the previous page** for the comparison column: `Artifact` with `action: "read"`, the url above and
@@ -53,9 +55,9 @@ S=<the scratchpad directory>/spells-report && mkdir -p "$S"
 
    ```bash
    python3 scripts/spells-report/report.py --data data --variety $S/variety.json --mirror $S/mirror.json \
-       --purchases "Greedy=$S/greedy-runs" --before <the saved index.html> \
+       --purchases "Greedy=$S/greedy-runs" --purchases "Explorateur=$S/variety-runs" --before <the saved index.html> \
        --note "<one line: what changed in the content since the previous report>" --out $S/spells-report.html
-   rm -rf $S/greedy-runs   # 200 traces weigh about 2 GB
+   rm -rf $S/greedy-runs $S/variety-runs   # 200 traces weigh about 2 GB
    ```
 
    The previous page names itself (`generated`), so `--label` is needed only for the report of 2026-10-04,
@@ -69,7 +71,10 @@ S=<the scratchpad directory>/spells-report && mkdir -p "$S"
 
 6. **Tell the owner, in French**, in a few lines: the link, the content it reads, and what the summary cards
    say: spells almost never cast, spells that crush their package (the tuner's `tierUsageShare` above 0.8),
-   packages greedy does not buy, what moved most since the previous report, and the capstones' purchases.
+   packages greedy does not buy, what moved most since the previous report, the purchases that stall (a
+   package rarely taken when offered, or rarely offered because the line before it is not bought), the funnel
+   of each family level by level, and the capstones' purchases. A package's offers are its line's purchases
+   as much as its own: say which of the two a stall is.
    Name a share as noise when the package has fewer than 30 casts.
 
 ## Rules

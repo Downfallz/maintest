@@ -113,6 +113,8 @@ tr.thin td { opacity: 0.62; }
 .stat { display: grid; gap: 2px; }
 .stat b { font: 700 1.25rem var(--display); }
 .stat span { color: var(--muted); font-size: 0.85rem; }
+.funnel table { min-width: 560px; }
+.funnel td.drop { color: var(--bad); font-weight: 600; }
 </style>
 
 <div class="wrap">
@@ -151,6 +153,12 @@ tr.thin td { opacity: 0.62; }
   </fieldset>
 
   <div id="levels" class="level"></div>
+
+  <section class="level funnel" aria-labelledby="funnel-title">
+    <h2 id="funnel-title">L'entonnoir des achats</h2>
+    <p>Combien de paquets chaque famille achète à chaque niveau, dans des matchs enregistrés sur ce même contenu. Un paquet ne s'offre qu'à une créature qui possède celui d'avant, donc une famille dont le niveau 3 n'est presque pas acheté voit à peine son capstone, quel que soit son passif. En rouge : un niveau qu'une famille achète moins de la moitié autant que les familles en moyenne.</p>
+    <div class="table-box"><table id="funnel"></table></div>
+  </section>
 
   <section class="level" aria-labelledby="caps-title">
     <h2 id="caps-title">Niveau 4 — les capstones</h2>
@@ -197,8 +205,33 @@ function verdicts(s, p) {
   if (s.greedy >= 800) out.push(["info", "Favori de greedy"]);
   return out;
 }
+// The first recorded run's offers of a package: what the summary and the flags read.
+const firstOffer = (o) => (o && o.length ? o[0] : null);
+const takeRate = (o) => (o && o.offered ? o.bought / o.offered : null);
+// How often a package of each level is bought when offered, pooled over the level's packages in the first run:
+// a level-1 pick weighs every package for every creature, so its rates sit far below a capstone's.
+const levelRates = (() => {
+  const sums = {};
+  for (const p of [...data.packages, ...data.capstones.map((c) => ({ ...c, level: 4 }))]) {
+    const o = firstOffer(p.offers);
+    if (!o) continue;
+    sums[p.level] ??= [0, 0, 0];
+    sums[p.level][0] += o.offered;
+    sums[p.level][1] += o.bought;
+    sums[p.level][2] += 1;
+  }
+  return Object.fromEntries(Object.entries(sums).map(([l, [o, b, n]]) => [l, { rate: o ? b / o : 0, offered: o / n }]));
+})();
+function offerFlags(o, level) {
+  if (!o) return [];
+  if (o.offered >= 30 && takeRate(o) < (2 / 3) * levelRates[level].rate) return [["warn", `Rarement pris quand offert (${o.label})`]];
+  if (level >= 2 && o.offered < levelRates[level].offered / 4) return [["warn", `Rarement offert (${o.label})`]];
+  return [];
+}
+const offerText = (list) => (list || []).map((o) => `${o.label} : offert ${fmt(o.offered)}, pris ${fmt(o.bought)} (${pct(takeRate(o))})`).join(" · ");
+
 function packageFlags(p) {
-  const out = [];
+  const out = [...offerFlags(firstOffer(p.offers), p.level)];
   if (p.greedyTotal < 20) out.push(["warn", "Greedy ne l'achète presque pas"]);
   if (p.wilsonTop != null && p.wilsonTop > 0.8) out.push(["bad", "Pénalisé par le tuner"]);
   return out;
@@ -240,7 +273,7 @@ function packageRows(p, onlyIssues) {
   const needsLook = flags.length || spells.some((r) => r.v.some(([k]) => k !== "info"));
   if (onlyIssues && !needsLook) return "";
   const parent = p.parent ? `après ${p.parent}` : `famille ${p.family}`;
-  const head = `<tr class="pkg"><td colspan="8"><span class="pname">${p.name}</span><span class="pinfo">${parent} · +${p.initiative} initiative · ${fmt(p.total)} lancés (explorateur) · ${fmt(p.greedyTotal)} (greedy)</span> ${pills(flags)}</td></tr>`;
+  const head = `<tr class="pkg"><td colspan="8"><span class="pname">${p.name}</span><span class="pinfo">${parent} · +${p.initiative} initiative · ${fmt(p.total)} lancés (explorateur) · ${fmt(p.greedyTotal)} (greedy)${p.offers?.length ? " · " + offerText(p.offers) : ""}</span> ${pills(flags)}</td></tr>`;
   return head + spells.map(({ s, v }) => spellRow(s, v)).join("");
 }
 
@@ -274,8 +307,23 @@ function capstones() {
     <article class="cap">
       <h3>${c.name} <span class="pinfo">famille ${c.family}</span></h3>
       <div class="passive">${c.passive}</div>
-      <dl>${c.runs.length ? c.runs.map((r) => `<dt>${r.label}, ${fmt(r.matches)} matchs</dt><dd class="num">${line(r)}</dd>`).join("") : "<dt>Aucun match enregistré</dt><dd>—</dd>"}</dl>
+      <dl>${c.runs.length ? c.runs.map((r) => `<dt>${r.label}, ${fmt(r.matches)} matchs</dt><dd class="num">${line(r)}</dd>`).join("") : "<dt>Aucun match enregistré</dt><dd>—</dd>"}
+      ${(c.offers || []).map((o) => `<dt>${o.label}, offert</dt><dd class="num">${fmt(o.offered)} fois · pris ${pct(takeRate(o))}</dd>`).join("")}</dl>
     </article>`).join("");
+}
+
+function funnel() {
+  const host = document.getElementById("funnel");
+  const rows = data.funnel || [];
+  host.closest("section").hidden = !rows.length || !rows[0].runs.length;
+  if (host.closest("section").hidden) return;
+  const levels = Math.max(...rows.flatMap((f) => f.runs.map((r) => r.levels.length)));
+  const head = `<thead><tr><th>Famille</th><th>Matchs enregistrés</th>${Array.from({ length: levels }, (_, i) => `<th class="num">Niveau ${i + 1}</th>`).join("")}</tr></thead>`;
+  // The families' mean at each level, run by run: a family is read against the others, since every family
+  // buys fewer packages at its capstone than at level 2 by construction.
+  const mean = (run, i) => rows.reduce((sum, f) => sum + (f.runs[run].levels[i] ?? 0), 0) / rows.length;
+  const body = rows.flatMap((f) => f.runs.map((r, run) => `<tr><td><span class="sname">${f.family}</span></td><td>${r.label}, ${fmt(r.matches)}</td>${r.levels.map((n, i) => `<td class="num${n < mean(run, i) / 2 ? " drop" : ""}">${fmt(n)}</td>`).join("")}</tr>`)).join("");
+  host.innerHTML = head + `<tbody>${body}</tbody>`;
 }
 
 function summary() {
@@ -287,6 +335,10 @@ function summary() {
     .map((s) => ({ ...s, d: s.share - s.before.share }))
     .filter((s) => Math.abs(s.d) >= 0.15)
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 6);
+  const offered = [...data.packages, ...data.capstones.map((c) => ({ ...c, level: 4 }))]
+    .map((p) => ({ p, o: firstOffer(p.offers) }))
+    .filter(({ p, o }) => offerFlags(o, p.level).length)
+    .sort((a, b) => b.p.level - a.p.level || a.o.offered - b.o.offered);
   const li = (items) => items.map((t) => `<li>${t}</li>`).join("") || "<li>Aucun</li>";
   const cards = [
     ["var(--bad)", "Presque jamais lancés", `Moins de 20 lancers en ${data.castMatches} matchs, même avec le hasard de l'explorateur.`,
@@ -295,6 +347,8 @@ function summary() {
       li(crush.map((s) => `${s.name} <small>${s.pkg.name} · ${pct(s.share)}</small>`))],
     ["var(--warn)", "Paquets que greedy n'achète pas", "Moins de 20 lancers dans le miroir greedy : le bot qui joue au mieux ne les choisit pas.",
       li(ignored.map((p) => `${p.name} <small>niveau ${p.level} · ${p.greedyTotal} lancers</small>`))],
+    ["var(--warn)", "Achats qui bloquent", "Offert au moins 30 fois et pris moins des deux tiers aussi souvent que son niveau en moyenne, ou offert moins du quart aussi souvent que les autres paquets de son niveau : la ligne d'avant n'y mène pas.",
+      li(offered.map(({ p, o }) => `${p.name} <small>niveau ${p.level} · offert ${fmt(o.offered)}, pris ${pct(takeRate(o))}</small>`))],
     ["var(--accent)", "Ce qui a le plus bougé", "Part dans le paquet, écart d'au moins 15 points avec le rapport précédent.",
       li(moved.map((s) => `${s.name} <small>${s.pkg.name} · ${pct(s.before.share)} → ${pct(s.share)}</small>`))],
   ];
@@ -312,4 +366,5 @@ document.getElementById("f-issues").addEventListener("click", () => setFilter(tr
 summary();
 render(false);
 capstones();
+funnel();
 </script>
