@@ -157,7 +157,10 @@ tr.thin td { opacity: 0.62; }
   <section class="level funnel" aria-labelledby="funnel-title">
     <h2 id="funnel-title">L'entonnoir des achats</h2>
     <p>Combien de paquets chaque famille achète à chaque niveau, dans des matchs enregistrés sur ce même contenu. Un paquet ne s'offre qu'à une créature qui possède celui d'avant, donc une famille dont le niveau 3 n'est presque pas acheté voit à peine son capstone, quel que soit son passif. En rouge : un niveau qu'une famille achète moins de la moitié autant que les familles en moyenne.</p>
-    <div class="table-box"><table id="funnel"></table></div>
+    <div class="table-box"><table>
+      <thead><tr id="funnel-head"><th>Famille</th><th>Matchs enregistrés</th></tr></thead>
+      <tbody id="funnel"></tbody>
+    </table></div>
   </section>
 
   <section class="level" aria-labelledby="caps-title">
@@ -301,14 +304,16 @@ function render(onlyIssues) {
 
 function capstones() {
   const line = (r) => `${fmt(r.bought)} achats · seul ${r.aloneWon}/${r.alone}`;
+  const bought = (r) => `<dt>${r.label}, ${fmt(r.matches)} matchs</dt><dd class="num">${line(r)}</dd>`;
+  const offer = (o) => `<dt>${o.label}, offert</dt><dd class="num">${fmt(o.offered)} fois · pris ${pct(takeRate(o))}</dd>`;
   const host = document.getElementById("caps");
   host.closest("section").hidden = !data.capstones.length;
   host.innerHTML = data.capstones.map((c) => `
     <article class="cap">
       <h3>${c.name} <span class="pinfo">famille ${c.family}</span></h3>
       <div class="passive">${c.passive}</div>
-      <dl>${c.runs.length ? c.runs.map((r) => `<dt>${r.label}, ${fmt(r.matches)} matchs</dt><dd class="num">${line(r)}</dd>`).join("") : "<dt>Aucun match enregistré</dt><dd>—</dd>"}
-      ${(c.offers || []).map((o) => `<dt>${o.label}, offert</dt><dd class="num">${fmt(o.offered)} fois · pris ${pct(takeRate(o))}</dd>`).join("")}</dl>
+      <dl>${c.runs.length ? c.runs.map(bought).join("") : "<dt>Aucun match enregistré</dt><dd>—</dd>"}
+      ${(c.offers || []).map(offer).join("")}</dl>
     </article>`).join("");
 }
 
@@ -318,12 +323,14 @@ function funnel() {
   host.closest("section").hidden = !rows.length || !rows[0].runs.length;
   if (host.closest("section").hidden) return;
   const levels = Math.max(...rows.flatMap((f) => f.runs.map((r) => r.levels.length)));
-  const head = `<thead><tr><th>Famille</th><th>Matchs enregistrés</th>${Array.from({ length: levels }, (_, i) => `<th class="num">Niveau ${i + 1}</th>`).join("")}</tr></thead>`;
+  const levelHead = (i) => `<th class="num">Niveau ${i + 1}</th>`;
+  document.getElementById("funnel-head").insertAdjacentHTML("beforeend", Array.from({ length: levels }, (_, i) => levelHead(i)).join(""));
   // The families' mean at each level, run by run: a family is read against the others, since every family
   // buys fewer packages at its capstone than at level 2 by construction.
   const mean = (run, i) => rows.reduce((sum, f) => sum + (f.runs[run].levels[i] ?? 0), 0) / rows.length;
-  const body = rows.flatMap((f) => f.runs.map((r, run) => `<tr><td><span class="sname">${f.family}</span></td><td>${r.label}, ${fmt(r.matches)}</td>${r.levels.map((n, i) => `<td class="num${n < mean(run, i) / 2 ? " drop" : ""}">${fmt(n)}</td>`).join("")}</tr>`)).join("");
-  host.innerHTML = head + `<tbody>${body}</tbody>`;
+  const cell = (n, run, i) => `<td class="${n < mean(run, i) / 2 ? "num drop" : "num"}">${fmt(n)}</td>`;
+  const row = (f, r, run) => `<tr><td><span class="sname">${f.family}</span></td><td>${r.label}, ${fmt(r.matches)}</td>${r.levels.map((n, i) => cell(n, run, i)).join("")}</tr>`;
+  host.innerHTML = rows.flatMap((f) => f.runs.map((r, run) => row(f, r, run))).join("");
 }
 
 function summary() {
