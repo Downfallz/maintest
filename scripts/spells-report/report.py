@@ -3,8 +3,9 @@
 
 It reads two evaluations the tuner reads too (data/balance/knobs.json, objective.evaluations): the exploring
 lookahead against itself (`variety`) and the greedy mirror (`mirror`), both played by `evaluate` on the
-benchmark seeds. The capstones teach no spell, so their purchases come from recorded matches instead
-(`simulate --record ... --traces N`), one directory per run. A previous report, given as its HTML page, is
+benchmark seeds. Purchases come from recorded matches instead (`simulate --record ...`), one directory per
+run: how often each package is offered and bought, each family's purchases level by level, and, from a run
+recorded with its traces, how the capstones' buyers fare. A previous report, given as its HTML page, is
 read back for the column that says how far each spell's share of its package has moved since.
 
     python3 scripts/spells-report/report.py --data data --variety variety.json --mirror mirror.json \\
@@ -167,12 +168,42 @@ def buyers(trace: dict, capstones: set[str]) -> dict[str, collections.Counter]:
     return bought
 
 
+def offers(runs: list[str]) -> list[dict]:
+    """For each recorded run, how many purchase decisions offered each package and how many bought it.
+
+    A decision that offers a package to two creatures offers it once. A package bought rarely when offered is
+    one the bot passes over; a package rarely offered is one the line before it does not reach, and the
+    capstone of a family whose level 3 is rarely bought is rarely offered whatever its passive is worth.
+    """
+    out = []
+    for run in runs:
+        label, _, directory = run.partition("=")
+        offered: collections.Counter = collections.Counter()
+        bought: collections.Counter = collections.Counter()
+        matches = set()
+        # Resolved and checked by existing(), as the note above purchases() says.
+        with (existing(directory, "dir") / "steps.jsonl").open() as steps:  # NOSONAR
+            for line in steps:
+                step = json.loads(line)
+                matches.add(step["matchId"])
+                if step["kind"] != "Evolve":
+                    continue
+                offered.update({short(c.split(":", 2)[2]) for c in step["candidates"] if c != "pass"})
+                if step["action"] != "pass":
+                    bought[short(step["action"].split(":", 2)[2])] += 1
+        out.append({"label": label, "matches": len(matches), "offered": offered, "bought": bought})
+    return out
+
+
 def purchases(runs: list[str], capstones: list[str]) -> dict[str, list[dict]]:
-    """For each capstone, its purchases and its wins when one side alone bought it, per recorded run."""
+    """For each capstone, its purchases and its wins when one side alone bought it, per recorded run with
+    traces: a run recorded with `--traces 0` has its offers read, and nothing here."""
     out: dict[str, list[dict]] = {tier: [] for tier in capstones}
     for run in runs:
         label, _, directory = run.partition("=")
         traces = sorted((existing(directory, "dir") / "traces").glob(JSON_FILES))
+        if not traces:
+            continue
         counts = {tier: {"bought": 0, "alone": 0, "aloneWon": 0} for tier in capstones}
         for path in traces:
             trace = json.loads(path.read_text())
@@ -189,9 +220,12 @@ def purchases(runs: list[str], capstones: list[str]) -> dict[str, list[dict]]:
 class Readings:
     """The two evaluations and the content they were played on, read spell by spell."""
 
-    def __init__(self, data: Path, variety: dict, mirror: dict, before: dict | None) -> None:
+    def __init__(
+        self, data: Path, variety: dict, mirror: dict, before: dict | None, offered: list[dict]
+    ) -> None:
         self.spells, self.tiers = load_content(data)
         self.variety, self.mirror, self.before = variety, mirror, before
+        self.offered = offered
         self.by_variety = {short(o["spell"]): o for o in variety["spellOutcomes"]}
         self.by_mirror = {short(o["spell"]): o for o in mirror["spellOutcomes"]}
         self.total_variety = sum(int(o["resolved"]) for o in variety["spellOutcomes"])
@@ -200,6 +234,36 @@ class Readings:
     @staticmethod
     def landed(spell: str, outcomes: dict) -> int:
         return int(outcomes.get(spell, {}).get("resolved", 0))
+
+    def offers_of(self, tier: str) -> list[dict]:
+        return [
+            {"label": run["label"], "offered": run["offered"][tier], "bought": run["bought"][tier]}
+            for run in self.offered
+        ]
+
+    def funnel(self) -> list[dict]:
+        """Each family's purchases level by level, per recorded run: where a line stops being bought."""
+        rows = []
+        for root in FAMILY_ORDER:
+            members = [t for t in self.tiers if self.family(t) == root]
+            levels = sorted({self.tiers[t]["level"] for t in members})
+            rows.append(
+                {
+                    "family": self.tiers[root]["name"],
+                    "runs": [
+                        {
+                            "label": run["label"],
+                            "matches": run["matches"],
+                            "levels": [
+                                sum(run["bought"][t] for t in members if self.tiers[t]["level"] == level)
+                                for level in levels
+                            ],
+                        }
+                        for run in self.offered
+                    ],
+                }
+            )
+        return rows
 
     def family(self, tier: str) -> str:
         parents = self.tiers[tier].get("prerequisites") or self.tiers[tier].get("anyOf") or []
@@ -245,6 +309,7 @@ class Readings:
             "total": total,
             "greedyTotal": sum(self.landed(s, self.by_mirror) for s in ids),
             "wilsonTop": wilson_lower(top, total) if total and len(ids) > 1 else None,
+            "offers": self.offers_of(tier),
             "spells": [self.spell_row(s, total) for s in ids],
         }
 
@@ -267,6 +332,7 @@ class Readings:
                 "family": self.tiers[self.family(tier)]["name"],
                 "passive": passive_text(self.tiers[tier]["passive"]),
                 "runs": bought[tier],
+                "offers": self.offers_of(tier),
             }
             for tier in ids
         ]
@@ -292,7 +358,7 @@ def comparison(before: dict | None, variety: dict) -> dict | None:
 def build(args: argparse.Namespace) -> dict:
     variety, mirror = read_json(args.variety), read_json(args.mirror)
     before = previous(args.before, args.label)
-    readings = Readings(existing(args.data, "dir"), variety, mirror, before)
+    readings = Readings(existing(args.data, "dir"), variety, mirror, before, offers(args.purchases))
     return {
         "generated": args.today,
         "note": args.note,
@@ -309,6 +375,7 @@ def build(args: argparse.Namespace) -> dict:
         "totalMirror": readings.total_mirror,
         "packages": readings.packages(),
         "capstones": readings.capstones(args.purchases),
+        "funnel": readings.funnel(),
         "starting": [readings.spell_row(s, 0) for s in STARTING_KIT if s in readings.spells],
         "before": comparison(before, variety),
     }
@@ -326,7 +393,8 @@ def main() -> None:
         action="append",
         default=[],
         metavar="LABEL=DIR",
-        help="a recorded run (simulate --record DIR --traces N) to read the capstones' purchases from",
+        help="a recorded run (simulate --record DIR) to read each package's offers and purchases from,"
+        " and with --traces N the capstones' wins",
     )
     parser.add_argument(
         "--before", help="the previous report's HTML page, for the column of what moved since"
