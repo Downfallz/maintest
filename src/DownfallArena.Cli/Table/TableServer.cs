@@ -182,12 +182,12 @@ internal sealed class TableServer : IDisposable
             return await SessionPageAsync(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
-        // A host whose admin panel nobody opens still lets go of the tables nobody is at: any request may
-        // sweep, once a minute at most.
+        // A host whose admin panel nobody opens still lets go of finished tables nobody reads and of tables
+        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most.
         var now = _clock.GetUtcNow();
         foreach (var gone in _registry.SweepIfDue(now))
         {
-            Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+            Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
 
         var token = request.Headers[TableApi.TokenHeader];

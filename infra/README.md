@@ -17,8 +17,9 @@ on GitHub Pages (ADR 0023).
 The app scales to zero a few minutes after the last request. An open page polls, so a table being played
 keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. A match
 lives in memory, but the replica that starts next **rebuilds every table left open** from its seed and its
-recorded decisions, under the same links and codes (ADR 0091). Open games do not expire during a pause
-(ADR 0115); the operator can explicitly close unused tables. The recording is what survives either way: the admin panel lists every recorded
+recorded decisions, under the same links and codes (ADR 0091). A game that began does not expire during a
+pause, and a table that never began is closed after twenty hours without a request (ADR 0115); the operator
+can explicitly close unused tables. The recording is what survives either way: the admin panel lists every recorded
 session, links to it in the viewer and exports it.
 
 The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/deploy.yml` from the

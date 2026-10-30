@@ -28,7 +28,10 @@ once the match has started. Closing the page must still allow reconnection.
   anyone present or begin a game. Browser localStorage keeps a history of up to 128 capabilities plus the
   active table. A fresh invitation selects one verified table, avoiding accidental hotseat across games.
 - `POST /api/lobby/tables/<id>/join` claims one explicitly offered place. Creation, Join, Leave and arrival
-  with an invitation share a host gate. The claim is written to `table.json` before its token is returned.
+  with an invitation share a host gate. A place claimed here is handed over under a fresh token and code,
+  so the seat's old invitation link and code stop reaching it, and the claim is written to `table.json`
+  before the new token is returned. A seat request that is not claiming an open place does not wait on the
+  gate.
   The record's `openSeats` defaults to empty so older, operator-created tables stay invitation-only.
 - Closing a tab or losing a connection keeps the seat. `POST /api/lobby/leave`, authorized by its seat
   token, replaces that token and its invitation code, resets presence and records the place as open.
@@ -36,9 +39,14 @@ once the match has started. Closing the page must still allow reconnection.
   a replacement takes the same team, state and question. No game decision is fabricated and no bot is
   substituted. A match naturally waits when it needs that team's answer. Other people in a shared
   browser keep their own seats.
-- Open tables do not expire because nobody polls them. They are restored from the existing seed and
-  journal regardless of age, with current tokens, codes and open places. The operator can close them;
+- A game that has begun does not expire because nobody polls it. It is restored from the existing seed and
+  journal regardless of age, with current tokens, codes and open places. The operator can close it;
   finished tables retain their existing one-hour in-memory retention and stored session artifacts.
+- A table that never began -- nobody came to it, or its second player never did -- is closed after twenty
+  hours without a request, and a host does not rebuild one opened longer ago that holds no decision. Anyone
+  may open a table from the lobby, so without this the host's capacity would fill for good.
+- A seat write that races the end of the match keeps the record `finished`: a record that says the table
+  ended never goes back to `open`.
 
 ## Consequences
 

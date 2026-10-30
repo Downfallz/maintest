@@ -18,7 +18,7 @@
       <div><p class="eyebrow">Gather your creatures</p><h2 id="welcome">Find your table.</h2><p class="hero-detail">Pick up a battle. Take an open seat. Start something new.</p></div>
       <button id="new-table" class="primary" type="button">＋ New table</button>
     </section>
-    <p id="lobby-status" class="lobby-status muted" role="status">Finding tables…</p>
+    <output id="lobby-status" class="lobby-status muted">Finding tables…</output>
     <p id="lobby-problem" class="problem" role="alert" hidden></p>
     <div class="lobby-layout">
       <div class="lobby-games">
@@ -28,7 +28,7 @@
         </section>
         <section aria-labelledby="tables-heading" class="lobby-section">
           <div class="section-heading"><h2 id="tables-heading">Tables <span id="tables-count" class="lobby-count"></span></h2></div>
-          <div class="lobby-filters" role="group" aria-label="Show tables"><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></div>
+          <fieldset class="lobby-filters"><legend>Show tables</legend><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></fieldset>
           <div id="open-tables" class="lobby-grid"><p class="empty-state">Finding open tables…</p></div>
         </section>
       </div>

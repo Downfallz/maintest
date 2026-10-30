@@ -12,15 +12,23 @@ namespace DownfallArena.Cli.Table;
 /// API is unchanged; this only says which one.
 /// </para>
 /// <para>
-/// Finished tables are let go of after an hour without a reader. Unfinished tables remain open until
-/// explicitly closed by the operator: closing a browser must not end the game it comes back to.
-/// The sweep runs on requests, at most once a minute outside the admin panel.
+/// Finished tables are let go of after an hour without a reader. A game that has begun stays open until it
+/// ends or the operator closes it: closing a browser must not end the game it comes back to (ADR 0115). A
+/// table that never began -- nobody came to it, or its second player never did -- is closed after
+/// <see cref="NeverBegunFor" /> without a request, or a lobby anyone may open tables from would fill the host
+/// for good. The sweep runs on requests, at most once a minute outside the admin panel.
 /// </para>
 /// </remarks>
 internal sealed class TableRegistry : IDisposable
 {
     /// <summary>How long a finished table stays readable after the last request: the end screen, the session page.</summary>
     public static readonly TimeSpan FinishedFor = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How long a table that never began is kept without a request: an evening and a night's sleep, the time
+    /// an invitation reasonably waits. A game that began is never swept unfinished.
+    /// </summary>
+    public static readonly TimeSpan NeverBegunFor = TimeSpan.FromHours(20);
 
     /// <summary>How often a request other than the admin panel's is allowed to sweep.</summary>
     public static readonly TimeSpan SweepEvery = TimeSpan.FromMinutes(1);
@@ -239,7 +247,7 @@ internal sealed class TableRegistry : IDisposable
             foreach (var table in _byId.Values.ToList())
             {
                 var idle = now - table.Touched;
-                if (table.IsFinished && idle >= FinishedFor)
+                if ((table.IsFinished && idle >= FinishedFor) || (!table.IsOver && !table.Session.HasBegun && idle >= NeverBegunFor))
                 {
                     _byId.Remove(table.Id);
                     Forget(table);

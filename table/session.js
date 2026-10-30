@@ -84,6 +84,18 @@ export function activateSeats(seats, storage) {
   remember(storage, Object.fromEntries(seats.filter(item => SEATS.includes(item.seat) && item.token).map(item => [item.seat, item.token])));
 }
 
+// The tokens a page asks the host to verify: the ones this browser saved, and the ones its link or its held
+// seats carry. A browser whose storage is blocked saves nothing, and its link is still a seat (ADR 0115).
+export function resumeTokens(saved, held) {
+  return [...new Set([...(saved ?? []), ...(held ?? [])].map(seat => seat?.token).filter(Boolean))];
+}
+
+// Where the address bar goes once the token is out of it: the table itself. `/` is the lobby now (ADR 0115), so
+// a page that came in on `/?player2=...` stays on `/play` and a reload returns to the game, not the lobby.
+export function playPath(pathname) {
+  return !pathname || pathname === '/' ? '/play' : pathname;
+}
+
 export function selectTableSeats(matches, requested) {
   const chosen = matches.find(match => match.seats.some(seat => requested.some(wanted => wanted.token === seat.token)));
   return chosen?.seats ?? [];

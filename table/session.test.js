@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, forget, heldSeats, isOperator, operatorToken, seatsFromLocation } from './session.js';
+import { OPERATOR_KEY, forget, heldSeats, isOperator, operatorToken, playPath, resumeTokens, seatsFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -110,4 +110,21 @@ test('the operator token is what the admin panel kept, or nothing', () => {
   assert.equal(operatorToken({ getItem: () => null }), null);
   assert.equal(operatorToken({ getItem: () => { throw new Error('private'); } }), null);
   assert.equal(operatorToken(null), null);
+});
+
+// A browser whose storage is blocked saves no seat, and the link it came in on is still its seat (ADR 0115): the
+// tokens the page asks the host to verify are the saved ones and the held ones together, each once.
+test('the seats to verify are the saved ones and the held ones, each token once', () => {
+  assert.deepEqual(resumeTokens([], [{ seat: 'player2', token: 'from-link' }]), ['from-link']);
+  assert.deepEqual(resumeTokens([{ token: 'a' }, { token: 'b' }], [{ token: 'b' }, { token: 'c' }]), ['a', 'b', 'c']);
+  assert.deepEqual(resumeTokens(undefined, [{ token: '' }]), []);
+});
+
+// `/` is the lobby now, so a page that took the token out of `/?player2=...` must not leave the address on `/`: a
+// reload there would open the lobby instead of the game.
+test('the address a seat page keeps is the table, never the lobby', () => {
+  assert.equal(playPath('/'), '/play');
+  assert.equal(playPath(''), '/play');
+  assert.equal(playPath('/play'), '/play');
+  assert.equal(playPath('/table'), '/table');
 });

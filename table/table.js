@@ -1,6 +1,6 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
-import { activateSeats, forget, heldSeats, isOperator, operatorToken, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
+import { activateSeats, forget, heldSeats, isOperator, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -65,32 +65,47 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
   }
 }
 
-async function boot(practice) {
+// Synchronous, so the module's top level starts nothing it leaves unawaited: the one asynchronous step, asking
+// the host which of the held seats still answer, settles into the same `enter` either way.
+function boot(practice) {
   void showAdminLink();
-  let held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
-  if (!practice && held.length > 0) {
-    try {
-      const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens: savedSeats(storage).map(seat => seat.token) }) });
-      if (response.ok) {
-        const matches = (await response.json()).tables;
-        const requested = seatsFromLocation(globalThis.location?.search ?? '');
-        held = selectTableSeats(matches, requested.length > 0 ? requested : held);
-        activateSeats(held, storage);
-      }
-    } catch { /* Keep the active tokens through a temporary connection failure. */ }
+  const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
+  if (practice || held.length === 0) {
+    enter(held, practice);
+    return;
   }
+
+  // Keep the held tokens through a temporary connection failure.
+  verifiedSeats(held).then(seats => enter(seats, practice), () => enter(held, practice));
+}
+
+// The held seats the host still answers for, one table's worth, saved again as the active pair. The held ones
+// as they were when the host could not be asked.
+async function verifiedSeats(held) {
+  const tokens = resumeTokens(savedSeats(storage), held);
+  const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+  if (!response.ok) return held;
+  const matches = (await response.json()).tables;
+  const requested = seatsFromLocation(globalThis.location?.search ?? '');
+  const seats = selectTableSeats(matches, requested.length > 0 ? requested : held);
+  activateSeats(seats, storage);
+  return seats;
+}
+
+function enter(held, practice) {
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
-  } else {
-    // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
-    if (!practice) tidy();
-    start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
+    return;
   }
+
+  // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
+  if (!practice) tidy();
+  start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
 }
 
 function tidy() {
   if (globalThis.location?.search && globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+    globalThis.history.replaceState(null, '', playPath(globalThis.location.pathname));
   }
 }
 

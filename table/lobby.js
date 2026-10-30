@@ -59,18 +59,27 @@ export function mountLobby(doc, location, storage) {
     catch (error) { problem(error.message || 'Could not reach the table. Try again.'); await refresh(); }
     finally { busy = false; button.disabled = false; }
   }
+  function cardAction(table, entry) {
+    if (!entry) return 'Take a seat →';
+    return table.over ? 'View game →' : 'Resume game →';
+  }
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
     const top = node('div', '', 'game-card-top');
     top.append(node('h3', `${table.format} battle`), node('span', tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}`));
     root.append(top, node('p', table.id, 'game-id'), node('p', (table.players ?? []).join(' vs '), 'game-players'));
-    const button = node('button', entry ? (table.over ? 'View game →' : 'Resume game →') : 'Take a seat →');
+    const button = node('button', cardAction(table, entry));
     button.type = 'button';
     button.setAttribute('aria-label', `${entry ? 'Resume' : 'Join'} ${table.format} table ${table.id}`);
     if (entry) { button.className = 'primary'; button.addEventListener('click', () => enter(entry)); }
     else button.addEventListener('click', () => act(button, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
     if (entry || table.openSeats > 0) root.append(button);
     return root;
+  }
+  function statusText(state) {
+    if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
+    const tables = state.tables.length === 1 ? 'table' : 'tables';
+    return `${state.tables.length} ${tables} ongoing · updates automatically`;
   }
   function render() {
     const key = JSON.stringify([listing, mine, showAll]);
@@ -82,7 +91,7 @@ export function mountLobby(doc, location, storage) {
     el('my-tables').replaceChildren(...(mine.length ? mine.map(entry => card(entry.table, entry)) : [node('p', 'No saved games here yet. Create a table, take an open seat or enter an invitation code.', 'empty-state')]));
     el('open-tables').replaceChildren(...(available.length ? available.map(table => card(table)) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
     el('new-table').disabled = !listing.recording;
-    el('lobby-status').textContent = listing.recording ? `${listing.tables.length} ${listing.tables.length === 1 ? 'table' : 'tables'} ongoing · updates automatically` : 'This host is not saving games. New tables are unavailable until recording is enabled.';
+    el('lobby-status').textContent = statusText(listing);
     const options = listing.formats;
     if (el('format').options.length === 0) {
       el('format').replaceChildren(...options.map(format => { const option = node('option', format); option.value = format; return option; }));

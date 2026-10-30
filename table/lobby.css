@@ -8,7 +8,7 @@
 .lobby-hero h2 { font: 400 clamp(36px, 5vw, 58px)/1.15 Georgia, serif; letter-spacing: -1.5px; margin: 12px 0; }
 .hero-detail { color: var(--muted); font-size: 15px; line-height: 1.65; }
 .lobby-page .primary { background: var(--gold); border-color: var(--gold); color: #1b211a; font-weight: 700; text-align: center; padding: 14px 22px; }
-.lobby-status { min-height: 26px; margin-bottom: 24px; }
+.lobby-status { display: block; min-height: 26px; margin-bottom: 24px; }
 .lobby-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 34px; }
 .lobby-section { margin-bottom: 38px; }
 .lobby-section .section-heading { margin-bottom: 16px; }
@@ -25,7 +25,8 @@
 .game-players { font-size: 13px; color: var(--muted); line-height: 1.5; }
 .game-card button { width: 100%; text-align: center; margin-top: auto; }
 .game-card a { color: var(--gold); }
-.lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; }
+.lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; padding: 0; border: 0; min-width: 0; }
+.lobby-filters > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lobby-filters button { border-radius: 24px; font-size: 12px; padding: 8px 14px; }
 .lobby-filters button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: #e7c37b0d; }
 .empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); line-height: 1.7; }
@@ -63,4 +64,4 @@
   .game-card { padding: 18px; }
   .dialog-actions { flex-wrap: wrap; } .dialog-actions button { flex: 1; }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+

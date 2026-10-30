@@ -212,6 +212,50 @@ public sealed class LobbyApiTests : IDisposable
         _registry.All().ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// The seat's link and code are on the admin panel and in any invitation already sent. A place taken from
+    /// the lobby is handed over under a fresh token and code, so whoever holds the old ones cannot share it.
+    /// </summary>
+    [Fact]
+    public async Task Taking_a_place_from_the_lobby_revokes_the_seats_old_link_and_code()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var oldToken = table.Seats[1].Token;
+        var oldCode = _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+
+        var joined = Read(await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}"));
+        var newToken = joined.GetProperty("seats")[0].GetProperty("token").GetString()!;
+
+        newToken.ShouldNotBe(oldToken);
+        _registry.ByToken(oldToken).ShouldBeNull();
+        _registry.ByToken(newToken).ShouldBeSameAs(table);
+        _registry.Codes.Of(table.Seats[1]).ShouldNotBe(oldCode);
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[1].Token.ShouldBe(newToken);
+    }
+
+    /// <summary>A seat write racing the end of the match must not write the record back to open: the next host would rebuild a finished game.</summary>
+    [Fact]
+    public async Task A_seat_write_after_the_match_ended_keeps_the_record_finished()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+
+        await table.Run!.MarkAsync(TableRecord.Finished, TestContext.Current.CancellationToken);
+        await table.RecordAsync(_registry.Codes, TestContext.Current.CancellationToken);
+
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
+    }
+
+    [Theory]
+    [InlineData("/api/lobby/tables/join")]
+    [InlineData("/api/lobby/tables//join")]
+    [InlineData("/api/lobby/tables/a/b/join")]
+    public async Task A_join_path_without_one_table_id_is_not_a_route(string path)
+    {
+        (await Lobby.HandleAsync("POST", path, "{}")).Status.ShouldBe(404);
+    }
+
     private async Task<JsonElement> Open() => Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", "{}"));
 
     private static JsonElement Read(StudioResponse response)

@@ -144,6 +144,23 @@ public sealed class TableRestorerTests : IDisposable
         _earlier.All().ShouldHaveSingleItem().ShouldBeSameAs(table);
     }
 
+    /// <summary>A table nobody ever played a decision at, opened longer ago than the sweep keeps one, is not rebuilt (ADR 0115).</summary>
+    [Fact]
+    public async Task A_table_that_never_began_is_left_as_it_was_after_a_night()
+    {
+        // Opened and recorded, and nobody ever reached a seat: the match never began and no decision was taken.
+        var table = await _before.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        _earlier.TryAdd(table).ShouldBeTrue();
+        await table.RecordAsync(_earlier.Codes, TestContext.Current.CancellationToken);
+        var later = new Clock { Now = table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1) };
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, later, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("never began");
+        _later.All().ShouldBeEmpty();
+        (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "left as it was, not marked");
+    }
+
     [Fact]
     public async Task An_open_table_is_rebuilt_even_after_a_long_break()
     {

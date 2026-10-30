@@ -1,8 +1,9 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Rebuilds every recorded open table when a host starts. Open games do not expire during a pause.
-/// Finished and explicitly closed records are left alone, as are runs with no table record. A replay
+/// Rebuilds every recorded open table when a host starts. A game that began does not expire during a pause.
+/// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
+/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A replay
 /// that no longer fits the current engine or content is reported and preserved for the operator.
 /// </summary>
 internal static class TableRestorer
@@ -27,6 +28,14 @@ internal static class TableRestorer
             }
 
             var journal = await stored.JournalAsync(id, cancellationToken);
+            if (!DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
+            {
+                // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
+                // host before this one never got to sweep is left as it is, not marked, and not rebuilt.
+                said.Add($"Session {record.Id} left as it was: it never began, and was opened at {record.CreatedAt:u}.");
+                continue;
+            }
+
             PlayedTable? table;
             try
             {

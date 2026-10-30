@@ -104,15 +104,35 @@ public sealed class TableRegistryTests : IDisposable
     }
 
     [Fact]
-    public async Task An_unfinished_table_keeps_its_seat_after_a_long_break()
+    public async Task A_game_that_began_keeps_its_seat_after_a_long_break()
+    {
+        using var registry = new TableRegistry();
+        var idle = await Composed(HostedTables.OnePerson);
+        registry.TryAdd(idle);
+        idle.Seats[0].Person!.Arrive();
+        idle.Session.Begin();
+
+        registry.Sweep(idle.CreatedAt + TimeSpan.FromDays(30)).ShouldBeEmpty();
+        registry.ByToken(idle.Seats[0].Token).ShouldBeSameAs(idle);
+        idle.Session.Outcome.IsCompleted.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// A table that never began -- nobody came, or its second player never did -- is closed once nobody has
+    /// asked anything of it for a night, or a lobby anyone may open tables from fills the host for good (ADR 0115).
+    /// </summary>
+    [Fact]
+    public async Task A_table_that_never_began_is_closed_after_a_night_without_a_request()
     {
         using var registry = new TableRegistry();
         var idle = await Composed(HostedTables.OnePerson);
         registry.TryAdd(idle);
 
-        registry.Sweep(idle.CreatedAt + TimeSpan.FromDays(30)).ShouldBeEmpty();
-        registry.ByToken(idle.Seats[0].Token).ShouldBeSameAs(idle);
-        idle.Session.Outcome.IsCompleted.ShouldBeFalse();
+        idle.Touch(idle.CreatedAt + TableRegistry.NeverBegunFor - TimeSpan.FromMinutes(1));
+        registry.Sweep(idle.CreatedAt + TableRegistry.NeverBegunFor).ShouldBeEmpty("a request a minute ago is somebody still waiting");
+
+        registry.Sweep(idle.CreatedAt + TableRegistry.NeverBegunFor + TableRegistry.NeverBegunFor).ShouldBe([idle.Id]);
+        registry.ByToken(idle.Seats[0].Token).ShouldBeNull();
     }
 
     /// <summary>
