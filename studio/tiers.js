@@ -76,6 +76,12 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
     warnings.push('A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.');
   }
 
+  // `Tier.Create` refuses a shared package that teaches a spell (ADR 0114): it shares its passive, and a spell
+  // is learned by the creature that buys it.
+  if (draft?.sharedWithTeam === true && (asArray(draft?.spells).filter(Boolean).length || !passiveLines(draft?.passive).length)) {
+    warnings.push('A shared package gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.');
+  }
+
   // `Passive.Of` refuses a negative amount: a package that took energy or damage away would be a curse.
   for (const key of ['upkeepEnergy', 'damageBonus', 'sunder']) {
     if (Number(draft?.passive?.[key]) < 0) {

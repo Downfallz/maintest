@@ -262,7 +262,9 @@ public sealed class PracticeTableTests : IDisposable
         await using var table = new PracticeTable(Options(), "practice-token");
         var started = Json(await table.HandleAsync("POST", "/api/practice", $$"""{"scenario":"{{scenario}}"}""", "practice-token"));
         var token = started["seatToken"]!.GetValue<string>();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        // A guard against a seat that stops being asked, not a speed test: a shared runner under coverage took
+        // 15.6 s to finish the multiclass recipe (#371), which a desktop plays in a few.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var seen = new HashSet<long>();
         while (true)
         {

@@ -82,6 +82,16 @@ not 7; its cost of 3 and its Critical chance of 0.8 are unchanged, and it still 
 observation of 2.4 holds as written. The Frenzied card's Fury prints 6 where it printed 7, one digit for one
 digit. No count here reads a hit. The measured profiles are not re-run.
 
+**Nor for the Capstones of 2026-10-30** (journal, 2026-10-30, "The capstones: Titan sunders 10, Apex +5,
+Archmage shared"; [ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md)). Titan's Sunder is
+10, not 2, and Apex's Damage bonus +5, not +3: one Passive line each, which nothing here reads. Archmage
+still gives +1 Energy at every Upkeep, but it is a **shared package** that stacks: its buyer owns it, every
+other Creature of the side holds its Passive too, and a teammate may still buy its own copy, each copy giving
+the whole side +1 more. Every Creature may own one, so the package cards stay **144** on 16 sheets, and an
+Archmage card lies uncovered with its buyer like any Capstone, so a cascade still leaves it uncovered. What
+moves is who reads it: every Creature of the side, at every Energy gain, which no option here counts. The
+measured profiles are not re-run.
+
 ## 1. Status and scope
 
 The maintainer's goals: a fast setup, less upkeep a Round, fewer components, and nothing a player has to

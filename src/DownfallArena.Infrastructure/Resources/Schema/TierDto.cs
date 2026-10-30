@@ -28,9 +28,13 @@ public sealed record TierDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PassiveDto? Passive { get; init; }
 
+    /// <summary>Whether one purchase gives the package to the buyer's whole side (ADR 0114); absent when it does not.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool SharedWithTeam { get; init; }
+
     /// <summary>Whether the package uses a member a reader written before ADR 0101 does not know.</summary>
     [JsonIgnore]
-    public bool UsesCapstoneMembers => AnyOf is { Count: > 0 } || Passive is not null;
+    public bool UsesCapstoneMembers => AnyOf is { Count: > 0 } || Passive is not null || SharedWithTeam;
 
     /// <summary>
     /// Authoring-only switch (ADR 0015): <c>false</c> keeps the item out of the consolidated schema. The builder

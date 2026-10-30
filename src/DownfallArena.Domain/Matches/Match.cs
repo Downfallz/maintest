@@ -558,6 +558,7 @@ public sealed class Match : AggregateRoot<MatchId>
             }
         }
 
+        SharedPackages.Share(_creatures, tiers.Select(purchase => (CreatureOf(purchase.Creature), purchase.Tier)));
         RaiseDomainEvent(new PurchasesRevealed(Id, round.Id, choices));
     }
 
