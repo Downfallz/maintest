@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Randomness;
@@ -139,6 +140,8 @@ public static class Advance
                 throw new InvalidOperationException($"Creature {creature.Id} refused {tier.Id}: {bought.Error.Message}");
             }
         }
+
+        SharedPackages.Share(creatures, purchases);
 
         return Snapshots(creatures);
     }

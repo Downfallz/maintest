@@ -1097,34 +1097,38 @@
     },
     "tier:apex": {
       "name": "Apex",
-      "intent": "The Predator family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and adds 3 to every direct hit its owner deals for the rest of the match (2 until 2026-10-09, raised with Titan's sunder because the Predator family won least, ADR 0106). The late pick that turns a hunter's every strike up rather than adding a card.",
+      "intent": "The Predator family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and adds 5 to every direct hit its owner deals for the rest of the match (2 until 2026-10-09, raised with Titan's sunder because the Predator family won least, ADR 0106; 3 until 2026-10-30). The late pick that turns a hunter's every strike up rather than adding a card.",
       "keep": [
         "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
       ],
       "knobs": [
-        { "path": "/passive/damageBonus", "min": 1, "max": 3, "step": 1 }
-      ]
+        { "path": "/passive/damageBonus", "min": 1, "max": 5, "step": 1 }
+      ],
+      "note": "Raised from 3 to 5 on 2026-10-30 (journal), above the top of its knob, which was 3 and is 5 now: the exploring lookahead bought it a quarter of the times it was offered, and the owner wants the capstones bought. At 5 it is bought a third of the time, and a lookahead that buys it every time it is offered wins 0.500 against one that does not, so it does not become the pick a capstone has to be: it arrives at round 7 at the earliest, in matches of about ten rounds."
     },
     "tier:archmage": {
       "name": "Archmage",
-      "intent": "The Warped family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and gives its owner 1 energy at every upkeep beside the rule set's own, for the rest of the match. The family's deepest spells cost 3, and this is what pays for them.",
+      "intent": "The Warped family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and gives every creature of its owner's side 1 energy at every upkeep beside the rule set's own, for the rest of the match: it is the one shared package (ADR 0114), held by the whole side from the reveal on. The family's deepest spells cost 3, and this is what pays for them.",
       "keep": [
-        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs"
+        "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs",
+        "Shared with the whole side (ADR 0114): that is the progression's too, and never a knob"
       ],
       "knobs": [
         { "path": "/passive/upkeepEnergy", "min": 1, "max": 2, "step": 1 }
-      ]
+      ],
+      "note": "Shared with the whole side since 2026-10-30 (ADR 0114, journal): bought a fifth of the times it was offered by the exploring lookahead, and doubling it to 2 energy for its owner alone changed nothing, since it arrives with one or two rounds left. Shared, 1 energy an upkeep is 3 for a side of three, priced as such by Greedy."
     },
     "tier:titan": {
       "name": "Titan",
-      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing, and every direct hit its owner deals ignores 2 of the target's defense for the rest of the match (ADR 0106; a sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it). The Brawler crushes armour: worth nothing against a team without defense, and the answer to one that stacked it. Until 2026-10-09 it made its owner immune to stun instead, which lengthened the matches it was bought in.",
+      "intent": "The Brute family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing, and every direct hit its owner deals ignores 10 of the target's defense for the rest of the match, which is all of it on every board measured (ADR 0106; a sunder of 3 won 91 % of the Greedy mirrors where one side alone bought it). The Brawler crushes armour: worth nothing against a team without defense, and the answer to one that stacked it. Until 2026-10-09 it made its owner immune to stun instead, which lengthened the matches it was bought in.",
       "keep": [
         "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs",
         "Offensive, and only against armour: it never adds damage to a hit on a target with no defense"
       ],
       "knobs": [
-        { "path": "/passive/sunder", "min": 1, "max": 3, "step": 1 }
-      ]
+        { "path": "/passive/sunder", "min": 1, "max": 10, "step": 1 }
+      ],
+      "note": "Raised from 2 to 10 on 2026-10-30 (journal), above the top of its knob, which was 3 and is 10 now: the owner wants it to ignore all defense. It moves Greedy's purchases more than the exploring lookahead's: a living enemy holds defense on about four boards in ten in Greedy's matches at rounds 7 to 11, and three in ten in the exploring lookahead's, 2.6 and 1.1 of it on average, so every sunder above 3 buys little. A Greedy that buys it whenever it is offered wins 0.495 against one that does not."
     },
     "tier:warmonger": {
       "name": "Tyrant",

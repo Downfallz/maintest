@@ -30,6 +30,8 @@ public static class PlanningErrors
 
     public static readonly DomainError TierAlreadyOwned = new("Planning.TierAlreadyOwned", "The creature already owns this package.");
 
+    public static readonly DomainError TierPickedByTeammate = new("Planning.TierPickedByTeammate", "Another creature of the side picked this shared package this round, and the reveal gives it to the whole side.");
+
     public static readonly DomainError TierNotAvailable = new("Planning.TierNotAvailable", "The creature does not own every package this one requires.");
 
     public static readonly DomainError NoTieToOrder = new("Planning.NoTieToOrder", "None of the player's creatures ties with another of theirs on this timeline.");

@@ -278,6 +278,28 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     /// <summary>
+    /// Holds a shared package another creature of its side bought (ADR 0114): the package is owned, so it is not
+    /// offered again, and its passive is held from now on. Its initiative bonus stays with the buyer, and it
+    /// teaches nothing, since a shared package has no spell. A dead creature is given nothing, and one that
+    /// already owns the package -- its buyer, or a teammate who bought it in the same reveal -- holds it once.
+    /// </summary>
+    internal void Share(Tier tier)
+    {
+        ArgumentNullException.ThrowIfNull(tier);
+        if (!tier.SharedWithTeam)
+        {
+            throw new InvalidOperationException($"{tier.Id} is not a shared package; a creature holds only the packages it bought.");
+        }
+
+        if (IsDead || !_acquiredTiers.Add(tier.Id))
+        {
+            return;
+        }
+
+        _passive = _passive.With(tier.Passive);
+    }
+
+    /// <summary>
     /// Adds a spell to what this creature knows, idempotently. It grants no initiative of its own: a bonus
     /// belongs to the package that teaches the spell and is paid once, when the package is bought (ADR 0056).
     /// Idempotent because two packages may legitimately teach the same spell.

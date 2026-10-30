@@ -4,6 +4,7 @@ using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
@@ -282,6 +283,37 @@ public sealed class AdvanceTests
         next.Single(creature => creature.Id == Arena.Knight).Energy.ShouldBe(Energy.Of(knight.Energy.Value + 3));
     }
 
+    /// <summary>
+    /// A shared package bought on a hypothetical board is held by the buyer's whole side (ADR 0114), as the match
+    /// reveals it: the lookahead prices it on the boards bought here. The other side holds nothing.
+    /// </summary>
+    [Fact]
+    public void A_shared_package_bought_on_a_board_is_held_by_every_creature_of_the_side()
+    {
+        var resources = WithBanner();
+
+        var board = Advance.Buy(Arena.Snapshots(Arena.FourCreatures()), [new EvolutionChoice(Arena.Knight, Banner)], resources);
+
+        var archer = board.Single(creature => creature.Id == Arena.Archer);
+        archer.AcquiredTiers.ShouldContain(Banner);
+        archer.Passive.UpkeepEnergy.ShouldBe(1);
+        board.Single(creature => creature.Id == Arena.Ghoul).AcquiredTiers.ShouldBeEmpty();
+        TierEligibility.AvailableTiers(archer, resources).ShouldNotContain(Banner);
+        Advance.StartOfRound(board, resources, Table.TwoOnTwo()).Single(creature => creature.Id == Arena.Archer).Energy.ShouldBe(Energy.Of(archer.Energy.Value + 3));
+    }
+
+    /// <summary>A dead creature of the side is given nothing: it holds no passive it could use.</summary>
+    [Fact]
+    public void A_shared_package_skips_a_dead_creature_of_the_side()
+    {
+        var living = Arena.FourCreatures();
+        living[1].TakeDamage(99);
+
+        var board = Advance.Buy(Arena.Snapshots(living), [new EvolutionChoice(Arena.Knight, Banner)], WithBanner());
+
+        board.Single(creature => creature.Id == Arena.Archer).AcquiredTiers.ShouldBeEmpty();
+    }
+
     [Fact]
     public void A_purchase_the_creature_refuses_is_a_bug_in_the_caller()
     {
@@ -419,4 +451,14 @@ public sealed class AdvanceTests
             creature.Conditions.ShouldBe(other.Conditions, $"creature {creature.Id}");
         }
     }
+
+    private static readonly TierId Banner = TierId.Parse("tier:banner:v1");
+
+    /// <summary>The arena's content and a shared package any creature can buy at once, giving 1 energy an upkeep.</summary>
+    private static GameResources WithBanner() => GameResources.Create(
+        "test",
+        [.. Arena.Resources.Creatures],
+        [.. Arena.Resources.Spells],
+        [.. Arena.Resources.TalentTrees],
+        [.. Arena.Resources.Tiers, Tier.Create(Banner, "Banner", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 1), sharedWithTeam: true)]);
 }

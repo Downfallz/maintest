@@ -273,6 +273,21 @@ public sealed class TierContentTests
         titan.Passive.ShouldBe(Passive.Of(stunImmunity: true, damageBonus: 2, sunder: 1));
     }
 
+    /// <summary>A shared package (ADR 0114) says so in its file, and a package that does not say so is not one.</summary>
+    [Fact]
+    public void A_shared_package_reaches_the_catalogue_shared_and_another_does_not()
+    {
+        using var content = Climb().WithFile("Tiers/archmage.v1.json", """
+            { "id": "tier:archmage:v1", "name": "Archmage", "level": 4, "prerequisites": [], "anyOf": ["tier:warmonger:v1"],
+              "spells": [], "initiativeBonus": 0, "passive": { "upkeepEnergy": 1 }, "sharedWithTeam": true }
+            """);
+
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
+
+        resources.GetTier(TierId.Parse("tier:archmage:v1")).SharedWithTeam.ShouldBeTrue();
+        resources.GetTier(TierId.Parse("tier:warmonger:v1")).SharedWithTeam.ShouldBeFalse();
+    }
+
     /// <summary>A package with neither a spell nor a passive sells nothing, whatever opens it.</summary>
     [Fact]
     public void A_package_with_no_spell_and_an_empty_passive_is_refused()

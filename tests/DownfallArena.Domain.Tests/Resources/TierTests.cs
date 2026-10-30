@@ -46,6 +46,16 @@ public sealed class TierTests
         Should.Throw<ArgumentException>(() => Tier.Create(Brute, "Brute", 1, [], [], Initiative.Of(1), passive: Passive.None));
     }
 
+    /// <summary>ADR 0114: a shared package shares its passive, so it has one and teaches nothing.</summary>
+    [Fact]
+    public void A_shared_package_gives_a_passive_and_teaches_nothing()
+    {
+        var shared = Tier.Create(Brute, "Archmage", 4, [], [], Initiative.Of(0), [Marauder], Passive.Of(upkeepEnergy: 1), sharedWithTeam: true);
+
+        shared.SharedWithTeam.ShouldBeTrue();
+        Should.Throw<ArgumentException>(() => Tier.Create(Brute, "Brute", 1, [], [Pummel], Initiative.Of(1), passive: Passive.Of(upkeepEnergy: 1), sharedWithTeam: true));
+    }
+
     /// <summary>ADR 0101: an any-of list opens the tier with one of its packages; the all-of list still needs every one.</summary>
     [Fact]
     public void An_any_of_prerequisite_opens_with_one_of_its_packages_beside_every_required_one()

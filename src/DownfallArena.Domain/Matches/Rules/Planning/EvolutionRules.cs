@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Domain.Matches.Rules.Planning;
@@ -68,6 +69,11 @@ public static class EvolutionRules
             return Result.Failure(PlanningErrors.TierAlreadyOwned);
         }
 
+        if (PickedByTeammate(slot, round, resources).Contains(choice.Tier))
+        {
+            return Result.Failure(PlanningErrors.TierPickedByTeammate);
+        }
+
         return TierEligibility.AvailableTiers(creature, resources).Contains(choice.Tier)
             ? Result.Success()
             : Result.Failure(PlanningErrors.TierNotAvailable);
@@ -132,13 +138,23 @@ public static class EvolutionRules
         ArgumentNullException.ThrowIfNull(round);
         ArgumentNullException.ThrowIfNull(resources);
 
+        var picked = PickedByTeammate(slot, round, resources);
         return [.. creatures
             .Where(creature => creature.Owner == slot && creature.IsAlive && !HasEvolved(creature, round))
-            .Select(creature => new EvolutionOffer(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
+            .Select(creature => new EvolutionOffer(creature.Id, [.. TierEligibility.AvailableTiers(creature, resources).Where(tier => !picked.Contains(tier))]))
             .Where(offer => offer.Tiers.Count > 0)];
     }
 
     /// <summary>Whether the creature has already been picked for a package this round.</summary>
     private static bool HasEvolved(CreatureSnapshot creature, Round round) =>
         round.EvolutionChoicesOf(creature.Owner).Any(choice => choice.Creature == creature.Id);
+
+    /// <summary>
+    /// The shared packages the player picked this round (ADR 0114): the reveal gives each to the whole side, so
+    /// a second creature of the side buying it in the same round would pay a pick for what it is about to hold.
+    /// </summary>
+    private static HashSet<TierId> PickedByTeammate(PlayerSlot slot, Round round, IGameResources resources) =>
+        [.. round.EvolutionChoicesOf(slot)
+            .Select(choice => choice.Tier)
+            .Where(tier => resources.TryGetTier(tier, out var package) && package.SharedWithTeam)];
 }

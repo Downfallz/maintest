@@ -357,7 +357,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             }
         }
 
-        return PassiveTerms(actor, tier.Passive, creatures) + (best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) });
+        // A shared package's passive is held by every living creature of the side (ADR 0114), and read once for each.
+        var holders = tier.SharedWithTeam ? creatures.Count(creature => creature.Owner == actor.Owner && creature.IsAlive) : 1;
+        return (holders * PassiveTerms(actor, tier.Passive, creatures)) + (best with { Initiative = best.Initiative + Overtaken(actor, tier.InitiativeBonus.Value, creatures) });
     }
 
     /// <summary>

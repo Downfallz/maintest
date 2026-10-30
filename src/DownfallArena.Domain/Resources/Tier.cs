@@ -29,7 +29,8 @@ public sealed class Tier
         IReadOnlyList<SpellId> spells,
         Initiative initiativeBonus,
         IReadOnlyList<TierId> anyOf,
-        Passive passive)
+        Passive passive,
+        bool sharedWithTeam)
     {
         Id = id;
         Name = name;
@@ -39,6 +40,7 @@ public sealed class Tier
         InitiativeBonus = initiativeBonus;
         AnyOf = anyOf;
         Passive = passive;
+        SharedWithTeam = sharedWithTeam;
     }
 
     public TierId Id { get; }
@@ -68,6 +70,13 @@ public sealed class Tier
     /// <summary>What the owner holds for as long as it owns the package (ADR 0101); <see cref="Passive.None"/> for most.</summary>
     public Passive Passive { get; }
 
+    /// <summary>
+    /// Whether one purchase gives the package to the whole side (ADR 0114): every creature of the buyer's side
+    /// holds it and its passive from the reveal on, and none of them is offered it again. Only a package that
+    /// teaches nothing can be shared, since what it shares is its passive.
+    /// </summary>
+    public bool SharedWithTeam { get; }
+
     /// <summary>Whether a creature owning exactly the tiers <paramref name="owns"/> says it owns may buy this one, prerequisites read: every one of <see cref="Prerequisites"/>, and one of <see cref="AnyOf"/> when it names any.</summary>
     public bool IsOpenTo(Func<TierId, bool> owns)
     {
@@ -83,7 +92,8 @@ public sealed class Tier
         IReadOnlyList<SpellId> spells,
         Initiative initiativeBonus,
         IReadOnlyList<TierId>? anyOf = null,
-        Passive? passive = null)
+        Passive? passive = null,
+        bool sharedWithTeam = false)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -97,6 +107,11 @@ public sealed class Tier
         if (spells.Count == 0 && !passive.GivesAnything())
         {
             throw new ArgumentException("A tier must teach at least one spell or give a passive, or nothing buys it.", nameof(spells));
+        }
+
+        if (sharedWithTeam && (spells.Count > 0 || !passive.GivesAnything()))
+        {
+            throw new ArgumentException("A shared package gives its side a passive and teaches nothing; a spell is learned by the creature that buys it.", nameof(sharedWithTeam));
         }
 
         if (spells.Distinct().Count() != spells.Count)
@@ -129,6 +144,6 @@ public sealed class Tier
             throw new ArgumentException("A tier lists one prerequisite both as required and as one of several; it is one or the other.", nameof(anyOf));
         }
 
-        return new Tier(id, name, level, [.. prerequisites], [.. spells], initiativeBonus, [.. anyOf], passive);
+        return new Tier(id, name, level, [.. prerequisites], [.. spells], initiativeBonus, [.. anyOf], passive, sharedWithTeam);
     }
 }

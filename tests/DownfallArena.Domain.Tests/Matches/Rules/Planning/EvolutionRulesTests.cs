@@ -2,9 +2,11 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Planning;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
+using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Domain.Tests.Matches.Rules.Planning;
 
@@ -196,6 +198,30 @@ public sealed class EvolutionRulesTests
 
         round.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         EvolutionRules.Evaluate(creatures, round, Arena.Resources, RuleSet.Default).CanAdvance.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A shared package one creature picked this round goes to the whole side at the reveal (ADR 0114): no other
+    /// creature of the side is offered it or may pick it, and the other side still may.
+    /// </summary>
+    [Fact]
+    public void A_shared_package_a_teammate_picked_this_round_is_neither_offered_nor_accepted()
+    {
+        var banner = TierId.Parse("tier:banner:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. Arena.Resources.Creatures],
+            [.. Arena.Resources.Spells],
+            [.. Arena.Resources.TalentTrees],
+            [.. Arena.Resources.Tiers, Tier.Create(banner, "Banner", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 1), sharedWithTeam: true)]);
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, banner));
+
+        EvolutionRules.Offers(PlayerSlot.Player1, creatures, round, resources).Single().Tiers.ShouldNotContain(banner);
+        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, banner), creatures, round, resources, RuleSet.Default).Error.ShouldBe(PlanningErrors.TierPickedByTeammate);
+        EvolutionRules.ValidateChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, banner), creatures, round, resources, RuleSet.Default).IsSuccess.ShouldBeTrue();
     }
 
     private static Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>
