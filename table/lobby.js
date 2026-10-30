@@ -30,6 +30,17 @@ export async function lobbyRequest(path, body, token, fetchImpl = globalThis.fet
   return result;
 }
 
+function cardAction(table, entry) {
+  if (!entry) return 'Take a seat →';
+  return table.over ? 'View game →' : 'Resume game →';
+}
+
+function statusText(state) {
+  if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
+  const tables = state.tables.length === 1 ? 'table' : 'tables';
+  return `${state.tables.length} ${tables} ongoing · updates automatically`;
+}
+
 export function mountLobby(doc, location, storage) {
   const el = id => doc.getElementById(id);
   let listing = null;
@@ -59,10 +70,6 @@ export function mountLobby(doc, location, storage) {
     catch (error) { problem(error.message || 'Could not reach the table. Try again.'); await refresh(); }
     finally { busy = false; button.disabled = false; }
   }
-  function cardAction(table, entry) {
-    if (!entry) return 'Take a seat →';
-    return table.over ? 'View game →' : 'Resume game →';
-  }
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
     const top = node('div', '', 'game-card-top');
@@ -75,11 +82,6 @@ export function mountLobby(doc, location, storage) {
     else button.addEventListener('click', () => act(button, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
     if (entry || table.openSeats > 0) root.append(button);
     return root;
-  }
-  function statusText(state) {
-    if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
-    const tables = state.tables.length === 1 ? 'table' : 'tables';
-    return `${state.tables.length} ${tables} ongoing · updates automatically`;
   }
   function render() {
     const key = JSON.stringify([listing, mine, showAll]);
