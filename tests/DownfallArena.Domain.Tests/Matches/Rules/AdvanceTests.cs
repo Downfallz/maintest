@@ -284,34 +284,40 @@ public sealed class AdvanceTests
     }
 
     /// <summary>
-    /// A shared package bought on a hypothetical board is held by the buyer's whole side (ADR 0114), as the match
-    /// reveals it: the lookahead prices it on the boards bought here. The other side holds nothing.
+    /// A shared package bought on a hypothetical board gives its passive to the buyer's whole side (ADR 0114), as
+    /// the match's reveal does: the lookahead prices it on the boards bought here. The buyer owns it, a teammate
+    /// holds its passive and may still buy a copy, and the other side holds nothing.
     /// </summary>
     [Fact]
-    public void A_shared_package_bought_on_a_board_is_held_by_every_creature_of_the_side()
+    public void A_shared_package_bought_on_a_board_gives_its_passive_to_every_creature_of_the_side()
     {
         var resources = WithBanner();
 
         var board = Advance.Buy(Arena.Snapshots(Arena.FourCreatures()), [new EvolutionChoice(Arena.Knight, Banner)], resources);
 
         var archer = board.Single(creature => creature.Id == Arena.Archer);
-        archer.AcquiredTiers.ShouldContain(Banner);
+        archer.AcquiredTiers.ShouldBeEmpty();
         archer.Passive.UpkeepEnergy.ShouldBe(1);
-        board.Single(creature => creature.Id == Arena.Ghoul).AcquiredTiers.ShouldBeEmpty();
-        TierEligibility.AvailableTiers(archer, resources).ShouldNotContain(Banner);
+        board.Single(creature => creature.Id == Arena.Knight).Passive.UpkeepEnergy.ShouldBe(1);
+        board.Single(creature => creature.Id == Arena.Ghoul).Passive.UpkeepEnergy.ShouldBe(0);
+        TierEligibility.AvailableTiers(archer, resources).ShouldContain(Banner);
         Advance.StartOfRound(board, resources, Table.TwoOnTwo()).Single(creature => creature.Id == Arena.Archer).Energy.ShouldBe(Energy.Of(archer.Energy.Value + 3));
     }
 
-    /// <summary>A dead creature of the side is given nothing: it holds no passive it could use.</summary>
+    /// <summary>
+    /// Each copy the side owns gives its passive once more, to the buyers too, and a board restored from those
+    /// snapshots recomputes the same: what the teammates own is read off the board.
+    /// </summary>
     [Fact]
-    public void A_shared_package_skips_a_dead_creature_of_the_side()
+    public void Shared_packages_stack_and_a_restored_board_agrees()
     {
-        var living = Arena.FourCreatures();
-        living[1].TakeDamage(99);
+        var resources = WithBanner();
+        var board = Advance.Buy(Arena.Snapshots(Arena.FourCreatures()), [new EvolutionChoice(Arena.Knight, Banner)], resources);
 
-        var board = Advance.Buy(Arena.Snapshots(living), [new EvolutionChoice(Arena.Knight, Banner)], WithBanner());
+        board = Advance.Buy(board, [new EvolutionChoice(Arena.Archer, Banner)], resources);
 
-        board.Single(creature => creature.Id == Arena.Archer).AcquiredTiers.ShouldBeEmpty();
+        board.Where(creature => creature.Owner == PlayerSlot.Player1).ShouldAllBe(creature => creature.Passive.UpkeepEnergy == 2);
+        Advance.StartOfRound(board, resources, Table.TwoOnTwo()).Single(creature => creature.Id == Arena.Knight).Passive.UpkeepEnergy.ShouldBe(2);
     }
 
     [Fact]

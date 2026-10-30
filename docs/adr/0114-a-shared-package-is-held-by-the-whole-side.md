@@ -16,14 +16,13 @@ purchases matter. Which one is bought does not, because nothing bought that late
 
 ## Decision
 
-A package can be marked `sharedWithTeam`. When one creature buys it, the reveal gives it to every living
-creature of the buyer's side:
-- each one owns it, so it is never offered to them again;
-- each one holds its passive from then on;
-- the buyer alone takes its initiative bonus.
+A package can be marked `sharedWithTeam`. When one creature buys it, the buyer owns it as any package, and
+the reveal gives its passive to every other creature of the buyer's side, from then on. It stacks: a
+teammate is still offered it and may buy a copy of its own, and each copy the side owns gives every creature
+of the side its passive once more. A creature's passive is therefore its own packages' and every shared copy
+its teammates own, which a restored board reads off the board (`SharedPackages.HeldBy`).
 
-A shared package teaches nothing and gives a passive: `Tier.Create` refuses any other. A second creature of
-the side cannot pick it in the round a teammate did (`Planning.TierPickedByTeammate`). A hypothetical board
+A shared package teaches nothing and gives a passive: `Tier.Create` refuses any other. A hypothetical board
 (`Advance.Buy`) shares it the way the match does. Greedy reads the passive once for each living creature of
 the side.
 
@@ -34,14 +33,17 @@ Archmage is the one shared package: 1 energy at every upkeep for each creature o
 - Good: a late capstone is worth up to three creatures' passive for its last rounds, without one creature's
   number growing past what the table can read.
 - Good: one marker on the side's board says it, and no creature carries it alone.
-- Bad: an energy passive held by three creatures is 3 energy a round for one pick. The side that reaches the
-  capstone first is often the one ahead, so it can hasten the end of a match. The journal measures the length
-  on the benchmark seeds.
+- Bad: an energy passive held by three creatures is 3 energy a round for one pick, and three copies are 9.
+  The side that reaches the capstone first is often the one ahead, so it can hasten the end of a match. The
+  owner chose stacking over one copy a side knowing this; the journal measures the length on the benchmark
+  seeds.
 - Neutral: the passive of each creature still says what it holds, so the resolution, the upkeep and every
   reader of a creature's passive are unchanged.
 
 ## Alternatives considered
 
+- One copy a side: the first version of this decision, where every teammate owned the package and was not
+  offered it again. The owner preferred that it stack.
 - Raise each capstone's number: Apex at +5, Archmage at +2 and Titan at a sunder of 10 left the exploring
   lookahead's purchases where they were. Too little time is left to use any of them.
 - Every capstone shared: Apex shared at +1 or +2 and Titan shared measured no better for the exploring

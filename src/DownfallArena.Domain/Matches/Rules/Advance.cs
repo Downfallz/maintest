@@ -147,12 +147,12 @@ public static class Advance
     }
 
     private static List<Creature> Restore(IReadOnlyList<CreatureSnapshot> board, IGameResources resources) =>
-        [.. board.Select(snapshot => Restore(snapshot, resources))];
+        [.. board.Select(snapshot => Restore(snapshot, board, resources))];
 
-    private static Creature Restore(CreatureSnapshot snapshot, IGameResources resources)
+    private static Creature Restore(CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> board, IGameResources resources)
     {
         var definition = resources.GetCreature(snapshot.DefinitionId);
-        return Creature.Restore(snapshot, definition, [.. snapshot.AcquiredTiers.Select(resources.GetTier)]);
+        return Creature.Restore(snapshot, definition, [.. snapshot.AcquiredTiers.Select(resources.GetTier)], SharedPackages.HeldBy(snapshot, board, resources));
     }
 
     private static List<CreatureSnapshot> Snapshots(List<Creature> creatures) =>

@@ -167,7 +167,11 @@ public sealed class Creature : Entity<CreatureId>
     /// asked for rather than looked up so that a snapshot naming a package nobody authored cannot be restored
     /// at all, and because <see cref="Creature"/> has no catalogue of its own.
     /// </param>
-    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, IReadOnlyList<Tier> acquired)
+    /// <param name="shared">
+    /// What the shared packages its teammates own give it (ADR 0114), which its own snapshot cannot say, so the
+    /// caller reads it off the board.
+    /// </param>
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, IReadOnlyList<Tier> acquired, Passive? shared = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(definition);
@@ -202,7 +206,7 @@ public sealed class Creature : Entity<CreatureId>
         // restored creature's, recomputed from its conditions. A snapshot where the two disagree would be
         // resolved on one board and applied to another.
         var creature = new Creature(snapshot, definition);
-        creature._passive = Passive.Of(acquired);
+        creature._passive = Passive.Of(acquired).With(shared ?? Passive.None);
         if (creature._passive != snapshot.Passive)
         {
             throw new ArgumentException($"Creature {snapshot.Id}'s snapshot carries a passive its packages do not give.", nameof(snapshot));
@@ -278,22 +282,17 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     /// <summary>
-    /// Holds a shared package another creature of its side bought (ADR 0114): the package is owned, so it is not
-    /// offered again, and its passive is held from now on. Its initiative bonus stays with the buyer, and it
-    /// teaches nothing, since a shared package has no spell. A dead creature is given nothing, and one that
-    /// already owns the package -- its buyer, or a teammate who bought it in the same reveal -- holds it once.
+    /// Holds the passive of a shared package another creature of its side bought (ADR 0114), on top of its own:
+    /// the package stays the buyer's, so this creature may still buy one of its own, and each copy the side owns
+    /// adds its passive again. A dead creature holds it too, so that what a creature holds is always its own
+    /// packages' passives and every copy its teammates own, which is what a restored board recomputes.
     /// </summary>
-    internal void Share(Tier tier)
+    internal void HoldShared(Tier tier)
     {
         ArgumentNullException.ThrowIfNull(tier);
         if (!tier.SharedWithTeam)
         {
-            throw new InvalidOperationException($"{tier.Id} is not a shared package; a creature holds only the packages it bought.");
-        }
-
-        if (IsDead || !_acquiredTiers.Add(tier.Id))
-        {
-            return;
+            throw new InvalidOperationException($"{tier.Id} is not a shared package; a creature holds only the passives of the packages it bought.");
         }
 
         _passive = _passive.With(tier.Passive);

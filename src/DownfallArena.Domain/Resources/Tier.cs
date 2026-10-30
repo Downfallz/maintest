@@ -71,9 +71,9 @@ public sealed class Tier
     public Passive Passive { get; }
 
     /// <summary>
-    /// Whether one purchase gives the package to the whole side (ADR 0114): every creature of the buyer's side
-    /// holds it and its passive from the reveal on, and none of them is offered it again. Only a package that
-    /// teaches nothing can be shared, since what it shares is its passive.
+    /// Whether one purchase gives the package's passive to the whole side (ADR 0114): the buyer owns it, and
+    /// every other creature of the side holds its passive from the reveal on, once for each copy the side owns.
+    /// Only a package that teaches nothing can be shared, since what it shares is its passive.
     /// </summary>
     public bool SharedWithTeam { get; }
 

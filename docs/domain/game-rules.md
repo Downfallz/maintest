@@ -59,9 +59,9 @@ listed in [spells.md](spells.md).
   does to its own caster are left alone. Each family closes with a level-4 capstone opened by any of its
   level-3 packages and teaching no spell: Titan (sunder 10; 2 until 2026-10-30, stun immunity until
   2026-10-09), Archmage (+1 energy at upkeep, shared), Apex (+5 damage; +3 until 2026-10-30, +2 until
-  2026-10-09). A shared package (ADR 0114) is given by the reveal to every living creature of its buyer's
-  side: each owns it, is not offered it again, and holds its passive; the buyer alone takes its initiative
-  bonus. It teaches no spell. A second creature of the side cannot pick it in the round a teammate did.
+  2026-10-09). A shared package (ADR 0114) is owned by its buyer, and the reveal gives its passive to every
+  other creature of the buyer's side. It stacks: a teammate may still buy a copy, and each copy the side owns
+  gives every creature of the side its passive once more. It teaches no spell.
 
 - Combat declaration (ADR 0110, 0112): the default rule set declares no intent (`AtActivation`).
   `IntentSelection` passes through without asking anyone, and at each slot the owner submits a spell the

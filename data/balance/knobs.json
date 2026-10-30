@@ -1108,7 +1108,7 @@
     },
     "tier:archmage": {
       "name": "Archmage",
-      "intent": "The Warped family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and gives every creature of its owner's side 1 energy at every upkeep beside the rule set's own, for the rest of the match: it is the one shared package (ADR 0114), held by the whole side from the reveal on. The family's deepest spells cost 3, and this is what pays for them.",
+      "intent": "The Warped family's capstone (ADR 0101): bought after any of its level-3 packages, it teaches nothing and gives every creature of its owner's side 1 energy at every upkeep beside the rule set's own, for the rest of the match: it is the one shared package (ADR 0114), whose passive the whole side holds from the reveal on, once for each copy the side owns. The family's deepest spells cost 3, and this is what pays for them.",
       "keep": [
         "The level, the any-of prerequisite and the kind of passive are the progression, and are never knobs",
         "Shared with the whole side (ADR 0114): that is the progression's too, and never a knob"
@@ -1116,7 +1116,7 @@
       "knobs": [
         { "path": "/passive/upkeepEnergy", "min": 1, "max": 2, "step": 1 }
       ],
-      "note": "Shared with the whole side since 2026-10-30 (ADR 0114, journal): bought a fifth of the times it was offered by the exploring lookahead, and doubling it to 2 energy for its owner alone changed nothing, since it arrives with one or two rounds left. Shared, 1 energy an upkeep is 3 for a side of three, priced as such by Greedy."
+      "note": "Shared with the whole side since 2026-10-30 (ADR 0114, journal): bought a fifth of the times it was offered by the exploring lookahead, and doubling it to 2 energy for its owner alone changed nothing, since it arrives with one or two rounds left. Shared, 1 energy an upkeep is 3 for a side of three, priced as such by Greedy, and it stacks: each creature of the side may buy a copy, and each copy gives every creature of the side 1 more."
     },
     "tier:titan": {
       "name": "Titan",

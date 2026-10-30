@@ -201,11 +201,11 @@ public sealed class EvolutionRulesTests
     }
 
     /// <summary>
-    /// A shared package one creature picked this round goes to the whole side at the reveal (ADR 0114): no other
-    /// creature of the side is offered it or may pick it, and the other side still may.
+    /// A shared package stacks (ADR 0114): a creature whose teammate picked it this round is still offered it
+    /// and may pick it too, and each copy gives the side its passive once more.
     /// </summary>
     [Fact]
-    public void A_shared_package_a_teammate_picked_this_round_is_neither_offered_nor_accepted()
+    public void A_shared_package_a_teammate_picked_this_round_is_still_offered()
     {
         var banner = TierId.Parse("tier:banner:v1");
         var resources = GameResources.Create(
@@ -219,9 +219,8 @@ public sealed class EvolutionRulesTests
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, banner));
 
-        EvolutionRules.Offers(PlayerSlot.Player1, creatures, round, resources).Single().Tiers.ShouldNotContain(banner);
-        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, banner), creatures, round, resources, RuleSet.Default).Error.ShouldBe(PlanningErrors.TierPickedByTeammate);
-        EvolutionRules.ValidateChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, banner), creatures, round, resources, RuleSet.Default).IsSuccess.ShouldBeTrue();
+        EvolutionRules.Offers(PlayerSlot.Player1, creatures, round, resources).Single().Tiers.ShouldContain(banner);
+        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, banner), creatures, round, resources, RuleSet.Default).IsSuccess.ShouldBeTrue();
     }
 
     private static Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>

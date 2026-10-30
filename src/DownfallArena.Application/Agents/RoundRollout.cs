@@ -145,21 +145,14 @@ public sealed class RoundRollout(IPlayerAgent player, ActionScorer scorer, IGame
         }
     }
 
-    /// <summary>
-    /// A seat's living creatures not yet picked this round, each with the packages it can buy, less a shared
-    /// package one of the picks already buys for the whole side (ADR 0114), as the match's own offers are.
-    /// </summary>
-    public List<EvolutionOption> Offers(IReadOnlyList<CreatureSnapshot> board, PlayerSlot seat, IReadOnlyList<EvolutionChoice> picks)
-    {
-        var shared = picks.Select(pick => pick.Tier).Where(tier => resources.GetTier(tier).SharedWithTeam).ToHashSet();
-        return
-        [
-            .. board
-                .Where(creature => creature.Owner == seat && creature.IsAlive && !picks.Any(pick => pick.Creature == creature.Id))
-                .Select(creature => new EvolutionOption(creature.Id, [.. TierEligibility.AvailableTiers(creature, resources).Where(tier => !shared.Contains(tier))]))
-                .Where(option => option.AvailableTiers.Count > 0),
-        ];
-    }
+    /// <summary>A seat's living creatures not yet picked this round, each with the packages it can buy.</summary>
+    public List<EvolutionOption> Offers(IReadOnlyList<CreatureSnapshot> board, PlayerSlot seat, IReadOnlyList<EvolutionChoice> picks) =>
+    [
+        .. board
+            .Where(creature => creature.Owner == seat && creature.IsAlive && !picks.Any(pick => pick.Creature == creature.Id))
+            .Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
+            .Where(option => option.AvailableTiers.Count > 0),
+    ];
 
     /// <summary>
     /// A round's Planning after its evolution, and its Combat: the speeds, the timeline, every intent, then each

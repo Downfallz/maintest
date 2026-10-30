@@ -1,6 +1,6 @@
 {
   "contentHash": "478f9b45b059edc569946b22fa573ef8f888ecb108dde2783c7e71a292abb9ea",
-  "engineVersion": "16ba22be70af-dirty",
+  "engineVersion": "7f7e6a79415a-dirty",
   "agentA": "Greedy",
   "agentB": "Greedy",
   "entries": [
@@ -513,18 +513,18 @@
       "order": "AB",
       "winner": "Player2",
       "reason": "Elimination",
-      "rounds": 12,
+      "rounds": 13,
       "player1Health": 0,
-      "player2Health": 35
+      "player2Health": 20
     },
     {
       "seed": 133114,
       "order": "BA",
       "winner": "Player2",
       "reason": "Elimination",
-      "rounds": 12,
+      "rounds": 13,
       "player1Health": 0,
-      "player2Health": 35
+      "player2Health": 20
     },
     {
       "seed": 135748,
@@ -1233,8 +1233,8 @@
       "order": "AB",
       "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 12,
-      "player1Health": 24,
+      "rounds": 14,
+      "player1Health": 27,
       "player2Health": 0
     },
     {
@@ -1242,8 +1242,8 @@
       "order": "BA",
       "winner": "Player1",
       "reason": "Elimination",
-      "rounds": 12,
-      "player1Health": 24,
+      "rounds": 14,
+      "player1Health": 27,
       "player2Health": 0
     },
     {
