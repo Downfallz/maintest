@@ -205,8 +205,7 @@ public sealed class Creature : Entity<CreatureId>
         // The rules that price an action read the snapshot's derived values; the rules that apply it read the
         // restored creature's, recomputed from its conditions. A snapshot where the two disagree would be
         // resolved on one board and applied to another.
-        var creature = new Creature(snapshot, definition);
-        creature._passive = Passive.Of(acquired).With(shared ?? Passive.None);
+        var creature = new Creature(snapshot, definition) { _passive = Passive.Of(acquired).With(shared ?? Passive.None) };
         if (creature._passive != snapshot.Passive)
         {
             throw new ArgumentException($"Creature {snapshot.Id}'s snapshot carries a passive its packages do not give.", nameof(snapshot));
