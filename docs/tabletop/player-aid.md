@@ -5,7 +5,8 @@ the same engine: Tiers bought on the Rule set's schedule, one a Creature an oppo
 ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
 (ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), one Activation a slot, each action
 resolving the moment its targets are named (ADR 0083), and a level-4 Capstone in each family that gives a
-Passive instead of Spells (ADR 0101), Titan's a Sunder (ADR 0106). The section number is beside each rule.
+Passive instead of Spells (ADR 0101), Titan's a Sunder (ADR 0106), and Archmage's shared by the whole side
+(ADR 0114), copy by copy. The section number is beside each rule.
 Fill the setup table's values in before the first Match.
 
 ---
@@ -14,7 +15,7 @@ Fill the setup table's values in before the first Match.
 
 | # | Phase | Sub-phase | What happens | §|
 | --- | --- | --- | --- | --- |
-| 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy, **plus** any `Energy +N at every upkeep` its package cards print. | 5.1 |
+| 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy, **plus** any `Energy +N at every upkeep` its package cards and its teammates' shared ones print: **+1 for every Archmage card on your mat**. | 5.1 |
 | 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
 | 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Tier, **face down**, both Players at once. **One Tier a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** buys them all. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
@@ -48,9 +49,12 @@ the Match (§7.3):
 
 | Capstone | Needs one of | Passive |
 | --- | --- | --- |
-| **Titan** | Ravager, Colossus, Tyrant | `Every hit ignores 2 defense`: a **Sunder** of 2 on every direct hit |
-| **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round |
-| **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +3 on every hit`: every target of every Damage line |
+| **Titan** | Ravager, Colossus, Tyrant | `Every hit ignores 10 defense`: a **Sunder** of 10 on every direct hit |
+| **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round, `For every creature of the side`: **shared**, see below |
+| **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +5 on every hit`: every target of every Damage line |
+
+**Archmage is shared, and stacks.** Its buyer owns it; every other Creature of your side holds its Passive
+too. A teammate may still buy its own copy, and each copy gives **every** Creature of your side +1 more.
 
 Give up the rest with an **Evolution pass**, unannounced. The step ends when neither Player has a pick they
 could use.
@@ -58,7 +62,8 @@ could use.
 **Purchase reveal**: turn every face-down package card over together, then buy each, Player 1's then Player
 2's:
 
-1. **Package card** stays face up with that Creature. A Passive it prints holds from now on.
+1. **Package card** stays face up with that Creature. A Passive it prints holds from now on, for the whole
+   side if the card is shared.
 2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows,
    and none for a Capstone.
 3. **Base initiative** + the Tier's initiative bonus. Once, for the rest of the Match. The only thing that

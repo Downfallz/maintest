@@ -1441,6 +1441,10 @@ public sealed class ActionScorerTests
 
     private static readonly TierId Sundering = TierId.Parse("tier:sundering:v1");
 
+    private static readonly TierId Rally = TierId.Parse("tier:rally:v1");
+
+    private static readonly TierId Banner = TierId.Parse("tier:banner:v1");
+
     /// <summary>
     /// Two capstones (ADR 0101) behind Slam's package, teaching nothing: one immune to stun, one with an energy
     /// at upkeep and two damage on every hit.
@@ -1455,6 +1459,8 @@ public sealed class ActionScorerTests
             Tier.Create(Steadfast, "Steadfast", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(stunImmunity: true)),
             Tier.Create(Focused, "Focused", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1, damageBonus: 2)),
             Tier.Create(Sundering, "Sundering", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(sunder: 3)),
+            Tier.Create(Rally, "Rally", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1)),
+            Tier.Create(Banner, "Banner", 3, [], [], Initiative.Of(0), [TestContent.SlamPack], Passive.Of(upkeepEnergy: 1), sharedWithTeam: true),
         ]);
 
     private static ActionScorer Capstones { get; } = new(CapstoneContent, MatchStore.TwoOnTwo(), ScoringWeights.Default);
@@ -1504,6 +1510,29 @@ public sealed class ActionScorerTests
         var terms = poor.PurchaseTerms(board[0], Focused, board);
 
         terms.Stun.ShouldBeGreaterThan(0, "half a round more of Slam is half a stun more a round");
+    }
+
+    /// <summary>
+    /// A shared package (ADR 0114) is priced as its passive read by each living creature of the side against its
+    /// own spells: the buyer knows Strike alone, which costs nothing, and its ally knows Slam too, which the
+    /// energy lets it cast more often. The ally's stun is not the buyer's, so the passive is not the buyer's
+    /// reading counted twice.
+    /// </summary>
+    [Fact]
+    public void A_shared_package_is_priced_as_its_passive_read_by_each_creature_of_the_side()
+    {
+        var poor = new ActionScorer(CapstoneContent, RuleSet.Create(2, 1, 2, 30, 2.0), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { KnownSpells = new HashSet<SpellId>([TestContent.Strike, TestContent.Slam]) };
+        board.Insert(1, ally);
+
+        var shared = poor.PurchaseTerms(board[0], Banner, board);
+        var each = poor.PurchaseTerms(board[0], Rally, board) + poor.PurchaseTerms(ally, Rally, board);
+
+        shared.Stun.ShouldBe(each.Stun, 1e-9);
+        shared.Energy.ShouldBe(each.Energy, 1e-9);
+        shared.Damage.ShouldBe(each.Damage, 1e-9);
+        shared.Stun.ShouldBeGreaterThan(2 * poor.PurchaseTerms(board[0], Rally, board).Stun);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Randomness;
@@ -140,16 +141,18 @@ public static class Advance
             }
         }
 
+        SharedPackages.Share(creatures, purchases);
+
         return Snapshots(creatures);
     }
 
     private static List<Creature> Restore(IReadOnlyList<CreatureSnapshot> board, IGameResources resources) =>
-        [.. board.Select(snapshot => Restore(snapshot, resources))];
+        [.. board.Select(snapshot => Restore(snapshot, board, resources))];
 
-    private static Creature Restore(CreatureSnapshot snapshot, IGameResources resources)
+    private static Creature Restore(CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> board, IGameResources resources)
     {
         var definition = resources.GetCreature(snapshot.DefinitionId);
-        return Creature.Restore(snapshot, definition, [.. snapshot.AcquiredTiers.Select(resources.GetTier)]);
+        return Creature.Restore(snapshot, definition, [.. snapshot.AcquiredTiers.Select(resources.GetTier)], SharedPackages.HeldBy(snapshot, board, resources));
     }
 
     private static List<CreatureSnapshot> Snapshots(List<Creature> creatures) =>

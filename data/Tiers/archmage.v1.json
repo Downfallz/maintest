@@ -12,5 +12,6 @@
   "initiativeBonus": 0,
   "passive": {
     "upkeepEnergy": 1
-  }
+  },
+  "sharedWithTeam": true
 }

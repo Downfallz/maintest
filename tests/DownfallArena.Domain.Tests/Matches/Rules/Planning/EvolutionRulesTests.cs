@@ -2,9 +2,11 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Planning;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
+using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Domain.Tests.Matches.Rules.Planning;
 
@@ -196,6 +198,29 @@ public sealed class EvolutionRulesTests
 
         round.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         EvolutionRules.Evaluate(creatures, round, Arena.Resources, RuleSet.Default).CanAdvance.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A shared package stacks (ADR 0114): a creature whose teammate picked it this round is still offered it
+    /// and may pick it too, and each copy gives the side its passive once more.
+    /// </summary>
+    [Fact]
+    public void A_shared_package_a_teammate_picked_this_round_is_still_offered()
+    {
+        var banner = TierId.Parse("tier:banner:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. Arena.Resources.Creatures],
+            [.. Arena.Resources.Spells],
+            [.. Arena.Resources.TalentTrees],
+            [.. Arena.Resources.Tiers, Tier.Create(banner, "Banner", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 1), sharedWithTeam: true)]);
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, banner));
+
+        EvolutionRules.Offers(PlayerSlot.Player1, creatures, round, resources).Single().Tiers.ShouldContain(banner);
+        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, banner), creatures, round, resources, RuleSet.Default).IsSuccess.ShouldBeTrue();
     }
 
     private static Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>

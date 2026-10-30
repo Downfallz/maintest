@@ -20,6 +20,16 @@ test('a package that teaches nothing is refused, because a pick would buy nothin
   assert.deepEqual(tierWarnings(OPENER.document, CATALOGUE), []);
 });
 
+// ADR 0114: a shared package hands its passive to the whole side, so it has one and teaches nothing.
+test('a shared package that teaches a spell is refused, and one that only gives a passive is not', () => {
+  const shared = { id: 'tier:banner:v1', level: 1, spells: [], passive: { upkeepEnergy: 1 }, sharedWithTeam: true };
+
+  assert.deepEqual(tierWarnings(shared, CATALOGUE), []);
+  assert.deepEqual(tierWarnings({ ...shared, spells: ['spell:guard:v1'] }, CATALOGUE), [
+    'A shared package gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.',
+  ]);
+});
+
 // The rule that makes a level mean what it is priced and paced at: a level-3 package reached through one
 // level-1 prerequisite is bought with two picks rather than three.
 test('a package above level one has to follow the level below it', () => {

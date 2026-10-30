@@ -13,7 +13,9 @@ a Damage buff +1; Emberstorm's and Ice Grip's examples re-read 2026-10-20, when 
 with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo's example re-read
 2026-10-21, when its Regeneration became 4 a Round; Wraithguard's mention re-read 2026-10-26, when its timed
 ward became +5, and Vital Surge's example the same day, when its cost became 1 and Whirlwind's hit
-became 8; Fury re-read 2026-10-27, when its hit became 6). Phase 4 of [plan.md](plan.md).
+became 8; Fury re-read 2026-10-27, when its hit became 6; the Capstones re-read 2026-10-30, when Titan's
+Sunder became 10, Apex's Damage bonus 5, and Archmage a shared package that stacks). Phase 4 of
+[plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -33,7 +35,9 @@ became 8; Fury re-read 2026-10-27, when its hit became 6). Phase 4 of [plan.md](
 > level-4 Capstone that teaches no Spell and gives a Passive instead, and any one of the family's level-3 Tiers
 > opens it ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Titan's Passive is a
 > Sunder, not a Stun immunity
-> ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md)). This book names the
+> ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md)). Archmage is a shared package:
+> each copy a side owns gives its Passive to every Creature of that side, and the copies stack
+> ([ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md)). This book names the
 > **package card** by what it must show; its size, its count and where it sits are
 > [components.md](components.md)'s to specify.
 
@@ -102,7 +106,7 @@ The four pieces this book names constantly, and where they are specified:
 | The Creature board | One per Creature: its number, the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition, and an Immune token for the Round after a Stun ends | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
-| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches or the Passive it gives, and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows and holds | [components.md 4.1](components.md#41-the-package-card) |
+| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches or the Passive it gives, and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows and holds; a shared package's is read by the whole side | [components.md 4.1](components.md#41-the-package-card) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
 stunned Creature cannot be given a Speed card. A Creature board turned to its `Defeated` back has no slots at
@@ -249,7 +253,8 @@ the setup table's reference column and real Spells from the catalogue.
 **Trigger.** The Round begins.
 **Actor.** Both Players, together.
 **Result.** Every **living** Creature gains the setup table's Energy per Round, plus the Energy at every
-Upkeep its package cards print. Move each Energy marker up.
+Upkeep printed on its own package cards and on its teammates' shared ones (`For every creature of the side`),
+so 1 for every Archmage card on its Player's mat, whoever bought it. Move each Energy marker up.
 
 A dead Creature gains nothing. Its board is on its `Defeated` back and has no Energy rail to move.
 
@@ -258,8 +263,12 @@ A dead Creature gains nothing. Its board is on its `Defeated` back and has no En
 > nothing, now or ever.
 >
 > **Example, a Passive.** Creature 2 owns Warped, Stormborn and Cataclysm, and buys **Archmage** at the
-> Purchase reveal of Round 7: `Energy +1 at every upkeep`. Round 7's Energy gain is already done, so it gained
-> 2 that Round. From Round 8 on it gains 2 + 1 = 3 at every Energy gain.
+> Purchase reveal of Round 7: `Energy +1 at every upkeep`, `For every creature of the side`. Round 7's Energy
+> gain is already done, so it gained 2 that Round. From Round 8 on, Creature 2 and every other living Creature
+> of Player 1's gain 2 + 1 = 3 at every Energy gain. At Round 11 Creature 1, which owns Revenant, buys its
+> own Archmage, as a teammate still may: from
+> Round 12 there are two Archmage cards on Player 1's mat, and each of its living Creatures gains
+> 2 + 2 = **4**.
 
 ### 5.2 Ongoing effects
 
@@ -324,9 +333,16 @@ is +0. It gives a **Passive** instead, printed on its package card
 
 | Capstone | Family | Needs one of | Passive, as the card prints it |
 | --- | --- | --- | --- |
-| Titan | Brute | Ravager, Colossus, Tyrant | `Every hit ignores 2 defense` |
-| Archmage | Warped | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep` |
-| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +3 on every hit` |
+| Titan | Brute | Ravager, Colossus, Tyrant | `Every hit ignores 10 defense` |
+| Archmage | Warped | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, `For every creature of the side` |
+| Apex | Predator | Blightweaver, Deathstalker, Soulreaver | `Damage +5 on every hit` |
+
+**A shared package.** Archmage is shared with the whole side
+([ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md)): its card prints
+`For every creature of the side`. The Creature that buys it owns it like any Tier, and from the Purchase
+reveal on every other Creature of that Player's side holds its Passive too. **It stacks**: a teammate may
+still buy its own copy, in the same Round or later, and each copy the side owns gives every Creature of the
+side its Passive once more. Each card stays with its buyer; every Creature of the side reads all of them.
 
 **Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it, owns
 every Tier it requires, and owns at least one Tier of its `Needs one of` list when it has one. That is the
@@ -353,7 +369,8 @@ A purchase is three actions, in this order:
 1. **Package card.** The package card, now face up, stays with that Creature. It is the public record that
    the Creature owns the Tier and knows its Spells. If the card prints a Passive, the Creature holds it from
    this moment to the end of the Match; lay that card where no later card covers it
-   ([components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits)).
+   ([components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits)). A shared
+   package's Passive is held from this moment by every other Creature of your side as well.
 2. **Cards.** Take one card of each Spell the Tier teaches from the library into your hand. If the Creature
    already knows one of them, take no card for that one; the purchase is still legal. A Capstone teaches
    none, so take no card.
@@ -398,7 +415,7 @@ Then every pick token comes off the mats and the boards.
 > **Creature 3.** It owns none of the three. Titan is refused, and Player 1 picks Tyrant instead: it requires
 > Oppressor, which Creature 3 owns.
 > **The Purchase reveal.** Titan goes face up with Creature 1. No Spell card moves, and the bonus of +0 moves no
-> rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 2
+> rail. From now on every direct hit Creature 1 deals meets its target's total Defense less 10
 > ([5.8](#58-resolving-an-action)). Tyrant goes face up with Creature 3: Dominate and Alpha Roar go
 > into the hand, and +2 raises its Base initiative. Creature 3 may buy Titan at Round 9.
 
@@ -592,23 +609,24 @@ everyone else.
 > Had the roll missed: 10 - 7 = **3** damage. Had you subtracted first and doubled after:
 > (10 - 7) x 2 = **6**, which is not a number in this game. Multiply first. Subtract second.
 >
-> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +3 on
+> **Example, a Damage bonus.** Creature 4 owns Predator, Parasite, Soulreaver and **Apex**: `Damage +5 on
 > every hit`. It is Standard, and casts **Blood Price** on Creature 1: `Damage 11`, `Caster: Damage 3`,
 > `Critical 50%  d20: 11+`. Creature 1's total Defense is 3.
-> Add the bonus: 11 + 3 = 14. The d20 shows 16, a critical: 14 x 2 = 28. Subtract Defense: 28 - 3 = **25**.
-> Had the roll missed: 14 - 3 = **11**.
+> Add the bonus: 11 + 5 = 16. The d20 shows 16, a critical: 16 x 2 = 32. Subtract Defense: 32 - 3 = **29**.
+> Had the roll missed: 16 - 3 = **13**.
 > The `Caster:` line takes no bonus and no critical: Creature 4 takes exactly 3, less its own total Defense.
-> Add first, multiply second, subtract third. (11 x 2) + 3 - 3 = 22 is not a number in this game.
+> Add first, multiply second, subtract third. (11 x 2) + 5 - 3 = 24 is not a number in this game.
 >
-> **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 2
+> **Example, a Sunder.** Creature 3 owns Brute, Oppressor, Tyrant and **Titan**: `Every hit ignores 10
 > defense`. It is Standard, and casts **Dominate** on Creatures 4 and 5: cost 3, `Up to 2 enemies`,
 > `Damage 7`, `Critical 50%  d20: 11+`. Creature 6 cast **Alpha Roar** on Creature 5 last Round:
 > `One ally`, `Defense +4, 2 rounds`, `Damage +2 on every hit, 2 rounds`. So Creature 5's Defense buff rail
 > reads 4: total Defense 4. Creature 4 has no Defense: total Defense 0.
-> The d20 shows 8: no critical. Creature 5: the hit meets 4 - 2 = 2 Defense, and Creature 5 takes
-> 7 - 2 = **5**. Creature 4: 0 - 2 is below zero, so the hit meets 0 Defense, and Creature 4 takes **7**,
-> not 9. A Sunder takes Defense away; it never adds damage.
-> Had the d20 shown 11 or more: 7 x 2 = 14, so Creature 5 takes 14 - 2 = **12** and Creature 4 takes **14**.
+> The d20 shows 8: no critical. Creature 5: 4 - 10 is below zero, so the hit meets 0 Defense, and Creature 5
+> takes **7**, where a caster with no Sunder would deal 7 - 4 = 3. Creature 4: 0 - 10 is below zero too, so
+> the hit meets 0 Defense, and Creature 4 takes **7**, not 17. A Sunder takes Defense away; it never adds
+> damage.
+> Had the d20 shown 11 or more: 7 x 2 = 14, so Creatures 5 and 4 each take **14**.
 > No rail moves. Creature 2, with no Sunder, hits Creature 5 next with **Strike**, `Damage 3`, and meets all
 > 4: 0 damage. Creature 5's `Damage +2` changes none of this: it counts when Creature 5 hits, not when it is
 > hit.
@@ -616,7 +634,7 @@ everyone else.
 > **Example, a Damage buff.** Later in the same Round, Creature 5's slot comes up. Its dock holds the
 > `Damage +2` token Alpha Roar put there last Round. It casts **Strike** on Creature 3: `Damage 3`,
 > `No critical roll`. Creature 3 has no Defense. Add the bonus: 3 + 2 = **5**. Creature 5 owns no Apex, so the
-> token is the whole of its bonus; with Apex it would be 3 + 3 + 2 = 8.
+> token is the whole of its bonus; with Apex it would be 3 + 5 + 2 = 10.
 > Had Creature 4 also cast Alpha Roar on Creature 5 earlier this Round, there would be two tokens:
 > 3 + 2 + 2 = **7**. A Damage buff stacks, and each one is its own token.
 > The token never touches a Bleed Creature 5 causes, nor its own `Caster:` line. It went into the `new` lane
@@ -962,13 +980,15 @@ Creature at 3 Health or less that kills the last enemy with it wipes its own Tea
 A **Passive** is what a Tier gives its owner for as long as it owns it (ADR 0101). Only a Capstone gives one
 of the three below. It is printed on the package card, and the card face up with the Creature is its only
 record: no token, no rail. A Passive starts at the Purchase reveal that buys it, never counts down, and lasts
-to the end of the Match. A Creature that owns two Capstones holds both Passives.
+to the end of the Match. A Creature that owns two Capstones holds both Passives. A shared package's Passive
+is held by every Creature of the buyer's side, once for each copy the side owns, so its record is every such
+card on the Player's mat, read by each Creature ([5.3](#53-evolution)).
 
 | Passive | Capstone | What it does | When it does it | What it never touches |
 | --- | --- | --- | --- | --- |
-| `Every hit ignores 2 defense` | Titan | Its **Sunder**: every direct hit the Creature deals meets the target's total Defense less 2, never below zero. Against a target with no Defense it adds nothing | Applying a Damage line, when Defense is subtracted: **after** the Damage bonus and the critical | A Bleed tick, the `Caster:` line, a Heal, Energy, and the target's Defense rails: no rail moves |
-| `Energy +1 at every upkeep` | Archmage | The Creature gains 1 more Energy | Energy gain, beside the Rule set's own; first at the Round after the purchase | Nothing else: no other pass reads it |
-| `Damage +3 on every hit` | Apex | Adds 3 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
+| `Every hit ignores 10 defense` | Titan | Its **Sunder**: every direct hit the Creature deals meets the target's total Defense less 10, never below zero. Against a target with no Defense it adds nothing | Applying a Damage line, when Defense is subtracted: **after** the Damage bonus and the critical | A Bleed tick, the `Caster:` line, a Heal, Energy, and the target's Defense rails: no rail moves |
+| `Energy +1 at every upkeep` | Archmage, shared | Every living Creature of the buyer's side gains 1 more Energy, for each Archmage card on the Player's mat | Energy gain, beside the Rule set's own; first at the Round after the purchase | Nothing else: no other pass reads it |
+| `Damage +5 on every hit` | Apex | Adds 5 to every direct hit the Creature deals, on every target the line reaches | Applying a Damage line, **before** the critical multiplies and **before** Defense is subtracted | A Bleed tick, the `Caster:` line, a Heal, Energy |
 
 **A direct hit** is a Damage line applied to a target of a cast. A Bleed tick is not one, and neither is
 anything on the `Caster:` line.
@@ -1097,7 +1117,17 @@ Whirlwind prints `Damage 8`, not `Damage 6`, and still nothing else. §6.7's Hea
 Surge's targeting, its `Heal 10` and its critical, and not its cost, so it holds as written; no example uses
 Whirlwind. No rule moved. On 2026-10-27 every example naming Fury was re-read against `data/Spells/`
 (content `bb18697e`), which changed its hit: it prints `Damage 6`, not `Damage 7`, and still nothing else.
-No example uses Fury. No rule moved.
+No example uses Fury. No rule moved. On 2026-10-30 the opening note, §5.1, §5.3's table, its availability
+rule, its purchase step 1 and its Capstone example, §5.8's three examples, §7.3 and this table were re-read
+against [ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md) and `data/Tiers/` (content
+`478f9b45`: `"passive": {"sunder": 10}` in `titan.v1.json`, `"passive": {"damageBonus": 5}` in
+`apex.v1.json`, and `"sharedWithTeam": true` in `archmage.v1.json`), and the engine's `SharedPackages.Share`,
+`Creature.HoldShared` and `SharedPackages.HeldBy`. One rule was added, the shared package, in §5.3, and §5.1
+and §7.3 read it: Archmage's buyer owns it, every other Creature of the side holds its Passive, and the copies
+a side owns stack, so a Creature gains 1 for every Archmage card on its Player's mat. §5.1's example adds a
+second copy. The numbers moved in the examples: the Damage bonus example adds 5 and deals 29 on
+the critical, 13 without; the Sunder example's Creature 5 meets 0 Defense, not 2, and takes 7, since no
+total Defense it can have is past 10; the Damage buff example's Apex aside reads 10.
 
 | This book | The specification |
 | --- | --- |
@@ -1122,9 +1152,10 @@ No example uses Fury. No rule moved.
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`; "Match lifecycle"; "Combat", 2: "a Team wiped by an action ends the Match there"; ADR 0011, ADR 0083 |
 | [7.1](#71-the-nine-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 2: `Activation`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
 | [5.3](#53-evolution), the Capstone, its `Needs one of` list and the availability rule | "Planning rules (phase 5)": "owns one of its any-of list when it names one"; "Combat rules (phase 6)": "Each family closes with a level-4 capstone opened by any of its level-3 packages and teaching no spell"; ADR 0101. The engine: `Tier.IsOpenTo` |
+| [5.3](#53-evolution), the shared package, [5.1](#51-energy-gain) and [7.3](#73-the-three-passives-and-their-timing) | "Combat rules (phase 6)": "A shared package (ADR 0114) is owned by its buyer, and the reveal gives its passive to every other creature of the buyer's side. It stacks: a teammate may still buy a copy, and each copy the side owns gives every creature of the side its passive once more"; glossary, **Shared package**. The engine: `SharedPackages.Share` and `Creature.HoldShared` at the reveal, and `SharedPackages.HeldBy` for a restored board. The Archmage cards on a Player's mat are the table's record for the whole side |
 | [5.1](#51-energy-gain), [7.3](#73-the-three-passives-and-their-timing): Energy at every Upkeep | "Combat rules (phase 6)": "energy gained at every upkeep beside the rule set's"; ADR 0101. The engine: `UpkeepRules.EnergyGain` adds `Passive.UpkeepEnergy` to the Rule set's Energy per Round |
-| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster", and Apex (+3 damage); ADR 0101, ADR 0106 for the 3. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)`, with a bonus of 0 on the `Caster:` line |
-| [5.8](#58-resolving-an-action) step 3 and 4, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Sunder, the Defense a hit meets, and Titan's 2 | "Combat rules (phase 6)": "every direct hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast does to its own caster are left alone", and Titan (sunder 2); "Combat", 2: `Activation`, the instant-effects bullet, "damage reduced by the target's total Defense less the caster's sunder, each floored at zero"; ADR 0106; glossary, **Sunder**. The engine: `Passive.Sunder`, read by `ResolutionRules.Outcome` as above, with a Sunder of 0 on the `Caster:` line. The Titan package card is the table's record of the glossary's **Passive** |
+| [5.8](#58-resolving-an-action) step 3, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Damage bonus and its order | "Combat rules (phase 6)": "added to every direct hit the creature deals before the critical multiplier and the target's defense, and never to a bleed or to what a cast does to its own caster", and Apex (+5 damage); ADR 0101, ADR 0106 for the 3 it was, the journal of 2026-10-30 for the 5. The engine: `ResolutionRules.Outcome`, `Multiplied(damage.Amount + damageBonus, multiplier) - Math.Max(0, target.TotalDefense - sunder)`, with a bonus of 0 on the `Caster:` line |
+| [5.8](#58-resolving-an-action) step 3 and 4, [6.7](#67-the-critical-roll), [7.3](#73-the-three-passives-and-their-timing): the Sunder, the Defense a hit meets, and Titan's 10 | "Combat rules (phase 6)": "every direct hit it deals meets the target's total defense less the sunder, floored at zero, and a bleed and what a cast does to its own caster are left alone", and Titan (sunder 10); "Combat", 2: `Activation`, the instant-effects bullet, "damage reduced by the target's total Defense less the caster's sunder, each floored at zero"; ADR 0106; glossary, **Sunder**. The engine: `Passive.Sunder`, read by `ResolutionRules.Outcome` as above, with a Sunder of 0 on the `Caster:` line. The Titan package card is the table's record of the glossary's **Passive** |
 | [7.1](#71-the-nine-conditions-and-their-timing)'s Damage buff, and the Damage bonus sum | "Combat rules (phase 6)": "A creature's damage bonus is its packages' and its damage buffs' added"; ADR 0101; glossary, **Damage buff** and **Damage bonus** |
 | [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 2: `Activation`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" and the threshold on every card | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`; ADR 0100, which refuses any other value in the data builder and holds every Spell's chance to the d20's twentieths. The rule in "Combat", 2 still adds the Creature's chance to the Spell's; the Creature's is zero by rule, so the card's chance is the whole chance |

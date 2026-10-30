@@ -209,6 +209,24 @@ public sealed class CatalogueProjectionTests
         slam.Tree.ShouldNotBeNullOrWhiteSpace();
     }
 
+    /// <summary>A shared package's card ends on the line that says its passive goes to the whole side (ADR 0114).</summary>
+    [Fact]
+    public void A_shared_package_card_says_its_passive_is_for_every_creature_of_the_side()
+    {
+        var banner = TierId.Parse("tier:banner:v1");
+        var resources = GameResources.Create(
+            "probe",
+            [.. TestContent.Resources.Creatures],
+            [.. TestContent.Resources.Spells],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers, Tier.Create(banner, "Banner", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 1), sharedWithTeam: true)]);
+
+        var card = CatalogueProjection.Build(resources, Rules).Packages.Single(package => package.Id == banner);
+
+        card.PassiveLines.ShouldBe(["Energy +1 at every upkeep", CatalogueProjection.SharedLine]);
+        View.Packages.ShouldAllBe(package => !package.PassiveLines.Contains(CatalogueProjection.SharedLine));
+    }
+
     private static Domain.Resources.Spell Named(SpellId id, string name) =>
         Domain.Resources.Spell.Create(
             id,
