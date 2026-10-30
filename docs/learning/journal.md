@@ -49,16 +49,17 @@ The owner asked for all three, above the old tops of Titan's and Apex's knobs.
   matter. Greedy that stops buying from round 11 wins 0.468 against Greedy, from round 9 0.417, from round 7
   0.320 and from round 5 0.130. Which package is bought at round 7 or later matters little: a capstone
   arrives at round 7 at the earliest, in matches of about ten rounds.
-- **Together** (`478f9b45`, Archmage stacking), on the same 200 recorded matches:
+- **Together** (`478f9b45`, Archmage stacking), on the same 200 recorded matches. Greedy prices a shared
+  passive as each creature of the side reads it, against its own spells:
 
   | reading | Titan | Apex | Archmage | rounds |
   | --- | --- | --- | --- | --- |
-  | explorer | 10 % | 23 % | 21 % | 9.68 |
-  | Greedy | 35 % | 61 % | 78 % | 9.84 |
+  | explorer | 10 % | 24 % | 22 % | 9.71 |
+  | Greedy | 35 % | 68 % | 79 % | 9.82 |
 
   - **Archmage copies:** the exploring lookahead bought a second copy for 2 sides of 400, so stacking is
     rare. One copy a side, measured first, read the same: 9.66 rounds.
-  - **Benchmark mirror:** 9.62 rounds against 10.18, 0.5 % past 16, none at the cap and no draw. Matches are
+  - **Benchmark mirror:** 9.57 rounds against 10.18, none past 16, none at the cap and no draw. Matches are
     half a round shorter.
 - **Still open.** The explorer's take rates barely moved, so the owner's aim of one in two is not met. It
   would need the capstones earlier, a change of the progression of ADR 0101.
