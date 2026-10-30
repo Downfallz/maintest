@@ -14,7 +14,8 @@ bonus raised to 3 later that day; to Alpha Roar, the first Spell to give a Damag
 Overdrive's Energy +4 and Damage buff +1, 2026-10-19; to Emberstorm's hit of 3 and 1-Round Bleed and Ice
 Grip's hit of 3 and 2-Round slow, 2026-10-20; to Bonewall's ward of +6 and the Regeneration of Vital Echo at 4
 and Whisper at 3, 2026-10-21; to Wraithguard's timed ward of +5, 2026-10-26, and to Vital Surge's cost of 1
-and Whirlwind's hit of 8 the same day; to Fury's hit of 6, 2026-10-27). Phase 3
+and Whirlwind's hit of 8 the same day; to Fury's hit of 6, 2026-10-27; to Titan's Sunder of 10, Apex's
+Damage bonus of 5 and Archmage shared with the whole side, copy by copy (ADR 0114), 2026-10-30). Phase 3
 of [plan.md](plan.md). It answers the
 **needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -56,7 +57,8 @@ What is current, exactly:
   figure of [2.3](#23-the-measurement) moves. The dock keeps four lanes: 3 Rounds was already the longest
   Duration ([3.2](#32-the-condition-dock-and-the-countdown)). Three Defense buff Spells carry a permanent half
   now, not four.
-- **Titan sunders 2 Defense instead of giving Stun immunity, and Apex adds 3, not 2**
+- **Titan sunders 2 Defense instead of giving Stun immunity, and Apex adds 3, not 2** (10 and 5 since
+  2026-10-30, below)
   ([ADR 0106](../adr/0106-titan-sunders-defense-instead-of-ignoring-stuns.md), 2026-10-09; content
   `95a78999`, `data/Tiers/titan.v1.json` reads `"passive": {"sunder": 2}` and `data/Tiers/apex.v1.json`
   `"passive": {"damageBonus": 3}`). Every direct hit a Titan owner deals meets the target's total Defense
@@ -179,6 +181,35 @@ What is current, exactly:
   `hateful_sacrifice`'s 11, the largest printed Damage. translation.md's `enraged_charge` row keeps its 5
   operations, no token and **keep as is**, so [Part 7](#part-7-coverage-the-needs-a-component-rows) does not
   move.
+- **Titan sunders 10, Apex adds 5, and Archmage is shared with the whole side** (journal, 2026-10-30, "The
+  capstones: Titan sunders 10, Apex +5, Archmage shared";
+  [ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md); content `478f9b45`, which is
+  `bb18697e` with those three Tiers changed). `data/Tiers/titan.v1.json` reads `"passive": {"sunder": 10}`,
+  `apex.v1.json` `"passive": {"damageBonus": 5}`, and `archmage.v1.json` keeps `"upkeepEnergy": 1` and adds
+  `"sharedWithTeam": true`. **Titan and Apex move one line each and no count**: the Titan card prints
+  `Every hit ignores 10 defense`, 28 characters where it printed 27, and the Apex card
+  `Damage +5 on every hit`, 22 either way ([4.1](#41-the-package-card)). Both are still read off the card at
+  the hit, with no token and no rail. No total Defense reads above 10 since ADR 0076, so a Sunder of 10 takes
+  all of it: a Titan owner's direct hits meet 0 Defense, and neither rail moves
+  ([3.3](#33-defense-two-rails-because-the-floor-is-applied-once)). Apex's 5 moves the largest direct hit from
+  14 to 16, 32 on a critical, which no rail reads (same section). **Archmage moves how its card is read, and
+  no count.** Its buyer owns it like any package, and from the reveal every other Creature of the side holds
+  its Passive too. It stacks: a teammate is still offered it and may buy its own copy, and each copy the side
+  owns gives every Creature of the side +1 more at every Upkeep (ADR 0114). Every Creature of a side may own
+  one, so the copies stay **2 x team size = 6**, and the package cards stay **144** on 16 sheets; the paper
+  stays 57 ([1.1](#11-spell-cards-and-package-cards)). **Each card lies where any Capstone does**, uncovered
+  beside its buyer's stagger, because it is that Creature's record that it owns the Tier. What changes is who
+  reads it: at every Energy gain each living Creature adds 1 for **every Archmage card on its Player's mat**,
+  its own and its teammates', a dead buyer's included, since the engine counts every copy the side owns
+  ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits),
+  [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded)). No piece is added: up to three
+  cards on one mat are counted at a glance, and a marker would be a second record of them. The card ends on
+  the line the engine prints for a shared package, `For every creature of the side`
+  (`CatalogueProjection.SharedLine`), so its body is 4 lines, inside the 4-line box
+  ([4.1](#41-the-package-card)). No rail moves, but the Energy figures do: with three copies on a side a
+  Creature gains at most 17 in a Round, and banks at most 71 by doing nothing, inside the one overflow chit;
+  at the knob's `max` of 2 it is 102, past the chit ([1.7](#17-the-energy-track-what-ends-it), and Part 6,
+  question 4).
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -270,8 +301,9 @@ What is current, exactly:
 - **The Capstones of 2026-10-07, `cedcfb61`**
   ([ADR 0101](../adr/0101-a-capstone-package-buys-a-passive-not-a-spell.md)). Each family closes with a
   level-4 package that any of its level-3 packages opens, that teaches no Spell, pays +0 initiative, and gives
-  a Passive: Titan is immune to Stun (a Sunder since 2026-10-09, of 2 at `95a78999`, above), Archmage gains
-  1 more Energy at every Upkeep, Apex adds 2 to every direct hit (3 since 2026-10-09, above). The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
+  a Passive: Titan is immune to Stun (a Sunder since 2026-10-09, of 2 at `95a78999` and 10 at `478f9b45`,
+  above), Archmage gains 1 more Energy at every Upkeep (for the whole side since 2026-10-30, above), Apex
+  adds 2 to every direct hit (3 since 2026-10-09, 5 since 2026-10-30, above). The earliest a Capstone is bought is Round 7. What moved: **24 Tiers, so 144 package cards** on
   16 sheets, not 126 on 14, and the paper is **57** sheets, not 55
   ([1.1](#11-spell-cards-and-package-cards)). The package card prints a `Needs one of:` list and the Passive's
   line ([4.1](#41-the-package-card)), and a Capstone card lies uncovered beside the stagger, since its Passive
@@ -430,14 +462,16 @@ and 4, re-dealt at the same total, so the Condition tokens stay **216** and the 
 go from 216 to **222** and the token pieces from 314 to **320**, still on 2 sheets, and the paper stays 57
 ([1.4](#14-condition-tokens)). Vital Surge's cost of 1 and Whirlwind's hit of 8, the same day, moved none:
 neither Spell places a token, so the Condition tokens stay **222** and the token pieces **320**
-([1.4](#14-condition-tokens)). Fury's hit of 6, 2026-10-27, moved none either: it places no token.
+([1.4](#14-condition-tokens)). Fury's hit of 6, 2026-10-27, moved none either: it places no token. The
+Capstones of 2026-10-30 moved none: Archmage is shared with the whole side (ADR 0114), but every Creature
+may still buy its own copy, so the package cards stay **144** ([1.1](#11-spell-cards-and-package-cards)).
 
 ### 1.1 Spell cards and package cards
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
 | Spell card | **264** = 44 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `3c9eb083` there is none, so all 44 are printed. 264 is 30 sheets, the last holding 3 (270, exactly 30, until 2026-10-06). | 44 is a **VALUE** (content: 2 starting, 42 taught; 3 and 42 until 2026-10-06); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
-| Package card | **144** = 24 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3), and of the Passive it holds if the Tier gives one (ADR 0101). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a Capstone costs a Creature 4 purchases at 4 opportunities, 12 for a whole Team, inside the 20 a Player makes in 20 Rounds. So all six Creatures can own the same Tier in one Match. 144 is exactly 16 sheets (126 on 14 until 2026-10-07). | 24 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
+| Package card | **144** = 24 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3), and of the Passive it holds if the Tier gives one (ADR 0101). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a Capstone costs a Creature 4 purchases at 4 opportunities, 12 for a whole Team, inside the 20 a Player makes in 20 Rounds. So all six Creatures can own the same Tier in one Match. A shared package is no exception (ADR 0114): its buyer owns it, a teammate may still buy its own copy, and each copy the side owns adds to every Creature of the side, so three a side is legal and counted. 144 is exactly 16 sheets (126 on 14 until 2026-10-07). | 24 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
 What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
 command below also gives the Base initiative ceiling that
@@ -660,7 +694,7 @@ How many one Creature can hold. A token stays for the rest of the Round it is ca
 ([3.2](#32-the-condition-dock-and-the-countdown)), and every Creature of a Team can cast Alpha Roar on the
 same ally (`Ally` includes the caster). When the holder hits, it holds at most **8**: 3 from each of the two
 Rounds before, and 2 from its allies' slots earlier in its own Round, since its own slot is the hit. That is
-a Damage bonus of 16, 19 with Apex. The rule's own ceiling for the face is 18 tokens in play, six casts a
+a Damage bonus of 16, 21 with Apex (19 while Apex added 3, until 2026-10-30). The rule's own ceiling for the face is 18 tokens in play, six casts a
 Round for three Rounds; it needs every Creature to cast nothing else, and the 20 blanks cover the 12 past
 the supply.
 
@@ -828,7 +862,34 @@ honest end of a printed track. It ran to 32 while the track was built for 16 Rou
 earliest is Round 7, after that Round's gain, so a Creature that buys it and then does nothing banks
 2 x 7 + 3 x 13 = **53** in 20 Rounds. That is past 40 and inside the one overflow chit, as the five Spells
 below are. `data/balance/knobs.json` lets a pass take the Passive to 2: 2 x 7 + 4 x 13 = 66, inside the chit
-too. A Creature owns at most one Archmage, so nothing stacks it.
+too. A Creature owns at most one Archmage, so until 2026-10-30 nothing stacked it.
+
+**Since ADR 0114 Archmage stacks across the side.** Each copy a side owns gives every Creature of the side 1
+more at every Energy gain, and each of its three Creatures may own one, so a Creature can gain 2 + 3 a Round.
+The copies cannot all arrive at Round 7: a Player makes two picks an opportunity, each for a different
+Creature, and an Archmage is a Creature's fourth purchase, so the earliest three copies on one side land at
+Rounds 7, 11 and 11. A Creature that does nothing then banks 2 x 20 + 13 + 9 + 9 = **71** in 20 Rounds, past
+40 and inside the one overflow chit, which covers up to 80. The command below is that search: every way three
+Creatures can each make four purchases at different opportunities, two picks an opportunity, ranked by the
+Energy the copies add.
+
+```bash
+python3 -c "
+import itertools
+o=[1,3,5,7,9,11,13,15,17,19];C=list(itertools.combinations(range(10),4));R=[]
+for a in C:
+  for b in C:
+    for c in C:
+      n=[0]*10
+      for x in a+b+c: n[x]+=1
+      if max(n)<=2: R.append((sum(20-o[max(s)] for s in (a,b,c)),sorted(o[max(s)] for s in (a,b,c))))
+print(max(R))"   # (31, [7, 11, 11])
+```
+
+**At the knob's `max` of 2 it is 40 + 2 x 31 = 102, past the one chit.** The rule beside one chit a Creature
+is that a second means banking over 80 (Part 6, question 4), and a pass that took Archmage to 2 would make
+that reachable by a legal Match, with no cast. That is a reprint of the chit count, a **VALUE**, and the
+maintainer's to decide if a pass ever moves the knob; at 1, the content as it stands, nothing moves.
 
 Seven Spells in the catalogue touch Energy. Five of them can push a Creature above 40, and all five cost a
 cast:
@@ -862,8 +923,10 @@ while Overdrive gave 2, from ADR 0078 until 2026-10-19: 2 from the Round, 4 from
 whose caster line gives the same 2, or on `adrenaline_tonic`. Nothing reaches it from earlier
 Rounds any more: it was 14 while `momentum` placed an Energy regeneration on its own caster, 2 a Round for 3
 Rounds, and three of those overlapping added 6. **An Archmage owner gains 15**, the 1 its Passive adds at the
-Energy gain on top of the 14 (16 at the knob's `max` of 2; 9 and 10 until 2026-10-19). Overdrive's own knob
-runs its Energy from 2 to 5, so a pass can make the Round's most 17, 18 with Archmage. It moves no end and
+Energy gain on top of the 14 (16 at the knob's `max` of 2; 9 and 10 until 2026-10-19). Since ADR 0114 a
+Creature holds 1 for every copy its side owns, so with three copies on the side it gains **17** (20 at the
+knob's `max`). Overdrive's own knob runs its Energy from 2 to 5, so a pass can make the Round's most 17, 20
+with three Archmage copies (18 with one). It moves no end and
 no count: a Round that gains 14 is three slots spent on Energy, and the overflow chit below is what any gain
 past 40 takes.
 
@@ -1305,20 +1368,23 @@ critical (ADR 0101), so `hateful_sacrifice` from an Apex owner is 14, 28 on a cr
 which is also the most a pass can make it: 3 is the knob's `max`, so no pass raises the bonus further. It was
 13, 26 on a critical, from `cedcfb61` until 2026-10-09, when the bonus went from 2 to 3 (ADR 0106). It moves
 nothing for the reason above: no Creature's Defense reads above 10. The command below reads the printed
-Damage, which is the Spell card's; the bonus is the package card's.
+Damage, which is the Spell card's; the bonus is the package card's. **At `478f9b45` it is 16**, 32 on a
+critical: Apex adds 5 since 2026-10-30, and 5 is the knob's `max` now. It moves nothing, for the same reason.
 
 **Since 2026-10-18 the largest direct hit has no end the content fixes.** Alpha Roar's Damage buff adds 2
 to its holder's Damage bonus and stacks, and a holder carries at most 8 of them when it hits
-([1.4](#14-condition-tokens)): +16, and +19 with Apex. `hateful_sacrifice` from that Creature is 30, 60 on a
-critical. It moves nothing either, for the same reason: the rails' end blanks nothing a Creature can reach
+([1.4](#14-condition-tokens)): +16, and +21 with Apex since 2026-10-30 (+19 before). `hateful_sacrifice` from
+that Creature is 32, 64 on a critical (30 and 60 before). It moves nothing either, for the same reason: the rails' end blanks nothing a Creature can reach
 since ADR 0076, whatever the hit. Overdrive's Damage buff +1 of 2026-10-19 does not raise it: a slot puts one
 token on a holder either way, and Alpha Roar's is the larger and the longer ([1.4](#14-condition-tokens)).
 
-**Titan's Sunder reads the rails and moves neither** (ADR 0106; 3 at `0a0d8573`, 2 at `95a78999`). A hit
-from a Titan owner meets the target's total Defense less 2, never below zero: the rails still give the total
-in one subtraction, and the Sunder is a second one, done at the hit and read off the Titan package card, as
-Apex's bonus is. It lowers what a hit meets and never raises it, so it moves no end of either rail and no
-figure above, at 2 or at the knob's `max` of 3.
+**Titan's Sunder reads the rails and moves neither** (ADR 0106; 3 at `0a0d8573`, 2 at `95a78999`, 10 at
+`478f9b45`). A hit from a Titan owner meets the target's total Defense less 10, never below zero: the rails
+still give the total in one subtraction, and the Sunder is a second one, done at the hit and read off the
+Titan package card, as Apex's bonus is. It lowers what a hit meets and never raises it, so it moves no end of
+either rail and no figure above, at 10, which is the knob's `max` now (3 until 2026-10-30). Since no
+Creature's Defense reads above 10, a Sunder of 10 takes all of it: the subtraction is still done, and always
+gives 0.
 
 ```bash
 python3 -c "
@@ -1508,6 +1574,12 @@ An A4 landscape mat a Player, three columns, one a Creature:
   every Energy gain, and at every hit — and the band does not print it, so a card bought
   later must not cover it. A Creature owns at most two Capstones in 20 Rounds (four purchases each, ten in
   all), so the column needs room for two cards beside the stagger. That is question 15's player area again.
+- **A shared package's card lies where any Capstone's does**, uncovered beside its buyer's stagger, and is
+  read across the mat (ADR 0114). Archmage is the one: its buyer owns it, and every other Creature of the
+  side holds its Passive too, once for each copy the side owns. So at every Energy gain each living Creature
+  counts **every Archmage card on its Player's mat**, in any column, a dead buyer's included. The mat needs no
+  space of its own for it: a side owns at most three, one a column, and three cards face up on one mat are
+  read at a glance.
 - **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
   as an opportunity. A pick moves one onto the header of the board of the Creature it was picked for ([3.1](#31-the-creature-board)),
   where it marks that Creature as done for the opportunity (ADR 0066). A pass takes the tokens still on the
@@ -1556,7 +1628,8 @@ at the earliest, and a Capstone at Round 7.
 What the table has to hold, for each Creature: which Tiers it owns, whether the next one's prerequisite is
 among them, what it knows because of them, and what Passive it holds. The package card holds all four, face
 up with the Creature, which is translation.md's verdict ("Tier cards", 21 kinds then, 24 now) and the
-rulebook's record (§5.3). A package mat
+rulebook's record (§5.3). A shared package's card lies with its buyer too, and its Passive is read by
+every Creature of the side, once for each such card on the mat (ADR 0114). A package mat
 with a pip per purchase does the same job on less paper; it is the alternative in Part 6, question 7.
 
 ### 4.1 The package card
@@ -1592,15 +1665,20 @@ table app prints (`EffectLine.Of(Passive)`):
 | Needs one of:                        |   the any-of list, by name, joined with commas:
 | Ravager, Colossus, Tyrant            |   one of these is enough
 |--------------------------------------|
-| Every hit ignores 2 defense          |   the Passive, one a line; no Spell
+| Every hit ignores 10 defense         |   the Passive, one a line; no Spell
 |                                      |
-| tier:titan:v1                95a789  |
+| tier:titan:v1                478f9b  |
 +--------------------------------------+
 ```
 
-The three Passive lines are `Every hit ignores 2 defense` (Titan, since ADR 0106; `Immune to stun` before,
-and `Every hit ignores 3 defense` at `0a0d8573`), `Energy +1 at every upkeep` (Archmage) and
-`Damage +3 on every hit` (Apex; `Damage +2 on every hit` until `95a78999`). The engine still words a Stun
+The three Passive lines are `Every hit ignores 10 defense` (Titan, since 2026-10-30; `Immune to stun`
+before ADR 0106, `Every hit ignores 3 defense` at `0a0d8573` and `Every hit ignores 2 defense` from
+`95a78999`), `Energy +1 at every upkeep` (Archmage) and `Damage +5 on every hit` (Apex, since 2026-10-30;
+`Damage +2 on every hit` until `95a78999`, `Damage +3 on every hit` after). **A shared package's card ends on
+one more line**, `For every creature of the side`, the line the engine prints for it
+(`CatalogueProjection.SharedLine`, ADR 0114): Archmage's body is its two `Needs` lines, its Passive and that
+line, the 4 lines the box holds. That card lies with its buyer, like any Capstone, and every Creature of the
+side reads it ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The engine still words a Stun
 immunity Passive `Immune to stun` (`EffectLine.Of`), and the measurement below still reads it, but no Tier
 gives one. The card is the Passive's only component: no token, no rail, no marker. It is read during
 play, so a Capstone card lies uncovered beside the stagger
@@ -1622,10 +1700,12 @@ What each piece of the layout answers:
 | A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature, and, for a card that prints `Needs one of:`, at least one of the Tiers listed under it (ADR 0101). A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | The Passive in the body, in words, and no marker | A Passive is held for as long as the package is owned, read from the packages a Creature owns (ADR 0101). The card that records the purchase already says it, so a token would be a second record that can drift from the first. |
+| A shared package's last line, `For every creature of the side` | The card is read without the rulebook, and without that line Archmage's would read as one Creature's Passive. It is the engine's own words for it (ADR 0114), and it is what tells a teammate to count that card at its own Energy gain. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
 The measurement, at `cedcfb61`, re-run at `0a0d8573` with the Sunder's line and at `95a78999` with the
-Sunder of 2 and Apex's `+3`, neither of which moves either figure
+Sunder of 2 and Apex's `+3`, neither of which moves either figure, and at `478f9b45` with the Sunder of 10,
+Apex's `+5` and Archmage's shared line, which move the body lines from `[3]` to `[3, 4]` and not the widest
 (at `9419f935`, before the Capstones, it read `(23, 'Warped', 3)` and `[3]`; the widest line was 23 characters at `e6f72578`, `813bb91b` and `4ab506fa` too, where it was Tyrant's
 `level 3 . +4 initiative`; the body lines read `[2, 3]` while the level-2 packages taught one Spell):
 
@@ -1638,19 +1718,19 @@ P=lambda v:(['Immune to stun'] if v.get('stunImmunity') else [])+([f\"Energy +{v
 L=[]
 for t in T.values():
   needs=['Needs one of:', ', '.join(T[q]['name'] for q in t['anyOf'])] if t.get('anyOf') else ['Needs '+(' and '.join(T[q]['name'] for q in t['prerequisites']) or 'nothing')]
-  lines=[t['name'], f\"level {t['level']} . +{t['initiativeBonus']} initiative\"]+needs+[S[x] for x in t['spells']]+P(t.get('passive',{}))
+  lines=[t['name'], f\"level {t['level']} . +{t['initiativeBonus']} initiative\"]+needs+[S[x] for x in t['spells']]+P(t.get('passive',{}))+(['For every creature of the side'] if t.get('sharedWithTeam') else [])
   L.append((max(len(x) for x in lines), t['name'], len(lines)-2))
 print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
 # widest line (38, 'Apex', 3)
-# body lines [3]
+# body lines [3, 4]
 ```
 
 The widest line on any package card is 38 characters, Apex's any-of list, **exactly** the 38 a line holds
-at 8 pt; Archmage's list is next, at 33, then Titan's Passive line, at 27 since ADR 0106, and every other
-line is 25 or fewer, and every band's second line
-is 23 (`level 3 . +2 initiative`). A
-body is 3 lines, a `Needs` line and two Spells, or a Capstone's two `Needs` lines and its Passive, of the 4
-the Spell card's body box holds. The package card is the easy card to print, except that one line: a
+at 8 pt; Archmage's list is next, at 33, then Archmage's shared line, at 30 since 2026-10-30, then Titan's
+Passive line, at 28 since 2026-10-30 (27 from ADR 0106), and every other line is 25 or fewer, and every
+band's second line is 23 (`level 3 . +2 initiative`). A body is 3 lines, a `Needs` line and two Spells, or a
+Capstone's two `Needs` lines and its Passive, of the 4 the Spell card's body box holds; Archmage's is 4, with
+its shared line, and fills the box. The package card is the easy card to print, except that one line: a
 level-3 package renamed one character longer would wrap Apex's list, and the test in
 [5.6](#56-how-it-is-tested) would fail the build. The band is two lines at 8 pt, about 10 mm with its rule, so
 a stagger costs 10 mm a card.
@@ -1670,7 +1750,9 @@ of rulebook §5.3:
    `e6f72578` no Spell is taught by two Tiers, so this never happens, but authored content may make it
    happen, and [2.1](#21-what-is-printed-and-where-it-comes-from) says what that card's head prints. A
    Capstone names no Spell, so nothing comes from the library; its Passive is held from this moment, and its
-   card goes beside the stagger, not on it ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)).
+   card goes beside the stagger, not on it ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). A
+   shared package's card goes there too, and from this moment every other Creature of the side holds its
+   Passive as well (ADR 0114).
 3. **Initiative.** Move that Creature's Base initiative rails up by the card's bonus. **This is the only
    place Base initiative ever moves** (ADR 0056), which is why the package card prints it and no Spell card
    does. Values at `e6f72578` are 1 to 5, so it is one marker move on the units rail, sometimes carrying into
@@ -1679,11 +1761,13 @@ of rulebook §5.3:
 Rules of the sub-phase that the components carry rather than the rulebook:
 
 - **A Creature cannot buy a Tier it owns.** The card is already in its stagger; a second copy there is a
-  mistake anyone can see.
+  mistake anyone can see. A shared package is owned by its buyer alone, so a teammate may still buy its own
+  copy, in the same Round or later (ADR 0114).
 - **A prerequisite is a card.** Every Tier a card `Needs` must already lie face up with the same Creature,
   and at least one of a `Needs one of:` list. The check is a read down one stagger's bands.
 - **A Passive is a card.** Nothing else on the table records it: the Capstone card, face up and uncovered
-  beside its Creature's stagger, is read at every Energy gain or hit it changes (ADR 0101, ADR 0106).
+  beside its Creature's stagger, is read at every Energy gain or hit it changes (ADR 0101, ADR 0106). A shared
+  package's card is read by every living Creature of the side, each card once (ADR 0114).
 - **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has
   been picked for this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`,
   ADR 0066). A face-down card is not owned yet, so the face-up stagger is the board as the Sub-phase opened,
@@ -1730,7 +1814,8 @@ is the whole reason phase 3 specifies a generator instead of a table of card tex
   teaches - repeated 2 x team size times, laid out 9 to a sheet. 44 faces and 264 cards, 30 sheets, the last
   holding 3, at `3c9eb083` (45 faces and 270 cards at `e6f72578` and `ad3e4d00`).
 - **Package card sheets**: every enabled Tier's face, repeated 2 x team size times, 9 to a sheet. 24 faces
-  and 144 cards, 16 sheets, at `cedcfb61` (21 faces, 126 cards and 14 sheets at `e6f72578`).
+  and 144 cards, 16 sheets, at `cedcfb61` (21 faces, 126 cards and 14 sheets at `e6f72578`). A Tier with
+  `sharedWithTeam` gets as many copies as any other: every Creature may own one (ADR 0114).
 - **Speed card sheets**: the Quick face and the Standard face of [2.6](#26-the-speed-card), each repeated 2 x
   team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
   but the hash.
@@ -1797,7 +1882,7 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | A Regeneration effect prints as `Regen N a round, ...` on a Spell card face, and the Regeneration token's face keeps the word `Regeneration` | [2.2](#22-the-words): the abbreviation is the card body's, made to keep every line within 38 characters, and is not a second name for the Condition. |
 | **No face carries an initiative or a prerequisite**, and none carries the talent tree's class | ADR 0059 and ADR 0056. A card that prints a rule the engine stopped applying is a card a table plays. |
 | A package's level is its own `level`, and a starting Spell's is 0 | ADR 0058 superseded the tree depth of ADR 0034. A depth computed from the tree is a number the game does not consult. |
-| A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none), a `Needs one of:` head and its list for an any-of prerequisite, every Spell it teaches and every line its Passive gives, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses, and an any-of list printed as a `Needs` line is one that refuses what the engine sells. A Capstone face with no Passive line is a card that sells nothing (ADR 0101). |
+| A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none), a `Needs one of:` head and its list for an any-of prerequisite, every Spell it teaches and every line its Passive gives, `For every creature of the side` last on a Tier with `sharedWithTeam`, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses, and an any-of list printed as a `Needs` line is one that refuses what the engine sells. A Capstone face with no Passive line is a card that sells nothing (ADR 0101). A shared face without its line is one Creature's Passive where the engine gives the whole side's (ADR 0114). |
 | The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
 | The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
 | The Round track has one space per Round up to the rule set's Round cap (20 in `playtest.rules.json`), and the pick marks are exactly the Rounds on it that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. A track shorter than the cap leaves the Round cap marker nowhere to go. |
@@ -1870,7 +1955,9 @@ Creature; it was 14 a Round, 280 and 7 chits, until ADR 0078 took `momentum`'s E
 Archmage owner gains 9 a Round from Round 8, 173 in all, still 4 chits) and accept the punch-out? Since
 2026-10-19 the rate is 14 a Round again, from Overdrive's `Energy +4` this time
 ([1.7](#17-the-energy-track-what-ends-it)): 280 in 20 Rounds, 7 chits a Creature, and an Archmage owner's
-15 a Round from Round 8 makes 293, still 7.
+15 a Round from Round 8 makes 293, still 7. Since 2026-10-30 Archmage stacks across the side (ADR 0114):
+three copies, at Rounds 7, 11 and 11 at the earliest, add 31 to one Creature in 20 Rounds, so 311, still 7.
+The one chit holds a Creature that casts nothing at 71; it would not at the Archmage knob's `max` of 2, 102.
 
 ### 5. The condition supply, and what a supply that runs out means
 
@@ -2031,7 +2118,8 @@ goes in the concealed hand, so the player area holds nothing new.
 
 ADR 0101 adds to it on the mat. A Capstone card lies whole beside the stagger, never under a later card
 ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)), and a Creature can own two, so a column needs
-room for two poker cards beside its stagger as well as below its intent slot.
+room for two poker cards beside its stagger as well as below its intent slot. ADR 0114 adds no room: a shared
+package's card is a Capstone card in its buyer's column, read by its teammates where it lies.
 
 ADR 0068 adds to it on the board too. The Health rail runs 0 to 30 in two rows
 ([1.3](#13-stat-markers-and-the-rails-they-ride)), so the board gives one more row to its rails. The rail at 20
@@ -2088,7 +2176,7 @@ them now, and the Spells that place a token but are not among the audit's rows f
 | 1.3 An opportunity at Round 1 and every second Round after | The 10 pick marks on the Round track, [3.6](#36-the-round-track) |
 | 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces); a token that buys lies on the buyer's board until the Sub-phase ends, [3.1](#31-the-creature-board), which also carries the restate row "A Creature buys at most one Tier an opportunity" |
 | 1.3 A pick buys a whole Tier | 144 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line, or `Needs one of:` list, is the prerequisite check; no Spell card prints a gate. |
-| 1.3 A Tier may give a Passive, held while it is owned, and then teaches no Spell | The Passive's line on the Capstone's package card, and the card's place beside the stagger where nothing covers it, [4.1](#41-the-package-card) and [3.7](#37-the-player-area-and-where-a-face-down-intent-sits). No token, no rail (ADR 0101). |
+| 1.3 A Tier may give a Passive, held while it is owned, and then teaches no Spell | The Passive's line on the Capstone's package card, and the card's place beside the stagger where nothing covers it, [4.1](#41-the-package-card) and [3.7](#37-the-player-area-and-where-a-face-down-intent-sits). No token, no rail (ADR 0101). A shared package's card, with its `For every creature of the side` line, lies with its buyer and is read by every Creature of the side, once a card (ADR 0114); translation.md folds the shared package into its Passive rows (its re-read of 2026-10-30). |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
 | 1.4 One Speed choice per living, unstunned Creature | 12 Speed cards, a Quick and a Standard a Creature behind one back, one laid face down and one kept, [1.5](#15-the-rest-of-the-pieces) and [2.6](#26-the-speed-card); the card-sized Speed slot a Stun token occupies, [3.1](#31-the-creature-board). Part 6, question 14, answered by the maintainer |
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |
