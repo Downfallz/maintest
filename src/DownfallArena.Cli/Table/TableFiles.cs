@@ -27,6 +27,10 @@ internal sealed class TableFiles
         {
             ["/"] = index,
             ["/index.html"] = index,
+            ["/play"] = index,
+            ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
+            ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
+            ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/table.js"] = (Path.Combine(tableDirectory, "table.js"), JavaScript),
             ["/transport.js"] = (Path.Combine(tableDirectory, "transport.js"), JavaScript),

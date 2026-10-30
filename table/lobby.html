@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111917" />
+  <title>Downfall Arena — find your table</title>
+  <link rel="stylesheet" href="table.css" />
+  <link rel="stylesheet" href="lobby.css" />
+</head>
+<body class="lobby-page">
+  <header class="masthead lobby-header">
+    <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></a>
+    <nav aria-label="Lobby navigation"><a id="admin-link" href="/admin" hidden>Admin</a><button id="refresh" type="button" class="secondary">Refresh</button></nav>
+  </header>
+  <main class="lobby-main">
+    <section class="lobby-hero" aria-labelledby="welcome">
+      <div><p class="eyebrow">Gather your creatures</p><h2 id="welcome">Find your table.</h2><p class="hero-detail">Pick up a battle. Take an open seat. Start something new.</p></div>
+      <button id="new-table" class="primary" type="button">＋ New table</button>
+    </section>
+    <p id="lobby-status" class="lobby-status muted" role="status">Finding tables…</p>
+    <p id="lobby-problem" class="problem" role="alert" hidden></p>
+    <div class="lobby-layout">
+      <div class="lobby-games">
+        <section aria-labelledby="mine-heading" class="lobby-section">
+          <div class="section-heading"><h2 id="mine-heading">Your games <span id="mine-count" class="lobby-count"></span></h2><span class="muted">Saved on this browser</span></div>
+          <div id="my-tables" class="lobby-grid"><p class="empty-state">Looking for your saved seats…</p></div>
+        </section>
+        <section aria-labelledby="tables-heading" class="lobby-section">
+          <div class="section-heading"><h2 id="tables-heading">Tables <span id="tables-count" class="lobby-count"></span></h2></div>
+          <div class="lobby-filters" role="group" aria-label="Show tables"><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></div>
+          <div id="open-tables" class="lobby-grid"><p class="empty-state">Finding open tables…</p></div>
+        </section>
+      </div>
+      <aside class="lobby-sidebar" aria-label="Join and reconnect">
+        <section class="lobby-panel" aria-labelledby="code-heading"><p class="eyebrow">Have an invitation?</p><h2 id="code-heading">Join with a code</h2><form id="join-code"><label for="code">Seat code</label><div class="code-row"><input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7F2Q9XM" maxlength="16" required /><button type="submit">Join →</button></div></form></section>
+        <section class="lobby-panel reconnect-panel" aria-labelledby="reconnect-heading"><span class="reconnect-mark" aria-hidden="true">↻</span><h2 id="reconnect-heading">Your battle can wait.</h2><p>Close the tab and come back here to resume. Games and seats survive a server restart.</p><p>Use <strong>Leave table</strong> during a match to offer your team to another player. Closing the page keeps your seat.</p><details><summary>Playing on another device?</summary><p>Use your seat’s invitation link or code. Your saved seats belong to this browser; clearing browser data removes those shortcuts.</p></details></section>
+      </aside>
+    </div>
+  </main>
+  <dialog id="create-dialog" aria-labelledby="create-title">
+    <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
+      <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="greedy">Solo · Greedy bot</option><option value="random">Solo · Random bot</option><option value="hotseat">Two players · shared device</option></select>
+      <label for="format">Creatures per side</label><select id="format" name="format"></select>
+      <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
+      <p id="create-problem" class="problem" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="create-cancel" type="button" class="secondary">Cancel</button><button id="create-submit" class="primary" type="submit">Create &amp; play →</button></div>
+    </form>
+  </dialog>
+  <script type="module" src="lobby.js"></script>
+</body>
+</html>

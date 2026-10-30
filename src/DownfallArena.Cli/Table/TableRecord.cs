@@ -68,6 +68,9 @@ internal sealed record TableRecord
 
     public required string Status { get; init; }
 
+    /// <summary>Only explicitly offered seats are public. Older, invitation-only tables offer none.</summary>
+    public IReadOnlyList<string> OpenSeats { get; init; } = [];
+
     public static TableRecord Of(PlayedTable table, TableRequest request, JoinCodes codes)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -88,6 +91,7 @@ internal sealed record TableRecord
             Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
             PilotToken = table.Pilot.Token,
             Status = Open,
+            OpenSeats = table.OpenSeats,
         };
     }
 

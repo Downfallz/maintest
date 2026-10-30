@@ -10,7 +10,7 @@
   <body>
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></div>
-      <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" aria-live="polite">Connecting…</p><a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>
+      <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" aria-live="polite">Connecting…</p><a class="admin-link" href="/">Tables</a> <a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>
       <details id="shape">
         <summary>Round guide</summary>
         <div class="guide-body"><p id="rules" class="muted"></p><ol id="sub-phases"></ol><ul id="orderings"></ul></div>
@@ -54,6 +54,13 @@
             <summary id="match-tools-label">Match</summary>
             <section id="match-panel" aria-label="This match">
               <button id="concede" type="button" class="secondary">Concede the match…</button>
+              <button id="leave-table" type="button" class="secondary">Leave table…</button>
+              <div id="leave-confirm" hidden>
+                <p>Leave your team for another player? Your seat becomes available in the lobby and your access is revoked. To keep your seat, close the page or return to Tables.</p>
+                <button id="leave-yes" type="button">Leave and free my seat</button>
+                <button id="leave-no" type="button" class="secondary">Keep my seat</button>
+              </div>
+              <output id="leave-problem" class="muted" role="alert" hidden></output>
               <div id="concede-confirm" hidden>
                 <p>Give the match up? Your opponent wins on the spot, and the session records it.</p>
                 <button id="concede-yes" type="button">Concede</button>

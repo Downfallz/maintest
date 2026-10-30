@@ -343,3 +343,11 @@ npm ci --ignore-scripts
 node node_modules/playwright/cli.js install chromium
 node node_modules/playwright/cli.js test --config table.config.js
 ```
+
+## Player lobby
+
+Open `/` or `/lobby` to resume this browser's games, join an explicitly open place, create an online,
+solo or shared-device table, or enter a seat code. `/play` is the table itself. Return to **Tables** to
+switch games without leaving a seat. **Match → Leave table** explicitly frees the team for a replacement
+and invalidates the old token and code; closing the page keeps them. Open tables and place availability
+survive redeployment through the same recorded store as the decision journal (ADR 0115).

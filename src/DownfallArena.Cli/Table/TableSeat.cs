@@ -14,6 +14,9 @@ namespace DownfallArena.Cli.Table;
 /// </remarks>
 internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Person)
 {
+    /// <summary>Replaced when its player explicitly leaves, revoking their previous access.</summary>
+    public string Token { get; set; } = Token;
+
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";
 

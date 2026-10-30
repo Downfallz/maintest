@@ -242,6 +242,7 @@ internal sealed class TableComposer
             var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
             var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents };
             var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping);
+            table.OpenSeats = rebuilding?.Record.OpenSeats ?? [];
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened

@@ -104,18 +104,15 @@ public sealed class TableRegistryTests : IDisposable
     }
 
     [Fact]
-    public async Task A_table_nobody_asks_anything_of_for_twenty_hours_is_abandoned()
+    public async Task An_unfinished_table_keeps_its_seat_after_a_long_break()
     {
         using var registry = new TableRegistry();
         var idle = await Composed(HostedTables.OnePerson);
         registry.TryAdd(idle);
 
-        // Touched keeps it: a poll is somebody still at the table.
-        idle.Touch(idle.CreatedAt + TableRegistry.IdleFor - TimeSpan.FromMinutes(1));
-        registry.Sweep(idle.CreatedAt + TableRegistry.IdleFor).ShouldBeEmpty();
-
-        registry.Sweep(idle.CreatedAt + TableRegistry.IdleFor + TableRegistry.IdleFor).ShouldBe([idle.Id]);
-        await Should.ThrowAsync<OperationCanceledException>(() => idle.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        registry.Sweep(idle.CreatedAt + TimeSpan.FromDays(30)).ShouldBeEmpty();
+        registry.ByToken(idle.Seats[0].Token).ShouldBeSameAs(idle);
+        idle.Session.Outcome.IsCompleted.ShouldBeFalse();
     }
 
     /// <summary>

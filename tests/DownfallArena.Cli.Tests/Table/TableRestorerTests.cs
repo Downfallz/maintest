@@ -145,17 +145,17 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     [Fact]
-    public async Task A_table_nobody_has_been_at_for_longer_than_the_host_would_keep_it_is_left_as_it_was()
+    public async Task An_open_table_is_rebuilt_even_after_a_long_break()
     {
         var table = await Opened(HostedTables.OnePerson);
         table.Seats[0].Person!.Submit(PlayerDecision.Pass, (await Waiting(table.Seats[0].Person!)).Asked).ShouldBeTrue();
         await Task.Delay(100, TestContext.Current.CancellationToken);
-        var later = new Clock { Now = DateTimeOffset.UtcNow + TableRegistry.IdleFor + TimeSpan.FromMinutes(1) };
+        var later = new Clock { Now = DateTimeOffset.UtcNow + TimeSpan.FromDays(30) };
 
         var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, later, TestContext.Current.CancellationToken);
 
-        said.ShouldHaveSingleItem().ShouldContain("left as it was");
-        _later.All().ShouldBeEmpty();
+        said.ShouldHaveSingleItem().ShouldContain("rebuilt");
+        _later.ById(table.Id).ShouldNotBeNull();
     }
 
     [Fact]

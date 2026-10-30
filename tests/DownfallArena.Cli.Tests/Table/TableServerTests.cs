@@ -53,6 +53,19 @@ public sealed class TableServerTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task An_ordinary_visit_opens_the_player_lobby_and_existing_seat_links_still_open_the_game()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var lobby = await Get(url, token: null);
+        (await lobby.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("lobby.js");
+        var game = await Get($"{url}?player1=invitation", token: null);
+        (await game.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("table.js");
+        (await Get($"{url}play", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await Get($"{url}api/lobby", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await Get($"{url}api/tables", token: null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task A_token_no_table_holds_is_refused_as_a_missing_one()
     {
         var url = Serve(OperatorGate.BehindPlatform());
