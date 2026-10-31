@@ -504,11 +504,14 @@ async function poll(state) {
   state.views = drawnViews(state);
   render(state, state.views);
   if (!state.catalogue) await load(state);
-  // A session opened for its replay goes straight to it, once, when the catalogue is in to name its cards.
-  if (state.replaying && !state.replayStarted && state.catalogue && state.views[0]?.view?.over) {
-    state.replayStarted = true;
-    await replayMatch(state, state.views[0]);
-  }
+  await openWatchedReplay(state);
+}
+
+// A session opened for its replay goes straight to it, once, when the catalogue is in to name its cards.
+async function openWatchedReplay(state) {
+  if (!state.replaying || state.replayStarted || !state.catalogue || !state.views[0]?.view?.over) return;
+  state.replayStarted = true;
+  await replayMatch(state, state.views[0]);
 }
 
 function redraw(state) {

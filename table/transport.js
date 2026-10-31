@@ -54,14 +54,10 @@ export function replayTransport(id, seat, token, fetchImpl = globalThis.fetch.bi
     return { status: response.status, ok: response.ok, body: text ? parse(text) : null };
   }
   function load() {
-    loading ??= request().then(answer => {
-      if (!answer.ok) loading = null;
-      return answer;
-    }, failure => {
-      loading = null;
-      throw failure;
-    });
-    return loading;
+    const pending = loading ?? request();
+    loading = pending;
+    pending.then(answer => { if (!answer.ok) loading = null; }, () => { loading = null; });
+    return pending;
   }
   const answered = async shape => {
     const answer = await load();
