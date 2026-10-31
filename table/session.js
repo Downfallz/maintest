@@ -118,9 +118,18 @@ export function playPath(pathname) {
   return !pathname || pathname === '/' ? '/play' : pathname;
 }
 
-export function selectTableSeats(matches, requested) {
-  const chosen = matches.find(match => match.seats.some(seat => requested.some(wanted => wanted.token === seat.token)));
+// The seats of one table among those this browser holds: the one a link's tokens name, or the one a notice
+// named (`?table=`, ADR 0118), or none when neither is here any more.
+export function selectTableSeats(matches, requested, table = null) {
+  const chosen = table
+    ? matches.find(match => match.table?.id === table)
+    : matches.find(match => match.seats.some(seat => requested.some(wanted => wanted.token === seat.token)));
   return chosen?.seats ?? [];
+}
+
+// The table a notice sent the browser to, off `?table=`, or null.
+export function tableFromLocation(search) {
+  return new URLSearchParams(search ?? '').get('table');
 }
 
 // The operator's token, kept by the admin panel when a link brought it there (admin.js): what the table page

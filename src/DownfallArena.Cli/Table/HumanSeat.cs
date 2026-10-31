@@ -27,6 +27,12 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
     private long _asked;
 
+    /// <summary>
+    /// Raised as the match asks this seat something, with the round it belongs to when the question has one:
+    /// what a notice to a phone nobody is looking at is sent about (<see cref="PushNotices" />, ADR 0118).
+    /// </summary>
+    public event Action<Question, int?>? Asked;
+
     // The round the question being asked belongs to, and the picks, speeds and intents answered in it.
     private int? _round;
     private readonly List<(int? Round, PlayerDecision Decision)> _given = [];
@@ -210,6 +216,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
             }
         }
 
+        Asked?.Invoke(question, round);
         try
         {
             return answer.Task.WaitAsync(cancellation).GetAwaiter().GetResult();

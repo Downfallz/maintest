@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,15 +38,31 @@ internal static class TableHost
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, stopping.Token) : null;
         var agents = SeatableAgents.Read(WeightsDirectory);
-        var composer = new TableComposer(services, rules, store) { Agents = agents };
-        var stored = store is null ? null : new StoredSessions(store);
         using var registry = new TableRegistry();
+
+        // "Your turn" to a seat's phone (ADR 0118), when the host has keys to sign it with: the file named, or
+        // the hosted table's variable. A key pair that is not one is one line here, not a refusal per notice.
+        PushKeys? keys;
+        try
+        {
+            keys = PushKeys.Load(options.PushKeys, Environment.GetEnvironmentVariable(PushKeys.Environment));
+        }
+        catch (Exception failure) when (failure is IOException or InvalidDataException or JsonException)
+        {
+            await Console.Error.WriteLineAsync($"The push keys could not be read: {failure.Message}");
+            return 1;
+        }
+
+        using var sender = keys is null ? null : new WebPushSender(keys);
+        var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync(registry.Codes) };
+        var composer = new TableComposer(services, rules, store) { Agents = agents, Push = push };
+        var stored = store is null ? null : new StoredSessions(store);
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
         var described = RuleSetFile.Describe(rules, options.Rules);
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents);
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push);
         using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored);
 
         Console.WriteLine($"Table on {server.Url}");
@@ -60,6 +77,9 @@ internal static class TableHost
         // the engine's default caps at thirty, so a table that took one silently would be testing another
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
+        Console.WriteLine(push is null
+            ? $"  Notices: off. A phone is told \"your turn\" when the host has push keys: --push-keys <file>, or {PushKeys.Environment} (push-keys prints a pair)."
+            : "  Notices: on. A seat's page offers \"Notify me when it's my turn\".");
 
         // The place of the table the command line asks for is held first: the rebuild below fills the host up
         // to its bound, and a table composed into a full host would be recorded and announced with nothing

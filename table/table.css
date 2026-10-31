@@ -709,6 +709,8 @@ body:has(#table) { padding-bottom: 24px; }
 .practice-panel[hidden] { display: none; }
 .practice-panel > div, .practice-panel > p, .practice-panel > output { grid-column: 1 / -1; }
 .invitation-panel { max-width: 640px; }
+.notices-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-top: .8rem; }
+.notices-row[hidden] { display: none; }
 .invitation-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
 .practice-panel h2, .practice-panel p { margin: 0; }
 .practice-panel select { min-height: 44px; max-width: 100%; color: inherit; background: #111917; border: 1px solid #628477; border-radius: 8px; padding: .6rem; font: inherit; }

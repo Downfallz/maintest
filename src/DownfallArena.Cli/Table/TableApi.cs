@@ -44,6 +44,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// </summary>
     public Func<TableSeat, string?>? CodeOf { get; set; }
 
+    /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
+    public PushNotices? Push { get; init; }
+
     public int FeedStart { get; init; }
 
     public const string TokenHeader = "X-Seat-Token";
@@ -399,6 +402,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         if (shown is { } drawn && seat.Person?.Waiting is { } asking && drawn == asking.Asked)
         {
             run?.Served(seat.Slot, asking);
+            Push?.Shown(seat, asking);
         }
 
         return StudioResponse.OfJson(

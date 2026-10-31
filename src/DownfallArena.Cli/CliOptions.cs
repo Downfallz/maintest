@@ -78,6 +78,12 @@ internal sealed record CliOptions
     public bool PlatformAuth { get; init; }
 
     /// <summary>
+    /// The file holding the table's VAPID key pair (<c>push-keys</c> writes one), with which it sends "your
+    /// turn" to a seat's phone (ADR 0118). Without it, and without <c>DOWNFALL_PUSH_KEYS</c>, a table sends none.
+    /// </summary>
+    public string? PushKeys { get; init; }
+
+    /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
     /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
     /// than calling them the same player (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
@@ -139,7 +145,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -154,6 +160,8 @@ internal sealed record CliOptions
 
     private const string PlatformAuthOption = "--platform-auth";
 
+    private const string PushKeysOption = "--push-keys";
+
     private const string FormatOption = "--format";
 
     private const string DeclarationOption = "--declaration";
@@ -164,7 +172,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -207,6 +215,7 @@ internal sealed record CliOptions
             Practice = flags.Contains(PracticeOption),
             Lobby = flags.Contains(LobbyOption),
             PlatformAuth = flags.Contains(PlatformAuthOption),
+            PushKeys = values.GetValueOrDefault(PushKeysOption),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -237,6 +246,11 @@ internal sealed record CliOptions
         if (flags.Contains(PlatformAuthOption) && command != "table")
         {
             return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        if (values.ContainsKey(PushKeysOption) && command != "table")
+        {
+            return "'--push-keys' is for table only: it names the keys a table signs its notices with.";
         }
 
         if (values.ContainsKey(SlotLogOption) && command is not ("play" or "simulate" or "evaluate"))

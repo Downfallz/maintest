@@ -69,6 +69,15 @@ public sealed class CliOptionsTests
             .Message.ShouldContain("digest is committed per content hash");
 
     [Fact]
+    public void Push_keys_is_a_command_and_a_table_option_and_nothing_else_takes_the_keys()
+    {
+        CliOptions.Parse(["push-keys"]).Command.ShouldBe("push-keys");
+        CliOptions.Parse(["table", "--push-keys", "keys.json"]).PushKeys.ShouldBe("keys.json");
+        CliOptions.Parse(["table"]).PushKeys.ShouldBeNull();
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--push-keys", "keys.json"])).Message.ShouldContain("--push-keys");
+    }
+
+    [Fact]
     public void The_studio_refuses_a_format_because_it_plays_no_match() =>
         Should.Throw<ArgumentException>(() => CliOptions.Parse(["studio", "--format", "2v2"]))
             .Message.ShouldContain("plays no match of its own");

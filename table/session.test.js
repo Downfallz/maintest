@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, seatsFromLocation } from './session.js';
+import { forget, heldSeats, isOperator, keeps, OPERATOR_KEY, operatorToken, playPath, replayOf, resumeTokens, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -137,6 +137,19 @@ test('a browser that keeps what is written is told apart from one that throws or
   assert.equal(keeps(refusing), false);
   assert.equal(keeps({ getItem: () => null, setItem: () => {}, removeItem: () => {} }), false);
   assert.equal(keeps(null), false);
+});
+
+test('the table a notice named is chosen among the saved ones, and the link\'s tokens otherwise', () => {
+  const matches = [
+    { table: { id: 'a' }, seats: [{ seat: 'player1', token: 'one' }] },
+    { table: { id: 'b' }, seats: [{ seat: 'player2', token: 'two' }] },
+  ];
+
+  assert.deepEqual(selectTableSeats(matches, [], 'b'), [{ seat: 'player2', token: 'two' }]);
+  assert.deepEqual(selectTableSeats(matches, [{ seat: 'player1', token: 'one' }]), [{ seat: 'player1', token: 'one' }]);
+  assert.deepEqual(selectTableSeats(matches, [{ seat: 'player1', token: 'one' }], 'gone'), [], 'a table no longer here is nobody\'s');
+  assert.equal(tableFromLocation('?table=a%20b'), 'a b');
+  assert.equal(tableFromLocation('?player1=x'), null);
 });
 
 test('a replay link names its session and the seat it is seen from, Player 1 unless Player 2', () => {

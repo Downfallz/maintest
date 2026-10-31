@@ -490,6 +490,111 @@ public sealed class LobbyApiTests : IDisposable
         (await Lobby.HandleAsync("POST", path, "{}")).Status.ShouldBe(404);
     }
 
+    /// <summary>Where a seat's notices go (ADR 0118): kept with the seat, written down, and gone with the seat's token.</summary>
+    [Fact]
+    public async Task A_subscription_is_kept_for_the_seat_recorded_and_restored()
+    {
+        var notices = new PushNotices(new NothingSent(), "BP8", TimeProvider.System);
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, notices);
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var token = table.Seats[0].Token;
+
+        Read(await lobby.HandleAsync("GET", "/api/lobby/push", "")).GetProperty("publicKey").GetString().ShouldBe("BP8");
+        var answer = Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+
+        answer.GetProperty("notices").GetBoolean().ShouldBeTrue();
+        table.Seats[0].Push.ShouldBe(new PushSubscription("https://push.example/one", BrowserKey, BrowserAuth));
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Push.ShouldBe(table.Seats[0].Push);
+
+        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
+        using var restored = new TableRegistry();
+        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
+        var rebuilt = restored.ById(id).ShouldNotBeNull();
+        rebuilt.Seats[0].Push.ShouldBe(table.Seats[0].Push);
+        restored.Dispose();
+        await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task A_subscription_is_forgotten_on_request_and_goes_with_the_seat_when_the_player_leaves()
+    {
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var token = table.Seats[0].Token;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+
+        Read(await lobby.HandleAsync("DELETE", "/api/lobby/push", "", token)).GetProperty("notices").GetBoolean().ShouldBeFalse();
+        table.Seats[0].Push.ShouldBeNull();
+
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+        var second = Read(await Claim(table.Seats[1].Invitation!)).GetProperty("seats")[0].GetProperty("token").GetString()!;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, second));
+        (await lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(200);
+
+        table.Seats[0].Push.ShouldBeNull("the next player's browser is not this one");
+        table.Seats[1].Push.ShouldNotBeNull("the other seat keeps its own");
+    }
+
+    [Theory]
+    [InlineData("http://push.example/one", BrowserKey, BrowserAuth)]
+    [InlineData("https://push.example/one", "not base64url!", BrowserAuth)]
+    [InlineData("https://push.example/one", "BP8", BrowserAuth)]
+    [InlineData("https://push.example/one", BrowserKey, "YWJj")]
+    [InlineData("https://push.example/one", null, null)]
+    [InlineData(null, null, null)]
+    public async Task A_subscription_that_is_not_one_is_refused_and_nothing_is_kept(string? endpoint, string? p256dh, string? auth)
+    {
+        var body = JsonSerializer.Serialize(new { endpoint, keys = p256dh is null ? null : new { p256dh, auth } });
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", body, table.Seats[0].Token)).Status.ShouldBe(400);
+        table.Seats[0].Push.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_subscription_needs_a_seat_token_and_a_host_with_keys()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var token = _registry.ById(id)!.Seats[0].Token;
+
+        (await Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token)).Status.ShouldBe(404, "this host has no keys");
+        Read(await Lobby.HandleAsync("GET", "/api/lobby/push", "")).GetProperty("publicKey").ValueKind.ShouldBe(JsonValueKind.Null);
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, "not-a-seat")).Status.ShouldBe(403);
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, null)).Status.ShouldBe(403);
+    }
+
+    /// <summary>A real P-256 point and sixteen bytes of secret, as the browser would serialise them: the host refuses anything shorter.</summary>
+    private const string BrowserKey = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+
+    private const string BrowserAuth = "AAECAwQFBgcICQoLDA0ODw";
+
+    private static readonly string Browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/one", expirationTime = (object?)null, keys = new { p256dh = BrowserKey, auth = BrowserAuth } });
+
+    /// <summary>The race ADR 0118 guards: a subscription sent for a seat whose token was just replaced must not reach the next player's seat.</summary>
+    [Fact]
+    public async Task A_subscription_sent_with_a_token_that_was_replaced_is_refused_and_kept_by_nobody()
+    {
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var departed = table.Seats[0].Token;
+        (await lobby.HandleAsync("POST", "/api/lobby/leave", "{}", departed)).Status.ShouldBe(200);
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, departed)).Status.ShouldBe(403);
+
+        table.Seats[0].Push.ShouldBeNull();
+    }
+
+    private sealed class NothingSent : IPushSender
+    {
+        public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
+
     private async Task<JsonElement> Open() => Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", "{}"));
 
     private Task<StudioResponse> Claim(params string[] tokens) => Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens }));

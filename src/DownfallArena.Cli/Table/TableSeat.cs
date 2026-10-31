@@ -29,6 +29,12 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
     public bool Taken { get; set; }
 
     /// <summary>
+    /// Where the browser holding this seat asked its notices to be sent (ADR 0118), or none. One of the seat's
+    /// keys: it goes when the token does, since it is that browser's and not the next one's.
+    /// </summary>
+    public PushSubscription? Push { get; set; }
+
+    /// <summary>
     /// What a link or a code hands out for this seat: its invitation, or, for a seat recorded before invitations
     /// existed, its token, as links did then. Nothing once the seat is taken, and nothing for a bot's.
     /// </summary>

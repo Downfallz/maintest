@@ -13,6 +13,10 @@ param image string
 @description('The application (client) id of the app registration the platform signs the operator in with.')
 param signInClientId string
 
+@secure()
+@description('The table\'s VAPID key pair, the JSON `push-keys` prints (ADR 0118). Empty, the table sends no notices.')
+param pushKeys string = ''
+
 @description('The object ids of the people who may sign in to the lobby, comma-separated. Players never sign in.')
 param operators string
 
@@ -195,6 +199,13 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
+      // The push keys are a secret of the app, read by the table as a variable (ADR 0118); none when empty.
+      secrets: empty(pushKeys) ? [] : [
+        {
+          name: 'push-keys'
+          value: pushKeys
+        }
+      ]
       ingress: {
         external: true
         targetPort: 8080
@@ -219,6 +230,12 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             'docs/tabletop/playtest.rules.json'
             '--record'
             '${storage.properties.primaryEndpoints.blob}${containerName}'
+          ]
+          env: empty(pushKeys) ? [] : [
+            {
+              name: 'DOWNFALL_PUSH_KEYS'
+              secretRef: 'push-keys'
+            }
           ]
           resources: {
             cpu: json('0.5')
