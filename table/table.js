@@ -927,11 +927,14 @@ function renderBoard(state, current, spellbook = current) {
   // A round's upkeep or its purchases in a match replay marks no caster and no target.
   const replayed = replay?.actions[replay.index];
   const cast = replayed?.interlude ? null : replayed;
+  let active = null;
+  if (replay) active = cast?.actor.id;
+  else if (isAsked(view)) active = view.waitingCreature;
   const marks = {
     picked: state.picked,
     board,
     roundEvents: view.roundEvents,
-    active: replay ? cast?.actor.id : isAsked(view) ? view.waitingCreature : null,
+    active,
     playback: cast ?? live,
     playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
