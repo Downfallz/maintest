@@ -198,6 +198,7 @@ export function tableRows(list) {
     hotseat: table.hotseat ?? null,
     pilot: table.pilot,
     session: table.finished ? table.session : null,
+    replay: table.finished ? table.replay ?? null : null,
     location: table.location ?? null,
     closable: !table.finished,
   }));
@@ -223,12 +224,34 @@ export function sessionRows(answer) {
     state: sessionState(session),
     steps: session.steps ?? 0,
     live: session.live === true,
+    finished: session.live !== true && session.over === true,
+    // How many seats a person held at some point: the stamp names a person `human` or `human:<initials>`, and a
+    // seat handed over carries each occupant after the first (`Greedy>human:mk@3`).
+    people: [session.player1, session.player2].filter(agent => /(^|>)human\b/.test(agent ?? '')).length,
     session: session.session,
+    replay: session.replay ?? null,
     // Exportable once it is no longer being written: the host refuses a live one.
     export: session.live === true ? null : session.export,
     location: session.location ?? null,
   }));
 }
+
+// The sessions a filter keeps: by state (finished, live, neither) and by who sat (people only, a person and a
+// bot, bots only). A session with no manifest names nobody, so only "anyone" keeps it.
+export function filterSessions(rows, { state = 'all', players = 'all' } = {}) {
+  const states = { all: () => true, finished: row => row.finished, live: row => row.live, unfinished: row => !row.finished && !row.live };
+  const seated = { all: () => true, people: row => row.people === 2, mixed: row => row.people === 1, bots: row => row.people === 0 && row.players !== 'no manifest' };
+  return rows.filter(row => (states[state] ?? states.all)(row) && (seated[players] ?? seated.all)(row));
+}
+
+// One page of a list, the page clamped to the ones there are.
+export function pageOf(rows, page, size = SESSIONS_PER_PAGE) {
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const shown = Math.min(Math.max(0, page), pages - 1);
+  return { rows: rows.slice(shown * size, (shown + 1) * size), page: shown, pages };
+}
+
+export const SESSIONS_PER_PAGE = 20;
 
 function sessionState(session) {
   if (session.live) return 'live on this host';
@@ -339,6 +362,7 @@ function card(row, transport, redraw) {
   if (row.hotseat) list.append(...line('Both seats', anchor(row.hotseat, 'one browser, both seats')));
   list.append(...line('Pilot', anchor(row.pilot, 'hand a seat over')));
   if (row.session) list.append(...line('Session', anchor(row.session, 'read it in the viewer')));
+  if (row.replay) list.append(...line('Replay', anchor(row.replay, 'action by action')));
   if (row.location) list.append(...line('Written to', document.createTextNode(row.location)));
 
   box.append(name, state, list);
@@ -374,6 +398,7 @@ function sessionItem(row, transport) {
   const links = document.createElement('div');
   links.className = 'session-links';
   links.append(anchor(row.session, 'viewer'));
+  if (row.replay) links.append(anchor(row.replay, 'replay'));
   // A session being played is still being written, and the host refuses to export it: no link to a 409.
   if (!row.live) {
     const save = document.createElement('a');
@@ -422,6 +447,9 @@ async function start() {
   let formatChosen = false;
   let offeredDeclarations = null;
   let declarationChosen = false;
+  // The last listing of the store, and the page of it on screen.
+  let sessions = [];
+  let page = 0;
 
   function fillDeclarations(answer) {
     const list = declarations(answer);
@@ -516,7 +544,19 @@ async function start() {
       return;
     }
     told.classList.remove('refused');
-    element('sessions').replaceChildren(...sessionRows(answer.body).map(row => sessionItem(row, transport)));
+    sessions = sessionRows(answer.body);
+    drawSessions();
+  }
+
+  // The list as filtered and paged, from what the last listing read: a filter or a page is no walk of the store.
+  function drawSessions() {
+    const kept = filterSessions(sessions, { state: element('sessions-state').value, players: element('sessions-players').value });
+    const shown = pageOf(kept, page);
+    page = shown.page;
+    element('sessions').replaceChildren(...shown.rows.map(row => sessionItem(row, transport)));
+    element('sessions-count').textContent = `${kept.length} of ${sessions.length} session${sessions.length === 1 ? '' : 's'} · page ${shown.page + 1} of ${shown.pages}`;
+    element('sessions-previous').disabled = shown.page === 0;
+    element('sessions-next').disabled = shown.page >= shown.pages - 1;
     element('sessions-all').checked = false;
     armTools();
   }
@@ -549,6 +589,9 @@ async function start() {
   element('format').addEventListener('change', () => { formatChosen = true; });
   element('declaration').addEventListener('change', () => { declarationChosen = true; });
 
+  for (const id of ['sessions-state', 'sessions-players']) element(id).addEventListener('change', () => { page = 0; drawSessions(); });
+  element('sessions-previous').addEventListener('click', () => { page -= 1; drawSessions(); });
+  element('sessions-next').addEventListener('click', () => { page += 1; drawSessions(); });
   element('sessions').addEventListener('change', armTools);
   element('sessions-all').addEventListener('change', () => {
     for (const box of element('sessions').querySelectorAll('input[type=checkbox]')) box.checked = element('sessions-all').checked;

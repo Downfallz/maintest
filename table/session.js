@@ -21,6 +21,14 @@ export function seatsFromLocation(search) {
   return SEATS.map(seat => ({ seat, token: query.get(seat) })).filter(held => held.token);
 }
 
+// The finished session a link asks to replay, and the seat it is seen from (Player 1 unless it names Player 2):
+// the admin panel's way into a match's replay, which needs no seat at all.
+export function replayOf(search) {
+  const query = new URLSearchParams(search);
+  const id = query.get('replay');
+  return id ? { id, seat: query.get('seat') === 'player2' ? 'player2' : 'player1' } : null;
+}
+
 // What the link brings plus what this browser already had, with the link winning: opening a fresh code is how
 // a player says they are somebody else now.
 export function heldSeats(search, storage) {
