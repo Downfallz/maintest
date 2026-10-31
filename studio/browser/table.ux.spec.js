@@ -333,6 +333,31 @@ test('Concede opens in view under the dock, asks twice, and the end screen says 
   await expect(page.locator('#match-tools')).toBeHidden();
 });
 
+test('a finished match replays every round from its result, and the round can be jumped to', async ({ page }, info) => {
+  const ally = view.board.allies[0]; const enemy = view.board.enemies[0];
+  const cast = (sequence, round, health) => ({ sequence, round, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: round,
+    resolution: { action: { actor: 1, spell: cards[3].id, targets: [2] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 7 }],
+    frame: { before: [ally, { ...enemy, health: health + 7 }], after: [ally, { ...enemy, health }], timeline: [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }], rollOffs: [] } } });
+  const ended = round => ({ sequence: 100 + round, round: round + 1, event: { kind: 'RoundEnded', roundId: round } });
+  const feed = [cast(10, 1, 27), ended(1), cast(20, 2, 20), ended(2), cast(30, 3, 13)];
+  const over = { ...view, over: true, waitingFor: null, waitingCreature: null, options: {}, outcome: { winner: 'player1', reason: 'RoundCap' }, feed, feedNext: 104 };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: over }));
+  await expect(page.locator('#asking')).toHaveText(/You win/);
+
+  await page.getByRole('button', { name: 'Replay the match action by action' }).click();
+  await expect(page.locator('#playback')).toBeVisible();
+  await expect(page.locator('#phase-current')).toHaveText('Match replay');
+  await expect(page.locator('#playback-count')).toContainText('Round 1 · action 1 of 3');
+  await page.locator('[data-focus="playback-round"]').selectOption({ label: 'Round 3' });
+  await expect(page.locator('#playback-count')).toContainText('Round 3 · action 3 of 3');
+  await expectNoSidewaysScroll(page);
+  await page.locator('#playback').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('match-replay.png'), animations: 'disabled' });
+  await page.locator('[data-focus="playback-skip"]').click();
+  await expect(page.locator('#playback')).toBeHidden();
+  await expect(page.locator('#asking')).toHaveText(/You win/);
+});
+
 test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {
   if (isLaptop(page)) {
     await expect(page.locator('#mini-board')).toBeHidden();

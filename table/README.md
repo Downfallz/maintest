@@ -86,6 +86,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   Older recordings without snapshots explicitly label their battlefield as current totals.
   The next question and its asking acknowledgement wait until the review closes; replay controls send
   no decisions. Arrow keys step backward/forward and Escape skips.
+- A finished match's result offers **Replay the match action by action**, which is the same review over every
+  round: the page keeps only the last two rounds' events, so it asks the host for the seat's feed from its start,
+  once. A selector jumps to the first action of any round. Packages, upkeep and cleanup between rounds are
+  not replayed. A finished game opened from the lobby's **View game** lands on the same result, with the same
+  replay.
 - The sticky top bar leads with round, current phase and the acting position/creature from the host timeline;
   on a phone the acting creature is the outlined chip in its battlefield bar instead.
   The decision repeats the phase and turn position above the creature/spell title; targeting starts with one

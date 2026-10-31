@@ -1404,6 +1404,66 @@ test('a completed round is not replayed on its own, and its recap replays one ac
   p.draw(); assert.equal(p.state.playback, null);
 });
 
+// The page keeps only the last two rounds, so a finished match asks for its whole feed once, from its start.
+function finishedMatch(p) {
+  const feed = [...completedRound(1), ...completedRound(2).map(entry => ({ ...entry, sequence: entry.sequence + 10 }))];
+  const asked = [];
+  // An acknowledgement of a drawn question goes through the same call; only the fetches are counted.
+  p.current.transport.seat = async (since, drawn) => { if (drawn === undefined) asked.push(since); return { ok: true, body: { ...p.view, feed } }; };
+  Object.assign(p.view, { over: true, waitingFor: null, outcome: { winner: 'player1', reason: 'Elimination' }, roundEvents: feed.slice(3) });
+  p.view.board.roundNumber = 2;
+  return asked;
+}
+
+test('a finished match offers a replay of every round from its result, asking the host for its feed once', async () => {
+  const p = page(); const asked = finishedMatch(p); p.draw(); stepOk(p);
+
+  assert.equal(p.nodes.choices.children[0].textContent, 'Replay the match action by action');
+  await p.nodes.choices.children[0].click();
+  assert.deepEqual(asked, [0]);
+  assert.equal(p.state.playback.actions.length, 4);
+  assert.equal(p.nodes['phase-current'].textContent, 'Match replay');
+  assert.equal(p.nodes['playback-kind'].textContent, 'Match replay · action by action');
+  assert.match(p.nodes['playback-count'].textContent, /Round 1 · action 1 of 4/);
+  p.nodes['playback-controls'].children[1].click(); p.nodes['playback-controls'].children[1].click();
+  assert.match(p.nodes['playback-count'].textContent, /Round 2 · action 3 of 4/);
+  assert.equal(p.nodes['phase-round'].textContent, 'Round 2');
+  p.nodes['playback-controls'].children[2].click();
+  assert.equal(p.state.playback, null);
+  assert.match(p.nodes.asking.textContent, /You win/);
+  await p.nodes.choices.children[0].click();
+  assert.deepEqual(asked, [0]);
+});
+
+test('a match replay jumps to the first action of the round chosen', async () => {
+  const p = page(); finishedMatch(p); p.draw(); stepOk(p);
+  await p.nodes.choices.children[0].click();
+
+  const jump = p.nodes['playback-controls'].children[3];
+  assert.deepEqual(jump.children.map(option => option.textContent), ['Round 1', 'Round 2']);
+  jump.value = jump.children[1].value; jump.events.change();
+  assert.equal(p.state.playback.index, 2);
+  assert.match(p.nodes['playback-count'].textContent, /Round 2 · action 3 of 4/);
+});
+
+test('a match replay the host cannot be reached for says so and opens nothing', async () => {
+  const p = page(); finishedMatch(p); p.draw(); stepOk(p);
+  p.current.transport.seat = async () => { throw new TypeError('Failed to fetch'); };
+
+  await p.nodes.choices.children[0].click();
+
+  assert.equal(p.state.playback ?? null, null);
+  assert.equal(p.state.matchFeed, undefined);
+});
+
+test('a round replay names one round and offers no jump between rounds', () => {
+  const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2; p.draw();
+  openReplay(p);
+
+  assert.equal(p.nodes['playback-controls'].children.length, 3);
+  assert.match(p.nodes['playback-count'].textContent, /^Action 1 of 2/);
+});
+
 test('the action resolved last is shown in the round bar and battlefield until combat moves on', () => {
   const p = page(); p.view.waitingFor = null; p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 1;
   p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }];

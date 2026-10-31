@@ -21,3 +21,18 @@ test('a replayed board points at the slot its action was played from, not its pl
   const action = { actor: { id: 2 }, frame: { before: [], after: [], timeline, rollOffs: [] } };
   assert.equal(playbackBoard({ actions: [action], index: 0, stage: 'after', round: 1 }, { allies: [] }).activationCursor, 2);
 });
+
+test('a replay across rounds shows the action on its own round with only that round revealed', () => {
+  const frame = { before: [], after: [], timeline: [], rollOffs: [] };
+  const actions = [
+    { round: 1, actor: { id: 1 }, action: { actor: 1 }, frame },
+    { round: 2, actor: { id: 2 }, action: { actor: 2 }, frame },
+    { round: 2, actor: { id: 1 }, action: { actor: 1 }, frame },
+  ];
+
+  const board = playbackBoard({ actions, index: 2, stage: 'after', round: 1 }, { allies: [] });
+
+  assert.equal(board.roundNumber, 2);
+  assert.deepEqual(board.revealedActions, [{ actor: 2 }, { actor: 1 }]);
+  assert.equal(board.activationCursor, 1);
+});

@@ -10,7 +10,7 @@ import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './time
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
-import { healthChange, playbackBoard, playbackChanges } from './replay.js';
+import { healthChange, playbackBoard, playbackChanges, playbackRound } from './replay.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { actionDecision, askedKey, slotView } from './slot.js';
@@ -680,7 +680,7 @@ function render(state, views) {
   const replay = state.playback ?? state.step;
   const display = replay ? { ...current, view: {
     ...view, board: playbackBoard(replay, view.board), waitingFor: null, options: {},
-    roundEvents: (view.roundEvents ?? []).filter(entry => entry.sequence < replay.actions[replay.index].sequence
+    roundEvents: ((state.playback?.match ? state.matchFeed?.entries : null) ?? view.roundEvents ?? []).filter(entry => entry.sequence < replay.actions[replay.index].sequence
       || (replay.stage === 'after' && entry.sequence === replay.actions[replay.index].sequence)),
   } } : current;
   // The dock and its notice before the battlefield: the upkeep tick the notice is on is marked on the chip whose
@@ -1795,6 +1795,46 @@ function renderRecap(state, view) {
   element('recap-actions').replaceChildren(...rows);
 }
 
+// The whole match, action by action, from its end screen. The page keeps only the last two rounds' events, so
+// the feed is asked for again from its start, once a seat: the match is over and its trace no longer grows.
+async function replayMatch(state, current) {
+  if (state.matchFeed?.seat !== current.seat) {
+    let answer;
+    try { answer = await current.transport.seat(0); }
+    catch { answer = { ok: false, body: { message: 'Could not reach the host. Try again.' } }; }
+    if (!answer.ok) {
+      setPhase(answer.body?.message ?? `The host answered ${answer.status}.`);
+      return;
+    }
+    state.matchFeed = { seat: current.seat, entries: answer.body?.feed ?? [] };
+  }
+  const entries = state.matchFeed.entries;
+  const actions = resolvedSince(entries, undefined, current.view.board, state.cards);
+  if (actions.length === 0) {
+    setPhase('No casts resolved in this match.');
+    return;
+  }
+  // The feed stays on the state rather than in the replay, which every redraw compares as a whole.
+  startPlayback(state, current.seat, { round: actions[0].round, actions, match: true });
+  redraw(state);
+  element('playback').scrollIntoView({ block: 'nearest', behavior: 'instant' });
+}
+
+// The rounds a whole match's replay can jump to, each with the index of its first action.
+function replayRounds(replay) {
+  const rounds = new Map();
+  replay.actions.forEach((action, index) => { if (!rounds.has(action.round)) rounds.set(action.round, index); });
+  return [...rounds];
+}
+
+function jumpPlayback(state, index) {
+  const replay = state.playback;
+  if (!replay) return;
+  replay.index = index;
+  replay.stage = replay.actions[index].frame ? 'before' : 'after';
+  redraw(state);
+}
+
 // A replay is only ever the player's choice, from the recap: each action was shown live as it resolved
 // (ADR 0083), so the end of a round no longer plays them back. The next question is acknowledged only on exit;
 // historical frames never replace the live view.
@@ -1803,7 +1843,8 @@ function syncPlayback(state, current) {
 }
 
 function startPlayback(state, seat, recap) {
-  state.playback = { seat, round: recap.round, actions: recap.actions, index: 0, stage: recap.actions[0]?.frame ? 'before' : 'after' };
+  state.playback = { seat, round: recap.round, actions: recap.actions, index: 0, stage: recap.actions[0]?.frame ? 'before' : 'after',
+    ...(recap.match ? { match: true } : {}) };
   state.picked = [];
   state.chosen = null;
   hidePhaseNotice(state);
@@ -1842,17 +1883,20 @@ function renderPlayback(state, current) {
   const action = replay.actions[replay.index];
   const before = action.frame && replay.stage === 'before';
   const stage = before ? 'Before' : 'After';
-  const position = `Action ${replay.index + 1} of ${replay.actions.length}`;
-  element('phase-round').textContent = `Round ${replay.round}`;
+  const round = playbackRound(replay);
+  const kind = replay.match ? 'Match replay' : 'Round replay';
+  const position = replay.match ? `Round ${round} · action ${replay.index + 1} of ${replay.actions.length}` : `Action ${replay.index + 1} of ${replay.actions.length}`;
+  element('phase-round').textContent = `Round ${round}`;
   element('upkeep').hidden = true;
-  element('phase-current').textContent = 'Round replay';
+  element('phase-current').textContent = kind;
+  element('playback-kind').textContent = `${kind} · action by action`;
   element('phase-turn').textContent = `Action ${replay.index + 1} of ${replay.actions.length} · ${action.actor.label}`;
   element('phase-reminder').textContent = 'Next: apply / advance · Previous: review again · Skip: return to the match';
-  setPhase(`Round ${replay.round} · Round replay`, true);
+  setPhase(`Round ${round} · ${kind}`, true);
   element('playback-title').textContent = `${action.actor.label} ${before ? 'is about to act' : 'acted'}`;
   element('playback-count').textContent = action.frame ? `${position} · ${stage}` : position;
   element('playback-board-note').textContent = action.frame
-    ? `${stage} action ${replay.index + 1} · recorded battlefield · cleanup and upkeep appear when you return to the match.`
+    ? `${stage} action ${replay.index + 1} · recorded battlefield · ${replay.match ? 'packages, upkeep and cleanup between rounds are not replayed.' : 'cleanup and upkeep appear when you return to the match.'}`
     : 'This recording has no action snapshots · battlefield totals show the current state.';
   const held = element('playback-action');
   held.replaceChildren(recapRow(before ? { ...action, status: 'Ready', effects: [], reason: 'Press Next to apply this recorded action.', dropped: [] } : action));
@@ -1868,12 +1912,27 @@ function renderPlayback(state, current) {
   next.dataset.focus = 'playback-next';
   const skip = button(current.view.over ? 'Skip to results' : `Skip to round ${current.view.board.roundNumber}`, () => finishPlayback(state));
   skip.dataset.focus = 'playback-skip';
-  element('playback-controls').replaceChildren(previous, next, skip);
+  const controls = [previous, next, skip];
+  if (replay.match) {
+    const jump = document.createElement('select');
+    jump.dataset.focus = 'playback-round';
+    jump.setAttribute('aria-label', 'Jump to round');
+    jump.replaceChildren(...replayRounds(replay).map(([number, index]) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = `Round ${number}`;
+      option.selected = number === round;
+      return option;
+    }));
+    jump.addEventListener('change', () => jumpPlayback(state, Number(jump.value)));
+    controls.push(jump);
+  }
+  element('playback-controls').replaceChildren(...controls);
 }
 
 function animatePlayback(state, held) {
   const replay = state.playback;
-  const key = `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`;
+  const key = `${replay.seat}/${replay.round}/${replay.match ? 'match' : 'round'}/${replay.index}/${replay.stage}`;
   if (state.playbackFrame === key) return;
   state.playbackFrame = key;
   if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
@@ -1991,7 +2050,9 @@ function renderDecision(state, current) {
   }
   if (view.over) {
     asking.textContent = outcomeText(view, current.seat);
-    choices.replaceChildren();
+    const replay = button('Replay the match action by action', () => replayMatch(state, current));
+    replay.dataset.focus = 'match-replay';
+    choices.replaceChildren(replay);
     return;
   }
 
