@@ -45,7 +45,7 @@ public sealed class PushNoticesTests : IDisposable
         var notice = JsonDocument.Parse(payload).RootElement;
         notice.GetProperty("title").GetString().ShouldBe("Your turn");
         notice.GetProperty("body").GetString().ShouldBe("Round 1: pick your packages.");
-        notice.GetProperty("url").GetString().ShouldBe("/play");
+        notice.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");
         notice.GetProperty("tag").GetString().ShouldBe("turn:player1");
         _clock.Advance(Grace);
         await Settled();
@@ -110,6 +110,31 @@ public sealed class PushNoticesTests : IDisposable
         notices.IsDead("https://push.example/other").ShouldBeFalse();
     }
 
+    /// <summary>A subscription replaced while its notice was in flight is not the one the service refused: the new one stays.</summary>
+    [Fact]
+    public async Task A_refusal_of_a_subscription_the_seat_no_longer_holds_leaves_the_new_one_alone()
+    {
+        var (table, notices) = await Seated();
+        var recorded = 0;
+        notices.Record = _ => { recorded++; return Task.CompletedTask; };
+        var replacement = Phone with { Endpoint = "https://push.example/two" };
+        _sender.Gone = true;
+        _sender.Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
+        await _sender.Next();
+        table.Seats[0].Push = replacement;
+        _sender.Hold.SetResult();
+        await Settled();
+
+        table.Seats[0].Push.ShouldBe(replacement);
+        recorded.ShouldBe(0);
+        notices.IsDead(Phone.Endpoint).ShouldBeTrue();
+    }
+
     /// <summary>A sender that throws is the end of a task nothing awaits: said on the console, and the subscription kept for the next asking.</summary>
     [Fact]
     public async Task A_sender_that_fails_loses_the_notice_and_keeps_the_subscription()
@@ -132,9 +157,10 @@ public sealed class PushNoticesTests : IDisposable
     {
         var seat = new TableSeat(Domain.Matches.PlayerSlot.Player2, "token", new HumanSeat(CancellationToken.None));
 
-        var withRound = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Speed, null, 4), 7, seat)).RootElement;
-        var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat)).RootElement;
+        var withRound = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Speed, null, 4), 7, seat, "a b")).RootElement;
+        var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat, "t")).RootElement;
 
+        withRound.GetProperty("url").GetString().ShouldBe("/play?table=a%20b");
         withRound.GetProperty("body").GetString().ShouldBe("Round 7: choose a speed.");
         withRound.GetProperty("asked").GetInt64().ShouldBe(4);
         atTheSlot.GetProperty("body").GetString().ShouldBe("Your creature acts: choose a spell.");
@@ -184,7 +210,10 @@ public sealed class PushNoticesTests : IDisposable
 
         public bool Failing { get; set; }
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
+        /// <summary>Set, the send waits on it before answering: what a test needs to change the seat under a notice in flight.</summary>
+        public TaskCompletionSource? Hold { get; set; }
+
+        public async Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
         {
             lock (Sent)
             {
@@ -196,7 +225,12 @@ public sealed class PushNoticesTests : IDisposable
                 }
             }
 
-            return Failing ? Task.FromException<bool>(new HttpRequestException("The push service is out.")) : Task.FromResult(!Gone);
+            if (Hold is { } hold)
+            {
+                await hold.Task;
+            }
+
+            return Failing ? throw new HttpRequestException("The push service is out.") : !Gone;
         }
 
         public Task<(PushSubscription To, string Payload)> Next()

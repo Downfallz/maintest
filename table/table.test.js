@@ -2178,7 +2178,7 @@ test('the notices button is drawn from where the page stands, in the room and in
 test('a hidden page shows "your turn" itself, once per asking, and a visible one never does', () => {
   const p = page();
   const shown = [];
-  p.state.push = { registration: { showNotification: async (title, options) => { shown.push({ title, ...options }); }, getNotifications: async () => [] } };
+  p.state.push = { subscribed: true, registration: { showNotification: async (title, options) => { shown.push({ title, ...options }); }, getNotifications: async () => [] } };
   p.context.Notification = { permission: 'granted' };
   p.document.visibilityState = 'hidden';
   const current = { seat: 'player1', view: { waitingFor: 'Speed', board: { roundNumber: 3 } } };
@@ -2189,8 +2189,14 @@ test('a hidden page shows "your turn" itself, once per asking, and a visible one
   assert.equal(shown[0].title, 'Your turn');
   assert.equal(shown[0].body, 'Round 3: choose a speed.');
   assert.equal(shown[0].tag, 'turn:player1');
+  assert.equal(shown[0].data.url, '/play');
 
   p.document.visibilityState = 'visible';
   p.context.noticeInPage(p.state, current, 5);
   assert.equal(shown.length, 1, 'a visible page is the notice');
+
+  p.document.visibilityState = 'hidden';
+  p.state.push.subscribed = false;
+  p.context.noticeInPage(p.state, current, 6);
+  assert.equal(shown.length, 1, 'a player who said stop hears nothing from the page either');
 });

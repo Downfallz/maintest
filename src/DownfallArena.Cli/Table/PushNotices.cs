@@ -77,11 +77,16 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// <summary>Whether a push service said this endpoint is gone: a subscription the page should not send again.</summary>
     public bool IsDead(string endpoint) => _dead.ContainsKey(endpoint);
 
-    /// <summary>What the service worker is handed: a title, a line, and where a tap goes.</summary>
-    public static string Payload(HumanSeat.Question question, int? round, TableSeat seat)
+    /// <summary>
+    /// What the service worker is handed: a title, a line, and where a tap goes, which is the game at this table:
+    /// a browser may hold several (ADR 0115), and the question is at the one that asked. The id is the session's
+    /// public name, on the session page's address already; no token travels.
+    /// </summary>
+    public static string Payload(HumanSeat.Question question, int? round, TableSeat seat, string table)
     {
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(seat);
+        ArgumentNullException.ThrowIfNull(table);
         var what = question.Kind switch
         {
             PlayerOptionsKind.Evolution => "pick your packages",
@@ -93,7 +98,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             _ => "decide",
         };
         var body = round is { } number ? string.Create(CultureInfo.InvariantCulture, $"Round {number}: {what}.") : $"Your creature acts: {what}.";
-        return JsonSerializer.Serialize(new { title = "Your turn", body, url = "/play", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
+        return JsonSerializer.Serialize(new { title = "Your turn", body, url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
     }
 
     private async Task NoticeAsync(PlayedTable table, TableSeat seat, HumanSeat.Question question, int? round)
@@ -111,7 +116,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            if (await sender.SendAsync(subscription, Payload(question, round, seat)))
+            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id)))
             {
                 return;
             }
@@ -119,7 +124,14 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             // Gone from the push service: the browser was reinstalled, or the service let it go. Sending again
             // would only fail again, so the seat forgets it and the endpoint is remembered as dead: the browser
             // still holds it and sends it on its next load, and is answered 410, which is when it makes a new one.
+            // Only the subscription that was refused: the seat may hold another by now, the browser's new one or
+            // the next player's, and that one answered nothing.
             _dead[subscription.Endpoint] = 0;
+            if (seat.Push != subscription)
+            {
+                return;
+            }
+
             seat.Push = null;
             if (Record is { } record)
             {

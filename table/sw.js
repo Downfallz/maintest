@@ -21,14 +21,16 @@ async function onPush(notice) {
   });
 }
 
-// A tap goes to the game: the page already open on it when there is one, a new one otherwise. A page on the
-// lobby is sent to the game, unless it is one this worker does not control, which cannot be steered.
+// A tap goes to the game at the table the notice came from: the page already open on it when there is one, a
+// new one otherwise. A page on the lobby, or on another table, is sent there, unless it is one this worker
+// does not control, which cannot be steered.
 async function onTap(url) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  const open = windows.find(client => new URL(client.url).pathname === url) ?? windows[0];
+  const at = client => { const here = new URL(client.url); return `${here.pathname}${here.search}`; };
+  const open = windows.find(client => at(client) === url) ?? windows.find(client => new URL(client.url).pathname === GAME) ?? windows[0];
   if (open) {
     await open.focus();
-    if (new URL(open.url).pathname === url) return;
+    if (at(open) === url) return;
     try {
       if (open.navigate) {
         await open.navigate(url);

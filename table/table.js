@@ -1,8 +1,8 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
-import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
+import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, pushSupported, sameKey, shouldNotifyInPage, turnNotice, TAG } from './push.js';
+import { keyBytes, noticeButton, noticeUrl, pushSupported, sameKey, shouldNotifyInPage, turnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -66,6 +66,9 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
     // Not knowing is the same as no: the link is for the operator, and a page that cannot ask shows none.
   }
 }
+
+// The id of the table whose seats this page plays, once the host said which; null for a page that could not ask.
+let playing = null;
 
 // Synchronous, so the module's top level starts nothing it leaves unawaited: the one asynchronous step, asking
 // the host which of the held seats still answer, settles into the same `enter` either way.
@@ -216,7 +219,11 @@ async function verifiedSeats(held) {
   if (!response.ok) return held;
   const matches = (await response.json()).tables;
   const requested = seatsFromLocation(globalThis.location?.search ?? '');
-  const seats = selectTableSeats(matches, requested.length > 0 ? requested : held);
+  // A notice names its table: the tap lands on the game that asked, not on the table this browser last played.
+  const named = tableFromLocation(globalThis.location?.search);
+  const seats = selectTableSeats(matches, requested.length > 0 ? requested : held, named);
+  // The table these seats are at, for the page's own notices to name: a browser may hold several (ADR 0115).
+  playing = matches.find(match => match.seats === seats)?.table?.id ?? null;
   activateSeats(seats, storage);
   return seats;
 }
@@ -938,10 +945,10 @@ function noticeInPage(state, current, drawn) {
   // Per seat as well as per asking, as the acknowledgement is: the two seats count their own questions.
   const key = drawn === null ? null : `${current.seat}/${drawn}`;
   const hidden = document.visibilityState === 'hidden';
-  if (!shouldNotifyInPage({ asked: key, previous: state.noticed, hidden, permission: globalThis.Notification?.permission })) return;
+  if (!shouldNotifyInPage({ asked: key, previous: state.noticed, hidden, permission: globalThis.Notification?.permission, enabled: state.push?.subscribed })) return;
   state.noticed = key;
   const notice = turnNotice(current.view, current.seat);
-  const options = { body: notice.body, tag: notice.tag, icon: '/icon-192.png', data: { url: '/play' } };
+  const options = { body: notice.body, tag: notice.tag, icon: '/icon-192.png', data: { url: noticeUrl(playing) } };
   try {
     if (state.push?.registration) void state.push.registration.showNotification(notice.title, options);
     else new globalThis.Notification(notice.title, options);

@@ -59,8 +59,15 @@ export function turnNotice(view, seat) {
   };
 }
 
-// Whether a page should show the notice itself: a new asking, while it is hidden, with leave to notify. A
-// visible page is the notice, and a page that was already told of this asking says nothing twice.
-export function shouldNotifyInPage({ asked, previous, hidden, permission }) {
-  return asked !== null && asked !== undefined && asked !== previous && Boolean(hidden) && permission === 'granted';
+// Whether a page should show the notice itself: a new asking, while it is hidden, with leave to notify and the
+// notices on. A visible page is the notice, a page that was already told of this asking says nothing twice,
+// and a player who tapped "Stop notifying me" hears nothing from the page either, whatever the browser allows.
+export function shouldNotifyInPage({ asked, previous, hidden, permission, enabled }) {
+  return asked !== null && asked !== undefined && asked !== previous && Boolean(hidden) && permission === 'granted' && Boolean(enabled);
+}
+
+// Where a tap on a notice goes: the game, at the table the notice came from. A browser may hold several
+// tables (ADR 0115), and the question is at this one.
+export function noticeUrl(table) {
+  return table ? `/play?table=${encodeURIComponent(table)}` : '/play';
 }

@@ -128,3 +128,14 @@ test('a subscription the browser rotated is made again with the same key, and ev
   assert.deepEqual(JSON.parse(JSON.stringify(made)), [{ userVisibleOnly: true, applicationServerKey: 'key' }]);
   assert.deepEqual(JSON.parse(JSON.stringify(told)), [{ kind: 'subscription-changed' }]);
 });
+
+test('a tap sends the page already on the game to the table the notice came from', async () => {
+  const went = [];
+  const game = { url: 'https://table.example/play', focused: false, focus: async () => {}, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [game] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play?table=a' }, close: () => {} } });
+
+  assert.deepEqual(went, ['/play?table=a']);
+  assert.deepEqual(w.opened, []);
+});
