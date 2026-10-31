@@ -97,6 +97,32 @@ function page() {
 
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
 
+for (const seat of ['player1', 'player2']) {
+  test(`entering with only ${seat} opens the game without a handover confirmation`, () => {
+    const p = page();
+    p.current.seat = seat;
+    p.state.holder = null;
+    p.context.fetch = async () => ({ ok: true });
+    p.context.start = (_seats, holder) => { p.state.holder = holder; p.draw(); };
+    p.context.enter([{ seat, token: 'own-seat' }], null);
+    assert.equal(p.nodes.pass.hidden, true);
+    assert.equal(p.nodes.table.hidden, false);
+    assert.equal(p.state.holder, seat);
+    p.view.waitingAsked++; p.draw();
+    assert.equal(p.nodes.pass.hidden, true);
+  });
+}
+
+test('entering with both seats still requires the shared-device confirmation', () => {
+  const p = page();
+  p.context.fetch = async () => ({ ok: true });
+  p.context.start = (_seats, holder) => { p.state.holder = holder; p.draw(); };
+  p.context.enter([{ seat: 'player1', token: 'one' }, { seat: 'player2', token: 'two' }], null);
+  assert.equal(p.nodes.pass.hidden, false);
+  assert.equal(p.nodes.table.hidden, true);
+  assert.equal(p.state.holder, null);
+});
+
 // The inspector's purchase controls, without the phone's way back to the package list.
 function unlocks(p) { return p.nodes.mat.children[2].querySelectorAll('button').filter(node => node.className === 'atlas-unlock'); }
 

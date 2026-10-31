@@ -9,6 +9,8 @@ dotnet run --project src/DownfallArena.Cli -- table --p2 greedy
 
 Open the seat link printed by the host. For two people sharing a screen, omit `--p2 greedy` and use the
 hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md) for rules and recording.
+With one seat in the browser (solo against a bot or each player on their own device), the game opens directly.
+The “I am Player…” confirmation is reserved for browsers holding both seats on a shared device.
 
 ## Many tables, one host
 
