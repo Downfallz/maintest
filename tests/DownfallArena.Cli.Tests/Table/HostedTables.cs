@@ -55,6 +55,9 @@ internal sealed class HostedTables : IDisposable
     /// <summary>A table with a person in seat 1, which waits at its first question until it is let go of.</summary>
     public static TableRequest OnePerson => new(null, AgentSpec.Parse("greedy"), Who: "mk", Handover: null, Seed: 7);
 
+    /// <summary>Two people, the shape the console's "both seats here" link and the admin's hotseat link are for.</summary>
+    public static TableRequest TwoPeople => new(null, null, Who: "mk", Handover: null, Seed: 7);
+
     public void Dispose()
     {
         _host.Dispose();

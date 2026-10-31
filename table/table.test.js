@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import * as transport from './transport.js';
 import * as seats from './seats.js';
 import * as session from './session.js';
+import * as invitation from './invitation.js';
 import * as card from './card.js';
 import * as board from './board.js';
 import * as hand from './hand.js';
@@ -69,7 +70,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -1989,4 +1990,91 @@ test('a game that chooses spells at the slot says so on its rule line and in its
   assert.doesNotMatch(p.context.ruleLine({ contentHash: 'abcdef', rules }), /at the slot/);
   assert.match(p.context.ruleLine({ contentHash: 'abcdef', rules }), /hidden intents/, 'the other rule is named too since ADR 0112');
   assert.match(JSON.stringify(p.nodes), /chooses its spell when its turn comes|chooses a spell and its targets/);
+});
+
+// The host's lobby answers, by path, as the page's `lobbyPost` reads them; every path asked is kept.
+function lobbyHost(p, answers, asked = []) {
+  p.context.fetch = async (path, options) => {
+    asked.push({ path, body: options?.body ? JSON.parse(options.body) : null });
+    const [status, body] = answers[path] ?? [404, { message: 'No such lobby route.' }];
+    return { ok: status < 300, status, text: async () => JSON.stringify(body) };
+  };
+  return asked;
+}
+
+const invited = { token: 'inv', kind: 'invitation', seat: 'player2', table: { id: 't1', format: '3v3', waiting: true } };
+
+test('a player who opens the link meant for the other player is offered their own seat back, and nothing is accepted', async () => {
+  const p = page();
+  const entered = [];
+  p.context.enter = seats => entered.push(seats);
+  const asked = lobbyHost(p, {
+    '/api/lobby/invitations': [200, { invitations: [invited] }],
+    '/api/lobby/resume': [200, { tables: [{ table: { id: 't1' }, seats: [{ seat: 'player1', token: 'mine' }] }] }],
+  });
+
+  await p.context.arrive([{ seat: 'player2', token: 'inv' }]);
+
+  assert.equal(p.nodes.invitation.hidden, false);
+  assert.equal(p.nodes['invitation-title'].textContent, 'You already play Player 1 at this table');
+  assert.equal(p.nodes['invitation-take'].hidden, true);
+  assert.equal(p.document.activeElement, p.nodes['invitation-keep']);
+  p.nodes['invitation-keep'].onclick();
+  // Read across the page's realm, whose arrays are not this one's.
+  assert.deepEqual(JSON.parse(JSON.stringify(entered)), [[{ seat: 'player1', token: 'mine' }]]);
+  assert.deepEqual(asked.map(one => one.path), ['/api/lobby/invitations', '/api/lobby/resume'], 'the invitation is not accepted');
+});
+
+test('taking the place accepts the invitation and plays the seat the host hands back', async () => {
+  const p = page();
+  const entered = [];
+  p.context.enter = seats => entered.push(seats);
+  const asked = lobbyHost(p, {
+    '/api/lobby/invitations': [200, { invitations: [invited] }],
+    '/api/lobby/resume': [200, { tables: [] }],
+    '/api/lobby/claim': [200, { seats: [{ seat: 'player2', token: 'seat-token' }] }],
+  });
+
+  await p.context.arrive([{ seat: 'player2', token: 'inv' }]);
+  assert.equal(p.nodes['invitation-title'].textContent, 'Join as Player 2?');
+  assert.equal(entered.length, 0, 'nothing is played before the tap');
+  await p.nodes['invitation-take'].onclick();
+
+  assert.deepEqual(asked.at(-1), { path: '/api/lobby/claim', body: { tokens: ['inv'] } });
+  assert.equal(p.nodes.invitation.hidden, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(entered)), [[{ seat: 'player2', token: 'seat-token' }]]);
+});
+
+test('a place taken first by another device says so, and leaves only the way out', async () => {
+  const p = page();
+  p.context.enter = () => assert.fail('nothing is played');
+  lobbyHost(p, {
+    '/api/lobby/invitations': [200, { invitations: [invited] }],
+    '/api/lobby/resume': [200, { tables: [] }],
+    '/api/lobby/claim': [409, { message: 'This invitation has already been used.' }],
+  });
+
+  await p.context.arrive([{ seat: 'player2', token: 'inv' }]);
+  await p.nodes['invitation-take'].onclick();
+
+  assert.equal(p.nodes['invitation-problem'].textContent, 'This invitation has already been used.');
+  assert.equal(p.nodes['invitation-take'].hidden, true);
+  assert.equal(p.document.activeElement, p.nodes['invitation-lobby']);
+});
+
+test('a host that cannot be reached keeps nothing, and only an older host is read the old way', () => {
+  const p = page();
+  const resumed = [];
+  p.context.resume = held => resumed.push(held);
+
+  p.context.arrivalFailed(Object.assign(new Error('Bad gateway'), { status: 502 }));
+  assert.equal(p.nodes['invitation-title'].textContent, 'The table could not be reached');
+  assert.equal(p.nodes['invitation-keep'].textContent, 'Try again');
+  assert.equal(resumed.length, 0);
+
+  p.context.arrivalFailed(new TypeError('Failed to fetch'));
+  assert.equal(resumed.length, 0, 'a network failure is not an older host');
+
+  p.context.arrivalFailed(Object.assign(new Error('No such lobby route.'), { status: 404 }));
+  assert.equal(resumed.length, 1);
 });

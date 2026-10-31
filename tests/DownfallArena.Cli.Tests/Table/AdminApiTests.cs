@@ -4,6 +4,7 @@ using System.Text.Json;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Infrastructure.Learning;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -78,9 +79,11 @@ public sealed class AdminApiTests : IDisposable
         seats[1].GetProperty("seated").GetString().ShouldBe("Greedy");
         seats[1].GetProperty("code").ValueKind.ShouldBe(JsonValueKind.Null);
 
-        // And the table is now the registry's, found by the token the link carries.
-        var token = seats[0].GetProperty("link").GetString()!["/?player1=".Length..];
-        _registry.ByToken(token).ShouldNotBeNull().Id.ShouldBe(id);
+        // And the table is now the registry's, found by the invitation the link carries, which is not the
+        // seat's token: whoever accepts it first gets that (ADR 0116).
+        var invitation = seats[0].GetProperty("link").GetString()!["/?player1=".Length..];
+        _registry.ByInvitation(invitation).ShouldNotBeNull().Table.Id.ShouldBe(id);
+        _registry.ByToken(invitation).ShouldBeNull();
     }
 
     [Fact]
@@ -96,6 +99,71 @@ public sealed class AdminApiTests : IDisposable
         codes.ShouldAllBe(code => code != null && code.Length == 8);
         codes[0].ShouldNotBe(codes[1]);
         opened.GetProperty("hotseat").GetString().ShouldNotBeNull().ShouldContain("player1=");
+    }
+
+    /// <summary>A player who lost the phone holding their seat (ADR 0116): the operator's new invitation is the way back in, and the phone is cut off.</summary>
+    [Fact]
+    public async Task A_new_invitation_for_a_taken_seat_cuts_off_the_device_that_held_it()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement;
+        var id = opened.GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var first = table.Seats[0].Invitation!;
+        var claimed = await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { first } }));
+        var lost = JsonDocument.Parse(Text(claimed)).RootElement.GetProperty("seats")[0].GetProperty("token").GetString()!;
+        Seat(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null)).GetProperty("taken").GetBoolean().ShouldBeTrue();
+
+        var answer = await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", OperatorToken, null);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        var invited = JsonDocument.Parse(Text(answer)).RootElement;
+        var next = invited.GetProperty("link").GetString()!["/?player1=".Length..];
+        next.ShouldNotBe(first);
+        invited.GetProperty("code").GetString().ShouldNotBeNull();
+        _registry.ByToken(lost).ShouldBeNull();
+        Seat(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null)).GetProperty("taken").GetBoolean().ShouldBeFalse();
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Invitation.ShouldBe(next);
+        (await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { next } }))).Status.ShouldBe(200);
+
+        static JsonElement Seat(StudioResponse listed) => JsonDocument.Parse(listed.Body).RootElement.GetProperty("tables")[0].GetProperty("seats")[0];
+    }
+
+    /// <summary>A new invitation the store cannot save is not given: the device holding the seat keeps it, as the record still says.</summary>
+    [Fact]
+    public async Task A_new_invitation_that_cannot_be_saved_leaves_the_seat_with_its_device()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
+        using var registry = new TableRegistry();
+        var admin = new AdminApi(registry, hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)", hosted.Stored);
+        var id = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement.GetProperty("id").GetString()!;
+        var table = registry.ById(id)!;
+        var claimed = await admin.Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { table.Seats[0].Invitation! } }));
+        var held = JsonDocument.Parse(Text(claimed)).RootElement.GetProperty("seats")[0].GetProperty("token").GetString()!;
+        store!.Refusing = true;
+
+        (await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", OperatorToken, null)).Status.ShouldBe(503);
+
+        registry.ByToken(held).ShouldBeSameAs(table);
+        table.Seats[0].Taken.ShouldBeTrue();
+        table.Seats[0].Invitation.ShouldBeNull();
+        registry.Codes.Of(table.Seats[0]).ShouldBeNull();
+        registry.Dispose();
+        await table.QuiesceAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData("missing/seats/player1/invite", 404)]
+    [InlineData("{id}/seats/player2/invite", 404)]
+    [InlineData("{id}/seats/player3/invite", 404)]
+    public async Task A_new_invitation_is_only_for_a_person_s_seat_of_a_table_here(string route, int status)
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var id = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, null))).RootElement.GetProperty("id").GetString()!;
+
+        (await admin.HandleAsync("POST", $"/api/tables/{route.Replace("{id}", id, StringComparison.Ordinal)}", "", OperatorToken, null)).Status.ShouldBe(status);
+        (await admin.HandleAsync("POST", $"/api/tables/{id}/seats/player1/invite", "", "not-the-operator", null)).Status.ShouldBe(403);
     }
 
     [Fact]

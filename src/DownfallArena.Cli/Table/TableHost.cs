@@ -146,13 +146,13 @@ internal static class TableHost
         Console.WriteLine($"  Pilot: {server.Url}pilot?token={table.Pilot.Token}");
         Console.WriteLine($"    or from a shell, as '{TableApi.TokenHeader}: {table.Pilot.Token}'");
 
-        // One link carrying every human seat's token, for the case where the two people share this machine's
-        // browser: the page follows whichever seat the match asks, and typing two codes on one device gets to
-        // the same place. A bot's token is on nothing -- nobody needs to read a bot's board.
-        var people = table.Seats.Where(seat => seat.Person is not null).ToList();
+        // One link carrying every human seat's invitation, for the case where the two people share this
+        // machine's browser: the page follows whichever seat the match asks, and typing two codes on one device
+        // gets to the same place. A bot's seat is on nothing -- nobody needs to read a bot's board.
+        var people = table.Seats.Where(seat => seat.Key is not null).ToList();
         if (people.Count > 1)
         {
-            Console.WriteLine($"  Both seats here: {server.Url}?{string.Join('&', people.Select(seat => $"{seat.Name}={seat.Token}"))}");
+            Console.WriteLine($"  Both seats here: {server.Url}?{string.Join('&', people.Select(seat => $"{seat.Name}={seat.Key}"))}");
         }
     }
 

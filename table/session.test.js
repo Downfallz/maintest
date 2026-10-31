@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, forget, heldSeats, isOperator, operatorToken, playPath, resumeTokens, seatsFromLocation } from './session.js';
+import { OPERATOR_KEY, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, seatsFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -127,4 +127,14 @@ test('the address a seat page keeps is the table, never the lobby', () => {
   assert.equal(playPath(''), '/play');
   assert.equal(playPath('/play'), '/play');
   assert.equal(playPath('/table'), '/table');
+});
+
+test('a browser that keeps what is written is told apart from one that throws or keeps nothing', () => {
+  const kept = storage();
+
+  assert.equal(keeps(kept), true);
+  assert.deepEqual(kept.kept, {}, 'the probe leaves nothing behind');
+  assert.equal(keeps(refusing), false);
+  assert.equal(keeps({ getItem: () => null, setItem: () => {}, removeItem: () => {} }), false);
+  assert.equal(keeps(null), false);
 });

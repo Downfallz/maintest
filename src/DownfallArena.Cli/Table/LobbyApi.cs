@@ -44,6 +44,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", Prefix + "/resume") => await ResumeAsync(body),
                 ("POST", Prefix + "/tables") => await OpenAsync(body),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token),
+                ("POST", Prefix + "/invitations") => await InvitationsAsync(body),
+                ("POST", Prefix + "/claim") => await ClaimAsync(body),
                 ("POST", _) when JoinedTable(path) is { } id => await JoinAsync(id),
                 _ => Problem(404, "No such lobby route."),
             };
@@ -142,6 +144,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
             registry.Add(table, reservation);
+
+            // The seats handed to this browser are taken by it from the start: no link names them, and only the
+            // place left for another player keeps an invitation and a code (ADR 0116).
+            var handed = table.Seats.Where(seat => seat.Person is not null && (seat.Name == "player1" || opponent == "hotseat")).ToArray();
+            foreach (var seat in handed)
+            {
+                registry.Rekey(table, seat, SeatKeys.TakenBy(seat.Token));
+            }
+
             try
             {
                 await table.RecordAsync(registry.Codes);
@@ -156,7 +167,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Json(new
             {
                 table = await DescribeAsync(table),
-                seats = table.Seats.Where(seat => seat.Name == "player1" || opponent == "hotseat").Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
+                seats = handed.Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
             }, 201);
         }
         finally
@@ -175,25 +186,17 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "This table is no longer available. Refresh the tables to find another.");
             }
 
-            var seat = table.Seats.FirstOrDefault(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false });
+            var seat = table.Seats.FirstOrDefault(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false } && !seat.Taken);
             if (seat is null)
             {
                 return Problem(409, "Someone has already taken this place. Refresh the tables to find another.");
             }
 
-            // The place is handed over under a fresh token and code: the ones the seat had are in its invitation
+            // The place is handed over under a fresh token, and its invitation and code are spent: they are in a
             // link and on the admin panel, and whoever holds those must not reach a seat someone else took.
-            var previous = seat.Token;
-            var code = registry.Codes.Of(seat);
-            registry.ReplaceToken(table, seat, TableComposer.Token());
-            try
+            if (!await TakeAsync(table, [seat]))
             {
-                await ReserveSeatAsync(table, seat.Name);
-            }
-            catch
-            {
-                registry.ReplaceToken(table, seat, previous, code);
-                throw;
+                return Problem(409, "This table is no longer available. Refresh the tables to find another.");
             }
 
             table.Touch(clock.GetUtcNow());
@@ -222,11 +225,16 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "Only a saved, unfinished game can offer a place to another player.");
             }
 
-            var previous = seat.Token;
-            var code = registry.Codes.Of(seat);
+            // A fresh token revokes this browser, and a fresh invitation and code offer the place to the next
+            // player (ADR 0116): the ones the seat was first offered under were spent when this player took it.
+            var previous = registry.KeysOf(seat);
             var arrived = seat.Person!.HasArrived;
             var open = table.OpenSeats;
-            registry.ReplaceToken(table, seat, TableComposer.Token());
+            if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+            {
+                return Problem(409, "This table is no longer available.");
+            }
+
             seat.Person.Depart();
             table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
             try
@@ -235,7 +243,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
             catch
             {
-                registry.ReplaceToken(table, seat, previous, code);
+                registry.Rekey(table, seat, previous);
                 table.OpenSeats = open;
                 if (arrived)
                 {
@@ -253,7 +261,116 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    /// <summary>An invitation consumes the same place as Join, before its first board is served.</summary>
+    /// <summary>
+    /// What the keys a link carries are, before the page does anything with them (ADR 0116): an invitation still
+    /// outstanding, a seat's own token (a link from before invitations, or a browser that keeps no storage), or
+    /// nothing any more. Asking spends nothing, so a page can show what accepting would do and wait for a tap.
+    /// </summary>
+    private async Task<StudioResponse> InvitationsAsync(string body)
+    {
+        var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
+        if (tokens is null || tokens.Count is 0 or > 2)
+        {
+            return Problem(400, "Send the one or two keys the link carries.");
+        }
+
+        var invitations = await Task.WhenAll(tokens.Distinct(StringComparer.Ordinal).Select(async token =>
+        {
+            if (registry.ByInvitation(token) is { Table.IsOver: false } offered)
+            {
+                return new { token, kind = "invitation", seat = (string?)offered.Seat.Name, table = (object?)await DescribeAsync(offered.Table) };
+            }
+
+            if (registry.ByToken(token) is { } table && table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is { } held)
+            {
+                return new { token, kind = "seat", seat = (string?)held.Name, table = (object?)await DescribeAsync(table) };
+            }
+
+            // Spent, replaced, closed or never minted: which one is not told to whoever holds it.
+            return new { token, kind = "spent", seat = (string?)null, table = (object?)null };
+        }));
+        return Json(new { invitations });
+    }
+
+    /// <summary>
+    /// Accepts the invitations a link carries, one seat or both seats of one table: the first browser to ask takes
+    /// the seat under a fresh token and the invitation is spent, so the same link opened again finds the place
+    /// taken rather than a second key to it. All or none, and saved before the token is returned.
+    /// </summary>
+    private async Task<StudioResponse> ClaimAsync(string body)
+    {
+        var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
+        if (tokens is null || tokens.Count is 0 or > 2)
+        {
+            return Problem(400, "Send the one or two invitations the link carries.");
+        }
+
+        await Claims.WaitAsync();
+        try
+        {
+            var found = tokens.Distinct(StringComparer.Ordinal).Select(registry.ByInvitation).ToArray();
+            if (found.Any(one => one is null) || found.Select(one => one!.Value.Table).Distinct().Count() != 1 || found[0]!.Value.Table.IsOver)
+            {
+                return Problem(409, "This invitation has already been used: someone has taken the place, or it was replaced. Ask the other player for a new code.");
+            }
+
+            var table = found[0]!.Value.Table;
+            var seats = found.Select(one => one!.Value.Seat).ToArray();
+            if (!await TakeAsync(table, seats))
+            {
+                return Problem(409, "This table is no longer available: it was closed.");
+            }
+
+            table.Touch(clock.GetUtcNow());
+            return Json(new { table = await DescribeAsync(table), seats = seats.Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray() });
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>
+    /// Under the claim gate: the seats are this browser's now. Each gets a fresh token, its invitation and code
+    /// are spent and it is no longer an open place, and the record says so before the token leaves the host.
+    /// False, with nothing changed, when the table was let go of meanwhile.
+    /// </summary>
+    private async Task<bool> TakeAsync(PlayedTable table, TableSeat[] seats)
+    {
+        var before = seats.Select(registry.KeysOf).ToArray();
+        void Undo()
+        {
+            for (var index = 0; index < seats.Length; index++)
+            {
+                registry.Rekey(table, seats[index], before[index]);
+            }
+        }
+
+        if (!seats.All(seat => registry.Rekey(table, seat, SeatKeys.TakenBy(TableComposer.Token()))))
+        {
+            Undo();
+            return false;
+        }
+
+        var open = table.OpenSeats;
+        table.OpenSeats = [.. open.Where(name => seats.All(seat => seat.Name != name))];
+        try
+        {
+            await table.RecordAsync(registry.Codes);
+            return true;
+        }
+        catch
+        {
+            Undo();
+            table.OpenSeats = open;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// A seat token reaching an open place, which only a table recorded before invitations still has: its link
+    /// carried the token itself, and the place is spent as it is reached, before its first board is served.
+    /// </summary>
     public async Task SeatReachedAsync(PlayedTable table, string? token)
     {
         ArgumentNullException.ThrowIfNull(table);

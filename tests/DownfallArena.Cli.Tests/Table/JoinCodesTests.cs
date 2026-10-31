@@ -105,7 +105,7 @@ public sealed class JoinCodesTests : IDisposable
 
         var answer = codes.Answer($"{JoinCodes.Prefix}{code}");
 
-        answer.Status.ShouldBe(404);
+        answer.ShouldNameNoSeat();
         Encoding.UTF8.GetString(answer.Body).ShouldNotContain("token-1");
     }
 
@@ -122,7 +122,7 @@ public sealed class JoinCodesTests : IDisposable
         codes.Forget(gone);
 
         codes.Of(gone).ShouldBeNull();
-        codes.Answer($"{JoinCodes.Prefix}{forgotten}").Status.ShouldBe(404);
+        codes.Answer($"{JoinCodes.Prefix}{forgotten}").ShouldNameNoSeat();
         codes.Answer($"{JoinCodes.Prefix}{remaining}").Status.ShouldBe(303);
         codes.Mint(Seat(PlayerSlot.Player2, "token-3", held: false)).ShouldBeNull();
     }

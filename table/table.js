@@ -1,6 +1,7 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
-import { activateSeats, forget, heldSeats, isOperator, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
+import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
+import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -69,14 +70,141 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
 // the host which of the held seats still answer, settles into the same `enter` either way.
 function boot(practice) {
   void showAdminLink();
-  const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
-  if (practice || held.length === 0) {
-    enter(held, practice);
+  if (practice) {
+    enter(practice.seats, practice);
+    return;
+  }
+
+  // A link's keys are asked about before anything is kept or sat down at: they may be an invitation, which is
+  // accepted once and only with a tap (ADR 0116).
+  if (spentLink(globalThis.location?.search)) {
+    arrive([]).catch(() => invite({ kind: 'spent', resumable: false }));
+    return;
+  }
+
+  const linked = seatsFromLocation(globalThis.location?.search ?? '');
+  if (linked.length > 0) {
+    arrive(linked).catch(arrivalFailed);
+    return;
+  }
+
+  resume(heldSeats('', storage));
+}
+
+function resume(held) {
+  if (held.length === 0) {
+    enter(held, null);
     return;
   }
 
   // Keep the held tokens through a temporary connection failure.
-  verifiedSeats(held).then(seats => enter(seats, practice), () => enter(held, practice));
+  verifiedSeats(held).then(seats => enter(seats, null), () => enter(held, null));
+}
+
+// Only a host with no such route -- one from before invitations -- is read the old way, the link as a seat.
+// Anything else that fails keeps nothing and says so: a phone's blip must not store an invitation as a seat.
+function arrivalFailed(failure) {
+  if (failure?.status === 404) resume(heldSeats(globalThis.location?.search ?? '', storage));
+  else invite({ kind: 'unreachable' });
+}
+
+async function lobbyPost(path, body) {
+  const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const text = await response.text();
+  const answer = text ? JSON.parse(text) : {};
+  if (!response.ok) throw Object.assign(new Error(answer.message ?? `The host answered ${response.status}.`), { status: response.status });
+  return answer;
+}
+
+// What the link carries, said before anything is done with it: an invitation waits for a tap, and a player who
+// already holds a seat at that table is offered it back first. A host that cannot be asked -- one from before
+// invitations among them -- throws, and the page reads the link as a seat, as it did then.
+async function arrive(linked) {
+  // No keys is a code that named no open seat (`spentLink`): only what this browser holds is asked about.
+  const answer = linked.length > 0 ? await lobbyPost('/api/lobby/invitations', { tokens: linked.map(one => one.token) }) : { invitations: [] };
+  let held = [];
+  try {
+    held = (await lobbyPost('/api/lobby/resume', { tokens: resumeTokens(savedSeats(storage), referredSeats()) })).tables ?? [];
+  } catch { /* Not knowing what else this browser holds only means the invitation is offered as it is. */ }
+
+  const plan = invitationPlan(answer.invitations, held);
+  if (plan.kind === 'enter') {
+    settle(plan.seats);
+    return;
+  }
+
+  invite(plan);
+}
+
+// A browser that keeps nothing holds its seats in its address (`settle`), so the page a link was tapped on is
+// the only place they are: that page's own seats, read off the referrer when it is this host's.
+function referredSeats() {
+  if (keeps(storage)) return [];
+  try {
+    const from = new URL(globalThis.document?.referrer ?? '');
+    return from.origin === globalThis.location?.origin ? seatsFromLocation(from.search) : [];
+  } catch {
+    return [];
+  }
+}
+
+// The seats this browser now plays, kept, and the address cleared of every key -- unless nothing is kept, in
+// which case the address is the only thing a reload can find them in.
+function settle(seats) {
+  activateSeats(seats, storage);
+  if (globalThis.history?.replaceState) {
+    globalThis.history.replaceState(null, '', addressAfter(playPath(globalThis.location?.pathname), seats, keeps(storage)));
+  }
+
+  enter(seats, null);
+}
+
+function invite(plan) {
+  const text = invitationText(plan);
+  const panel = element('invitation');
+  setPhase(plan.kind === 'spent' ? 'This invitation was already used.' : 'An invitation to a table.');
+  element('invitation-title').textContent = text.title;
+  element('invitation-body').textContent = text.body;
+  element('invitation-problem').textContent = '';
+  const buttons = { 'invitation-take': text.take, 'invitation-here': text.here, 'invitation-keep': text.keep };
+  for (const [id, label] of Object.entries(buttons)) {
+    element(id).hidden = !label;
+    element(id).textContent = label ?? '';
+  }
+  panel.hidden = false;
+  (element('invitation-take').hidden ? element('invitation-keep').hidden ? element('invitation-lobby') : element('invitation-keep') : element('invitation-take')).focus();
+
+  const accept = async also => {
+    for (const id of Object.keys(buttons)) element(id).disabled = true;
+    try {
+      const claimed = await lobbyPost('/api/lobby/claim', { tokens: plan.offered.map(one => one.token) });
+      panel.hidden = true;
+      settle([...plan.seats, ...also, ...claimed.seats]);
+    } catch (failure) {
+      // Somebody accepted it first, or it was replaced: what the page says is what the host said.
+      element('invitation-problem').textContent = failure.message;
+      for (const id of Object.keys(buttons)) element(id).disabled = false;
+      element('invitation-take').hidden = true;
+      element('invitation-here').hidden = true;
+      (element('invitation-keep').hidden ? element('invitation-lobby') : element('invitation-keep')).focus();
+    }
+  };
+  element('invitation-take').onclick = () => accept([]);
+  element('invitation-here').onclick = () => accept(plan.own);
+  element('invitation-keep').onclick = () => {
+    if (plan.kind === 'unreachable') {
+      globalThis.location.reload();
+      return;
+    }
+
+    panel.hidden = true;
+    if (plan.kind === 'spent') {
+      resume(heldSeats('', storage));
+      return;
+    }
+
+    settle([...plan.seats, ...plan.own]);
+  };
 }
 
 // The held seats the host still answers for, one table's worth, saved again as the active pair. The held ones
@@ -98,8 +226,9 @@ function enter(held, practice) {
     return;
   }
 
-  // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
-  if (!practice) tidy();
+  // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage. A page
+  // that keeps nothing keeps its seats in the address (`settle`), so it is not tidied away.
+  if (!practice && keeps(storage)) tidy();
   // A single-seat browser already identifies its player. Only a shared device needs the handover fence.
   const holder = practice ? 'player1' : held.length === 1 ? held[0].seat : null;
   start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), holder, Boolean(practice));
@@ -1823,6 +1952,10 @@ function waitingSeat(seat) {
   if (seat.link) {
     const link = document.createElement('a');
     link.href = seat.link;
+    // In a tab of its own: it is the other player's invitation, to pass on, and this tab is this player's seat
+    // (ADR 0116). Opened here it would replace the one address a browser that keeps nothing holds its seat in.
+    link.target = '_blank';
+    link.rel = 'noopener';
     link.textContent = 'join link';
     box.append(document.createTextNode(' · '), link);
   }

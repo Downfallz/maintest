@@ -133,6 +133,7 @@ export function adminTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
     list: () => send('GET', '/api/tables'),
     open: request => send('POST', '/api/tables', request),
     close: id => send('DELETE', `/api/tables/${encodeURIComponent(id)}`),
+    reinvite: path => send('POST', path),
     sessions: () => send('GET', '/api/sessions'),
     deleteSessions: ids => send('DELETE', '/api/sessions', { ids }),
     exportSessions: ids => download('POST', '/api/sessions/export', { ids }),
@@ -190,6 +191,9 @@ export function tableRows(list) {
       code: seat.code ?? null,
       join: seat.join ?? null,
       link: seat.link ?? null,
+      // A browser holds it (ADR 0116): no link reaches it, and a new invitation is how its player gets back
+      // in from another device. Offered only while the table is played.
+      reinvite: seat.taken === true && !table.finished ? `/api/tables/${encodeURIComponent(table.id)}/seats/${encodeURIComponent(seat.slot)}/invite` : null,
     })),
     hotseat: table.hotseat ?? null,
     pilot: table.pilot,
@@ -289,6 +293,25 @@ function line(term, ...content) {
   return [dt, dd];
 }
 
+// For a player who lost the device holding their seat: that device is cut off, and the seat gets a new code to
+// pass on. Asked twice, because the player at that device may simply be thinking.
+function reinviteButton(seat, transport, redraw) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary';
+  button.textContent = 'New invitation';
+  button.title = 'Cuts off the device holding this seat and gives it a new code';
+  button.addEventListener('click', async () => {
+    if (!globalThis.confirm?.(`Give ${seat.slot} a new invitation? The device playing it now loses the seat.`)) return;
+    button.disabled = true;
+    const answer = await transport.reinvite(seat.reinvite);
+    // Refused -- the store is out, or the table went -- and the seat keeps the device it had: said, not redrawn over.
+    if (!answer.ok) globalThis.alert?.(answer.body?.message ?? `The host answered ${answer.status}.`);
+    await redraw();
+  });
+  return button;
+}
+
 function card(row, transport, redraw) {
   const box = document.createElement('section');
   box.className = 'seat-card table-card';
@@ -309,7 +332,8 @@ function card(row, transport, redraw) {
   for (const seat of row.seats) {
     const shown = seat.code
       ? [document.createTextNode(`${seat.seated} · code `), Object.assign(document.createElement('strong'), { className: 'code', textContent: seat.code }), document.createTextNode(' · '), anchor(seat.join, 'join link')]
-      : [document.createTextNode(seat.seated)];
+      : [document.createTextNode(seat.reinvite ? `${seat.seated} · taken ` : seat.seated)];
+    if (seat.reinvite) shown.push(reinviteButton(seat, transport, redraw));
     list.append(...line(seat.slot, ...shown));
   }
   if (row.hotseat) list.append(...line('Both seats', anchor(row.hotseat, 'one browser, both seats')));

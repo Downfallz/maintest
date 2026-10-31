@@ -50,6 +50,9 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
     if (response.request().method() === 'POST' && response.url().endsWith('/decision')) answered.push(response.status());
   });
   await page.goto(join);
+  // The code's invitation is accepted with a tap, once (ADR 0116); nothing is held until then.
+  await expect(page.locator('#invitation-title')).toHaveText('Join as Player 1?', { timeout: 20000 });
+  await page.locator('#invitation-take').click();
   await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
 
   let changedSpell = false;
@@ -92,4 +95,20 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
     expect(action.spell).toBeTruthy();
     expect(action.targets.length).toBeGreaterThan(0);
   }
+});
+
+// Two devices open the same code: the first to accept takes the seat, and the code then reaches nothing.
+test('a code accepted on one device is spent for every other', async ({ browser }) => {
+  const first = await browser.newContext();
+  const page = await first.newPage();
+  await page.goto(join);
+  // The match above took this host's seat already, unless it failed before accepting: either way one accept.
+  if (await page.locator('#invitation-take').isVisible()) await page.locator('#invitation-take').click();
+
+  const second = await browser.newContext();
+  const other = await second.newPage();
+  await other.goto(join);
+  await expect(other.locator('#invitation-title')).toHaveText('This invitation can no longer be used');
+  await expect(other.locator('#invitation-take')).toBeHidden();
+  await Promise.all([first.close(), second.close()]);
 });

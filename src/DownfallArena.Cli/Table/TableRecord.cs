@@ -88,7 +88,7 @@ internal sealed record TableRecord
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
             Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
-            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null))],
+            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken))],
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,
@@ -107,5 +107,9 @@ internal sealed record TableRecord
             CombatDeclarationText.TryParse(Declaration, out var declaration) ? declaration : Domain.Matches.CombatDeclaration.HiddenIntent);
 }
 
-/// <summary>One seat as the record keeps it: its token, the code its person types, and whether there is one.</summary>
-internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person);
+/// <summary>
+/// One seat as the record keeps it: its token, the code its person types, whether there is one, the invitation
+/// still outstanding for it, and whether a browser has taken it (ADR 0116). <paramref name="Taken" /> is null in
+/// a record written before invitations existed, whose links carried the seat's token itself.
+/// </summary>
+internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null);

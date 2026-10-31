@@ -121,3 +121,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0113](0113-a-tie-between-purchases-goes-to-the-seats-dice.md) | Break a tie between two purchases with the seat's dice | Accepted |
 | [0114](0114-a-shared-package-is-held-by-the-whole-side.md) | Let a package be shared with the whole side | Accepted |
 | [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) | A player lobby keeps a seat until its player explicitly leaves | Accepted |
+| [0116](0116-a-seat-invitation-is-accepted-once.md) | A seat's invitation is accepted once, with a tap | Accepted |
