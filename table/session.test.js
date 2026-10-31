@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, seatsFromLocation } from './session.js';
+import { OPERATOR_KEY, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, seatsFromLocation } from './session.js';
 
 // What a browser's localStorage is, for the three lines of it this page uses.
 function storage(initial = {}) {
@@ -137,4 +137,11 @@ test('a browser that keeps what is written is told apart from one that throws or
   assert.equal(keeps(refusing), false);
   assert.equal(keeps({ getItem: () => null, setItem: () => {}, removeItem: () => {} }), false);
   assert.equal(keeps(null), false);
+});
+
+test('a replay link names its session and the seat it is seen from, Player 1 unless Player 2', () => {
+  assert.deepEqual(replayOf('?replay=20261031-1'), { id: '20261031-1', seat: 'player1' });
+  assert.deepEqual(replayOf('?replay=x&seat=player2'), { id: 'x', seat: 'player2' });
+  assert.deepEqual(replayOf('?replay=x&seat=anyone'), { id: 'x', seat: 'player1' });
+  assert.equal(replayOf('?player1=token'), null);
 });

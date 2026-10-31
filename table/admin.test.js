@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, formatToShow, formats, openAsked, operatorToken, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
+import { OPERATOR_KEY, adminTransport, declarationToShow, declarations, defaultFormat, defaultOpponent, deletionSaid, filenameOf, filterSessions, formatToShow, formats, openAsked, operatorToken, pageOf, said, seatable, sessionRows, signInNeeded, tableRows } from './admin.js';
 
 function answering(status, body, seen = []) {
   return async (path, options) => {
@@ -298,4 +298,54 @@ test('a table asked to choose its spells at the slot says so, and one on the def
   assert.equal(openAsked({ player1: 'person', player2: 'greedy', declaration: 'at-activation' }).declaration, 'at-activation');
   assert.equal(openAsked({ player1: 'person', player2: 'greedy', declaration: '' }).declaration, undefined);
   assert.equal(tableRows({ tables: [{ id: 't', declaration: 'at-activation', seats: [] }] })[0].declaration, 'at-activation');
+});
+
+const listed = [
+  { id: 'a', player1: 'human:mk', player2: 'human', over: true, replay: '/play?replay=a' },
+  { id: 'b', player1: 'human:mk', player2: 'Greedy', over: true, replay: '/play?replay=b' },
+  { id: 'c', player1: 'Greedy', player2: 'Random', live: true, over: false },
+  { id: 'd', player1: 'human:mk', player2: 'human:jo', over: false },
+  { id: 'e' },
+  { id: 'f', player1: 'Greedy>human:mk@3', player2: 'Greedy', over: true, replay: '/play?replay=f' },
+];
+
+test('a session row counts the seats a person held, a seat handed over to one included, and offers its replay once finished', () => {
+  const rows = sessionRows({ sessions: listed });
+
+  assert.deepEqual(rows.map(row => [row.id, row.people, row.finished, row.replay]),
+    [['a', 2, true, '/play?replay=a'], ['b', 1, true, '/play?replay=b'], ['c', 0, false, null], ['d', 2, false, null], ['e', 0, false, null],
+      ['f', 1, true, '/play?replay=f']]);
+});
+
+test('sessions are filtered by state and by who sat, and a session with no manifest only under anyone', () => {
+  const rows = sessionRows({ sessions: listed });
+  const ids = filter => filterSessions(rows, filter).map(row => row.id);
+
+  assert.deepEqual(ids({ state: 'finished' }), ['a', 'b', 'f']);
+  assert.deepEqual(ids({ state: 'finished', players: 'people' }), ['a']);
+  assert.deepEqual(ids({ players: 'people' }), ['a', 'd']);
+  assert.deepEqual(ids({ players: 'mixed' }), ['b', 'f']);
+  assert.deepEqual(ids({ players: 'bots' }), ['c']);
+  assert.deepEqual(ids({ state: 'live' }), ['c']);
+  assert.deepEqual(ids({ state: 'unfinished' }), ['d', 'e']);
+  assert.deepEqual(ids({}), ['a', 'b', 'c', 'd', 'e', 'f']);
+});
+
+test('a page of sessions is clamped to the pages there are', () => {
+  const rows = Array.from({ length: 45 }, (_, index) => index);
+
+  assert.deepEqual(pageOf(rows, 0), { rows: rows.slice(0, 20), page: 0, pages: 3 });
+  assert.deepEqual(pageOf(rows, 2).rows, rows.slice(40));
+  assert.equal(pageOf(rows, 9).page, 2);
+  assert.equal(pageOf(rows, -1).page, 0);
+  assert.deepEqual(pageOf([], 3), { rows: [], page: 0, pages: 1 });
+});
+
+test('a finished table offers its replay beside its viewer link, and a table being played neither', () => {
+  const rows = tableRows({ tables: [
+    { id: 'done', finished: true, session: '/session/done', replay: '/play?replay=done', seats: [], pilot: '/pilot' },
+    { id: 'playing', finished: false, session: '/session/playing', replay: null, seats: [], pilot: '/pilot' },
+  ] });
+
+  assert.deepEqual(rows.map(row => [row.session, row.replay]), [['/session/done', '/play?replay=done'], [null, null]]);
 });

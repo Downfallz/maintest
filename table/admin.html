@@ -44,8 +44,22 @@
           <button id="sessions-refresh" type="button" class="secondary">Refresh</button>
         </div>
         <p class="muted">Every session this host's store holds, whether or not this host still has its table. Export one or several as a zip of run directories, the format <code>train-clone</code> and the viewer read.</p>
+        <div class="fields session-filters">
+          <label for="sessions-state">Show<select id="sessions-state">
+            <option value="all">Every session</option>
+            <option value="finished">Finished</option>
+            <option value="live">Live on this host</option>
+            <option value="unfinished">Not finished</option>
+          </select></label>
+          <label for="sessions-players">Players<select id="sessions-players">
+            <option value="all">Anyone</option>
+            <option value="people">Human vs human</option>
+            <option value="mixed">Human vs bot</option>
+            <option value="bots">Bots only</option>
+          </select></label>
+        </div>
         <div class="selection-tools">
-          <label class="check"><input id="sessions-all" type="checkbox" /> Select all</label>
+          <label class="check"><input id="sessions-all" type="checkbox" /> Select all on this page</label>
           <button id="sessions-export" type="button" disabled>Export selected</button>
           <button id="sessions-delete" type="button" class="danger" disabled>Delete selected…</button>
         </div>
@@ -56,6 +70,11 @@
         </div>
         <output id="sessions-said" class="said"></output>
         <ol id="sessions" class="session-list" aria-label="Recorded sessions"></ol>
+        <nav class="session-pages" aria-label="Session pages">
+          <button id="sessions-previous" type="button" class="secondary">← Newer</button>
+          <output id="sessions-count" class="muted"></output>
+          <button id="sessions-next" type="button" class="secondary">Older →</button>
+        </nav>
       </section>
     </main>
 

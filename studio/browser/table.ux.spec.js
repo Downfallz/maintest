@@ -368,6 +368,29 @@ test('a finished match replays every round from its result, and the round can be
   await expect(page.locator('#asking')).toHaveText(/You win/);
 });
 
+test('a session opened from the admin panel goes straight to its replay, and its result names the winner', async ({ page }) => {
+  const ally = view.board.allies[0]; const enemy = view.board.enemies[0];
+  const frame = { before: [ally, { ...enemy, health: 27 }], after: [ally, enemy], timeline: [{ creature: 1, speed: 'Standard' }], rollOffs: [] };
+  const feed = [{ sequence: 10, round: 1, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 1,
+    resolution: { action: { actor: 1, spell: cards[3].id, targets: [2] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 7 }], frame } }];
+  let asked = 0;
+  await page.route('**/api/sessions/finished-one/replay', route => {
+    asked += 1;
+    return route.fulfill({ json: { id: 'finished-one', outcome: { winner: 'player2', reason: 'Elimination' }, catalogue,
+      boards: { player1: view.board, player2: { ...view.board, allies: view.board.enemies, enemies: view.board.allies } }, feed } });
+  });
+
+  await page.goto('/table/?replay=finished-one');
+
+  await expect(page.locator('#phase-current')).toHaveText('Match replay');
+  await expect(page.locator('#playback-action')).toContainText('Heavy Strike');
+  await page.locator('[data-focus="playback-skip"]').click();
+  await expect(page.locator('#asking')).toHaveText('Player 2 wins · the last team standing.');
+  await expect(page.locator('#notes')).toBeHidden();
+  expect(asked).toBe(1);
+  await expectNoSidewaysScroll(page);
+});
+
 test('below a laptop the battlefield is in the round bar at a glance, not at the bottom of the page', async ({ page }) => {
   if (isLaptop(page)) {
     await expect(page.locator('#mini-board')).toBeHidden();

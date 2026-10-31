@@ -41,6 +41,47 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   };
 }
 
+// A finished session read back for its replay, off the operator's own route: nothing here is a seat, so it
+// decides nothing and the host is asked once. Its answer is the match as one seat saw it at the end -- the
+// seat's last board, the outcome and every public event of every round -- which is all a replay reads.
+export function replayTransport(id, seat, token, fetchImpl = globalThis.fetch.bind(globalThis)) {
+  // The asking itself is kept, not its answer: the catalogue and the first poll ask at the same moment. A refusal
+  // or a failure is forgotten, so the next poll asks again.
+  let loading = null;
+  async function request() {
+    const response = await fetchImpl(`/api/sessions/${encodeURIComponent(id)}/replay`, { method: 'GET', headers: token ? { 'X-Seat-Token': token } : {} });
+    const text = await response.text();
+    return { status: response.status, ok: response.ok, body: text ? parse(text) : null };
+  }
+  function load() {
+    const pending = loading ?? request();
+    loading = pending;
+    pending.then(answer => { if (!answer.ok) loading = null; }, () => { loading = null; });
+    return pending;
+  }
+  const answered = async shape => {
+    const answer = await load();
+    return answer.ok ? { ...answer, body: shape(answer.body) } : answer;
+  };
+  const refused = async () => ({ status: 409, ok: false, body: { message: 'A replay decides nothing.' } });
+  return {
+    seat: () => answered(body => replayView(body, seat)),
+    session: () => answered(body => ({ over: true, begun: true, outcome: body.outcome })),
+    catalogue: () => answered(body => body.catalogue),
+    decide: refused, concede: refused, leave: refused, note: refused,
+  };
+}
+
+// The seat view a replay is drawn from: a match over, nothing asked, nothing recorded from here.
+export function replayView(body, seat) {
+  const feed = body?.feed ?? [];
+  return {
+    over: true, outcome: body?.outcome ?? null, replay: true, recording: false, waiting: null,
+    waitingFor: null, waitingCreature: null, waitingAsked: null, options: {},
+    board: body?.boards?.[seat], feed, feedNext: feed.length ? feed.at(-1).sequence + 1 : 0,
+  };
+}
+
 // What the seat route is asked for, or nothing. Zero and a first poll are the same request: the feed from the
 // start, which is what `since` already means on the host.
 function query(since, shown) {

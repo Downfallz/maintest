@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { httpTransport } from './transport.js';
+import { httpTransport, replayTransport } from './transport.js';
 
 // The stub is the shape studio/backend.test.js uses: a recorded call and a canned answer, no network.
 function stub(answer = { status: 200, body: '{"seat":"player1"}' }) {
@@ -129,4 +129,42 @@ test('a poll with nothing held asks for the feed from the start', async () => {
   await transport.seat();
 
   assert.deepEqual(calls.map(call => call.path), ['/api/seat/player1']);
+});
+
+const replayed = JSON.stringify({
+  id: 'x', outcome: { winner: 'player2', reason: 'Elimination' }, catalogue: { cards: [] },
+  boards: { player1: { roundNumber: 6, allies: [{ id: 1 }] }, player2: { roundNumber: 6, allies: [{ id: 4 }] } },
+  feed: [{ sequence: 3, event: { kind: 'RoundEnded' } }, { sequence: 9, event: { kind: 'CombatActionResolved' } }],
+});
+
+test('a replay asks the host for its session once, with the operator token, and serves it as a finished seat', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: replayed });
+  const transport = replayTransport('20261031 x', 'player2', 'op', fetchImpl);
+
+  const [seat, catalogue] = await Promise.all([transport.seat(0), transport.catalogue()]);
+  await transport.seat(10);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, '/api/sessions/20261031%20x/replay');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'op');
+  assert.equal(seat.body.over, true);
+  assert.equal(seat.body.replay, true);
+  assert.equal(seat.body.waitingFor, null);
+  assert.deepEqual(seat.body.board.allies, [{ id: 4 }]);
+  assert.equal(seat.body.feedNext, 10);
+  assert.deepEqual(catalogue.body, { cards: [] });
+});
+
+test('a replay decides nothing, and asks again after a refusal', async () => {
+  const { calls, fetchImpl } = stub({ status: 403, body: '{"message":"Not the operator."}' });
+  const transport = replayTransport('x', 'player1', null, fetchImpl);
+
+  const refused = await transport.seat(0);
+  await transport.seat(0);
+  const decided = await transport.decide({ kind: 'Speed' });
+
+  assert.equal(refused.ok, false);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].options.headers, {});
+  assert.equal(decided.ok, false);
 });
