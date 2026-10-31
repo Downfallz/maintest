@@ -435,6 +435,12 @@ async function refresh(state) {
   }
 }
 
+// Whether the host said this seat's token is no longer one of its seats. A replay refused is the operator's
+// sign-in, not a seat this browser holds, so nothing saved is forgotten for it.
+function revokes(state, answer) {
+  return answer.status === 403 && !state.replaying;
+}
+
 async function poll(state) {
   const revision = state.revision;
 
@@ -456,8 +462,7 @@ async function poll(state) {
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
     // same page, and it has already been taken out of the address bar, so forgetting it too would mean
     // reading it off the host's screen again.
-    // A replay refused is the operator's sign-in, not a seat this browser holds: nothing saved is forgotten.
-    if (answer.status === 403 && !state.replaying) {
+    if (revokes(state, answer)) {
       refused.push(seat.seat);
       continue;
     }
