@@ -330,7 +330,12 @@ class Readings:
                 "id": tier,
                 "name": self.tiers[tier]["name"],
                 "family": self.tiers[self.family(tier)]["name"],
-                "passive": passive_text(self.tiers[tier]["passive"]),
+                "passive": passive_text(self.tiers[tier]["passive"])
+                + (
+                    " pour toute l'équipe, à chaque copie (ADR 0114)"
+                    if self.tiers[tier].get("sharedWithTeam")
+                    else ""
+                ),
                 "runs": bought[tier],
                 "offers": self.offers_of(tier),
             }
