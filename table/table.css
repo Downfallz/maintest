@@ -981,6 +981,24 @@ body:has(#table) { padding-bottom: 24px; }
   .mini-initiative { flex: none; font-size: 10px; font-weight: 700; color: #d0aff3; }
 }
 
+/* During phone targeting the battlefield is a touch control, not just a status strip. Only rows with
+   legal targets grow, keeping the other team and ordinary phase changes compact. */
+@media (max-width: 760px) {
+  .mini-board.targeting { gap: 8px; }
+  .mini-board.targeting .mini-row { gap: 8px; }
+  .mini-board.targeting .mini-row:has(.legal) .mini-creature {
+    min-height: 72px; padding: 8px 6px; grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-rows: 24px 18px; gap: 5px 4px; border-radius: 10px;
+  }
+  .mini-board.targeting .mini-row:has(.legal) .mini-id { width: 24px; height: 24px; font-size: 14px; }
+  .mini-board.targeting .mini-row:has(.legal) .mini-health { height: 18px; }
+  .mini-board.targeting .mini-row:has(.legal) .mini-hp { font-size: 12px; line-height: 18px; }
+  .mini-board.targeting .mini-row:has(.legal) :is(.mini-energy, .mini-defense, .mini-initiative) { font-size: 11px; }
+  #decision[data-kind="Target"] .decision-context { font-size: 12px; margin-bottom: 0; }
+  #decision[data-kind="Target"] .decision-guide { padding: 6px 8px; margin-block: 4px; }
+  #decision[data-kind="Target"] .decision-guide p { margin-block: 2px; }
+}
+
 @media (max-width: 760px) {
   #own-hand .held-cards.speed-reference:not(.grouped-spells),
   #own-hand .speed-reference .spell-grid,

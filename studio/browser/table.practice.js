@@ -50,7 +50,7 @@ async function open(page, scenario) {
 test('target previews stay readable on a phone and restart clears the selection', async ({ page }, info) => {
   await open(page, 'targeting');
   await expect(page.locator('#decision-guide')).toContainText('If cast on the current board');
-  await expect(page.locator('#decision-guide')).toContainText('the earlier actions are already on the board');
+  await expect(page.locator('#decision-guide')).toContainText('rolls can still change the outcome');
   // A phone picks a target in the battlefield bar under the round; a laptop on the battlefield beside the desk.
   const target = info.project.name === 'table-phone' ? page.locator('#mini-board [aria-label^="Creature 4,"]') : page.locator('[data-focus="target-4"]');
   await target.click();
