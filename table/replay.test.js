@@ -36,3 +36,17 @@ test('a replay across rounds shows the action on its own round with only that ro
   assert.deepEqual(board.revealedActions, [{ actor: 2 }, { actor: 1 }]);
   assert.equal(board.activationCursor, 1);
 });
+
+test('a round upkeep in a replay is shown before its combat, with nothing turned over', () => {
+  const frame = { before: [], after: [], timeline: [], rollOffs: [] };
+  const actions = [
+    { round: 1, actor: { id: 1 }, action: { actor: 1 }, frame },
+    { round: 2, interlude: 'upkeep', ticks: [], frame },
+  ];
+
+  const board = playbackBoard({ actions, index: 1, stage: 'after', round: 1 }, { allies: [] });
+
+  assert.equal(board.roundNumber, 2);
+  assert.equal(board.subPhase, 'Upkeep');
+  assert.deepEqual(board.revealedActions, []);
+});

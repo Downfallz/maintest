@@ -1456,6 +1456,25 @@ test('a match replay the host cannot be reached for says so and opens nothing', 
   assert.equal(p.state.matchFeed, undefined);
 });
 
+test('a match replay reads a round upkeep and the packages it revealed before its casts', async () => {
+  const p = page(); finishedMatch(p); p.draw(); stepOk(p);
+  const feed = [
+    { sequence: 1, round: 2, event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 1, damage: 2 }] } },
+    { sequence: 2, round: 2, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 2, tier: 'tier:one:v1' }] } },
+    ...completedRound(2),
+  ];
+  p.current.transport.seat = async () => ({ ok: true, body: { ...p.view, feed } });
+
+  await p.nodes.choices.children[0].click();
+  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · upkeep');
+  assert.match(p.nodes['playback-action'].textContent, /Creature 1 · yoursOngoing damage −2 HP/);
+  p.nodes['playback-controls'].children[1].click();
+  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · packages bought');
+  assert.match(p.nodes['playback-action'].textContent, /Creature 2 · opponentFirst package/);
+  p.nodes['playback-controls'].children[1].click();
+  assert.match(p.nodes['playback-action'].textContent, /First card/);
+});
+
 test('a round replay names one round and offers no jump between rounds', () => {
   const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2; p.draw();
   openReplay(p);

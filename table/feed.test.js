@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, stepStart } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -265,4 +265,29 @@ test("only the opponent's actions are held, and a seat picked up again starts af
   assert.equal(stepStart(entries, board, cards), 9);
   assert.equal(stepStart(entries.filter(entry => entry.event.resolution.action.actor === 2), board, cards), 3);
   assert.equal(stepStart([], board, cards), -1);
+});
+
+test('a match replay reads each round as it happened: upkeep, the packages revealed, then the casts', () => {
+  const board = { allies: [{ id: 1 }], enemies: [{ id: 2 }] };
+  const frame = { before: [{ id: 1, health: 9 }], after: [{ id: 1, health: 4 }], timeline: [{ creature: 1 }], rollOffs: [] };
+  const entries = [
+    { sequence: 5, round: 2, event: { kind: 'CombatActionResolved', roundId: 2, resolution: { action: { actor: 2, spell: 'x', targets: [1] } }, appliedOutcomes: [], frame } },
+    { sequence: 3, round: 2, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 1, tier: 'tier:a:v1' }, { creature: 2, tier: 'tier:b:v1' }] } },
+    { sequence: 2, round: 2, event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 1, damage: 2 }] } },
+    { sequence: 4, round: 2, event: { kind: 'SubPhaseEntered', roundId: 2 } },
+  ];
+
+  const replay = matchReplay(entries, board, cards);
+
+  assert.deepEqual(replay.map(item => item.interlude ?? 'cast'), ['upkeep', 'purchases', 'cast']);
+  assert.deepEqual(replay[0].ticks.map(tick => [tick.creature, tick.amount, tick.tone]), [[1, 2, 'harm']]);
+  assert.deepEqual(replay[1].choices.map(choice => [choice.creature.side, choice.tier]), [['ally', 'tier:a:v1'], ['enemy', 'tier:b:v1']]);
+  assert.deepEqual(replay[0].frame.before, frame.before);
+  assert.deepEqual(replay[0].frame.after, frame.before);
+});
+
+test('an upkeep with no cast after it in its round has no battlefield to borrow', () => {
+  const entries = [{ sequence: 2, round: 3, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }];
+
+  assert.equal(matchReplay(entries, { allies: [], enemies: [] }, cards)[0].frame, undefined);
 });

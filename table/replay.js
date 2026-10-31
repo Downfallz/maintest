@@ -6,11 +6,13 @@ export function playbackBoard(replay, board) {
   const allies = new Set((board.allies ?? []).map(creature => creature.id));
   // A whole match's replay crosses rounds: the round is the action's own, and only its round's slots count.
   const round = playbackRound(replay);
-  const earlier = replay.actions.slice(0, replay.index + 1).filter(item => (item.round ?? round) === round);
+  const earlier = replay.actions.slice(0, replay.index + 1).filter(item => (item.round ?? round) === round && !item.interlude);
+  // A round's upkeep or its purchases happen before its combat: nothing is on the timeline or turned over yet.
+  const before = { upkeep: 'Upkeep', purchases: 'Evolution' }[action.interlude];
   return {
     ...board,
     roundNumber: round,
-    phase: 'Combat', subPhase: 'Activation',
+    phase: before ? 'Planning' : 'Combat', subPhase: before ?? 'Activation',
     allies: creatures.filter(creature => allies.has(creature.id)),
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
