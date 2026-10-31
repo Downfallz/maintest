@@ -357,3 +357,10 @@ and invalidates the old token and code; closing the page keeps them. Taking an o
 hands it over under a fresh token and code, so an invitation already sent for it stops working. Open tables
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
+
+A seat's link and code carry an **invitation**, not the seat itself (ADR 0116). Opening one asks first: **Take
+the place** accepts it, once, and the link and code then stop working for anyone else. A browser that already
+plays the other seat of that table is offered **Back to** its own seat instead, so a player who opens the link
+meant for their opponent does not take that seat by accident; playing both seats on that device is an explicit
+second button. A player who lost the device holding a seat gets a **New invitation** from the admin panel,
+which cuts that device off.

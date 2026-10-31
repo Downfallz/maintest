@@ -26,6 +26,19 @@
       <output id="practice-status" aria-live="polite"></output>
     </section>
 
+    <!-- A link's invitation is accepted once, with a tap (ADR 0116): until then nothing is kept and no seat is taken. -->
+    <section id="invitation" class="practice-panel invitation-panel" aria-labelledby="invitation-title" hidden>
+      <div><p class="eyebrow">Invitation</p><h2 id="invitation-title"></h2></div>
+      <p id="invitation-body"></p>
+      <div class="invitation-actions">
+        <button id="invitation-take" type="button" hidden></button>
+        <button id="invitation-keep" type="button" hidden></button>
+        <button id="invitation-here" type="button" class="secondary" hidden></button>
+        <a id="invitation-lobby" class="admin-link" href="/">Tables</a>
+      </div>
+      <output id="invitation-problem" aria-live="polite"></output>
+    </section>
+
     <!-- Opaque and above every control: neither seat can read the board during handover. -->
     <section id="pass" hidden aria-labelledby="pass-seat">
       <div class="pass-emblem" aria-hidden="true">D</div>

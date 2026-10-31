@@ -45,6 +45,7 @@ internal sealed class TableRegistry : IDisposable
     private readonly Lock _gate = new();
     private readonly Dictionary<string, PlayedTable> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PlayedTable> _byToken = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PlayedTable> _byInvitation = new(StringComparer.Ordinal);
     private DateTimeOffset _swept = DateTimeOffset.MinValue;
     private int _reserved;
 
@@ -146,6 +147,11 @@ internal sealed class TableRegistry : IDisposable
         foreach (var seat in table.Seats)
         {
             _byToken[seat.Token] = table;
+            if (seat.Invitation is { } invitation)
+            {
+                _byInvitation[invitation] = table;
+            }
+
             if (codes is not null)
             {
                 Codes.Mint(seat, codes.GetValueOrDefault(seat.Name));
@@ -179,16 +185,69 @@ internal sealed class TableRegistry : IDisposable
         }
     }
 
-    /// <summary>Revokes a departed player's token and code without changing the human agent or its pending question.</summary>
-    public void ReplaceToken(PlayedTable table, TableSeat seat, string token, string? code = null)
+    /// <summary>The table and seat an outstanding invitation names (ADR 0116), or none: a spent one names nothing.</summary>
+    public (PlayedTable Table, TableSeat Seat)? ByInvitation(string? invitation)
     {
+        if (string.IsNullOrWhiteSpace(invitation))
+        {
+            return null;
+        }
+
         lock (_gate)
         {
+            return _byInvitation.GetValueOrDefault(invitation) is { } table && table.Seats.FirstOrDefault(seat => seat.Invitation == invitation) is { } seat
+                ? (table, seat)
+                : null;
+        }
+    }
+
+    /// <summary>A seat's keys as they are, to put back with <see cref="Rekey" /> when what changed them cannot be saved.</summary>
+    public SeatKeys KeysOf(TableSeat seat)
+    {
+        ArgumentNullException.ThrowIfNull(seat);
+        lock (_gate)
+        {
+            return new SeatKeys(seat.Token, seat.Invitation, seat.Taken, Codes.Of(seat));
+        }
+    }
+
+    /// <summary>
+    /// Gives a seat new keys without changing the human agent or its pending question: a fresh token when its
+    /// player leaves or another takes it, and an invitation and its code while nobody holds it. The old token,
+    /// invitation and code stop reaching the seat at once. A code is minted only for a seat a link may still
+    /// name; <see cref="SeatKeys.Code" /> asks for that one back, as an undo does. False, changing nothing, once
+    /// the table is no longer here: a sweep or a close that won the race leaves no key to put back.
+    /// </summary>
+    public bool Rekey(PlayedTable table, TableSeat seat, SeatKeys keys)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(seat);
+        ArgumentNullException.ThrowIfNull(keys);
+        lock (_gate)
+        {
+            if (_byId.GetValueOrDefault(table.Id) != table)
+            {
+                return false;
+            }
+
             Codes.Forget(seat);
             _byToken.Remove(seat.Token);
-            seat.Token = token;
-            _byToken[token] = table;
-            Codes.Mint(seat, code);
+            if (seat.Invitation is { } spent)
+            {
+                _byInvitation.Remove(spent);
+            }
+
+            seat.Token = keys.Token;
+            seat.Invitation = keys.Invitation;
+            seat.Taken = keys.Taken;
+            _byToken[keys.Token] = table;
+            if (keys.Invitation is { } invitation)
+            {
+                _byInvitation[invitation] = table;
+            }
+
+            Codes.Mint(seat, keys.Code);
+            return true;
         }
     }
 
@@ -276,6 +335,7 @@ internal sealed class TableRegistry : IDisposable
             all = [.. _byId.Values];
             _byId.Clear();
             _byToken.Clear();
+            _byInvitation.Clear();
         }
 
         foreach (var table in all)
@@ -329,6 +389,11 @@ internal sealed class TableRegistry : IDisposable
         foreach (var seat in table.Seats)
         {
             _byToken.Remove(seat.Token);
+            if (seat.Invitation is { } invitation)
+            {
+                _byInvitation.Remove(invitation);
+            }
+
             Codes.Forget(seat);
         }
     }

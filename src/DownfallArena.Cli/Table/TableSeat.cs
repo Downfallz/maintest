@@ -17,6 +17,23 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
     /// <summary>Replaced when its player explicitly leaves, revoking their previous access.</summary>
     public string Token { get; set; } = Token;
 
+    /// <summary>
+    /// The single-use key a link and a code carry while nobody has taken this person's seat (ADR 0116). It is
+    /// not the seat's token: the host trades it for the token once, to the first browser that confirms, and
+    /// forgets it, so a second browser opening the same link finds the place taken rather than a second key to
+    /// the same seat. Null once taken, for a bot's seat, and for a seat recorded before invitations existed.
+    /// </summary>
+    public string? Invitation { get; set; }
+
+    /// <summary>Whether a browser holds this seat's token: it took the invitation, or the lobby handed it over.</summary>
+    public bool Taken { get; set; }
+
+    /// <summary>
+    /// What a link or a code hands out for this seat: its invitation, or, for a seat recorded before invitations
+    /// existed, its token, as links did then. Nothing once the seat is taken, and nothing for a bot's.
+    /// </summary>
+    public string? Key => Person is null || Taken ? null : Invitation ?? Token;
+
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";
 

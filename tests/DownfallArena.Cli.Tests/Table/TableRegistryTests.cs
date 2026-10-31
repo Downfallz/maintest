@@ -46,7 +46,7 @@ public sealed class TableRegistryTests : IDisposable
         var answer = registry.Codes.Answer($"{JoinCodes.Prefix}{code}");
 
         answer.Status.ShouldBe(303);
-        answer.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == $"/?player1={second.Seats[0].Token}");
+        answer.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == $"/?player1={second.Seats[0].Invitation}");
         registry.Codes.Of(first.Seats[0]).ShouldNotBe(code);
         registry.Codes.Of(first.Seats[1]).ShouldBeNull("a bot's seat has nobody to hand a code to");
     }
@@ -64,7 +64,7 @@ public sealed class TableRegistryTests : IDisposable
 
         registry.ByToken(token).ShouldBeNull();
         registry.ById(table.Id).ShouldBeNull();
-        registry.Codes.Answer($"{JoinCodes.Prefix}{code}").Status.ShouldBe(404);
+        registry.Codes.Answer($"{JoinCodes.Prefix}{code}").ShouldNameNoSeat();
         registry.Remove(table.Id).ShouldBeFalse();
 
         // Removing stops the match: the person's seat is released and the driver ends without an outcome.

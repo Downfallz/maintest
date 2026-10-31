@@ -67,6 +67,20 @@ function remember(storage, held) {
   }
 }
 
+// Whether this browser keeps what the page writes: private browsing can throw on the way in, or hand nothing
+// back. A page that keeps nothing holds its seat in the address instead (invitation.js).
+export function keeps(storage) {
+  const probe = 'downfall.table.probe';
+  try {
+    storage?.setItem(probe, '1');
+    const kept = storage?.getItem(probe) === '1';
+    storage?.removeItem(probe);
+    return kept;
+  } catch {
+    return false;
+  }
+}
+
 // Keep every table's capabilities independently; choosing a new table only replaces the active pair.
 export function savedSeats(storage) {
   let saved = [];

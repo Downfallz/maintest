@@ -36,8 +36,22 @@ public sealed class LobbyApiTests : IDisposable
         foreach (var seat in table.Seats)
         {
             text.ShouldNotContain(seat.Token);
-            text.ShouldNotContain(_registry.Codes.Of(seat)!);
+            if (_registry.Codes.Of(seat) is { } code)
+            {
+                text.ShouldNotContain(code);
+            }
+
+            if (seat.Invitation is { } invitation)
+            {
+                text.ShouldNotContain(invitation);
+            }
         }
+
+        // The creator's seat is theirs from the start: no link or code names it, and only the other place is offered.
+        table.Seats[0].Taken.ShouldBeTrue();
+        table.Seats[0].Key.ShouldBeNull();
+        _registry.Codes.Of(table.Seats[0]).ShouldBeNull();
+        table.Seats[1].Invitation.ShouldNotBeNull();
 
         Read(listed).GetProperty("tables")[0].GetProperty("openSeats").GetInt32().ShouldBe(1);
     }
@@ -55,7 +69,19 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Fact]
-    public async Task An_invitation_consumes_the_same_place_as_the_public_join_button()
+    public async Task An_accepted_invitation_consumes_the_same_place_as_the_public_join_button()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        (await Claim(table.Seats[1].Invitation!)).Status.ShouldBe(200);
+
+        (await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).Status.ShouldBe(409);
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().OpenSeats.ShouldBeEmpty();
+    }
+
+    /// <summary>A table recorded before invitations: its link carried the seat's token, and reaching the seat spends the place.</summary>
+    [Fact]
+    public async Task A_seat_token_from_an_older_link_still_consumes_its_open_place()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
         var table = _registry.ById(id)!;
@@ -63,6 +89,208 @@ public sealed class LobbyApiTests : IDisposable
 
         (await Lobby.HandleAsync("POST", $"/api/lobby/tables/{id}/join", "{}")).Status.ShouldBe(409);
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().OpenSeats.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// The case the guard exists for (ADR 0116): one link opened on two devices, or by the player who meant to
+    /// pass it on. The first to accept takes the seat under a token of its own; the second finds it taken.
+    /// </summary>
+    [Fact]
+    public async Task An_invitation_is_taken_once_whoever_opens_its_link_second()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var invitation = table.Seats[1].Invitation.ShouldNotBeNull();
+        var code = _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+
+        var answers = await Task.WhenAll(Claim(invitation), Claim(invitation));
+
+        answers.Select(answer => answer.Status).Order().ShouldBe([200, 409]);
+        var token = Read(answers.Single(answer => answer.Status == 200)).GetProperty("seats")[0].GetProperty("token").GetString()!;
+        token.ShouldNotBe(invitation);
+        table.Seats[1].Token.ShouldBe(token);
+        table.Seats[1].Taken.ShouldBeTrue();
+        _registry.ByInvitation(invitation).ShouldBeNull();
+        _registry.Codes.Answer($"/j/{code}").ShouldNameNoSeat();
+        Read(await Ask(invitation)).GetProperty("invitations")[0].GetProperty("kind").GetString().ShouldBe("spent");
+
+        var recorded = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        recorded.OpenSeats.ShouldBeEmpty();
+        recorded.Seats[1].ShouldBe(new RecordedSeat("player2", token, null, true, null, true));
+    }
+
+    /// <summary>A table recorded before invitations comes back the way its links were written: they carry the seat's token, and keep working.</summary>
+    [Fact]
+    public async Task A_table_recorded_before_invitations_keeps_its_links_to_the_seat_token()
+    {
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        _registry.TryAdd(table).ShouldBeTrue();
+        await table.RecordAsync(_registry.Codes, TestContext.Current.CancellationToken);
+        var recorded = (await _hosted.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await table.Run!.RecordAsync(recorded with { Seats = [.. recorded.Seats.Select(seat => seat with { Invitation = null, Taken = null })] }, TestContext.Current.CancellationToken);
+        var token = table.Seats[0].Token;
+        _registry.Dispose();
+        await table.QuiesceAsync(TestContext.Current.CancellationToken);
+        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
+        using var restored = new TableRegistry();
+
+        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        rebuilt.Seats[0].Key.ShouldBe(token);
+        var code = restored.Codes.Of(rebuilt.Seats[0]).ShouldNotBeNull();
+        restored.Codes.Answer($"/j/{code}").Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == $"/?player1={token}");
+        restored.Dispose();
+        await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>A claim the store cannot save is not made: the invitation, its code and the open place are as they were, and no token was handed out.</summary>
+    [Fact]
+    public async Task An_invitation_whose_acceptance_cannot_be_saved_stays_outstanding()
+    {
+        RecordRefused? store = null;
+        using var hosted = new HostedTables(directory => store = new RecordRefused(new FileArtifactStore(directory)));
+        var lobby = new LobbyApi(_registry, hosted.Composer, TimeProvider.System);
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var seat = table.Seats[1];
+        var (token, invitation, code) = (seat.Token, seat.Invitation!, _registry.Codes.Of(seat));
+        store!.Refusing = true;
+
+        await Should.ThrowAsync<IOException>(() => lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { invitation } })));
+
+        (seat.Token, seat.Invitation, seat.Taken, _registry.Codes.Of(seat)).ShouldBe((token, invitation, false, code));
+        table.OpenSeats.ShouldBe(["player2"]);
+        _registry.ByInvitation(invitation).ShouldNotBeNull();
+        store.Refusing = false;
+        (await lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens = new[] { invitation } }))).Status.ShouldBe(200);
+    }
+
+    /// <summary>A table let go of while its invitation was being accepted hands out nothing.</summary>
+    [Fact]
+    public async Task An_invitation_to_a_table_let_go_of_is_refused()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var invitation = table.Seats[1].Invitation!;
+        _registry.Remove(id).ShouldBeTrue();
+
+        (await Claim(invitation)).Status.ShouldBe(409);
+        _registry.Rekey(table, table.Seats[1], SeatKeys.TakenBy("late")).ShouldBeFalse();
+        _registry.ByToken("late").ShouldBeNull();
+        await table.QuiesceAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Asking_what_a_link_carries_spends_nothing()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var invitation = table.Seats[1].Invitation!;
+
+        for (var asked = 0; asked < 2; asked++)
+        {
+            var answer = Read(await Ask(invitation)).GetProperty("invitations")[0];
+            answer.GetProperty("kind").GetString().ShouldBe("invitation");
+            answer.GetProperty("seat").GetString().ShouldBe("player2");
+            answer.GetProperty("table").GetProperty("id").GetString().ShouldBe(id);
+        }
+
+        table.OpenSeats.ShouldBe(["player2"]);
+        table.Seats[1].Person!.HasArrived.ShouldBeFalse();
+        _registry.ByInvitation(invitation).ShouldNotBeNull();
+    }
+
+    /// <summary>An invitation is not a seat token: a page polling with it, an old one or a script, is refused, so it cannot sit down without accepting.</summary>
+    [Fact]
+    public async Task An_invitation_reaches_no_seat_until_it_is_accepted()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var invitation = _registry.ById(id)!.Seats[1].Invitation!;
+
+        _registry.ByToken(invitation).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_link_carrying_a_seat_token_is_answered_as_a_seat_and_spends_nothing()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+
+        var answer = Read(await Ask(table.Seats[0].Token, table.Pilot.Token)).GetProperty("invitations");
+
+        answer.GetArrayLength().ShouldBe(2);
+        answer[0].GetProperty("kind").GetString().ShouldBe("seat");
+        answer[0].GetProperty("seat").GetString().ShouldBe("player1");
+        answer[1].GetProperty("kind").GetString().ShouldBe("spent", "a pilot's token is not a seat a page may sit at");
+        Read(await Ask("unknown")).GetProperty("invitations")[0].GetProperty("kind").GetString().ShouldBe("spent");
+        table.Seats[0].Person!.HasArrived.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task One_link_for_one_shared_browser_takes_both_seats_together()
+    {
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
+        _registry.TryAdd(table).ShouldBeTrue();
+
+        var claimed = Read(await Claim(table.Seats[0].Invitation!, table.Seats[1].Invitation!)).GetProperty("seats");
+
+        claimed.GetArrayLength().ShouldBe(2);
+        table.Seats.ShouldAllBe(seat => seat.Taken && seat.Invitation == null);
+    }
+
+    [Fact]
+    public async Task Invitations_of_two_tables_are_not_accepted_together()
+    {
+        var first = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        var second = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        _registry.TryAdd(first).ShouldBeTrue();
+        _registry.TryAdd(second).ShouldBeTrue();
+
+        (await Claim(first.Seats[0].Invitation!, second.Seats[0].Invitation!)).Status.ShouldBe(409);
+        first.Seats[0].Taken.ShouldBeFalse();
+        second.Seats[0].Taken.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Leaving_offers_the_place_under_a_fresh_invitation()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var first = table.Seats[1].Invitation!;
+        var token = Read(await Claim(first)).GetProperty("seats")[0].GetProperty("token").GetString()!;
+
+        (await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(200);
+
+        var next = table.Seats[1].Invitation.ShouldNotBeNull();
+        next.ShouldNotBe(first);
+        table.Seats[1].Taken.ShouldBeFalse();
+        _registry.Codes.Of(table.Seats[1]).ShouldNotBeNull();
+        (await Claim(first)).Status.ShouldBe(409);
+        (await Claim(next)).Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task A_redeploy_keeps_an_outstanding_invitation_and_a_taken_seat_as_they_were()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var creator = table.Seats[0].Token;
+        var invitation = table.Seats[1].Invitation!;
+        var code = _registry.Codes.Of(table.Seats[1])!;
+        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
+        using var restored = new TableRegistry();
+
+        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        var rebuilt = restored.ById(id).ShouldNotBeNull();
+        rebuilt.Seats[0].Taken.ShouldBeTrue();
+        restored.Codes.Of(rebuilt.Seats[0]).ShouldBeNull();
+        restored.ByToken(creator).ShouldBeSameAs(rebuilt);
+        restored.ByInvitation(invitation).ShouldNotBeNull().Seat.ShouldBeSameAs(rebuilt.Seats[1]);
+        restored.Codes.Of(rebuilt.Seats[1]).ShouldBe(code);
+        restored.Dispose();
+        await rebuilt.QuiesceAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -110,7 +338,7 @@ public sealed class LobbyApiTests : IDisposable
         (await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(200);
 
         _registry.ByToken(token).ShouldBeNull();
-        _registry.Codes.Answer($"/j/{code}").Status.ShouldBe(404);
+        _registry.Codes.Answer($"/j/{code}").ShouldNameNoSeat();
         (await table.Api.HandleAsync("GET", "/api/seat/player2", "", token)).Status.ShouldBe(403);
         (await Lobby.HandleAsync("POST", "/api/lobby/leave", "{}", token)).Status.ShouldBe(403);
         table.Session.Outcome.IsCompleted.ShouldBeFalse();
@@ -206,6 +434,10 @@ public sealed class LobbyApiTests : IDisposable
     [InlineData("/api/lobby/tables", """{"opponent":"heuristic:secret.json"}""")]
     [InlineData("/api/lobby/tables", """{"format":"invalid"}""")]
     [InlineData("/api/lobby/resume", "{}")]
+    [InlineData("/api/lobby/invitations", "{}")]
+    [InlineData("/api/lobby/invitations", """{"tokens":["a","b","c"]}""")]
+    [InlineData("/api/lobby/claim", "{}")]
+    [InlineData("/api/lobby/claim", """{"tokens":[]}""")]
     public async Task Invalid_requests_are_refused_without_opening_a_table(string path, string body)
     {
         (await Lobby.HandleAsync("POST", path, body)).Status.ShouldBe(400);
@@ -230,7 +462,9 @@ public sealed class LobbyApiTests : IDisposable
         newToken.ShouldNotBe(oldToken);
         _registry.ByToken(oldToken).ShouldBeNull();
         _registry.ByToken(newToken).ShouldBeSameAs(table);
-        _registry.Codes.Of(table.Seats[1]).ShouldNotBe(oldCode);
+        _registry.Codes.Of(table.Seats[1]).ShouldBeNull();
+        _registry.Codes.Answer($"/j/{oldCode}").ShouldNameNoSeat();
+        table.Seats[1].Invitation.ShouldBeNull();
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[1].Token.ShouldBe(newToken);
     }
 
@@ -257,6 +491,10 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     private async Task<JsonElement> Open() => Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", "{}"));
+
+    private Task<StudioResponse> Claim(params string[] tokens) => Lobby.HandleAsync("POST", "/api/lobby/claim", JsonSerializer.Serialize(new { tokens }));
+
+    private Task<StudioResponse> Ask(params string[] tokens) => Lobby.HandleAsync("POST", "/api/lobby/invitations", JsonSerializer.Serialize(new { tokens }));
 
     private static JsonElement Read(StudioResponse response)
     {

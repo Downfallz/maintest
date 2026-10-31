@@ -69,6 +69,9 @@ Open `https://<address>/` for the player lobby: resume games saved in this brows
 or create a table (another player, a bot, or two people sharing a device). Players need no account.
 Closing the page keeps a seat; **Leave table** revokes its token and invitation code and offers the same
 team to a replacement player, including during a match. Saved open places and claimed seats survive a redeploy.
+An invitation link or code is accepted once, after a confirmation: a second device opening it finds the place
+taken (ADR 0116). For a player who lost their device, **New invitation** on the admin panel cuts it off and gives
+the seat a new code.
 
 The operator still uses `/admin`, signs in with the bootstrap account, and manages all tables, sessions
 and the pilot links. Its invitation-only tables are listed but cannot be claimed through the lobby.

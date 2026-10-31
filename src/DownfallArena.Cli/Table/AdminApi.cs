@@ -107,6 +107,7 @@ internal sealed class AdminApi
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => Task.FromResult(Close(id, operatorName))),
+            ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -186,6 +187,65 @@ internal sealed class AdminApi
             new { error = "Admin.Full", message = $"This host has {_registry.Capacity} tables open, waiting or under way, which is as many as it takes. Close one first." },
             ArtifactJson.LineOptions,
             status: 409);
+
+    /// <summary>The table and seat of <c>&lt;id&gt;/seats/&lt;seat&gt;/invite</c>, or null for any other path.</summary>
+    private static (string Table, string Slot)? Reinvited(string rest)
+    {
+        var parts = rest.Split('/');
+        return parts is [{ Length: > 0 } table, "seats", { Length: > 0 } slot, "invite"] ? (table, slot) : null;
+    }
+
+    /// <summary>
+    /// A new invitation for a person's seat, for a player who lost the device holding it (ADR 0116): the seat's
+    /// token is replaced, so that device stops reaching it, and a fresh invitation and code are what the operator
+    /// passes on. The match and the question the seat is asked stay as they are.
+    /// </summary>
+    private async Task<StudioResponse> ReinviteAsync(string id, string slot, string operatorName)
+    {
+        if (_registry.ById(id) is not { IsOver: false } table)
+        {
+            return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
+        }
+
+        if (table.Seats.FirstOrDefault(seat => seat.Name == slot && seat.Person is not null) is not { } seat)
+        {
+            return StudioResponse.OfPlainText(404, $"No person's seat '{slot}' at table '{id}'.");
+        }
+
+        var previous = _registry.KeysOf(seat);
+        var arrived = seat.Person!.HasArrived;
+        if (!_registry.Rekey(table, seat, SeatKeys.Offered()))
+        {
+            return StudioResponse.OfPlainText(404, $"No unfinished table '{id}' at this host.");
+        }
+
+        seat.Person.Depart();
+        try
+        {
+            await table.RecordAsync(_registry.Codes);
+        }
+        catch (Exception failure)
+        {
+            // Whatever failed, memory goes back to what the record still says: a seat rekeyed here and not on
+            // the store would let the cut-off device back in after a redeploy, and kill the invitation passed on.
+            _registry.Rekey(table, seat, previous);
+            if (arrived)
+            {
+                seat.Person.Arrive();
+            }
+
+            if (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException)
+            {
+                return StudioResponse.OfPlainText(503, $"The new invitation could not be saved, so the seat keeps its old one: {failure.Message}");
+            }
+
+            throw;
+        }
+
+        Console.WriteLine($"  Session {id}: {slot} invited again by {operatorName}.");
+        var code = _registry.Codes.Of(seat);
+        return StudioResponse.OfJson(new { slot, code, join = code is null ? null : $"{JoinCodes.Prefix}{code}", link = $"/?{seat.Name}={seat.Key}" }, ArtifactJson.LineOptions);
+    }
 
     private StudioResponse Close(string id, string operatorName)
     {
@@ -365,13 +425,17 @@ internal sealed class AdminApi
                 hasPerson = seat.Person is not null,
                 code = _registry.Codes.Of(seat),
                 join = _registry.Codes.Of(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
-                link = seat.Person is null ? null : $"/?{seat.Name}={seat.Token}",
+                link = seat.Key is { } key ? $"/?{seat.Name}={key}" : null,
+
+                // Somebody's browser holds it (ADR 0116): no link reaches it, and a new invitation is the way
+                // back in for a player who lost that browser.
+                taken = seat.Person is not null && seat.Taken,
             }).ToArray(),
 
-            // One link carrying every human seat's token, for the case where the two people share one
-            // browser: the page follows whichever seat the match asks.
-            hotseat = table.Seats.Count(seat => seat.Person is not null) > 1
-                ? $"/?{string.Join('&', table.Seats.Where(seat => seat.Person is not null).Select(seat => $"{seat.Name}={seat.Token}"))}"
+            // One link carrying both seats' invitations, for the case where the two people share one browser:
+            // the page follows whichever seat the match asks. None once either seat is taken.
+            hotseat = table.Seats.Count(seat => seat.Key is not null) > 1
+                ? $"/?{string.Join('&', table.Seats.Where(seat => seat.Key is not null).Select(seat => $"{seat.Name}={seat.Key}"))}"
                 : null,
             pilot = $"/pilot?token={table.Pilot.Token}",
             session = $"/session/{table.Id}",

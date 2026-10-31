@@ -186,9 +186,9 @@ internal sealed class TableComposer
         return resumed;
     }
 
-    /// <summary>The token a seat had on the earlier host, for a table being rebuilt; null for a fresh one.</summary>
-    private static string? RecordedToken(TableRecord? record, PlayerSlot slot) =>
-        record?.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(slot))?.Token;
+    /// <summary>The seat as the earlier host recorded it, for a table being rebuilt; null for a fresh one.</summary>
+    private static RecordedSeat? Recorded(TableRecord? record, PlayerSlot slot) =>
+        record?.Seats.FirstOrDefault(seat => seat.Slot == TableSeat.NameOf(slot));
 
     private async Task<PlayedTable> BuildAsync(TableRequest request, (TableRecord Record, IReadOnlyList<JournalEntry> Journal)? rebuilding, CancellationToken cancellationToken)
     {
@@ -211,8 +211,8 @@ internal sealed class TableComposer
             // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
             // this host played before or beside it. A source shared across tables would make every recording
             // depend on the order the host's requests happened to arrive in.
-            var seat1 = Seat(PlayerSlot.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player1));
-            var seat2 = Seat(PlayerSlot.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, RecordedToken(rebuilding?.Record, PlayerSlot.Player2));
+            var seat1 = Seat(PlayerSlot.Player1, request, rules, agents, Source(seed, PlayerSlot.Player1), stopping.Token, Recorded(rebuilding?.Record, PlayerSlot.Player1));
+            var seat2 = Seat(PlayerSlot.Player2, request, rules, agents, Source(seed, PlayerSlot.Player2), stopping.Token, Recorded(rebuilding?.Record, PlayerSlot.Player2));
             (SeatAgent Agent, TableSeat Seat) Of(PlayerSlot slot) => slot == PlayerSlot.Player1 ? seat1 : seat2;
             Occupant? SeatingOf(PlayerSlot slot, string wanted) => Seating(Of(slot).Seat, wanted, request, rules, agents, Source(seed, slot));
 
@@ -400,7 +400,7 @@ internal sealed class TableComposer
     /// </summary>
     private static string PersonName(TableRequest request) => request.Who is { Length: > 0 } who ? $"human:{who}" : "human";
 
-    /// <param name="token">The token the seat had on an earlier host, for a table being rebuilt; a fresh one otherwise.</param>
+    /// <param name="recorded">The seat as an earlier host recorded it, for a table being rebuilt: its token, its invitation and whether it was taken. Null for a fresh seat.</param>
     private static (SeatAgent Agent, TableSeat Seat) Seat(
         PlayerSlot slot,
         TableRequest request,
@@ -408,8 +408,9 @@ internal sealed class TableComposer
         IAgentFactory agents,
         IRandomSource random,
         CancellationToken cancellation,
-        string? token = null)
+        RecordedSeat? recorded = null)
     {
+        var token = recorded?.Token;
         // A seat no agent was named for is a person's. Until a handover it is played by the understudy.
         var named = slot == PlayerSlot.Player1 ? request.Player1 : request.Player2;
         var spec = named ?? Understudy;
@@ -430,7 +431,11 @@ internal sealed class TableComposer
             seat.SwapAt(person, round);
         }
 
-        return (seat, new TableSeat(slot, token ?? Token(), human));
+        // A fresh seat is offered under an invitation, never under its token (ADR 0116). A rebuilt one comes back
+        // as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
+        var taken = recorded is null ? false : recorded.Taken ?? false;
+        var invitation = recorded is null ? Token() : recorded.Invitation;
+        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken });
     }
 
     /// <summary>

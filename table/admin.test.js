@@ -77,6 +77,20 @@ test('a table reads as its round while it is played, and as finished once writte
   assert.equal(rows[4].state, 'Waiting for the players');
 });
 
+test('a taken seat of a table being played offers a new invitation, and nothing else does', () => {
+  const rows = tableRows({
+    tables: [
+      { id: 'a b', finished: false, seats: [{ slot: 'player1', seated: 'human:mk', taken: true }, { slot: 'player2', seated: 'human', code: 'K7F2Q9XM', taken: false }, { slot: 'player2', seated: 'Greedy' }] },
+      { id: 'c', finished: true, seats: [{ slot: 'player1', seated: 'human:mk', taken: true }] },
+    ],
+  });
+
+  assert.equal(rows[0].seats[0].reinvite, '/api/tables/a%20b/seats/player1/invite');
+  assert.equal(rows[0].seats[1].reinvite, null, 'a seat still offered has its code already');
+  assert.equal(rows[0].seats[2].reinvite, null, "a bot's seat has nobody to invite");
+  assert.equal(rows[1].seats[0].reinvite, null, 'a finished table has no seat left to come back to');
+});
+
 test('an empty or missing list draws nothing', () => {
   assert.deepEqual(tableRows(null), []);
   assert.deepEqual(tableRows({}), []);
