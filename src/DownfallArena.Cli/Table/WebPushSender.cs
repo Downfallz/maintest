@@ -7,7 +7,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// The Web Push protocol (RFC 8030, 8291, 8292) behind <see cref="IPushSender" />: the payload encrypted to the
 /// browser's keys, the request signed with the host's VAPID pair, sent to the push service the browser named.
-/// The library does the encryption and the signing (ADR 0117); this maps a seat's subscription onto it and
+/// The library does the encryption and the signing (ADR 0118); this maps a seat's subscription onto it and
 /// reads its one answer that matters.
 /// </summary>
 internal sealed class WebPushSender : IPushSender, IDisposable
@@ -17,13 +17,15 @@ internal sealed class WebPushSender : IPushSender, IDisposable
 
     private readonly PushServiceClient _client;
     private readonly VapidAuthentication _authentication;
+    private readonly HttpClient? _owned;
 
-    /// <param name="http">The client the requests go through; a test hands one aimed at its own listener.</param>
+    /// <param name="http">The client the requests go through; a test hands one aimed at its own listener. Without one the sender makes, and owns, its own.</param>
     public WebPushSender(PushKeys keys, HttpClient? http = null)
     {
         ArgumentNullException.ThrowIfNull(keys);
         _authentication = new VapidAuthentication(keys.PublicKey, keys.PrivateKey) { Subject = keys.Subject };
-        _client = new PushServiceClient(http ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+        _owned = http is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(10) } : null;
+        _client = new PushServiceClient(http ?? _owned!)
         {
             DefaultAuthentication = _authentication,
             DefaultTimeToLive = (int)KeptFor.TotalSeconds,
@@ -59,5 +61,9 @@ internal sealed class WebPushSender : IPushSender, IDisposable
         }
     }
 
-    public void Dispose() => _authentication.Dispose();
+    public void Dispose()
+    {
+        _authentication.Dispose();
+        _owned?.Dispose();
+    }
 }

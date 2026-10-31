@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { createServer } from 'node:net';
 
-// A host with push keys offers "your turn" on the phone (ADR 0117): the page registers the worker, asks the
+// A host with push keys offers "your turn" on the phone (ADR 0118): the page registers the worker, asks the
 // host for its key, and shows the one button. The browser here has no push service to subscribe with, so the
 // tap is as far as this goes; what it proves is the wiring on the real host, which the unit tests cannot.
 

@@ -29,7 +29,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     /// <summary>
     /// Raised as the match asks this seat something, with the round it belongs to when the question has one:
-    /// what a notice to a phone nobody is looking at is sent about (<see cref="PushNotices" />, ADR 0117).
+    /// what a notice to a phone nobody is looking at is sent about (<see cref="PushNotices" />, ADR 0118).
     /// </summary>
     public event Action<Question, int?>? Asked;
 

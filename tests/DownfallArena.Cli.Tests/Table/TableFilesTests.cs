@@ -40,7 +40,7 @@ public sealed class TableFilesTests
         }
     }
 
-    /// <summary>What a phone installs and shows (ADR 0117): the worker at the root, the manifest as a manifest, the icon as bytes.</summary>
+    /// <summary>What a phone installs and shows (ADR 0118): the worker at the root, the manifest as a manifest, the icon as bytes.</summary>
     [Fact]
     public void The_worker_the_manifest_and_the_icons_are_served_as_what_they_are()
     {

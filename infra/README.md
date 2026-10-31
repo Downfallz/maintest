@@ -82,7 +82,7 @@ comma-separated, and run the workflow again.
 ## "Your turn" on a phone
 
 The table tells a player's phone when it is their turn, screen off included, once it has a push key pair
-(ADR 0117). Make one, keep it, and hand it to the deployment as a repository secret:
+(ADR 0118). Make one, keep it, and hand it to the deployment as a repository secret:
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json

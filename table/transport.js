@@ -35,7 +35,7 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     concede: () => send('POST', `/api/seat/${seat}/concede`),
     leave: () => send('POST', '/api/lobby/leave', {}),
 
-    // Where "your turn" goes when nobody is looking at this page (ADR 0117): the host's key to subscribe
+    // Where "your turn" goes when nobody is looking at this page (ADR 0118): the host's key to subscribe
     // with, the subscription this browser made, and no longer. A write without a body would be refused as a
     // form another site posted, so forgetting sends an empty one.
     pushKey: () => send('GET', '/api/lobby/push'),

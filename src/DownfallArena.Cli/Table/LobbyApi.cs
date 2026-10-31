@@ -265,7 +265,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>
-    /// Where this seat's notices go from now on (ADR 0117), as the browser's <c>PushSubscription.toJSON()</c>
+    /// Where this seat's notices go from now on (ADR 0118), as the browser's <c>PushSubscription.toJSON()</c>
     /// gives it, or nowhere for a <c>DELETE</c>. The seat's token says which seat; a shared browser sends the same
     /// subscription for both of its seats. Written to the record before the answer, so the next host sends there too.
     /// </summary>
@@ -276,13 +276,6 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return Problem(404, "This host sends no notices: it has no push keys.");
         }
 
-        var table = registry.ByToken(token);
-        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
-        if (table is null || seat is null)
-        {
-            return Problem(403, "This seat is no longer yours.");
-        }
-
         PushSubscription? subscription = null;
         if (body is not null)
         {
@@ -290,23 +283,46 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
             if (subscription is null)
             {
-                return Problem(400, "Send the subscription as the browser serialises it: an https endpoint and its p256dh and auth keys.");
+                return Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
+            }
+
+            if (push.IsDead(subscription.Endpoint))
+            {
+                return Problem(410, "This subscription is gone from its push service. Subscribe again.");
             }
         }
 
-        var before = seat.Push;
-        seat.Push = subscription;
+        // Under the claim gate, and the seat found under it: a leave, a claim or a new invitation replaces the
+        // seat's keys, this subscription among them, and one landing between the lookup and the write would
+        // hand the departed browser's phone to the next player's seat.
+        await Claims.WaitAsync();
         try
         {
-            await table.RecordAsync(registry.Codes);
-        }
-        catch
-        {
-            seat.Push = before;
-            throw;
-        }
+            var table = registry.ByToken(token);
+            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+            if (table is null || seat is null)
+            {
+                return Problem(403, "This seat is no longer yours.");
+            }
 
-        return Json(new { seat = seat.Name, notices = subscription is not null });
+            var before = seat.Push;
+            seat.Push = subscription;
+            try
+            {
+                await table.RecordAsync(registry.Codes);
+            }
+            catch
+            {
+                seat.Push = before;
+                throw;
+            }
+
+            return Json(new { seat = seat.Name, notices = subscription is not null });
+        }
+        finally
+        {
+            Claims.Release();
+        }
     }
 
     /// <summary>

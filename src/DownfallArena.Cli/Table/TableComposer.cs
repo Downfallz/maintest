@@ -57,7 +57,7 @@ internal sealed class TableComposer
 
     public bool Records => _store is not null;
 
-    /// <summary>The notices a seat's phone gets when nobody is looking at its page (ADR 0117), or none on a host without push keys.</summary>
+    /// <summary>The notices a seat's phone gets when nobody is looking at its page (ADR 0118), or none on a host without push keys.</summary>
     public PushNotices? Push { get; init; }
 
     /// <summary>
@@ -248,7 +248,6 @@ internal sealed class TableComposer
             {
                 OpenSeats = rebuilding?.Record.OpenSeats ?? [],
             };
-            api.Table = table;
             Push?.Watch(table);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps

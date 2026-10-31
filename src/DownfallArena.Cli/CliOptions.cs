@@ -79,7 +79,7 @@ internal sealed record CliOptions
 
     /// <summary>
     /// The file holding the table's VAPID key pair (<c>push-keys</c> writes one), with which it sends "your
-    /// turn" to a seat's phone (ADR 0117). Without it, and without <c>DOWNFALL_PUSH_KEYS</c>, a table sends none.
+    /// turn" to a seat's phone (ADR 0118). Without it, and without <c>DOWNFALL_PUSH_KEYS</c>, a table sends none.
     /// </summary>
     public string? PushKeys { get; init; }
 

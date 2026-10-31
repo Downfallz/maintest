@@ -31,7 +31,7 @@ internal sealed class HostedTables : IDisposable
 
     /// <param name="store">The store a recording host writes to, made over <see cref="RunsDirectory" />.</param>
     /// <param name="rules">The rules every table is composed with, <see cref="Rules" /> unless given.</param>
-    /// <param name="push">The notices the tables send (ADR 0117), or none, which is the ordinary host of these tests.</param>
+    /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
     public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));

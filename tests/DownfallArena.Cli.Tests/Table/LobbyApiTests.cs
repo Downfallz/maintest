@@ -490,7 +490,7 @@ public sealed class LobbyApiTests : IDisposable
         (await Lobby.HandleAsync("POST", path, "{}")).Status.ShouldBe(404);
     }
 
-    /// <summary>Where a seat's notices go (ADR 0117): kept with the seat, written down, and gone with the seat's token.</summary>
+    /// <summary>Where a seat's notices go (ADR 0118): kept with the seat, written down, and gone with the seat's token.</summary>
     [Fact]
     public async Task A_subscription_is_kept_for_the_seat_recorded_and_restored()
     {
@@ -504,7 +504,7 @@ public sealed class LobbyApiTests : IDisposable
         var answer = Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
 
         answer.GetProperty("notices").GetBoolean().ShouldBeTrue();
-        table.Seats[0].Push.ShouldBe(new PushSubscription("https://push.example/one", "BP8", "YWJj"));
+        table.Seats[0].Push.ShouldBe(new PushSubscription("https://push.example/one", BrowserKey, BrowserAuth));
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Push.ShouldBe(table.Seats[0].Push);
 
         using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
@@ -538,12 +538,15 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Theory]
-    [InlineData("""{"endpoint":"http://push.example/one","keys":{"p256dh":"BP8","auth":"YWJj"}}""")]
-    [InlineData("""{"endpoint":"https://push.example/one","keys":{"p256dh":"not base64url!","auth":"YWJj"}}""")]
-    [InlineData("""{"endpoint":"https://push.example/one"}""")]
-    [InlineData("{}")]
-    public async Task A_subscription_that_is_not_one_is_refused_and_nothing_is_kept(string body)
+    [InlineData("http://push.example/one", BrowserKey, BrowserAuth)]
+    [InlineData("https://push.example/one", "not base64url!", BrowserAuth)]
+    [InlineData("https://push.example/one", "BP8", BrowserAuth)]
+    [InlineData("https://push.example/one", BrowserKey, "YWJj")]
+    [InlineData("https://push.example/one", null, null)]
+    [InlineData(null, null, null)]
+    public async Task A_subscription_that_is_not_one_is_refused_and_nothing_is_kept(string? endpoint, string? p256dh, string? auth)
     {
+        var body = JsonSerializer.Serialize(new { endpoint, keys = p256dh is null ? null : new { p256dh, auth } });
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
         var table = _registry.ById(id)!;
@@ -565,7 +568,27 @@ public sealed class LobbyApiTests : IDisposable
         (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, null)).Status.ShouldBe(403);
     }
 
-    private const string Browser = """{"endpoint":"https://push.example/one","expirationTime":null,"keys":{"p256dh":"BP8","auth":"YWJj"}}""";
+    /// <summary>A real P-256 point and sixteen bytes of secret, as the browser would serialise them: the host refuses anything shorter.</summary>
+    private const string BrowserKey = "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+
+    private const string BrowserAuth = "AAECAwQFBgcICQoLDA0ODw";
+
+    private static readonly string Browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/one", expirationTime = (object?)null, keys = new { p256dh = BrowserKey, auth = BrowserAuth } });
+
+    /// <summary>The race ADR 0118 guards: a subscription sent for a seat whose token was just replaced must not reach the next player's seat.</summary>
+    [Fact]
+    public async Task A_subscription_sent_with_a_token_that_was_replaced_is_refused_and_kept_by_nobody()
+    {
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var departed = table.Seats[0].Token;
+        (await lobby.HandleAsync("POST", "/api/lobby/leave", "{}", departed)).Status.ShouldBe(200);
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, departed)).Status.ShouldBe(403);
+
+        table.Seats[0].Push.ShouldBeNull();
+    }
 
     private sealed class NothingSent : IPushSender
     {

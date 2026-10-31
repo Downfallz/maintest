@@ -25,7 +25,7 @@ function worker({ windows = [], opened = [] } = {}) {
     handlers[kind]({ ...event, waitUntil: promise => { waited = promise; } });
     await waited;
   };
-  return { handlers, shown, opened, fire };
+  return { handlers, shown, opened, fire, self };
 }
 
 const push = notice => ({ data: { json: () => notice } });
@@ -96,4 +96,35 @@ test('a tap with a page open elsewhere on the table brings it to the game', asyn
 
 test('the worker caches nothing: it listens for no fetch', () => {
   assert.equal(worker().handlers.fetch, undefined);
+});
+
+test('a focused window on the lobby does not stand in for the notice: only the game does', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/', focused: true }] });
+
+  await w.fire('push', push({ title: 'Your turn' }));
+
+  assert.equal(w.shown.length, 1);
+});
+
+test('a tap on a lobby page this worker cannot steer opens the game in a new window', async () => {
+  const lobby = { url: 'https://table.example/', focused: false, focus: async () => {}, navigate: async () => { throw new TypeError('not controlled'); } };
+  const w = worker({ windows: [lobby] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play' }, close: () => {} } });
+
+  assert.deepEqual(w.opened, ['/play']);
+});
+
+test('a subscription the browser rotated is made again with the same key, and every page is told', async () => {
+  const told = [];
+  const made = [];
+  const page = { url: 'https://table.example/play', focused: false, postMessage: message => told.push(message) };
+  const w = worker({ windows: [page] });
+  w.self.registration.pushManager = { subscribe: async options => { made.push(options); } };
+
+  await w.fire('pushsubscriptionchange', { oldSubscription: { options: { applicationServerKey: 'key' } } });
+
+  // Read across the worker's realm, whose objects are not this one's.
+  assert.deepEqual(JSON.parse(JSON.stringify(made)), [{ userVisibleOnly: true, applicationServerKey: 'key' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(told)), [{ kind: 'subscription-changed' }]);
 });

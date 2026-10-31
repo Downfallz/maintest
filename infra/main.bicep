@@ -14,7 +14,7 @@ param image string
 param signInClientId string
 
 @secure()
-@description('The table\'s VAPID key pair, the JSON `push-keys` prints (ADR 0117). Empty, the table sends no notices.')
+@description('The table\'s VAPID key pair, the JSON `push-keys` prints (ADR 0118). Empty, the table sends no notices.')
 param pushKeys string = ''
 
 @description('The object ids of the people who may sign in to the lobby, comma-separated. Players never sign in.')
@@ -199,7 +199,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
-      // The push keys are a secret of the app, read by the table as a variable (ADR 0117); none when empty.
+      // The push keys are a secret of the app, read by the table as a variable (ADR 0118); none when empty.
       secrets: empty(pushKeys) ? [] : [
         {
           name: 'push-keys'

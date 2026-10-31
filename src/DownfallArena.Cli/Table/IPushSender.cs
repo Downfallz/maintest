@@ -1,7 +1,7 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Sends one notice to one browser through its push service (ADR 0117). The port is the host's own rather than
+/// Sends one notice to one browser through its push service (ADR 0118). The port is the host's own rather than
 /// the application's: nothing below the host knows a seat, a browser or a push service, and what is behind it is
 /// one HTTP request signed with the host's keys.
 /// </summary>

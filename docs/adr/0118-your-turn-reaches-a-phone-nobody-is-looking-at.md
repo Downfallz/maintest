@@ -1,4 +1,4 @@
-# 0117. "Your turn" reaches a phone nobody is looking at
+# 0118. "Your turn" reaches a phone nobody is looking at
 
 Date: 2026-10-31
 
@@ -45,6 +45,10 @@ browser's push service, shown by a service worker.
   token or the board.
 - Bad: only an https page, or localhost, can subscribe: a table on the LAN over http offers no button. On iOS
   the page has to be added to the home screen first.
+- Bad: a push service that lets a subscription go (a reinstalled browser, a rotated endpoint) is learnt of at
+  the next notice, which is lost; the host then refuses that subscription (`410`) and the page offers the
+  button again. The worker re-subscribes on `pushsubscriptionchange` and tells its pages, which say so to the
+  host; with no page open, the host hears of the new subscription at the next page load.
 - Neutral: the polling stays as it is. A longer-lived connection is a separate improvement, for the page in
   front of somebody, not for the one that is not.
 

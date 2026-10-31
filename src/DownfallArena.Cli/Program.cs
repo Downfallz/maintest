@@ -20,7 +20,7 @@ if (options.Command == "studio")
     return await StudioHost.RunAsync(options);
 }
 
-// A table's push keys (ADR 0117), printed once and kept where the table reads them: no content, no host.
+// A table's push keys (ADR 0118), printed once and kept where the table reads them: no content, no host.
 if (options.Command == "push-keys")
 {
     Console.WriteLine(DownfallArena.Cli.Table.PushKeys.Generate().ToJson());

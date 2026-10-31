@@ -163,7 +163,7 @@ jobs:
           SIGN_IN_CLIENT_ID: ${{ vars.TABLE_SIGNIN_CLIENT_ID }}
           OPERATORS: ${{ vars.TABLE_OPERATORS }}
           NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
-          # The push key pair (ADR 0117), or nothing: a table without one sends no notices and says so in its log.
+          # The push key pair (ADR 0118), or nothing: a table without one sends no notices and says so in its log.
           PUSH_KEYS: ${{ secrets.TABLE_PUSH_KEYS }}
         run: |
           az deployment group create \

@@ -3,7 +3,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// Everything that reaches one seat (ADR 0116): the token its browser holds, the invitation a link or a code
 /// carries while nobody has taken it, whether somebody has, the code itself, and where that browser's notices
-/// go (ADR 0117). A fresh token has no subscription: it is a new browser's, or nobody's yet.
+/// go (ADR 0118). A fresh token has no subscription: it is a new browser's, or nobody's yet.
 /// </summary>
 internal sealed record SeatKeys(string Token, string? Invitation, bool Taken, string? Code = null, PushSubscription? Push = null)
 {

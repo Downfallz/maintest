@@ -830,7 +830,7 @@ function setupLeave(state) {
   });
 }
 
-// ---- "Your turn" on a phone nobody is looking at (ADR 0117, push.js).
+// ---- "Your turn" on a phone nobody is looking at (ADR 0118, push.js).
 
 // The page asks the host for its key, registers the worker, and keeps the subscription this browser already
 // has, telling the host about it again: the seat's token may be new since, and a host that lost its record
@@ -850,22 +850,41 @@ function setupNotices(state) {
       state.push.publicKey = key.ok ? key.body?.publicKey ?? null : null;
       state.push.keyed = Boolean(state.push.publicKey);
       if (!state.push.keyed) return;
-      state.push.registration = await globalThis.navigator.serviceWorker.register('/sw.js');
-      const held = await state.push.registration.pushManager.getSubscription();
-      if (!held) return;
-      if (!sameKey(held, state.push.publicKey)) {
-        // Made with keys this host no longer has: the host could not send to it, so it is let go of.
-        await held.unsubscribe();
-        return;
-      }
-      state.push.subscribed = true;
-      await Promise.all(state.seats.map(seat => seat.transport.push(held.toJSON())));
+      await globalThis.navigator.serviceWorker.register('/sw.js');
+      // The worker that is active, not the one just registered: on a first visit that one is still installing,
+      // and a subscription needs an active worker behind it.
+      state.push.registration = await globalThis.navigator.serviceWorker.ready;
+      globalThis.navigator.serviceWorker.addEventListener('message', event => { if (event.data?.kind === 'subscription-changed') void tellHeld(state); });
+      await tellHeld(state);
     } catch {
       // A worker that will not register, or a host that cannot be asked: no notices, and the button says so by its absence.
     } finally {
       renderNotices(state);
     }
   })();
+}
+
+// The subscription this browser holds, told to the host for every seat here. Made with keys the host no longer
+// has, or gone from its service (the host answers 410), it is let go of, and the button is offered again.
+async function tellHeld(state) {
+  const held = await state.push.registration.pushManager.getSubscription();
+  if (!held) {
+    state.push.subscribed = false;
+    return;
+  }
+  if (!sameKey(held, state.push.publicKey)) {
+    await held.unsubscribe();
+    state.push.subscribed = false;
+    return;
+  }
+  const answers = await Promise.all(state.seats.map(seat => seat.transport.push(held.toJSON())));
+  if (answers.some(answer => answer.status === 410)) {
+    await held.unsubscribe();
+    state.push.subscribed = false;
+    return;
+  }
+  state.push.subscribed = answers.every(answer => answer.ok);
+  renderNotices(state);
 }
 
 function renderNotices(state) {

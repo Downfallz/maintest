@@ -4,6 +4,11 @@
     <ProjectReference Include="..\..\src\DownfallArena.Cli\DownfallArena.Cli.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- A clock a test moves, so the grace before a notice is a fact rather than a wait (PushNoticesTests). -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
   <!--
     The real viewer page, because ViewerPage edits it by matching two literals from it (ADR 0015): a test that
     rendered against a copy would keep passing after the viewer was re-indented, and the studio would 404.

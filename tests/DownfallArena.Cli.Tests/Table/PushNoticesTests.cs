@@ -1,18 +1,25 @@
 using System.Text.Json;
 using DownfallArena.Cli.Table;
-using DownfallArena.Infrastructure.Learning;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
-/// "Your turn" reaches a phone whose page did not draw the question (ADR 0117), and nothing else: a page that
-/// drew it, a seat that was answered, a seat without a subscription, each get no notice.
+/// "Your turn" reaches a phone whose page did not draw the question (ADR 0118), and nothing else: a page that
+/// drew it, a seat that was answered, a seat without a subscription, each get no notice. The grace is a clock
+/// the test moves, so what is asserted is the rule and not a wait.
 /// </summary>
 public sealed class PushNoticesTests : IDisposable
 {
-    private static readonly PushSubscription Phone = new("https://push.example/one", "BP8", "YWJj");
+    private static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);
+
+    private static readonly PushSubscription Phone = new(
+        "https://push.example/one",
+        "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A",
+        "AAECAwQFBgcICQoLDA0ODw");
 
     private readonly Sender _sender = new();
+    private readonly FakeTimeProvider _clock = new();
     private readonly TableRegistry _registry = new();
     private HostedTables? _hosted;
 
@@ -25,11 +32,13 @@ public sealed class PushNoticesTests : IDisposable
     [Fact]
     public async Task A_question_nobody_drew_within_the_grace_is_sent_to_the_seat_s_phone_once()
     {
-        var (table, notices) = await Seated(grace: TimeSpan.FromMilliseconds(100));
+        var (table, notices) = await Seated();
         notices.Record = _ => Task.CompletedTask;
         table.Seats[0].Push = Phone;
 
         await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
 
         var (to, payload) = await _sender.Next();
         to.ShouldBe(Phone);
@@ -38,59 +47,84 @@ public sealed class PushNoticesTests : IDisposable
         notice.GetProperty("body").GetString().ShouldBe("Round 1: pick your packages.");
         notice.GetProperty("url").GetString().ShouldBe("/play");
         notice.GetProperty("tag").GetString().ShouldBe("turn:player1");
-        await Task.Delay(300, TestContext.Current.CancellationToken);
+        _clock.Advance(Grace);
+        await Settled();
         _sender.Sent.Count.ShouldBe(1, "one asking, one notice");
     }
 
     [Fact]
     public async Task A_question_the_page_drew_in_time_is_not_sent()
     {
-        var (table, notices) = await Seated(grace: TimeSpan.FromMilliseconds(400));
+        var (table, notices) = await Seated();
         table.Seats[0].Push = Phone;
 
         await Arrive(table);
         var asked = await Asked(table);
         (await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token, null, $"?shown={asked}")).Status.ShouldBe(200);
+        _clock.Advance(Grace);
 
-        await Task.Delay(800, TestContext.Current.CancellationToken);
+        await Settled();
         _sender.Sent.ShouldBeEmpty();
         notices.PublicKey.ShouldBe("BP8");
     }
 
     [Fact]
-    public async Task A_seat_without_a_subscription_and_a_seat_answered_before_the_grace_get_nothing()
+    public async Task A_seat_without_a_subscription_and_a_question_answered_before_the_grace_get_nothing()
     {
-        var (table, _) = await Seated(grace: TimeSpan.FromMilliseconds(300));
+        var (table, _) = await Seated();
 
         await Arrive(table);
-        await Asked(table);
-        await Task.Delay(500, TestContext.Current.CancellationToken);
+        var first = await Asked(table);
+        _clock.Advance(Grace);
+        await Settled();
         _sender.Sent.ShouldBeEmpty("no subscription");
 
         table.Seats[0].Push = Phone;
-        var asked = await Asked(table);
-        var pass = JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked });
+        var pass = JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked = first });
         (await table.Api.HandleAsync("POST", "/api/seat/player1/decision", pass, table.Seats[0].Token)).Status.ShouldBe(204);
+        var next = await Asked(table, after: first);
+        _clock.Advance(Grace);
 
-        // The next asking, a second Evolution pick or the round's speeds, is the one a notice may go for; the
-        // answered one must not be sent after the fact.
+        // The answered asking is not sent after the fact; the one the seat is on now is.
         var (_, payload) = await _sender.Next();
-        JsonDocument.Parse(payload).RootElement.GetProperty("asked").GetInt64().ShouldBeGreaterThan(asked);
+        JsonDocument.Parse(payload).RootElement.GetProperty("asked").GetInt64().ShouldBe(next);
+        _sender.Sent.Count.ShouldBe(1);
     }
 
     [Fact]
-    public async Task A_subscription_the_service_says_is_gone_is_forgotten_and_the_table_recorded()
+    public async Task A_subscription_the_service_says_is_gone_is_forgotten_recorded_and_refused_from_then_on()
     {
-        var (table, notices) = await Seated(grace: TimeSpan.Zero);
+        var (table, notices) = await Seated();
         var recorded = new TaskCompletionSource<PlayedTable>(TaskCreationOptions.RunContinuationsAsynchronously);
         notices.Record = recordedTable => { recorded.TrySetResult(recordedTable); return Task.CompletedTask; };
         _sender.Gone = true;
         table.Seats[0].Push = Phone;
 
         await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
 
         (await recorded.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ShouldBeSameAs(table);
         table.Seats[0].Push.ShouldBeNull();
+        notices.IsDead(Phone.Endpoint).ShouldBeTrue();
+        notices.IsDead("https://push.example/other").ShouldBeFalse();
+    }
+
+    /// <summary>A sender that throws is the end of a task nothing awaits: said on the console, and the subscription kept for the next asking.</summary>
+    [Fact]
+    public async Task A_sender_that_fails_loses_the_notice_and_keeps_the_subscription()
+    {
+        var (table, _) = await Seated();
+        _sender.Failing = true;
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
+
+        await _sender.Next();
+        await Settled();
+        table.Seats[0].Push.ShouldBe(Phone);
     }
 
     [Fact]
@@ -107,9 +141,9 @@ public sealed class PushNoticesTests : IDisposable
         atTheSlot.GetProperty("tag").GetString().ShouldBe("turn:player2");
     }
 
-    private async Task<(PlayedTable Table, PushNotices Notices)> Seated(TimeSpan grace)
+    private async Task<(PlayedTable Table, PushNotices Notices)> Seated()
     {
-        var notices = new PushNotices(_sender, "BP8", TimeProvider.System, grace);
+        var notices = new PushNotices(_sender, "BP8", _clock, Grace);
         _hosted = new HostedTables(null, push: notices);
         var table = await _hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
         _registry.TryAdd(table).ShouldBeTrue();
@@ -120,24 +154,35 @@ public sealed class PushNoticesTests : IDisposable
     private static async Task Arrive(PlayedTable table) =>
         (await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token)).Status.ShouldBe(200);
 
-    private static async Task<long> Asked(PlayedTable table)
+    /// <summary>The asking the seat is on, once it is on one past <paramref name="after" />.</summary>
+    private static async Task<long> Asked(PlayedTable table, long after = 0)
     {
         var person = table.Seats[0].Person!;
-        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
+        for (var attempt = 0; attempt < 300 && (person.Waiting?.Asked ?? 0) <= after; attempt++)
         {
             await Task.Delay(20, TestContext.Current.CancellationToken);
         }
 
+        // The asking is raised right after it is set; a moment for the notice task to have started its grace,
+        // so that moving the clock finds a timer to fire.
+        await Task.Delay(20, TestContext.Current.CancellationToken);
         return person.Waiting.ShouldNotBeNull().Asked;
     }
 
+    /// <summary>Long enough for a notice task released by the clock to have run to its end on the thread pool.</summary>
+    private static Task Settled() => Task.Delay(150, TestContext.Current.CancellationToken);
+
+    /// <summary>What was sent, read in order: a send released by the clock runs to its end inside <c>Advance</c>, before the test asks for it.</summary>
     private sealed class Sender : IPushSender
     {
         private readonly Queue<TaskCompletionSource<(PushSubscription, string)>> _waiting = new();
+        private int _read;
 
         public List<(PushSubscription To, string Payload)> Sent { get; } = [];
 
         public bool Gone { get; set; }
+
+        public bool Failing { get; set; }
 
         public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
         {
@@ -146,17 +191,23 @@ public sealed class PushNoticesTests : IDisposable
                 Sent.Add((to, payload));
                 if (_waiting.TryDequeue(out var waiting))
                 {
+                    _read++;
                     waiting.TrySetResult((to, payload));
                 }
             }
 
-            return Task.FromResult(!Gone);
+            return Failing ? Task.FromException<bool>(new HttpRequestException("The push service is out.")) : Task.FromResult(!Gone);
         }
 
         public Task<(PushSubscription To, string Payload)> Next()
         {
             lock (Sent)
             {
+                if (_read < Sent.Count)
+                {
+                    return Task.FromResult(Sent[_read++]);
+                }
+
                 var source = new TaskCompletionSource<(PushSubscription, string)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _waiting.Enqueue(source);
                 return source.Task.WaitAsync(TimeSpan.FromSeconds(5));

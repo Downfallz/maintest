@@ -51,4 +51,15 @@ public sealed class PushKeysTests
         Should.Throw<InvalidDataException>(() => PushKeys.Load(null, $$"""{"publicKey":"{{keys.PublicKey}}","privateKey":"not-a-key"}""")).Message.ShouldContain("private key");
         Should.Throw<InvalidDataException>(() => PushKeys.Load(null, "null"));
     }
+
+    /// <summary>Two halves of two pairs are each well formed and sign nothing a push service accepts: refused at start-up, not at every notice.</summary>
+    [Fact]
+    public void A_public_key_and_a_private_key_from_two_pairs_are_refused_as_not_a_pair()
+    {
+        var one = PushKeys.Generate();
+        var other = PushKeys.Generate();
+
+        Should.Throw<InvalidDataException>(() => PushKeys.Load(null, (one with { PrivateKey = other.PrivateKey }).ToJson())).Message.ShouldContain("not a pair");
+        PushKeys.Load(null, one.ToJson()).ShouldBe(one);
+    }
 }

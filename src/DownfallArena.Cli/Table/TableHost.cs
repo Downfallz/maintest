@@ -40,7 +40,7 @@ internal static class TableHost
         var agents = SeatableAgents.Read(WeightsDirectory);
         using var registry = new TableRegistry();
 
-        // "Your turn" to a seat's phone (ADR 0117), when the host has keys to sign it with: the file named, or
+        // "Your turn" to a seat's phone (ADR 0118), when the host has keys to sign it with: the file named, or
         // the hosted table's variable. A key pair that is not one is one line here, not a refusal per notice.
         PushKeys? keys;
         try

@@ -45,7 +45,7 @@ internal sealed class TableFiles
             ["/invitation.js"] = (Path.Combine(tableDirectory, "invitation.js"), JavaScript),
             ["/push.js"] = (Path.Combine(tableDirectory, "push.js"), JavaScript),
 
-            // The service worker, at the root so its scope is the whole table (ADR 0117), and what an installed
+            // The service worker, at the root so its scope is the whole table (ADR 0118), and what an installed
             // page and a notification show: the manifest and the icon, as a vector and as the two bitmaps
             // Android asks for.
             ["/sw.js"] = (Path.Combine(tableDirectory, "sw.js"), JavaScript),

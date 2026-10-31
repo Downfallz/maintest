@@ -7,7 +7,7 @@ namespace DownfallArena.Cli.Table;
 
 /// <summary>
 /// The host's VAPID key pair (RFC 8292), which is what lets a push service believe a notice comes from this
-/// host and nobody else (ADR 0117). The public key goes to every page that subscribes; the private key signs
+/// host and nobody else (ADR 0118). The public key goes to every page that subscribes; the private key signs
 /// every notice sent. One pair outlives every table: a subscription a browser holds is bound to the public
 /// key it was made with, so changing the pair silently unsubscribes everybody.
 /// </summary>
@@ -67,9 +67,30 @@ internal sealed record PushKeys(string PublicKey, string PrivateKey, string Subj
             throw new InvalidDataException("The push public key is not an uncompressed P-256 point in base64url.");
         }
 
-        if (!Decodes(PrivateKey, ScalarLength, out _))
+        if (!Decodes(PrivateKey, ScalarLength, out var scalar))
         {
             throw new InvalidDataException("The push private key is not a 32-byte P-256 scalar in base64url.");
+        }
+
+        // A pair pasted together from two: each half is well formed and every notice is refused by the push
+        // service. Signing with the one and verifying with the other is the check the service would make.
+        try
+        {
+            using var ecdsa = ECDsa.Create(new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+                D = scalar,
+                Q = new ECPoint { X = point[1..(1 + ScalarLength)], Y = point[(1 + ScalarLength)..] },
+            });
+            var probe = new byte[] { 0x44 };
+            if (!ecdsa.VerifyData(probe, ecdsa.SignData(probe, HashAlgorithmName.SHA256), HashAlgorithmName.SHA256))
+            {
+                throw new InvalidDataException("The push public and private keys are not a pair.");
+            }
+        }
+        catch (CryptographicException failure)
+        {
+            throw new InvalidDataException($"The push public and private keys are not a pair: {failure.Message}", failure);
         }
 
         return string.IsNullOrWhiteSpace(Subject) ? this with { Subject = DefaultSubject } : this;

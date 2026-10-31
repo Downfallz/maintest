@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
@@ -7,7 +8,7 @@ using DownfallArena.Domain.Matches;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// "Your turn", sent to a seat's phone when the match asks it something and nobody is looking (ADR 0117). A
+/// "Your turn", sent to a seat's phone when the match asks it something and nobody is looking (ADR 0118). A
 /// page in front of somebody says so within a poll (<c>?shown=</c>, <see cref="DecisionClock" />), and a seat
 /// whose page said so gets no notice; a seat whose page is asleep, closed or on another app gets one after a
 /// short grace, and its service worker shows it. One notice an asking at most: the next asking comes only
@@ -24,7 +25,15 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     private readonly TimeSpan _grace = grace ?? Grace;
-    private readonly ConcurrentDictionary<(string Table, PlayerSlot Slot), long> _shown = new();
+
+    // The last asking each seat's page said it drew, kept on the seat's own lifetime: a table let go of takes
+    // its seats, and their entries, with it.
+    private readonly ConditionalWeakTable<HumanSeat, StrongBox<long>> _shown = [];
+
+    // The endpoints a push service said were gone. A browser keeps its subscription when the service drops it,
+    // and a page sends it again on every load; answering those with 410 is how the page learns to make a new
+    // one. Small: one line per subscription that died, for the life of the host.
+    private readonly ConcurrentDictionary<string, byte> _dead = new(StringComparer.Ordinal);
 
     /// <summary>What a page subscribes with: the host's VAPID public key, base64url.</summary>
     public string PublicKey { get; } = publicKey;
@@ -49,13 +58,24 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     }
 
     /// <summary>A page has drawn this asking in front of somebody: no notice for it.</summary>
-    public void Shown(PlayedTable table, TableSeat seat, HumanSeat.Question question)
+    public void Shown(TableSeat seat, HumanSeat.Question question)
     {
-        ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(seat);
         ArgumentNullException.ThrowIfNull(question);
-        _shown.AddOrUpdate((table.Id, seat.Slot), question.Asked, (_, asked) => Math.Max(asked, question.Asked));
+        if (seat.Person is not { } person)
+        {
+            return;
+        }
+
+        var shown = _shown.GetOrCreateValue(person);
+        lock (shown)
+        {
+            shown.Value = Math.Max(shown.Value, question.Asked);
+        }
     }
+
+    /// <summary>Whether a push service said this endpoint is gone: a subscription the page should not send again.</summary>
+    public bool IsDead(string endpoint) => _dead.ContainsKey(endpoint);
 
     /// <summary>What the service worker is handed: a title, a line, and where a tap goes.</summary>
     public static string Payload(HumanSeat.Question question, int? round, TableSeat seat)
@@ -86,7 +106,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            if (_shown.TryGetValue((table.Id, seat.Slot), out var shown) && shown >= question.Asked)
+            if (seat.Person is { } person && _shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked)
             {
                 return;
             }
@@ -96,18 +116,21 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            // Gone from the push service: the browser unsubscribed, or was reinstalled. Sending again would only
-            // fail again, so the seat forgets it; the page offers the button again on its next visit.
+            // Gone from the push service: the browser was reinstalled, or the service let it go. Sending again
+            // would only fail again, so the seat forgets it and the endpoint is remembered as dead: the browser
+            // still holds it and sends it on its next load, and is answered 410, which is when it makes a new one.
+            _dead[subscription.Endpoint] = 0;
             seat.Push = null;
             if (Record is { } record)
             {
                 await record(table);
             }
         }
-        catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException)
+        catch (Exception failure)
         {
-            // A service that is out, or a record that cannot be written: the notice is lost, the seat keeps its
-            // subscription for the next asking, and the console says what happened.
+            // The end of a task nothing awaits: whatever failed -- a service that is out, a record that cannot
+            // be written, a key the sender could not use -- the notice is lost, the seat keeps its subscription
+            // for the next asking, and the console says what happened rather than nothing.
             Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be notified: {failure.Message}");
         }
     }

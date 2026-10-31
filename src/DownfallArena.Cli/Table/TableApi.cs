@@ -44,11 +44,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// </summary>
     public Func<TableSeat, string?>? CodeOf { get; set; }
 
-    /// <summary>The notices sent to a seat nobody is looking at (ADR 0117): told which askings a page has drawn.</summary>
+    /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
     public PushNotices? Push { get; init; }
-
-    /// <summary>The table these seats are at, for the notices: set as the table is built, before any page reaches it.</summary>
-    public PlayedTable? Table { get; set; }
 
     public int FeedStart { get; init; }
 
@@ -405,10 +402,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         if (shown is { } drawn && seat.Person?.Waiting is { } asking && drawn == asking.Asked)
         {
             run?.Served(seat.Slot, asking);
-            if (Table is { } table)
-            {
-                Push?.Shown(table, seat, asking);
-            }
+            Push?.Shown(seat, asking);
         }
 
         return StudioResponse.OfJson(
