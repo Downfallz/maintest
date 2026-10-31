@@ -67,6 +67,59 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
+    /// At a table a player makes every pick of an opportunity without waiting for the other's (ADR 0117). Seat 2
+    /// makes its first pick only once seat 1 has made both of its own, which a driver asking one pick of each seat
+    /// at a time can never satisfy, and each of seat 1's picks is made on the board and with the options the
+    /// picks before it left.
+    /// </summary>
+    [Fact]
+    public async Task At_a_table_a_player_makes_every_pick_of_an_opportunity_without_waiting_for_the_other_s()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
+        using var done = new SemaphoreSlim(0);
+        var first = new Buying(Scripted(TestContent.Strike), done: done);
+        var second = new Buying(Scripted(TestContent.Strike), waitsFor: done);
+
+        var outcome = await Driver(store, together: true).PlayAsync(match.Id, first, second, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.ShouldBeTrue();
+        second.Waited.ShouldBeTrue();
+        first.Seen.ShouldBe([(0, 2), (1, 1)]);
+    }
+
+    /// <summary>
+    /// What lets a seat at a table make all its picks before any is submitted: a pick changes its owner's board by
+    /// that pick alone and its options by one pick and that creature, and the other seat's board and options not
+    /// at all, since every pick stays face down until both players are done (ADR 0089, ADR 0117).
+    /// </summary>
+    [Fact]
+    public async Task A_pick_changes_its_owner_s_board_by_that_pick_and_its_options_by_that_creature_and_the_other_s_not_at_all()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(), new TestRandom(3));
+        var commands = Commands(store);
+        var queries = Queries(store);
+        var before = (await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).Value;
+        var offered = (await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).Value.Evolution!;
+        var otherBefore = (await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).Value;
+        var otherOffered = (await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).Value.Evolution!;
+        offered.RemainingPicks.ShouldBe(2);
+        var choice = new EvolutionChoice(offered.Creatures[0].Creature, offered.Creatures[0].AvailableTiers[0]);
+
+        (await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, choice.Creature, choice.Tier), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+
+        var after = (await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).Value;
+        var left = (await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).Value.Evolution!;
+        var otherAfter = (await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).Value;
+        var otherLeft = (await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).Value.Evolution!;
+        JsonSerializer.Serialize(after).ShouldBe(JsonSerializer.Serialize(before with { EvolutionChoices = [.. before.EvolutionChoices, choice] }));
+        JsonSerializer.Serialize(left).ShouldBe(JsonSerializer.Serialize(offered.After(choice)));
+        JsonSerializer.Serialize(otherAfter).ShouldBe(JsonSerializer.Serialize(otherBefore));
+        JsonSerializer.Serialize(otherLeft).ShouldBe(JsonSerializer.Serialize(otherOffered));
+    }
+
+    /// <summary>
     /// Speeds are chosen face down and so are intents, so a table asks both seats at once, as it asks their picks
     /// (ADR 0111). Each agent here answers each speed, or each intent, only once the other seat has been asked
     /// its own.
@@ -127,12 +180,12 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
-    /// Asked at once, answered in seat order: the engine is handed every speed and every intent of seat 1 before
+    /// Asked at once, answered in seat order: the engine is handed every pick, every speed and every intent of seat 1 before
     /// any of seat 2's, whichever seat finished first, so a rebuilt table replays its commands in the order they
     /// were recorded in.
     /// </summary>
     [Fact]
-    public async Task At_a_table_speeds_and_intents_asked_at_once_are_submitted_in_seat_order()
+    public async Task At_a_table_picks_speeds_and_intents_asked_at_once_are_submitted_in_seat_order()
     {
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(roundCap: 3), new TestRandom(5));
@@ -146,8 +199,10 @@ public sealed class MatchDriverTests
 
         foreach (var round in events.All.OfType<IMatchEvent>().GroupBy(Round))
         {
+            var picks = round.OfType<EvolutionChoiceSubmitted>().Select(submitted => submitted.Slot).ToList();
             var speeds = round.OfType<SpeedChoiceSubmitted>().Select(submitted => submitted.Slot).ToList();
             var intents = round.OfType<IntentSubmitted>().Select(submitted => submitted.Slot).ToList();
+            picks.ShouldBe([.. picks.OrderBy(slot => slot)], $"round {round.Key}");
             speeds.ShouldBe([.. speeds.OrderBy(slot => slot)], $"round {round.Key}");
             intents.ShouldBe([.. intents.OrderBy(slot => slot)], $"round {round.Key}");
         }
@@ -155,6 +210,7 @@ public sealed class MatchDriverTests
 
     private static RoundId? Round(IMatchEvent matchEvent) => matchEvent switch
     {
+        EvolutionChoiceSubmitted pick => pick.RoundId,
         SpeedChoiceSubmitted speed => speed.RoundId,
         IntentSubmitted intent => intent.RoundId,
         _ => null,
@@ -227,6 +283,42 @@ public sealed class MatchDriverTests
         }
     }
 
+    /// <summary>
+    /// An agent that buys the first package it is offered at every pick, and notes how many picks of its own each
+    /// pick is shown and how many it has left. It can say when it has made its last pick, or wait before its first
+    /// until the other seat has said so, giving up after a while rather than hang.
+    /// </summary>
+    private sealed class Buying(IPlayerAgent inner, SemaphoreSlim? done = null, SemaphoreSlim? waitsFor = null) : IPlayerAgent
+    {
+        public List<(int Picked, int Remaining)> Seen { get; } = [];
+
+        public bool Waited { get; private set; }
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+        {
+            if (waitsFor is not null && Seen.Count == 0)
+            {
+                Waited = waitsFor.Wait(TimeSpan.FromSeconds(2));
+            }
+
+            Seen.Add((board.EvolutionChoices.Count, options.RemainingPicks));
+            if (options.RemainingPicks == 1)
+            {
+                done?.Release();
+            }
+
+            return EvolutionDecision.Unlock(new EvolutionChoice(options.Creatures[0].Creature, options.Creatures[0].AvailableTiers[0]));
+        }
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => inner.DecideSpeed(board, creature);
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => inner.DecideIntent(board, intentOption);
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
+    }
+
     /// <summary>An agent that notes how many intents of its own each intent it declares is shown.</summary>
     private sealed class Declaring(IPlayerAgent inner) : IPlayerAgent
     {
@@ -248,13 +340,17 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
-    /// Seat 1's agent, answering each speed and intent only once seat 2 has answered one: what is then submitted
+    /// Seat 1's agent, answering each pick, speed and intent only once seat 2 has answered one: what is then submitted
     /// first is the seat order, not the order the answers came in. A seat with fewer creatures standing gives up
     /// waiting rather than hang.
     /// </summary>
     private sealed class Behind(IPlayerAgent inner, SemaphoreSlim answered) : IPlayerAgent
     {
-        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => inner.DecideEvolution(board, options);
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+        {
+            answered.Wait(TimeSpan.FromMilliseconds(500));
+            return inner.DecideEvolution(board, options);
+        }
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
         {
@@ -273,10 +369,15 @@ public sealed class MatchDriverTests
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => inner.DecideTargets(board, options);
     }
 
-    /// <summary>Seat 2's agent, saying so each time it has answered a speed or an intent.</summary>
+    /// <summary>Seat 2's agent, saying so each time it has answered a pick, a speed or an intent.</summary>
     private sealed class Ahead(IPlayerAgent inner, SemaphoreSlim answered) : IPlayerAgent
     {
-        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => inner.DecideEvolution(board, options);
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+        {
+            var decision = inner.DecideEvolution(board, options);
+            answered.Release();
+            return decision;
+        }
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
         {

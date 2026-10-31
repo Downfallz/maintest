@@ -18,16 +18,20 @@ internal sealed class HostedTables : IDisposable
 {
     public static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 4, 2.0);
 
+    /// <summary>The same rules with two picks an opportunity, the number a player can be asked one after the other.</summary>
+    public static readonly RuleSet TwoPicks = RuleSet.Create(2, 2, 2, 4, 2.0);
+
     private readonly StudioContent _content = new();
     private readonly IHost _host;
 
-    public HostedTables(bool recording = false)
-        : this(recording ? directory => new FileArtifactStore(directory) : null)
+    public HostedTables(bool recording = false, RuleSet? rules = null)
+        : this(recording ? directory => new FileArtifactStore(directory) : null, rules)
     {
     }
 
     /// <param name="store">The store a recording host writes to, made over <see cref="RunsDirectory" />.</param>
-    public HostedTables(Func<string, IArtifactStore>? store)
+    /// <param name="rules">The rules every table is composed with, <see cref="Rules" /> unless given.</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -35,7 +39,7 @@ internal sealed class HostedTables : IDisposable
             seed: 7,
             logMatchToConsole: false);
         var opened = store?.Invoke(RunsDirectory);
-        Composer = new TableComposer(_host.Services, Rules, opened);
+        Composer = new TableComposer(_host.Services, rules ?? Rules, opened);
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 
