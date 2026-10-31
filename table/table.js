@@ -100,7 +100,9 @@ function enter(held, practice) {
 
   // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
   if (!practice) tidy();
-  start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
+  // A single-seat browser already identifies its player. Only a shared device needs the handover fence.
+  const holder = practice ? 'player1' : held.length === 1 ? held[0].seat : null;
+  start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), holder, Boolean(practice));
 }
 
 function tidy() {
@@ -110,8 +112,8 @@ function tidy() {
 }
 
 function start(seats, holder = null, practicing = false) {
-  // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
-  // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
+  // `holder` is the browser's sole seat, or the player who confirmed they hold a shared device.
+  // `shown` is the seat on screen, so picked targets never survive a handover.
   // `holding` keeps the holder's seat on screen for a poll between two of their own questions (seats.js).
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
   const state = {
@@ -2015,6 +2017,19 @@ function unlockedPackages(state, seat, board, phaseVisible) {
 }
 
 function renderPhaseGuide(state, view, seat) {
+  // The engine prepares round one before the driver starts. Even an empty waiting.seats still means
+  // the host has not begun; leave the first phase unseen so its announcement arrives when it does.
+  if (view.waiting && !view.over) {
+    element('phase-round').textContent = 'Match not started';
+    element('phase-current').textContent = 'Waiting for players';
+    element('phase-turn').textContent = '';
+    element('phase-steps').replaceChildren();
+    element('phase-reminder').textContent = 'The match begins when everyone is seated.';
+    renderUpkeep(state, view, null, seat);
+    renderAnnouncements(state, seat);
+    hidePhaseNotice(state);
+    return;
+  }
   const phases = [
     ['Upkeep', [], 'Round upkeep is automatic.'],
     ['Evolve', ['Evolution'], 'Buy whole packages with shared team picks. At most one per creature this opportunity, or pass.'],

@@ -9,6 +9,8 @@ dotnet run --project src/DownfallArena.Cli -- table --p2 greedy
 
 Open the seat link printed by the host. For two people sharing a screen, omit `--p2 greedy` and use the
 hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md) for rules and recording.
+With one seat in the browser (solo against a bot or each player on their own device), the game opens directly.
+The “I am Player…” confirmation is reserved for browsers holding both seats on a shared device.
 
 ## Many tables, one host
 
@@ -172,6 +174,8 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
+  Before the match begins, the dock says it is waiting for players; upkeep and phase announcements wait
+  for the host to clear `waiting`, even if round one's board and upkeep events are already prepared.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
   Next advances through the applied healing, then the applied damage, then the remaining conditions, one
   step a kind: each step is one row a creature -- its number in its side's colour, then symbol chips (`+2 ♥`,

@@ -97,6 +97,32 @@ function page() {
 
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
 
+for (const seat of ['player1', 'player2']) {
+  test(`entering with only ${seat} opens the game without a handover confirmation`, () => {
+    const p = page();
+    p.current.seat = seat;
+    p.state.holder = null;
+    p.context.fetch = async () => ({ ok: true });
+    p.context.start = (_seats, holder) => { p.state.holder = holder; p.draw(); };
+    p.context.enter([{ seat, token: 'own-seat' }], null);
+    assert.equal(p.nodes.pass.hidden, true);
+    assert.equal(p.nodes.table.hidden, false);
+    assert.equal(p.state.holder, seat);
+    p.view.waitingAsked++; p.draw();
+    assert.equal(p.nodes.pass.hidden, true);
+  });
+}
+
+test('entering with both seats still requires the shared-device confirmation', () => {
+  const p = page();
+  p.context.fetch = async () => ({ ok: true });
+  p.context.start = (_seats, holder) => { p.state.holder = holder; p.draw(); };
+  p.context.enter([{ seat: 'player1', token: 'one' }, { seat: 'player2', token: 'two' }], null);
+  assert.equal(p.nodes.pass.hidden, false);
+  assert.equal(p.nodes.table.hidden, true);
+  assert.equal(p.state.holder, null);
+});
+
 // The inspector's purchase controls, without the phone's way back to the package list.
 function unlocks(p) { return p.nodes.mat.children[2].querySelectorAll('button').filter(node => node.className === 'atlas-unlock'); }
 
@@ -1781,6 +1807,30 @@ test("the next creature's speed or spell question starts its spellbook at the to
   assert.equal(p.nodes.planning.scrollTop, 0);
 });
 
+for (const seats of [[{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM' }], []]) {
+  test(`round one announcements wait for the match to begin with ${seats.length} missing seats`, () => {
+    const p = page();
+    p.view.waiting = { seats };
+    p.view.waitingFor = null; p.view.waitingCreature = null;
+    p.view.board.subPhase = 'Evolution';
+    p.view.roundEvents = [{ sequence: 1, event: { kind: 'OngoingEffectsApplied', roundId: 1 } }];
+    p.draw();
+    assert.equal(p.nodes['phase-notice'].hidden, true);
+    assert.equal(p.nodes.upkeep.hidden, true);
+    assert.equal(p.nodes['phase-current'].textContent, 'Waiting for players');
+    assert.equal(p.state.phaseSeen?.has('player1') ?? false, false);
+    assert.equal(p.state.announcements?.get('player1')?.length ?? 0, 0);
+
+    p.view.waiting = null; p.view.waitingFor = 'Evolution'; p.draw();
+    assert.equal(p.nodes['phase-notice'].hidden, false);
+    assert.match(p.nodes['phase-notice-title'].textContent, /Round 1 · Upkeep complete → Evolve/);
+    assert.equal(p.nodes.upkeep.hidden, false);
+    assert.equal(p.state.announcements.get('player1').length, 1);
+    p.draw();
+    assert.equal(p.state.announcements.get('player1').length, 1);
+  });
+}
+
 test('a table given up while it waited shows the outcome without the waiting room under it', () => {
   const p = page();
   p.view.waiting = { seats: [{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM' }] };
@@ -1793,6 +1843,8 @@ test('a table given up while it waited shows the outcome without the waiting roo
   p.view.over = true; p.view.outcome = { winner: 'player2', reason: 'Concession' };
   p.draw();
   assert.equal(p.nodes['waiting-room'].hidden, true);
+  assert.equal(p.nodes['phase-current'].textContent, 'Match complete');
+  assert.equal(p.nodes['phase-notice'].hidden, false);
 });
 
 // ADR 0101: a capstone is opened by any one of its family's level-3 packages and teaches no spell, so its lane

@@ -43,7 +43,6 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalogue', route => route.fulfill({ json: catalogue }));
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
   await page.goto('/table/?player1=layout-fixture');
-  await page.locator('#pass-ready').click();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
 });
 
