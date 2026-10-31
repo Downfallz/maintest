@@ -456,7 +456,8 @@ async function poll(state) {
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
     // same page, and it has already been taken out of the address bar, so forgetting it too would mean
     // reading it off the host's screen again.
-    if (answer.status === 403) {
+    // A replay refused is the operator's sign-in, not a seat this browser holds: nothing saved is forgotten.
+    if (answer.status === 403 && !state.replaying) {
       refused.push(seat.seat);
       continue;
     }

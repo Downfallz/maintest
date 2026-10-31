@@ -492,7 +492,8 @@ internal sealed class AdminApi
                 : null,
             pilot = $"/pilot?token={table.Pilot.Token}",
             session = $"/session/{table.Id}",
-            replay = table.IsOver ? ReplayPath(table.Id) : null,
+            // Read off the run the store holds: a host that records nothing has no replay to offer.
+            replay = table.IsOver && _stored is not null ? ReplayPath(table.Id) : null,
         };
 
     /// <summary>The table page replaying a finished session, action by action (<see cref="ReplayAsync" />).</summary>

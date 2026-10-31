@@ -225,8 +225,9 @@ export function sessionRows(answer) {
     steps: session.steps ?? 0,
     live: session.live === true,
     finished: session.live !== true && session.over === true,
-    // How many seats a person held: the stamp names a person's seat `human` or `human:<initials>`.
-    people: [session.player1, session.player2].filter(agent => /^human\b/.test(agent ?? '')).length,
+    // How many seats a person held at some point: the stamp names a person `human` or `human:<initials>`, and a
+    // seat handed over carries each occupant after the first (`Greedy>human:mk@3`).
+    people: [session.player1, session.player2].filter(agent => /(^|>)human\b/.test(agent ?? '')).length,
     session: session.session,
     replay: session.replay ?? null,
     // Exportable once it is no longer being written: the host refuses a live one.

@@ -1481,6 +1481,16 @@ test('a replay opened from the admin names the winner rather than saying you', (
   assert.equal(p.nodes.asking.textContent, 'Player 1 wins · the last team standing.');
 });
 
+test('a replay the host refuses forgets no seat this browser saved, and says why', async () => {
+  const p = page(); p.state.replaying = true;
+  p.current.transport.seat = async () => ({ status: 403, ok: false, body: { message: 'The panel carries the operator\'s token.' } });
+
+  await p.context.poll(p.state);
+
+  assert.equal(p.state.seats.length, 1);
+  assert.match(p.nodes.phase.textContent, /operator's token/);
+});
+
 test('a round replay names one round and offers no jump between rounds', () => {
   const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2; p.draw();
   openReplay(p);

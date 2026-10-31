@@ -464,6 +464,25 @@ public sealed class AdminApiTests : IDisposable
         JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Admin.NotRecording");
     }
 
+    /// <summary>A host that records nothing has no run to replay, so a finished table there offers no replay link.</summary>
+    [Fact]
+    public async Task A_finished_table_on_a_host_that_records_nothing_offers_no_replay()
+    {
+        using var silent = new HostedTables(recording: false);
+        var admin = new AdminApi(_registry, silent.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)");
+        var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
+        var table = _registry.ById(played).ShouldNotBeNull();
+        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null))).RootElement.GetProperty("tables").EnumerateArray().Single();
+
+        table.IsFinished.ShouldBeTrue();
+        listed.GetProperty("replay").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
     private static string Opened(StudioResponse answer)
     {
         answer.Status.ShouldBe(201, Text(answer));

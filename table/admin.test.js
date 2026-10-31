@@ -306,27 +306,29 @@ const listed = [
   { id: 'c', player1: 'Greedy', player2: 'Random', live: true, over: false },
   { id: 'd', player1: 'human:mk', player2: 'human:jo', over: false },
   { id: 'e' },
+  { id: 'f', player1: 'Greedy>human:mk@3', player2: 'Greedy', over: true, replay: '/play?replay=f' },
 ];
 
-test('a session row counts the seats a person held and offers its replay once finished', () => {
+test('a session row counts the seats a person held, a seat handed over to one included, and offers its replay once finished', () => {
   const rows = sessionRows({ sessions: listed });
 
   assert.deepEqual(rows.map(row => [row.id, row.people, row.finished, row.replay]),
-    [['a', 2, true, '/play?replay=a'], ['b', 1, true, '/play?replay=b'], ['c', 0, false, null], ['d', 2, false, null], ['e', 0, false, null]]);
+    [['a', 2, true, '/play?replay=a'], ['b', 1, true, '/play?replay=b'], ['c', 0, false, null], ['d', 2, false, null], ['e', 0, false, null],
+      ['f', 1, true, '/play?replay=f']]);
 });
 
 test('sessions are filtered by state and by who sat, and a session with no manifest only under anyone', () => {
   const rows = sessionRows({ sessions: listed });
   const ids = filter => filterSessions(rows, filter).map(row => row.id);
 
-  assert.deepEqual(ids({ state: 'finished' }), ['a', 'b']);
+  assert.deepEqual(ids({ state: 'finished' }), ['a', 'b', 'f']);
   assert.deepEqual(ids({ state: 'finished', players: 'people' }), ['a']);
   assert.deepEqual(ids({ players: 'people' }), ['a', 'd']);
-  assert.deepEqual(ids({ players: 'mixed' }), ['b']);
+  assert.deepEqual(ids({ players: 'mixed' }), ['b', 'f']);
   assert.deepEqual(ids({ players: 'bots' }), ['c']);
   assert.deepEqual(ids({ state: 'live' }), ['c']);
   assert.deepEqual(ids({ state: 'unfinished' }), ['d', 'e']);
-  assert.deepEqual(ids({}), ['a', 'b', 'c', 'd', 'e']);
+  assert.deepEqual(ids({}), ['a', 'b', 'c', 'd', 'e', 'f']);
 });
 
 test('a page of sessions is clamped to the pages there are', () => {
