@@ -24,7 +24,14 @@ ones `learning/seatable.json` puts forward, then every weights file under `learn
 host so a new search is offered without a page change. The panel also lists every recorded session the store
 holds, whether or not this host still has its table, deletes one or several (a table still being played is
 closed first) and exports one or several as a zip of run directories: unzipped under `runs/`, each is what
-`train-clone`, `export-csv` and the viewer read. A table with a person in it waits for every person to
+`train-clone`, `export-csv` and the viewer read. The list is filtered by state (finished, live, not
+finished) and by who sat (human vs human, human vs bot, bots only), and paged twenty at a time, newest first;
+the filters and the pages work on the listing the panel last read, so they never walk the store again. A
+finished session, and a finished table, offers a **replay** beside its viewer link: `/play?replay=<id>` opens
+the table page on that match's replay, action by action, with no seat at all. It reads
+`GET /api/sessions/<id>/replay`, the operator's own route, which serves the match's outcome, each seat's last
+board, the catalogue its table served and only the public events a replay reads, off the run the store holds,
+whether or not this host still has the table; `&seat=player2` shows it from the other side. A table with a person in it waits for every person to
 reach their seat before its first question, showing whoever is here the code that brings the other, and then
 asks both players their package picks at the same time (ADR 0092), each player every pick of the
 opportunity without waiting for the other's (ADR 0117), as it then asks their speeds and their intents (ADR 0111). On one screen the player holding it answers theirs before it is passed. A table page shows an **Admin** link in its header to the

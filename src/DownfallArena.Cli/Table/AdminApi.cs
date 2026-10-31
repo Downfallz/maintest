@@ -285,8 +285,60 @@ internal sealed class AdminApi
                     return await ExportAsync(stored, [id], problem: null, id);
                 }
 
+                if (method == "GET" && rest.EndsWith("/replay", StringComparison.Ordinal))
+                {
+                    return await ReplayAsync(stored, rest[..^"/replay".Length]);
+                }
+
                 return StudioResponse.OfPlainText(404, $"No such route: {method} {SessionsPrefix}/{rest}");
         }
+    }
+
+    /// <summary>The events a finished match's replay reads: every one public, so nothing either seat held is served.</summary>
+    private static readonly HashSet<string> Replayed = ["OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"];
+
+    /// <summary>
+    /// A finished session as the table page replays it: the match's outcome, each seat's last board, the catalogue
+    /// its table served and the public events of every round, off the run the store holds. A table this host has
+    /// let go of, or that an earlier replica played, is replayed as well as one still listed; a match still being
+    /// played is not, since its trace is a checkpoint and not the match.
+    /// </summary>
+    private static async Task<StudioResponse> ReplayAsync(StoredSessions stored, string id)
+    {
+        var (trace, catalogue) = await stored.MatchAsync(id);
+        if (trace is null)
+        {
+            return StudioResponse.OfJson(new { error = "Admin.NoMatch", message = $"Session {id} recorded no match to replay." }, ArtifactJson.LineOptions, status: 404);
+        }
+
+        using var match = JsonDocument.Parse(trace);
+        var root = match.RootElement;
+        var entries = root.GetProperty("entries");
+        if (!root.TryGetProperty("outcome", out var outcome) || outcome.ValueKind != JsonValueKind.Object || entries.GetArrayLength() == 0)
+        {
+            return StudioResponse.OfJson(new { error = "Admin.NotOver", message = $"Session {id} has not finished its match, so there is nothing to replay yet." }, ArtifactJson.LineOptions, status: 409);
+        }
+
+        var last = entries[entries.GetArrayLength() - 1];
+        using var served = catalogue is null ? null : JsonDocument.Parse(catalogue);
+        return StudioResponse.OfJson(
+            new
+            {
+                id,
+                // As the seat route serves it: the winner by its seat's name, which the page compares with its own.
+                outcome = new
+                {
+                    winner = outcome.TryGetProperty("winner", out var winner) && Enum.TryParse<PlayerSlot>(winner.GetString(), out var slot) ? TableSeat.NameOf(slot) : null,
+                    reason = outcome.TryGetProperty("reason", out var reason) ? reason.GetString() : null,
+                },
+                boards = new { player1 = last.GetProperty("player1"), player2 = last.GetProperty("player2") },
+                catalogue = served?.RootElement,
+                feed = entries.EnumerateArray()
+                    .Where(entry => Replayed.Contains(entry.GetProperty("event").GetProperty("kind").GetString() ?? string.Empty))
+                    .Select(entry => new { sequence = entry.GetProperty("sequence"), round = entry.GetProperty("round"), subPhase = entry.GetProperty("subPhase"), @event = entry.GetProperty("event") })
+                    .ToArray(),
+            },
+            ArtifactJson.LineOptions);
     }
 
     private async Task<StudioResponse> DeleteAsync(StoredSessions stored, IReadOnlyList<string> ids, string? problem, string operatorName)
@@ -394,6 +446,7 @@ internal sealed class AdminApi
             live = table is not null,
             over = table?.IsOver ?? session.Matches > 0,
             session = $"/session/{session.Id}",
+            replay = (table?.IsOver ?? session.Matches > 0) ? ReplayPath(session.Id) : null,
             export = $"{SessionsPrefix}/{session.Id}/export",
         };
     }
@@ -439,7 +492,11 @@ internal sealed class AdminApi
                 : null,
             pilot = $"/pilot?token={table.Pilot.Token}",
             session = $"/session/{table.Id}",
+            replay = table.IsOver ? ReplayPath(table.Id) : null,
         };
+
+    /// <summary>The table page replaying a finished session, action by action (<see cref="ReplayAsync" />).</summary>
+    private static string ReplayPath(string id) => $"/play?replay={Uri.EscapeDataString(id)}";
 
     /// <summary>
     /// The round a table is in, read without waiting long on it: a listing must not block behind a match that

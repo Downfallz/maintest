@@ -354,6 +354,55 @@ public sealed class AdminApiTests : IDisposable
         Directory.Exists(Path.Combine(_hosted.RunsDirectory, playing)).ShouldBeFalse("nothing landed after the deletion");
     }
 
+    /// <summary>
+    /// A finished session is replayed off the run the store holds: its outcome, each seat's last board, the
+    /// catalogue its table served and only the public events a replay reads, whether or not this host still has
+    /// its table.
+    /// </summary>
+    [Fact]
+    public async Task A_finished_session_is_served_for_its_replay_with_its_public_events_only()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
+        var table = _registry.ById(played).ShouldNotBeNull();
+        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        _registry.Remove(played);
+
+        var answer = await admin.HandleAsync("GET", $"/api/sessions/{played}/replay", "", OperatorToken, null);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        var replay = JsonDocument.Parse(Text(answer)).RootElement;
+        replay.GetProperty("outcome").GetProperty("reason").GetString().ShouldNotBeNullOrEmpty();
+        replay.GetProperty("outcome").GetProperty("winner").GetString()?.ShouldBeOneOf("player1", "player2");
+        replay.GetProperty("boards").GetProperty("player2").GetProperty("allies").GetArrayLength().ShouldBeGreaterThan(0);
+        replay.GetProperty("catalogue").GetProperty("cards").GetArrayLength().ShouldBeGreaterThan(0);
+        var kinds = replay.GetProperty("feed").EnumerateArray().Select(entry => entry.GetProperty("event").GetProperty("kind").GetString()).ToHashSet();
+        kinds.ShouldContain("CombatActionResolved");
+        kinds.ShouldBeSubsetOf(["OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"]);
+        var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null))).RootElement.GetProperty("sessions")[0];
+        listed.GetProperty("replay").GetString().ShouldBe($"/play?replay={played}");
+    }
+
+    [Fact]
+    public async Task A_session_whose_match_is_still_being_played_has_no_replay()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var playing = Opened(await admin.HandleAsync("POST", "/api/tables", NoFormat, OperatorToken, null));
+
+        var answer = await admin.HandleAsync("GET", $"/api/sessions/{playing}/replay", "", OperatorToken, null);
+        var unknown = await admin.HandleAsync("GET", "/api/sessions/nowhere/replay", "", OperatorToken, null);
+        var stranger = await admin.HandleAsync("GET", $"/api/sessions/{playing}/replay", "", "not-the-operator", null);
+
+        answer.Status.ShouldBe(409, Text(answer));
+        JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Admin.NotOver");
+        unknown.Status.ShouldBe(404);
+        stranger.Status.ShouldBe(403);
+    }
+
     [Fact]
     public async Task A_session_still_being_played_is_not_exported()
     {

@@ -13,8 +13,10 @@
 .control { border: 1px solid var(--line); border-radius: 11px; padding: 16px; background: var(--panel); max-width: 70ch; }
 .control h2 { margin-bottom: 6px; }
 .fields { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 14px; }
-.fields label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; }
-select, input[type="number"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--raised); color: var(--ink); }
+/* A label is a grid of one column that may shrink: a select is as wide as its longest option otherwise, and a
+   weights file's name is longer than a phone. */
+.fields label { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 5px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; }
+select, input[type="number"] { font: inherit; min-height: 44px; max-width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--raised); color: var(--ink); }
 input[type="number"] { width: 8ch; }
 /* `<output>` rather than a paragraph with role="status": the implicit role comes with the element, and the
    two do not read the same on every assistive technology. It is inline by default, so both are told to be a

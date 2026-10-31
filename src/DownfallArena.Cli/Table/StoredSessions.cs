@@ -113,6 +113,17 @@ internal sealed class StoredSessions(IArtifactStore store)
 
     public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, cancellationToken);
 
+    /// <summary>
+    /// The session's match trace and the catalogue its table served, as the store holds them. A table plays one
+    /// match, so its run holds one trace; null for either when it was never written.
+    /// </summary>
+    public async Task<(string? Trace, string? Catalogue)> MatchAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var reader = store.Reader(id);
+        var trace = (await reader.ListAsync(RunRecorder.TracesDirectory, cancellationToken)).FirstOrDefault(name => name.EndsWith(".json", StringComparison.Ordinal));
+        return (trace is null ? null : await reader.ReadTextAsync(trace, cancellationToken), await reader.ReadTextAsync(PlaytestRun.CatalogueFile, cancellationToken));
+    }
+
     /// <summary>The table's record, or none when the run was never a table of a host that wrote one (ADR 0091).</summary>
     public async Task<TableRecord?> RecordAsync(string id, CancellationToken cancellationToken = default)
     {

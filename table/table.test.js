@@ -1475,6 +1475,12 @@ test('a match replay reads a round upkeep and the packages it revealed before it
   assert.match(p.nodes['playback-action'].textContent, /First card/);
 });
 
+test('a replay opened from the admin names the winner rather than saying you', () => {
+  const p = page(); finishedMatch(p); p.view.replay = true; p.draw(); stepOk(p);
+
+  assert.equal(p.nodes.asking.textContent, 'Player 1 wins · the last team standing.');
+});
+
 test('a round replay names one round and offers no jump between rounds', () => {
   const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2; p.draw();
   openReplay(p);

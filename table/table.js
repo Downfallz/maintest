@@ -1,6 +1,6 @@
-import { httpTransport } from './transport.js';
+import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
-import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
+import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
@@ -70,6 +70,13 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
 // the host which of the held seats still answer, settles into the same `enter` either way.
 function boot(practice) {
   void showAdminLink();
+  // A finished session the admin panel opened: no seat, only its replay, read with the operator's token.
+  const watched = replayOf(globalThis.location?.search ?? '');
+  if (watched) {
+    start([{ seat: watched.seat, token: null, transport: replayTransport(watched.id, watched.seat, operatorToken(storage)) }], watched.seat, false, true);
+    return;
+  }
+
   if (practice) {
     enter(practice.seats, practice);
     return;
@@ -240,13 +247,13 @@ function tidy() {
   }
 }
 
-function start(seats, holder = null, practicing = false) {
+function start(seats, holder = null, practicing = false, replaying = false) {
   // `holder` is the browser's sole seat, or the player who confirmed they hold a shared device.
   // `shown` is the seat on screen, so picked targets never survive a handover.
   // `holding` keeps the holder's seat on screen for a poll between two of their own questions (seats.js).
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
   const state = {
-    seats, views: [], holder, holding: false, shown: null, asked: null, practice: practicing,
+    seats, views: [], holder, holding: false, shown: null, asked: null, practice: practicing, replaying,
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
@@ -497,6 +504,11 @@ async function poll(state) {
   state.views = drawnViews(state);
   render(state, state.views);
   if (!state.catalogue) await load(state);
+  // A session opened for its replay goes straight to it, once, when the catalogue is in to name its cards.
+  if (state.replaying && !state.replayStarted && state.catalogue && state.views[0]?.view?.over) {
+    state.replayStarted = true;
+    await replayMatch(state, state.views[0]);
+  }
 }
 
 function redraw(state) {
@@ -762,6 +774,8 @@ function outcomeText(view, seat) {
   if (!outcome.winner) return `The match is a draw · ${because}.`;
   const won = outcome.winner === seat;
   const winner = nameOf(outcome.winner);
+  // A replay opened from the admin panel is nobody's seat: it names the winner rather than saying "you".
+  if (view.replay) return `${winner} wins · ${because}.`;
   if (outcome.reason === 'Concession') {
     const other = nameOf(seat === 'player1' ? 'player2' : 'player1');
     return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
