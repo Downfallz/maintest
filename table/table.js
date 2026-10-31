@@ -2015,6 +2015,19 @@ function unlockedPackages(state, seat, board, phaseVisible) {
 }
 
 function renderPhaseGuide(state, view, seat) {
+  // The engine prepares round one before the driver starts. Even an empty waiting.seats still means
+  // the host has not begun; leave the first phase unseen so its announcement arrives when it does.
+  if (view.waiting && !view.over) {
+    element('phase-round').textContent = 'Match not started';
+    element('phase-current').textContent = 'Waiting for players';
+    element('phase-turn').textContent = '';
+    element('phase-steps').replaceChildren();
+    element('phase-reminder').textContent = 'The match begins when everyone is seated.';
+    renderUpkeep(state, view, null, seat);
+    renderAnnouncements(state, seat);
+    hidePhaseNotice(state);
+    return;
+  }
   const phases = [
     ['Upkeep', [], 'Round upkeep is automatic.'],
     ['Evolve', ['Evolution'], 'Buy whole packages with shared team picks. At most one per creature this opportunity, or pass.'],

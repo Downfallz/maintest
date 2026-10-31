@@ -172,6 +172,8 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
+  Before the match begins, the dock says it is waiting for players; upkeep and phase announcements wait
+  for the host to clear `waiting`, even if round one's board and upkeep events are already prepared.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
   Next advances through the applied healing, then the applied damage, then the remaining conditions, one
   step a kind: each step is one row a creature -- its number in its side's colour, then symbol chips (`+2 ♥`,
