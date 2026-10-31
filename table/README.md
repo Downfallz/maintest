@@ -368,6 +368,23 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
+## "Your turn" on a phone
+
+A page offers **Notify me when it's my turn** once the host has push keys (ADR 0117): the phone is then told
+when the match asks that seat something and nobody is looking at the page, screen off or browser closed
+included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page still
+running but hidden shows one itself. The notice says "your turn" and the round, nothing else.
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
+dotnet run --project src/DownfallArena.Cli -- table --push-keys push-keys.json --p2 greedy
+```
+
+Only an https page or `localhost` can subscribe: a table reached over http on the LAN (`--bind`) shows no
+button. On iOS the table has to be added to the home screen first (the page ships a manifest and an icon for
+it). Changing the key pair unsubscribes every phone, which is why the file is kept. The hosted table takes
+its pair from a repository secret (`infra/README.md`).
+
 A seat's link and code carry an **invitation**, not the seat itself (ADR 0116). Opening one asks first: **Take
 the place** accepts it, once, and the link and code then stop working for anyone else. A browser that already
 plays the other seat of that table is offered **Back to** its own seat instead, so a player who opens the link

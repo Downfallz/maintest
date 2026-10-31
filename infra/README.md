@@ -79,6 +79,21 @@ and the pilot links. Its invitation-only tables are listed but cannot be claimed
 To let somebody else open tables, add their Entra object id to the `TABLE_OPERATORS` variable,
 comma-separated, and run the workflow again.
 
+## "Your turn" on a phone
+
+The table tells a player's phone when it is their turn, screen off included, once it has a push key pair
+(ADR 0117). Make one, keep it, and hand it to the deployment as a repository secret:
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json
+gh secret set TABLE_PUSH_KEYS < push-keys.json
+```
+
+Run the workflow again: the pair reaches the container as a secret, and every seat's page offers **Notify me
+when it's my turn**. Keep the file: a subscription is bound to the public key it was made with, and a new pair
+silently unsubscribes every phone. Without the secret the table runs as before and offers no notices.
+Android Chrome takes the notice as it is; iOS only once the table is added to the home screen.
+
 ## Changing it
 
 - The app follows `main`: a merge that touches anything the image carries deploys itself.

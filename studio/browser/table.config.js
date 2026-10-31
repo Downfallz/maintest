@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['table.practice.js', 'table.slot.js'],
+  testMatch: ['table.practice.js', 'table.slot.js', 'table.push.js'],
   workers: 1,
   timeout: 45000,
   use: { launchOptions: { executablePath: process.env.STUDIO_CHROMIUM }, trace: 'retain-on-failure', screenshot: 'only-on-failure' },

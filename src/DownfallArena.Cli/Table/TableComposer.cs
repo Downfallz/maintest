@@ -57,6 +57,9 @@ internal sealed class TableComposer
 
     public bool Records => _store is not null;
 
+    /// <summary>The notices a seat's phone gets when nobody is looking at its page (ADR 0117), or none on a host without push keys.</summary>
+    public PushNotices? Push { get; init; }
+
     /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
     /// <c>--rules</c> named, or either of them in the format <c>--format</c> named.
@@ -240,11 +243,13 @@ internal sealed class TableComposer
 
             var seats = new[] { seat1.Seat, seat2.Seat };
             var pilot = new TablePilot(rebuilding?.Record.PilotToken ?? Token(), SeatingOf);
-            var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents };
+            var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
             var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
             {
                 OpenSeats = rebuilding?.Record.OpenSeats ?? [],
             };
+            api.Table = table;
+            Push?.Watch(table);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened
@@ -435,7 +440,7 @@ internal sealed class TableComposer
         // as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
         var taken = recorded is null ? false : recorded.Taken ?? false;
         var invitation = recorded is null ? Token() : recorded.Invitation;
-        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken });
+        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken, Push = recorded?.Push });
     }
 
     /// <summary>

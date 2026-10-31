@@ -130,3 +130,17 @@ test('a poll with nothing held asks for the feed from the start', async () => {
 
   assert.deepEqual(calls.map(call => call.path), ['/api/seat/player1']);
 });
+
+test('the notices calls carry the seat token, and forgetting sends an empty body so the fence lets it through', async () => {
+  const calls = [];
+  const transport = httpTransport('player2', 'beef', async (path, options) => { calls.push({ path, options }); return { status: 200, ok: true, text: async () => '{"publicKey":"BP8"}' }; });
+
+  await transport.pushKey();
+  await transport.push({ endpoint: 'https://push.example/x', keys: { p256dh: 'a', auth: 'b' } });
+  await transport.forgetPush();
+
+  assert.deepEqual(calls.map(call => [call.options.method, call.path]), [['GET', '/api/lobby/push'], ['PUT', '/api/lobby/push'], ['DELETE', '/api/lobby/push']]);
+  assert.equal(calls[1].options.headers['Content-Type'], 'application/json');
+  assert.equal(calls[2].options.body, '{}');
+  assert.ok(calls.every(call => call.options.headers['X-Seat-Token'] === 'beef'));
+});

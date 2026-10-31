@@ -6,6 +6,7 @@ import * as transport from './transport.js';
 import * as seats from './seats.js';
 import * as session from './session.js';
 import * as invitation from './invitation.js';
+import * as push from './push.js';
 import * as card from './card.js';
 import * as board from './board.js';
 import * as hand from './hand.js';
@@ -70,7 +71,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -2156,4 +2157,40 @@ test('a host that cannot be reached keeps nothing, and only an older host is rea
 
   p.context.arrivalFailed(Object.assign(new Error('No such lobby route.'), { status: 404 }));
   assert.equal(resumed.length, 1);
+});
+
+test('the notices button is drawn from where the page stands, in the room and in the match panel alike', () => {
+  const p = page();
+  p.state.push = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false, practice: false };
+
+  p.context.renderNotices(p.state);
+  assert.equal(p.nodes.notices.hidden, false);
+  assert.equal(p.nodes['notices-row'].hidden, false);
+  assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
+  assert.equal(p.nodes['notices-hint'].textContent, 'Even with the screen off or the browser closed.');
+
+  p.state.push.keyed = false;
+  p.context.renderNotices(p.state);
+  assert.equal(p.nodes.notices.hidden, true, 'a host without keys offers nothing');
+  assert.equal(p.nodes['notices-row'].hidden, true);
+});
+
+test('a hidden page shows "your turn" itself, once per asking, and a visible one never does', () => {
+  const p = page();
+  const shown = [];
+  p.state.push = { registration: { showNotification: async (title, options) => { shown.push({ title, ...options }); }, getNotifications: async () => [] } };
+  p.context.Notification = { permission: 'granted' };
+  p.document.visibilityState = 'hidden';
+  const current = { seat: 'player1', view: { waitingFor: 'Speed', board: { roundNumber: 3 } } };
+
+  p.context.noticeInPage(p.state, current, 4);
+  p.context.noticeInPage(p.state, current, 4);
+  assert.equal(shown.length, 1, 'one asking, one notice');
+  assert.equal(shown[0].title, 'Your turn');
+  assert.equal(shown[0].body, 'Round 3: choose a speed.');
+  assert.equal(shown[0].tag, 'turn:player1');
+
+  p.document.visibilityState = 'visible';
+  p.context.noticeInPage(p.state, current, 5);
+  assert.equal(shown.length, 1, 'a visible page is the notice');
 });

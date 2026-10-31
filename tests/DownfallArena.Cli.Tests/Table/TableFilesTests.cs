@@ -40,6 +40,19 @@ public sealed class TableFilesTests
         }
     }
 
+    /// <summary>What a phone installs and shows (ADR 0117): the worker at the root, the manifest as a manifest, the icon as bytes.</summary>
+    [Fact]
+    public void The_worker_the_manifest_and_the_icons_are_served_as_what_they_are()
+    {
+        Files.Get("/sw.js").ContentType.ShouldContain("text/javascript");
+        Files.Get("/manifest.webmanifest").ContentType.ShouldBe("application/manifest+json");
+        Files.Get("/icon.svg").ContentType.ShouldBe("image/svg+xml");
+        var bitmap = Files.Get("/icon-192.png");
+        bitmap.ContentType.ShouldBe("image/png");
+        bitmap.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);
+        Files.Get("/icon-512.png").Status.ShouldBe(200);
+    }
+
     /// <summary>The operator's pages are routes of this host too (ADR 0081), reached by name rather than by file.</summary>
     [Theory]
     [InlineData("/pilot", "pilot.js")]

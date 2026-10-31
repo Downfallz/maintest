@@ -2,6 +2,7 @@ import { httpTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, shouldNotifyInPage, turnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -259,6 +260,7 @@ function start(seats, holder = null, practicing = false) {
   setupPhaseControls(state);
   setupConcede(state);
   setupLeave(state);
+  setupNotices(state);
   document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -647,6 +649,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
+  noticeInPage(state, current, drawn);
   const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTicks(state, view.board)]);
   if (state.rendered === identity) return;
   state.rendered = identity;
@@ -825,6 +828,117 @@ function setupLeave(state) {
       element('leave-problem').hidden = false;
     } finally { state.leaving = false; element('leave-yes').disabled = false; }
   });
+}
+
+// ---- "Your turn" on a phone nobody is looking at (ADR 0117, push.js).
+
+// The page asks the host for its key, registers the worker, and keeps the subscription this browser already
+// has, telling the host about it again: the seat's token may be new since, and a host that lost its record
+// must hear of it. Nothing is asked of the person here; the button is.
+function setupNotices(state) {
+  state.push = {
+    supported: pushSupported(), keyed: false, practice: state.practice, subscribed: false, busy: false,
+    permission: globalThis.Notification?.permission ?? 'default', registration: null, publicKey: null,
+  };
+  for (const id of ['notices', 'notices-match']) element(id)?.addEventListener('click', () => toggleNotices(state));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void closeNotices(state); });
+  renderNotices(state);
+  if (!state.push.supported || state.practice || state.seats.length === 0) return;
+  void (async () => {
+    try {
+      const key = await state.seats[0].transport.pushKey();
+      state.push.publicKey = key.ok ? key.body?.publicKey ?? null : null;
+      state.push.keyed = Boolean(state.push.publicKey);
+      if (!state.push.keyed) return;
+      state.push.registration = await globalThis.navigator.serviceWorker.register('/sw.js');
+      const held = await state.push.registration.pushManager.getSubscription();
+      if (!held) return;
+      if (!sameKey(held, state.push.publicKey)) {
+        // Made with keys this host no longer has: the host could not send to it, so it is let go of.
+        await held.unsubscribe();
+        return;
+      }
+      state.push.subscribed = true;
+      await Promise.all(state.seats.map(seat => seat.transport.push(held.toJSON())));
+    } catch {
+      // A worker that will not register, or a host that cannot be asked: no notices, and the button says so by its absence.
+    } finally {
+      renderNotices(state);
+    }
+  })();
+}
+
+function renderNotices(state) {
+  const shown = noticeButton(state.push ?? {});
+  for (const id of ['notices', 'notices-match']) {
+    const button = element(id);
+    if (!button) continue;
+    button.hidden = shown.hidden;
+    button.disabled = shown.disabled;
+    button.textContent = shown.label;
+    button.title = shown.hint;
+  }
+  if (element('notices-row')) element('notices-row').hidden = shown.hidden;
+  if (element('notices-hint')) element('notices-hint').textContent = shown.hint;
+}
+
+// The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.
+async function toggleNotices(state) {
+  const push = state.push;
+  if (!push?.registration || push.busy) return;
+  push.busy = true;
+  renderNotices(state);
+  try {
+    if (push.subscribed) {
+      const held = await push.registration.pushManager.getSubscription();
+      await held?.unsubscribe();
+      await Promise.all(state.seats.map(seat => seat.transport.forgetPush()));
+      push.subscribed = false;
+      return;
+    }
+    push.permission = await globalThis.Notification.requestPermission();
+    if (push.permission !== 'granted') return;
+    const made = await push.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(push.publicKey) });
+    const answers = await Promise.all(state.seats.map(seat => seat.transport.push(made.toJSON())));
+    if (answers.some(answer => !answer.ok)) {
+      await made.unsubscribe();
+      return;
+    }
+    push.subscribed = true;
+  } catch {
+    // Refused by the browser or the service: the button stays as it was, and a second tap asks again.
+  } finally {
+    push.busy = false;
+    renderNotices(state);
+  }
+}
+
+// A page that is still running but hidden keeps acknowledging what it draws, so the host sends nothing: it
+// shows the notice itself. Under the worker's registration when there is one, so a tap on it opens this page.
+function noticeInPage(state, current, drawn) {
+  // Per seat as well as per asking, as the acknowledgement is: the two seats count their own questions.
+  const key = drawn === null ? null : `${current.seat}/${drawn}`;
+  const hidden = document.visibilityState === 'hidden';
+  if (!shouldNotifyInPage({ asked: key, previous: state.noticed, hidden, permission: globalThis.Notification?.permission })) return;
+  state.noticed = key;
+  const notice = turnNotice(current.view, current.seat);
+  const options = { body: notice.body, tag: notice.tag, icon: '/icon-192.png', data: { url: '/play' } };
+  try {
+    if (state.push?.registration) void state.push.registration.showNotification(notice.title, options);
+    else new globalThis.Notification(notice.title, options);
+  } catch {
+    // A browser that refuses a page's own notice loses nothing but the notice.
+  }
+}
+
+// Back in front of somebody: whatever "your turn" was still showing, the host's or the page's own, goes.
+async function closeNotices(state) {
+  try {
+    const shown = await state.push?.registration?.getNotifications?.() ?? [];
+    for (const notice of shown) if (String(notice.tag).startsWith(`${TAG}:`)) notice.close();
+  } catch {
+    // Nothing to close, or no leave to ask: either way nothing is showing.
+  }
 }
 
 // The seat on screen gives up: in hotseat that is whoever holds the device, which the pass screen has just

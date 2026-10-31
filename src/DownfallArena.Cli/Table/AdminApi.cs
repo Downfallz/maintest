@@ -44,7 +44,7 @@ internal sealed class AdminApi
     /// <param name="rules">The line the console prints of the rule set: which one, and where it came from.</param>
     /// <param name="stored">The host's store, or none for a host that records nothing.</param>
     /// <param name="agents">The bots a seat is offered, in the order they are offered.</param>
-    public AdminApi(TableRegistry registry, TableComposer composer, OperatorGate gate, TimeProvider clock, string rules, StoredSessions? stored = null, IReadOnlyList<SeatableAgent>? agents = null)
+    public AdminApi(TableRegistry registry, TableComposer composer, OperatorGate gate, TimeProvider clock, string rules, StoredSessions? stored = null, IReadOnlyList<SeatableAgent>? agents = null, PushNotices? push = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(composer);
@@ -59,7 +59,7 @@ internal sealed class AdminApi
         _rules = rules;
         _stored = stored;
         _agents = agents ?? [];
-        Lobby = new LobbyApi(registry, composer, clock);
+        Lobby = new LobbyApi(registry, composer, clock, push);
     }
 
     public static bool Names(string path) =>

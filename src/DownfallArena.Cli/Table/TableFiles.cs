@@ -16,6 +16,12 @@ internal sealed class TableFiles
 
     private const string Css = "text/css; charset=utf-8";
 
+    private const string Manifest = "application/manifest+json";
+
+    private const string Svg = "image/svg+xml";
+
+    private const string Png = "image/png";
+
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
 
     public TableFiles(string tableDirectory)
@@ -37,6 +43,16 @@ internal sealed class TableFiles
             ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
             ["/session.js"] = (Path.Combine(tableDirectory, "session.js"), JavaScript),
             ["/invitation.js"] = (Path.Combine(tableDirectory, "invitation.js"), JavaScript),
+            ["/push.js"] = (Path.Combine(tableDirectory, "push.js"), JavaScript),
+
+            // The service worker, at the root so its scope is the whole table (ADR 0117), and what an installed
+            // page and a notification show: the manifest and the icon, as a vector and as the two bitmaps
+            // Android asks for.
+            ["/sw.js"] = (Path.Combine(tableDirectory, "sw.js"), JavaScript),
+            ["/manifest.webmanifest"] = (Path.Combine(tableDirectory, "manifest.webmanifest"), Manifest),
+            ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
+            ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
+            ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),
             ["/card.js"] = (Path.Combine(tableDirectory, "card.js"), JavaScript),
             ["/board.js"] = (Path.Combine(tableDirectory, "board.js"), JavaScript),
             ["/timeline.js"] = (Path.Combine(tableDirectory, "timeline.js"), JavaScript),
@@ -83,8 +99,14 @@ internal sealed class TableFiles
             return StudioResponse.OfPlainText(404, $"No such page: {path}");
         }
 
-        return File.Exists(route.Path)
-            ? StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path))
-            : StudioResponse.OfPlainText(500, $"'{route.Path}' is missing. Run the table from the repository root.");
+        if (!File.Exists(route.Path))
+        {
+            return StudioResponse.OfPlainText(500, $"'{route.Path}' is missing. Run the table from the repository root.");
+        }
+
+        // A bitmap is bytes; everything else the table ships is text.
+        return route.ContentType == Png
+            ? new StudioResponse(200, Png, File.ReadAllBytes(route.Path))
+            : StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path));
     }
 }

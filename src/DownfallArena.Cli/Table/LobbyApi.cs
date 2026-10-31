@@ -7,7 +7,7 @@ using DownfallArena.Infrastructure.Learning;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>The players' entrance: public summaries, explicitly open seats, and the seats a browser already holds.</summary>
-internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, TimeProvider clock)
+internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, TimeProvider clock, PushNotices? push = null)
 {
     public const string Prefix = "/api/lobby";
 
@@ -46,6 +46,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", Prefix + "/leave") => await LeaveAsync(token),
                 ("POST", Prefix + "/invitations") => await InvitationsAsync(body),
                 ("POST", Prefix + "/claim") => await ClaimAsync(body),
+                ("GET", Prefix + "/push") => Json(new { publicKey = push?.PublicKey }),
+                ("PUT", Prefix + "/push") => await SubscribeAsync(token, body),
+                ("DELETE", Prefix + "/push") => await SubscribeAsync(token, null),
                 ("POST", _) when JoinedTable(path) is { } id => await JoinAsync(id),
                 _ => Problem(404, "No such lobby route."),
             };
@@ -262,6 +265,51 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>
+    /// Where this seat's notices go from now on (ADR 0117), as the browser's <c>PushSubscription.toJSON()</c>
+    /// gives it, or nowhere for a <c>DELETE</c>. The seat's token says which seat; a shared browser sends the same
+    /// subscription for both of its seats. Written to the record before the answer, so the next host sends there too.
+    /// </summary>
+    private async Task<StudioResponse> SubscribeAsync(string? token, string? body)
+    {
+        if (push is null)
+        {
+            return Problem(404, "This host sends no notices: it has no push keys.");
+        }
+
+        var table = registry.ByToken(token);
+        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+        if (table is null || seat is null)
+        {
+            return Problem(403, "This seat is no longer yours.");
+        }
+
+        PushSubscription? subscription = null;
+        if (body is not null)
+        {
+            var sent = JsonSerializer.Deserialize<BrowserSubscription>(body, Web);
+            subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
+            if (subscription is null)
+            {
+                return Problem(400, "Send the subscription as the browser serialises it: an https endpoint and its p256dh and auth keys.");
+            }
+        }
+
+        var before = seat.Push;
+        seat.Push = subscription;
+        try
+        {
+            await table.RecordAsync(registry.Codes);
+        }
+        catch
+        {
+            seat.Push = before;
+            throw;
+        }
+
+        return Json(new { seat = seat.Name, notices = subscription is not null });
+    }
+
+    /// <summary>
     /// What the keys a link carries are, before the page does anything with them (ADR 0116): an invitation still
     /// outstanding, a seat's own token (a link from before invitations, or a browser that keeps no storage), or
     /// nothing any more. Asking spends nothing, so a page can show what accepting would do and wait for a tap.
@@ -431,4 +479,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private sealed record Opening(string? Opponent, string? Format);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
+
+    private sealed record BrowserSubscription(string? Endpoint, BrowserKeys? Keys);
+
+    private sealed record BrowserKeys(string? P256dh, string? Auth);
 }

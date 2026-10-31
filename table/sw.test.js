@@ -1,0 +1,99 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+// The worker, run against what a browser gives one: `self` with its clients, its registration and the events
+// it listens for. A notice is a `push` event whose data reads as JSON.
+function worker({ windows = [], opened = [] } = {}) {
+  const shown = [];
+  const handlers = {};
+  const self = {
+    addEventListener: (kind, handler) => { handlers[kind] = handler; },
+    skipWaiting: () => Promise.resolve(),
+    clients: {
+      claim: () => Promise.resolve(),
+      matchAll: async () => windows,
+      openWindow: async url => { opened.push(url); },
+    },
+    registration: { showNotification: async (title, options) => { shown.push({ title, ...options }); } },
+  };
+  const context = vm.createContext({ self, URL });
+  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), context);
+  const fire = async (kind, event) => {
+    let waited = Promise.resolve();
+    handlers[kind]({ ...event, waitUntil: promise => { waited = promise; } });
+    await waited;
+  };
+  return { handlers, shown, opened, fire };
+}
+
+const push = notice => ({ data: { json: () => notice } });
+
+test('a push shows the notice the host sent, with a tap going to the game', async () => {
+  const w = worker();
+
+  await w.fire('push', push({ title: 'Your turn', body: 'Round 7: choose a speed.', tag: 'turn:player2', url: '/play' }));
+
+  assert.equal(w.shown.length, 1);
+  assert.equal(w.shown[0].title, 'Your turn');
+  assert.equal(w.shown[0].body, 'Round 7: choose a speed.');
+  assert.equal(w.shown[0].tag, 'turn:player2');
+  assert.equal(w.shown[0].data.url, '/play');
+});
+
+test('a push arriving while a window of the table is in front of somebody shows nothing', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/play', focused: true }] });
+
+  await w.fire('push', push({ title: 'Your turn' }));
+
+  assert.equal(w.shown.length, 0);
+});
+
+test('a push arriving while the page is open but not in front shows the notice', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/play', focused: false }] });
+
+  await w.fire('push', push({ title: 'Your turn' }));
+
+  assert.equal(w.shown.length, 1);
+});
+
+test('a push with no readable data still says something rather than nothing', async () => {
+  const w = worker();
+
+  await w.fire('push', { data: { json: () => { throw new SyntaxError('not json'); } } });
+
+  assert.equal(w.shown[0].title, 'Your turn');
+  assert.equal(w.shown[0].tag, 'turn');
+});
+
+test('a tap focuses the page already on the game, or opens one', async () => {
+  const focused = [];
+  const page = { url: 'https://table.example/play', focused: false, focus: async () => { focused.push('play'); } };
+  const w = worker({ windows: [page] });
+  const closed = [];
+  const notification = { data: { url: '/play' }, close: () => closed.push(true) };
+
+  await w.fire('notificationclick', { notification });
+  assert.deepEqual(focused, ['play']);
+  assert.deepEqual(closed, [true]);
+  assert.deepEqual(w.opened, []);
+
+  const none = worker();
+  await none.fire('notificationclick', { notification });
+  assert.deepEqual(none.opened, ['/play']);
+});
+
+test('a tap with a page open elsewhere on the table brings it to the game', async () => {
+  const went = [];
+  const lobby = { url: 'https://table.example/', focused: false, focus: async () => {}, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [lobby] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play' }, close: () => {} } });
+
+  assert.deepEqual(went, ['/play']);
+});
+
+test('the worker caches nothing: it listens for no fetch', () => {
+  assert.equal(worker().handlers.fetch, undefined);
+});
