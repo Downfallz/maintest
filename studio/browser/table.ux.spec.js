@@ -380,6 +380,63 @@ test('a spell aimed at an ally is aimed from the round bar, and the battlefield 
   await page.screenshot({ path: info.outputPath('ally-target-battlefield.png'), animations: 'disabled' });
 });
 
+for (const candidates of [[2, 3, 4], [1, 5, 6], [1, 2, 5]]) {
+  test(`target rows make room for a thumb on phones: ${candidates.join(', ')}`, async ({ page }, info) => {
+    const creature = id => ({ id, health: 30, maxHealth: 30, energy: 2, currentInitiative: 6, totalDefense: 2 });
+    const target = { ...view, waitingFor: 'Target', waitingAsked: 4,
+      guidance: [{ spell: cards[3].id, cost: 2, energyAfterCost: 0, chosenSpeed: 'Quick',
+        targets: candidates.map(target => ({ target, plain: [{ kind: 'DamageOutcome', amount: 3 }], critical: [{ kind: 'DamageOutcome', amount: 3 }] })) }],
+      options: { target: { actor: 1, spell: cards[3].id, legalTargets: { candidates, minTargets: 1, maxTargets: 1 } } },
+      board: { ...view.board, subPhase: 'Activation', allies: [1, 5, 6].map(creature), enemies: [2, 3, 4].map(creature) } };
+    let submissions = 0;
+    await page.route('**/api/seat/player1**', route => {
+      if (route.request().method() === 'POST') submissions++;
+      return route.fulfill({ json: target });
+    });
+    await page.route('**/api/seat/player1/decision', route => {
+      submissions++;
+      return route.fulfill({ json: {} });
+    });
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+    await page.locator('#phase-notice-close').click();
+    if (isLaptop(page)) {
+      await expect(page.locator('#mini-board')).toBeHidden();
+      await expect(page.locator('#board .creature.legal')).toHaveCount(candidates.length);
+      return;
+    }
+    const chips = page.locator('#mini-board .mini-creature.legal');
+    await expect(chips).toHaveCount(candidates.length);
+    for (const chip of await chips.all()) {
+      const box = await chip.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(isPhone(page) ? 72 : 39);
+      if (isPhone(page)) expect(box.width).toBeGreaterThanOrEqual(72);
+      expect(await chip.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    }
+    if (isPhone(page)) {
+      for (const row of await page.locator('#mini-board .mini-row').all()) {
+        const boxes = await row.locator('.mini-creature').evaluateAll(nodes => nodes.map(node => {
+          const { left, right } = node.getBoundingClientRect(); return { left, right };
+        }));
+        expect(boxes[1].left - boxes[0].right).toBeGreaterThanOrEqual(8);
+      }
+    }
+    // A tap near the bottom corner must select the creature, without casting or opening the full board.
+    const chip = chips.first(); const box = await chip.boundingBox();
+    await chip.tap({ position: { x: box.width - 10, y: box.height - 10 } });
+    await expect(chip).toHaveClass(/picked/);
+    await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
+    await expect(page.locator('#board')).toBeHidden();
+    expect(submissions).toBe(0);
+    await expectNoSidewaysScroll(page);
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.screenshot({ path: info.outputPath('thumb-targets.png'), animations: 'disabled' });
+    await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Speed');
+    await expect(page.locator('#mini-board')).not.toHaveClass(/targeting/);
+    expect((await page.locator('#mini-board .mini-creature').first().boundingBox()).height).toBeLessThan(72);
+  });
+}
+
 // What resolved since the seat's last move, with the longest lines an action produces, in every question.
 const resolved = (sequence, actor, targets, outcomes) => ({ sequence, round: 3, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 3,
   resolution: { action: { actor, spell: cards[3].id, targets } },

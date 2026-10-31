@@ -102,7 +102,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   a spell aimed at an ally never sends the player past the opponent to find one; any other chip opens the
   battlefield at that creature, and the battlefield opened while a target is asked for starts at the first
   creature the spell may take. A picked chip says that a second tap casts, as its row does. With the
-  battlefield shut, arrows walk the legal chips and number keys pick as on a laptop; a chip that opens the
+  phone targeting view active, rows containing legal targets grow from 39 to at least 72 px high, with
+  8 px gaps and larger creature numbers, health and stats. Rows without legal targets stay compact, and
+  every row returns to its normal size after targeting. The target preview uses a shorter estimate note.
+  With the battlefield shut, arrows walk the legal chips and number keys pick as on a laptop; a chip that opens the
   battlefield hands it the focus, and closing it hands the focus back to its button. In a resolution replay
   the chips mark the caster and its targets and, once the action is applied, what it did to health. The bar
   never widens the page: a long phase name is cut short, and on the narrowest phones a chip showing a health

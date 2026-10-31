@@ -72,7 +72,7 @@ export function guidancePanel(document, view, chosen, picked) {
   const caveat = document.createElement('small');
   // A target is chosen on the board the earlier slots left (ADR 0083); a spell is declared before any of them.
   caveat.textContent = view.waitingFor === 'Target'
-    ? 'An estimate before caps and stacking: the earlier actions are already on the board; rolls can still change the outcome.'
+    ? 'Estimate before caps and stacking; rolls can still change the outcome.'
     : 'An estimate before caps and stacking: earlier actions, hidden choices and rolls can change the outcome.';
   panel.append(caveat);
   return panel;
