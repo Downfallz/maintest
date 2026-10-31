@@ -94,13 +94,35 @@ export function roundUpkeep(entries, round) {
   const entry = (entries ?? []).filter(item => eventRound(item) === round && item?.event?.kind === 'OngoingEffectsApplied')
     .sort((left, right) => right.sequence - left.sequence)[0];
   if (!entry) return null;
-  const event = entry.event;
-  const rows = [
+  return { round, rows: upkeepTicks(entry.event) };
+}
+
+function upkeepTicks(event) {
+  return [
     ...(event.energyRegenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.gained, tone: 'energy', label: 'Energy from effects', unit: 'energy', sign: '+' })),
     ...(event.regenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.healed, tone: 'recovery', label: 'Healing over time', unit: 'HP', sign: '+' })),
     ...(event.bleedTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.damage, tone: 'harm', label: 'Ongoing damage', unit: 'HP', sign: '−' })),
   ];
-  return { round, rows };
+}
+
+// A whole match to replay, in the order it happened: each round's upkeep, the packages its Evolution revealed,
+// then its casts. Upkeep and purchases carry no battlefield of their own (a seat's feed has no boards), so each
+// borrows the one its round's combat began on, the first cast's Before, which is after both.
+export function matchReplay(entries, board, cards) {
+  const casts = resolvedSince(entries, undefined, board, cards);
+  const between = (entries ?? []).flatMap(entry => {
+    const kind = entry?.event?.kind;
+    if (kind === 'OngoingEffectsApplied') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ticks: upkeepTicks(entry.event) }];
+    if (kind === 'PurchasesRevealed') {
+      const choices = (entry.event.choices ?? []).map(choice => ({ creature: recapCreature(choice.creature, board), tier: choice.tier }));
+      return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'purchases', choices }];
+    }
+    return [];
+  }).map(item => {
+    const first = casts.find(cast => cast.round === item.round && cast.sequence > item.sequence && cast.frame);
+    return first ? { ...item, frame: { before: first.frame.before, after: first.frame.before, timeline: [], rollOffs: [] } } : item;
+  });
+  return [...between, ...casts].sort((left, right) => left.sequence - right.sequence);
 }
 
 export function roundRecap(entries, board, cards) {

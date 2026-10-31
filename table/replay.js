@@ -4,20 +4,30 @@ export function playbackBoard(replay, board) {
   if (!action?.frame) return board;
   const creatures = action.frame[replay.stage];
   const allies = new Set((board.allies ?? []).map(creature => creature.id));
+  // A whole match's replay crosses rounds: the round is the action's own, and only its round's slots count.
+  const round = playbackRound(replay);
+  const earlier = replay.actions.slice(0, replay.index + 1).filter(item => (item.round ?? round) === round && !item.interlude);
+  // A round's upkeep or its purchases happen before its combat: nothing is on the timeline or turned over yet.
+  const before = { upkeep: 'Upkeep', purchases: 'Evolution' }[action.interlude];
   return {
     ...board,
-    roundNumber: replay.round,
-    phase: 'Combat', subPhase: 'Activation',
+    roundNumber: round,
+    phase: before ? 'Planning' : 'Combat', subPhase: before ?? 'Activation',
     allies: creatures.filter(creature => allies.has(creature.id)),
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
     // The slot the action was played from: a creature that fizzled unasked is still a slot, so the action's
     // index among the round's resolutions is only a fallback.
-    activationCursor: slotOf(action, replay.index),
+    activationCursor: slotOf(action, earlier.length - 1),
     // Only the slots up to this one had been turned over when it resolved (ADR 0083).
-    revealedActions: replay.actions.slice(0, replay.index + 1).map(item => item.action).filter(Boolean),
+    revealedActions: earlier.map(item => item.action).filter(Boolean),
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
   };
+}
+
+// The round the action being replayed belongs to: its own, or the replay's when it does not say.
+export function playbackRound(replay) {
+  return replay?.actions[replay.index]?.round ?? replay?.round;
 }
 
 function slotOf(action, fallback) {
