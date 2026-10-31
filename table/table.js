@@ -1909,6 +1909,12 @@ function renderPlayback(state, current) {
   if (action.interlude) held.replaceChildren(...interludeRows(state, current.view.board, action));
   else held.replaceChildren(recapRow(before ? { ...action, status: 'Ready', effects: [], reason: 'Press Next to apply this recorded action.', dropped: [] } : action));
   animatePlayback(state, held);
+  element('playback-controls').replaceChildren(...playbackControls(state, current, action, before));
+}
+
+// Previous, Next and Skip, and in a whole match's replay the round to jump to.
+function playbackControls(state, current, action, before) {
+  const replay = state.playback;
   const previous = button('← Previous', () => movePlayback(state, -1));
   previous.dataset.focus = 'playback-previous';
   previous.disabled = replay.index === 0 && (before || !twoStaged(action));
@@ -1920,22 +1926,23 @@ function renderPlayback(state, current) {
   next.dataset.focus = 'playback-next';
   const skip = button(current.view.over ? 'Skip to results' : `Skip to round ${current.view.board.roundNumber}`, () => finishPlayback(state));
   skip.dataset.focus = 'playback-skip';
-  const controls = [previous, next, skip];
-  if (replay.match) {
-    const jump = document.createElement('select');
-    jump.dataset.focus = 'playback-round';
-    jump.setAttribute('aria-label', 'Jump to round');
-    jump.replaceChildren(...replayRounds(replay).map(([number, index]) => {
-      const option = document.createElement('option');
-      option.value = String(index);
-      option.textContent = `Round ${number}`;
-      option.selected = number === round;
-      return option;
-    }));
-    jump.addEventListener('change', () => jumpPlayback(state, Number(jump.value)));
-    controls.push(jump);
-  }
-  element('playback-controls').replaceChildren(...controls);
+  return replay.match ? [previous, next, skip, roundJump(state, replay)] : [previous, next, skip];
+}
+
+function roundJump(state, replay) {
+  const round = playbackRound(replay);
+  const jump = document.createElement('select');
+  jump.dataset.focus = 'playback-round';
+  jump.setAttribute('aria-label', 'Jump to round');
+  jump.replaceChildren(...replayRounds(replay).map(([number, index]) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = `Round ${number}`;
+    option.selected = number === round;
+    return option;
+  }));
+  jump.addEventListener('change', () => jumpPlayback(state, Number(jump.value)));
+  return jump;
 }
 
 function interludeHeading(action, round) {
