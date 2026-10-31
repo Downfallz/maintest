@@ -27,7 +27,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
     private long _asked;
 
-    // The round the question being asked belongs to, and the speeds and intents answered in it.
+    // The round the question being asked belongs to, and the picks, speeds and intents answered in it.
     private int? _round;
     private readonly List<(int? Round, PlayerDecision Decision)> _given = [];
 
@@ -83,7 +83,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
                 return false;
             }
 
-            if (decision.Kind is PlayerOptionsKind.Speed or PlayerOptionsKind.Intent)
+            if (decision.Kind is PlayerOptionsKind.Evolution or PlayerOptionsKind.Speed or PlayerOptionsKind.Intent)
             {
                 _given.Add((_round, decision));
             }
@@ -99,9 +99,10 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     }
 
     /// <summary>
-    /// The speeds and intents this seat has answered in a round, whether or not the match has them yet. Both seats
-    /// are asked theirs at once and the answers are handed to the match only when both are done (ADR 0111), so
-    /// until then the board does not show a player what they have just chosen; this is what the host adds to it.
+    /// The picks, speeds and intents this seat has answered in a round, whether or not the match has them yet. Both
+    /// seats are asked theirs at once and the answers are handed to the match only when both are done (ADR 0111,
+    /// ADR 0117), so until then the board does not show a player what they have just chosen, nor the options what
+    /// is left to them; this is what the host adds to both.
     /// Answers of earlier rounds are forgotten when the seat is asked about a later one, never by a reader: a poll
     /// that read its board before the round moved on must not take the new round's answers with it.
     /// </summary>
@@ -132,7 +133,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
-        var decision = Ask(new Question(PlayerOptionsKind.Evolution, Creature: null));
+        var decision = Ask(new Question(PlayerOptionsKind.Evolution, Creature: null), board?.RoundNumber);
         return decision is null || decision.IsPass
             ? EvolutionDecision.Pass
             : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Tier)));

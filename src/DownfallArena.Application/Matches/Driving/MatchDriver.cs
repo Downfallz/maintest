@@ -19,8 +19,9 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
 {
     /// <summary>
     /// Whether both seats are asked their speeds and their intents at once, as they are asked their picks (ADR
-    /// 0111). A table sets it, where two people would otherwise wait on each other; bots answer at once, so a
-    /// simulation leaves it off and keeps the order of its events and of its recorded steps fixed by the seed.
+    /// 0111), and each seat all of its picks before either seat's reach the match (ADR 0117). A table sets it,
+    /// where two people would otherwise wait on each other; bots answer at once, so a simulation leaves it off
+    /// and keeps the order of its events and of its recorded steps fixed by the seed.
     /// </summary>
     public bool AsksSpeedsAndIntentsTogether { get; init; }
 
@@ -81,7 +82,8 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
 
     /// <summary>
     /// Both players asked at once, when both are being asked the same thing and neither can see the other's
-    /// answer: their package picks (ADR 0092), and at a table their speeds and their intents (ADR 0111). Each is
+    /// answer: their package picks (ADR 0092), and at a table their speeds and their intents (ADR 0111) and every
+    /// pick of their opportunity rather than one pick each at a time (ADR 0117). Each is
     /// made face down and revealed together, so the two questions are independent and asking them in turn only
     /// made the second player wait for the first. Each seat answers all of its own on its own thread, then the
     /// answers are submitted in seat order, so a rebuilt table replays the commands it recorded in the order it
@@ -103,6 +105,21 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
 
         switch (one.Options.Kind)
         {
+            case PlayerOptionsKind.Evolution when AsksSpeedsAndIntentsTogether:
+                var opportunities = await Task.WhenAll(
+                    Task.Run(() => Picks(player1, one.Board, Section(one.Options.Evolution)), cancellationToken),
+                    Task.Run(() => Picks(player2, two.Board, Section(two.Options.Evolution)), cancellationToken));
+                foreach (var pick in opportunities[0])
+                {
+                    await SubmitEvolutionAsync(matchId, PlayerSlot.Player1, pick, cancellationToken);
+                }
+
+                foreach (var pick in opportunities[1])
+                {
+                    await SubmitEvolutionAsync(matchId, PlayerSlot.Player2, pick, cancellationToken);
+                }
+
+                return true;
             case PlayerOptionsKind.Evolution:
                 var picks = await Task.WhenAll(
                     Task.Run(() => player1.DecideEvolution(one.Board, Section(one.Options.Evolution)), cancellationToken),
@@ -140,6 +157,32 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
 
         var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(matchId, slot), cancellationToken);
         return options.IsSuccess ? (board.Value, options.Value) : null;
+    }
+
+    /// <summary>
+    /// Every pick of a seat's opportunity, up to its pass, each made on the board and with the options its owner
+    /// would read after the picks before it. Nothing is submitted until both seats are done, so the driver builds
+    /// them: a pick changes its owner's board by that pick and its options by one pick and that creature, and the
+    /// other seat's neither (ADR 0089, ADR 0117; MatchDriverTests holds them to the match's).
+    /// </summary>
+    private static List<EvolutionDecision> Picks(IPlayerAgent agent, PlayerBoardState board, EvolutionOptions options)
+    {
+        var decisions = new List<EvolutionDecision>();
+        var picked = new List<EvolutionChoice>();
+        while (options.RemainingPicks > 0)
+        {
+            var decision = agent.DecideEvolution(board with { EvolutionChoices = [.. board.EvolutionChoices, .. picked] }, options);
+            decisions.Add(decision);
+            if (decision.Choice is not { } choice)
+            {
+                break;
+            }
+
+            picked.Add(choice);
+            options = options.After(choice);
+        }
+
+        return decisions;
     }
 
     /// <summary>A speed for every creature still without one, each read on the same board, as the seat-by-seat loop reads them.</summary>
