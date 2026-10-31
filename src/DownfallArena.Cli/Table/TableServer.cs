@@ -149,10 +149,17 @@ internal sealed class TableServer : IDisposable
             return _registry.Codes.Answer(path);
         }
 
-        // The query travels with it: the token the console printed is in it.
+        // Old seat links keep working; an ordinary visit opens the player lobby.
+        if (path == "/" && request.Url?.Query is not { Length: > 0 })
+        {
+            return _files.Get("/lobby");
+        }
+
         if (path == FormerLobby)
         {
-            return StudioResponse.OfRedirect(AdminApi.Page + (request.Url?.Query ?? string.Empty));
+            return request.Url?.Query.Contains("token=", StringComparison.Ordinal) == true
+                ? StudioResponse.OfRedirect(AdminApi.Page + request.Url.Query)
+                : _files.Get("/lobby");
         }
 
         if (!path.StartsWith("/api/", StringComparison.Ordinal) && !path.StartsWith(SessionPrefix, StringComparison.Ordinal))
@@ -175,12 +182,12 @@ internal sealed class TableServer : IDisposable
             return await SessionPageAsync(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
-        // A host whose admin panel nobody opens still lets go of the tables nobody is at: any request may
-        // sweep, once a minute at most.
+        // A host whose admin panel nobody opens still lets go of finished tables nobody reads and of tables
+        // that never began and nobody came to (ADR 0115): any request may sweep, once a minute at most.
         var now = _clock.GetUtcNow();
         foreach (var gone in _registry.SweepIfDue(now))
         {
-            Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+            Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
 
         var token = request.Headers[TableApi.TokenHeader];
@@ -197,6 +204,7 @@ internal sealed class TableServer : IDisposable
         }
 
         table.Touch(now);
+        await _admin.Lobby.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
 }

@@ -55,6 +55,9 @@ internal sealed class PlayedTable : IDisposable
 
     public TablePilot Pilot { get; }
 
+    /// <summary>Seats explicitly offered in the player lobby; claims are serialized and recorded by the lobby.</summary>
+    public IReadOnlyList<string> OpenSeats { get; set; } = [];
+
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
 
@@ -94,7 +97,7 @@ internal sealed class PlayedTable : IDisposable
     public Task Closing { get; private set; } = Task.CompletedTask;
 
     /// <summary>
-    /// Closes the table for good: the operator closed it, or nobody came back to it. Its record is marked
+    /// Closes the table for good: the operator closed it, or it never began and nobody came to it (ADR 0115). Its record is marked
     /// closed, so a host that comes after this one does not rebuild it, and then it is let go of. The one
     /// way a record is marked closed: a host stopping lets its tables go without closing them, since the
     /// next host rebuilding them is the whole point (ADR 0091).

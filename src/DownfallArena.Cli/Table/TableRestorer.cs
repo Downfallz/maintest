@@ -1,17 +1,11 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Rebuilds, when a host starts, the tables the host before it left unfinished (ADR 0091): every run in the
-/// store whose record says it is open and whose last decision is recent enough that somebody may come back
-/// to it. A match lives in memory and went with the replica; its seed and its decisions did not.
+/// Rebuilds every recorded open table when a host starts. A game that began does not expire during a pause.
+/// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
+/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A replay
+/// that no longer fits the current engine or content is reported and preserved for the operator.
 /// </summary>
-/// <remarks>
-/// What is left alone, and why: a record that says finished or closed (nothing to come back to), a run with no
-/// record (a batch, or a host before this decision), and a table nobody has touched for longer than the
-/// registry would have kept it (<see cref="TableRegistry.IdleFor" />) -- the same fate the sweep gives a table
-/// nobody is at, read off the record instead of a timer. A replay that does not reach the end of its record
-/// is reported and left where it was.
-/// </remarks>
 internal static class TableRestorer
 {
     /// <summary>Rebuilds what can be rebuilt, into the registry, and says what happened to each, one line a table.</summary>
@@ -34,12 +28,11 @@ internal static class TableRestorer
             }
 
             var journal = await stored.JournalAsync(id, cancellationToken);
-            var touched = journal.Count > 0 ? journal[^1].At : record.CreatedAt;
-            if (now - touched >= TableRegistry.IdleFor)
+            if (!DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
             {
-                // Left as it is, not marked: the record still says what the table was, and the sweep rule is
-                // what says nobody is coming back.
-                said.Add($"Session {record.Id} left as it was: nobody has been at it since {touched:u}.");
+                // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
+                // host before this one never got to sweep is left as it is, not marked, and not rebuilt.
+                said.Add($"Session {record.Id} left as it was: it never began, and was opened at {record.CreatedAt:u}.");
                 continue;
             }
 

@@ -275,12 +275,21 @@ internal sealed class PlaytestRun
         return true;
     }
 
-    /// <summary>Writes the table down as it was opened, so a later host can rebuild it (ADR 0091).</summary>
+    /// <summary>
+    /// Writes the table down as it was opened, so a later host can rebuild it (ADR 0091), and again whenever
+    /// its seats change (ADR 0115). A record that already says the table ended keeps saying so: a seat claimed
+    /// or left in the same moment the match ends must not write it back to open, or the next host would rebuild
+    /// a finished match. The writes land in the order they were made, the same queue <see cref="MarkAsync" />
+    /// joins, so the last one written is the last one decided.
+    /// </summary>
     public Task RecordAsync(TableRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
-        _record = record;
-        return _writer.WriteJsonAsync(TableRecord.File, record, cancellationToken);
+        lock (_recordGate)
+        {
+            _record = _record is { Status: not TableRecord.Open } ended ? record with { Status = ended.Status } : record;
+            return _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -290,15 +299,21 @@ internal sealed class PlaytestRun
     /// </summary>
     public async Task MarkAsync(string status, CancellationToken cancellationToken = default)
     {
-        if (_record is not { } record || record.Status == status)
+        Task written;
+        lock (_recordGate)
         {
-            return;
+            if (_record is not { } record || record.Status == status)
+            {
+                return;
+            }
+
+            _record = record with { Status = status };
+            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
         }
 
-        _record = record with { Status = status };
         try
         {
-            await _writer.WriteJsonAsync(TableRecord.File, _record, cancellationToken);
+            await written;
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
@@ -307,6 +322,15 @@ internal sealed class PlaytestRun
     }
 
     private TableRecord? _record;
+    private readonly Lock _recordGate = new();
+    private Task _recordWritten = Task.CompletedTask;
+
+    /// <summary>One record write after the one before it, whatever became of that one: a failed write is its own caller's.</summary>
+    private async Task WriteRecordAfterAsync(Task before, TableRecord record, CancellationToken cancellationToken)
+    {
+        await Task.WhenAny(before);
+        await _writer.WriteJsonAsync(TableRecord.File, record, cancellationToken);
+    }
 
     /// <summary>
     /// The agent the driver plays for a seat: the seat itself, wrapped so every decision it makes is a step.

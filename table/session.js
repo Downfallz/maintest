@@ -10,6 +10,7 @@
 // here works without it, at the cost of needing the link again after a reload.
 
 const KEY = 'downfall.table.seats';
+const HISTORY_KEY = 'downfall.table.saved-seats';
 
 const SEATS = ['player1', 'player2'];
 
@@ -37,8 +38,13 @@ export function heldSeats(search, storage) {
 // table being played, and it is no longer in the address bar to be read back from.
 export function forget(storage, seat) {
   const held = { ...remembered(storage) };
+  const token = held[seat];
+  const saved = savedSeats(storage).filter(saved => saved.token !== token);
   delete held[seat];
-  remember(storage, held);
+  try {
+    storage?.setItem(KEY, JSON.stringify(held));
+    storage?.setItem(HISTORY_KEY, JSON.stringify(saved));
+  } catch { /* The current page still works when storage is unavailable. */ }
 }
 
 function remembered(storage) {
@@ -52,10 +58,47 @@ function remembered(storage) {
 
 function remember(storage, held) {
   try {
+    const saved = new Map(savedSeats(storage).map(saved => [saved.token, saved]));
+    for (const seat of SEATS) if (held[seat]) saved.set(held[seat], { seat, token: held[seat] });
+    storage?.setItem(HISTORY_KEY, JSON.stringify([...saved.values()].slice(-128)));
     storage?.setItem(KEY, JSON.stringify(held));
   } catch {
     // A browser that keeps nothing still plays; it just needs the link again after a reload.
   }
+}
+
+// Keep every table's capabilities independently; choosing a new table only replaces the active pair.
+export function savedSeats(storage) {
+  let saved = [];
+  try {
+    const value = JSON.parse(storage?.getItem(HISTORY_KEY) ?? '[]');
+    if (Array.isArray(value)) saved = value.filter(item => SEATS.includes(item?.seat) && typeof item.token === 'string' && item.token);
+  } catch { /* Old browsers and private browsing can still use an invitation link. */ }
+  const all = new Map(saved.map(item => [item.token, item]));
+  const active = remembered(storage);
+  for (const seat of SEATS) if (typeof active[seat] === 'string' && active[seat]) all.set(active[seat], { seat, token: active[seat] });
+  return [...all.values()].slice(-128);
+}
+
+export function activateSeats(seats, storage) {
+  remember(storage, Object.fromEntries(seats.filter(item => SEATS.includes(item.seat) && item.token).map(item => [item.seat, item.token])));
+}
+
+// The tokens a page asks the host to verify: the ones this browser saved, and the ones its link or its held
+// seats carry. A browser whose storage is blocked saves nothing, and its link is still a seat (ADR 0115).
+export function resumeTokens(saved, held) {
+  return [...new Set([...(saved ?? []), ...(held ?? [])].map(seat => seat?.token).filter(Boolean))];
+}
+
+// Where the address bar goes once the token is out of it: the table itself. `/` is the lobby now (ADR 0115), so
+// a page that came in on `/?player2=...` stays on `/play` and a reload returns to the game, not the lobby.
+export function playPath(pathname) {
+  return !pathname || pathname === '/' ? '/play' : pathname;
+}
+
+export function selectTableSeats(matches, requested) {
+  const chosen = matches.find(match => match.seats.some(seat => requested.some(wanted => wanted.token === seat.token)));
+  return chosen?.seats ?? [];
 }
 
 // The operator's token, kept by the admin panel when a link brought it there (admin.js): what the table page

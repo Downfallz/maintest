@@ -17,8 +17,9 @@ on GitHub Pages (ADR 0023).
 The app scales to zero a few minutes after the last request. An open page polls, so a table being played
 keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. A match
 lives in memory, but the replica that starts next **rebuilds every table left open** from its seed and its
-recorded decisions, under the same links and codes (ADR 0091); only a table nobody has touched for twenty
-hours is left as it was. The recording is what survives either way: the admin panel lists every recorded
+recorded decisions, under the same links and codes (ADR 0091). A game that began does not expire during a
+pause, and a table that never began is closed after twenty hours without a request (ADR 0115); the operator
+can explicitly close unused tables. The recording is what survives either way: the admin panel lists every recorded
 session, links to it in the viewer and exports it.
 
 The image is `ghcr.io/downfallz/downfall-table:<commit>`, built by `.github/workflows/deploy.yml` from the
@@ -64,9 +65,13 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
 
 ## Playing
 
-Open `https://<address>/admin` and sign in with the account that ran the bootstrap. Open a table, read each
-seat's eight-character code to its player, and they type it at `https://<address>/j/<code>`, or follow the
-seat's link. Nobody but the operator signs in. The pilot page is linked from each table.
+Open `https://<address>/` for the player lobby: resume games saved in this browser, take an open seat,
+or create a table (another player, a bot, or two people sharing a device). Players need no account.
+Closing the page keeps a seat; **Leave table** revokes its token and invitation code and offers the same
+team to a replacement player, including during a match. Saved open places and claimed seats survive a redeploy.
+
+The operator still uses `/admin`, signs in with the bootstrap account, and manages all tables, sessions
+and the pilot links. Its invitation-only tables are listed but cannot be claimed through the lobby.
 
 To let somebody else open tables, add their Entra object id to the `TABLE_OPERATORS` variable,
 comma-separated, and run the workflow again.

@@ -12,10 +12,11 @@ namespace DownfallArena.Cli.Table;
 /// API is unchanged; this only says which one.
 /// </para>
 /// <para>
-/// Tables are let go of on a sweep rather than on a timer: a table that is finished and untouched for an
-/// hour, or abandoned (never over, nobody polling) for twenty hours, is disposed and its codes forgotten. The
-/// sweep runs when the admin panel is asked anything, which is the one moment memory is about to be spent, and at
-/// most once a minute from any other request, so a host whose admin panel nobody opens still lets go.
+/// Finished tables are let go of after an hour without a reader. A game that has begun stays open until it
+/// ends or the operator closes it: closing a browser must not end the game it comes back to (ADR 0115). A
+/// table that never began -- nobody came to it, or its second player never did -- is closed after
+/// <see cref="NeverBegunFor" /> without a request, or a lobby anyone may open tables from would fill the host
+/// for good. The sweep runs on requests, at most once a minute outside the admin panel.
 /// </para>
 /// </remarks>
 internal sealed class TableRegistry : IDisposable
@@ -23,8 +24,11 @@ internal sealed class TableRegistry : IDisposable
     /// <summary>How long a finished table stays readable after the last request: the end screen, the session page.</summary>
     public static readonly TimeSpan FinishedFor = TimeSpan.FromHours(1);
 
-    /// <summary>How long a table nobody asks anything of is kept before it is abandoned: an evening, and a night's sleep.</summary>
-    public static readonly TimeSpan IdleFor = TimeSpan.FromHours(20);
+    /// <summary>
+    /// How long a table that never began is kept without a request: an evening and a night's sleep, the time
+    /// an invitation reasonably waits. A game that began is never swept unfinished.
+    /// </summary>
+    public static readonly TimeSpan NeverBegunFor = TimeSpan.FromHours(20);
 
     /// <summary>How often a request other than the admin panel's is allowed to sweep.</summary>
     public static readonly TimeSpan SweepEvery = TimeSpan.FromMinutes(1);
@@ -175,6 +179,19 @@ internal sealed class TableRegistry : IDisposable
         }
     }
 
+    /// <summary>Revokes a departed player's token and code without changing the human agent or its pending question.</summary>
+    public void ReplaceToken(PlayedTable table, TableSeat seat, string token, string? code = null)
+    {
+        lock (_gate)
+        {
+            Codes.Forget(seat);
+            _byToken.Remove(seat.Token);
+            seat.Token = token;
+            _byToken[token] = table;
+            Codes.Mint(seat, code);
+        }
+    }
+
     /// <summary>Every table, newest first.</summary>
     public IReadOnlyList<PlayedTable> All()
     {
@@ -230,7 +247,7 @@ internal sealed class TableRegistry : IDisposable
             foreach (var table in _byId.Values.ToList())
             {
                 var idle = now - table.Touched;
-                if ((table.IsFinished && idle >= FinishedFor) || (!table.IsOver && idle >= IdleFor))
+                if ((table.IsFinished && idle >= FinishedFor) || (!table.IsOver && !table.Session.HasBegun && idle >= NeverBegunFor))
                 {
                     _byId.Remove(table.Id);
                     Forget(table);

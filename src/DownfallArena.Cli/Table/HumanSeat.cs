@@ -41,6 +41,8 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     public void Arrive() => Volatile.Write(ref _arrived, 1);
 
+    public void Depart() => Volatile.Write(ref _arrived, 0);
+
     /// <summary>What this seat is waiting for, or <c>null</c> when the match is not asking it anything.</summary>
     public Question? Waiting
     {

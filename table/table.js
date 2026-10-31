@@ -1,6 +1,6 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
-import { forget, heldSeats, isOperator, operatorToken } from './session.js';
+import { activateSeats, forget, heldSeats, isOperator, operatorToken, playPath, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -65,21 +65,47 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
   }
 }
 
+// Synchronous, so the module's top level starts nothing it leaves unawaited: the one asynchronous step, asking
+// the host which of the held seats still answer, settles into the same `enter` either way.
 function boot(practice) {
   void showAdminLink();
   const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
+  if (practice || held.length === 0) {
+    enter(held, practice);
+    return;
+  }
+
+  // Keep the held tokens through a temporary connection failure.
+  verifiedSeats(held).then(seats => enter(seats, practice), () => enter(held, practice));
+}
+
+// The held seats the host still answers for, one table's worth, saved again as the active pair. The held ones
+// as they were when the host could not be asked.
+async function verifiedSeats(held) {
+  const tokens = resumeTokens(savedSeats(storage), held);
+  const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+  if (!response.ok) return held;
+  const matches = (await response.json()).tables;
+  const requested = seatsFromLocation(globalThis.location?.search ?? '');
+  const seats = selectTableSeats(matches, requested.length > 0 ? requested : held);
+  activateSeats(seats, storage);
+  return seats;
+}
+
+function enter(held, practice) {
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
-  } else {
-    // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
-    if (!practice) tidy();
-    start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
+    return;
   }
+
+  // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
+  if (!practice) tidy();
+  start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null, Boolean(practice));
 }
 
 function tidy() {
   if (globalThis.location?.search && globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+    globalThis.history.replaceState(null, '', playPath(globalThis.location.pathname));
   }
 }
 
@@ -101,6 +127,7 @@ function start(seats, holder = null, practicing = false) {
   setupTalentWindow(state);
   setupPhaseControls(state);
   setupConcede(state);
+  setupLeave(state);
   document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -622,6 +649,7 @@ function renderMatchTools(state, view) {
     resetConcede();
   }
   tools.hidden = hidden;
+  element('leave-table').hidden = !view.recording;
 }
 
 function resetConcede() {
@@ -642,6 +670,30 @@ function setupConcede(state) {
     element('match-tools-label').focus({ preventScroll: true });
   });
   element('concede-yes').addEventListener('click', () => concede(state));
+}
+
+function setupLeave(state) {
+  element('leave-table').addEventListener('click', () => {
+    element('leave-confirm').hidden = false;
+    element('leave-yes').focus({ preventScroll: true });
+  });
+  element('leave-no').addEventListener('click', () => { element('leave-confirm').hidden = true; element('leave-table').focus(); });
+  element('leave-yes').addEventListener('click', async () => {
+    const current = state.seats.find(seat => seat.seat === state.shown);
+    if (!current || state.leaving) return;
+    state.leaving = true;
+    element('leave-yes').disabled = true;
+    element('leave-problem').hidden = true;
+    try {
+      const answer = await current.transport.leave();
+      if (!answer.ok) throw new Error(answer.body?.message ?? 'Could not leave the table. Try again.');
+      forget(storage, current.seat);
+      globalThis.location.assign('/');
+    } catch (error) {
+      element('leave-problem').textContent = error.message || 'Could not reach the host. Try again.';
+      element('leave-problem').hidden = false;
+    } finally { state.leaving = false; element('leave-yes').disabled = false; }
+  });
 }
 
 // The seat on screen gives up: in hotseat that is whoever holds the device, which the pass screen has just

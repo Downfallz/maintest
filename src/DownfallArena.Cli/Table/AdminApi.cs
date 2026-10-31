@@ -39,6 +39,8 @@ internal sealed class AdminApi
     private readonly StoredSessions? _stored;
     private readonly IReadOnlyList<SeatableAgent> _agents;
 
+    public LobbyApi Lobby { get; }
+
     /// <param name="rules">The line the console prints of the rule set: which one, and where it came from.</param>
     /// <param name="stored">The host's store, or none for a host that records nothing.</param>
     /// <param name="agents">The bots a seat is offered, in the order they are offered.</param>
@@ -57,16 +59,22 @@ internal sealed class AdminApi
         _rules = rules;
         _stored = stored;
         _agents = agents ?? [];
+        Lobby = new LobbyApi(registry, composer, clock);
     }
 
     public static bool Names(string path) =>
-        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix);
+        path == MePath || Under(path, Prefix) || Under(path, SessionsPrefix) || LobbyApi.Names(path);
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal)
     {
         ArgumentNullException.ThrowIfNull(path);
+        if (LobbyApi.Names(path))
+        {
+            return await Lobby.HandleAsync(method, path, body, token);
+        }
+
         var operatorName = _gate.Admit(token, principal);
         if (path == MePath)
         {
@@ -88,7 +96,9 @@ internal sealed class AdminApi
 
         if (Under(path, SessionsPrefix))
         {
-            return await SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName);
+            return method == "DELETE"
+                ? await LobbyApi.ExclusivelyAsync(() => SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName))
+                : await SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName);
         }
 
         var rest = path[Prefix.Length..].Trim('/');
@@ -96,7 +106,7 @@ internal sealed class AdminApi
         {
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
-            ("DELETE", { Length: > 0 } id) => Close(id, operatorName),
+            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => Task.FromResult(Close(id, operatorName))),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }
@@ -372,7 +382,7 @@ internal sealed class AdminApi
     /// is in the middle of a command, so a table whose gate is busy reads as "somewhere" rather than holding
     /// the whole list. A read that failed -- the table was let go of underneath -- reads the same way.
     /// </summary>
-    private static async Task<int?> RoundNowAsync(PlayedTable table)
+    internal static async Task<int?> RoundNowAsync(PlayedTable table)
     {
         var reading = table.RoundAsync();
         var first = await Task.WhenAny(reading, Task.Delay(TimeSpan.FromMilliseconds(200)));
