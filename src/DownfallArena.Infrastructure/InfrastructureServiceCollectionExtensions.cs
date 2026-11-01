@@ -41,6 +41,7 @@ public static class InfrastructureServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaPath);
 
         services.TryAddSingleton<IGameResources>(_ => GameSchemaBuilder.Load(schemaPath));
+        services.TryAddSingleton(_ => PackageIdentities.ReadNextTo(schemaPath));
 
         return services;
     }

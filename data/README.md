@@ -23,6 +23,9 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   that uses either member is schema version 5, so an engine written before them refuses it as a version.
   Player-facing package identities use the controlled vocabulary in `docs/domain/package-identity-tags.md`;
   those tags are design/presentation metadata and are not part of the match schema.
+- `presentation/package-tags.json`: those identity tags, two or three words per package keyed by its id. The
+  builder checks them against the packages and the vocabulary and publishes them beside the schema as
+  `package-tags.json`, outside the content hash; the table shows them on its package cards.
 - `aliases.json`: unversioned ids (`spell:pummel`) to their current versioned id (`spell:pummel:v1`).
 
 References between items (starting spells, talent prerequisites) may use either form; the data builder resolves

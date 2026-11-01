@@ -24,6 +24,9 @@ internal sealed class HostedTables : IDisposable
     private readonly StudioContent _content = new();
     private readonly IHost _host;
 
+    /// <summary>The words the content's one package is known by, published beside its schema as a build does.</summary>
+    public const string PackageTags = """{ "tier:guard:v1": ["Defense", "Sustain"] }""";
+
     public HostedTables(bool recording = false, RuleSet? rules = null)
         : this(recording ? directory => new FileArtifactStore(directory) : null, rules)
     {
@@ -34,6 +37,7 @@ internal sealed class HostedTables : IDisposable
     /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
     public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null)
     {
+        _content.Write("presentation/package-tags.json", PackageTags);
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },

@@ -204,6 +204,14 @@ test('a passive is printed in the host words and nothing is invented for a card 
   assert.deepEqual(passiveOf(undefined), []);
 });
 
+test('a package is known by the tags the host serves and by nothing a card does not carry', async () => {
+  const { tagsOf } = await import('./mat.js');
+  assert.deepEqual(tagsOf({ tags: ['Pressure', 'Defense'] }), ['Pressure', 'Defense']);
+  assert.deepEqual(tagsOf({ tags: ['', null, 'Burst'] }), ['Burst']);
+  assert.deepEqual(tagsOf({ name: 'Apex' }), []);
+  assert.deepEqual(tagsOf(undefined), []);
+});
+
 // A capstone teaches no spell, so it has no class to take a colour from. It wears the colour of the package
 // that opens its family instead of a hash of its own name.
 test('a package with no spell takes its family colour', async () => {

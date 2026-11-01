@@ -170,6 +170,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   catalogue packages, not the retired per-spell gates. Select a package to read its prerequisites by name,
   initiative bonus and all its spell faces side by side. Ownership comes from `acquiredTiers`, independently
   of known spells; only the host's `availableTiers` can enable a purchase.
+- Every package card, tree node and inspector wears the package's two or three identity tags as chips
+  (`tags` on the catalogue package, `docs/domain/package-identity-tags.md`), so a pick can be scanned before
+  its spells are read. A catalogue built without them shows none.
 - The authored first-level families use coherent cool, leaf and ember palettes, with shades inherited by
   specializations. These accents follow every card into the spellbook and unlock picker.
 - Buy legal packages directly from the atlas. A creature that bought this opportunity remains inspectable
