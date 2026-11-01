@@ -13,11 +13,11 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 12
+      "amount": 14
     },
     {
       "kind": "EnergyGain",
-      "amount": 2
+      "amount": 3
     }
   ],
   "enabled": true

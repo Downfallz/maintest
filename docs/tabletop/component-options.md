@@ -1,7 +1,7 @@
 # Component options: a lighter box
 
 Status: **Draft** (2026-10-04). A design proposal, not a manifest. It records what the maintainer has
-decided about the physical box, what he is still choosing between, and the evidence for each, so the next
+decided about the physical box, what the maintainer is still choosing between, and the evidence for each, so the next
 pass on [components.md](components.md) and [rulebook.md](rulebook.md) can be made from it. Read at content
 `e6f72578` and the table's rule set (`docs/tabletop/playtest.rules.json`). The counts of the catalogue and the
 starting kit are re-read at `3c9eb083` (2026-10-06), where Basic Attack is gone and every Creature starts
@@ -91,6 +91,21 @@ the whole side +1 more. Every Creature may own one, so the package cards stay **
 Archmage card lies uncovered with its buyer like any Capstone, so a cascade still leaves it uncovered. What
 moves is who reads it: every Creature of the side, at every Energy gain, which no option here counts. The
 measured profiles are not re-run.
+
+**Nor for Predator's level 2, Revitalize and Renewal Burst** (journal, 2026-11-01, "Hand-tuned: Predator's
+level 2, Revitalize and Renewal Burst"). Bite (`parasite_jab`) deals 6, not 4, and still heals its caster 4.
+Ambush (`ambush`) deals 10, not 8, and still slows its caster by 5 for a Round. Latch (`latch`) bleeds its
+target 2 a Round for 3 Rounds, not 1, beside its unchanged Damage 1 and its caster's Regeneration of 1 for 3
+Rounds. Revitalize (`rejuvenate`) heals 6, not 5. Renewal Burst (`restorative_burst`) heals 14, not 12, and
+gives Energy +3, not +2. components.md §1.4 still reads **222** Condition tokens in 7 kinds: Latch's Bleed
+moves from the Bleed 1 face, which keeps 6 for Paralyzing Barb and Bonewall's caster line, to the Bleed 2
+face, which keeps 18 for Infestation's and Emberstorm's three a cast. No Duration moves, so no token's
+handling moves on either dock, and the content observation of 2.4 holds as written. The Parasite card prints
+Bite's 6 and Latch's 2, the Warped card Revitalize's 6, and the Transcendent card Renewal Burst's 14 and +3,
+one digit for one digit; the Deathmarked card's Ambush prints `Damage 10`, one character more on a 9-character
+line, under the 36-character head line that is still the widest (3.6). No count here reads a hit, a heal or an
+Energy gain. The cascade band's lengths of 3.6, the energy readings of 3.2 and the measured profiles are not
+re-run.
 
 ## 1. Status and scope
 
