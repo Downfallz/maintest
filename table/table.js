@@ -1023,12 +1023,17 @@ async function showOwn(state) {
   } catch {
     // An update that cannot be fetched leaves the worker there is, which still shows.
   }
+  const permission = globalThis.Notification?.permission;
+  if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
   try {
     await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
-    return null;
   } catch (error) {
     return error?.message || String(error);
   }
+  // Taken is not shown: a browser lists the notices it is showing, and one it took and lists no more it dropped
+  // on the way, which is the browser's or the system's doing, not the page's.
+  const listed = await registration.getNotifications?.({ tag: 'test:page' }) ?? null;
+  return listed !== null && listed.length === 0 ? 'the browser took it and then listed no such notice: it dropped it' : null;
 }
 
 // The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.
