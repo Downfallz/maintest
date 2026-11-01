@@ -319,9 +319,11 @@ entry says what it buys and what it costs). **The balance objective's `exploit` 
 them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)),
 and scores **how fast** that one wins rather than whether it does, ties going to the fastest
 ([ADR 0053](../adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md)):
-`search-23`, `search-21`, `kill-first`, `mixture-mean` and `search-19` today, since 2026-10-05, when `search-31`
-and `pressure-floor` left it for no longer beating Greedy on content `e6f72578`; `search-19` no longer does either,
-and stays as the best exploiter of the catalogue before, the one a candidate moving the content back would wake.
+`search-51`, `search-40`, `kill-first`, `mixture-mean` and `search-19` today, since 2026-11-01, when `search-51`
+joined on content `f3e8a42d` and `search-21` left as the set that beats Greedy least (0.228). `search-40` had
+replaced `search-23` on 2026-10-10. On 2026-10-05 `search-31` and `pressure-floor` left for no longer beating
+Greedy on content `e6f72578`. `search-19` no longer beats Greedy either. It stays as the best exploiter of the
+catalogue before, the one a candidate moving the content back would wake.
 `stun-first` and `search-4` were in it before. It named one file until 2026-09-17,
 `pressure-floor` then, `search-4` before it and `search-3` before that, and the reason it no longer does is
 measured: one agent reads what that agent punishes, so the same one-spell move was worth 0.013 to `search-4`
