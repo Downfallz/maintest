@@ -78,6 +78,45 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     public bool IsDead(string endpoint) => _dead.ContainsKey(endpoint);
 
     /// <summary>
+    /// A notice sent now, on request, with no grace and whatever the page is doing: what a player taps to see
+    /// whether this phone can be reached at all, and what the push service answers when it cannot. The worker
+    /// shows it even over a visible game, since it is the one notice that is the point.
+    /// </summary>
+    public async Task<PushTest> TestAsync(PlayedTable table, TableSeat seat)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(seat);
+        if (seat.Push is not { } subscription)
+        {
+            return new PushTest(false, "This seat has no subscription: tap \"Notify me when it's my turn\" first.");
+        }
+
+        var payload = JsonSerializer.Serialize(new { title = "Notifications work", body = "This phone is told when it is your turn.", url = $"/play?table={Uri.EscapeDataString(table.Id)}", tag = $"test:{seat.Name}", test = true }, Web);
+        try
+        {
+            if (await sender.SendAsync(subscription, payload))
+            {
+                Console.WriteLine($"  Session {table.Id}: {seat.Name} sent a test notice.");
+                return new PushTest(true, "Sent. If nothing showed, check the phone's notification settings for this browser.");
+            }
+
+            _dead[subscription.Endpoint] = 0;
+            seat.Push = null;
+            if (Record is { } record)
+            {
+                await record(table);
+            }
+
+            return new PushTest(false, "The push service says this subscription is gone. Tap \"Notify me when it's my turn\" again.");
+        }
+        catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
+        {
+            Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be sent a test notice: {failure.Message}");
+            return new PushTest(false, $"The push service refused it: {failure.Message}");
+        }
+    }
+
+    /// <summary>
     /// What the service worker is handed: a title, a line, and where a tap goes, which is the game at this table:
     /// a browser may hold several (ADR 0115), and the question is at the one that asked. The id is the session's
     /// public name, on the session page's address already; no token travels.

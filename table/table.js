@@ -871,6 +871,7 @@ function setupNotices(state) {
     ios: /iPad|iPhone|iPod/.test(globalThis.navigator?.userAgent ?? ''),
   };
   for (const id of ['notices', 'notices-match']) element(id)?.addEventListener('click', () => toggleNotices(state));
+  element('notices-test')?.addEventListener('click', () => testNotices(state));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void closeNotices(state); });
   renderNotices(state);
   if (state.practice || state.seats.length === 0) return;
@@ -929,6 +930,30 @@ function renderNotices(state) {
   }
   if (element('notices-row')) element('notices-row').hidden = shown.hidden;
   if (element('notices-hint')) element('notices-hint').textContent = shown.hint;
+  // The test is offered once this phone is subscribed: what it answers is the host's own word on whether a
+  // notice reaches it, which is what to read when "your turn" never came.
+  if (element('notices-test')) element('notices-test').hidden = shown.hidden || !state.push?.subscribed;
+}
+
+async function testNotices(state) {
+  const button = element('notices-test');
+  const problem = element('notices-problem');
+  const seat = state.seats[0];
+  if (!seat || !button || button.disabled) return;
+  button.disabled = true;
+  if (problem) problem.textContent = 'Sending…';
+  try {
+    const answer = await seat.transport.pushTest();
+    if (problem) problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+    if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
+      state.push.subscribed = false;
+      renderNotices(state);
+    }
+  } catch {
+    if (problem) problem.textContent = 'Could not reach the host. Try again.';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.

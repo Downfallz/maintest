@@ -41,6 +41,7 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     pushKey: () => send('GET', '/api/lobby/push'),
     push: subscription => send('PUT', '/api/lobby/push', subscription),
     forgetPush: () => send('DELETE', '/api/lobby/push', {}),
+    pushTest: () => send('POST', '/api/lobby/push/test', {}),
 
     // A note goes to one route for both seats: the host records it against whichever seat's token carried it,
     // so nobody can file a misplay against the other player.

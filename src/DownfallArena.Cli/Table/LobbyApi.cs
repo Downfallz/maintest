@@ -49,6 +49,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("GET", Prefix + "/push") => Json(new { publicKey = push?.PublicKey }),
                 ("PUT", Prefix + "/push") => await SubscribeAsync(token, body),
                 ("DELETE", Prefix + "/push") => await SubscribeAsync(token, null),
+                ("POST", Prefix + "/push/test") => await TestPushAsync(token),
                 ("POST", _) when JoinedTable(path) is { } id => await JoinAsync(id),
                 _ => Problem(404, "No such lobby route."),
             };
@@ -323,6 +324,25 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             Claims.Release();
         }
+    }
+
+    /// <summary>A notice to this seat's phone now, and what came of it: how a player sees that the phone can be reached.</summary>
+    private async Task<StudioResponse> TestPushAsync(string? token)
+    {
+        if (push is null)
+        {
+            return Problem(404, "This host sends no notices: it has no push keys.");
+        }
+
+        var table = registry.ByToken(token);
+        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+        if (table is null || seat is null)
+        {
+            return Problem(403, "This seat is no longer yours.");
+        }
+
+        var test = await push.TestAsync(table, seat);
+        return Json(new { sent = test.Sent, message = test.Message }, test.Sent ? 200 : 502);
     }
 
     /// <summary>

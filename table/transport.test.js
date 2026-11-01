@@ -138,8 +138,9 @@ test('the notices calls carry the seat token, and forgetting sends an empty body
   await transport.pushKey();
   await transport.push({ endpoint: 'https://push.example/x', keys: { p256dh: 'a', auth: 'b' } });
   await transport.forgetPush();
+  await transport.pushTest();
 
-  assert.deepEqual(calls.map(call => [call.options.method, call.path]), [['GET', '/api/lobby/push'], ['PUT', '/api/lobby/push'], ['DELETE', '/api/lobby/push']]);
+  assert.deepEqual(calls.map(call => [call.options.method, call.path]), [['GET', '/api/lobby/push'], ['PUT', '/api/lobby/push'], ['DELETE', '/api/lobby/push'], ['POST', '/api/lobby/push/test']]);
   assert.equal(calls[1].options.headers['Content-Type'], 'application/json');
   assert.equal(calls[2].options.body, '{}');
   assert.ok(calls.every(call => call.options.headers['X-Seat-Token'] === 'beef'));
