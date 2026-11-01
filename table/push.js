@@ -32,21 +32,39 @@ export function sameKey(subscription, publicKey) {
   return bytes.length === wanted.length && bytes.every((byte, index) => byte === wanted[index]);
 }
 
-// What the one button says, from where the page stands. Hidden when there is nothing it could do: a browser
-// that cannot push, a host without keys, a practice table. Disabled, with the way out, when the person said no,
-// and on an iPhone, which pushes only to a page added to the home screen. Hidden too for a device nobody is away from:
-// that is, not two seats of one table on one device, where the other player is whoever holds it (ADR 0120).
-export function noticeButton({ supported, keyed, permission, subscribed, busy, practice, ios, hotseat }) {
-  if (!keyed || practice || hotseat) return { hidden: true, disabled: true, label: '', hint: '' };
+// What the one button says, from where the page stands, and whether it is offered outside the match panel
+// (`offered`: the waiting room, and the one-time offer every seat page makes on entering -- the second player
+// to arrive never sees a waiting room). Hidden only when there is nothing to say: a host without keys, a
+// practice table. Everywhere else the match panel says something, because a notice that silently is not there
+// reads as one that is broken: disabled, with the way out, when the person said no, on an iPhone, which pushes
+// only to a page added to the home screen, and in a browser that cannot take a push at all, an app's built-in
+// browser that a chat opened the invitation in most often. A device holding both seats is told nothing, since
+// nobody is away from it (ADR 0120): the panel says so, and nothing is offered.
+export function noticeButton({ supported, keyed, permission, subscribed, busy, practice, ios, hotseat, secure }) {
+  if (!keyed || practice) return { hidden: true, disabled: true, offered: false, label: '', hint: '' };
+  if (hotseat) {
+    return { hidden: false, disabled: true, offered: false, label: 'No notices with both seats here', hint: 'This device holds both seats, so whoever holds it is the other player: nobody is away to be told.' };
+  }
   if (!supported && ios) {
-    return { hidden: false, disabled: true, label: 'Notifications need the home screen', hint: 'On iPhone: Share, Add to Home Screen, then open the table from there to be told when it is your turn.' };
+    return { hidden: false, disabled: true, offered: true, label: 'Notifications need the home screen', hint: 'On iPhone: Share, Add to Home Screen, then open the table from there to be told when it is your turn.' };
   }
-  if (!supported) return { hidden: true, disabled: true, label: '', hint: '' };
+  if (!supported && secure === false) {
+    return { hidden: false, disabled: true, offered: false, label: 'Notifications need https', hint: 'This table is served over plain http, where no browser takes a push: the hosted table, or this computer at localhost, can notify.' };
+  }
+  if (!supported) {
+    return { hidden: false, disabled: true, offered: true, label: 'This browser cannot notify you', hint: 'Open the table in Chrome, Firefox or Safari to be told when it is your turn: the browser built into a chat or social app cannot show notifications.' };
+  }
   if (permission === 'denied') {
-    return { hidden: false, disabled: true, label: 'Notifications are blocked', hint: 'Allow them for this site in the browser\'s settings to be told when it is your turn.' };
+    return { hidden: false, disabled: true, offered: true, label: 'Notifications are blocked', hint: 'Allow them for this site in the browser\'s settings to be told when it is your turn.' };
   }
-  if (subscribed) return { hidden: false, disabled: Boolean(busy), label: 'Stop notifying me', hint: 'This phone is told when it is your turn.' };
-  return { hidden: false, disabled: Boolean(busy), label: 'Notify me when it\'s my turn', hint: 'Even with the screen off or the browser closed.' };
+  if (subscribed) return { hidden: false, disabled: Boolean(busy), offered: true, label: 'Stop notifying me', hint: 'This phone is told when it is your turn.' };
+  return { hidden: false, disabled: Boolean(busy), offered: true, label: 'Notify me when it\'s my turn', hint: 'Even with the screen off or the browser closed.' };
+}
+
+// Whether the one-time offer is made: once a browser, to a seat page that could be told and is not yet, and
+// never again once it was declined or accepted. A person who blocked notifications said no already.
+export function offerShown(shown, { subscribed, permission } = {}, declined = false) {
+  return Boolean(shown?.offered && !subscribed && permission !== 'denied' && !declined);
 }
 
 // What the two test notices say together, for the phone to read against what appeared. The page shows one

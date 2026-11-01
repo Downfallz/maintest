@@ -393,8 +393,13 @@ when the match asks that seat something and nobody is looking at the page, scree
 included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
-first. A device holding both seats of the table is hotseat and is told nothing: the other player is whoever holds
-it (ADR 0120). The host's log says which seat was notified of which asking, and why a notice could not be sent.
+first. Every seat page makes the offer once, in a bar at the bottom of the screen, and **Not now** is remembered
+by the browser; the button stays in the Match panel and in the waiting room. The second player to arrive never
+waits in a room, so the bar is where they are asked. Where no notice can reach, the Match panel says why instead of
+showing nothing: a browser built into a chat or social app (**This browser cannot notify you**: open the table in
+Chrome, Firefox or Safari), notifications blocked for the site, or plain http on a network address. A device holding
+both seats of the table is hotseat and is told nothing: the other player is whoever holds it (ADR 0120), and its
+Match panel says **No notices with both seats here**. The host's log says which seat was notified of which asking, and why a notice could not be sent.
 Once subscribed, **Send a test notification** (Match panel) shows two notices at once: one the page shows
 itself, through the worker and no push service, and one the host sends through the push service, with what
 the service answered under the button. Both appearing is a phone that works; only the page's is a push that

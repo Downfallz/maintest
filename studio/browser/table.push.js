@@ -62,6 +62,20 @@ test('a seat page on a host with keys registers the worker and offers the notice
   // browser on the CI runner answers every notification permission with a refusal, and the page says so.
   const button = page.locator('#notices-match');
   await expect(button).toHaveText(/Notify me when it's my turn|Notifications are blocked/, { timeout: 10000 });
+  // Offered once on entering, too: a player who arrives second never waits in the room that offered it before.
+  // Blocked is a "no" already said, and is not offered again.
+  const offer = page.locator('#notices-offer');
+  if (await button.isEnabled()) {
+    await expect(offer).toBeVisible();
+    await expect(page.locator('#notices-offer-yes')).toHaveText("Notify me when it's my turn");
+    await page.locator('#notices-offer-no').click();
+    await expect(offer).toBeHidden();
+    await page.reload();
+    await expect(button).toHaveText("Notify me when it's my turn", { timeout: 10000 });
+    await expect(offer).toBeHidden();
+  } else {
+    await expect(offer).toBeHidden();
+  }
   await expect.poll(() => page.evaluate(async () => Boolean(await navigator.serviceWorker.getRegistration('/'))), { timeout: 10000 }).toBe(true);
   const key = await page.evaluate(async () => (await (await fetch('/api/lobby/push')).json()).publicKey);
   expect(key).toMatch(/^[A-Za-z0-9_-]{87}$/);

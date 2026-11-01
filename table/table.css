@@ -714,6 +714,14 @@ body:has(#table) { padding-bottom: 24px; }
 .invitation-panel { max-width: 640px; }
 .notices-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-top: .8rem; }
 .notices-row[hidden] { display: none; }
+/* Fixed to the bottom of the screen: on a phone anything in the flow sits under the phase dock or off screen,
+   and the offer is made once, so it may cover the controls until either of its two buttons is tapped. */
+.notices-offer { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: 460px; margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 12px 14px; border: 1px solid var(--gold); border-radius: 10px; background: var(--raised); box-shadow: 0 10px 30px #000a; }
+.notices-offer[hidden] { display: none; }
+.notices-offer p { flex: 1 1 220px; margin: 0; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.notices-offer .muted { display: block; font-size: 12px; }
+.notices-offer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notices-offer-actions button { min-height: 40px; }
 .invitation-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
 .practice-panel h2, .practice-panel p { margin: 0; }
 .practice-panel select { min-height: 44px; max-width: 100%; color: inherit; background: #111917; border: 1px solid #628477; border-radius: 8px; padding: .6rem; font: inherit; }
