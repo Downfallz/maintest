@@ -118,6 +118,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
 
             if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id)))
             {
+                // Said, so a host's log shows what reached a phone and what did not.
+                Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");
                 return;
             }
 

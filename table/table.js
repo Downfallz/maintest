@@ -2,7 +2,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, noticeUrl, pushSupported, sameKey, shouldNotifyInPage, turnNotice, TAG } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -66,9 +66,6 @@ async function showAdminLink(fetchImpl = globalThis.fetch?.bind(globalThis)) {
     // Not knowing is the same as no: the link is for the operator, and a page that cannot ask shows none.
   }
 }
-
-// The id of the table whose seats this page plays, once the host said which; null for a page that could not ask.
-let playing = null;
 
 // Synchronous, so the module's top level starts nothing it leaves unawaited: the one asynchronous step, asking
 // the host which of the held seats still answer, settles into the same `enter` either way.
@@ -229,8 +226,6 @@ async function verifiedSeats(held) {
   // A notice names its table: the tap lands on the game that asked, not on the table this browser last played.
   const named = tableFromLocation(globalThis.location?.search);
   const seats = selectTableSeats(matches, requested.length > 0 ? requested : held, named);
-  // The table these seats are at, for the page's own notices to name: a browser may hold several (ADR 0115).
-  playing = matches.find(match => match.seats === seats)?.table?.id ?? null;
   activateSeats(seats, storage);
   return seats;
 }
@@ -672,12 +667,15 @@ function render(state, views) {
   // Per seat as well as per asking: the two seats count their own questions, so they are at the same number
   // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
   // would call the other seat's question already acknowledged and never announce it.
-  const drawn = fence || state.playback || state.step ? null : view.waitingAsked ?? null;
+  // And nothing is acknowledged by a page nobody can see: a phone whose screen went off keeps running its page
+  // for minutes, polling as before, and an acknowledgement from it would both time the decision from a moment
+  // nobody was looking and tell the host the person was told, so no notice would reach the phone (ADR 0118).
+  // The next poll after the page is back in front of somebody acknowledges.
+  const drawn = fence || state.playback || state.step || document.visibilityState === 'hidden' ? null : view.waitingAsked ?? null;
   const acknowledgement = `${current.seat}/${drawn}`;
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  noticeInPage(state, current, drawn);
   const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTicks(state, view.board)]);
   if (state.rendered === identity) return;
   state.rendered = identity;
@@ -869,17 +867,19 @@ function setupNotices(state) {
   state.push = {
     supported: pushSupported(), keyed: false, practice: state.practice, subscribed: false, busy: false,
     permission: globalThis.Notification?.permission ?? 'default', registration: null, publicKey: null,
+    // An iPhone pushes only to a page added to the home screen; the button says so instead of hiding.
+    ios: /iPad|iPhone|iPod/.test(globalThis.navigator?.userAgent ?? ''),
   };
   for (const id of ['notices', 'notices-match']) element(id)?.addEventListener('click', () => toggleNotices(state));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void closeNotices(state); });
   renderNotices(state);
-  if (!state.push.supported || state.practice || state.seats.length === 0) return;
+  if (state.practice || state.seats.length === 0) return;
   void (async () => {
     try {
       const key = await state.seats[0].transport.pushKey();
       state.push.publicKey = key.ok ? key.body?.publicKey ?? null : null;
       state.push.keyed = Boolean(state.push.publicKey);
-      if (!state.push.keyed) return;
+      if (!state.push.keyed || !state.push.supported) return;
       await globalThis.navigator.serviceWorker.register('/sw.js');
       // The worker that is active, not the one just registered: on a first visit that one is still installing,
       // and a subscription needs an active worker behind it.
@@ -962,25 +962,7 @@ async function toggleNotices(state) {
   }
 }
 
-// A page that is still running but hidden keeps acknowledging what it draws, so the host sends nothing: it
-// shows the notice itself. Under the worker's registration when there is one, so a tap on it opens this page.
-function noticeInPage(state, current, drawn) {
-  // Per seat as well as per asking, as the acknowledgement is: the two seats count their own questions.
-  const key = drawn === null ? null : `${current.seat}/${drawn}`;
-  const hidden = document.visibilityState === 'hidden';
-  if (!shouldNotifyInPage({ asked: key, previous: state.noticed, hidden, permission: globalThis.Notification?.permission, enabled: state.push?.subscribed })) return;
-  state.noticed = key;
-  const notice = turnNotice(current.view, current.seat);
-  const options = { body: notice.body, tag: notice.tag, icon: '/icon-192.png', data: { url: noticeUrl(playing) } };
-  try {
-    if (state.push?.registration) void state.push.registration.showNotification(notice.title, options);
-    else new globalThis.Notification(notice.title, options);
-  } catch {
-    // A browser that refuses a page's own notice loses nothing but the notice.
-  }
-}
-
-// Back in front of somebody: whatever "your turn" was still showing, the host's or the page's own, goes.
+// Back in front of somebody: whatever "your turn" was still showing goes.
 async function closeNotices(state) {
   try {
     const shown = await state.push?.registration?.getNotifications?.() ?? [];

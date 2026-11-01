@@ -7,10 +7,12 @@ const ICON = '/icon-192.png';
 const GAME = '/play';
 
 // A notice is shown unless the game is in front of somebody: a page focused on the question is the notice,
-// and the same words twice would be noise. The lobby is not the game: a player parked on it is told.
+// and the same words twice would be noise. In front of somebody means visible as well as focused: a phone
+// whose screen went off keeps its page focused for a while, and nobody is looking at that one. The lobby is
+// not the game: a player parked on it is told.
 async function onPush(notice) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  if (windows.some(client => client.focused && new URL(client.url).pathname === GAME)) return;
+  if (windows.some(client => client.focused && client.visibilityState === 'visible' && new URL(client.url).pathname === GAME)) return;
   await self.registration.showNotification(notice.title ?? 'Your turn', {
     body: notice.body ?? 'The match is asking you something.',
     tag: notice.tag ?? 'turn',

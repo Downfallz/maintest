@@ -29,9 +29,11 @@ browser's push service, shown by a service worker.
   `GET /api/lobby/push` is the public key.
 - A notice goes when the match asks the seat something and no page acknowledged drawing it within two seconds
   (`?shown=`, the decision clock's own signal): a page in front of somebody acknowledges within a poll, so it
-  gets none. A page still running but hidden keeps acknowledging and so hears nothing from the host; it shows the
-  notice itself, through the same worker. One notice per asking at most; a push service that says the
-  subscription is gone makes the seat forget it.
+  gets none. A hidden page acknowledges nothing: a phone whose screen went off keeps running its page for
+  minutes, and an acknowledgement from it would say the person was told when nobody was looking. So the host
+  notices a hidden page like a closed one, and the worker shows the notice unless the game is visible and
+  focused. One notice per asking at most; a push service that says the subscription is gone makes the seat
+  forget it.
 - The sending is `Lib.Net.Http.WebPush`, the one NuGet package this adds, in the host (`DownfallArena.Cli`)
   behind a port of the host's own (`IPushSender`): nothing below the host knows a seat or a browser, and the
   encryption and the signing are better taken from a library than written here.

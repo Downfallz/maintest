@@ -379,8 +379,10 @@ table that never began is closed after twenty hours nobody asked anything of it 
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
 when the match asks that seat something and nobody is looking at the page, screen off or browser closed
-included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page still
-running but hidden shows one itself. The notice says "your turn" and the round, nothing else.
+included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page hidden
+behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
+"your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
+first. The host's log says which seat was notified of which asking, and why a notice could not be sent.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
