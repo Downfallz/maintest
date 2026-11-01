@@ -171,6 +171,7 @@ internal sealed class PlayedTable : IDisposable
         }
 
         _stopping.Cancel();
+        Api.Detach();
         Session.Outcome.ContinueWith(
             _ =>
             {

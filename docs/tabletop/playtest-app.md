@@ -161,6 +161,7 @@ Plain HTTP, JSON, request and response. Polling, not push.
 | `GET` | `/api/session` | The session stamp — engine version, content hash, rule set, seed, session id — the two seat names, and **which seat has a pending decision and of what kind**. No board, no options. |
 | `GET` | `/api/catalogue` | The card faces and the enabled Talent tree (1.3). Seat-independent, read-only, cacheable. |
 | `GET` | `/api/seat/{slot}?since=N` | That seat's `PlayerBoardState`, its `PlayerOptions`, and the events it may see since sequence `N`. Before the match begins, `waiting` names the seats nobody has reached yet, with their join codes and links (ADR 0092); null afterwards. The request is also how the seat's person reaches it: the match begins when every person has. |
+| `GET` | `/api/seat/{slot}/events` | The table's changes as server-sent events ([ADR 0119](../adr/0119-a-seat-page-is-told-when-its-table-changed.md)): `ready` with the version, `changed` with each new one, a comment every twenty seconds while nothing changes. Ends with the browser, the table, or the match. |
 | `POST` | `/api/seat/{slot}/decision` | One decision. `204` once the seat is answered (the next poll serves what follows), or `409` with the error code. Under a rule set that declares no intent ([ADR 0110](../adr/0110-a-rule-set-may-declare-spells-at-activation.md)) a seat is asked no Intent and no Target: at its creature's slot it is asked one `Action`, served as `options.action` (every spell it can cast now, each with its legal targets), and answers `{"kind": "Action", "creature": 1, "spell": "spell:pummel:v1", "targets": [3]}`. The page draws it as a card to tap, then that spell's targets to confirm (`table/slot.js`). |
 | `POST` | `/api/notes` | One playtest note. |
 | `GET` | `/session/{id}` | The finished session in the viewer, rendered by `ViewerPage.Render` exactly as the studio serves `/runs/<id>` (`StudioApi.cs:112-126`). A session this host no longer has a table for is read from the store, partial trace included: the replica that played it is gone and the run is what survives. |
@@ -186,10 +187,12 @@ every token to its table, so no route carries a session id (ADR 0081).
 The three pilot routes carry the pilot's own token instead, which is never a seat's: a pilot can move both
 seats, so a seat token that could also pilot would let either player hand their opponent's seat to a bot — and
 in hotseat both seat tokens live in the same browser as the page a player is looking at. Every other API
-request carries exactly one seat token and answers for exactly one seat. Long-polling, server-sent
-events and WebSockets are all refused for the first version: hotseat has nothing to push to, the idle seat in a
-two-device session needs a one-second poll and no more, and each of the three is a second thing to keep alive
-across a phone's screen lock.
+request carries exactly one seat token and answers for exactly one seat. The first version polled and pushed
+nothing: hotseat had nothing to push to, and a screen lock was one more thing to keep a connection alive across.
+Since [ADR 0119](../adr/0119-a-seat-page-is-told-when-its-table-changed.md) the seat route also streams the
+table's *changes* (`GET /api/seat/{slot}/events`, server-sent events under the seat's token): it says to read
+the seat now, never what changed, so the one-seat-per-payload boundary stays where it is. The page reads on each
+event and polls every five seconds besides; without the stream it polls every 700 ms as it always did.
 
 ### 2.4 The hidden-information boundary
 

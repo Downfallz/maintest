@@ -195,6 +195,15 @@ internal sealed class HttpHost : IDisposable
                 context.Response.Headers[header.Key] = header.Value;
             }
 
+            if (response.Writer is { } writer)
+            {
+                // No length, chunked: the answer ends when the writer does, which for a stream of changes is
+                // when the browser goes or the table does.
+                context.Response.SendChunked = true;
+                await writer(context.Response.OutputStream, CancellationToken.None);
+                return;
+            }
+
             context.Response.ContentLength64 = response.Body.Length;
             await context.Response.OutputStream.WriteAsync(response.Body);
         }

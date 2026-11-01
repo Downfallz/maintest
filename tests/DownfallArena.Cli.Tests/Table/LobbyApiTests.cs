@@ -555,6 +555,85 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldBeNull();
     }
 
+    /// <summary>The test notice a player asks for: sent now, or the push service's refusal in words, on the page.</summary>
+    [Fact]
+    public async Task A_test_notice_is_sent_now_and_its_outcome_said()
+    {
+        var sender = new Refusing();
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var token = table.Seats[0].Token;
+
+        var unsubscribed = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+        unsubscribed.Status.ShouldBe(502);
+        JsonDocument.Parse(unsubscribed.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("no subscription");
+
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+        var sent = Read(await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token));
+        sent.GetProperty("sent").GetBoolean().ShouldBeTrue();
+        sender.Sent.ShouldHaveSingleItem().ShouldContain("\"test\":true");
+
+        sender.Failure = new HttpRequestException("The push service answered 403: bad vapid");
+        var refused = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+        refused.Status.ShouldBe(502);
+        JsonDocument.Parse(refused.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("bad vapid");
+        table.Seats[0].Push.ShouldNotBeNull("a refusal is the service's, the subscription stays");
+
+        (await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", "not-a-seat")).Status.ShouldBe(403);
+        (await Lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token)).Status.ShouldBe(404, "this host has no keys");
+    }
+
+    /// <summary>A test that finds the subscription gone forgets it, unless the seat holds another by then, which answered nothing.</summary>
+    [Fact]
+    public async Task A_test_that_finds_the_subscription_gone_forgets_only_that_one()
+    {
+        var sender = new Refusing { Gone = true };
+        var notices = new PushNotices(sender, "BP8", TimeProvider.System);
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, notices);
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var token = table.Seats[0].Token;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+        var held = table.Seats[0].Push!;
+
+        var gone = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+        gone.Status.ShouldBe(502);
+        JsonDocument.Parse(gone.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("gone");
+        table.Seats[0].Push.ShouldBeNull();
+        notices.IsDead(held.Endpoint).ShouldBeTrue();
+
+        var replacement = held with { Endpoint = "https://push.example/two" };
+        table.Seats[0].Push = replacement;
+        sender.Replace = () => table.Seats[0].Push = replacement with { Auth = "AAECAwQFBgcICQoLDA0ODx" };
+        (await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token)).Status.ShouldBe(502);
+        table.Seats[0].Push.ShouldNotBeNull("the seat was given another subscription while the test was in flight, and that one answered nothing");
+    }
+
+    private sealed class Refusing : IPushSender
+    {
+        public List<string> Sent { get; } = [];
+
+        public Exception? Failure { get; set; }
+
+        public bool Gone { get; set; }
+
+        /// <summary>Run while the send is in flight: what a browser or the next player does to the seat meanwhile.</summary>
+        public Action? Replace { get; set; }
+
+        public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
+        {
+            if (Failure is { } failure)
+            {
+                return Task.FromException<bool>(failure);
+            }
+
+            Sent.Add(payload);
+            Replace?.Invoke();
+            return Task.FromResult(!Gone);
+        }
+    }
+
     [Fact]
     public async Task A_subscription_needs_a_seat_token_and_a_host_with_keys()
     {

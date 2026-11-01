@@ -50,6 +50,15 @@ test('a push arriving while a window of the table is in front of somebody shows 
   assert.equal(w.shown.length, 0);
 });
 
+test('a test notice shows over the game in front of somebody: it is the one notice that was asked for', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Notifications work', test: true, tag: 'test:player1' }));
+
+  assert.equal(w.shown.length, 1);
+  assert.equal(w.shown[0].tag, 'test:player1');
+});
+
 test('a page still focused on a phone whose screen went off is not in front of anybody: the notice shows', async () => {
   const w = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'hidden' }] });
 

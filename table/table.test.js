@@ -352,13 +352,17 @@ test('a failed request releases the busy state and shows a recoverable error', a
   assert.equal(p.nodes.decision.attributes['aria-busy'], 'false');
 });
 
-test('overlapping refreshes make only one seat request', async () => {
+test('overlapping refreshes make one seat request at a time, the second once the first is answered', async () => {
   const p = page(); let finish; let calls = 0;
   p.current.transport.seat = () => { calls += 1; return new Promise(resolve => { finish = resolve; }); };
   const first = p.context.refresh(p.state); await p.context.refresh(p.state);
   assert.equal(calls, 1);
-  // A handover prevents an acknowledgement from adding a second request.
+  // A handover prevents an acknowledgement from adding a request of its own.
   p.state.holder = null; finish({ ok: true, body: p.view }); await first;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(calls, 2, 'the refresh asked for mid-flight is owed, not dropped (ADR 0119)');
+  finish({ ok: true, body: p.view });
+  await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(p.state.polling, false);
 });
 
@@ -2206,4 +2210,57 @@ test('a hidden page acknowledges nothing, and the next poll in front of somebody
   p.state.rendered = null;
   p.draw();
   assert.deepEqual(announced, [4]);
+});
+
+test('a streamed page reads on its own only every few seconds, and at once when asked', async () => {
+  const p = page();
+  const polls = [];
+  p.context.poll = async () => { polls.push(Date.now()); };
+  p.state.live = new Set(['player1']);
+  p.state.polled = Date.now();
+
+  p.context.tick(p.state);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(polls.length, 0, 'the stream is open and the last read is fresh');
+  await p.context.refresh(p.state);
+  assert.equal(polls.length, 1, 'a read the page asks for is never held back');
+
+  p.state.live = new Set();
+  p.context.tick(p.state);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(polls.length, 2, 'no stream: the timer reads as it always did');
+});
+
+test('a read asked for while one is in flight is made once that one is done, not dropped', async () => {
+  const p = page();
+  let release;
+  const polls = [];
+  p.context.poll = () => new Promise(resolve => { polls.push(Date.now()); release = resolve; });
+  p.state.live = new Set();
+
+  const first = p.context.refresh(p.state);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await p.context.refresh(p.state);
+  assert.equal(polls.length, 1, 'one read in flight, the second owed');
+
+  p.context.poll = async () => { polls.push(Date.now()); };
+  release();
+  await first;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(polls.length, 2, 'the owed read was made once the first was done');
+});
+
+test('a test notice that finds the subscription gone lets the browser\'s go too, so the next tap makes a new one', async () => {
+  const p = page();
+  let unsubscribed = 0;
+  const held = { unsubscribe: async () => { unsubscribed += 1; } };
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { pushManager: { getSubscription: async () => held } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 502, ok: false, body: { message: 'The push service says this subscription is gone.' } }) } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.equal(unsubscribed, 1);
+  assert.equal(p.state.push.subscribed, false);
+  assert.match(p.nodes['notices-problem'].textContent, /gone/);
+  assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
 });

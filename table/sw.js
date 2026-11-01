@@ -12,7 +12,8 @@ const GAME = '/play';
 // not the game: a player parked on it is told.
 async function onPush(notice) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  if (windows.some(client => client.focused && client.visibilityState === 'visible' && new URL(client.url).pathname === GAME)) return;
+  // A test notice is the one a player asked to see, over the game or not.
+  if (!notice.test && windows.some(client => client.focused && client.visibilityState === 'visible' && new URL(client.url).pathname === GAME)) return;
   await self.registration.showNotification(notice.title ?? 'Your turn', {
     body: notice.body ?? 'The match is asking you something.',
     tag: notice.tag ?? 'turn',

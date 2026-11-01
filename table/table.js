@@ -313,7 +313,49 @@ function start(seats, holder = null, practicing = false, replaying = false) {
   });
 
   void refresh(state);
-  setInterval(() => refresh(state), 700);
+  // The timer is the fallback: a page the host streams its changes to (ADR 0119) reads on each, and on its own
+  // only every few seconds in case a change was missed; one the host cannot stream to reads as it always did.
+  // A read the page asks for itself, after a tap, is never held back.
+  setInterval(() => tick(state), 700);
+  state.live = new Set();
+  state.polled = 0;
+  for (const seat of seats) void watch(state, seat);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void refresh(state); });
+}
+
+function tick(state) {
+  if (state.live?.size > 0 && Date.now() - (state.polled ?? 0) < StreamedPollEvery) return;
+  void refresh(state);
+}
+
+// How long a streamed page goes between polls of its own: long enough to cost nothing, short enough that a
+// change the stream dropped is on screen before anybody wonders.
+const StreamedPollEvery = 5000;
+
+// One seat's stream, kept open for the life of the page: each change the host announces is a read now, and a
+// stream that ends -- the phone slept, the network blinked, the host restarted -- is opened again after a
+// moment, a little later each time, until the seat is no longer this page's.
+async function watch(state, seat) {
+  let pause = 1000;
+  while (state.seats.includes(seat)) {
+    const controller = new AbortController();
+    try {
+      const answer = await seat.transport.events(() => {
+        state.live.add(seat.seat);
+        pause = 1000;
+        void refresh(state);
+      }, controller.signal);
+      // Refused is a seat that is no longer this page's, or a host without the route: the poll carries on alone.
+      if (answer.status === 403 || answer.status === 404) return;
+    } catch {
+      // The stream broke; the loop below opens it again.
+    } finally {
+      state.live.delete(seat.seat);
+      controller.abort();
+    }
+    await new Promise(resolve => setTimeout(resolve, pause));
+    pause = Math.min(pause * 2, 10000);
+  }
 }
 
 // Tells the host this seat's question is now in front of somebody. It is the ordinary seat poll with the flag
@@ -427,15 +469,23 @@ function atTheSlot(catalogue) {
 
 // Only one poll can be in flight. An old response must never replace a newer decision.
 async function refresh(state) {
-  if (state.sending || state.polling) return;
+  // A read asked for while one is in flight is not dropped but owed: the host's word that something changed
+  // may have come after the read in flight was answered, and the next timer tick is seconds away (ADR 0119).
+  if (state.sending || state.polling) {
+    state.again = true;
+    return;
+  }
   state.polling = true;
   try {
+    state.again = false;
+    state.polled = Date.now();
     await poll(state);
   } catch {
     state.rendered = null;
     setPhase('Connection lost · retrying…');
   } finally {
     state.polling = false;
+    if (state.again && !state.sending) void refresh(state);
   }
 }
 
@@ -871,6 +921,7 @@ function setupNotices(state) {
     ios: /iPad|iPhone|iPod/.test(globalThis.navigator?.userAgent ?? ''),
   };
   for (const id of ['notices', 'notices-match']) element(id)?.addEventListener('click', () => toggleNotices(state));
+  element('notices-test')?.addEventListener('click', () => testNotices(state));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void closeNotices(state); });
   renderNotices(state);
   if (state.practice || state.seats.length === 0) return;
@@ -929,6 +980,34 @@ function renderNotices(state) {
   }
   if (element('notices-row')) element('notices-row').hidden = shown.hidden;
   if (element('notices-hint')) element('notices-hint').textContent = shown.hint;
+  // The test is offered once this phone is subscribed: what it answers is the host's own word on whether a
+  // notice reaches it, which is what to read when "your turn" never came.
+  if (element('notices-test')) element('notices-test').hidden = shown.hidden || !state.push?.subscribed;
+}
+
+async function testNotices(state) {
+  const button = element('notices-test');
+  const problem = element('notices-problem');
+  const seat = state.seats[0];
+  if (!seat || !button || button.disabled) return;
+  button.disabled = true;
+  if (problem) problem.textContent = 'Sending…';
+  try {
+    const answer = await seat.transport.pushTest();
+    if (problem) problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+    if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
+      // Gone from the service, and the browser still holds it: let go of here too, or the next tap would get
+      // the same dead subscription back from the browser and the host's 410 for it.
+      const held = await state.push.registration?.pushManager.getSubscription();
+      await held?.unsubscribe();
+      state.push.subscribed = false;
+      renderNotices(state);
+    }
+  } catch {
+    if (problem) problem.textContent = 'Could not reach the host. Try again.';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.

@@ -15,6 +15,7 @@ using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Cli.Table;
@@ -33,6 +34,64 @@ namespace DownfallArena.Cli.Table;
 internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null)
 {
     public DecisionGuideProjection? Guide { get; init; }
+
+    private readonly ChangeWatcher _watcher = new(session, seats, events);
+
+    /// <summary>
+    /// That this table changed, for the pages streaming it (ADR 0119): a question asked, which the seats say
+    /// themselves, an entry landing in the trace, the match over, and what the routes below do to it.
+    /// </summary>
+    public TableChanges Changes => _watcher.Changes;
+
+    /// <summary>How often the stream says it is still there, for an ingress that closes a quiet connection: well under the four minutes a container's gives.</summary>
+    public TimeSpan KeepAlive { get; init; } = TimeSpan.FromSeconds(20);
+
+    /// <summary>The table is let go of: nothing will change again, and whoever streams it is told so.</summary>
+    public void Detach() => _watcher.Detach();
+
+    /// <summary>
+    /// What moves the version on its own, without a route: a seat asked, an entry recorded for this match --
+    /// the recorder is the host's and records every table's, so each watcher keeps to its own match -- and the
+    /// outcome. Unsubscribed with the table, or a host would hold every table it ever played through the
+    /// recorder.
+    /// </summary>
+    private sealed class ChangeWatcher
+    {
+        private readonly MatchTraceRecorder _events;
+        private readonly Action<MatchId> _recorded;
+
+        public ChangeWatcher(TableSession session, IReadOnlyList<TableSeat> seats, MatchTraceRecorder events)
+        {
+            _events = events;
+            var changes = Changes;
+            var matchId = session.MatchId;
+            _recorded = recorded =>
+            {
+                if (recorded == matchId)
+                {
+                    changes.Bump();
+                }
+            };
+            events.EntryRecorded += _recorded;
+            foreach (var seat in seats)
+            {
+                if (seat.Person is { } person)
+                {
+                    person.Asked += (_, _) => changes.Bump();
+                }
+            }
+
+            session.Outcome.ContinueWith(_ => changes.Bump(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
+
+        public TableChanges Changes { get; } = new();
+
+        public void Detach()
+        {
+            _events.EntryRecorded -= _recorded;
+            Changes.Close();
+        }
+    }
 
     /// <summary>The bots the pilot may seat, as the host offers them (<see cref="SeatableAgents" />); the page adds the seat's own person.</summary>
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
@@ -146,10 +205,60 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         return (method, segments) switch
         {
             ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
+            ("GET", [_, "events"]) => Events(),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             ("POST", [_, "concede"]) => await ConcedeAsync(holder),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
+    }
+
+    /// <summary>
+    /// The table's changes as they happen, as server-sent events (ADR 0119): <c>ready</c> with the version as it
+    /// stands, then <c>changed</c> with each new one, and a comment every <see cref="KeepAlive" /> while nothing
+    /// changes. It says what to ask, not what was asked: the seat route still answers one seat at a time. It
+    /// ends when the browser goes, when the table is let go of, or once the match is over and said so.
+    /// </summary>
+    private StudioResponse Events() =>
+        StudioResponse.OfStream(
+            "text/event-stream; charset=utf-8",
+            StreamChangesAsync,
+            [new KeyValuePair<string, string>("Cache-Control", "no-cache"), new KeyValuePair<string, string>("X-Accel-Buffering", "no")]);
+
+    private async Task StreamChangesAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var seen = Changes.Version;
+        await WriteEventAsync(stream, "ready", seen, cancellationToken);
+        while (!Changes.IsClosed)
+        {
+            var changed = Changes.WaitAsync(seen, cancellationToken);
+            if (await Task.WhenAny(changed, Task.Delay(KeepAlive, cancellationToken)) != changed)
+            {
+                await WriteAsync(stream, ": keep-alive\n\n", cancellationToken);
+                continue;
+            }
+
+            var version = await changed;
+            if (version == seen)
+            {
+                break;
+            }
+
+            seen = version;
+            await WriteEventAsync(stream, "changed", seen, cancellationToken);
+            if (session.IsOver)
+            {
+                break;
+            }
+        }
+    }
+
+    private static Task WriteEventAsync(Stream stream, string name, long version, CancellationToken cancellationToken) =>
+        WriteAsync(stream, $"event: {name}\ndata: {version.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
+
+    private static async Task WriteAsync(Stream stream, string text, CancellationToken cancellationToken)
+    {
+        await stream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(text), cancellationToken);
+        await stream.FlushAsync(cancellationToken);
     }
 
     /// <summary>
@@ -281,10 +390,17 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// </summary>
     private void Arrived(TableSeat holder)
     {
+        var arrived = holder.Person is { HasArrived: false };
         holder.Person?.Arrive();
         if (!session.HasBegun && seats.All(seat => seat.Person is null || seat.Person.HasArrived))
         {
             session.Begin();
+        }
+
+        // A person reaching their seat is what the other seat's room shows, and what begins the match.
+        if (arrived)
+        {
+            Changes.Bump();
         }
     }
 
@@ -497,6 +613,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // A table given up while it waited for its players begins now, so the driver reads the end and the
         // session closes; it would otherwise wait for a player who is never coming to a match that is over.
         session.Begin();
+        Changes.Bump();
 
         await NoteConcessionAsync(seat.Slot, round, subPhase);
         return StudioResponse.OfJson(Outcome(new MatchOutcome(Other(seat.Slot), MatchEndReason.Concession)), ArtifactJson.LineOptions);
@@ -617,6 +734,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
 
         await RecordAsync(seat.Slot, round, subPhase, accepted, traced, SetsOff(seat, person, decision, options, round));
+
+        // The other seat sees this decision's effects on its next read; its page is told to read now.
+        Changes.Bump();
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -825,6 +945,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         var held = outcome.Held.Name;
         await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
+        Changes.Bump();
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
     }
 

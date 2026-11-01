@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { httpTransport, replayTransport } from './transport.js';
+import { httpTransport, parseEvents, replayTransport } from './transport.js';
 
 // The stub is the shape studio/backend.test.js uses: a recorded call and a canned answer, no network.
 function stub(answer = { status: 200, body: '{"seat":"player1"}' }) {
@@ -138,8 +138,9 @@ test('the notices calls carry the seat token, and forgetting sends an empty body
   await transport.pushKey();
   await transport.push({ endpoint: 'https://push.example/x', keys: { p256dh: 'a', auth: 'b' } });
   await transport.forgetPush();
+  await transport.pushTest();
 
-  assert.deepEqual(calls.map(call => [call.options.method, call.path]), [['GET', '/api/lobby/push'], ['PUT', '/api/lobby/push'], ['DELETE', '/api/lobby/push']]);
+  assert.deepEqual(calls.map(call => [call.options.method, call.path]), [['GET', '/api/lobby/push'], ['PUT', '/api/lobby/push'], ['DELETE', '/api/lobby/push'], ['POST', '/api/lobby/push/test']]);
   assert.equal(calls[1].options.headers['Content-Type'], 'application/json');
   assert.equal(calls[2].options.body, '{}');
   assert.ok(calls.every(call => call.options.headers['X-Seat-Token'] === 'beef'));
@@ -181,4 +182,33 @@ test('a replay decides nothing, and asks again after a refusal', async () => {
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[0].options.headers, {});
   assert.equal(decided.ok, false);
+});
+
+test('server-sent events are cut at the blank line, comments dropped, and the unfinished one kept for later', () => {
+  const parsed = parseEvents('event: ready\ndata: 3\n\n: keep-alive\n\nevent: changed\ndata: 4\n\nevent: chan');
+
+  assert.deepEqual(parsed.events, [{ event: 'ready', data: '3' }, { event: 'message', data: '' }, { event: 'changed', data: '4' }]);
+  assert.equal(parsed.rest, 'event: chan');
+  assert.deepEqual(parseEvents(''), { events: [], rest: '' });
+});
+
+test('the events call reads the stream under the seat token and tells of each change until the host closes it', async () => {
+  const calls = [];
+  const chunks = ['event: ready\ndata: 1\n\n', ': keep-alive\n\nevent: changed\nda', 'ta: 2\n\n'].map(text => new TextEncoder().encode(text));
+  const body = { getReader: () => ({ read: async () => (chunks.length ? { value: chunks.shift(), done: false } : { value: undefined, done: true }) }) };
+  const transport = httpTransport('player1', 'cafe', async (path, options) => { calls.push({ path, options }); return { status: 200, ok: true, body }; });
+  const heard = [];
+
+  const answer = await transport.events(event => heard.push(event), new AbortController().signal);
+
+  assert.equal(calls[0].path, '/api/seat/player1/events');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'cafe');
+  assert.deepEqual(heard, [{ event: 'ready', data: '1' }, { event: 'changed', data: '2' }]);
+  assert.equal(answer.ok, true);
+});
+
+test('a stream the host refuses is answered as refused, with nothing read', async () => {
+  const transport = httpTransport('player1', 'cafe', async () => ({ status: 403, ok: false, body: null }));
+
+  assert.deepEqual(await transport.events(() => assert.fail('nothing to hear'), new AbortController().signal), { status: 403, ok: false });
 });
