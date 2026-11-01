@@ -132,8 +132,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         ArgumentNullException.ThrowIfNull(table);
         var what = question.Kind switch
         {
-            PlayerOptionsKind.Evolution => "pick your packages",
-            PlayerOptionsKind.Speed => "choose a speed",
+            PlayerOptionsKind.Evolution => "choose your mutations",
+            PlayerOptionsKind.Speed => "choose a tempo",
             PlayerOptionsKind.TieOrder => "order the tie",
             PlayerOptionsKind.Intent => "declare a spell",
             PlayerOptionsKind.Target => "choose your targets",

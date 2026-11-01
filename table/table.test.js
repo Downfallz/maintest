@@ -20,6 +20,7 @@ import * as guidance from './guidance.js';
 import * as waiting from './waiting.js';
 import * as practice from './practice.js';
 import * as slot from './slot.js';
+import * as terms from './terms.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -71,7 +72,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...terms,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -321,7 +322,7 @@ test('a package card names its level, its initiative and every spell it teaches'
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1', 'tier:two:v1'] }] } }; p.draw();
   const text = p.nodes.choices.textContent;
   assert.match(text, /First package/);
-  assert.match(text, /tier 1/);
+  assert.match(text, /Stage 1/);
   assert.match(text, /\+1 initiative/);
   assert.match(text, /First card/);
   assert.match(text, /no initiative/);
@@ -463,7 +464,7 @@ test('speed selection opens the acting spellbook as readable reference without o
   const p = page(); p.view.waitingFor = 'Speed'; p.view.options = { speed: { missing: [1] } }; p.draw();
   const row = p.nodes['own-hand'].children[0].children[0];
   assert.match(row.className, /active/);
-  assert.match(row.textContent, /choose speed/);
+  assert.match(row.textContent, /choose tempo/);
   assert.match(held(p).children[0].className, /speed-spell/);
   assert.equal(held(p).children[0].events.click, undefined);
   assert.equal(p.nodes.planning.scrolledIntoView, true);
@@ -654,10 +655,10 @@ test('the talent reference follows the inspected creature and the class filter i
   const p = page(); talentFixture(p); p.state.inspectClass = 'tier:two:v1'; p.draw();
   const toolbar = p.nodes.mat.children[0];
   const south = p.nodes.mat.children[2];
-  assert.match(south.textContent, /Second package · Tier 2/);
+  assert.match(south.textContent, /Second package · Stage 2/);
   assert.match(south.textContent, /Requires: First package/);
   toolbar.children[2].children[1].events.click();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Mutation acquired/);
   const filter = p.nodes.mat.children[0].children[3];
   filter.value = 'tier:one:v1'; filter.events.change();
   assert.match(p.nodes.mat.children[2].textContent, /First package/);
@@ -673,7 +674,7 @@ test('the talent inspector uses the selected evolution creature and offers only 
   p.state.inspectClass = 'tier:two:v1'; p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Available now/);
   assert.equal(unlocks(p).length, 1);
   p.nodes.choices.children[0].children[1].events.click();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Mutation acquired/);
   assert.doesNotMatch(p.nodes.mat.textContent, /Available now/);
   assert.equal(unlocks(p).length, 0);
 });
@@ -782,7 +783,7 @@ test('on a phone, choosing a package in the atlas brings its spells up with a wa
   const inspector = p.nodes.mat.children[2];
   assert.equal(inspector.scrolledIntoView, true);
   assert.equal(inspector.children[0].className, 'atlas-back reference-link');
-  assert.match(inspector.textContent, /First package · Tier 1/);
+  assert.match(inspector.textContent, /First package · Stage 1/);
   p.state.rendered = null; p.draw();
   assert.equal(p.nodes.mat.children[2].scrolledIntoView, undefined);
 });
@@ -819,7 +820,7 @@ test('the initial talent preview follows the first offered evolution creature ev
   const filter = p.nodes.mat.children[0].children[3]; filter.value = 'tier:one:v1'; filter.events.change();
   assert.match(p.nodes.mat.children[2].textContent, /Available now/);
   p.state.inspectClass = 'tier:two:v1'; p.draw();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Mutation acquired/);
 });
 
 const keyEvent = (key, extra = {}) => ({ key, preventDefault() {}, ...extra });
@@ -881,7 +882,7 @@ test('speed shortcuts submit the named speed and atlas numbers only change the i
 
 test('enemy cards show public speed and the revealed spell while keeping the new round distinct', () => {
   const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Quick' }]; p.draw();
-  assert.match(p.nodes.enemies.textContent, /Speed · Quick/);
+  assert.match(p.nodes.enemies.textContent, /Tempo · Instinct/);
   assert.match(p.nodes.enemies.textContent, /Hidden until reveal/);
   assert.doesNotMatch(p.nodes.enemies.textContent, /First card/);
   p.view.board.revealedActions = [{ actor: 2, spell: 'one', targets: [1] }]; p.draw();
@@ -889,7 +890,7 @@ test('enemy cards show public speed and the revealed spell while keeping the new
   p.view.board.roundNumber = 2; p.view.board.revealedActions = []; p.view.board.timeline = [];
   p.view.roundEvents = [{ round: 2, event: { kind: 'CombatActionResolved', roundId: 1, resolution: { action: { actor: 2, spell: 'one', targets: [1] } } } }]; p.draw();
   assert.match(p.nodes.enemies.textContent, /Round 2 · Hidden until revealLast round \(1\): First card/);
-  assert.doesNotMatch(p.nodes.enemies.textContent, /Speed · Quick/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Tempo · Instinct/);
 });
 
 test('an atlas unlock uses the guarded current asking and rejects a stale inspector control', async () => {
@@ -945,7 +946,7 @@ test('down from the last intent row reaches its explorer without declaring a car
 test('the atlas identifies the inspected creature and the second evolution pick from the new board', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }] } }; p.draw();
-  assert.match(p.nodes.mat.children[0].textContent, /Creature 1 · talentsRound 1 · Evolution/);
+  assert.match(p.nodes.mat.children[0].textContent, /Creature 1 · Mutation TreeRound 1 · Evolution/);
   p.view.board.evolutionChoices = [{ creature: 1, tier: 'tier:one:v1' }];
   p.view.options.evolution.remainingPicks = 1; p.view.waitingAsked++; p.draw();
   assert.match(p.nodes.mat.children[0].textContent, /1 \/ 2 team picks remaining/);
@@ -974,7 +975,7 @@ test('newly acquired packages are summarized together after evolution and shown 
   assert.match(p.nodes.enemies.textContent, /Second package/);
   assert.equal(p.nodes.enemies.children[0].querySelectorAll('[data-focus]').length, 0);
   p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Mutations acquired/);
   assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 1 · yoursFirst package/);
   assert.match(p.nodes['phase-notice-changes'].textContent, /Creature 2 · opponentSecond package/);
   assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
@@ -987,9 +988,9 @@ test('package recap waits through an automatic phase and appears with the next d
   p.view.board.subPhase = 'Evolution'; p.view.waitingFor = 'Evolution'; p.draw();
   p.view.board.allies[0].acquiredTiers = ['tier:one:v1']; p.draw();
   p.view.board.subPhase = 'EnergyGain'; p.view.waitingFor = null; p.draw();
-  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /Mutations acquired/);
   p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Mutations acquired/);
   assert.match(p.nodes['phase-notice-changes'].textContent, /First package/);
 });
 
@@ -1003,11 +1004,11 @@ test("in hotseat, each seat's package recap names purchases made before the devi
   p.state.holder = 'player2'; p.draw();
   p.view.board.enemies[0].acquiredTiers = ['tier:two:v1']; p.draw();
   p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.view.waitingAsked++; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Mutations acquired/);
   assert.equal(p.nodes['phase-notice-changes'].children.length, 2, 'the purchase made before the handover is included');
   p.current.seat = 'player1'; p.view.waitingAsked++; p.draw();
   p.state.holder = 'player1'; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Packages unlocked/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Mutations acquired/);
   assert.equal(p.nodes['phase-notice-changes'].children.length, 2);
 });
 
@@ -1074,7 +1075,7 @@ test("the next round's notice waits until the opponent's actions are read, and i
   assert.equal(p.nodes['combat-step'].hidden, false);
   assert.equal(p.nodes['phase-notice'].hidden, true, 'no round 4 pop-up over a round 3 action');
   assert.match(p.nodes['phase-round'].textContent, /^Round 3 \//);
-  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat · Activation');
   assert.equal(p.nodes.upkeep.hidden, true, 'nor round 4\'s Upkeep panel under a round 3 dock');
   p.nodes['combat-step-controls'].children[0].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
@@ -1148,19 +1149,30 @@ test('a round with conditions but no health ticks shows their actual counters in
 test('the persistent phase guide distinguishes simultaneous speeds from sequential spell revelation', () => {
   const p = page(); p.view.board.subPhase = 'Speed'; p.draw();
   assert.match(p.nodes['phase-round'].textContent, /Round 1 \/ 16/);
-  assert.match(p.nodes['phase-reminder'].textContent, /All speeds reveal together/);
+  assert.match(p.nodes['phase-reminder'].textContent, /All tempos reveal together/);
+  assert.match(p.nodes['phase-reminder'].textContent, /Instinct acts before Precision; only Precision can crit/);
+  assert.equal(p.nodes['phase-current'].textContent, 'Command · Tempo');
   assert.equal(p.nodes['phase-steps'].children[2].attributes['aria-current'], 'step');
   p.view.board.subPhase = 'Activation'; p.draw();
   assert.match(p.nodes['phase-reminder'].textContent, /chooses targets, and it resolves at once/);
   assert.equal(p.nodes['phase-steps'].children[5].attributes['aria-current'], 'step');
   p.view.board.phase = 'StartOfRound'; p.draw();
   assert.equal(p.nodes['phase-steps'].children[0].attributes['aria-current'], 'step');
+  assert.equal(p.nodes['phase-current'].textContent, 'Upkeep');
+});
+
+test('the round flow reads Upkeep, Command, Combat and Aftermath, each step under its phase', () => {
+  const p = page(); p.view.board.subPhase = 'Cleanup'; p.draw();
+  const steps = p.nodes['phase-steps'].children;
+  assert.deepEqual(steps.map(step => step.textContent), ['Upkeep', 'Command: Evolve', 'Tempo', 'Tie order', 'Combat: Spells', 'Activation', 'Aftermath: Cleanup']);
+  assert.deepEqual([...new Set(steps.map(step => step.dataset.phase))], ['Upkeep', 'Command', 'Combat', 'Aftermath']);
+  assert.equal(p.nodes['phase-current'].textContent, 'Aftermath · Cleanup');
 });
 
 test('turn order labels distinguish creature identity, play position and initiative', () => {
   const p = page(); p.view.board.timeline = [{ creature: 2, initiative: 8, speed: 'Quick' }, { creature: 1, initiative: 11, speed: 'Standard' }]; p.draw();
-  assert.equal(p.nodes.timeline.children[0].children[1].children[0].attributes['aria-label'], 'Turn 1, Creature 2, Quick, initiative 8');
-  assert.equal(p.nodes.timeline.children[1].children[1].children[0].attributes['aria-label'], 'Turn 2, Creature 1, Standard, initiative 11');
+  assert.equal(p.nodes.timeline.children[0].children[1].children[0].attributes['aria-label'], 'Turn 1, Creature 2, Instinct, initiative 8');
+  assert.equal(p.nodes.timeline.children[1].children[1].children[0].attributes['aria-label'], 'Turn 2, Creature 1, Precision, initiative 11');
   assert.match(p.nodes.allies.textContent, /Creature 1/);
   assert.doesNotMatch(p.nodes.allies.textContent, /First/);
 });
@@ -1185,7 +1197,7 @@ test('the acting creature appears first in the planning spellbook with its conte
   p.view.waitingFor = 'Speed'; p.view.waitingCreature = 3; p.view.options = { speed: {} }; p.draw();
   assert.match(p.nodes['own-hand'].children[0].children[0].textContent, /Creature 3/);
   assert.match(p.nodes['decision-context'].textContent, /12\/20 HP · 5 energy/);
-  assert.equal(p.nodes.asking.textContent, 'Creature 3 · choose speed');
+  assert.equal(p.nodes.asking.textContent, 'Creature 3 · choose tempo');
 });
 
 test('arrows switch the evolution creature and move into its offered spells without submitting', () => {
@@ -1290,7 +1302,7 @@ test('spell stats label cast cost and crit without reviving retired spell initia
   const parts = p.context.cardParts(p.state, 'one');
   assert.match(parts[0].textContent, /ϟ 0Energy/);
   assert.doesNotMatch(parts[2].textContent, /Initiative|On unlock/);
-  assert.match(parts[2].textContent, /Crit chance35%Standard only · d20 14\+/);
+  assert.match(parts[2].textContent, /Crit chance35%Precision only · d20 14\+/);
   p.state.cards.set('one', { name: 'Unknown stats' });
   const missing = p.context.cardParts(p.state, 'one');
   assert.equal(missing[0].children.length, 1);
@@ -1304,8 +1316,8 @@ test('targeting names the actual host cursor separately from creature identity i
   p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.draw();
   assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
-  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 3 of 6 · Standard');
-  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 3 of 6 · Precision');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat · Activation');
   assert.equal(p.nodes['phase-turn'].textContent, 'Turn 3 of 6 · Creature 1');
   p.view.board.activationCursor = 6; p.draw();
   assert.equal(p.nodes['decision-turn'].hidden, true);
@@ -1337,7 +1349,7 @@ test('announcement history is bounded, separate per seat, and replays without ch
   p.nodes['announcement-list'].children[2].children[0].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement/);
   assert.match(p.nodes['phase-notice-title'].textContent, /Spells/);
-  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat · Activation');
   assert.equal(p.state.chosen, 'one');
   assert.equal(p.state.noticePinned, true);
   assert.equal(p.timers.has(p.state.phaseTimer), false);
@@ -1487,7 +1499,7 @@ test('a match replay reads a round upkeep and the packages it revealed before it
   assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · upkeep');
   assert.match(p.nodes['playback-action'].textContent, /Creature 1 · yoursOngoing damage −2 HP/);
   p.nodes['playback-controls'].children[1].click();
-  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · packages bought');
+  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · mutations acquired');
   assert.match(p.nodes['playback-action'].textContent, /Creature 2 · opponentFirst package/);
   p.nodes['playback-controls'].children[1].click();
   assert.match(p.nodes['playback-action'].textContent, /First card/);
@@ -1690,7 +1702,7 @@ test('tie order shows rolls, supports arrow focus and number choices, then submi
   p.view.options = { tieOrder: { ties: [[1, 3]] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
   assert.match(p.nodes.timeline.textContent, /d20 12 → 19/);
-  assert.equal(p.nodes['phase-current'].textContent, 'Tie order');
+  assert.equal(p.nodes['phase-current'].textContent, 'Command · Tie order');
   assert.equal(p.nodes['decision-phase'].textContent, 'Order tied creatures');
   p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
   assert.equal(p.document.activeElement.dataset.focus, 'tie-1');
@@ -1826,9 +1838,9 @@ test('revealed speeds open the turn order once a round, opponent first, even wit
   p.draw();
   assert.equal(p.nodes.order.hidden, false);
   assert.equal(p.nodes.order.open, true);
-  assert.equal(p.nodes['order-theirs'].textContent, 'Opponent: Creature 2 Quick');
-  assert.equal(p.nodes['order-mine'].textContent, 'You: Creature 1 Standard');
-  assert.equal(p.nodes['order-list'].children[0].textContent, '1Creature 2opponent · Quick · initiative 9');
+  assert.equal(p.nodes['order-theirs'].textContent, 'Opponent: Creature 2 Instinct');
+  assert.equal(p.nodes['order-mine'].textContent, 'You: Creature 1 Precision');
+  assert.equal(p.nodes['order-list'].children[0].textContent, '1Creature 2opponent · Instinct · initiative 9');
   p.nodes.order.open = false; p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes.order.open, false);
   p.view.board.roundNumber = 2; p.draw();
@@ -1841,7 +1853,7 @@ test('revealed speeds open the turn order once a round, opponent first, even wit
 
 test('choosing a spell shows where its creature acts, in the heading and on its spellbook row', () => {
   const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Quick' }, { creature: 1, speed: 'Standard' }]; p.draw();
-  assert.equal(p.nodes['decision-turn'].textContent, 'Acts 2 of 2 · Standard');
+  assert.equal(p.nodes['decision-turn'].textContent, 'Acts 2 of 2 · Precision');
   assert.equal(p.nodes['decision-turn'].hidden, false);
   assert.match(p.nodes['own-hand'].textContent, /Creature 1 · acts 2 of 2 · choose a card/);
 });
@@ -1893,7 +1905,7 @@ test("an opponent action being read heads the sheet with its own turn, and names
   assert.equal(p.nodes['phase-turn'].textContent, 'Turn 3 of 6 · Creature 2');
   stepOk(p);
   assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
-  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 6 of 6 · Standard');
+  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 6 of 6 · Precision');
 });
 
 test("a round's last opponent action read in the next round keeps the round bar on its own round's combat", () => {
@@ -1902,7 +1914,7 @@ test("a round's last opponent action read in the next round keeps the round bar 
   p.view.roundEvents = [opponentAction(30, 4)]; p.draw();
   assert.equal(p.nodes['combat-step'].hidden, false);
   assert.match(p.nodes['phase-round'].textContent, /^Round 1 \//);
-  assert.equal(p.nodes['phase-current'].textContent, 'Combat');
+  assert.equal(p.nodes['phase-current'].textContent, 'Combat · Activation');
   assert.equal(p.nodes['phase-turn'].textContent, '', 'the live timeline is the next round\'s, not this action\'s');
   p.view.over = true; p.draw();
   assert.equal(p.nodes['phase-current'].textContent, 'Match complete');
@@ -1937,7 +1949,7 @@ for (const seats of [[{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM' }
 
     p.view.waiting = null; p.view.waitingFor = 'Evolution'; p.draw();
     assert.equal(p.nodes['phase-notice'].hidden, false);
-    assert.match(p.nodes['phase-notice-title'].textContent, /Round 1 · Upkeep complete → Evolve/);
+    assert.match(p.nodes['phase-notice-title'].textContent, /Round 1 · Upkeep complete → Command · Evolve/);
     assert.equal(p.nodes.upkeep.hidden, false);
     assert.equal(p.state.announcements.get('player1').length, 1);
     p.draw();
@@ -1973,7 +1985,7 @@ function capstoneFixture(p) {
 test('a capstone lane says any one of its packages opens it and shows its passive instead of spells', () => {
   const p = page(); talentFixture(p); capstoneFixture(p); p.state.inspectClass = 'tier:cap:v1'; p.draw();
   const lane = p.nodes.mat.children[2];
-  assert.match(lane.textContent, /Capstone · Tier 3/);
+  assert.match(lane.textContent, /Capstone · Stage 3/);
   assert.match(lane.textContent, /Requires one of: Second package \/ First package/);
   assert.match(lane.textContent, /Held while owned · Immune to stun/);
   const section = lane.children[1];
@@ -1981,7 +1993,7 @@ test('a capstone lane says any one of its packages opens it and shows its passiv
   assert.equal(section.children.some(child => child.className === 'talent-tier'), false);
   p.state.inspectClass = 'tier:two:v1'; p.draw();
   assert.equal(p.nodes.mat.children[2].children[1].children.some(child => child.className === 'talent-tier'), true);
-  assert.match(p.nodes.mat.children[0].textContent, /Tier 4/);
+  assert.match(p.nodes.mat.children[0].textContent, /Stage 4/);
 });
 
 test('a capstone offer card prints its passive and its any-of requirement', () => {

@@ -7,8 +7,10 @@
 // caps and overkill all move the number a critical produced. So a resolution is formatted, and everything else
 // is named.
 
+import { stepLabel } from './terms.js';
+
 export function feedLine(entry, cards) {
-  const head = `${entry?.round ?? '—'} · ${entry?.subPhase ?? ''} · ${entry?.event?.kind ?? ''}`;
+  const head = `${entry?.round ?? '—'} · ${stepLabel(entry?.subPhase)} · ${entry?.event?.kind ?? ''}`;
   const detail = entry?.event?.kind === 'CombatActionResolved' ? resolutionText(entry.event, cards) : '';
   return detail === '' ? head : `${head} — ${detail}`;
 }

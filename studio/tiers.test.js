@@ -12,10 +12,10 @@ const CATALOGUE = [OPENER, ADVANCED];
 
 test('a package that teaches nothing is refused, because a pick would buy nothing', () => {
   assert.deepEqual(tierWarnings({ id: 'tier:empty:v1', level: 1, spells: [] }, CATALOGUE), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings({ id: 'tier:blank:v1', level: 1, spells: ['', null] }, CATALOGUE), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings(OPENER.document, CATALOGUE), []);
 });
@@ -26,7 +26,7 @@ test('a shared package that teaches a spell is refused, and one that only gives 
 
   assert.deepEqual(tierWarnings(shared, CATALOGUE), []);
   assert.deepEqual(tierWarnings({ ...shared, spells: ['spell:guard:v1'] }, CATALOGUE), [
-    'A shared package gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.',
+    'A shared mutation gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.',
   ]);
 });
 
@@ -36,7 +36,7 @@ test('a package above level one has to follow the level below it', () => {
   const jumped = { id: 'tier:jumped:v1', level: 3, prerequisites: ['tier:brute:v1'], spells: ['spell:slam:v1'] };
 
   assert.deepEqual(tierWarnings(jumped, CATALOGUE), [
-    'A package at level 3 needs a prerequisite at level 2: a family is climbed one level at a time.',
+    'A mutation at stage 3 needs a prerequisite at stage 2: a family is climbed one stage at a time.',
   ]);
   assert.deepEqual(tierWarnings(ADVANCED.document, CATALOGUE), []);
 });
@@ -45,15 +45,15 @@ test('a prerequisite level with or below what it opens cannot be reached first',
   const sideways = { id: 'tier:sideways:v1', level: 2, prerequisites: ['tier:marauder:v1'], spells: ['spell:slam:v1'] };
 
   assert.deepEqual(tierWarnings(sideways, CATALOGUE), [
-    'A package at level 2 needs a prerequisite at level 1: a family is climbed one level at a time.',
-    'A prerequisite has to sit above what it opens, so its level has to be lower than this one.',
+    'A mutation at stage 2 needs a prerequisite at stage 1: a family is climbed one stage at a time.',
+    'A prerequisite has to sit above what it opens, so its stage has to be lower than this one.',
   ]);
 });
 
 test('a package cannot require itself', () => {
   const loop = { id: 'tier:brute:v1', level: 1, prerequisites: ['tier:brute:v1'], spells: ['spell:guard:v1'] };
 
-  assert.ok(tierWarnings(loop, CATALOGUE).includes('A package cannot require itself.'));
+  assert.ok(tierWarnings(loop, CATALOGUE).includes('A mutation cannot require itself.'));
 });
 
 // A prerequisite half-typed is not a level, and the level rule is answered only once every one of them
@@ -66,10 +66,10 @@ test('a prerequisite the catalogue does not carry is left to the builder rather 
 
 test('a draft with nothing in it warns about the spells rather than throwing', () => {
   assert.deepEqual(tierWarnings({}, []), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
   assert.deepEqual(tierWarnings(undefined, undefined), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
 });
 
@@ -99,7 +99,7 @@ test('a package that requires the alias pointing at itself still requires itself
   const v2 = { id: 'tier:brute:v2', level: 1, prerequisites: ['tier:brute'], spells: ['spell:guard:v1'] };
   const resolve = reference => (reference === 'tier:brute' ? 'tier:brute:v2' : reference);
 
-  assert.ok(tierWarnings(v2, [tier('tier:brute:v2', 1)], resolve).includes('A package cannot require itself.'));
+  assert.ok(tierWarnings(v2, [tier('tier:brute:v2', 1)], resolve).includes('A mutation cannot require itself.'));
 });
 
 // The link that decides whether a spell is reachable at all: a pick buys a package, so a spell no package
@@ -141,7 +141,7 @@ test('a package whose list fields are not lists is read as empty rather than thr
   assert.deepEqual(tiersBehind('tier:brute:v1', catalogue), []);
   assert.deepEqual(startersOverlapping(broken.document, [{ document: { startingSpellIds: 'spell:guard:v1' } }]), []);
   assert.deepEqual(tierWarnings(broken.document, catalogue), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
 });
 
@@ -152,7 +152,7 @@ test('a level-one package with any prerequisite is warned about, because nothing
   const rooted = { id: 'tier:rooted:v1', level: 1, prerequisites: ['tier:brute:v1'], spells: ['spell:slam:v1'] };
 
   assert.deepEqual(tierWarnings(rooted, CATALOGUE), [
-    'A prerequisite has to sit above what it opens, so its level has to be lower than this one.',
+    'A prerequisite has to sit above what it opens, so its stage has to be lower than this one.',
   ]);
 });
 
@@ -163,7 +163,7 @@ test('a package that teaches nothing but gives a passive is accepted', () => {
 
   assert.deepEqual(tierWarnings(capstone, CATALOGUE), []);
   assert.deepEqual(tierWarnings({ ...capstone, passive: { stunImmunity: false, damageBonus: 0 } }, CATALOGUE), [
-    'A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
+    'A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.',
   ]);
 });
 
@@ -171,7 +171,7 @@ test('a passive that takes something away is refused, as Passive.Of refuses it',
   const curse = { id: 'tier:curse:v1', level: 1, spells: ['spell:guard:v1'], passive: { damageBonus: -1 } };
 
   assert.deepEqual(tierWarnings(curse, CATALOGUE), [
-    "A passive's damageBonus cannot be negative: a package that took it away would be a curse, not a purchase.",
+    "A passive's damageBonus cannot be negative: a mutation that took it away would be a curse, not a purchase.",
   ]);
 });
 
@@ -206,16 +206,16 @@ test('every package of an any-of list has to sit exactly a level below', () => {
   const skipped = { id: 'tier:titan:v1', level: 4, anyOf: ['tier:ravager:v1', 'tier:berserker:v1'], spells: [], passive: { stunImmunity: true } };
 
   assert.deepEqual(tierWarnings(skipped, FAMILY), [
-    'tier:berserker:v1 at level 2 can open this level-4 package: every package of an any-of list is a step a creature climbs through, so each sits at level 3.',
+    'tier:berserker:v1 at stage 2 can open this stage-4 mutation: every mutation of an any-of list is a step a creature climbs through, so each sits at stage 3.',
   ]);
 });
 
 test('an any-of list with nothing a level below fails the climb, and one naming the package itself is refused', () => {
   const low = { id: 'tier:low:v1', level: 4, anyOf: ['tier:marauder:v1'], spells: ['spell:slam:v1'] };
-  assert.ok(tierWarnings(low, FAMILY).includes('A package at level 4 needs a prerequisite at level 3: a family is climbed one level at a time.'));
+  assert.ok(tierWarnings(low, FAMILY).includes('A mutation at stage 4 needs a prerequisite at stage 3: a family is climbed one stage at a time.'));
 
   const loop = { id: 'tier:loop:v1', level: 2, anyOf: ['tier:loop:v1', 'tier:brute:v1'], spells: ['spell:slam:v1'] };
-  assert.ok(tierWarnings(loop, FAMILY).includes('A package cannot be opened by itself.'));
+  assert.ok(tierWarnings(loop, FAMILY).includes('A mutation cannot be opened by itself.'));
 });
 
 test('a package named only in an any-of list still has the capstone behind it', () => {

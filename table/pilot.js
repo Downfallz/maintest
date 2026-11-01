@@ -5,6 +5,8 @@
 // door, on their own screen. The host's answer carries no board and no hand at all, and this page draws only
 // what that answer holds.
 
+import { decisionLabel, stepLabel } from './terms.js';
+
 const POLL_MS = 900;
 
 // What a pilot may seat: `person` is the seat's own player, which only a seat that has one can be handed back
@@ -64,7 +66,7 @@ function asking(seat) {
   if (!seat.waitingFor) return null;
 
   const creature = seat.waitingCreature ? ` · creature ${seat.waitingCreature}` : '';
-  return `${seat.waitingFor}${creature}`;
+  return `${decisionLabel(seat.waitingFor)}${creature}`;
 }
 
 // The one line the page says about the match, and the reason a swap may be refused before it is sent.
@@ -74,7 +76,7 @@ export function whereItIs(view) {
   if (view.begun === false) return 'Waiting for the players to reach their seats.';
   if (!view.round) return 'Waiting for the first round.';
 
-  const sub = view.subPhase ? ` · ${view.subPhase}` : '';
+  const sub = view.subPhase ? ` · ${stepLabel(view.subPhase)}` : '';
   return `Round ${view.round}${sub}`;
 }
 

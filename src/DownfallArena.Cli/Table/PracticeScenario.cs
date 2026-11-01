@@ -31,7 +31,7 @@ internal sealed record PracticeScenario(
     public static IReadOnlyList<PracticeScenario> All { get; } =
     [
         new("targeting", "Choose your target", "Hidden intents. Compare Shock on each enemy. Select a target, read the preview, then confirm: it resolves at once.", 1, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
-        new("multiclass", "Build a multiclass creature", "Hidden intents. Round 3: your first creature already owns Brute. Compare another level-1 package with its level-2 upgrades in the talent atlas.", 3, PlayerOptionsKind.Evolution, CombatDeclaration.HiddenIntent),
+        new("multiclass", "Build a multiclass creature", "Hidden intents. Round 3: your first creature already owns Brute. Compare another Stage 1 mutation with its Stage 2 upgrades in the Mutation Tree.", 3, PlayerOptionsKind.Evolution, CombatDeclaration.HiddenIntent),
         new("stun", "Interrupt an action", "Hidden intents. Cast Paralyzing Barb before the enemy acts. Watch its action fizzle when its turn comes, then inspect stun and the immunity left after it expires.", 5, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
         new("resolution", "Read a layered resolution", "Hidden intents. Choose the targets of Void Pulse. It resolves at once; replay the round from its recap to step through damage, bleed and caster effects.", 5, PlayerOptionsKind.Target, CombatDeclaration.HiddenIntent),
         new("slot-armor", "At the slot: answer an armor", "Spells chosen at the slot. The enemy Ironhide casts Carapace before your creature acts. Choose your spell and its target knowing it: strike through the armor, or turn to another enemy.", 3, PlayerOptionsKind.Action, CombatDeclaration.AtActivation),

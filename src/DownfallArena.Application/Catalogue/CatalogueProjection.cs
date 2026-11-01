@@ -144,7 +144,7 @@ public static class CatalogueProjection
             band?.TreeName,
             Cues(spell),
             spell.Stats.CriticalChance.Value > 0
-                ? "Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets."
+                ? "Instinct cannot crit. At Precision, crits multiply only direct damage and healing on targets."
                 : null);
 
     private static List<CardCue> Cues(Spell spell)
@@ -155,7 +155,7 @@ public static class CatalogueProjection
             .ToList();
         if (spell.Stats.CriticalChance.Value > 0)
         {
-            cues.Add(new CardCue("critical", "Crit · Standard only"));
+            cues.Add(new CardCue("critical", "Crit · Precision only"));
         }
 
         return cues;

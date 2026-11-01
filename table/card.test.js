@@ -107,7 +107,7 @@ test('visual stat groups omit zero and preserve non-d20 chances without inventin
   const stats = cardStats({ initiative: 0, critical: '33%' });
   assert.equal(stats.length, 1);
   assert.equal(stats[0].value, '33%');
-  assert.equal(stats[0].hint, 'Standard only');
+  assert.equal(stats[0].hint, 'Precision only');
   assert.deepEqual(cardStats({ critical: '0%' }), []);
   assert.deepEqual(cardStats({ critical: '0.0%' }), []);
   assert.equal(cardDetails({ requires: 'retired spell gate' }).length, 0);

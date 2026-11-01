@@ -38,8 +38,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('real packages drive the mobile guide and its linked spell details', async ({ page }, info) => {
-  await expect(page.locator('.hero-stats')).toContainText('24packages');
-  await expect(page.locator('.hero-stats')).toContainText('4tiers');
+  await expect(page.locator('.hero-stats')).toContainText('24mutations');
+  await expect(page.locator('.hero-stats')).toContainText('4stages');
   await expect(page.locator('.family-pick')).toHaveCount(3);
   if (page.viewportSize().width < 900) {
     const bar = await page.locator('#toolbar').boundingBox();
@@ -85,13 +85,13 @@ test('browsing spells shows the tier and package each one is learned from, and f
   await page.locator('#spells-view').click();
   const search = page.getByRole('searchbox', { name: 'Search spells', exact: true });
   await search.fill('pummel');
-  await expect(page.locator('.spell-tile .spell-origin')).toHaveText(/Tier \d · \w+|Starting kit/);
+  await expect(page.locator('.spell-tile .spell-origin')).toHaveText(/Stage \d · \w+|Starting kit/);
   await search.fill('');
-  const tiers = page.getByRole('group', { name: 'Tier' }).or(page.locator('[aria-label="Tier"]'));
-  await tiers.getByRole('button', { name: 'Tier 2', exact: true }).click();
+  const tiers = page.getByRole('group', { name: 'Stage' }).or(page.locator('[aria-label="Stage"]'));
+  await tiers.getByRole('button', { name: 'Stage 2', exact: true }).click();
   const origins = await page.locator('.spell-tile .spell-origin').allTextContents();
   expect(origins.length).toBeGreaterThan(0);
-  for (const text of origins) expect(text).toContain('Tier 2 · ');
+  for (const text of origins) expect(text).toContain('Stage 2 · ');
   const controls = await page.locator('.library-controls').boundingBox();
   if (page.viewportSize().width < 600) expect(controls.height).toBeLessThan(200);
   await page.locator('.spell-tile').first().scrollIntoViewIfNeeded();
@@ -116,7 +116,7 @@ test('a spell card shows its critical bonus, collapsed in both libraries, and a 
 test('a spell shows its value a round next to its tier, and the reader says what the estimate leaves out', async ({ page }, info) => {
   await page.locator('#spells-view').click();
   await page.getByRole('searchbox', { name: 'Search spells', exact: true }).fill('protective slam');
-  await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 6\.3 a round · Tier 2 attacks \d+\.\d–\d+\.\d$/);
+  await expect(page.locator('.spell-tile .spell-value')).toHaveText(/^Value 6\.3 a round · Stage 2 attacks \d+\.\d–\d+\.\d$/);
   await page.locator('.spell-tile').click();
   const reading = page.locator('.value-reading');
   await expect(reading.locator('summary')).toHaveText('Value 6.3 a round · 9.5 a cast');
@@ -151,7 +151,7 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await page.locator('#nav-close').click();
   await expect(page.locator('.reader-heading h2')).toHaveText('Brute');
   await page.getByRole('button', { name: 'Edit content' }).click();
-  await expect(page.getByLabel('Level', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Stage (level)', { exact: true })).toBeVisible();
   await page.locator('#tools-panel').click();
   await expect(page.locator('#tools')).toBeVisible();
   await expect(page.locator('#scrim')).toBeVisible();
@@ -171,7 +171,7 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await page.locator('#tools-panel').click();
   await page.locator('#balance-panel').click();
   const sheet = page.locator('#balance');
-  await expect(sheet).toContainText('enabled packages have an entry');
+  await expect(sheet).toContainText('enabled mutations have an entry');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages + knobbedSpells);
   await sheet.getByRole('combobox', { name: 'Filter balance knobs' }).selectOption('packages');
   await expect(sheet.locator('.balance-item')).toHaveCount(knobbedPackages);
@@ -187,7 +187,7 @@ test('balance shows package initiative and spell knobs before editing, with a pa
   await predator.getByRole('button', { name: 'Open content' }).click();
   await expect(page.locator('#detail .balance-value')).toContainText('Initiative +');
   await page.getByRole('button', { name: 'Edit content' }).click();
-  await expect(page.locator('#balance-strip')).toContainText('What this package is for');
+  await expect(page.locator('#balance-strip')).toContainText('What this mutation is for');
   await expect(page.locator('#balance-strip .knob .pointer')).toHaveText('/initiativeBonus');
   await page.getByLabel('Initiative bonus', { exact: true }).fill('99');
   await expect(page.locator('#balance-strip .knob .value')).toHaveText('99');
@@ -254,7 +254,7 @@ test('GitHub Pages subpath reads deployed data without a token', async ({ page }
   });
   await page.goto('https://downfallz.github.io/maintest/');
   await expect(page.locator('.family-pick')).toHaveCount(3);
-  await expect(page.locator('.hero-stats')).toContainText('24packages');
+  await expect(page.locator('.hero-stats')).toContainText('24mutations');
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(44);
   await expect(page.locator('.strategy-spell .spell-value').first()).toContainText('a round');
@@ -294,12 +294,12 @@ test('energy overview exposes gaps without a wide table and retains filters afte
 
 test('package comparison combines distinct spells and separates caster effects', async ({ page }, info) => {
   await page.getByRole('button', { name: 'Compare energy & effects →' }).click();
-  await page.getByText('Compare packages', { exact: true }).click();
+  await page.getByText('Compare mutations', { exact: true }).click();
   await page.getByLabel('Spell scope', { exact: true }).selectOption('packages');
   await expect(page.locator('.strategy-spell')).toHaveCount(0);
-  await page.getByLabel('Add a package', { exact: true }).selectOption('tier:brute:v1');
+  await page.getByLabel('Add a mutation', { exact: true }).selectOption('tier:brute:v1');
   await expect(page.locator('.strategy-spell')).toHaveCount(2);
-  await page.getByLabel('Add a package', { exact: true }).selectOption('tier:occultist:v1');
+  await page.getByLabel('Add a mutation', { exact: true }).selectOption('tier:occultist:v1');
   await expect(page.locator('.strategy-spell')).toHaveCount(4);
   await page.getByLabel('Include starting kit').check();
   await expect(page.locator('.strategy-spell')).toHaveCount(6);
@@ -307,7 +307,7 @@ test('package comparison combines distinct spells and separates caster effects',
   await page.getByRole('button', { name: 'Remove Brute', exact: true }).click();
   await expect(page.locator('.strategy-spell')).toHaveCount(4);
   await page.getByLabel('Spell scope', { exact: true }).selectOption('all');
-  await page.getByText('Compare packages', { exact: true }).click();
+  await page.getByText('Compare mutations', { exact: true }).click();
   await page.getByRole('button', { name: '0 energy', exact: true }).click();
   await page.getByRole('button', { name: 'On caster', exact: true }).click();
   await page.locator('.strategy-effect').filter({ hasText: 'Energy' }).click();

@@ -24,7 +24,7 @@ const TABS = {
   talentTrees: { kind: 'TalentTree', label: 'talent tree', folder: 'TalentTrees' },
   // Authored here, not derived from the tree: a pick buys a package, and the file the engine loads is the file
   // edited (ADR 0056, ADR 0057). The key is what the catalogue calls the list, which is what documentsOf reads.
-  tiers: { kind: 'Tier', label: 'package', folder: 'Tiers' },
+  tiers: { kind: 'Tier', label: 'mutation', folder: 'Tiers' },
 };
 
 const SPELL_TYPES = ['Offensive', 'Defensive', 'Passive'];
@@ -96,7 +96,7 @@ const TEMPLATES = {
   // anything is filled in. `anyOf` and `passive` are a capstone's, and are added from the sheet when wanted.
   tiers: () => ({
     id: 'tier:new_package:v1',
-    name: 'New package',
+    name: 'New mutation',
     level: 1,
     prerequisites: [],
     spells: [],
@@ -399,7 +399,7 @@ function glance(item) {
     const figure = !taught && gives.length ? gives.join(' · ') : `${taught} ${taught === 1 ? 'spell' : 'spells'}`;
     return [
       element('span', { className: 'figure', textContent: figure }),
-      element('span', { className: 'meta', textContent: [`level ${doc.level ?? '?'}`, bonus, ...(behind.length ? behind : ['opener'])].filter(Boolean).join(' · ') }),
+      element('span', { className: 'meta', textContent: [`stage ${doc.level ?? '?'}`, bonus, ...(behind.length ? behind : ['opener'])].filter(Boolean).join(' · ') }),
     ];
   }
 
@@ -942,7 +942,7 @@ function creatureEditor() {
     ['Defense', numberBox(draft, 'baseDefense', { min: 0 })],
     ['Initiative', element('div', { className: 'inline' }, [
       numberBox(draft, 'baseInitiative', { min: 0 }),
-      element('span', { className: 'muted', textContent: 'at spawn; buying a package adds its initiative bonus once' }),
+      element('span', { className: 'muted', textContent: 'at spawn; acquiring a mutation adds its initiative bonus once' }),
     ])],
     ['Critical chance', element('div', { className: 'inline' }, [
       numberBox(draft, 'baseCriticalChance', { step: 0.01, min: 0 }),
@@ -1000,11 +1000,11 @@ function tierList(target, key, { add = 'Add prerequisite' } = {}) {
 function tierEditor() {
   const draft = state.draft;
   const card = element('div', { className: 'card' }, [
-    element('h3', { textContent: 'Package' }),
+    element('h3', { textContent: 'Mutation' }),
     fields([
       ['Id', textBox(draft, 'id', { dirty: () => { markDirty(); refreshTierWarnings(); } })],
       ['Name', textBox(draft, 'name')],
-      ['Level', numberBox(draft, 'level', { min: 1, onChange: refreshTierWarnings })],
+      ['Stage (level)', numberBox(draft, 'level', { min: 1, onChange: refreshTierWarnings })],
       ['Initiative bonus', numberBox(draft, 'initiativeBonus', { min: 0 })],
     ]),
     element('p', { className: 'muted', textContent: 'Bought whole: every spell at once, the bonus once, one pick spent. The bonus is raised on the buyer for the rest of the match.' }),
@@ -1020,8 +1020,8 @@ function tierEditor() {
     element('p', { className: 'muted', textContent: 'The only eligibility rule. The talent tree gates nothing a pick buys, so multiclassing is free.' }),
     tierList(draft, 'prerequisites'),
     element('h3', { textContent: 'Or opened by any one of' }),
-    element('p', { className: 'muted', textContent: 'A capstone\'s way in (ADR 0101): owning one of these is enough, beside every package above. Each sits exactly a level below.' }),
-    tierList(draft, 'anyOf', { add: 'Add any-of package' }),
+    element('p', { className: 'muted', textContent: 'A capstone\'s way in (ADR 0101): owning one of these is enough, beside every mutation above. Each sits exactly one stage below.' }),
+    tierList(draft, 'anyOf', { add: 'Add any-of mutation' }),
   ]);
 
   return element('div', {}, [card, balanceStrip(), spells, passiveCard(draft), prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
@@ -1036,7 +1036,7 @@ function passiveCard(draft) {
   const holder = { stunImmunity: false, upkeepEnergy: 0, damageBonus: 0, sunder: 0, ...(draft.passive && typeof draft.passive === 'object' ? draft.passive : {}) };
   const reading = element('p', { className: 'muted' });
   const read = () => {
-    reading.textContent = passiveLines(draft.passive).join(' · ') || 'No passive: the package is bought for its spells and its initiative bonus.';
+    reading.textContent = passiveLines(draft.passive).join(' · ') || 'No passive: the mutation is acquired for its spells and its initiative bonus.';
   };
   // Only on an edit: opening a sheet must not rewrite a document nobody has touched.
   const sync = () => {
@@ -1298,7 +1298,7 @@ function usedByTier(item) {
   const card = element('div', { className: 'card' }, [element('h3', { textContent: 'Used by' })]);
   const references = [...opens, ...starters];
   if (!references.length) {
-    card.append(element('p', { className: 'muted', textContent: 'Nothing is bought behind this package yet.' }));
+    card.append(element('p', { className: 'muted', textContent: 'Nothing is bought behind this mutation yet.' }));
     return card;
   }
 
@@ -1504,7 +1504,7 @@ function fillBalanceStrip(holder) {
   // is a band with four controls under it -- neither is half a row wide, even on a desk.
   body.push(
     fields([
-      [`What this ${state.tab === 'tiers' ? 'package' : 'spell'} is for`, textArea(state.entry, 'intent', {
+      [`What this ${state.tab === 'tiers' ? 'mutation' : 'spell'} is for`, textArea(state.entry, 'intent', {
         placeholder: 'The decision this content exists to pose. A tuning pass may move every number below; it may not move this.',
         dirty: dirtyEntry,
       })],
@@ -1592,7 +1592,7 @@ function knobList(dirty) {
         // it is removed, and the picker cannot be used to fix it: with nothing selected the browser shows the
         // first option, so choosing what is already on screen fires no change at all.
         free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, scope)); dirty(); redraw(); }) : null,
-        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Every number this package may tune already has a knob.' : 'Every number this spell has already has a knob.' }),
+        free ? null : element('span', { className: 'muted', textContent: state.tab === 'tiers' ? 'Every number this mutation may tune already has a knob.' : 'Every number this spell has already has a knob.' }),
       ]),
     );
   };
@@ -1784,7 +1784,7 @@ function renderBalance() {
 /** Compact current values first; intent and all findings are one tap away. */
 function balanceCard(row, showKind = true) {
   const { summary } = row;
-  const kind = row.id?.startsWith('tier:') ? 'Package' : 'Spell';
+  const kind = row.id?.startsWith('tier:') ? 'Mutation' : 'Spell';
   // Off content, and a version no alias reaches, are out of the build, so an entry they lack is nothing to
   // check: check-knobs reads the alias map, not the folder, and ignores both.
   const off = row.enabled === false || !row.alias;
@@ -1871,14 +1871,14 @@ function balanceOverview(balance) {
   const count = all.filter(row => !row.summary || row.summary.tone === 'bad').length;
   const block = element('section', { className: 'balance-overview' }, [
     element('h3', { className: 'section', textContent: 'Current tuning values' }),
-    element('p', { className: 'hint', textContent: `${packages} packages · ${spells} spells · ${count} to check. Values come from the content; bands show what a tuning pass may change.` }),
+    element('p', { className: 'hint', textContent: `${packages} mutations · ${spells} spells · ${count} to check. Values come from the content; bands show what a tuning pass may change.` }),
   ]);
   const controls = element('div', { className: 'balance-filters' });
-  const search = element('input', { type: 'search', placeholder: 'Find a package, spell or knob…', ariaLabel: 'Find a balance knob' });
+  const search = element('input', { type: 'search', placeholder: 'Find a mutation, spell or knob…', ariaLabel: 'Find a balance knob' });
   const filter = element('select', { ariaLabel: 'Filter balance knobs' }, [
     element('option', { value: 'all', textContent: 'All content' }),
     element('option', { value: 'issues', textContent: `To check (${count})` }),
-    element('option', { value: 'packages', textContent: 'Packages' }),
+    element('option', { value: 'packages', textContent: 'Mutations' }),
     element('option', { value: 'spells', textContent: 'Spells' }),
   ]);
   controls.append(search, filter);
@@ -1945,7 +1945,7 @@ function balanceCoverage(balance) {
   const block = element('div', {}, [
     element('div', { className: 'audit-line' }, [
       element('span', { textContent: `${rolled.covered} of ${rolled.enabled} enabled spells have an entry` }),
-      element('span', { textContent: `${packages.covered} of ${packages.enabled} enabled packages have an entry` }),
+      element('span', { textContent: `${packages.covered} of ${packages.enabled} enabled mutations have an entry` }),
       element('span', { textContent: `${rolled.entries + packages.entries} entries, ${rolled.knobs + packages.knobs} knobs` }),
       // Most of this catalogue is off, and those entries are kept on purpose: they are the only thing left
       // saying what a spell was for while it waits for a rule to come back.
@@ -1953,14 +1953,14 @@ function balanceCoverage(balance) {
       rolled.uncovered.length + packages.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length + packages.uncovered.length} with no entry` }) : null,
       rolled.flagged.length + packages.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length + packages.flagged.length} the file disagrees with` }) : null,
       rolled.unresolved.length + packages.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length + packages.unresolved.length} naming nothing` }) : null,
-      packages.ambiguous.length ? element('span', { className: 'warn', textContent: `${packages.ambiguous.length} ambiguous package versions` }) : null,
+      packages.ambiguous.length ? element('span', { className: 'warn', textContent: `${packages.ambiguous.length} ambiguous mutation versions` }) : null,
       rolled.constraintProblems.length ? element('span', { className: 'warn', textContent: `${plural(rolled.constraintProblems.length, 'constraint')} checking nothing` }) : null,
-      clean ? element('span', { textContent: 'every enabled spell and package is covered' }) : null,
+      clean ? element('span', { textContent: 'every enabled spell and mutation is covered' }) : null,
     ]),
   ]);
 
   block.append(clean
-    ? element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell and package has an entry with intent, and its knobs address numbers inside their bands.' })
+    ? element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell and mutation has an entry with intent, and its knobs address numbers inside their bands.' })
     : balanceFindings(rolled, packages));
   return block;
 }

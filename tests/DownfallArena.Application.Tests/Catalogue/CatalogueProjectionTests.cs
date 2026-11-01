@@ -347,8 +347,8 @@ public sealed class CatalogueProjectionTests
         var spell = Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy), critical: 0.25, casterEffects: [Heal.Of(2)]);
         var card = Card(spell);
 
-        card.Cues.ShouldNotBeNull().ShouldBe([new CardCue("harm", "Damage"), new CardCue("recovery", "Caster: Healing"), new CardCue("critical", "Crit · Standard only")]);
-        card.CriticalNote.ShouldBe("Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets.");
+        card.Cues.ShouldNotBeNull().ShouldBe([new CardCue("harm", "Damage"), new CardCue("recovery", "Caster: Healing"), new CardCue("critical", "Crit · Precision only")]);
+        card.CriticalNote.ShouldBe("Instinct cannot crit. At Precision, crits multiply only direct damage and healing on targets.");
         Card(Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy))).Cues.ShouldNotBeNull().ShouldNotContain(cue => cue.Tone == "critical");
     }
 

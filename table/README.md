@@ -55,6 +55,14 @@ when the host was started with `--declaration hidden-intent`, when its `--rules`
 player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
 action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
+## Player-facing words
+
+The page shows the player's words for what the host serves under the domain's names: tempo **Instinct** and
+**Precision** for the speeds `Quick` and `Standard`, the phases **Upkeep → Command → Combat → Aftermath** for
+`StartOfRound`, `Planning`, `Combat` and `EndOfRound`, **mutation** for a Tier and **Stage N** for its level.
+They are spelled once, in `terms.js`; the commands it sends and the ids it reads are unchanged. The list is
+[docs/domain/player-terminology.md](../docs/domain/player-terminology.md).
+
 ## Preview
 
 Earlier visual baseline, before the desktop workspace and floating atlas. These illustrative fixtures are
@@ -133,7 +141,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
   ↟ current initiative), and the turn order wraps. The mini battlefield shows health, energy, defense when
   present and current initiative on each creature. Round flow and the tab row are left to the Round guide and the
-  spellbook's Talent atlas link, and the turn in the round bar to the decision heading and the acting chip.
+  spellbook's Mutation Tree link, and the turn in the round bar to the decision heading and the acting chip.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's available packages at a time. Each pick buys all of a package's spells
@@ -160,23 +168,23 @@ not recorded matches. Card text and creature names in the actual app come from t
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
-- The Talent atlas opens over the battlefield as a non-modal window: drag its title, resize its corner,
+- The Mutation Tree opens over the battlefield as a non-modal window: drag its title, resize its corner,
   maximize, reset or close it. Arrow keys on the title move it as well. Phones use a full-screen panel.
   Its sticky toolbar keeps the creature, round, Evolution pick number and remaining picks visible.
   Down from the last package or spell choice reaches the explorer; Enter opens it and Up returns to the choices.
-- The atlas draws the package prerequisite graph in three rows (tiers 1–3); a phone reads it top to bottom
+- The Mutation Tree draws the mutation prerequisite graph in three rows (stages 1–3); a phone reads it top to bottom
   instead, one family per block with each upgrade beside the package it grows from, and choosing a package
   brings its spells up with a way back to the list. Names and edges come from
   catalogue packages, not the retired per-spell gates. Select a package to read its prerequisites by name,
   initiative bonus and all its spell faces side by side. Ownership comes from `acquiredTiers`, independently
   of known spells; only the host's `availableTiers` can enable a purchase.
-- Every package card, tree node and inspector wears the package's two or three identity tags as chips
+- Every mutation card, Mutation Tree node and inspector wears the mutation's two or three identity tags as chips
   (`tags` on the catalogue package, `docs/domain/package-identity-tags.md`), so a pick can be scanned before
   its spells are read. A catalogue built without them shows none.
 - The authored first-level families use coherent cool, leaf and ember palettes, with shades inherited by
   specializations. These accents follow every card into the spellbook and unlock picker.
-- Buy legal packages directly from the atlas. A creature that bought this opportunity remains inspectable
-  but cannot buy again. New Speed, TieOrder, Intent and Target questions close the atlas to expose the board.
+- Acquire legal mutations directly from the Mutation Tree. A creature that acquired one this opportunity remains
+  inspectable but cannot acquire again. New Speed, TieOrder, Intent and Target questions close the atlas to expose the board.
 - The initiative strip retains d20 rolls and rerolls. TieOrder has its own phase reminder and guarded
   keyboard/pointer controls to order your creatures within your side's assigned places before declarations.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
@@ -186,10 +194,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   and initiative separately. Creature numbers replace repeated definition names in the play surface.
 - Spell faces use restrained paper tints with labelled effect and critical badges derived by the catalogue
   projection. The client does not infer effect categories from spell names or parse effect text. The critical
-  badge and reminder state the maintainer-confirmed rule: Quick cannot crit; Standard can, multiplying only
+  badge and reminder state the maintainer-confirmed rule: Instinct cannot crit; Precision can, multiplying only
   direct damage/healing on targets. This rule is now enforced by the engine on main; the UI does not alter combat resolution.
-- The energy cost has an icon and a visible label. Spell stats show critical chance, its Standard-only
-  reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per package,
+- The energy cost has an icon and a visible label. Spell stats show critical chance, its Precision-only
+  reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per mutation,
   never as obsolete spell stats. Targeting and effect cues retain their visual markers.
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
@@ -262,7 +270,7 @@ a decision has been sent.
 | 1–9 during Intent or Target | Select the numbered card or legal target; repeated numbers do not commit |
 | Enter | Confirm the selected intent or valid target set; activate a focused button normally |
 | 1–9 during Evolution or in the atlas | Choose the creature to evolve or inspect |
-| T | Open / close the Talent atlas |
+| T | Open / close the Mutation Tree |
 | Enter / → while an opponent action is read | OK: read the next one, or reach the question |
 | Escape while an opponent action is read | Skip all the opponent actions left |
 | Escape | Close the battlefield or the atlas; otherwise clear the pending card/target selection |

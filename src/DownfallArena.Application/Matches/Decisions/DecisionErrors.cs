@@ -14,7 +14,7 @@ public static class DecisionErrors
 
     public static readonly DomainError SpellNotOffered = new("Decision.SpellNotOffered", "The options do not offer this spell for this creature.");
 
-    public static readonly DomainError TierNotOffered = new("Decision.TierNotOffered", "The options do not offer this package for this creature.");
+    public static readonly DomainError TierNotOffered = new("Decision.TierNotOffered", "The options do not offer this mutation for this creature.");
 
     public static readonly DomainError NoSpeedChosen = new("Decision.NoSpeedChosen", "A speed choice names quick or standard.");
 
