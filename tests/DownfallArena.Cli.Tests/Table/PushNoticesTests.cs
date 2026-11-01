@@ -44,7 +44,7 @@ public sealed class PushNoticesTests : IDisposable
         to.ShouldBe(Phone);
         var notice = JsonDocument.Parse(payload).RootElement;
         notice.GetProperty("title").GetString().ShouldBe("Your turn");
-        notice.GetProperty("body").GetString().ShouldBe("Round 1: pick your packages.");
+        notice.GetProperty("body").GetString().ShouldBe("Round 1: choose your mutations.");
         notice.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");
         notice.GetProperty("tag").GetString().ShouldBe("turn:player1");
         _clock.Advance(Grace);
@@ -161,7 +161,7 @@ public sealed class PushNoticesTests : IDisposable
         var atTheSlot = JsonDocument.Parse(PushNotices.Payload(new HumanSeat.Question(Application.Matches.Projections.PlayerOptionsKind.Action, null, 5), null, seat, "t")).RootElement;
 
         withRound.GetProperty("url").GetString().ShouldBe("/play?table=a%20b");
-        withRound.GetProperty("body").GetString().ShouldBe("Round 7: choose a speed.");
+        withRound.GetProperty("body").GetString().ShouldBe("Round 7: choose a tempo.");
         withRound.GetProperty("asked").GetInt64().ShouldBe(4);
         atTheSlot.GetProperty("body").GetString().ShouldBe("Your creature acts: choose a spell.");
         atTheSlot.GetProperty("tag").GetString().ShouldBe("turn:player2");

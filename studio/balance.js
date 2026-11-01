@@ -381,8 +381,8 @@ export function summarise(entry, document) {
   const knobs = readings(entry, document).map(knob => {
     if (!text(entry?.alias).startsWith(PACKAGE_PREFIX) || PACKAGE_KNOBS.includes(knob.path)) return knob;
     const refusal = knob.path === INITIATIVE_BONUS
-      ? problem('packageInitiative', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; a package's initiative bonus is set by hand, never searched.`)
-      : problem('packageIdentity', `Only ${PACKAGE_KNOBS.join(', ')} may be a package knob; ${knob.path} is progression, not a tuning value.`);
+      ? problem('packageInitiative', `Only ${PACKAGE_KNOBS.join(', ')} may be a mutation knob; a mutation's initiative bonus is set by hand, never searched.`)
+      : problem('packageIdentity', `Only ${PACKAGE_KNOBS.join(', ')} may be a mutation knob; ${knob.path} is progression, not a tuning value.`);
     const problems = [...knob.problems, refusal];
     return { ...knob, problems, tone: 'bad' };
   });

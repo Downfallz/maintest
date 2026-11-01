@@ -16,6 +16,7 @@ import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { actionDecision, askedKey, slotView } from './slot.js';
 import { practice, storage } from './startup.js';
+import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -435,7 +436,7 @@ function renderShape(round) {
   element('shape').hidden = steps.length === 0 && orderings.length === 0;
   element('sub-phases').replaceChildren(...steps.map(step => {
     const one = document.createElement('li');
-    one.textContent = step;
+    one.textContent = stepLabel(step);
     return one;
   }));
 
@@ -751,7 +752,7 @@ function render(state, views) {
 
   setPhase(view.over
     ? outcomeText(view, current.seat)
-    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`, !view.over);
+    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${stepLabel(view.board.subPhase) || '—'}`, !view.over);
   renderMatchTools(state, view);
   state.palette = talentPalette(state.catalogue, state.cards);
   // A replay the player opened, or the opponent's action being stepped through: the battlefield as it stood
@@ -792,8 +793,8 @@ function render(state, views) {
   element('board').style.setProperty('--target-offset', `${18 + phaseHeight}px`);
   renderNotes(view);
   element('shortcut-context').textContent = view.waitingFor === 'Speed'
-    ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
-      ? '← → Choose creature · ↓ Browse packages · Enter to buy'
+    ? SPEEDS.map((speed, index) => `${index + 1} ${tempoLabel(speed)}`).join(' · ') : view.waitingFor === 'Evolution'
+      ? '← → Choose creature · ↓ Browse mutations · Enter to acquire'
       : view.waitingFor === 'TieOrder' ? '← → Browse tied creatures · Enter to order · Confirm when ready'
         : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
@@ -1123,7 +1124,7 @@ function renderTimeline(board) {
 
     const label = document.createElement('div');
     label.className = 'band-name';
-    label.textContent = band.speed;
+    label.textContent = tempoLabel(band.speed);
     box.append(label);
 
     const slots = document.createElement('div');
@@ -1140,7 +1141,7 @@ function renderTimeline(board) {
       const initiative = document.createElement('span');
       initiative.className = 'slot-initiative';
       initiative.textContent = `Initiative ${slot.initiative}`;
-      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${band.speed}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
+      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
       one.append(order, creature, initiative);
       const rolled = rollText(board.rollOffs, slot.creature);
       if (rolled) {
@@ -1253,7 +1254,7 @@ function handRow(state, row, asked, current) {
   who.className = 'hand-who';
   const order = turnOrder({ id: row.creature }, current.view.board);
   const acts = order === null ? '' : ` · acts ${order} of ${current.view.board.timeline.length}`;
-  who.textContent = `Creature ${row.creature}${acts}${active ? (reference ? ' · choose speed · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
+  who.textContent = `Creature ${row.creature}${acts}${active ? (reference ? ' · choose tempo · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
 
   const held = document.createElement('div');
   held.className = `held-cards${reference ? ' speed-reference' : ''}`;
@@ -1301,7 +1302,7 @@ function speedSpell(state, spell, creature, current) {
     const badge = document.createElement('span');
     badge.className = 'speed-critical';
     badge.textContent = `✦ ${critical} crit`;
-    badge.title = 'Critical chance at Standard speed';
+    badge.title = 'Critical chance at Precision tempo';
     summary.append(badge);
   }
   const body = document.createElement('div');
@@ -1479,7 +1480,7 @@ function line(state, creature, which, marks) {
     const one = document.createElement('span');
     one.className = 'badge';
     const speed = marks?.board?.timeline?.find(slot => slot.creature === creature.id)?.speed;
-    one.textContent = badge === speed ? `Speed · ${badge}` : badge;
+    one.textContent = badge === speed ? `Tempo · ${tempoLabel(badge)}` : badge;
     if (badge === speed) one.dataset.speed = speed;
     tags.append(one);
   }
@@ -1488,7 +1489,7 @@ function line(state, creature, which, marks) {
   if (which === 'enemy' && creature.acquiredTiers?.length) {
     const packages = document.createElement('div');
     packages.className = 'enemy-packages';
-    packages.setAttribute('aria-label', `Creature ${creature.id} packages`);
+    packages.setAttribute('aria-label', `Creature ${creature.id} mutations`);
     for (const tier of creature.acquiredTiers) {
       const chip = document.createElement('span');
       chip.className = 'enemy-package';
@@ -1729,7 +1730,7 @@ function renderMat(state, current) {
   const toolbar = document.createElement('div');
   toolbar.className = 'talent-toolbar';
   const heading = document.createElement('h2');
-  heading.textContent = creature ? `Creature ${creature.id} · talents` : 'Choose your path';
+  heading.textContent = creature ? `Creature ${creature.id} · Mutation Tree` : 'Choose your path';
   const context = document.createElement('span');
   context.className = 'atlas-context';
   context.textContent = evolution
@@ -1738,10 +1739,10 @@ function renderMat(state, current) {
   heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Tier 1 → Tier 2 → Tier 3 → Tier 4. A Tier 4 capstone opens from any Tier 3 of its family and gives a passive instead of spells. Select a package to inspect it. Lines show required packages; one pick buys the whole package.';
+  help.textContent = 'Stage 1 → Stage 2 → Stage 3 → Stage 4. A Stage 4 capstone opens from any Stage 3 of its family and gives a passive instead of spells. Select a mutation to inspect it. Lines show required mutations; one pick acquires the whole mutation.';
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
-  picker.setAttribute('aria-label', 'Inspect talent progress');
+  picker.setAttribute('aria-label', 'Inspect mutation progress');
   for (const ally of allies) {
     const choice = button(`Creature ${ally.id}`, () => {
       state.inspectCreature = ally.id;
@@ -1754,12 +1755,12 @@ function renderMat(state, current) {
     picker.append(choice);
   }
   const filter = document.createElement('select');
-  filter.setAttribute('aria-label', 'Inspect a package');
+  filter.setAttribute('aria-label', 'Inspect a mutation');
   filter.dataset.focus = 'talent-class';
   for (const name of ['', ...classes.map(group => group.id)]) {
     const option = document.createElement('option');
     option.value = name;
-    option.textContent = classes.find(group => group.id === name)?.name || 'All packages';
+    option.textContent = classes.find(group => group.id === name)?.name || 'All mutations';
     filter.append(option);
   }
   filter.value = classes.some(group => group.id === state.inspectClass) ? state.inspectClass : '';
@@ -1770,7 +1771,7 @@ function renderMat(state, current) {
   const graph = document.createElement('div');
   graph.className = 'tree-map';
   graph.dataset.scroll = 'talent-map';
-  graph.setAttribute('aria-label', 'Package prerequisites');
+  graph.setAttribute('aria-label', 'Mutation prerequisites');
   const roots = document.createElement('ul');
   roots.className = 'tree-roots';
   roots.append(...forest.map(node => treeNode(state, node, classes, creature)));
@@ -1778,7 +1779,7 @@ function renderMat(state, current) {
   // The overview is compact; full spell faces appear for the selected class only.
   const selected = classes.find(group => group.id === filter.value);
   const detail = atlasInspector(state, selected, graph, current, creature);
-  if (classes.length === 0) help.textContent = 'The talent catalogue is not available yet.';
+  if (classes.length === 0) help.textContent = 'The Mutation Tree is not available yet.';
   element('mat').replaceChildren(toolbar, graph, detail);
   if (state.revealPackage && selected && globalThis.innerWidth <= 760) detail.scrollIntoView({ block: 'start' });
   state.revealPackage = false;
@@ -1789,22 +1790,22 @@ function atlasInspector(state, selected, graph, current, creature) {
   const detail = document.createElement('div');
   detail.className = 'talent-inspector';
   if (selected) {
-    const back = button('↑ All packages', () => graph.scrollIntoView({ block: 'start' }));
+    const back = button('↑ All mutations', () => graph.scrollIntoView({ block: 'start' }));
     back.className = 'atlas-back reference-link';
     detail.append(back, talentLane(state, selected, current, creature));
     return detail;
   }
   const prompt = document.createElement('p');
   prompt.className = 'atlas-prompt';
-  prompt.textContent = 'Select a package above to see its spells or passive, initiative bonus and prerequisites.';
+  prompt.textContent = 'Select a mutation above to see its spells or passive, initiative bonus and prerequisites.';
   detail.append(prompt);
   return detail;
 }
 
 // What a package's lane says, by the status talentClasses gives it (ADR 0089 adds 'picked').
 const PACKAGE_STATUS_TEXT = {
-  known: '✓ Package acquired',
-  picked: '◐ Picked face down · bought when Evolution ends',
+  known: '✓ Mutation acquired',
+  picked: '◐ Picked face down · acquired when Evolution ends',
   available: '+ Available now · 1 team pick',
   future: 'Not available this opportunity · check prerequisites and creature eligibility',
 };
@@ -1815,7 +1816,7 @@ function talentLane(state, group, current, creature) {
   lane.style.setProperty('--class-color', classColour(group.id, state.palette));
   const title = document.createElement('h2');
   title.className = 'talent-class';
-  title.textContent = `${group.name} · Tier ${group.level}`;
+  title.textContent = `${group.name} · ${stageLabel(group.level)}`;
   const summary = document.createElement('p');
   summary.className = 'package-summary';
   const requires = requirementLine(group, id => state.packages.get(id)?.name ?? id);
@@ -1833,7 +1834,7 @@ function talentLane(state, group, current, creature) {
     lane.append(gives);
   }
   if (group.status === 'available') {
-    const buy = button(`Buy ${group.name} for creature ${creature.id}`, () => buyPackage(state, current, creature.id, group.id));
+    const buy = button(`Acquire ${group.name} for creature ${creature.id}`, () => buyPackage(state, current, creature.id, group.id));
     buy.disabled = state.sending;
     buy.className = 'atlas-unlock';
     buy.dataset.focus = `atlas-buy-${creature.id}-${group.id}`;
@@ -1848,7 +1849,7 @@ function talentLane(state, group, current, creature) {
     face.className = `card talent-card ${spell.status}`;
     const known = document.createElement('span');
     known.className = 'talent-status';
-    known.textContent = spell.status === 'known' ? '✓ Spell known' : 'Included in this package';
+    known.textContent = spell.status === 'known' ? '✓ Spell known' : 'Included in this mutation';
     face.append(known);
     const parts = cardParts(state, spell.spell, '');
     if (parts) face.append(...parts);
@@ -1963,9 +1964,9 @@ function renderOrder(state, view, seat) {
     panel.open = false;
     return;
   }
-  const speeds = choices => choices.map(one => `Creature ${one.creature} ${one.speed}`).join(' · ') || '—';
+  const speeds = choices => choices.map(one => `Creature ${one.creature} ${tempoLabel(one.speed)}`).join(' · ') || '—';
   element('order-label').textContent = 'Turn order';
-  element('order-title').textContent = `Round ${view.board.roundNumber} · speeds revealed`;
+  element('order-title').textContent = `Round ${view.board.roundNumber} · tempos revealed`;
   element('order-theirs').textContent = `Opponent: ${speeds(reveal.theirs)}`;
   element('order-mine').textContent = `You: ${speeds(reveal.mine)}`;
   element('order-list').replaceChildren(...reveal.order.map(slot => {
@@ -1978,7 +1979,7 @@ function renderOrder(state, view, seat) {
     const who = document.createElement('strong');
     who.textContent = `Creature ${slot.creature}`;
     const detail = document.createElement('span');
-    detail.textContent = [slot.side === 'ally' ? 'yours' : 'opponent', slot.speed, `initiative ${slot.initiative}`, slot.roll, slot.isNow && 'acting now']
+    detail.textContent = [slot.side === 'ally' ? 'yours' : 'opponent', tempoLabel(slot.speed), `initiative ${slot.initiative}`, slot.roll, slot.isNow && 'acting now']
       .filter(Boolean).join(' · ');
     item.append(position, who, detail);
     return item;
@@ -2200,7 +2201,7 @@ function roundJump(state, replay) {
 }
 
 function interludeHeading(action, round) {
-  return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · packages bought` }[action.interlude] ?? null;
+  return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
 }
 
 function playbackNote(replay, action, stage) {
@@ -2341,7 +2342,7 @@ function renderDecision(state, current) {
   element('decision-state').textContent = view.over ? 'Finished' : view.playedByBot ? 'Bot playing' : isAsked(view) ? 'Your turn' : 'Waiting';
   element('decision-phase').textContent = decisionPhase(view);
   const turn = activeTurn(view.board) ?? plannedTurn(view);
-  element('decision-turn').textContent = turn ? `${turn.planned ? 'Acts' : 'Turn'} ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
+  element('decision-turn').textContent = turn ? `${turn.planned ? 'Acts' : 'Turn'} ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${tempoLabel(turn.slot.speed)}` : ''}` : '';
   element('decision-turn').hidden = !turn;
   renderStep(state, current);
   // Before the match begins the seat is a room, not a board: who is still to come, and the code that brings
@@ -2418,8 +2419,8 @@ function stepHeading(state, current) {
 
 function titleOf(state, view) {
   switch (view.waitingFor) {
-    case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · buy a package`;
-    case 'Speed': return `Creature ${view.waitingCreature} · choose speed`;
+    case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · acquire a mutation`;
+    case 'Speed': return `Creature ${view.waitingCreature} · choose tempo`;
     case 'Intent': return view.askedAs === 'Action'
       ? `Creature ${view.waitingCreature} · your turn: choose a spell`
       : `Creature ${view.waitingCreature} · choose spell`;
@@ -2434,7 +2435,7 @@ function titleOf(state, view) {
 
 function decisionPhase(view) {
   if (view.over) return 'Match complete';
-  const phases = { Evolution: 'Evolution', Speed: 'Choose speed', TieOrder: 'Order tied creatures', Intent: 'Choose spell', Target: 'Targeting' };
+  const phases = { Evolution: 'Evolution', Speed: 'Choose tempo', TieOrder: 'Order tied creatures', Intent: 'Choose spell', Target: 'Targeting' };
   return phases[view.waitingFor] ?? (view.board.subPhase === 'Activation' ? 'Combat' : 'Waiting');
 }
 
@@ -2487,7 +2488,7 @@ function evolutionBudget(state, view) {
   }
   const note = document.createElement('span');
   note.className = 'pick-note';
-  note.textContent = 'Shared team picks · at most one package per creature this opportunity';
+  note.textContent = 'Shared team picks · at most one mutation per creature this opportunity';
   box.append(title, picks, note);
   return box;
 }
@@ -2529,32 +2530,53 @@ function renderPhaseGuide(state, view, seat) {
     hidePhaseNotice(state);
     return;
   }
+  // Each step names its round phase (terms.js): the dock reads Upkeep → Command → Combat → Aftermath, with the
+  // steps of each phase under it. The phases are labels over the engine's, which this list does not drive.
+  const upkeepPhase = phaseLabel('StartOfRound');
+  const command = phaseLabel('Planning');
+  const combat = phaseLabel('Combat');
+  const aftermath = phaseLabel('EndOfRound');
   const phases = [
-    ['Upkeep', [], 'Round upkeep is automatic.'],
-    ['Evolve', ['Evolution'], 'Buy whole packages with shared team picks. At most one per creature this opportunity, or pass.'],
-    ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
-    ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.'],
+    [upkeepPhase, [], 'Round upkeep is automatic.', upkeepPhase],
+    ['Evolve', ['Evolution'], 'Acquire whole mutations with shared team picks. At most one per creature this opportunity, or pass.', command],
+    ['Tempo', ['Speed', 'TurnOrderResolution'], `Pick a tempo for each eligible creature. ${TEMPO_RULE} All tempos reveal together when everyone is done.`, command],
+    ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.', command],
     ...(atTheSlot(state.catalogue) ? [
-      ['Spells', ['IntentSelection'], 'Nothing is declared: each creature chooses its spell when its turn comes.'],
-      ['Combat', ['Activation'], 'In turn order, each creature\'s owner chooses a spell and its targets, and it resolves at once. A creature that cannot act is skipped.'],
+      ['Spells', ['IntentSelection'], 'Nothing is declared: each creature chooses its spell when its turn comes.', combat],
+      ['Activation', ['Activation'], 'In turn order, each creature\'s owner chooses a spell and its targets, and it resolves at once. A creature that cannot act is skipped.', combat],
     ] : [
-      ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
-      ['Combat', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.'],
+      ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.', combat],
+      ['Activation', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.', combat],
     ]),
-    ['Cleanup', ['Cleanup', 'Finalization'], 'Conditions count down, then the next round begins.'],
+    ['Cleanup', ['Cleanup', 'Finalization'], 'Conditions count down, then the next round begins.', aftermath],
   ];
+  const stepName = step => (!step ? null : step[0] === step[3] ? step[0] : `${step[3]} · ${step[0]}`);
   // An opponent action of an earlier round being read keeps the dock on that round's combat: the battlefield under
   // it is that round's (playbackBoard), and a dock announcing the next round would contradict what is on screen.
   const board = state.step && state.step.round !== view.board.roundNumber
     ? { ...view.board, roundNumber: state.step.round, phase: 'Combat', subPhase: 'Activation' } : view.board;
   const current = board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(board.subPhase));
   element('phase-round').textContent = `Round ${board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
-  element('phase-current').textContent = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
+  const currentStep = phases[current];
+  const heading = element('phase-current');
+  heading.textContent = view.over ? 'Match complete' : stepName(currentStep) ?? 'Waiting';
+  // The phase is its own span, so the narrowest header can drop it and keep the step (table.css); the whole
+  // name stays on the title and in the text a screen reader reads.
+  if (!view.over && currentStep && currentStep[0] !== currentStep[3]) {
+    const major = document.createElement('span');
+    major.className = 'phase-major';
+    major.textContent = `${currentStep[3]} · `;
+    heading.replaceChildren(major, document.createTextNode(currentStep[0]));
+  }
+  heading.title = heading.textContent;
   const turn = activeTurn(board);
   element('phase-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total} · Creature ${turn.slot.creature}` : '';
-  element('phase-steps').replaceChildren(...phases.map(([label], index) => {
+  element('phase-steps').replaceChildren(...phases.map(([label, , , major], index) => {
     const step = document.createElement('li');
-    step.textContent = label;
+    // The first step of a phase carries the phase's name, so the list reads the round's four phases in order.
+    const opens = index === 0 || phases[index - 1][3] !== major;
+    step.textContent = opens && label !== major ? `${major}: ${label}` : label;
+    step.dataset.phase = major;
     step.className = index === current ? 'current' : index < current ? 'complete' : '';
     if (index === current) step.setAttribute('aria-current', 'step');
     return step;
@@ -2581,8 +2603,8 @@ function renderPhaseGuide(state, view, seat) {
   state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
   const newRound = previous?.round !== view.board.roundNumber;
   const begins = Boolean(previous) && newRound && !view.over;
-  const label = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
-  const title = unlocked.length ? `Round ${view.board.roundNumber} · Packages unlocked`
+  const label = view.over ? 'Match complete' : stepName(phases[current]) ?? 'Waiting';
+  const title = unlocked.length ? `Round ${view.board.roundNumber} · Mutations acquired`
     : begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
       : `Round ${view.board.roundNumber} · ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
@@ -2946,8 +2968,8 @@ function buttonsFor(state, current) {
       return evolutionButtons(state, current);
     }
     case 'Speed':
-      return ['Quick', 'Standard'].map(speed => {
-        const choice = button(speed, send({ kind: 'Speed', creature: view.waitingCreature, speed }));
+      return SPEEDS.map(speed => {
+        const choice = button(tempoLabel(speed), send({ kind: 'Speed', creature: view.waitingCreature, speed }));
         choice.dataset.focus = `speed-${speed}`;
         return choice;
       });
@@ -2992,10 +3014,10 @@ function evolutionButtons(state, current) {
   }
   const hint = document.createElement('p');
   hint.className = 'choice-help';
-  hint.textContent = cards.children.length ? 'Choose a creature, then tap a package to buy it whole.' : 'No package left for this creature. Choose another creature or pass.';
+  hint.textContent = cards.children.length ? 'Choose a creature, then tap a mutation to acquire it whole.' : 'No mutation left for this creature. Choose another creature or pass.';
   const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
   pass.className = 'secondary';
-  const explore = button('Talent atlas →', () => openTalents(state));
+  const explore = button('Mutation Tree →', () => openTalents(state));
   explore.className = 'secondary';
   explore.dataset.focus = 'evolution-explorer';
   pass.dataset.focus = 'evolution-pass';
@@ -3025,7 +3047,7 @@ function packageCard(state, tier, onClick) {
   title.textContent = face.name;
   const meta = document.createElement('span');
   meta.className = 'card-meta';
-  meta.textContent = [`tier ${face.level}`, face.initiativeBonus > 0 ? `+${face.initiativeBonus} initiative` : 'no initiative'].join(' · ');
+  meta.textContent = [stageLabel(face.level), face.initiativeBonus > 0 ? `+${face.initiativeBonus} initiative` : 'no initiative'].join(' · ');
   title.append(meta);
   head.append(title);
 
@@ -3402,8 +3424,8 @@ async function submit(state, current, decision) {
 // What a package says of itself, by the status talentClasses gives it (ADR 0089 adds 'picked').
 const TREE_STATUS_TEXT = {
   known: '✓ Acquired',
-  picked: '◐ Picked · bought at the reveal',
-  available: '+ Buy now · 1 pick',
+  picked: '◐ Picked · acquired at the reveal',
+  available: '+ Acquire now · 1 pick',
 };
 
 function treeNode(state, node, classes, creature) {
@@ -3428,10 +3450,10 @@ function treeNode(state, node, classes, creature) {
   title.textContent = node.name;
   const progress = document.createElement('span');
   progress.className = 'tree-progress';
-  progress.textContent = [`Tier ${node.level}`, `${node.initiativeBonus >= 0 ? '+' : ''}${node.initiativeBonus} initiative`, ...passiveOf(node)].join(' · ');
+  progress.textContent = [stageLabel(node.level), `${node.initiativeBonus >= 0 ? '+' : ''}${node.initiativeBonus} initiative`, ...passiveOf(node)].join(' · ');
   const status = document.createElement('span');
   status.className = 'tree-offer';
-  status.textContent = TREE_STATUS_TEXT[group?.status] ?? 'Inspect package';
+  status.textContent = TREE_STATUS_TEXT[group?.status] ?? 'Inspect mutation';
   pick.append(title, progress, status);
   branch.append(pick);
   if (node.children.length) {
@@ -3577,7 +3599,7 @@ function keyboardDecision(state, event) {
   if (number !== null) {
     event.preventDefault();
     if (view.waitingFor === 'Speed' && number < 2) {
-      return submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed: number === 0 ? 'Quick' : 'Standard' });
+      return submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed: SPEEDS[number] });
     }
     if (view.waitingFor === 'TieOrder') {
       const offered = untapped(view.options.tieOrder?.ties, state.ordered).filter(group => group.length > 1).flat();

@@ -74,9 +74,9 @@ export function spellOrigins(spell, catalogue) {
 }
 
 export function originText({ packages, starting }) {
-  const parts = packages.map(pack => `Tier ${pack.level} · ${pack.name}`);
+  const parts = packages.map(pack => `Stage ${pack.level} · ${pack.name}`);
   if (starting) parts.push('Starting kit');
-  return parts.join(' / ') || 'Not taught by any package';
+  return parts.join(' / ') || 'Not taught by any mutation';
 }
 
 /**
@@ -104,7 +104,7 @@ export function spellMatches(item, query, type, catalogue) {
   if (type !== 'All' && item.document?.spellType !== type) return false;
   const search = [item.name, item.id, item.document?.creatureClass,
     ...[...(item.document?.effects ?? []), ...(item.document?.casterEffects ?? [])].map(effect => effect.kind),
-    ...packagesTeaching(item, catalogue).flatMap(pack => [pack.name, `tier ${pack.document.level}`])].join(' ').toLowerCase();
+    ...packagesTeaching(item, catalogue).flatMap(pack => [pack.name, `stage ${pack.document.level}`, `tier ${pack.document.level}`])].join(' ').toLowerCase();
   return query.toLowerCase().trim().split(/\s+/).every(word => search.includes(word));
 }
 

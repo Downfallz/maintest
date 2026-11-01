@@ -189,11 +189,11 @@ test('a requirement line keeps every-one-of and any-one-of apart', async () => {
   const { requirementLine } = await import('./mat.js');
   const names = new Map([['a', 'Alpha'], ['b', 'Beta'], ['c', 'Gamma']]);
   const nameOf = id => names.get(id) ?? id;
-  assert.equal(requirementLine({ prerequisites: [] }, nameOf), 'Requires: No prerequisite package');
+  assert.equal(requirementLine({ prerequisites: [] }, nameOf), 'Requires: No prerequisite mutation');
   assert.equal(requirementLine({ prerequisites: ['a', 'b'] }, nameOf), 'Requires: Alpha + Beta');
   assert.equal(requirementLine({ prerequisites: [], anyOf: ['a', 'b', 'c'] }, nameOf), 'Requires one of: Alpha / Beta / Gamma');
   assert.equal(requirementLine({ prerequisites: ['a'], anyOf: ['b', 'c'] }, nameOf), 'Requires: Alpha, and one of: Beta / Gamma');
-  assert.equal(requirementLine(null), 'Requires: No prerequisite package');
+  assert.equal(requirementLine(null), 'Requires: No prerequisite mutation');
 });
 
 test('a passive is printed in the host words and nothing is invented for a card without them', async () => {

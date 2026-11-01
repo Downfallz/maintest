@@ -80,7 +80,7 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
     }
 
     const answer = await offered(page, '#choices button', { hasText: /^Pass/ })
-      ?? await offered(page, '#choices button', { hasText: /^Standard$/ })
+      ?? await offered(page, '#choices button', { hasText: /^Precision$/ })
       ?? await offered(page, '#choices button', { hasText: /^Keep the order/ });
     if (answer) { await answer.click(); continue; }
     await page.waitForTimeout(200);

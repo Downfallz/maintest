@@ -63,8 +63,8 @@ test('a spell names every package that teaches it, lowest tier first, and the st
   const origins = spellOrigins(spell, catalogue);
   assert.deepEqual(origins.packages.map(p => [p.name, p.level]), [['Occultist', 1], ['Warlock', 3]]);
   assert.equal(origins.starting, true);
-  assert.equal(originText(origins), 'Tier 1 · Occultist / Tier 3 · Warlock / Starting kit');
-  assert.equal(originText(spellOrigins(spell, { tiers: [] })), 'Not taught by any package');
+  assert.equal(originText(origins), 'Stage 1 · Occultist / Stage 3 · Warlock / Starting kit');
+  assert.equal(originText(spellOrigins(spell, { tiers: [] })), 'Not taught by any mutation');
 });
 
 test('the tier filter keeps a spell taught at that level or, for the kit, one a creature starts with', () => {
@@ -74,6 +74,7 @@ test('the tier filter keeps a spell taught at that level or, for the kit, one a 
   assert.equal(spellInTier(spell, '1', catalogue), false);
   assert.equal(spellInTier(spell, 'Starting', catalogue), false);
   assert.equal(spellMatches(spell, 'tier 2', 'All', catalogue), true);
+  assert.equal(spellMatches(spell, 'stage 2', 'All', catalogue), true);
 });
 
 // ADR 0101: a capstone names no all-of prerequisite, only an any-of list of its family's closers. Read through

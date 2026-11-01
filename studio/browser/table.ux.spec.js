@@ -16,7 +16,7 @@ const cards = ['Basic Attack', 'Full Plate', 'Guard', 'Heavy Strike', 'Pummel', 
   id: `spell-${index}`, name, cost: index === 5 ? 0 : 2, critical: index === 4 ? '77%' : '0%',
   type: [0, 3, 4].includes(index) ? 'Offensive' : index === 5 ? 'Passive' : 'Defensive',
   targeting: 'One enemy', effects: ['Damage 7'],
-  criticalNote: 'Quick cannot crit. Standard can, and a critical multiplies only direct damage or healing on its targets.',
+  criticalNote: 'Instinct cannot crit. Precision can, and a critical multiplies only direct damage or healing on its targets.',
 }));
 const view = {
   waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 3, options: { speed: { missing: [1] } }, feed: [],
@@ -91,8 +91,8 @@ test('speed spells fit in one compact list and only positive critical chances st
   await page.keyboard.press('Enter');
   await expect(pummel).toHaveAttribute('open', '');
   await expect(pummel.locator('.speed-spell-details')).toContainText('Damage 7');
-  await expect(page.locator('#choices')).toContainText('Quick');
-  await expect(page.locator('#choices')).toContainText('Standard');
+  await expect(page.locator('#choices')).toContainText('Instinct');
+  await expect(page.locator('#choices')).toContainText('Precision');
 });
 
 test('connection errors remain visible in the compact header', async ({ page }) => {
@@ -126,7 +126,7 @@ test('the battlefield opens from the round bar over the page and closes back to 
   expect(await page.evaluate(() => scrollY)).toBe(scrolled);
 });
 
-test('the talent atlas lays its families out without overlap or sideways panning', async ({ page }, info) => {
+test('the Mutation Tree lays its families out without overlap or sideways panning', async ({ page }, info) => {
   await page.locator('#phase-notice-close').click();
   await page.locator('#hand-talents').click();
   await expect(page.locator('.tree-node')).toHaveCount(packages.length);
@@ -142,7 +142,7 @@ test('the talent atlas lays its families out without overlap or sideways panning
   }
   await page.screenshot({ path: info.outputPath('talent-atlas.png'), animations: 'disabled' });
   await page.locator('.tree-node').filter({ hasText: 'East Master 2' }).click();
-  await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Tier 3');
+  await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Stage 3');
   await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });
 
@@ -302,7 +302,7 @@ test('the phase popup recaps both teams packages after the unlock opportunity', 
   served.board.enemies[0].acquiredTiers = [packages[7].id];
   served = { ...served, waitingFor: 'Speed', waitingCreature: 1, waitingAsked: 5,
     options: view.options, board: { ...served.board, subPhase: 'Speed', evolutionChoices: [] } };
-  await expect(page.locator('#phase-notice-title')).toHaveText('Round 3 · Packages unlocked');
+  await expect(page.locator('#phase-notice-title')).toHaveText('Round 3 · Mutations acquired');
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 1 · yours');
   await expect(page.locator('#phase-notice-changes')).toContainText('Creature 2 · opponent');
   await expect(page.locator('#enemies .enemy-packages')).toContainText('East');
@@ -354,7 +354,7 @@ test('a finished match replays every round from its result, and the round can be
   await expect(page.locator('#playback-title')).toHaveText('Round 2 · upkeep');
   await expect(page.locator('#playback-action')).toContainText('Ongoing damage −2 HP');
   await page.locator('[data-focus="playback-next"]').click();
-  await expect(page.locator('#playback-title')).toHaveText('Round 2 · packages bought');
+  await expect(page.locator('#playback-title')).toHaveText('Round 2 · mutations acquired');
   await expect(page.locator('#playback-action')).toContainText(packages[1].name);
   await expectNoSidewaysScroll(page);
   await page.locator('#playback').scrollIntoViewIfNeeded();
@@ -542,9 +542,9 @@ test('revealed speeds open the turn order from the round bar, and the spell bein
     await page.locator('#order-label').click();
   }
   await expect(page.locator('#order-panel')).toBeVisible();
-  await expect(page.locator('#order-theirs')).toHaveText('Opponent: Creature 2 Quick · Creature 3 Standard · Creature 4 Standard');
+  await expect(page.locator('#order-theirs')).toHaveText('Opponent: Creature 2 Instinct · Creature 3 Precision · Creature 4 Precision');
   await expect(page.locator('#order-list li')).toHaveCount(6);
-  await expect(page.locator('#decision-turn')).toHaveText('Acts 2 of 6 · Quick');
+  await expect(page.locator('#decision-turn')).toHaveText('Acts 2 of 6 · Instinct');
   const panel = await page.locator('#order-panel').boundingBox();
   expect(panel.x).toBeGreaterThanOrEqual(0);
   expect(panel.x + panel.width).toBeLessThanOrEqual(widthOf(page));

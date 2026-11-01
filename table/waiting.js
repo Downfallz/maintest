@@ -12,7 +12,7 @@ export function waitingRoom(view, origin = '') {
   const names = missing.map(seat => nameOf(seat.slot));
   return {
     line: `Waiting for ${names.join(' and ')} to join…`,
-    detail: 'The match begins the moment everyone is seated; you both pick your first package at the same time.',
+    detail: 'The match begins the moment everyone is seated; you both choose your first mutation at the same time.',
     seats: missing.map(seat => ({
       slot: seat.slot,
       name: nameOf(seat.slot),

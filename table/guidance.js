@@ -1,4 +1,5 @@
 import { recapEffectText as effectText } from './feed.js';
+import { TEMPO_RULE } from './terms.js';
 export { recapEffectText as effectText } from './feed.js';
 
 // Presentation only: every amount, refusal and critical chance is computed by the host.
@@ -53,7 +54,7 @@ export function guidancePanel(document, view, chosen, picked) {
     panel.append(p);
   };
   if (view.waitingFor === 'Speed') {
-    line('Quick acts first, without crits. Standard keeps its crits, shown below.');
+    line(`${TEMPO_RULE} Precision crit chances are shown below.`);
     return panel;
   }
   const spell = view.waitingFor === 'Target' ? view.options.target?.spell : chosen;

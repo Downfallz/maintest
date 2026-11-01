@@ -20,6 +20,7 @@ test('a seat reads as who is playing it, what it is being asked, and what it wil
   assert.equal(one.pending, null);
   assert.equal(two.seated, 'Greedy');
   assert.equal(two.asked, null);
+  assert.equal(seatRows({ seats: [{ slot: 'player1', waitingFor: 'Speed', waitingCreature: 1 }] })[0].asked, 'Tempo · creature 1');
   assert.equal(two.pending, 'Random from round 5');
 });
 
@@ -61,7 +62,7 @@ test('a match with no round yet takes a swap from the first', () => {
 });
 
 test('the line about the match says the round, or that it is over', () => {
-  assert.equal(whereItIs(view), 'Round 3 · IntentSelection');
+  assert.equal(whereItIs(view), 'Round 3 · Intent Selection');
   assert.equal(whereItIs({ over: true }), 'The match is over.');
   assert.equal(whereItIs(null), 'Connecting…');
 });

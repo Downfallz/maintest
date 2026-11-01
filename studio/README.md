@@ -1,6 +1,6 @@
 # Content studio
 
-A mobile field guide for packages, progression and spells, with an explicit content editor (ADR 0077).
+A mobile field guide for mutations (the `Tier` content of `data/Tiers/`), progression and spells, with an explicit content editor (ADR 0077).
 Reading on GitHub Pages needs no engine. Run locally to edit files and play matches:
 
 ```bash
@@ -55,14 +55,16 @@ a stored token is what separates a page that can save from one that can only rea
 
 ## What the page does
 
-The page opens on **Explore**: the current package families and their tiers, derived from authored prerequisites,
+The page opens on **Explore**: the current mutation families and their stages, derived from authored prerequisites,
 with every prerequisite and included spell one tap away. Class trees remain authoring content and do not
-supply the progression display. **Spells** offers search by name, effect, package and tier, plus type and tier
-filters (*Any tier*, each authored level, *Starting kit*). Every spell card, compact row and reader names where the
-spell is learned: each enabled package that teaches it with its tier, lowest first (`Tier 2 · Frenzied`), and
-*Starting kit* when an enabled creature begins with it. A spell with neither says it is not taught by any package.
+supply the progression display. **Spells** offers search by name, effect, mutation and stage, plus type and stage
+filters (*Any stage*, each authored level, *Starting kit*). Every spell card, compact row and reader names where the
+spell is learned: each enabled mutation that teaches it with its stage, lowest first (`Stage 2 · Frenzied`), and
+*Starting kit* when an enabled creature begins with it. A spell with neither says it is not taught by any mutation.
+The player-facing words follow [player-terminology.md](../docs/domain/player-terminology.md); a mutation's
+*Stage* is its file's `level`.
 
-Each spell also shows its **value a round** next to the range of its tier (its shallowest package, or the starting
+Each spell also shows its **value a round** next to the range of its stage (its shallowest mutation, or the starting
 kit), attacks compared only with attacks. It is the reading `check-knobs` prints (`cast_value` in
 `learning/src/downfall_learning/knobs.py`), priced with the agents' scoring weights (`/api/weights` locally,
 `weights.json` on the hosted page) and ported in `value.js`:
@@ -82,13 +84,13 @@ says so. `studio/value.test.js` and `learning/tests/test_knobs.py` pin the same 
 so the two readings cannot drift apart silently.
 
 Inside **Spells**, **Energy & effects** (`#strategy`) compares costs and affected stats in a compact mobile
-view. Tap a cost, then an effect to see the matching spells; zero counts expose gaps. **Compare packages**
-switches between the whole enabled catalogue, starting spells, or a union of selected packages with an
+view. Tap a cost, then an effect to see the matching spells; zero counts expose gaps. **Compare mutations**
+switches between the whole enabled catalogue, starting spells, or a union of selected mutations with an
 optional starting kit. Shared spells count once, aliases resolve to their current documents, and prerequisite
-packages are not silently included: this is a content comparison, not a legal build planner.
+mutations are not silently included: this is a content comparison, not a legal build planner.
 
 Target and caster effects have separate filters. Compact rows retain amounts, durations and permanence;
-tap a row for details and its teaching packages, or **Full spell** for the existing reader. Counts can overlap
+tap a row for details and its teaching mutations, or **Full spell** for the existing reader. Counts can overlap
 across effects, and authored values are before defense, criticals and caps. Returning from a reader keeps
 the comparison filters during the session. The same view works locally and on GitHub Pages.
 
@@ -103,14 +105,14 @@ selected family survive a return from a card during the same session.
 
 | Panel | What you get |
 | --- | --- |
-| Explore | Current package families, tiers, prerequisites, included spells and the creatures’ starting kit. |
+| Explore | Current mutation families, stages, prerequisites, included spells and the creatures’ starting kit. |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
 | Spells | Type, class, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. No spell initiative: a spell buys none of its own, the package that teaches it pays one bonus (ADR 0056). Plus **Used by**: every package that teaches it, every creature and talent node that names it, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. It gates nothing a pick buys — under free multiclassing it is where a class is authored, not what a creature has to climb. |
-| Packages | What one evolution pick buys (ADR 0056): id, name, level, the spells taught and the one initiative bonus, plus the packages that have to be owned first — the only eligibility rule there is. Authored here rather than derived from the tree (ADR 0057). The sheet says what the builder will refuse while it can still be fixed: a package teaching nothing, a level that skips the one below it, a prerequisite that does not sit above what it opens. Plus **Used by**: what is bought behind it, and the creatures already starting with a spell it teaches. |
+| Mutations | What one evolution pick buys (ADR 0056), one `data/Tiers/` file: id, name, stage (the file's `level`), the spells taught and the one initiative bonus, plus the mutations that have to be owned first — the only eligibility rule there is. Authored here rather than derived from the tree (ADR 0057). The sheet says what the builder will refuse while it can still be fixed: a mutation teaching nothing, a stage that skips the one below it, a prerequisite that does not sit above what it opens. Plus **Used by**: what is bought behind it, and the creatures already starting with a spell it teaches. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |
-| Balance | A searchable overview of current spell and package knobs, values and allowed bands, with filters for packages, spells and findings. Tap a row for intent and detailed bands; objective targets and constraints are below in a fold. |
+| Balance | A searchable overview of current spell and mutation knobs, values and allowed bands, with filters for mutations, spells and findings. Tap a row for intent and detailed bands; objective targets and constraints are below in a fold. |
 
 Each item has the same four actions:
 

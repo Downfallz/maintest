@@ -87,7 +87,7 @@ export function requirementLine(pack, nameOf = id => id) {
   const any = (Array.isArray(pack?.anyOf) ? pack.anyOf : []).map(nameOf).join(' / ');
   if (all && any) return `Requires: ${all}, and one of: ${any}`;
   if (any) return `Requires one of: ${any}`;
-  return `Requires: ${all || 'No prerequisite package'}`;
+  return `Requires: ${all || 'No prerequisite mutation'}`;
 }
 
 // What a package gives for as long as it is owned, in the host's words (`passiveLines`, ADR 0101). Nothing

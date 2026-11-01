@@ -73,30 +73,30 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
   // A capstone teaches nothing and is bought for its passive (ADR 0101): only a package that gives neither is
   // a pick that buys nothing. `Tier` refuses it in its constructor.
   if (!asArray(draft?.spells).filter(Boolean).length && !passiveLines(draft?.passive).length) {
-    warnings.push('A package has to teach at least one spell or give a passive: a pick that buys nothing is refused.');
+    warnings.push('A mutation has to teach at least one spell or give a passive: a pick that buys nothing is refused.');
   }
 
   // `Tier.Create` refuses a shared package that teaches a spell (ADR 0114): it shares its passive, and a spell
   // is learned by the creature that buys it.
   if (draft?.sharedWithTeam === true && (asArray(draft?.spells).filter(Boolean).length || !passiveLines(draft?.passive).length)) {
-    warnings.push('A shared package gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.');
+    warnings.push('A shared mutation gives its side a passive and teaches nothing: a spell is learned by the creature that buys it.');
   }
 
   // `Passive.Of` refuses a negative amount: a package that took energy or damage away would be a curse.
   for (const key of ['upkeepEnergy', 'damageBonus', 'sunder']) {
     if (Number(draft?.passive?.[key]) < 0) {
-      warnings.push(`A passive's ${key} cannot be negative: a package that took it away would be a curse, not a purchase.`);
+      warnings.push(`A passive's ${key} cannot be negative: a mutation that took it away would be a curse, not a purchase.`);
     }
   }
 
   // Through the alias map on both sides: a package that requires the alias pointing at itself requires
   // itself, and reading the two references literally would miss it.
   if (prerequisites.some(reference => resolve(reference) === resolve(draft?.id))) {
-    warnings.push('A package cannot require itself.');
+    warnings.push('A mutation cannot require itself.');
   }
 
   if (anyOf.some(reference => resolve(reference) === resolve(draft?.id))) {
-    warnings.push('A package cannot be opened by itself.');
+    warnings.push('A mutation cannot be opened by itself.');
   }
 
   // Only the prerequisites that resolve: one being typed is not yet a level.
@@ -108,14 +108,14 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
     // `GameResources.ValidateClimb` uses, and for the same reason. Only this half is about climbing, so only
     // this half asks for a level above one. Both lists count: a capstone's only steps are its any-of ones.
     if (level > 1 && levels.length === required.length && !levels.includes(level - 1)) {
-      warnings.push(`A package at level ${level} needs a prerequisite at level ${level - 1}: a family is climbed one level at a time.`);
+      warnings.push(`A mutation at stage ${level} needs a prerequisite at stage ${level - 1}: a family is climbed one stage at a time.`);
     }
 
     // Every level, including the first. `ValidateClimb` does not gate this one either, and a level-1 package
     // with a prerequisite is the case that makes the difference: nothing sits above level 1, so any
     // prerequisite it names is one the builder refuses.
     if (levels.some(behind => behind >= level)) {
-      warnings.push('A prerequisite has to sit above what it opens, so its level has to be lower than this one.');
+      warnings.push('A prerequisite has to sit above what it opens, so its stage has to be lower than this one.');
     }
 
     // Any one of an any-of list may be the step a creature climbed through, so `ValidateClimb` holds every one
@@ -123,7 +123,7 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
     for (const reference of anyOf) {
       const behind = levelOf(reference);
       if (Number.isFinite(behind) && behind !== level - 1) {
-        warnings.push(`${reference} at level ${behind} can open this level-${level} package: every package of an any-of list is a step a creature climbs through, so each sits at level ${level - 1}.`);
+        warnings.push(`${reference} at stage ${behind} can open this stage-${level} mutation: every mutation of an any-of list is a step a creature climbs through, so each sits at stage ${level - 1}.`);
       }
     }
   }

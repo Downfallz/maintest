@@ -26,12 +26,12 @@ export function useWeights(values) { weights = values && typeof values === 'obje
 
 const decimal = value => (Math.round(value * 10) / 10).toFixed(1);
 function tierGroup(read) {
-  const tier = read.level === 0 ? 'Starting kit' : 'Tier ' + read.level;
+  const tier = read.level === 0 ? 'Starting kit' : 'Stage ' + read.level;
   return `${tier} ${read.attack ? 'attacks' : 'non-attacks'}`;
 }
 
 function valuePlace(read) {
-  if (read.level === null) return 'No package teaches it and no creature starts with it, so it has no tier to be compared in.';
+  if (read.level === null) return 'No mutation teaches it and no creature starts with it, so it has no stage to be compared in.';
   if (read.peers < 2) return `It is the only one of the ${tierGroup(read)}, so there is nothing to compare it with.`;
   const place = { lowest: 'the lowest of', highest: 'the highest of', within: 'inside' }[read.place];
   return `${tierGroup(read)} today: ${decimal(read.low)} to ${decimal(read.high)}, median ${decimal(read.median)}. This one is ${place} that range.`;
@@ -102,7 +102,7 @@ function packageTile(item, catalogue, open) {
   const spells = (doc.spells ?? []).map(id => named(catalogue.spells, id, catalogue)?.name ?? id);
   const gives = passiveLines(doc.passive).map(line => `Passive: ${line}`);
   return append(tile,
-    append(h('span', 'package-top'), h('span', 'tier-label', `TIER ${doc.level}`), h('span', 'initiative-bonus', `+${doc.initiativeBonus ?? 0} initiative`)),
+    append(h('span', 'package-top'), h('span', 'tier-label', `STAGE ${doc.level}`), h('span', 'initiative-bonus', `+${doc.initiativeBonus ?? 0} initiative`)),
     h('strong', 'package-name', item.name), h('span', 'package-spells', [...spells, ...gives].join(' · ') || 'No spells'),
     h('span', 'package-parent', requirementText(item, catalogue) || 'Start here'),
     h('span', 'tile-arrow', '↗'));
@@ -116,25 +116,25 @@ export function explore(catalogue, ui, open, repaint, navigate) {
   view.append(append(h('section', 'codex-hero'),
     label('THE ARENA FIELD GUIDE'),
     h('h2', '', 'Find your next move.'),
-    h('p', 'codex-copy', 'Every package. Every spell. Your next build.'),
-    append(h('div', 'hero-stats'), stat(packages.length, 'packages'), stat(spells.length, 'spells'), stat(new Set(packages.map(item => item.document.level)).size, 'tiers'))));
+    h('p', 'codex-copy', 'Every mutation. Every spell. Your next build.'),
+    append(h('div', 'hero-stats'), stat(packages.length, 'mutations'), stat(spells.length, 'spells'), stat(new Set(packages.map(item => item.document.level)).size, 'stages'))));
   view.append(button('Compare energy & effects →', 'strategy-entry', () => navigate('strategy')));
-  if (!packages.length) { view.append(message('No enabled packages yet. Open Catalogue to add the first one.')); return view; }
+  if (!packages.length) { view.append(message('No enabled mutations yet. Open Catalogue to add the first one.')); return view; }
   const selected = groups.find(group => group.root.id === ui.family) ?? groups[0];
   if (selected) {
     const chooser = h('div', 'family-chooser'); chooser.setAttribute('aria-label', 'Progression family');
     for (const group of groups) {
       const pick = button('', `family-pick tone-${group.tone}`, () => { ui.family = group.root.id; repaint(); });
       pick.setAttribute('aria-pressed', String(group === selected));
-      append(pick, rune(group.tone), append(h('span', ''), h('strong', '', group.root.name), h('small', '', `${group.packages.length} packages`)));
+      append(pick, rune(group.tone), append(h('span', ''), h('strong', '', group.root.name), h('small', '', `${group.packages.length} mutations`)));
       chooser.append(pick);
     }
-    view.append(title('CHOOSE A PATH', 'Make it your own.', 'Follow a family or combine paths. Each package teaches all its spells.'), chooser,
+    view.append(title('CHOOSE A PATH', 'Make it your own.', 'Follow a family or combine paths. Each mutation teaches all its spells.'), chooser,
       progression(selected, catalogue, open));
   }
   const covered = new Set(groups.flatMap(group => group.packages.map(item => item.id)));
   const ungrouped = packages.filter(item => !covered.has(item.id));
-  if (ungrouped.length) view.append(title('MORE PACKAGES', 'Other paths', 'Inspect these packages to see their prerequisites.'),
+  if (ungrouped.length) view.append(title('MORE MUTATIONS', 'Other paths', 'Inspect these mutations to see their prerequisites.'),
     append(h('div', 'package-grid'), ...ungrouped.map(item => packageTile(item, catalogue, open))));
   const starters = new Set(active(catalogue.creatures).flatMap(item => item.document.startingSpellIds ?? []).map(id => named(catalogue.spells, id, catalogue)?.id));
   const kit = spells.filter(item => starters.has(item.id));
@@ -149,22 +149,22 @@ function progression(group, catalogue, open) {
   for (const level of levels) {
     const items = group.packages.filter(item => item.document.level === level);
     grid.append(append(h('section', 'tier-section'),
-      append(h('div', 'tier-heading'), h('span', 'tier-number', String(level).padStart(2, '0')), h('h3', '', `Tier ${level}`), h('span', 'muted', `${items.length} package${items.length === 1 ? '' : 's'}`)),
+      append(h('div', 'tier-heading'), h('span', 'tier-number', String(level).padStart(2, '0')), h('h3', '', `Stage ${level}`), h('span', 'muted', `${items.length} mutation${items.length === 1 ? '' : 's'}`)),
       append(h('div', 'package-grid'), ...items.map(item => packageTile(item, catalogue, open)))));
   }
   return grid;
 }
 
 export function spellLibrary(catalogue, ui, open, navigate) {
-  const view = append(h('div', 'codex'), title('SPELL LIBRARY', 'Know your options.', 'Find a spell by name, effect or package. Tap a card for the full details.'));
+  const view = append(h('div', 'codex'), title('SPELL LIBRARY', 'Know your options.', 'Find a spell by name, effect or mutation. Tap a card for the full details.'));
   view.prepend(spellViews('spells', navigate));
   const controls = h('div', 'library-controls');
-  const search = h('input', 'codex-search'); search.type = 'search'; search.placeholder = 'Search spells, effects, packages…'; search.value = ui.query ?? '';
+  const search = h('input', 'codex-search'); search.type = 'search'; search.placeholder = 'Search spells, effects, mutations…'; search.value = ui.query ?? '';
   search.setAttribute('aria-label', 'Search spells');
   const results = h('div', 'spell-grid');
   const count = h('p', 'result-count'); count.setAttribute('aria-live', 'polite');
   const filters = h('div', 'spell-filters'); filters.setAttribute('aria-label', 'Spell type');
-  const tiers = h('div', 'spell-filters'); tiers.setAttribute('aria-label', 'Tier');
+  const tiers = h('div', 'spell-filters'); tiers.setAttribute('aria-label', 'Stage');
   const draw = () => {
     const matches = active(catalogue.spells).filter(item => spellMatches(item, ui.query ?? '', ui.type ?? 'All', catalogue) && spellInTier(item, ui.tier ?? 'All', catalogue));
     count.textContent = `${matches.length} spells`;
@@ -175,7 +175,7 @@ export function spellLibrary(catalogue, ui, open, navigate) {
   };
   for (const type of ['All', 'Offensive', 'Defensive', 'Passive']) filters.append(button(type, 'filter-pill', () => { ui.type = type; draw(); }));
   const levels = [...new Set(active(catalogue.tiers).map(item => item.document.level))].sort((a, b) => a - b);
-  for (const [tier, name] of [['All', 'Any tier'], ...levels.map(level => [String(level), `Tier ${level}`]), ['Starting', 'Starting kit']]) {
+  for (const [tier, name] of [['All', 'Any stage'], ...levels.map(level => [String(level), `Stage ${level}`]), ['Starting', 'Starting kit']]) {
     const pick = button(name, 'filter-pill', () => { ui.tier = tier; draw(); });
     pick.dataset.tier = tier; tiers.append(pick);
   }
@@ -187,14 +187,14 @@ export function reader(item, catalogue, open, edit, back) {
   const doc = item.document ?? {};
   const view = h('article', 'codex reader');
   view.append(append(h('div', 'reader-toolbar'), button('← Back', 'button ghost', back), button('Edit content', 'button', edit)));
-  const kind = item.kind === 'Tier' ? `TIER ${doc.level} PACKAGE` : item.kind;
+  const kind = item.kind === 'Tier' ? `STAGE ${doc.level} MUTATION` : item.kind;
   view.append(append(h('div', 'reader-heading'), label(kind), h('h2', '', item.name || item.id)));
   if (item.enabled === false) view.append(message('Disabled · this content is not used in matches.'));
   if (item.problem) view.append(message(item.problem));
   if (item.kind === 'Tier') packageReading(view, item, catalogue, open);
   else if (item.kind === 'Spell') spellReading(view, item, catalogue, open);
   else if (item.kind === 'Creature') creatureReading(view, item, catalogue, open);
-  else view.append(message('This is an authoring class tree. Package prerequisites determine progression in play. Use Edit content to inspect or change its nodes.'));
+  else view.append(message('This is an authoring class tree. Mutation prerequisites determine progression in play. Use Edit content to inspect or change its nodes.'));
   const identity = append(h('details', 'reader-identity'), h('summary', '', 'Content reference'), h('code', '', item.id), h('p', 'muted', item.path));
   view.append(identity); return view;
 }
@@ -205,22 +205,22 @@ function packageReading(view, item, catalogue, open) {
   view.append(append(h('div', 'reader-stats'), stat(`+${doc.initiativeBonus ?? 0}`, 'base initiative'), stat((doc.spells ?? []).length, 'spells learned'),
     gives.length ? stat(gives.length, gives.length === 1 ? 'passive' : 'passives') : null));
   const { allOf, anyOf } = packageRequirements(item, catalogue);
-  if (!allOf.length && !anyOf.length) view.append(title('TO UNLOCK', 'An open starting point', 'This package has no prerequisite.'));
+  if (!allOf.length && !anyOf.length) view.append(title('TO UNLOCK', 'An open starting point', 'This mutation has no prerequisite.'));
   if (allOf.length) {
-    view.append(title('TO UNLOCK', 'Required packages', 'Own all of these packages before choosing this one.'),
+    view.append(title('TO UNLOCK', 'Required mutations', 'Acquire all of these mutations before choosing this one.'),
       append(h('div', 'reader-links'), ...allOf.map(parent => itemLink(parent, open))));
   }
   // ADR 0101: a capstone is opened by whichever of its family's closers the creature climbed through.
   if (anyOf.length) {
-    view.append(title(allOf.length ? 'AND' : 'TO UNLOCK', 'Any one of these', 'Own at least one of these packages before choosing this one.'),
+    view.append(title(allOf.length ? 'AND' : 'TO UNLOCK', 'Any one of these', 'Acquire at least one of these mutations before choosing this one.'),
       append(h('div', 'reader-links'), ...anyOf.map(parent => itemLink(parent, open))));
   }
   if (gives.length) {
-    view.append(title('ONE PICK GIVES', 'Passive', 'Held for as long as the creature owns this package, for the rest of the match.'),
+    view.append(title('ONE PICK GIVES', 'Passive', 'Held for as long as the creature owns this mutation, for the rest of the match.'),
       append(h('div', 'reader-links'), ...gives.map(line => h('span', 'chip', line))));
   }
   if ((doc.spells ?? []).length || !gives.length) {
-    view.append(title('ONE PICK TEACHES', 'Included spells', 'Learn every spell below when you acquire this package.'));
+    view.append(title('ONE PICK TEACHES', 'Included spells', 'Learn every spell below when you acquire this mutation.'));
   }
   const spells = (doc.spells ?? []).map(id => named(catalogue.spells, id, catalogue));
   view.append(append(h('div', 'spell-grid'), ...spells.filter(Boolean).map(spell => spellTile(spell, catalogue, open))));
@@ -242,7 +242,7 @@ function spellReading(view, item, catalogue, open) {
     for (const effect of doc.casterEffects) view.append(effectRow(effect));
   }
   const packages = packagesTeaching(item, catalogue);
-  view.append(title('LEARN THIS SPELL', packages.length ? 'Available in these packages' : 'Starting spell or unassigned', ''));
+  view.append(title('LEARN THIS SPELL', packages.length ? 'Available in these mutations' : 'Starting spell or unassigned', ''));
   view.append(append(h('div', 'package-grid'), ...packages.map(pack => packageTile(pack, catalogue, open))));
 }
 
@@ -254,7 +254,7 @@ function effectRow(effect) {
 function creatureReading(view, item, catalogue, open) {
   const doc = item.document;
   view.append(append(h('div', 'reader-stats'), stat(doc.baseHealth, 'HP'), stat(doc.baseEnergy, 'energy'), stat(doc.baseDefense, 'defense'), stat(doc.baseInitiative, 'initiative')),
-    title('STARTING KIT', 'Ready for the arena', 'Spells this creature knows before acquiring any packages.'));
+    title('STARTING KIT', 'Ready for the arena', 'Spells this creature knows before acquiring any mutations.'));
   const spells = (doc.startingSpellIds ?? []).map(id => named(catalogue.spells, id, catalogue)).filter(Boolean);
   view.append(append(h('div', 'spell-grid'), ...spells.map(spell => spellTile(spell, catalogue, open))));
 }
@@ -308,7 +308,7 @@ export function strategyLibrary(catalogue, ui, open, navigate) {
     count.textContent = `${data.matches.length} spells · ${costName} · ${side}`;
     scopeText.textContent = scopeDescription(catalogue, ui);
     results.replaceChildren(...data.matches.map(item => strategySpell(item, catalogue, open)));
-    if (!data.matches.length) results.append(message('No spells in this combination. Try another cost or effect, or widen the package scope.'));
+    if (!data.matches.length) results.append(message('No spells in this combination. Try another cost or effect, or widen the mutation scope.'));
   };
   for (const cost of ['all', ...allCosts]) {
     const pick = button('', 'strategy-cost', () => { ui.cost = cost; draw(); });
@@ -348,21 +348,21 @@ function scopeDescription(catalogue, ui) {
   if (ui.scope !== 'packages') return 'All enabled spells · authored values before defense, criticals and caps.';
   const names = active(catalogue.tiers).filter(item => ui.packages?.includes(item.id)).map(item => item.name);
   if (ui.includeStarting) names.unshift('Starting kit');
-  return names.length ? names.join(' + ') : 'Add a package or include the starting kit.';
+  return names.length ? names.join(' + ') : 'Add a mutation or include the starting kit.';
 }
 
 function strategyFilters(catalogue, ui, draw) {
-  const filters = append(h('details', 'strategy-filters'), h('summary', '', 'Compare packages'));
+  const filters = append(h('details', 'strategy-filters'), h('summary', '', 'Compare mutations'));
   const scope = h('select', ''); scope.setAttribute('aria-label', 'Spell scope');
-  for (const [value, text] of [['all', 'Whole catalogue'], ['starting', 'Starting kit'], ['packages', 'Selected packages']]) {
+  for (const [value, text] of [['all', 'Whole catalogue'], ['starting', 'Starting kit'], ['packages', 'Selected mutations']]) {
     const option = h('option', '', text); option.value = value; scope.append(option);
   }
   scope.value = ui.scope ?? 'all';
   const packages = h('div', 'strategy-package-picker');
-  const add = h('select', ''); add.setAttribute('aria-label', 'Add a package');
-  const placeholder = h('option', '', 'Add a package…'); placeholder.value = ''; add.append(placeholder);
+  const add = h('select', ''); add.setAttribute('aria-label', 'Add a mutation');
+  const placeholder = h('option', '', 'Add a mutation…'); placeholder.value = ''; add.append(placeholder);
   for (const item of active(catalogue.tiers).toSorted((a, b) => a.document.level - b.document.level || a.name.localeCompare(b.name))) {
-    const option = h('option', '', `Tier ${item.document.level} · ${item.name}`); option.value = item.id; add.append(option);
+    const option = h('option', '', `Stage ${item.document.level} · ${item.name}`); option.value = item.id; add.append(option);
   }
   const chosen = h('div', 'strategy-package-chips');
   const include = h('input', ''); include.type = 'checkbox'; include.checked = Boolean(ui.includeStarting);
@@ -384,7 +384,7 @@ function strategyFilters(catalogue, ui, draw) {
     ui.packages = [...new Set([...(ui.packages ?? []), add.value])]; add.value = ''; paint(); draw();
   });
   append(packages, add, chosen, append(h('label', 'strategy-starting'), include, h('span', '', 'Include starting kit')),
-    h('p', 'strategy-note', 'Only the selected packages are counted. Prerequisites are not added automatically.'));
+    h('p', 'strategy-note', 'Only the selected mutations are counted. Prerequisites are not added automatically.'));
   filters.append(append(h('label', 'strategy-scope-label'), h('span', '', 'Spell scope'), scope), packages);
   paint(); return filters;
 }
@@ -408,7 +408,7 @@ function strategySpell(item, catalogue, open) {
     detail.append(h('h3', 'reader-subtitle', 'On the caster'));
     for (const effect of doc.casterEffects) detail.append(effectRow(effect));
   }
-  if (doc.criticalChance > 0) detail.append(h('p', '', `${percentText(doc.criticalChance)} critical bonus · Standard speed`));
+  if (doc.criticalChance > 0) detail.append(h('p', '', `${percentText(doc.criticalChance)} critical bonus · Precision tempo`));
   const packs = packagesTeaching(item, catalogue);
   if (packs.length) detail.append(h('p', 'strategy-note', 'Taught by'), append(h('div', 'reader-links'), ...packs.map(pack => itemLink(pack, open))));
   detail.append(button('Full spell →', 'codex-link', () => open(item.path)));

@@ -1,51 +1,53 @@
 # Player aid
 
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
-the same engine: Tiers bought on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
+the same engine: Mutations acquired on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
 ADR 0066) and picked face down until the Purchase reveal (ADR 0089), ties settled by a Roll-off on a d20
 (ADR 0063), a Round of Stun immunity after every Stun (ADR 0072), one Activation a slot, each action
-resolving the moment its targets are named (ADR 0083), and a level-4 Capstone in each family that gives a
+resolving the moment its targets are named (ADR 0083), and a Stage-4 Capstone in each family that gives a
 Passive instead of Spells (ADR 0101), Titan's a Sunder (ADR 0106), and Archmage's shared by the whole side
-(ADR 0114), copy by copy. The section number is beside each rule.
+(ADR 0114), copy by copy. Like the rulebook, it teaches hidden Intents; by default the engine has each
+Creature choose its Spell when its slot comes up instead (ADR 0112). The section number is beside each rule.
 Fill the setup table's values in before the first Match.
 
 ---
 
-## The Round
+## The Round: Upkeep → Command → Combat → Aftermath
 
 | # | Phase | Sub-phase | What happens | §|
 | --- | --- | --- | --- | --- |
-| 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy, **plus** any `Energy +N at every upkeep` its package cards and its teammates' shared ones print: **+1 for every Archmage card on your mat**. | 5.1 |
-| 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
-| 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Tier, **face down**, both Players at once. **One Tier a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** buys them all. See below. | 5.3 |
-| 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
-| 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
+| 1 | Upkeep | **Energy gain** | Every **living** Creature gains the Rule set's Energy, **plus** any `Energy +N at every upkeep` its Mutation cards and its teammates' shared ones print: **+1 for every Archmage card on your mat**. | 5.1 |
+| 2 | Upkeep | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
+| 3 | Command | **Evolution** | **Only on a Round with a pick mark.** Each pick is one Mutation, **face down**, both Players at once. **One Mutation a Creature**: your picks go to different Creatures. Turn them over together: the **Purchase reveal** acquires them all. See below. | 5.3 |
+| 4 | Command | **Tempo** | Instinct or Precision, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
+| 5 | Command | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known; short of Energy, it Fizzles at its slot. | 5.6 |
 | 7 | Combat | **Activation** | Walk the timeline **once**. At each slot: can it act? If not, flip it with no targets: **Fizzle**. Otherwise choose targets on the board **as it stands**, flip the card and name them together, and **resolve it now**, before the next slot. A Team wiped **ends the Match here**. | 5.7, 5.8 |
-| 8 | End | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
-| 9 | End | **Finalization** | Check the **Round cap**. Advance the Round marker or end the Match. | 5.10 |
+| 8 | Aftermath | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
+| 9 | Aftermath | **Finalization** | Check the **Round cap**. Advance the Round marker or end the Match. | 5.10 |
 
 ---
 
-## Buying a Tier (§5.3)
+## Acquiring a Mutation (§5.3)
 
 **When.** A Round whose space on the Round track carries a pick mark (reference: every odd Round). Any other
 Round: skip step 3, nobody passes.
 
-**Pick.** On a pick mark, put all your pick tokens on your mat. A pick lays the Tier's package card **face
+**Pick.** On a pick mark, put all your pick tokens on your mat. A pick lays the Mutation's card **face
 down** with the Creature and moves a pick token onto its board. Nothing else moves. When the step ends, every
 pick token comes off the mats and the boards: picks never carry over.
 
-**Who.** A living Creature **without a pick token on its board**. A Creature buys **at most one Tier an
-opportunity**, so no Creature climbs two levels in one Round. Down to one living Creature, you have one pick.
+**Who.** A living Creature **without a pick token on its board**. A Creature acquires **at most one Mutation
+an opportunity**, so no Creature climbs two Stages in one Round. Down to one living Creature, you have one
+pick.
 
-**What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, **owns every
-Tier it requires**, and owns **at least one** Tier of a `Needs one of` list. A face-down card is not owned
-yet. Nothing else decides which Tier.
+**What.** A Mutation is available to a Creature when it is **alive**, has **not acquired** the Mutation,
+**has acquired every Mutation it requires**, and has acquired **at least one** Mutation of a `Needs one of`
+list. A face-down card is not acquired yet. Nothing else decides which Mutation.
 
-**Capstones** (level 4; Round 7 at the earliest on the reference schedule). Each needs **one of** its
-family's level-3 Tiers, teaches **no Spell**, pays **+0** initiative, and gives a **Passive** for the rest of
-the Match (§7.3):
+**Capstones** (Stage 4; Round 7 at the earliest on the reference schedule). Each needs **one of** its
+family's Stage-3 Mutations, teaches **no Spell**, pays **+0** initiative, and gives a **Passive** for the rest
+of the Match (§7.3):
 
 | Capstone | Needs one of | Passive |
 | --- | --- | --- |
@@ -53,32 +55,33 @@ the Match (§7.3):
 | **Archmage** | Cataclysm, Revenant, Transcendent | `Energy +1 at every upkeep`, from the next Round, `For every creature of the side`: **shared**, see below |
 | **Apex** | Blightweaver, Deathstalker, Soulreaver | `Damage +5 on every hit`: every target of every Damage line |
 
-**Archmage is shared, and stacks.** Its buyer owns it; every other Creature of your side holds its Passive
-too. A teammate may still buy its own copy, and each copy gives **every** Creature of your side +1 more.
+**Archmage is shared, and stacks.** The Creature that acquires it owns it; every other Creature of your side
+holds its Passive too. A teammate may still acquire its own copy, and each copy gives **every** Creature of
+your side +1 more.
 
 Give up the rest with an **Evolution pass**, unannounced. The step ends when neither Player has a pick they
 could use.
 
-**Purchase reveal**: turn every face-down package card over together, then buy each, Player 1's then Player
-2's:
+**Purchase reveal**: turn every face-down Mutation card over together, then acquire each, Player 1's then
+Player 2's:
 
-1. **Package card** stays face up with that Creature. A Passive it prints holds from now on, for the whole
+1. **Mutation card** stays face up with that Creature. A Passive it prints holds from now on, for the whole
    side if the card is shared.
-2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows,
+2. **Spell cards**: one of each Spell the Mutation teaches, into your hand. None for a Spell it already knows,
    and none for a Capstone.
-3. **Base initiative** + the Tier's initiative bonus. Once, for the rest of the Match. The only thing that
-   moves it.
+3. **Base initiative** + the Mutation's initiative bonus. Once, for the rest of the Match. The only thing
+   that moves it.
 
 ---
 
 ## The Combat timeline, and its tiebreaks (§5.5, §6.6)
 
 ```
-  |<-- Quick --[ divider ]-- Standard -->|
+  |<-- Instinct --[ divider ]-- Precision -->|
   [1st] [2nd] [3rd] [4th] [5th] [6th]
 ```
 
-1. **Quick before Standard.** Always, whatever the numbers.
+1. **Instinct before Precision.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
 3. **Tied with the other side? Roll-off.** Each tied Creature rolls a d20: the highest takes the first Place.
    A number both sides rolled is rolled again by every Creature on it, **your own included**. A number only
@@ -99,7 +102,7 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 2. **Choose targets** on the board as it stands. Same Spell: you choose targets, never another card.
 3. **Flip and name** the targets, together.
 4. **Pay** the printed cost.
-5. **Roll for a critical**, once for the cast. **Quick never rolls.**
+5. **Roll for a critical**, once for the cast. **Instinct never rolls.**
 6. **Apply each effect line to each target.** A Damage line takes the caster's **Damage bonus**, and meets
    the target's Defense less the caster's **Sunder**.
 7. **Apply the `Caster:` line**, once. No critical, no Damage bonus, no Sunder.
@@ -108,20 +111,20 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 **Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
 **total**, not the halves.
 
-**Damage bonus** = the `Damage +N on every hit` on the caster's package cards + the numbers on its Damage
+**Damage bonus** = the `Damage +N on every hit` on the caster's Mutation cards + the numbers on its Damage
 buff tokens.
 Never on a Bleed tick, never on the `Caster:` line.
 
-**Sunder** = the `Every hit ignores N defense` on the caster's package cards. A hit meets the target's total
+**Sunder** = the `Every hit ignores N defense` on the caster's Mutation cards. A hit meets the target's total
 Defense **less the Sunder, never below 0**: it never adds damage. No rail moves. Never on the `Caster:` line.
 
 ---
 
 ## What a critical does (§6.7)
 
-**Roll a d20 once per cast, against the threshold on the card (`d20: 11+`).** Every card that rolls prints
-one (ADR 0100), and a Creature's own Critical chance is **zero**: the chance on the card is the whole chance
-rolled. A card printed at **0%** never rolls.
+**Roll a d20 once per cast, against the threshold on the card (`d20: 11+`).** Only a Precision Creature
+rolls. Every card that rolls prints one (ADR 0100), and a Creature's own Critical chance is **zero**: the
+chance on the card is the whole chance rolled. A card printed at **0%** never rolls.
 
 | Multiplied | Not multiplied |
 | --- | --- |
@@ -160,19 +163,19 @@ Creature is ignored.**
 
 | Condition | When it acts |
 | --- | --- |
-| **Energy regeneration** | Start of Round, **1st** *(no card applies it today)* |
-| **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
-| **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
-| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
+| **Energy regeneration** | Upkeep, **1st** *(no card applies it today)* |
+| **Regeneration** | Upkeep, **2nd** — before Bleed, on purpose |
+| **Bleed** | Upkeep, **3rd**. **Ignores Defense** |
+| **Stun** | Tempo Sub-phase: no Tempo, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution *(no card applies a buff today)* |
 | **Damage buff** | Read whenever its holder deals a direct hit, added to its Damage bonus. A dock token, no rail *(Alpha Roar +2, Overdrive +1)* |
 
-**Cleanup, in two moves (§5.9):**
+**Aftermath · Cleanup, in two moves (§5.9):**
 
 1. Every token in a numbered lane slides **one lane left**; leaving lane `1` removes it. A **Stun** token
    leaving lane `1` of a living Creature is swapped for an **Immune** token in lane `1`, and the Stun token in
-   the Speed slot comes off. The next Cleanup removes the Immune token.
+   the Tempo slot comes off. The next Cleanup removes the Immune token.
 2. Every token in `new` moves into the lane matching its printed Duration.
 
 > `new` is why **the first countdown does not count**. Read a Duration as "**this many of the following

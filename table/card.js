@@ -6,6 +6,8 @@
 // change to this page -- and it only holds while nothing here defaults. A field a card does not carry is a line
 // the card does not have, never a blank to fill in.
 
+import { tempoLabel } from './terms.js';
+
 export function cardTitle(card) {
   return card?.name ?? '';
 }
@@ -54,7 +56,7 @@ function hasCritical(card) {
 
 export function cardStats(card) {
   const stats = [];
-  if (hasCritical(card)) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: ['Standard only', card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
+  if (hasCritical(card)) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: [`${tempoLabel('Standard')} only`, card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
   return stats;
 }
 

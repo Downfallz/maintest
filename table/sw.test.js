@@ -33,11 +33,11 @@ const push = notice => ({ data: { json: () => notice } });
 test('a push shows the notice the host sent, with a tap going to the game', async () => {
   const w = worker();
 
-  await w.fire('push', push({ title: 'Your turn', body: 'Round 7: choose a speed.', tag: 'turn:player2', url: '/play' }));
+  await w.fire('push', push({ title: 'Your turn', body: 'Round 7: choose a tempo.', tag: 'turn:player2', url: '/play' }));
 
   assert.equal(w.shown.length, 1);
   assert.equal(w.shown[0].title, 'Your turn');
-  assert.equal(w.shown[0].body, 'Round 7: choose a speed.');
+  assert.equal(w.shown[0].body, 'Round 7: choose a tempo.');
   assert.equal(w.shown[0].tag, 'turn:player2');
   assert.equal(w.shown[0].data.url, '/play');
 });
