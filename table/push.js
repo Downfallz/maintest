@@ -34,9 +34,10 @@ export function sameKey(subscription, publicKey) {
 
 // What the one button says, from where the page stands. Hidden when there is nothing it could do: a browser
 // that cannot push, a host without keys, a practice table. Disabled, with the way out, when the person said no,
-// and on an iPhone, which pushes only to a page added to the home screen.
-export function noticeButton({ supported, keyed, permission, subscribed, busy, practice, ios }) {
-  if (!keyed || practice) return { hidden: true, disabled: true, label: '', hint: '' };
+// and on an iPhone, which pushes only to a page added to the home screen. Hidden too for a device nobody is away from:
+// that is, not two seats of one table on one device, where the other player is whoever holds it (ADR 0120).
+export function noticeButton({ supported, keyed, permission, subscribed, busy, practice, ios, hotseat }) {
+  if (!keyed || practice || hotseat) return { hidden: true, disabled: true, label: '', hint: '' };
   if (!supported && ios) {
     return { hidden: false, disabled: true, label: 'Notifications need the home screen', hint: 'On iPhone: Share, Add to Home Screen, then open the table from there to be told when it is your turn.' };
   }

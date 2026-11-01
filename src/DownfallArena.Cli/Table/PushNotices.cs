@@ -159,6 +159,13 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
+            // One phone holding both seats is hotseat (ADR 0120): the other player is the person holding it, and a
+            // "your turn" for either seat would only say what the pass screen says, twice an opportunity.
+            if (table.Seats.Any(other => other != seat && other.Push?.Endpoint == subscription.Endpoint))
+            {
+                return;
+            }
+
             if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id)))
             {
                 // Said, so a host's log shows what reached a phone and what did not.

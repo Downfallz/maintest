@@ -42,6 +42,7 @@ test('the button is offered only where a notice could reach, and says what tappi
   assert.equal(noticeButton({ ...base, supported: false, ios: true, keyed: false }).hidden, true, 'not without keys');
   assert.equal(noticeButton({ ...base, keyed: false }).hidden, true, 'a host without keys');
   assert.equal(noticeButton({ ...base, practice: true }).hidden, true);
+  assert.equal(noticeButton({ ...base, hotseat: true }).hidden, true, 'two seats on one device: nobody is away');
   assert.equal(noticeButton({}).hidden, true);
 });
 

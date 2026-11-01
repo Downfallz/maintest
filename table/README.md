@@ -382,7 +382,8 @@ when the match asks that seat something and nobody is looking at the page, scree
 included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
-first. The host's log says which seat was notified of which asking, and why a notice could not be sent.
+first. A device holding both seats of the table is hotseat and is told nothing: the other player is whoever holds
+it (ADR 0120). The host's log says which seat was notified of which asking, and why a notice could not be sent.
 Once subscribed, **Send a test notification** (Match panel) shows two notices at once: one the page shows
 itself, through the worker and no push service, and one the host sends through the push service, with what
 the service answered under the button. Both appearing is a phone that works; only the page's is a push that
