@@ -104,6 +104,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         return Json(new { tables });
     }
 
+    /// <summary>
+    /// The one bot a visitor may play (ADR 0121): the first one <c>learning/seatable.json</c> puts forward, which is
+    /// the strongest the journal has measured, so the lobby follows the next one without a change here. Greedy when
+    /// the host was given no list.
+    /// </summary>
+    private string Strongest => composer.Agents.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy";
+
     private async Task<StudioResponse> OpenAsync(string body)
     {
         if (!composer.Records)
@@ -113,9 +120,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var opening = JsonSerializer.Deserialize<Opening>(body, Web);
         var opponent = opening?.Opponent ?? "person";
-        if (opponent is not ("person" or "hotseat" or "greedy" or "random"))
+        if (opponent is not ("person" or "hotseat" or "bot"))
         {
-            return Problem(400, "Choose another player, a shared device, Greedy or Random.");
+            return Problem(400, "Choose another player, a shared device, or the bot.");
         }
 
         var format = composer.Rules.Format;
@@ -133,7 +140,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "All tables are occupied. Ask the operator to close an unused table.");
             }
 
-            var request = new TableRequest(null, opponent is "greedy" or "random" ? AgentSpec.Parse(opponent) : null, null, null, null, format);
+            var request = new TableRequest(null, opponent == "bot" ? AgentSpec.Parse(Strongest) : null, null, null, null, format);
             PlayedTable table;
             try
             {

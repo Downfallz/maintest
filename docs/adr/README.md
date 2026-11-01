@@ -125,4 +125,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) | "Your turn" reaches a phone nobody is looking at | Accepted |
 | [0119](0119-a-seat-page-is-told-when-its-table-changed.md) | A seat's page is told when its table changed | Accepted |
 | [0120](0120-a-device-holding-both-seats-gets-no-notice.md) | A device holding both seats of a table gets no notice | Accepted |
+| [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md) | Offer one bot in the public lobby: the strongest | Accepted |
 | [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
