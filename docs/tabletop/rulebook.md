@@ -14,7 +14,9 @@ with a one-Round Bleed and Ice Grip a hit of 3 with a two-Round slow; Vital Echo
 2026-10-21, when its Regeneration became 4 a Round; Wraithguard's mention re-read 2026-10-26, when its timed
 ward became +5, and Vital Surge's example the same day, when its cost became 1 and Whirlwind's hit
 became 8; Fury re-read 2026-10-27, when its hit became 6; the Capstones re-read 2026-10-30, when Titan's
-Sunder became 10, Apex's Damage bonus 5, and Archmage a shared package that stacks). Phase 4 of
+Sunder became 10, Apex's Damage bonus 5, and Archmage a shared package that stacks; Bite, Ambush, Latch,
+Revitalize and Renewal Burst re-read 2026-11-01, when Bite's hit became 6, Ambush's 10, Latch's Bleed 2 a
+Round, Revitalize's Heal 6, and Renewal Burst's Heal 14 and Energy +3). Phase 4 of
 [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
@@ -1127,7 +1129,15 @@ and §7.3 read it: Archmage's buyer owns it, every other Creature of the side ho
 a side owns stack, so a Creature gains 1 for every Archmage card on its Player's mat. §5.1's example adds a
 second copy. The numbers moved in the examples: the Damage bonus example adds 5 and deals 29 on
 the critical, 13 without; the Sunder example's Creature 5 meets 0 Defense, not 2, and takes 7, since no
-total Defense it can have is past 10; the Damage buff example's Apex aside reads 10.
+total Defense it can have is past 10; the Damage buff example's Apex aside reads 10. On 2026-11-01 every
+example naming Bite, Ambush, Latch, Revitalize or Renewal Burst was re-read against `data/Spells/` (content
+`f3e8a42d`), which changed all five: Bite prints `Damage 6`, not `Damage 4`, beside its unchanged
+`Caster: Heal 4`; Ambush `Damage 10`, not `Damage 8`, beside its unchanged
+`Caster: Initiative -5, 1 round`; Latch `Bleed 2 a round, 3 rounds`, not `Bleed 1`, beside its unchanged
+`Damage 1` and `Caster: Regeneration 1 a round, 3 rounds`; Revitalize `Heal 6`, not `Heal 5`; and Renewal
+Burst `Heal 14` and `Energy +3`, not `Heal 12` and `Energy +2`. §5.3's purchase example names Revitalize
+among Warped's Spells and §6.8 names it as a Spell that may target its caster, and neither quotes a number of
+its; no example uses the other four. No rule moved.
 
 | This book | The specification |
 | --- | --- |

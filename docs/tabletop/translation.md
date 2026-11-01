@@ -28,8 +28,11 @@ re-read on 2026-10-26, when Wraithguard's timed `DefenseBuff` became 5 (journal,
 `Damage` 8 (journal, 2026-10-26); the rows `enraged_charge` reaches re-read on 2026-10-27, when Fury's `Damage`
 became 6 (journal, 2026-10-27, "Tuning pass 30"); the rows the Capstones reach re-read on 2026-10-30, when
 Titan's Sunder became 10, Apex's Damage bonus 5, and Archmage a shared package that stacks
-([ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md); journal, 2026-10-30)). Phase 1 of
-[plan.md](plan.md).
+([ADR 0114](../adr/0114-a-shared-package-is-held-by-the-whole-side.md); journal, 2026-10-30); the rows
+`parasite_jab`, `ambush`, `latch`, `rejuvenate` and `restorative_burst` reach re-read on 2026-11-01, when
+Bite's `Damage` became 6, Ambush's 10, Latch's `Bleed` 2 a Round, Revitalize's `Heal` 6, and Renewal Burst's
+`Heal` 14 and `EnergyGain` 3 (journal, 2026-11-01, "Hand-tuned: Predator's level 2, Revitalize and Renewal
+Burst")). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -277,6 +280,37 @@ Titan's Sunder became 10, Apex's Damage bonus 5, and Archmage a shared package t
     that side. Both verdicts hold, and the package cards stay 144, since every Creature may still own one.
     Whether the shared package deserves a row and a verdict of its own is the `boardgame-director`'s to say.
   - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
+- **Re-read on 2026-11-01 (journal, 2026-11-01, "Hand-tuned: Predator's level 2, Revitalize and Renewal
+  Burst"; content `f3e8a42d`, which is `478f9b45` with five Spells changed).** Three Predator level-2 Spells
+  and two Warped-family heals moved an amount, and none changed its cost, its reach, a Duration, its Effects or
+  its Critical chance.
+  - **`parasite_jab`** (Bite, Parasite; cost 2, one enemy, 0.45) deals 6, not 4. Its `Caster: Heal 4` is
+    unchanged.
+  - **`ambush`** (Ambush, Deathmarked; cost 3, one enemy, 0.35) deals 10, not 8. Its caster
+    `InitiativeDebuff` of 5 for 1 Round is unchanged.
+  - **`latch`** (Latch, Parasite; cost 1, one enemy, no Critical chance) gives `Bleed` 2 a Round for 3 Rounds,
+    not 1. Its `Damage` 1 and its caster `Regeneration` of 1 a Round for 3 Rounds are unchanged.
+  - **`rejuvenate`** (Revitalize, Warped; cost 2, one ally, 0.2) heals 6, not 5.
+  - **`restorative_burst`** (Renewal Burst, Transcendent; cost 3, one ally, no Critical chance) heals 14, not
+    12, and gives `EnergyGain` 3, not 2.
+
+  What this moves here:
+  - **No row moves its operations, its tokens or its verdict**: `rejuvenate` and `restorative_burst` stay at
+    4 and 0, **keep as is**, in Part 3's first table; `parasite_jab` at 6 and 0, **restate**, `ambush` at 6
+    and 1 and `latch` at 6 and 2, both **needs a component**, in its second. An amount is not a step of a
+    cast. `latch`'s row names its Bleed token at 2.
+  - **Part 2**: `Damage` still runs 1 to 11 with no 9: 10 was already `engulfing_flames`' and `psycho_rush`'s,
+    6 `reckless_swing`'s and `enraged_charge`'s, and 8 is `tornado`'s alone now. 11 is still the largest,
+    `hateful_sacrifice`'s, so no figure that reads the largest hit moves. `Heal`'s amounts are 2, 4, 6, 10 and
+    14. The row read 2, 4, 5, 7 and 9, its reading at `e6f72578`, which no re-read since had touched: a drift
+    older than this change, found on the way. `EnergyGain`'s are 1, 2, 3 and 4. `Bleed`'s values do not
+    move: 2 a Round for 3 Rounds was already `summon_minions`'. All three verdicts hold. [components.md](components.md)
+    §1.4 moves `latch` from the Bleed 1 face to the Bleed 2 face at the same supply, so the Condition tokens
+    stay 222 in 7 kinds. The 44 files still author 81 Effects.
+  - **Candidate 2** does not move: it reads no amount, and `restorative_burst`'s 3 is under
+    `adrenaline_tonic`'s 4, so the most one Creature gains in a Round stays 14
+    ([components.md](components.md) §1.7).
+  - **Part 5's tallies** do not move: 131 rows, **keep as is** 37, **restate** 43, **needs a component** 51.
 
 Every count, value range and tracking cost below is its Part's catalogue and no other: a tuning pass moves
 them, so rebuild and re-read this document's numbers whenever the hash moves.
@@ -517,8 +551,8 @@ that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` 
 | Effect kind | Spells in `data/` | Values used | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
 | `Damage` | 31 at `3c9eb083` (30 on targets; 3 on the caster: `hateful_sacrifice`, `reckless_swing`, `summon_minions`, the last on the caster only); 32 and 31 at `ad3e4d00`, with `basic_attack` | amounts 1 to 11, every one of them but 9, which no Spell deals since `crazed_specter` went to 4; 11 is `hateful_sacrifice`. `basic_attack`'s 2 is still dealt to a target by three Spells (five until 2026-10-20, when `frostbite` and `meteor` went to 3) | Multiplied by the critical, then reduced by total Defense, floor zero (`ResolutionRules.cs:91`) | 3 operations per target: double or not, subtract Defense, subtract from Health | **restate** | Nothing. This is the arithmetic the plan flagged, and at a multiplier of 2.0 it is the cheapest shape it can have. |
-| `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 4, 5, 7, 9 | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
-| `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`), 2 and 4 (`adrenaline_tonic` since 2026-10-19; 2 before) | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
+| `Heal` | 7 (5 on targets, 2 on the caster: `parasite_jab`, `soul_devourer`) | amounts 2, 4, 6, 10, 14, read at `f3e8a42d` (2, 4, 5, 7, 9 at `e6f72578`; `rejuvenate`'s 6 and `restorative_burst`'s 14 since 2026-11-01) | Multiplied by the critical (ADR 0033), capped by Health missing (`Creature.cs:271`) | 2 operations per target | **keep as is** | Nothing. |
+| `EnergyGain` | 5 (3 on targets: `wait`, `restorative_burst`, `adrenaline_tonic`; 2 on the caster: `momentum`, `extort`) | amounts 1 (`extort`), 2, 3 (`restorative_burst` since 2026-11-01; 2 before) and 4 (`adrenaline_tonic` since 2026-10-19; 2 before) | Added, never clamped (`Creature.cs:279-290`) | 1 token move | **keep as is** | Nothing at the cast; the unbounded track is ADR candidate 2. |
 | `EnergyDrain` | 3 (`extort`, `night_raid`, `soul_devourer`) | amounts 1 (`extort`) and 3; `night_raid`'s 3 on up to 2 enemies (2 on up to 3 at `e6f72578`) | Takes at most what the target has (`Creature.cs:295-307`, ADR 0035) | 1 comparison, 1 token move | **keep as is** | Nothing. |
 
 ### Lasting effects (they become Conditions)
@@ -638,7 +672,7 @@ size; this document only reports which rows carry an extra rule.
 | `ambush` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 5 on its own caster, for 1 Round. It is applied in Combat, so the Round it lasts is the next one (Candidate 5), and the caster line must say the caster slows itself, not its target. It replaced `shadowstep`, which raised its caster's initiative and had no row here. |
 | `mortal_wound` | 3 | 1 enemy | 6 | 1 | **needs a component** | A Bleed token at 4 a Round for 2 Rounds, the largest Bleed placed on a target, which `crazed_specter` places too since `ad3e4d00`. |
 | `frostbite` | 2 | 1 enemy | 6 | 1 | **needs a component** | An Initiative debuff token at 3, for 2 Rounds, beside a Damage 3, since 2026-10-20; it was 1 Round and Damage 2 until then. It is applied in Combat, so the two Rounds it lowers are the next two timelines (Candidate 5). New since PR #245. |
-| `latch` | 2 | 1 enemy | 6 | 2 | **needs a component** | A Bleed 1 token on the target and a Regeneration 1 token on its own caster, both for 3 Rounds, beside a Damage 1. Its caster line wraps: the one card whose body needs a fifth line (components.md §2.4). New since PR #245. |
+| `latch` | 2 | 1 enemy | 6 | 2 | **needs a component** | A Bleed 2 token on the target (Bleed 1 until 2026-11-01) and a Regeneration 1 token on its own caster, both for 3 Rounds, beside a Damage 1. Its caster line wraps: the one card whose body needs a fifth line (components.md §2.4). New since PR #245. |
 | `tranquilizer_dart` | 3 | 1 enemy | 6 | 2 | **needs a component** | A Stun token and a Bleed 1 token; one Round lost, where it was two. It was in the first table, at 5 operations and 1 token, until PR #245 reworked it. |
 | `summon_minions` | 2 | 3 enemies | 6 | 3 | **needs a component** | Three Bleed tokens and 2 self-damage; the only Spell aimed at enemies that deals them no Damage on the cast. Flagged for card text. |
 | `reckless_swing` | 2 | 1 enemy | 7 | 0 | **restate** | Nothing; 6 damage and 2 back on the caster. Two Health tracks move, and the caster line needs its own line on the card. New since PR #245. |

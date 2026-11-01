@@ -15,7 +15,9 @@ Overdrive's Energy +4 and Damage buff +1, 2026-10-19; to Emberstorm's hit of 3 a
 Grip's hit of 3 and 2-Round slow, 2026-10-20; to Bonewall's ward of +6 and the Regeneration of Vital Echo at 4
 and Whisper at 3, 2026-10-21; to Wraithguard's timed ward of +5, 2026-10-26, and to Vital Surge's cost of 1
 and Whirlwind's hit of 8 the same day; to Fury's hit of 6, 2026-10-27; to Titan's Sunder of 10, Apex's
-Damage bonus of 5 and Archmage shared with the whole side, copy by copy (ADR 0114), 2026-10-30). Phase 3
+Damage bonus of 5 and Archmage shared with the whole side, copy by copy (ADR 0114), 2026-10-30; to Bite's hit
+of 6, Ambush's of 10, Latch's Bleed of 2, Revitalize's Heal of 6 and Renewal Burst's Heal of 14 and
+Energy +3, 2026-11-01). Phase 3
 of [plan.md](plan.md). It answers the
 **needs a component** rows of [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -210,6 +212,33 @@ What is current, exactly:
   Creature gains at most 17 in a Round, and banks at most 71 by doing nothing, inside the one overflow chit;
   at the knob's `max` of 2 it is 102, past the chit ([1.7](#17-the-energy-track-what-ends-it), and Part 6,
   question 4).
+- **Bite hits for 6 and Ambush for 10, Latch bleeds 2 a Round, Revitalize heals 6, and Renewal Burst heals 14
+  and gives Energy +3** (journal, 2026-11-01, "Hand-tuned: Predator's level 2, Revitalize and Renewal Burst";
+  content `f3e8a42d`, which is `478f9b45` with those five Spells changed). None changes its name, its id, its
+  package, its cost, its reach, a Duration or its Critical chance. `parasite_jab` (Bite, Parasite) prints
+  `Damage 6`, where it printed `Damage 4`, and keeps `Caster: Heal 4`. `ambush` (Deathmarked) prints
+  `Damage 10`, where it printed `Damage 8`, and keeps `Caster: Initiative -5, 1 round`. `latch` (Parasite)
+  prints `Bleed 2 a round, 3 rounds`, where it printed `Bleed 1 a round, 3 rounds`, and keeps `Damage 1` and
+  `Caster: Regen 1 a round, 3 rounds`. `rejuvenate` (Revitalize, Warped) prints `Heal 6`, where it printed
+  `Heal 5`. `restorative_burst` (Renewal Burst, Transcendent) prints `Heal 14` and `Energy +3`, where it
+  printed `Heal 12` and `Energy +2`. **No piece count moves; one Spell changes face.** Latch's Bleed leaves
+  the Bleed 1 face for the Bleed 2 face ([1.4](#14-condition-tokens)). The 1 face keeps `tranquilizer_dart`
+  and `bone_ward`'s caster line, one a cast, so it stays **6**; the 2 face takes a Spell that places one a
+  cast beside `summon_minions` and `meteor`, which place up to 3, so it stays **18**. The Condition tokens stay
+  **222** in 7 kinds and the token pieces **320**, on the same 2 token sheets; the paper stays 57. The Bleed 2
+  face's ceiling in play stays 54, `summon_minions`' three a cast for 3 Rounds, which Latch's one a cast
+  cannot pass. The dock keeps four lanes: no Duration moves, and 3 Rounds is still the longest. Four of the
+  changed lines are one digit for one digit; `Damage 10` is one character more than `Damage 8`, so Ambush's
+  body goes from 53 to 54 characters and its statline from 77 to 78, both above the medians, and no figure of
+  [2.3](#23-the-measurement) moves: `latch`'s caster line, 33, is still the widest. No rail moves. 10 ties
+  `engulfing_flames`' and `psycho_rush`'s hit, under the largest printed Damage, `hateful_sacrifice`'s 11,
+  which the command of [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) still prints; from an
+  Apex owner Ambush hits for 15, 30 on a critical, under the 16 and 32 there. Renewal Burst's 14 is under the
+  Health rail's 30, and a Heal stops at the Health missing (`Creature.cs:271`). Its Energy +3 is under
+  Overdrive's +4, so the most one Creature gains in a Round stays **14**, 17 with three Archmage copies on the
+  side, and nothing past 40 needs more than the one overflow chit ([1.7](#17-the-energy-track-what-ends-it)).
+  translation.md's five rows keep their operations, their tokens and their verdicts, so
+  [Part 7](#part-7-coverage-the-needs-a-component-rows) moves one figure, `latch`'s Bleed, and no count.
 - **A Match is 8 to 14 Rounds, and the table's Round cap is 20** (ADR 0086; the plan said 8 to 16). The
   Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
@@ -465,6 +494,9 @@ neither Spell places a token, so the Condition tokens stay **222** and the token
 ([1.4](#14-condition-tokens)). Fury's hit of 6, 2026-10-27, moved none either: it places no token. The
 Capstones of 2026-10-30 moved none: Archmage is shared with the whole side (ADR 0114), but every Creature
 may still buy its own copy, so the package cards stay **144** ([1.1](#11-spell-cards-and-package-cards)).
+The content of 2026-11-01 moved none: Latch's Bleed of 2 joins the Bleed 2 face, which `summon_minions` and
+`meteor` already size at three a cast, and the Bleed 1 face keeps one a cast, so the Condition tokens stay
+**222** and the token pieces **320** ([1.4](#14-condition-tokens)).
 
 ### 1.1 Spell cards and package cards
 
@@ -577,8 +609,8 @@ for s in S:
 
 | Token | Face | Supply | The rule beside the count | Follows |
 | --- | --- | --- | --- | --- |
-| Bleed | 1 a Round | 6 | `latch` and `tranquilizer_dart` on one enemy, `bone_ward` on its own caster; one each; 6 slots x 1 | **VALUE** (content) |
-| Bleed | 2 a Round | 18 | `summon_minions` and `meteor`, each on up to 3 targets; 6 slots x 3 = 18. `meteor`'s lasts 1 Round, 2 from 2026-10-18 to 2026-10-20, which moved no supply | **VALUE** (content) |
+| Bleed | 1 a Round | 6 | `tranquilizer_dart` on one enemy, `bone_ward` on its own caster; one each; 6 slots x 1. `latch` placed one here until 2026-11-01, one a cast, which moved no supply when it left | **VALUE** (content) |
+| Bleed | 2 a Round | 18 | `summon_minions` and `meteor`, each on up to 3 targets; 6 slots x 3 = 18. `meteor`'s lasts 1 Round, 2 from 2026-10-18 to 2026-10-20, which moved no supply. `latch` places one, on one enemy for 3 Rounds, since 2026-11-01 | **VALUE** (content) |
 | Bleed | 3 a Round | 18 | `toxic_waves`, up to 3 targets (`poison_slash` places one); 6 slots x 3 = 18 | **VALUE** |
 | Bleed | 4 a Round | 24 | `crazed_specter` on up to 3 enemies and on its own caster, 4 a cast; `mortal_wound` on a target and `revenant_guards` on its own caster place one each; 6 slots x 4 = 24 | **VALUE** |
 | Regeneration | 1 a Round | 6 | `latch` on its own caster; 6 slots x 1 | **VALUE** |
@@ -635,7 +667,12 @@ total 30. On 2026-10-26 `revenant_guards`' timed Defense buff went from +4 to +5
 **222** (+6), still in 7 kinds. The timed Defense buffs are +1, +2, +4, +5, +6 and +7, and total 54. The
 same day `restorative_gush` (Vital Surge) went to a cost of 1 and `tornado` (Whirlwind) to `Damage 8`: a cost
 and a hit, which no face and no supply reads, since neither Spell places a token. **222**, unchanged. On
-2026-10-27 `enraged_charge` (Fury) went to `Damage 6`, a hit that places no token. **222**, unchanged.
+2026-10-27 `enraged_charge` (Fury) went to `Damage 6`, a hit that places no token. **222**, unchanged. On
+2026-11-01 `latch`'s Bleed went from 1 a Round to 2, for the same 3 Rounds. It leaves the 1 face, which keeps
+one a slot with `tranquilizer_dart` and `bone_ward`, 6, and joins the 2 face, whose three a slot are
+`summon_minions`' and `meteor`'s, 18. The same day `parasite_jab` and `ambush` went to `Damage 6` and
+`Damage 10`, `rejuvenate` to `Heal 6`, and `restorative_burst` to `Heal 14` and `Energy +3`: amounts that
+place no token. **222**, unchanged, still in 7 kinds. The Bleeds are still 1, 2, 3 and 4, and still total 66.
 
 **No Energy regeneration token.** At `813bb91b`, and still at `e6f72578`, no Spell authors an
 `EnergyRegeneration`, so the command above prints none and no cast can place one: `momentum`, the only Spell
@@ -901,9 +938,9 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   d=json.load(open(p))
   for e in d['effects']+d.get('casterEffects',[]):
     if 'Energy' in e['kind']: print(d['id'].split(':')[1], e)"
-# wait EnergyGain 2 | restorative_burst EnergyGain 2 | adrenaline_tonic EnergyGain 4 | momentum EnergyGain 2
+# wait EnergyGain 2 | restorative_burst EnergyGain 3 | adrenaline_tonic EnergyGain 4 | momentum EnergyGain 2
 # extort EnergyDrain 1, EnergyGain 1 | night_raid EnergyDrain 3 | soul_devourer EnergyDrain 3
-# adrenaline_tonic read EnergyGain 2 until 2026-10-19
+# adrenaline_tonic read EnergyGain 2 until 2026-10-19; restorative_burst read EnergyGain 2 until 2026-11-01
 ```
 
 `momentum`'s `EnergyGain` is its caster effect: it lands on the Creature that casts it, not on the enemy it
@@ -928,7 +965,9 @@ Creature holds 1 for every copy its side owns, so with three copies on the side 
 knob's `max`). Overdrive's own knob runs its Energy from 2 to 5, so a pass can make the Round's most 17, 20
 with three Archmage copies (18 with one). It moves no end and
 no count: a Round that gains 14 is three slots spent on Energy, and the overflow chit below is what any gain
-past 40 takes.
+past 40 takes. Renewal Burst's `Energy +3` of 2026-11-01 (2 before) moves neither figure: an ally who casts it
+gives 3 where Overdrive gives 4, and `data/balance/knobs.json` searches it from 1 to 3, so 3 is already its
+`max`.
 
 **What a player does at the end of the track.** A Creature whose Energy would pass 40 takes an **Energy
 overflow chit** worth 40 and its marker returns to 0. One chit per Creature is in the box: a second chit means
@@ -1079,14 +1118,17 @@ r('body    ',B);r('statline',S)"
 #   digit: Vital Surge's statline 42, Whirlwind's body 26 and statline 50, as before): the same three lines again
 # re-run on 2026-10-27, with Fury's Damage 6 (one digit for one digit: body 20, statline 44, as before): the
 #   same three lines again
+# re-run on 2026-11-01, with Bite's Damage 6, Ambush's Damage 10, Latch's Bleed 2, Revitalize's Heal 6 and
+#   Renewal Burst's Heal 14 and Energy +3 (Ambush's body 53 to 54 and statline 77 to 78, the four others one
+#   digit for one digit): the same three lines again
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
 | Body lines per card | 2, 3 or 4 | 14 cards at 2, 24 at 3, 6 at 4 (`crazed_specter`, `extort`, `latch`, `revenant_guards`, `soul_devourer`, `tranquilizer_dart`), read at `3c9eb083`; 15 at 2 at `ad3e4d00`, with `basic_attack`. No line wraps, so a card prints as many lines as it has, and the 4-line box holds every card. With the full word `Regeneration`, `latch` printed 5. `momentum` went from 2 lines to 3 with ADR 0078, and `crazed_specter` from 3 to 4 with its target Bleed on 2026-10-05; `night_raid` stays at 3. Since 2026-10-19 it is 13 at 2 and 25 at 3: `adrenaline_tonic` went from 2 lines to 3 with its Damage buff. On 2026-10-26 `tornado` stays at 2 with `Damage 8`, where it printed `Damage 6`. On 2026-10-27 `enraged_charge` stays at 2 with `Damage 6`, where it printed `Damage 7`. |
 | Widest single line | **33 characters** (`latch`: `Caster: Regen 1 a round, 3 rounds`) | Five under the 38 a line holds, so **no line in the catalogue wraps**. With the full word it was 40 and wrapped ([2.2](#22-the-words)). The next widest are 32: `Caster: Bleed 4 a round, 1 round` on `revenant_guards` and `crazed_specter`, `Caster: Bleed 1 a round, 1 round` on `bone_ward`, and since 2026-10-18 `Damage +2 on every hit, 2 rounds` on `thundering_seal`. Since 2026-10-19 `Damage +1 on every hit, 1 round` on `adrenaline_tonic` is 31, the next after them. The line that wrapped before `latch`'s, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078. |
-| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. `meteor`'s went from 53 to 54 the same day, and moved nothing. **Since 2026-10-19 the median is 43.5**: `adrenaline_tonic`'s body went from 26, below it, to 60, above it, so the 22nd and 23rd bodies are `soothing_chant`'s 42 and `frostbite`'s 45; with the full word it would be 45. The max and the min do not move. **On 2026-10-20 `frostbite`'s body went from 45 to 46** and `meteor`'s from 54 back to 53. The 23rd body is now `healing_screech`'s 45, the length `frostbite`'s left, so the median holds at 43.5; with the full word it would be 45.5 (`noxious_cure`'s 45 and `frostbite`'s 46). `meteor`'s 53 is above the median either way. On 2026-10-21 `bone_ward`'s, `healing_screech`'s and `soothing_chant`'s amounts moved by one digit for one digit, so no body changed length and nothing moved. On 2026-10-26 `revenant_guards`' timed Defense buff went from 4 to 5, one digit for one digit: its body is still 96, still the max, and nothing moved. Later that day `tornado`'s hit went from 6 to 8, one digit for one digit: its body is still 26, below the median, and nothing moved. On 2026-10-27 `enraged_charge`'s hit went from 7 to 6, one digit for one digit: its body is still 20, below the median, and nothing moved. |
-| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. Since 2026-10-19 the median is **69**: `adrenaline_tonic`'s statline went from 54 to 88. The max and the min do not move. On 2026-10-20 `frostbite`'s went from 69 to 70 and `meteor`'s from 78 to 77: the 22nd and 23rd statlines are `healing_screech`'s and `noxious_cure`'s, both 69, so the median holds. On 2026-10-21 no statline changed length ([2.2](#22-the-words)). On 2026-10-26 `revenant_guards`' is still 124, with `Defense +5, 2 rounds` where it had `Defense +4, 2 rounds`, so the max holds and nothing moved. Later that day `restorative_gush`'s is still 42 at a cost of 1 as at 2, and `tornado`'s still 50 at `Damage 8` as at `Damage 6`, both below the median, so nothing moved. On 2026-10-27 `enraged_charge`'s is still 44 at `Damage 6` as at `Damage 7`, below the median, so nothing moved. |
+| Whole body, one string | max **96** characters (`revenant_guards`), median **41**, min **16** (`wait`), read at `3c9eb083` (median 40 at `ad3e4d00`, with `basic_attack`'s 20) | 96 characters is under three full lines. No card is tight on the body alone. `latch`'s body is 84 (91 with the full word), `healing_screech`'s 45 (52) and `soothing_chant`'s 42 (49). The max and the min do not move with the abbreviation. The median does at `3c9eb083`: with 44 cards it is the mean of the 22nd and 23rd bodies, `momentum`'s 40 and `soothing_chant`'s 42, and with the full word it would be 42.5. `crazed_specter`'s is 89 at `ad3e4d00`, the second longest (61 before its target Bleed), and `night_raid`'s is 38, as it was; neither of those two changes moved the three figures. `thundering_seal`'s is 66 since 2026-10-18 (55 before), above the median on both sides of it, so the median holds. `meteor`'s went from 53 to 54 the same day, and moved nothing. **Since 2026-10-19 the median is 43.5**: `adrenaline_tonic`'s body went from 26, below it, to 60, above it, so the 22nd and 23rd bodies are `soothing_chant`'s 42 and `frostbite`'s 45; with the full word it would be 45. The max and the min do not move. **On 2026-10-20 `frostbite`'s body went from 45 to 46** and `meteor`'s from 54 back to 53. The 23rd body is now `healing_screech`'s 45, the length `frostbite`'s left, so the median holds at 43.5; with the full word it would be 45.5 (`noxious_cure`'s 45 and `frostbite`'s 46). `meteor`'s 53 is above the median either way. On 2026-10-21 `bone_ward`'s, `healing_screech`'s and `soothing_chant`'s amounts moved by one digit for one digit, so no body changed length and nothing moved. On 2026-10-26 `revenant_guards`' timed Defense buff went from 4 to 5, one digit for one digit: its body is still 96, still the max, and nothing moved. Later that day `tornado`'s hit went from 6 to 8, one digit for one digit: its body is still 26, below the median, and nothing moved. On 2026-10-27 `enraged_charge`'s hit went from 7 to 6, one digit for one digit: its body is still 20, below the median, and nothing moved. On 2026-11-01 `ambush`'s hit went from 8 to 10, one character more: its body goes from 53 to 54, above the median either way, and `parasite_jab`'s 37, `latch`'s 84, `rejuvenate`'s 17 and `restorative_burst`'s 30 keep their lengths, so nothing moved. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **124** (`revenant_guards`), median **68.5**, min **41** (`rejuvenate`), read at `3c9eb083` (median 68 at `ad3e4d00`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 124 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line, at a smaller catalogue. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows the 4-line box. `crazed_specter`'s is 117 at `ad3e4d00`, the second longest, and that change moved none of the three figures. Since 2026-10-19 the median is **69**: `adrenaline_tonic`'s statline went from 54 to 88. The max and the min do not move. On 2026-10-20 `frostbite`'s went from 69 to 70 and `meteor`'s from 78 to 77: the 22nd and 23rd statlines are `healing_screech`'s and `noxious_cure`'s, both 69, so the median holds. On 2026-10-21 no statline changed length ([2.2](#22-the-words)). On 2026-10-26 `revenant_guards`' is still 124, with `Defense +5, 2 rounds` where it had `Defense +4, 2 rounds`, so the max holds and nothing moved. Later that day `restorative_gush`'s is still 42 at a cost of 1 as at 2, and `tornado`'s still 50 at `Damage 8` as at `Damage 6`, both below the median, so nothing moved. On 2026-10-27 `enraged_charge`'s is still 44 at `Damage 6` as at `Damage 7`, below the median, so nothing moved. On 2026-11-01 `ambush`'s goes from 77 to 78 with `Damage 10`, above the median either way; `rejuvenate`'s is still 41 at `Heal 6`, still the min, and `parasite_jab`'s 61, `latch`'s 112 and `restorative_burst`'s 58 keep their lengths, so nothing moved. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -1126,10 +1168,12 @@ more Spells carry a Caster effect at `e6f72578` and are not among the audit's se
 `hateful_sacrifice`, `latch`, `momentum`, `ambush`, `parasite_jab`, `reckless_swing` and `shield_bash`. They
 use the same rule and the same prefix. `momentum` reads `One enemy` (9) / `Damage 3` (8) /
 `Caster: Energy +2` (17): three lines, and the rule is what says the 2 Energy go to the caster that struck
-and not to the enemy it struck. `ambush` reads `One enemy` (9) / `Damage 8` (8) /
-`Caster: Initiative -5, 1 round` (30), and the rule is what says the caster slows itself, not its victim.
-`latch` reads `One enemy` (9) / `Bleed 1 a round, 3 rounds` (25) / `Damage 1` (8) /
-`Caster: Regen 1 a round, 3 rounds` (33): four lines, the widest line in the catalogue, and no wrap. It is the
+and not to the enemy it struck. `ambush` reads `One enemy` (9) / `Damage 10` (9) /
+`Caster: Initiative -5, 1 round` (30), and the rule is what says the caster slows itself, not its victim; it
+printed `Damage 8` (8) until 2026-11-01.
+`latch` reads `One enemy` (9) / `Bleed 2 a round, 3 rounds` (25) / `Damage 1` (8) /
+`Caster: Regen 1 a round, 3 rounds` (33): four lines, the widest line in the catalogue, and no wrap. Its
+second line was `Bleed 1 a round, 3 rounds` (25) until 2026-11-01. It is the
 card the `Regen` abbreviation was made for ([2.2](#22-the-words)): with the full word its caster line was 40
 and took a fifth line.
 
@@ -2245,7 +2289,7 @@ all of them since its re-read of 2026-10-04. The components that answer them are
 | `ambush` | 1 Initiative debuff -5 on its own caster (1 round). It replaced `shadowstep`, which placed an Initiative buff +2 there |
 | `frostbite` | 1 Initiative debuff -3 (2 rounds), beside a `Damage 3` that moves a rail already on the board. 1 round and `Damage 2` until 2026-10-20 |
 | `meteor` | Up to 3 Bleeds 2 (1 round), beside `Damage 3` on each. 2 rounds from 2026-10-18 to 2026-10-20, and 1 round before, both at `Damage 2` |
-| `latch` | 1 Bleed 1 (3 rounds), and 1 Regeneration 1 on its own caster (3 rounds) |
+| `latch` | 1 Bleed 2 (3 rounds), and 1 Regeneration 1 on its own caster (3 rounds). Bleed 1 until 2026-11-01 |
 | `bone_ward` | 1 Defense buff +6 (2 rounds), and 1 Bleed 1 on its own caster (1 round). Defense buff +3 until 2026-10-21 |
 | `shield_bash` | 1 Defense buff +2 on its own caster (3 rounds); +3 until 2026-10-11 |
 | `soothing_chant` | Up to 3 Regenerations 3 (2 rounds). Regenerations 2 until 2026-10-21 |
