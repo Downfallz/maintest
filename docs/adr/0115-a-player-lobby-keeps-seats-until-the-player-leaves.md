@@ -2,7 +2,7 @@
 
 Date: 2026-10-30
 
-Status: Accepted. Amends ADRs 0081, 0091 and 0092.
+Status: Accepted. Amends ADRs 0081, 0091 and 0092. Its choice of bots is replaced by [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md).
 
 ## Context
 

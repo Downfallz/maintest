@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Learning;
@@ -385,13 +386,30 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Theory]
-    [InlineData("greedy", 1)]
+    [InlineData("bot", 1)]
     [InlineData("hotseat", 2)]
     public async Task Solo_and_shared_device_games_do_not_offer_a_public_place(string opponent, int seats)
     {
         var opened = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent })));
         opened.GetProperty("seats").GetArrayLength().ShouldBe(seats);
         opened.GetProperty("table").GetProperty("openSeats").GetInt32().ShouldBe(0);
+    }
+
+    /// <summary>
+    /// A visitor plays one bot, the strongest the host puts forward first (ADR 0121); Greedy and Random are the
+    /// operator's, from the admin panel.
+    /// </summary>
+    [Fact]
+    public async Task The_lobby_seats_the_first_featured_bot_and_refuses_the_others()
+    {
+        var composer = new TableComposer(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Agents = [new SeatableAgent("random", "Random", Featured: true), new SeatableAgent("greedy", "Greedy", Featured: false)] };
+        var lobby = new LobbyApi(_registry, composer, TimeProvider.System);
+
+        var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "bot" })));
+
+        _registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!).ShouldNotBeNull().Request.ShouldNotBeNull().Player2.ShouldBe(AgentSpec.Parse("random"));
+        (await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "greedy" }))).Status.ShouldBe(400);
+        (await lobby.HandleAsync("POST", "/api/lobby/tables", JsonSerializer.Serialize(new { opponent = "random" }))).Status.ShouldBe(400);
     }
 
     [Fact]

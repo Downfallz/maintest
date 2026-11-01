@@ -135,8 +135,7 @@ export function mountLobby(doc, location, storage) {
   for (const id of ['create-close', 'create-cancel']) el(id).addEventListener('click', () => dialog.close());
   const help = {
     person: 'You take the first seat. Another player can join from this lobby or with your invitation.',
-    greedy: 'A tactical bot plays the other side. Your game is saved so you can come back later.',
-    random: 'A bot chooses random legal moves. Your game is saved so you can come back later.',
+    bot: 'The strongest bot the game has plays the other side. Your game is saved so you can come back later.',
     hotseat: 'Both players use this device. Pass it between turns; both seats are saved here.',
   };
   el('opponent').addEventListener('change', () => { el('create-help').textContent = help[el('opponent').value]; });
