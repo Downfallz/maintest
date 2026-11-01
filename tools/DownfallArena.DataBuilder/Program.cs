@@ -9,6 +9,7 @@ try
     var notes = new List<string>();
     var schema = GameSchemaBuilder.Build(dataDirectory, notes);
     GameSchemaBuilder.Write(schema, outputDirectory);
+    PackageIdentities.Publish(dataDirectory, outputDirectory, schema);
 
     foreach (var note in notes)
     {

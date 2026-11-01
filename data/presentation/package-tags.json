@@ -1,0 +1,23 @@
+{
+  "tier:assassin:v1": ["Tempo", "Burst", "Energy"],
+  "tier:berserker:v1": ["Burst", "Sacrifice"],
+  "tier:blightweaver:v1": ["Debuff", "Control"],
+  "tier:brute:v1": ["Pressure", "Defense"],
+  "tier:deathstalker:v1": ["Burst", "Control", "Bleed"],
+  "tier:dreadnought:v1": ["Defense", "Control"],
+  "tier:elementalist:v1": ["AoE", "Control"],
+  "tier:harbinger:v1": ["Burst", "Control", "Focus"],
+  "tier:ironbound:v1": ["Defense", "Sustain"],
+  "tier:lich:v1": ["AoE", "Bleed", "Sacrifice"],
+  "tier:marauder:v1": ["Control", "Energy"],
+  "tier:necromancer:v1": ["Sacrifice", "Defense", "Bleed"],
+  "tier:occultist:v1": ["Damage", "Heal", "Control"],
+  "tier:parasite:v1": ["Drain", "Sustain"],
+  "tier:plague_doctor:v1": ["Support", "Energy"],
+  "tier:prowler:v1": ["Bleed", "Pressure"],
+  "tier:ravager:v1": ["AoE", "Burst", "Sacrifice"],
+  "tier:shaman:v1": ["Heal", "Sustain"],
+  "tier:soulreaver:v1": ["Drain", "Sacrifice", "Burst"],
+  "tier:spiritcaller:v1": ["Heal", "Energy", "AoE"],
+  "tier:warmonger:v1": ["AoE", "Defense"]
+}

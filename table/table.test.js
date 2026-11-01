@@ -97,6 +97,8 @@ function page() {
   return { context, document, nodes, state, view, current, timers, delays, draw: () => context.render(state, state.views) };
 }
 
+function classed(node, name) { return node.children.flatMap(child => [...(child.className === name ? [child] : []), ...classed(child, name)]); }
+
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
 
 for (const seat of ['player1', 'player2']) {
@@ -323,6 +325,17 @@ test('a package card names its level, its initiative and every spell it teaches'
   assert.match(text, /\+1 initiative/);
   assert.match(text, /First card/);
   assert.match(text, /no initiative/);
+});
+
+// The tags are what a player scans first when picking (docs/domain/package-identity-tags.md): the evolution card
+// wears them as chips, and a package without them wears none rather than an empty line.
+test('a package card shows the words its package is known by', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.state.packages.get('tier:one:v1').tags = ['Pressure', 'Defense'];
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1', 'tier:two:v1'] }] } }; p.draw();
+  const lines = classed(p.nodes.choices, 'package-tags');
+  assert.equal(lines.length, 1);
+  assert.deepEqual(lines[0].children.map(chip => chip.textContent), ['Pressure', 'Defense']);
 });
 
 test('a seat change hides the table until the next player acknowledges it', () => {

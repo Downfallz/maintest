@@ -96,6 +96,12 @@ export function passiveOf(pack) {
   return (Array.isArray(pack?.passiveLines) ? pack.passiveLines : []).filter(line => typeof line === 'string' && line !== '');
 }
 
+// The two or three words a package is known by (docs/domain/package-identity-tags.md), in the host's order.
+// They help a pick at a glance and decide nothing: a catalogue served before them carries none.
+export function tagsOf(pack) {
+  return (Array.isArray(pack?.tags) ? pack.tags : []).filter(tag => typeof tag === 'string' && tag !== '');
+}
+
 // The family a package belongs to, by its first parent of a lower level, up to the package that opens it.
 // A capstone teaches no spell to take a class colour from, so it wears its family's.
 function familyRoot(pack, byId, seen = new Set()) {

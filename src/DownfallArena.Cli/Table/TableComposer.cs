@@ -10,6 +10,7 @@ using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Resources;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -81,7 +82,17 @@ internal sealed class TableComposer
 
     /// <summary>The cards and the round shape of one rule set, built once per rule set this host plays.</summary>
     private CatalogueView Catalogue(RuleSet rules) =>
-        _catalogues.GetOrAdd(rules, one => CatalogueProjection.Build(_services.GetRequiredService<IGameResources>(), one));
+        _catalogues.GetOrAdd(rules, one => Tagged(CatalogueProjection.Build(_services.GetRequiredService<IGameResources>(), one)));
+
+    /// <summary>
+    /// Each package with the words it is known by, where the builder published them next to the schema: presentation
+    /// the table shows on a package, kept out of the schema so the content hash does not move with them.
+    /// </summary>
+    private CatalogueView Tagged(CatalogueView catalogue)
+    {
+        var identities = _services.GetService<PackageIdentities>() ?? PackageIdentities.None;
+        return catalogue with { Packages = [.. catalogue.Packages.Select(package => package with { Tags = identities.Of(package.Id) })] };
+    }
 
     private DecisionGuideProjection Guide(RuleSet rules) =>
         _guides.GetOrAdd(rules, one => new DecisionGuideProjection(_services.GetRequiredService<IGameResources>(), one));
