@@ -2191,28 +2191,19 @@ test('the notices button is drawn from where the page stands, in the room and in
   assert.equal(p.nodes['notices-row'].hidden, true);
 });
 
-test('a hidden page shows "your turn" itself, once per asking, and a visible one never does', () => {
+test('a hidden page acknowledges nothing, and the next poll in front of somebody does', () => {
   const p = page();
-  const shown = [];
-  p.state.push = { subscribed: true, registration: { showNotification: async (title, options) => { shown.push({ title, ...options }); }, getNotifications: async () => [] } };
-  p.context.Notification = { permission: 'granted' };
-  p.document.visibilityState = 'hidden';
-  const current = { seat: 'player1', view: { waitingFor: 'Speed', board: { roundNumber: 3 } } };
+  const announced = [];
+  p.context.announce = (_state, _current, drawn) => announced.push(drawn);
+  p.state.holder = 'player1';
+  p.current.view.waitingAsked = 4;
 
-  p.context.noticeInPage(p.state, current, 4);
-  p.context.noticeInPage(p.state, current, 4);
-  assert.equal(shown.length, 1, 'one asking, one notice');
-  assert.equal(shown[0].title, 'Your turn');
-  assert.equal(shown[0].body, 'Round 3: choose a speed.');
-  assert.equal(shown[0].tag, 'turn:player1');
-  assert.equal(shown[0].data.url, '/play');
+  p.document.visibilityState = 'hidden';
+  p.draw();
+  assert.deepEqual(announced, [], 'nobody is looking: the host is not told the question was drawn');
 
   p.document.visibilityState = 'visible';
-  p.context.noticeInPage(p.state, current, 5);
-  assert.equal(shown.length, 1, 'a visible page is the notice');
-
-  p.document.visibilityState = 'hidden';
-  p.state.push.subscribed = false;
-  p.context.noticeInPage(p.state, current, 6);
-  assert.equal(shown.length, 1, 'a player who said stop hears nothing from the page either');
+  p.state.rendered = null;
+  p.draw();
+  assert.deepEqual(announced, [4]);
 });

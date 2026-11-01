@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyBytes, noticeButton, noticeUrl, pushSupported, sameKey, shouldNotifyInPage, turnNotice } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey } from './push.js';
 
 test('a browser pushes when it has a worker, a push manager, notifications and a secure context', () => {
   const nav = { serviceWorker: {} };
@@ -38,31 +38,9 @@ test('the button is offered only where a notice could reach, and says what tappi
   assert.equal(noticeButton({ ...base, permission: 'denied' }).disabled, true);
   assert.match(noticeButton({ ...base, permission: 'denied' }).hint, /browser's settings/);
   assert.equal(noticeButton({ ...base, supported: false }).hidden, true);
+  assert.equal(noticeButton({ ...base, supported: false, ios: true }).label, 'Notifications need the home screen', 'an iPhone is told what to do');
+  assert.equal(noticeButton({ ...base, supported: false, ios: true, keyed: false }).hidden, true, 'not without keys');
   assert.equal(noticeButton({ ...base, keyed: false }).hidden, true, 'a host without keys');
   assert.equal(noticeButton({ ...base, practice: true }).hidden, true);
   assert.equal(noticeButton({}).hidden, true);
-});
-
-test('the notice a hidden page shows itself names the round and what is asked', () => {
-  const notice = turnNotice({ waitingFor: 'Speed', board: { roundNumber: 7 } }, 'player2');
-
-  assert.deepEqual(notice, { title: 'Your turn', body: 'Round 7: choose a speed.', tag: 'turn:player2' });
-  assert.equal(turnNotice({ waitingFor: 'Action', board: {} }, 'player1').body, 'Player 1: choose a spell.');
-  assert.equal(turnNotice({ waitingFor: 'Something' }, 'player1').body, 'Player 1: decide.');
-});
-
-test('a page notifies itself once per asking, only while hidden and allowed', () => {
-  const asking = { asked: 'player1/4', previous: 'player1/3', hidden: true, permission: 'granted', enabled: true };
-
-  assert.equal(shouldNotifyInPage(asking), true);
-  assert.equal(shouldNotifyInPage({ ...asking, enabled: false }), false, 'the player said stop, whatever the browser allows');
-  assert.equal(shouldNotifyInPage({ ...asking, previous: 'player1/4' }), false, 'already told');
-  assert.equal(shouldNotifyInPage({ ...asking, hidden: false }), false, 'the page is the notice');
-  assert.equal(shouldNotifyInPage({ ...asking, permission: 'default' }), false, 'no leave');
-  assert.equal(shouldNotifyInPage({ ...asking, asked: null }), false, 'nothing asked');
-});
-
-test('a tap on a notice goes to the game at the table it came from', () => {
-  assert.equal(noticeUrl('t 1'), '/play?table=t%201');
-  assert.equal(noticeUrl(null), '/play');
 });

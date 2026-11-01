@@ -43,11 +43,19 @@ test('a push shows the notice the host sent, with a tap going to the game', asyn
 });
 
 test('a push arriving while a window of the table is in front of somebody shows nothing', async () => {
-  const w = worker({ windows: [{ url: 'https://table.example/play', focused: true }] });
+  const w = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'visible' }] });
 
   await w.fire('push', push({ title: 'Your turn' }));
 
   assert.equal(w.shown.length, 0);
+});
+
+test('a page still focused on a phone whose screen went off is not in front of anybody: the notice shows', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'hidden' }] });
+
+  await w.fire('push', push({ title: 'Your turn' }));
+
+  assert.equal(w.shown.length, 1);
 });
 
 test('a push arriving while the page is open but not in front shows the notice', async () => {
