@@ -2249,3 +2249,18 @@ test('a read asked for while one is in flight is made once that one is done, not
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(polls.length, 2, 'the owed read was made once the first was done');
 });
+
+test('a test notice that finds the subscription gone lets the browser\'s go too, so the next tap makes a new one', async () => {
+  const p = page();
+  let unsubscribed = 0;
+  const held = { unsubscribe: async () => { unsubscribed += 1; } };
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { pushManager: { getSubscription: async () => held } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 502, ok: false, body: { message: 'The push service says this subscription is gone.' } }) } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.equal(unsubscribed, 1);
+  assert.equal(p.state.push.subscribed, false);
+  assert.match(p.nodes['notices-problem'].textContent, /gone/);
+  assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
+});

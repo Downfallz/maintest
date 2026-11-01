@@ -584,11 +584,42 @@ public sealed class LobbyApiTests : IDisposable
         (await Lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token)).Status.ShouldBe(404, "this host has no keys");
     }
 
+    /// <summary>A test that finds the subscription gone forgets it, unless the seat holds another by then, which answered nothing.</summary>
+    [Fact]
+    public async Task A_test_that_finds_the_subscription_gone_forgets_only_that_one()
+    {
+        var sender = new Refusing { Gone = true };
+        var notices = new PushNotices(sender, "BP8", TimeProvider.System);
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, notices);
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = _registry.ById(id)!;
+        var token = table.Seats[0].Token;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+        var held = table.Seats[0].Push!;
+
+        var gone = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+        gone.Status.ShouldBe(502);
+        JsonDocument.Parse(gone.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("gone");
+        table.Seats[0].Push.ShouldBeNull();
+        notices.IsDead(held.Endpoint).ShouldBeTrue();
+
+        var replacement = held with { Endpoint = "https://push.example/two" };
+        table.Seats[0].Push = replacement;
+        sender.Replace = () => table.Seats[0].Push = replacement with { Auth = "AAECAwQFBgcICQoLDA0ODx" };
+        (await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token)).Status.ShouldBe(502);
+        table.Seats[0].Push.ShouldNotBeNull("the seat was given another subscription while the test was in flight, and that one answered nothing");
+    }
+
     private sealed class Refusing : IPushSender
     {
         public List<string> Sent { get; } = [];
 
         public Exception? Failure { get; set; }
+
+        public bool Gone { get; set; }
+
+        /// <summary>Run while the send is in flight: what a browser or the next player does to the seat meanwhile.</summary>
+        public Action? Replace { get; set; }
 
         public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
         {
@@ -598,7 +629,8 @@ public sealed class LobbyApiTests : IDisposable
             }
 
             Sent.Add(payload);
-            return Task.FromResult(true);
+            Replace?.Invoke();
+            return Task.FromResult(!Gone);
         }
     }
 

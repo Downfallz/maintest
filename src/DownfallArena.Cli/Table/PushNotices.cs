@@ -100,11 +100,15 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return new PushTest(true, "Sent. If nothing showed, check the phone's notification settings for this browser.");
             }
 
+            // Only the subscription that was refused: the seat may hold another by now (NoticeAsync says why).
             _dead[subscription.Endpoint] = 0;
-            seat.Push = null;
-            if (Record is { } record)
+            if (seat.Push == subscription)
             {
-                await record(table);
+                seat.Push = null;
+                if (Record is { } record)
+                {
+                    await record(table);
+                }
             }
 
             return new PushTest(false, "The push service says this subscription is gone. Tap \"Notify me when it's my turn\" again.");

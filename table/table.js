@@ -996,6 +996,10 @@ async function testNotices(state) {
     const answer = await seat.transport.pushTest();
     if (problem) problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
     if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
+      // Gone from the service, and the browser still holds it: let go of here too, or the next tap would get
+      // the same dead subscription back from the browser and the host's 410 for it.
+      const held = await state.push.registration?.pushManager.getSubscription();
+      await held?.unsubscribe();
       state.push.subscribed = false;
       renderNotices(state);
     }
