@@ -40,8 +40,28 @@ public sealed class PackageIdentitiesTests
         read.Of(TierId.Parse("tier:brute:v1")).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// Disabling a package is an authoring switch (ADR 0015), so its tags stay authored: the build takes them and
+    /// publishes none for it, instead of making the author delete them to use the switch.
+    /// </summary>
+    [Fact]
+    public void A_disabled_package_keeps_its_authored_tags_and_publishes_none()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Tiers/brute.v1.json", Brute.Replace("\"level\": 1", "\"enabled\": false, \"level\": 1", StringComparison.Ordinal))
+            .WithFile("presentation/package-tags.json", """{ "tier:brute:v1": ["Pressure", "Defense"] }""");
+        var output = Path.Combine(content.Path, "dst");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        GameSchemaBuilder.Write(schema, output);
+        PackageIdentities.Publish(content.Path, output, schema);
+        var read = PackageIdentities.ReadNextTo(Path.Combine(output, "game.schema.json"));
+
+        read.Of(TierId.Parse("tier:brute:v1")).ShouldBeEmpty();
+    }
+
     [Theory]
-    [InlineData("""{ "tier:nowhere:v1": ["Pressure", "Defense"] }""", "is no package of this content")]
+    [InlineData("""{ "tier:nowhere:v1": ["Pressure", "Defense"] }""", "is no package this content authors")]
     [InlineData("""{ "tier:brute:v1": ["Pressure"] }""", "has 1 tags")]
     [InlineData("""{ "tier:brute:v1": ["Pressure", "Defense", "Burst", "AoE"] }""", "has 4 tags")]
     [InlineData("""{ "tier:brute:v1": ["Pressure", "Tanky"] }""", "is tagged 'Tanky'")]

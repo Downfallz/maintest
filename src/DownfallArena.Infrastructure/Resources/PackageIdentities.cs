@@ -28,6 +28,8 @@ public sealed class PackageIdentities
 
     private const int Most = 3;
 
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+
     private readonly IReadOnlyDictionary<TierId, IReadOnlyList<string>> _tags;
 
     private PackageIdentities(IReadOnlyDictionary<TierId, IReadOnlyList<string>> tags) => _tags = tags;
@@ -53,10 +55,11 @@ public sealed class PackageIdentities
     }
 
     /// <summary>
-    /// Checks the authored tags against the schema's packages and the vocabulary, and publishes them next to the
-    /// schema. Content that authors none publishes none. A tag outside the vocabulary, a package with fewer than two
-    /// or more than three, the same tag twice, or a package the schema does not have is refused with every problem
-    /// at once, as the rest of the content is.
+    /// Checks the authored tags against the authored packages and the vocabulary, and publishes those of the
+    /// schema's packages next to it. Content that authors none publishes none. A tag outside the vocabulary, a
+    /// package with fewer than two or more than three, the same tag twice, or a package the content does not author
+    /// is refused with every problem at once, as the rest of the content is. A disabled package is authored: its
+    /// tags are checked and left out of what is published.
     /// </summary>
     public static void Publish(string dataDirectory, string outputDirectory, GameSchema schema)
     {
@@ -81,22 +84,43 @@ public sealed class PackageIdentities
             throw new InvalidGameContentException($"{SourceFile}: not a map of package ids to tags ({exception.Message}).");
         }
 
-        var packages = (schema.Tiers ?? []).Select(tier => tier.Id).ToHashSet(StringComparer.Ordinal);
+        var built = (schema.Tiers ?? []).Select(tier => tier.Id).ToHashSet(StringComparer.Ordinal);
+        var packages = Authored(dataDirectory, schema).Union(built).ToHashSet(StringComparer.Ordinal);
         var problems = authored.SelectMany(entry => Problems(entry.Key, entry.Value, packages)).ToList();
         if (problems.Count > 0)
         {
             throw new InvalidGameContentException(problems);
         }
 
+        // A disabled package keeps its tags where they are authored and has none where they are played.
+        var published = authored.Where(entry => built.Contains(entry.Key)).ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
         Directory.CreateDirectory(outputDirectory);
-        File.WriteAllText(Path.Combine(outputDirectory, FileName), text);
+        File.WriteAllText(Path.Combine(outputDirectory, FileName), JsonSerializer.Serialize(published, WriteOptions));
+    }
+
+    /// <summary>
+    /// Every package the content authors, the disabled ones included (ADR 0015): the switch takes a package out of
+    /// the schema, not out of the content, so its tags are still the tags of a package.
+    /// </summary>
+    private static IEnumerable<string> Authored(string dataDirectory, GameSchema schema)
+    {
+        var folder = Path.Combine(dataDirectory, GameSchemaBuilder.TiersFolder);
+        if (!Directory.Exists(folder))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateFiles(folder, "*.json", SearchOption.AllDirectories)
+            .Select(file => JsonSerializer.Deserialize<TierDto>(File.ReadAllText(file), GameSchemaJson.ReadOptions)?.Id)
+            .OfType<string>()
+            .Select(id => schema.Aliases.TryGetValue(id, out var current) ? current : id);
     }
 
     private static IEnumerable<string> Problems(string package, string[] tags, HashSet<string> packages)
     {
         if (!packages.Contains(package))
         {
-            yield return $"{SourceFile}: '{package}' is no package of this content.";
+            yield return $"{SourceFile}: '{package}' is no package this content authors.";
         }
 
         if (tags.Length is < Fewest or > Most)
