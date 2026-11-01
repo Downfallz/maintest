@@ -244,6 +244,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             try
             {
                 await table.RecordAsync(registry.Codes);
+                table.Api.Changes.Bump();
             }
             catch
             {

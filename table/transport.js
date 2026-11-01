@@ -43,6 +43,26 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     forgetPush: () => send('DELETE', '/api/lobby/push', {}),
     pushTest: () => send('POST', '/api/lobby/push/test', {}),
 
+    // The table's changes as the host streams them (ADR 0119): `onChange` is called for each, and the call
+    // returns when the host closes the stream or the signal aborts it. A fetch rather than an EventSource,
+    // which cannot carry the seat token in a header, and a token in the address is one anybody behind the
+    // player can read.
+    events: async (onChange, signal) => {
+      const response = await fetchImpl(`/api/seat/${seat}/events`, { headers: { 'X-Seat-Token': token }, signal });
+      if (!response.ok || !response.body) return { status: response.status, ok: false };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let rest = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const parsed = parseEvents(rest + decoder.decode(value, { stream: true }));
+        rest = parsed.rest;
+        for (const event of parsed.events) if (event.event === 'changed' || event.event === 'ready') onChange(event);
+      }
+      return { status: response.status, ok: true };
+    },
+
     // A note goes to one route for both seats: the host records it against whichever seat's token carried it,
     // so nobody can file a misplay against the other player.
     note: note => send('POST', '/api/notes', note),
@@ -88,6 +108,28 @@ export function replayView(body, seat) {
     waitingFor: null, waitingCreature: null, waitingAsked: null, options: {},
     board: body?.boards?.[seat], feed, feedNext: feed.length ? feed.at(-1).sequence + 1 : 0,
   };
+}
+
+// Server-sent events as they arrive, cut at the blank line that ends each: the complete ones, and what is left
+// of the one still coming. A comment line (`: keep-alive`) is nothing; a field the page does not know is kept
+// and ignored.
+export function parseEvents(text) {
+  const blocks = text.split('\n\n');
+  const rest = blocks.pop() ?? '';
+  const events = [];
+  for (const block of blocks) {
+    const event = { event: 'message', data: '' };
+    for (const line of block.split('\n')) {
+      if (line.startsWith(':') || line.trim() === '') continue;
+      const colon = line.indexOf(':');
+      const field = colon < 0 ? line : line.slice(0, colon);
+      const value = colon < 0 ? '' : line.slice(colon + 1).replace(/^ /, '');
+      if (field === 'event') event.event = value;
+      else if (field === 'data') event.data = event.data ? `${event.data}\n${value}` : value;
+    }
+    events.push(event);
+  }
+  return { events, rest };
 }
 
 // What the seat route is asked for, or nothing. Zero and a first poll are the same request: the feed from the

@@ -24,6 +24,12 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
 
     public Type EventType => typeof(IMatchEvent);
 
+    /// <summary>
+    /// Raised once an entry has landed, with its match: what a host streaming a match's changes to a page
+    /// listens for, since the page shows the feed and the feed is these entries.
+    /// </summary>
+    public event Action<MatchId>? EntryRecorded;
+
     public async Task HandleAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
@@ -40,6 +46,7 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
             matchEvent,
             PlayerBoardStateProjection.Build(match, PlayerSlot.Player1),
             PlayerBoardStateProjection.Build(match, PlayerSlot.Player2));
+        EntryRecorded?.Invoke(match.Id);
     }
 
     /// <summary>

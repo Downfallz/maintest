@@ -6,10 +6,21 @@ namespace DownfallArena.Cli.Studio;
 /// <summary>
 /// One HTTP answer of a host of this CLI: a status, a content type, the bytes to write, and the headers that
 /// are not those — which is only ever <c>Location</c>, because a redirect is the one answer whose meaning is a
-/// header rather than a body.
+/// header rather than a body. Or, for the one route that does not end (<see cref="OfStream" />), a writer the
+/// host hands the open response to, in place of the bytes.
 /// </summary>
 internal sealed record StudioResponse(int Status, string ContentType, byte[] Body, IReadOnlyList<KeyValuePair<string, string>>? Headers = null)
 {
+    /// <summary>
+    /// Writes the answer itself, over as long as it likes, when it is not bytes known up front: the stream of
+    /// a table's changes (ADR 0119). The host sends the status and headers, then hands this the body stream and
+    /// closes it when the writer returns.
+    /// </summary>
+    public Func<Stream, CancellationToken, Task>? Writer { get; init; }
+
+    public static StudioResponse OfStream(string contentType, Func<Stream, CancellationToken, Task> writer, IReadOnlyList<KeyValuePair<string, string>>? headers = null) =>
+        new(200, contentType, [], headers) { Writer = writer };
+
     public const string Json = "application/json; charset=utf-8";
 
     public const string Html = "text/html; charset=utf-8";

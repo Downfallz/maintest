@@ -123,4 +123,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0115](0115-a-player-lobby-keeps-seats-until-the-player-leaves.md) | A player lobby keeps a seat until its player explicitly leaves | Accepted |
 | [0116](0116-a-seat-invitation-is-accepted-once.md) | A seat's invitation is accepted once, with a tap | Accepted |
 | [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) | "Your turn" reaches a phone nobody is looking at | Accepted |
+| [0119](0119-a-seat-page-is-told-when-its-table-changed.md) | A seat's page is told when its table changed | Accepted |
 | [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |

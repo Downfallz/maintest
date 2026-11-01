@@ -65,6 +65,73 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/tables", token: null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>The stream of a table's changes (ADR 0119): what it says first, what it says on a change, and under whose token.</summary>
+    [Fact]
+    public async Task A_seat_streams_its_table_s_changes_as_they_happen()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        // Two people: the first reaching their seat begins nothing, so the version moves only when this test moves it.
+        var table = await Opened(HostedTables.TwoPeople);
+        var token = table.Seats[0].Token;
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{url}api/seat/player1/events");
+        request.Headers.Add(TableApi.TokenHeader, token);
+
+        using var answer = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, TestContext.Current.CancellationToken);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.OK);
+        answer.Content.Headers.ContentType!.MediaType.ShouldBe("text/event-stream");
+        using var reader = new StreamReader(await answer.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        (await Event(reader)).ShouldBe(("ready", table.Api.Changes.Version));
+        var before = table.Api.Changes.Version;
+
+        table.Api.Changes.Bump();
+
+        (await Event(reader)).ShouldBe(("changed", before + 1));
+        (await Get($"{url}api/seat/player1/events", table.Pilot.Token)).StatusCode.ShouldBe(HttpStatusCode.Forbidden, "a pilot's token is not a seat's");
+        (await Get($"{url}api/seat/player2/events", token)).StatusCode.ShouldBe(HttpStatusCode.Forbidden, "the other seat's stream is not this token's");
+    }
+
+    /// <summary>What moves the version: a person reaching the seat, which begins the match and asks the first question; and the lobby's leave.</summary>
+    [Fact]
+    public async Task Reaching_a_seat_and_leaving_it_change_the_table()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var table = await Opened();
+        var before = table.Api.Changes.Version;
+
+        (await Get($"{url}api/seat/player1", table.Seats[0].Token)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        table.Api.Changes.Version.ShouldBeGreaterThan(before, "the person arrived, the match began, and the seat was asked its first question");
+    }
+
+    /// <summary>One event off the stream: its name and the version it carries, past any keep-alive comment.</summary>
+    private static async Task<(string Name, long Version)> Event(StreamReader reader)
+    {
+        string? name = null;
+        long version = -1;
+        var read = reader.ReadLineAsync(TestContext.Current.CancellationToken).AsTask();
+        while (await read.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken) is { } line)
+        {
+            if (line.StartsWith("event: ", StringComparison.Ordinal))
+            {
+                name = line["event: ".Length..];
+            }
+            else if (line.StartsWith("data: ", StringComparison.Ordinal))
+            {
+                version = long.Parse(line["data: ".Length..], System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else if (line.Length == 0 && name is not null)
+            {
+                return (name, version);
+            }
+
+            read = reader.ReadLineAsync(TestContext.Current.CancellationToken).AsTask();
+        }
+
+        throw new InvalidOperationException("The stream ended before an event.");
+    }
+
     [Fact]
     public async Task A_token_no_table_holds_is_refused_as_a_missing_one()
     {
