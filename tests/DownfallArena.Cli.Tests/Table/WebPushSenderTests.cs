@@ -27,6 +27,35 @@ public sealed class WebPushSenderTests
         request.Body.Contains("Your turn", StringComparison.Ordinal).ShouldBeFalse("the payload is encrypted to the browser");
     }
 
+    [Fact]
+    public async Task What_the_sender_encrypts_the_browser_s_keys_decrypt()
+    {
+        using var service = new PushService(201);
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
+        using var browser = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+        var auth = RandomNumberGenerator.GetBytes(16);
+        var point = browser.PublicKey.ExportSubjectPublicKeyInfo()[^65..];
+        var subscription = new PushSubscription($"{service.Url}push/one", Base64Url.EncodeToString(point), Base64Url.EncodeToString(auth));
+
+        await sender.SendAsync(subscription, """{"title":"Your turn"}""", TestContext.Current.CancellationToken);
+
+        var body = service.Received.ShouldHaveSingleItem().Bytes;
+        // RFC 8188 header: salt, record size, the sender's public key; then one record (RFC 8291).
+        var salt = body[..16];
+        var senderPoint = body[21..86];
+        var record = body[86..];
+        using var senderKey = ECDiffieHellman.Create(new ECParameters { Curve = ECCurve.NamedCurves.nistP256, Q = new ECPoint { X = senderPoint[1..33], Y = senderPoint[33..65] } });
+        var shared = browser.DeriveRawSecretAgreement(senderKey.PublicKey);
+        var ikm = HKDF.DeriveKey(HashAlgorithmName.SHA256, shared, 32, auth, [.. "WebPush: info\0"u8, .. point, .. senderPoint]);
+        var key = HKDF.DeriveKey(HashAlgorithmName.SHA256, ikm, 16, salt, "Content-Encoding: aes128gcm\0"u8.ToArray());
+        var nonce = HKDF.DeriveKey(HashAlgorithmName.SHA256, ikm, 12, salt, "Content-Encoding: nonce\0"u8.ToArray());
+        var plain = new byte[record.Length - 16];
+        using var aes = new AesGcm(key, 16);
+        aes.Decrypt(nonce, record[..^16], record[^16..], plain);
+
+        System.Text.Encoding.UTF8.GetString(plain).TrimEnd('\0').TrimEnd('\u0002').ShouldBe("""{"title":"Your turn"}""");
+    }
+
     [Theory]
     [InlineData(404)]
     [InlineData(410)]
@@ -67,7 +96,9 @@ public sealed class WebPushSenderTests
 
         public HttpClient Client { get; }
 
-        public List<(System.Collections.Specialized.NameValueCollection Headers, string Body)> Received { get; } = [];
+        public string Url => _url;
+
+        public List<(System.Collections.Specialized.NameValueCollection Headers, string Body, byte[] Bytes)> Received { get; } = [];
 
         /// <summary>A browser's subscription to this service: its own P-256 key and sixteen bytes of auth secret, as the browser would serialise them.</summary>
         public PushSubscription Subscription()
@@ -89,8 +120,10 @@ public sealed class WebPushSenderTests
                 while (_listener.IsListening)
                 {
                     var context = await _listener.GetContextAsync();
-                    using var reader = new StreamReader(context.Request.InputStream);
-                    Received.Add((context.Request.Headers, await reader.ReadToEndAsync()));
+                    using var buffer = new MemoryStream();
+                    await context.Request.InputStream.CopyToAsync(buffer);
+                    var bytes = buffer.ToArray();
+                    Received.Add((context.Request.Headers, System.Text.Encoding.Latin1.GetString(bytes), bytes));
                     context.Response.StatusCode = status;
                     context.Response.Close();
                 }

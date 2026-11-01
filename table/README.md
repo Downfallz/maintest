@@ -383,6 +383,10 @@ included, and a tap on the notice opens the game. A page in front of somebody ge
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
 first. The host's log says which seat was notified of which asking, and why a notice could not be sent.
+Once subscribed, **Send a test notification** (Match panel) shows two notices at once: one the page shows
+itself, through the worker and no push service, and one the host sends through the push service, with what
+the service answered under the button. Both appearing is a phone that works; only the page's is a push that
+does not reach this browser; neither is a browser not showing notifications for this site.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file

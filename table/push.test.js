@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyBytes, noticeButton, pushSupported, sameKey } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, testReading } from './push.js';
 
 test('a browser pushes when it has a worker, a push manager, notifications and a secure context', () => {
   const nav = { serviceWorker: {} };
@@ -43,4 +43,17 @@ test('the button is offered only where a notice could reach, and says what tappi
   assert.equal(noticeButton({ ...base, keyed: false }).hidden, true, 'a host without keys');
   assert.equal(noticeButton({ ...base, practice: true }).hidden, true);
   assert.equal(noticeButton({}).hidden, true);
+});
+
+test('the test reads the two notices together: the page\'s own, the host\'s, and what each outcome means', () => {
+  const both = testReading({ page: null, host: 'Sent.', hostOk: true });
+  assert.match(both, /^The page showed one itself\. Sent\. Two notices, then\./);
+  assert.match(both, /Only the page's: the push service is not reaching this browser/);
+  assert.match(both, /Neither: the browser is not showing notifications/);
+
+  const refused = testReading({ page: null, host: 'The push service refused it: 403.', hostOk: false });
+  assert.equal(refused, 'The page showed one itself. The push service refused it: 403.');
+
+  const blocked = testReading({ page: 'permission denied', host: 'Sent.', hostOk: true });
+  assert.equal(blocked, 'The page could not show one itself: permission denied. Sent. Allow notifications for this site in the browser\'s settings.');
 });

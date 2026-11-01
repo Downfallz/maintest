@@ -47,3 +47,14 @@ export function noticeButton({ supported, keyed, permission, subscribed, busy, p
   if (subscribed) return { hidden: false, disabled: Boolean(busy), label: 'Stop notifying me', hint: 'This phone is told when it is your turn.' };
   return { hidden: false, disabled: Boolean(busy), label: 'Notify me when it\'s my turn', hint: 'Even with the screen off or the browser closed.' };
 }
+
+// What the two test notices say together, for the phone to read against what appeared. The page shows one
+// itself, through the worker and no push service: whether this browser shows any for this site at all. The
+// host sends the other through the push service: whether a push reaches this browser. Both, only the page's,
+// or neither is the diagnosis, and the page cannot see which: the person can.
+export function testReading({ page, host, hostOk }) {
+  const lines = [page ? `The page could not show one itself: ${page}.` : 'The page showed one itself.', host];
+  if (page) lines.push('Allow notifications for this site in the browser\'s settings.');
+  else if (hostOk) lines.push('Two notices, then. Both appeared: notices work. Only the page\'s: the push service is not reaching this browser; check the browser\'s own settings for this site, and a battery saver that puts it to sleep. Neither: the browser is not showing notifications for this site.');
+  return lines.join(' ');
+}
