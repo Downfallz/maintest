@@ -2290,3 +2290,23 @@ test('a page whose worker will not show a notice says so, and still asks the hos
 
   assert.equal(p.nodes['notices-problem'].textContent, 'The page could not show one itself: No notification permission has been granted. Sent. Allow notifications for this site in the browser\'s settings.');
 });
+
+test('a notice the browser took and then lists no more was dropped by it, and the page says so', async () => {
+  const p = page();
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { showNotification: async () => {}, getNotifications: async () => [], pushManager: { getSubscription: async () => null } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 200, ok: true, body: { message: 'Sent.' } }) } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.match(p.nodes['notices-problem'].textContent, /^The page could not show one itself: the browser took it and then listed no such notice: it dropped it\. Sent\./);
+});
+
+test('a notice the browser still lists was shown', async () => {
+  const p = page();
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { showNotification: async () => {}, getNotifications: async ({ tag }) => [{ tag }], pushManager: { getSubscription: async () => null } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 200, ok: true, body: { message: 'Sent.' } }) } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.match(p.nodes['notices-problem'].textContent, /^The page showed one itself\. Sent\./);
+});

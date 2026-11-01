@@ -56,4 +56,7 @@ test('the test reads the two notices together: the page\'s own, the host\'s, and
 
   const blocked = testReading({ page: 'permission denied', host: 'Sent.', hostOk: true });
   assert.equal(blocked, 'The page could not show one itself: permission denied. Sent. Allow notifications for this site in the browser\'s settings.');
+
+  const dropped = testReading({ page: 'the browser took it and then listed no such notice: it dropped it', host: 'Sent.', hostOk: true });
+  assert.match(dropped, /it dropped it\. Sent\. Look for it in the system's notification history/);
 });

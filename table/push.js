@@ -54,7 +54,8 @@ export function noticeButton({ supported, keyed, permission, subscribed, busy, p
 // or neither is the diagnosis, and the page cannot see which: the person can.
 export function testReading({ page, host, hostOk }) {
   const lines = [page ? `The page could not show one itself: ${page}.` : 'The page showed one itself.', host];
-  if (page) lines.push('Allow notifications for this site in the browser\'s settings.');
+  if (page && /dropped/.test(page)) lines.push('Look for it in the system\'s notification history, and at the browser\'s own settings for this site.');
+  else if (page) lines.push('Allow notifications for this site in the browser\'s settings.');
   else if (hostOk) lines.push('Two notices, then. Both appeared: notices work. Only the page\'s: the push service is not reaching this browser; check the browser\'s own settings for this site, and a battery saver that puts it to sleep. Neither: the browser is not showing notifications for this site.');
   return lines.join(' ');
 }
