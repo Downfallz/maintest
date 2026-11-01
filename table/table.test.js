@@ -2240,6 +2240,20 @@ test('a seat page offers the notices once on entering, in place of the room, unt
   assert.equal(p.nodes['notices-match'].hidden, false, 'the match panel keeps the button');
 });
 
+test('a person who turns the notices on and off again is not offered them a second time', async () => {
+  const p = page();
+  const held = { unsubscribe: async () => true };
+  p.state.push = { supported: true, keyed: true, permission: 'granted', subscribed: true, busy: false, practice: false,
+    registration: { pushManager: { getSubscription: async () => held } } };
+  p.current.transport.forgetPush = async () => ({ ok: true });
+
+  await p.context.toggleNotices(p.state);
+
+  assert.equal(p.state.push.subscribed, false);
+  assert.equal(p.nodes['notices-offer'].hidden, true);
+  assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
+});
+
 test('a browser that cannot take a push says so in the match panel instead of showing nothing', () => {
   const p = page();
   p.state.push = { supported: false, keyed: true, permission: 'default', subscribed: false, busy: false, practice: false, declined: true };

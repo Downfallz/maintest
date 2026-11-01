@@ -996,24 +996,30 @@ function renderNotices(state) {
   if (element('notices-test')) element('notices-test').hidden = !shown.offered || !state.push?.subscribed;
 }
 
-// The offer is made once a browser: "Not now" is remembered, and the match panel keeps the button.
+// The offer is made once a browser: its answer is remembered, and the match panel keeps the button.
 const OfferKey = 'downfall.table.notices-offer';
 
 function offerDeclined() {
   try {
-    return storage?.getItem(OfferKey) === 'declined';
+    return storage?.getItem(OfferKey) === 'answered';
   } catch {
     return false;
   }
 }
 
-function declineOffer(state) {
+// Answered is answered, whichever way: "Not now", and any tap on the button itself -- a person who turned the
+// notices on and then off again said no, and is not asked a second time.
+function answerOffer(state) {
   state.push.declined = true;
   try {
-    storage?.setItem(OfferKey, 'declined');
+    storage?.setItem(OfferKey, 'answered');
   } catch {
     // A browser that keeps nothing is offered again on its next visit.
   }
+}
+
+function declineOffer(state) {
+  answerOffer(state);
   renderNotices(state);
 }
 
@@ -1072,6 +1078,7 @@ async function showOwn(state) {
 async function toggleNotices(state) {
   const push = state.push;
   if (!push?.registration || push.busy) return;
+  answerOffer(state);
   push.busy = true;
   renderNotices(state);
   try {
