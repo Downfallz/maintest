@@ -9,9 +9,11 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
 
   async function send(method, path, body) {
     const options = { method, headers: { 'X-Seat-Token': token } };
-    if (body !== undefined) {
+    // Every write says it is JSON, a concession included: the host's same-origin fence takes a write without
+    // that header as a form another site posted, and refuses it (HttpHost.CrossSite).
+    if (method !== 'GET') {
       options.headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(body);
+      options.body = JSON.stringify(body ?? {});
     }
     const response = await fetchImpl(path, options);
     const text = await response.text();
