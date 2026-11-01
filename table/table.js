@@ -2,7 +2,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, pushSupported, sameKey, TAG } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, testReading, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -993,8 +993,10 @@ async function testNotices(state) {
   button.disabled = true;
   if (problem) problem.textContent = 'Sending…';
   try {
+    // Two notices from the two ends (push.js, testReading): the page's own first, then the host's push.
+    const own = await showOwn(state);
     const answer = await seat.transport.pushTest();
-    if (problem) problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+    if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? `The host answered ${answer.status}.`, hostOk: answer.ok });
     if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
       // Gone from the service, and the browser still holds it: let go of here too, or the next tap would get
       // the same dead subscription back from the browser and the host's 410 for it.
@@ -1007,6 +1009,25 @@ async function testNotices(state) {
     if (problem) problem.textContent = 'Could not reach the host. Try again.';
   } finally {
     button.disabled = false;
+  }
+}
+
+// A notice the page shows itself, through the worker and no push service: whether this browser shows any for
+// this site at all. The worker is brought up to date first: a push lands on the worker that is active, and an
+// old one would read the test by yesterday's rule. Null when shown, else why not.
+async function showOwn(state) {
+  const registration = state.push?.registration;
+  if (!registration?.showNotification) return 'no worker';
+  try {
+    await registration.update?.();
+  } catch {
+    // An update that cannot be fetched leaves the worker there is, which still shows.
+  }
+  try {
+    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
+    return null;
+  } catch (error) {
+    return error?.message || String(error);
   }
 }
 

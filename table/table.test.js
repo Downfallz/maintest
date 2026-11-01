@@ -2264,3 +2264,29 @@ test('a test notice that finds the subscription gone lets the browser\'s go too,
   assert.match(p.nodes['notices-problem'].textContent, /gone/);
   assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
 });
+
+test('a test notice is two: the page shows one itself through a worker brought up to date, then asks the host for its push', async () => {
+  const p = page();
+  const shown = [];
+  const steps = [];
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { update: async () => { steps.push('update'); }, showNotification: async (title, options) => { steps.push('shown'); shown.push({ title, ...options }); }, pushManager: { getSubscription: async () => null } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => { steps.push('push'); return { status: 200, ok: true, body: { message: 'Sent.' } }; } } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.deepEqual(steps, ['update', 'shown', 'push']);
+  assert.equal(shown[0].title, 'Notifications work on this phone');
+  assert.equal(shown[0].tag, 'test:page');
+  assert.match(p.nodes['notices-problem'].textContent, /^The page showed one itself\. Sent\. Two notices, then\./);
+  assert.equal(p.state.push.subscribed, true);
+});
+
+test('a page whose worker will not show a notice says so, and still asks the host', async () => {
+  const p = page();
+  p.state.push = { subscribed: true, supported: true, keyed: true, registration: { showNotification: async () => { throw new TypeError('No notification permission has been granted'); }, pushManager: { getSubscription: async () => null } } };
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 200, ok: true, body: { message: 'Sent.' } }) } }];
+
+  await p.context.testNotices(p.state);
+
+  assert.equal(p.nodes['notices-problem'].textContent, 'The page could not show one itself: No notification permission has been granted. Sent. Allow notifications for this site in the browser\'s settings.');
+});
