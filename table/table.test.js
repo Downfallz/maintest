@@ -2310,3 +2310,14 @@ test('a notice the browser still lists was shown', async () => {
 
   assert.match(p.nodes['notices-problem'].textContent, /^The page showed one itself\. Sent\./);
 });
+
+test('a page holding both seats of its table is hotseat and offers no notices: nobody is away from it', () => {
+  const p = page();
+  p.state.push = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false };
+  p.state.seats = [{ seat: 'player1' }, { seat: 'player2' }];
+
+  p.context.renderNotices(p.state);
+
+  assert.equal(p.nodes['notices-match'].hidden, true);
+  assert.equal(p.nodes['notices-test'].hidden, true);
+});

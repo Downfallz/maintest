@@ -969,7 +969,8 @@ async function tellHeld(state) {
 }
 
 function renderNotices(state) {
-  const shown = noticeButton(state.push ?? {});
+  // Two seats of the table on this device is hotseat: nobody is away from it, and no notice would say anything.
+  const shown = noticeButton({ ...state.push ?? {}, hotseat: (state.seats?.length ?? 0) > 1 });
   for (const id of ['notices', 'notices-match']) {
     const button = element(id);
     if (!button) continue;

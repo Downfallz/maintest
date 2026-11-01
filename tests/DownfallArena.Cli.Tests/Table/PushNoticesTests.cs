@@ -167,6 +167,37 @@ public sealed class PushNoticesTests : IDisposable
         atTheSlot.GetProperty("tag").GetString().ShouldBe("turn:player2");
     }
 
+    [Fact]
+    public async Task One_phone_holding_both_seats_is_hotseat_and_is_not_notified()
+    {
+        var notices = new PushNotices(_sender, "BP8", _clock, Grace);
+        _hosted = new HostedTables(null, push: notices);
+        var table = await _hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
+        _registry.TryAdd(table).ShouldBeTrue();
+        table.Seats[0].Push = Phone;
+        table.Seats[1].Push = Phone;
+
+        await Arrive(table);
+        (await table.Api.HandleAsync("GET", "/api/seat/player2", "", table.Seats[1].Token)).Status.ShouldBe(200);
+        var first = await Asked(table);
+        _clock.Advance(Grace);
+        await Settled();
+        _sender.Sent.ShouldBeEmpty("both seats are on one phone, and the person holding it is the other player");
+
+        // The second seat reaches another phone: both are away from their pages, and both are told.
+        table.Seats[1].Push = Phone with { Endpoint = "https://push.example/two" };
+        var pass = JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked = first });
+        (await table.Api.HandleAsync("POST", "/api/seat/player1/decision", pass, table.Seats[0].Token)).Status.ShouldBe(204);
+        var other = table.Seats[1].Person!.Waiting.ShouldNotBeNull();
+        (await table.Api.HandleAsync("POST", "/api/seat/player2/decision", JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked = other.Asked }), table.Seats[1].Token)).Status.ShouldBe(204);
+        await Asked(table, after: first);
+        _clock.Advance(Grace);
+
+        var (to, _) = await _sender.Next();
+        var (second, _) = await _sender.Next();
+        new[] { to.Endpoint, second.Endpoint }.ShouldBe(["https://push.example/one", "https://push.example/two"], ignoreOrder: true);
+    }
+
     private async Task<(PlayedTable Table, PushNotices Notices)> Seated()
     {
         var notices = new PushNotices(_sender, "BP8", _clock, Grace);
