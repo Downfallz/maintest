@@ -37,8 +37,20 @@ Content `f3e8a42d`. The content has moved a long way since `search-40` was searc
   It values the kill and what keeps a creature alive or out of the fight over raw damage: the capstones, the
   shared Archmage and the stronger heals reward finishing a creature over spreading damage.
 - **Kept.** `learning/weights/search-51.json`, seated first at the table (`learning/seatable.json`).
-  `search-40` keeps its seat in the tuner's exploit panel for now: moving the panel changes every score the
-  tuner reports, which is a decision of its own.
+- **The tuner's exploit panel.** At the owner's request, search-51 also joins the exploit panel. Measured
+  against Greedy on the benchmark seeds:
+
+  | set | win share | rounds |
+  | --- | --- | --- |
+  | search-51 | 0.772 | 9.4 |
+  | search-40 | 0.515 | 9.3 |
+  | kill-first | 0.495 | |
+  | mixture-mean | 0.495 | |
+  | search-19 | 0.490 | |
+  | search-21 | 0.228 | |
+
+  search-21 leaves as the set that beats Greedy least, so the panel stays at five evaluations a candidate.
+  Every score the tuner reports from here on reads this panel.
 
 ## 2026-11-01. Hand-tuned: Predator's level 2, Revitalize and Renewal Burst
 
