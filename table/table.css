@@ -690,6 +690,9 @@ body:has(#table) { padding-bottom: 24px; }
 .talent-lane > .talent-tier { margin-top: 12px; }
 .package-card { border-top: 3px solid var(--class-color); }
 .package-requires { margin-top: 8px; color: #546151; font-size: 10px; }
+.package-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
+.tree-node .package-tags { justify-content: center; }
+.package-tag { padding: 1px 7px; border: 1px solid var(--class-color, var(--line)); border-radius: 999px; background: color-mix(in srgb, var(--class-color, var(--line)) 18%, transparent); font-size: 10px; letter-spacing: .02em; line-height: 1.5; white-space: nowrap; }
 #decision[data-kind="TieOrder"] { display: block; }
 #decision[data-kind="TieOrder"] .creature-picker { flex-wrap: wrap; }
 #decision[data-kind="TieOrder"] .creature-picker > p { flex: 1 0 100%; }
@@ -1086,7 +1089,7 @@ body:has(#table) { padding-bottom: 24px; }
   }
   #decision[data-kind="Evolution"] .choice-cards {
     grid-column: 1 / -1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    grid-auto-rows: minmax(66px, auto); align-content: start; scrollbar-width: thin;
+    grid-auto-rows: max-content; align-content: start; scrollbar-width: thin;
   }
   #decision[data-kind="Evolution"] .package-card { min-height: 66px; }
 }

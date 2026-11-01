@@ -21,4 +21,11 @@ public sealed record PackageCard(
     int InitiativeBonus,
     IReadOnlyList<TierId> AnyOf,
     Passive Passive,
-    IReadOnlyList<string> PassiveLines);
+    IReadOnlyList<string> PassiveLines)
+{
+    /// <summary>
+    /// The two or three words the package is known by (docs/domain/package-identity-tags.md), for a player to scan
+    /// before reading its spells. Presentation the host adds where it has them; none on a capstone.
+    /// </summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+}

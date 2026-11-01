@@ -26,10 +26,11 @@ const view = {
 };
 // Three families of three upgrades, each with one successor: the shape of the standard catalogue's packages.
 const packages = ['North', 'East', 'West'].flatMap((family, root) => [
-  { id: `tier:${family}:v1`, name: family, level: 1, prerequisites: [], spells: [cards[root].id], initiativeBonus: 1 },
+  { id: `tier:${family}:v1`, name: family, level: 1, prerequisites: [], spells: [cards[root].id], initiativeBonus: 1, tags: ['Pressure', 'Defense'] },
   ...[1, 2, 3].flatMap(branch => [
     { id: `tier:${family}-${branch}:v1`, name: `${family} Adept ${branch}`, level: 2, prerequisites: [`tier:${family}:v1`], spells: [cards[3].id], initiativeBonus: 1 },
-    { id: `tier:${family}-${branch}-master:v1`, name: `${family} Master ${branch}`, level: 3, prerequisites: [`tier:${family}-${branch}:v1`], spells: [cards[4].id], initiativeBonus: 3 },
+    { id: `tier:${family}-${branch}-master:v1`, name: `${family} Master ${branch}`, level: 3, prerequisites: [`tier:${family}-${branch}:v1`], spells: [cards[4].id], initiativeBonus: 3,
+      tags: ['Sacrifice', 'Burst', 'Sustain'] },
   ]),
 ]);
 const catalogue = {
@@ -256,6 +257,31 @@ test('package budget stays above a separately scrolling choice list on a phone',
   await page.screenshot({ path: info.outputPath('packages-scroll.png'), animations: 'disabled' });
   await page.locator('#hand-talents').click();
   await expect(page.locator('#mat')).toBeVisible();
+});
+
+// The identity tags are what a pick is scanned by (docs/domain/package-identity-tags.md): every package card
+// wears its chips inside the card, three of them included, on a phone as on a desk.
+test('package cards wear their identity tags without widening the page', async ({ page }, info) => {
+  const evolving = { ...view, waitingFor: 'Evolution', options: { evolution: { remainingPicks: 2,
+    creatures: [{ creature: 1, availableTiers: packages.map(item => item.id) }] } },
+    board: { ...view.board, subPhase: 'Evolution', evolutionChoices: [] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: evolving }));
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Evolution');
+  const north = page.locator('#decision .package-card', { hasText: /^North/ }).first();
+  await expect(north.locator('.package-tag')).toHaveText(['Pressure', 'Defense']);
+  const master = page.locator('#decision .package-card', { hasText: /^North Master 1/ });
+  await expect(master.locator('.package-tag')).toHaveText(['Sacrifice', 'Burst', 'Sustain']);
+  await expect(page.locator('#decision .package-card', { hasText: /^North Adept 1/ }).locator('.package-tags')).toHaveCount(0);
+  const inside = await master.evaluate(card => [...card.querySelectorAll('.package-tag')].every(chip => chip.getBoundingClientRect().right <= card.getBoundingClientRect().right + 0.5));
+  expect(inside).toBe(true);
+  const clipped = await page.locator('#decision .package-card').evaluateAll(cards => cards
+    .filter(card => card.scrollHeight > card.clientHeight + 1).map(card => `${card.textContent} ${card.scrollHeight}/${card.clientHeight}`));
+  expect(clipped).toEqual([]);
+  await expectNoSidewaysScroll(page);
+  await page.screenshot({ path: info.outputPath('package-tags.png'), animations: 'disabled' });
+  await page.locator('#hand-talents').click();
+  await expect(page.locator('#mat .tree-node', { hasText: 'North Master 1' }).locator('.package-tag')).toHaveText(['Sacrifice', 'Burst', 'Sustain']);
+  await expectNoSidewaysScroll(page);
 });
 
 test('battlefield names public opponent packages and upkeep popup separates ticks from lasting effects', async ({ page }, info) => {

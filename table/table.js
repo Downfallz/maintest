@@ -8,7 +8,7 @@ import { badges, chipSource, chipText, conditionDock, healthShare, healthText, l
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
-import { classColour, talentClasses, packageForest, passiveOf, requirementLine, talentPalette } from './mat.js';
+import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { healthChange, playbackBoard, playbackChanges, playbackRound } from './replay.js';
@@ -1810,6 +1810,22 @@ const PACKAGE_STATUS_TEXT = {
   future: 'Not available this opportunity · check prerequisites and creature eligibility',
 };
 
+// A package's identity tags as chips, or nothing for a package without them. Inside a button it is a span:
+// a button holds phrasing content only.
+function packageTags(pack, tag = 'p') {
+  const tags = tagsOf(pack);
+  if (!tags.length) return null;
+  const line = document.createElement(tag);
+  line.className = 'package-tags';
+  for (const name of tags) {
+    const chip = document.createElement('span');
+    chip.className = 'package-tag';
+    chip.textContent = name;
+    line.append(chip);
+  }
+  return line;
+}
+
 function talentLane(state, group, current, creature) {
   const lane = document.createElement('section');
   lane.className = 'talent-lane';
@@ -1824,7 +1840,7 @@ function talentLane(state, group, current, creature) {
   const status = document.createElement('p');
   status.className = 'talent-status';
   status.textContent = PACKAGE_STATUS_TEXT[group.status] ?? PACKAGE_STATUS_TEXT.future;
-  lane.append(title, summary, status);
+  lane.append(...[title, packageTags(group), summary, status].filter(Boolean));
   // A capstone teaches nothing (ADR 0101): what it gives for the rest of the match is the whole purchase.
   const passive = passiveOf(group);
   if (passive.length) {
@@ -3062,7 +3078,7 @@ function packageCard(state, tier, onClick) {
   const requires = document.createElement('p');
   requires.className = 'package-requires';
   requires.textContent = requirementLine(face, id => state.packages.get(id)?.name ?? id);
-  choice.append(head, body, requires);
+  choice.append(...[head, packageTags(face, 'span'), body, requires].filter(Boolean));
   return choice;
 }
 
@@ -3454,7 +3470,7 @@ function treeNode(state, node, classes, creature) {
   const status = document.createElement('span');
   status.className = 'tree-offer';
   status.textContent = TREE_STATUS_TEXT[group?.status] ?? 'Inspect mutation';
-  pick.append(title, progress, status);
+  pick.append(...[title, packageTags(node, 'span'), progress, status].filter(Boolean));
   branch.append(pick);
   if (node.children.length) {
     const children = document.createElement('ul');

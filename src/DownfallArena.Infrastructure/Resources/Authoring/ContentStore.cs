@@ -102,6 +102,7 @@ public sealed class ContentStore
         var notes = new List<string>();
         var schema = GameSchemaBuilder.Build(Root, notes);
         GameSchemaBuilder.Write(schema, outputDirectory);
+        PackageIdentities.Publish(Root, outputDirectory, schema);
         return (schema.ContentHash, notes);
     }
 
