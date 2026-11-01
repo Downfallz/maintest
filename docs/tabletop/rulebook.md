@@ -123,7 +123,7 @@ The four pieces this book names constantly, and where they are specified:
 | The Creature board | One per Creature: its number, the Health, Energy, Defense and Base initiative rails, the Tempo slot, the Condition dock | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition, and an Immune token for the Round after a Stun ends | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Instinct band and the Precision band | [components.md 3.5](components.md#35-the-initiative-track) |
-| The Mutation card | One per Mutation, in copies: its name, its Stage, the Mutations it requires, the Spells it teaches or the Passive it gives, and its initiative bonus. Face up with the Creature that acquired it, it is the public record of what that Creature knows and holds; a shared Mutation's is read by the whole side | [components.md 4.1](components.md#41-the-package-card) |
+| The Mutation card | One per Mutation, in copies: its name, its Stage, the Mutations it requires, the Spells it teaches or the Passive it gives, and its initiative bonus. Face up with the Creature that acquired it, it is the public record of what that Creature knows and holds; a shared Mutation's is read by the whole side | [components.md 4.1](components.md#41-the-mutation-card) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Tempo slot, so a
 stunned Creature cannot be given a Tempo card. A Creature board turned to its `Defeated` back has no slots at
