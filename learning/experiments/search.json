@@ -1,11 +1,11 @@
 {
-  "why": "The heuristic's rung on the game as it now stands. search-40, the strongest one-move weights and the table's second bot, was searched on content 95a78999 and held on 6198d349 (#358, no rung). Since then the content moved to f3e8a42d: Greedy breaks a purchase tie with its dice (ADR 0113), Wraithguard +5, Vital Surge 1 and Whirlwind 8, Fury 6 (tune 30), the capstones (Titan sunder 10, Apex +5, Archmage shared and stacking, ADR 0114), and the hand-tuned Bite, Ambush, Latch, Revitalize and Renewal Burst. Greedy also reads a shared passive once for each living creature of the side, so what a weight buys has moved under search-40. This rung starts from search-40 and plays every candidate as the heuristic against Greedy and against search-40 itself, so that a set cannot climb by learning Greedy alone, on 200 seeds drawn fresh from 6000000 to 6900000 (heuristic-rung-seeds-200.json); no run has used that window, nor the hold-out window just above its largest seed. 6 rounds of 12, seed 0; the heuristic's evaluations are fast enough for 200 seeds and both opponents. What would make it a rung: a set that beats search-40 against both Greedy and search-40 on the unseen seeds the hold-out replays.",
-  "initial": "learning/weights/search-40.json",
-  "opponent": "greedy,heuristic:learning/weights/search-40.json",
+  "why": "The lookahead's rung from search-51 (#387). A lookahead guessing the other side as search-51 beats search-51 0.655 on unseen seeds where the plain lookahead took 0.37, and one evaluating and guessing with search-51's weights beats it 0.615 (journal, 2026-11-01): the lookahead climbs with the weights it guesses with. This rung searches the lookahead's own weights, starting from search-51's, as `lookahead:<candidate>`, which both evaluates and guesses with the candidate. Every candidate plays search-51 and, on its first 20 seeds, the table's first seat (`lookahead:heuristic:learning/weights/search-51.json`), so a set cannot climb by learning the one-move player alone and the dear lookahead seat stays affordable; the hold-out replays both on every seed. 60 seeds drawn fresh from 7000000 to 7900000 (lookahead-rung-seeds-60-7m.json), a window no run has used, nor the hold-out window just above it. 4 rounds of 8, seed 0, no check opponent, as #359. What would make it a rung: a set that beats search-51's weights as a lookahead against both search-51 and the table's first seat on the unseen seeds the hold-out replays, and the first seat itself.",
+  "initial": "learning/weights/search-51.json",
+  "opponent": "heuristic:learning/weights/search-51.json,lookahead:heuristic:learning/weights/search-51.json@20",
   "check_opponent": "none",
-  "kind": "heuristic",
-  "seeds": "learning/experiments/heuristic-rung-seeds-200.json",
-  "iterations": 6,
-  "population": 12,
+  "kind": "lookahead",
+  "seeds": "learning/experiments/lookahead-rung-seeds-60-7m.json",
+  "iterations": 4,
+  "population": 8,
   "seed": 0
 }
