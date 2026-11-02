@@ -1334,3 +1334,38 @@ body:has(#table) { padding-bottom: 24px; }
 /* Persistent condition identity, even when motion is disabled. */
 .chip.condition-bleed { border-color: #be655f; color: #f2b7ab; background: #462521; }
 .chip.condition-stun { border-color: #9d82bd; color: #e7ccff; background: #362845; }
+
+
+/* UX 12: show progress through the server-owned initiative timeline. */
+.initiative-section .slot.completed {
+  opacity: .48;
+  border-color: #3b493e;
+}
+.initiative-section .slot.now {
+  position: relative;
+  box-shadow: inset 0 0 0 1px #fff3c9, 0 0 14px #e7c37b55;
+}
+.initiative-section .slot.now::before {
+  content: '';
+  position: absolute;
+  inset: -2px auto -2px -2px;
+  width: 3px;
+  border-radius: 5px;
+  background: var(--gold);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .initiative-section .slot {
+    transition: opacity var(--motion-normal) var(--motion-standard),
+                border-color var(--motion-fast) var(--motion-standard),
+                box-shadow var(--motion-normal) var(--motion-enter);
+  }
+  @keyframes initiative-arrival {
+    0% { box-shadow: inset 0 0 0 1px #fff3c9, 0 0 0 #e7c37b00; }
+    55% { box-shadow: inset 0 0 0 2px #fff3c9, 0 0 20px #e7c37baa; }
+    100% { box-shadow: inset 0 0 0 1px #fff3c9, 0 0 14px #e7c37b55; }
+  }
+  .initiative-section .slot.now.arrived {
+    animation: initiative-arrival var(--motion-slow) var(--motion-enter) both;
+  }
+}
