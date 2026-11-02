@@ -1235,6 +1235,8 @@ body:has(#table) { padding-bottom: 24px; }
   }
   .mini-board.targeting .mini-creature.legal:not(.picked) {
     animation: target-available-glow 2s ease-in-out infinite;
+  }
+}
 
 /* UX 05 — opening-only panel transitions. Never delay hide, focus, or a player's input.
    Battlefield and draggable windows only fade: their interactive targets must not move.
