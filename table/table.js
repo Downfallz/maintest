@@ -2306,7 +2306,8 @@ function renderStep(state, current) {
     state.stepTimerFor = null;
   }
   const asked = isAsked(current.view) && !current.view.over;
-  element('combat-step-count').textContent = `Round ${step.round} · ${stepKind(step.action)}${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
+  const count = [`Round ${step.round}`, stepKind(step.action), step.left > 1 && `${step.left} to read`, auto && 'auto'];
+  element('combat-step-count').textContent = count.filter(Boolean).join(' · ');
   element('combat-step-action').replaceChildren(...(step.action.interlude
     ? interludeRows(state, current.view.board, step.action) : [recapRow(step.action)]));
   if (step.action.interlude === 'upkeep') {

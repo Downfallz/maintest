@@ -226,7 +226,8 @@ export function turnoverSteps(entries, round, board) {
 // A turnover step as one line, for the round bar.
 export function turnoverText(step) {
   if (step.interlude === 'upkeep') {
-    return `Upkeep · ${step.ticks.map(tick => `${tick.label} ${tick.sign}${tick.amount} ${tick.unit} → Creature ${tick.creature}`).join(', ')}`;
+    const ticks = step.ticks.map(tick => `${tick.label} ${tick.sign}${tick.amount} ${tick.unit} → Creature ${tick.creature}`);
+    return `Upkeep · ${ticks.join(', ')}`;
   }
   const ended = step.ended.map(one => `${one.conditions.map(condition => condition?.effect?.kind ?? 'Condition').join(' + ')} ends → ${one.creature.label}`);
   const immune = step.immune.map(one => `${one.label} immune to stun`);
