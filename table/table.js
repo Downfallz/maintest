@@ -2586,7 +2586,13 @@ function renderDecision(state, current) {
   if (view.over) {
     asking.textContent = 'Match complete';
     element('decision').classList.toggle('match-finished', true);
-    element('decision-guide').replaceChildren(matchResult(state, current));
+    const result = matchResult(state, current);
+    const key = current.seat + '/' + view.board.roundNumber;
+    if (state.lastShownMatchResult !== key) {
+      result.classList.toggle('new-result', true);
+      state.lastShownMatchResult = key;
+    }
+    element('decision-guide').replaceChildren(result);
     const replay = button('Replay the match action by action', () => replayMatch(state, current));
     replay.dataset.focus = 'match-replay';
     choices.replaceChildren(replay);
