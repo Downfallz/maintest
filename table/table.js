@@ -1281,7 +1281,8 @@ function combatFeedback(board, changes) {
 // by its own hit, once, and the live board after the last step moves nothing more: an opponent's hit arrives with
 // its step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 function healthFx(state, current, board) {
-  if (state.replaying) return;
+  // A replay the player opened animates from its recorded frames (replayCombatFx), whichever way it is walked.
+  if (state.replaying || state.playback) return;
   const confirmed = (current.view.roundEvents ?? [])
     .filter(entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'OngoingEffectsApplied')
     .reduce((max, entry) => Math.max(max, entry.sequence ?? -1), -1);
