@@ -770,6 +770,36 @@ test('a new round lights the round label once, and the first board does not', as
   expect(await page.evaluate(() => globalThis.cues)).toEqual(['phase-round']);
 });
 
+// UX 20: on a phone the battlefield is a step of the history: Back closes it without leaving the table, Forward
+// opens it again, and closing it from its own button leaves no entry behind.
+test('Back closes the battlefield and Forward reopens it, without leaving the table', async ({ page }) => {
+  test.skip(isLaptop(page));
+  const open = () => page.evaluate(() => document.body.classList.contains('board-open'));
+  const onBoardEntry = () => page.evaluate(() => history.state?.downfallBoard === true);
+  await page.locator('#phase-notice-close').click();
+
+  await page.locator('#board-toggle').click();
+  expect(await open()).toBe(true);
+  expect(await onBoardEntry()).toBe(true);
+  await page.goBack();
+  await expect.poll(open).toBe(false);
+  await expect(page.locator('#table')).toBeVisible();
+  await page.goForward();
+  await expect.poll(open).toBe(true);
+  await page.locator('#board-toggle').click();
+  await expect.poll(open).toBe(false);
+  await expect.poll(onBoardEntry).toBe(false);
+});
+
+// UX 20: the round bar says when the table cannot reach its host, and clears once a poll answers again.
+test('the round bar says the table is offline, and clears once it reaches the host', async ({ page, context }) => {
+  const status = page.locator('#connection-state');
+  await context.setOffline(true);
+  await expect(status).toHaveText(/Offline/);
+  await context.setOffline(false);
+  await expect(status).toBeHidden({ timeout: 10000 });
+});
+
 // UX 16-17: a spell a creature has just learned glows where it is first seen -- the tempo question's list, the
 // round's first after Evolution -- once; the first board the page draws glows nothing.
 test('a spell just learned glows in the tempo list, and the first board does not', async ({ page }) => {
