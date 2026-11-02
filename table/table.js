@@ -677,6 +677,37 @@ function restorePosition(saved) {
 
 const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');
 
+// UX 16/17: compare only confirmed live inventory from each seat's board.
+// First view/reconnect is a baseline; local selections, replays, and SSE redraws
+// must never masquerade as a new mutation or learned spell.
+const unlockBaselines = new Map();
+function refreshUnlockFx(state, current) {
+  state.unlockFx = { tiers: new Set(), spells: new Set() };
+  if (state.playback || state.replaying || state.step || current.view.waiting) return;
+  const key = String(current.seat);
+  const inventory = new Map();
+  for (const creature of current.view.board?.allies ?? []) {
+    inventory.set(String(creature.id), {
+      tiers: new Set(creature.acquiredTiers ?? []),
+      spells: new Set((creature.knownSpells ?? []).map(spell => typeof spell === 'string' ? spell : spell?.spell).filter(Boolean)),
+    });
+  }
+  const old = unlockBaselines.get(key);
+  unlockBaselines.set(key, inventory);
+  if (!old || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  for (const [id, currentInventory] of inventory) {
+    const previous = old.get(id);
+    if (!previous) continue;
+    gained(previous.tiers, currentInventory.tiers).forEach(tier => state.unlockFx.tiers.add(`${id}/${tier}`));
+    gained(previous.spells, currentInventory.spells).forEach(spell => state.unlockFx.spells.add(`${id}/${spell}`));
+  }
+}
+
+// What a set holds now that it did not before.
+function gained(before, now) {
+  return [...now].filter(item => !before.has(item));
+}
+
 function render(state, views) {
   const current = activeSeat(views, state.holder, state.holding);
   const view = current.view;
@@ -776,6 +807,7 @@ function render(state, views) {
     const stepped = state.step && (state.step.action.frame || (state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation'));
     if (stepped && !view.over) element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
   }
+  refreshUnlockFx(state, current);
   renderTimeline(display.view.board);
   // The spellbook stays the live one while an opponent action is read: it is the player's, not the replay's.
   renderBoard(state, display, state.playback ? display : current);
@@ -1481,6 +1513,9 @@ function speedSpell(state, spell, creature, current) {
   const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell.spell) : null;
   const reference = document.createElement('details');
   reference.className = 'speed-spell';
+  // The round's first question after Evolution is its tempo, asked over this list: where a spell just learned is
+  // first seen (UX 17).
+  if (state.unlockFx?.spells.has(`${creature}/${spell.spell}`)) reference.className += ' spell-just-unlocked';
   const summary = document.createElement('summary');
   const name = document.createElement('strong');
   name.textContent = cardTitle(card) || spell.spell;
@@ -1521,6 +1556,7 @@ function heldCard(state, spell, offered, creature, current, reference = false) {
     .filter(Boolean)
     .join(' ');
 
+  if (state.unlockFx?.spells.has(String(creature) + '/' + spell.spell)) face.className += ' spell-just-unlocked';
   const parts = cardParts(state, spell.spell, '');
   if (parts === null) face.textContent = spell.spell;
   else face.append(...parts);
@@ -3685,6 +3721,7 @@ function treeNode(state, node, classes, creature) {
     redraw(state);
   });
   pick.className = ['tree-node', group?.id === state.inspectClass && 'selected', offered && 'unlockable', known && 'known', picked && 'picked'].filter(Boolean).join(' ');
+  if (creature && state.unlockFx?.tiers.has(String(creature.id) + '/' + node.id)) pick.className += ' mutation-just-acquired';
   pick.dataset.focus = `tree-${node.key}`;
   pick.setAttribute('aria-pressed', String(group?.id === state.inspectClass));
   pick.disabled = !group;
