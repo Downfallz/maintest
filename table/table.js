@@ -1292,6 +1292,35 @@ function healthFx(state, current, board) {
   combatFeedback(board, changes);
 }
 
+// Reveal only already-public, resolved actions. The sequence is the event identity;
+// local intent selection never reaches this path. Initial render establishes a
+// baseline instead of animating an old action on reconnect.
+const revealSeen = new Map();
+function revealKey(action) {
+  return Number.isInteger(action?.sequence) ? action.sequence : null;
+}
+function markNewReveal(seat, round, action) {
+  const key = seat + '/' + round;
+  const sequence = revealKey(action);
+  const previous = revealSeen.get(key);
+  if (sequence === null) return false;
+  revealSeen.set(key, sequence);
+  // Bound memory across long playtests.
+  if (revealSeen.size > 12) revealSeen.delete(revealSeen.keys().next().value);
+  return previous !== undefined && previous !== sequence;
+}
+function showSpellReveal(current, board, action, animated) {
+  if (!animated || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  for (const container of ['enemies', 'allies', 'mini-enemies', 'mini-allies']) {
+    for (const node of element(container).querySelectorAll?.('.creature, .mini-creature') ?? []) {
+      if (node.dataset.creatureId === String(action.actor?.id)) node.classList.toggle('spell-reveal-caster', true);
+      if (action.targets?.some(target => String(target.id) === node.dataset.creatureId)) node.classList.toggle('spell-reveal-target', true);
+    }
+  }
+  const text = element('combat-line');
+  if (!text.hidden) text.classList.toggle('spell-reveal-line', true);
+}
+
 function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
@@ -1339,6 +1368,10 @@ function renderBoard(state, current, spellbook = current) {
   element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
   element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
   element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
+  // Never animate replay navigation or an unconfirmed plan.
+  const revealAction = !replay ? live : null;
+  const revealNew = !replay && markNewReveal(current.seat, board.roundNumber, revealAction);
+  showSpellReveal(current, board, revealAction, revealNew);
   healthFx(state, current, board);
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, spellbook));
