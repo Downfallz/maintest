@@ -1403,5 +1403,5 @@ body:has(#table) { padding-bottom: 24px; }
 @media (max-width: 480px) { .match-result { padding: 14px; } .match-result-stats { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) {
   @keyframes result-enter { from { opacity: .45; } to { opacity: 1; } }
-  .match-result { animation: result-enter var(--motion-slow) var(--motion-enter) both; }
+  .match-result.new-result { animation: result-enter var(--motion-slow) var(--motion-enter) both; }
 }
