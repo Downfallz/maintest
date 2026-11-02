@@ -1159,3 +1159,36 @@ body:has(#table) { padding-bottom: 24px; }
   }
   #decision[data-kind="Evolution"] .package-card { min-height: 66px; }
 }
+
+
+/* UX 05 — opening-only panel transitions. Never delay hide, focus, or a player's input.
+   Animate paint/compositing properties instead of geometry (no target/layout shift).
+   The board and Mutation Tree are toggled by hidden/class immediately in table.js. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes panel-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes panel-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  /* Mutation Tree can be draggable/resizable: don't animate its left/top/size. */
+  .talent-window:not([hidden]) {
+    animation: panel-enter var(--motion-normal) var(--motion-enter) both;
+  }
+  /* Full battlefield overlay only exists on tablet/phone; desktop stays still. */
+  @media (max-width: 1099px) {
+    body.board-open #board {
+      animation: panel-enter var(--motion-normal) var(--motion-enter) both;
+    }
+  }
+  /* Announcements appear when unhidden, with no exit timer or delayed dismissal. */
+  #phase-notice:not([hidden]) {
+    animation: panel-fade-in var(--motion-fast) var(--motion-enter) both;
+  }
+  /* Browser-native dialogs show immediately; the dialog content gets a subtle entrance. */
+  dialog[open]:not([hidden]):not(.talent-window) {
+    animation: panel-enter var(--motion-normal) var(--motion-enter) both;
+  }
+}
