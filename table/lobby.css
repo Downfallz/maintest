@@ -65,15 +65,3 @@
   .dialog-actions { flex-wrap: wrap; } .dialog-actions button { flex: 1; }
 }
 
-
-
-/* UX 05 — the New Table modal opens with the same motion language as the game. */
-@media (prefers-reduced-motion: no-preference) {
-  .lobby-page dialog[open] {
-    animation: lobby-dialog-enter var(--motion-normal) var(--motion-enter) both;
-  }
-  @keyframes lobby-dialog-enter {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-}

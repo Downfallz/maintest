@@ -99,6 +99,37 @@ test('a pointer that can hover lifts an enabled button', async ({ page }) => {
   await expect.poll(() => button.evaluate(node => getComputedStyle(node).boxShadow)).not.toBe(before);
 });
 
+// Panels (UX 05) fade in when they open, and only open: the full battlefield on a phone or tablet and the
+// Mutation Tree fade without moving, the phase announcement keeps the entrance table.js plays for it, and
+// none of it runs for a person who asked for reduced motion.
+test('panels fade in as they open, and not at all with reduced motion', async ({ page }) => {
+  const animation = selector => page.locator(selector).evaluate(node => getComputedStyle(node).animationName);
+  expect(await animation('#phase-notice')).toBe('none');
+
+  if (!isLaptop(page)) {
+    await page.locator('#board-toggle').click();
+    expect(await animation('#board')).toBe('panel-fade-in');
+    await page.locator('#board-toggle').click();
+  }
+  await page.locator('#hand-talents').click();
+  expect(await animation('#talent-window')).toBe('panel-fade-in');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await animation('#talent-window')).toBe('none');
+});
+
+test('the lobby\'s dialog opens with the table\'s entrance', async ({ page }) => {
+  await page.route('**/api/**', route => route.fulfill({ json: {} }));
+  await page.goto('/table/lobby.html');
+  const name = await page.evaluate(() => {
+    const dialog = document.getElementById('create-dialog');
+    dialog.showModal();
+    return getComputedStyle(dialog).animationName;
+  });
+
+  expect(name).toBe('panel-enter');
+});
+
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {
   await page.evaluate(() => scrollTo(0, 0));
   if (isPhone(page)) {

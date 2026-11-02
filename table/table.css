@@ -1174,7 +1174,7 @@ body:has(#table) { padding-bottom: 24px; }
     to { opacity: 1; }
   }
   /* Mutation Tree can be draggable/resizable: don't animate its left/top/size. */
-   .talent-window:not([hidden]) {
+  .talent-window:not([hidden]) {
     animation: panel-fade-in var(--motion-normal) var(--motion-enter) both;
   }
   /* Full battlefield overlay only exists on tablet/phone; desktop stays still. */
@@ -1183,11 +1183,10 @@ body:has(#table) { padding-bottom: 24px; }
       animation: panel-fade-in var(--motion-normal) var(--motion-enter) both;
     }
   }
-  /* Announcements appear when unhidden, with no exit timer or delayed dismissal. */
-  #phase-notice:not([hidden]) {
-    animation: panel-fade-in var(--motion-fast) var(--motion-enter) both;
-  }
-  /* Browser-native dialogs show immediately; the dialog content gets a subtle entrance. */
+  /* The phase announcement is not here: table.js already plays its entrance (and skips it for reduced
+     motion), and a second, CSS one would only run under it. */
+  /* Browser-native dialogs show immediately; the dialog content gets a subtle entrance. The lobby loads this
+     stylesheet too, so its New Table dialog takes this rule and needs none of its own. */
   dialog[open]:not([hidden]):not(.talent-window) {
     animation: panel-enter var(--motion-normal) var(--motion-enter) both;
   }
