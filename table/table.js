@@ -3538,6 +3538,8 @@ function chooseForTheSlot(state, spell) {
   if (!element('phase-notice').hidden) hidePhaseNotice(state);
   state.chosen = spell;
   state.picked = [];
+  // A spell chosen is a selection; going back to the spell screen is not.
+  if (spell) state.feedback.cue('select');
   // The other screen of the same asking is guided to as a new question is: on a phone the hand gives way to the
   // targets, and a player left scrolled down the hand would be looking at nothing.
   state.guidedAsking = null;
@@ -3562,9 +3564,11 @@ function pick(state, current, candidate) {
   const legal = current.view.options.target?.legalTargets;
   if (!legal?.candidates.includes(candidate)) return;
   if (state.picked.includes(candidate)) return castTargets(state, current);
-  state.feedback.cue('select');
+  // A tap past the most targets the spell takes changes nothing, so it is not answered as a selection.
   if (legal.maxTargets === 1) state.picked = [candidate];
   else if (state.picked.length < legal.maxTargets) state.picked = [...state.picked, candidate];
+  else return redraw(state);
+  state.feedback.cue('select');
   redraw(state);
 }
 

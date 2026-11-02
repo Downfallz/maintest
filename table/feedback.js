@@ -6,7 +6,9 @@ export function feedbackSettings(store) {
   catch { return { sound: false, haptics: false }; }
 }
 export function saveFeedbackSettings(store, value) {
-  try { store.setItem(KEY, JSON.stringify({ sound: !!value.sound, haptics: !!value.haptics })); } catch {}
+  try { store.setItem(KEY, JSON.stringify({ sound: !!value.sound, haptics: !!value.haptics })); } catch {
+    // Without storage the choice lasts as long as the page.
+  }
 }
 export function createFeedback(globalScope, store) {
   let settings = feedbackSettings(store);
@@ -16,7 +18,9 @@ export function createFeedback(globalScope, store) {
     update(next) { settings = { ...settings, ...next }; saveFeedbackSettings(store, settings); },
     cue(kind) {
       if (settings.haptics) {
-        try { globalScope.navigator?.vibrate?.(kind === 'confirm' ? 18 : 8); } catch {}
+        try { globalScope.navigator?.vibrate?.(kind === 'confirm' ? 18 : 8); } catch {
+          // A device that refuses the pulse simply has no haptics.
+        }
       }
       if (!settings.sound) return;
       const Audio = globalScope.AudioContext || globalScope.webkitAudioContext;

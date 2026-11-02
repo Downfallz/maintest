@@ -22,6 +22,7 @@ import * as practice from './practice.js';
 import * as slot from './slot.js';
 import * as terms from './terms.js';
 import * as combatFx from './combat-fx.js';
+import * as feedback from './feedback.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -73,7 +74,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...terms, ...combatFx,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...terms, ...combatFx, ...feedback,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -88,7 +89,7 @@ function page() {
     acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards, packages,
     catalogue: { cards: [...cards.values()], packages: [...packages.values()], rules: { roundCap: 16 },
       effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }, { kind: 'Stun', glyph: '⊘', harmful: true }] },
-    tab: 'board', feeds: new Map(),
+    tab: 'board', feeds: new Map(), feedback: feedback.createFeedback({}, null),
   };
   const view = { waitingFor: 'Intent', waitingCreature: 1, waitingAsked: 1, options: { intent: { creatures: [{ creature: 1, castableSpells: ['one', 'two'] }] } },
     board: { roundNumber: 1, subPhase: 'IntentSelection', allies: [{ id: 1, name: 'First', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one', 'two'] }], enemies: [{ id: 2, health: 10, maxHealth: 20 }], intents: [], timeline: [] }, feed: [],
@@ -2461,4 +2462,24 @@ test('a page holding both seats of its table is hotseat and offers no notices, a
   assert.equal(p.nodes['notices-offer'].hidden, true);
   assert.equal(p.nodes['notices-row'].hidden, true);
   assert.equal(p.nodes['notices-test'].hidden, true);
+});
+
+test('a spell chosen at the slot is answered as a selection, and going back to the spells is not', () => {
+  const p = page(); const cues = [];
+  p.state.feedback = { cue: kind => cues.push(kind) };
+  p.context.chooseForTheSlot(p.state, 'one');
+  p.context.chooseForTheSlot(p.state, null);
+  assert.deepEqual(cues, ['select']);
+});
+
+test('a target tap past the most a spell takes changes nothing and is not answered as a selection', () => {
+  const p = page(); const cues = [];
+  p.state.feedback = { cue: kind => cues.push(kind) };
+  p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
+  p.view.board.enemies = [{ id: 2, health: 10, maxHealth: 20 }, { id: 3, health: 10, maxHealth: 20 }, { id: 4, health: 10, maxHealth: 20 }];
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2, 3, 4], minTargets: 1, maxTargets: 2 } } };
+  p.draw();
+  for (const candidate of [2, 3, 4]) p.context.pick(p.state, p.current, candidate);
+  assert.deepEqual([...p.state.picked], [2, 3]);
+  assert.deepEqual(cues, ['select', 'select']);
 });
