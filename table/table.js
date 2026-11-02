@@ -852,9 +852,6 @@ function outcomeText(view, seat) {
   return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
 }
 
-// The one thing a player can do to the match itself: give it up (ADR 0087). It is a dock tool like the
-// upkeep's, so it never sits on a decision, and it takes two taps because there is no undo. Not while a bot
-// plays the seat, not once the match is over, and not at practice, whose scenarios restart instead.
 // UX 18: a readable conclusion using only the authoritative outcome and
 // final public creature snapshot; no independent winner calculation.
 function matchResult(state, current) {
@@ -862,19 +859,19 @@ function matchResult(state, current) {
   const outcome = view.outcome;
   const result = document.createElement('section');
   const won = outcome?.winner === seat;
-  const draw = !outcome?.winner;
-  result.className = 'match-result ' + (draw ? 'draw' : won ? 'victory' : 'defeat');
+  // A host from before outcomes says only that the match is over: that is no draw, and the card says no more.
+  const draw = Boolean(outcome) && !outcome.winner;
+  result.className = `match-result ${resultTone(outcome, won)}`;
   result.setAttribute('aria-label', 'Match result');
   const eyebrow = document.createElement('span');
   eyebrow.className = 'match-result-eyebrow';
   eyebrow.textContent = 'DOWNFALL ARENA · FINAL';
   const heading = document.createElement('strong');
   heading.className = 'match-result-title';
-  heading.textContent = view.replay ? draw ? 'DRAW' : nameOf(outcome.winner) + ' WINS' : draw ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
-  const detail = document.createElement('p');
-  detail.className = 'match-result-detail';
-  detail.textContent = outcomeText(view, seat);
-  result.append(eyebrow, heading, detail);
+  heading.textContent = resultTitle(view, outcome, won, draw);
+  // The sentence itself stays the sheet's heading (#asking, which a screen reader announces); the card adds
+  // the word and the final count.
+  result.append(eyebrow, heading);
   const stats = document.createElement('div');
   stats.className = 'match-result-stats';
   for (const [label, creatures] of [['Your creatures', view.board.allies ?? []], ['Opponents', view.board.enemies ?? []]]) {
@@ -893,6 +890,22 @@ function matchResult(state, current) {
   return result;
 }
 
+function resultTone(outcome, won) {
+  if (!outcome) return 'unknown';
+  if (!outcome.winner) return 'draw';
+  return won ? 'victory' : 'defeat';
+}
+
+function resultTitle(view, outcome, won, draw) {
+  if (!outcome) return 'MATCH OVER';
+  if (draw) return 'DRAW';
+  if (view.replay) return `${nameOf(outcome.winner)} WINS`;
+  return won ? 'VICTORY' : 'DEFEAT';
+}
+
+// The one thing a player can do to the match itself: give it up (ADR 0087). It is a dock tool like the
+// upkeep's, so it never sits on a decision, and it takes two taps because there is no undo. Not while a bot
+// plays the seat, not once the match is over, and not at practice, whose scenarios restart instead.
 function renderMatchTools(state, view) {
   const tools = element('match-tools');
   const hidden = Boolean(view.over || view.playedByBot || state.practice || state.playback);
@@ -2584,7 +2597,7 @@ function renderDecision(state, current) {
     return;
   }
   if (view.over) {
-    asking.textContent = 'Match complete';
+    asking.textContent = outcomeText(view, current.seat);
     element('decision').classList.toggle('match-finished', true);
     const result = matchResult(state, current);
     const key = current.seat + '/' + view.board.roundNumber;
