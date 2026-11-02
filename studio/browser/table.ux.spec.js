@@ -901,3 +901,51 @@ test("the next creature's question opens its spellbook at the top, not where the
   await expect(page.locator('#asking')).toContainText('Creature 5');
   expect(await hand.evaluate(node => node.scrollTop)).toBe(0);
 });
+
+// Tempos are chosen per creature and can be changed from its tab until Confirm, which sends them all; the host
+// asks one creature at a time, and each is sent when its creature is asked.
+test('tempos are chosen per creature, can go back, and Confirm sends them as the host asks', async ({ page }) => {
+  const posted = [];
+  const asked = (creature, waitingAsked, speedChoices = []) => ({ ...view, waitingCreature: creature, waitingAsked, options: { speed: { missing: [1, 3] } },
+    board: { ...view.board, speedChoices, allies: [view.board.allies[0], { ...view.board.allies[0], id: 3, name: 'Creature 3' }] } });
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(1, 4) }));
+  await page.route('**/api/seat/player1/decision', route => {
+    posted.push(route.request().postDataJSON());
+    return route.fulfill({ status: 204 });
+  });
+  await page.reload();
+  const confirm = page.locator('[data-focus="tempo-confirm"]');
+  await expect(confirm).toBeDisabled();
+
+  await page.locator('[data-focus="speed-Quick"]').click();
+  await expect(page.locator('#asking')).toHaveText('Creature 3 · choose tempo');
+  await page.locator('[data-focus="speed-Quick"]').click();
+  await page.locator('[data-focus="tempo-creature-1"]').click();
+  await expect(page.locator('[data-focus="speed-Quick"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-focus="speed-Standard"]').click();
+  await expect(page.locator('[data-focus="tempo-creature-1"]')).toHaveText('Creature 1 · Precision');
+  expect(posted).toEqual([]);
+  await expectNoSidewaysScroll(page);
+
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(3, 5, [{ creature: 1, speed: 'Standard' }]) }));
+  await page.route('**/api/seat/player1/decision', route => {
+    posted.push(route.request().postDataJSON());
+    return route.fulfill({ status: 204 });
+  });
+  await confirm.click();
+  await expect.poll(() => posted.map(one => [one.creature, one.speed]), { timeout: 10000 }).toEqual([[1, 'Standard'], [3, 'Quick']]);
+});
+
+// Sound and haptics are a setting: a small toggle in the masthead beside the Round guide, not a panel in the match.
+test('sound and haptics sit in the masthead beside the Round guide, one popover at a time', async ({ page }) => {
+  const toggle = page.locator('#feedback-preferences > summary');
+  await expect(page.locator('.masthead #feedback-preferences')).toBeVisible();
+  expect((await toggle.boundingBox()).height).toBeLessThanOrEqual(48);
+  await toggle.click();
+  await expect(page.locator('#feedback-sound')).toBeVisible();
+  await page.locator('#feedback-sound').check();
+  await expect(page.locator('#feedback-preferences')).toHaveClass(/on/);
+  await page.locator('#shape > summary').click();
+  await expect(page.locator('#feedback-sound')).toBeHidden();
+  await expectNoSidewaysScroll(page);
+});

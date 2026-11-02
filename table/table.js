@@ -797,7 +797,8 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTicks(state, view.board)]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet, noticeTicks(state, view.board),
+    state.tempoFocus, [...(state.tempoDrafts?.get(tempoKey(current)) ?? [])], state.tempoSending]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -853,6 +854,7 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
+  sendTempo(state, current);
   renderCombatLine(state, view);
   element('planning').hidden = Boolean(state.playback);
   element('playback').hidden = !state.playback;
@@ -1540,7 +1542,7 @@ function renderBoard(state, current, spellbook = current) {
 function hand(state, current) {
   const view = current.view;
   state.activeHand = null;
-  const asked = isAsked(view) && ['Speed', 'Intent'].includes(view.waitingFor) ? view.waitingCreature : null;
+  const asked = isAsked(view) && ['Speed', 'Intent'].includes(view.waitingFor) ? (view.waitingFor === 'Speed' ? tempoFocus(state, current) : view.waitingCreature) : null;
   const rows = handRows(view.board.allies, view.options?.intent, view.board.intents);
   const box = document.createElement('div');
   box.className = 'hand-cards';
@@ -2735,7 +2737,8 @@ function renderDecision(state, current) {
     return;
   }
 
-  const actor = (view.board.allies ?? []).find(creature => creature.id === view.waitingCreature);
+  const acting = view.waitingFor === 'Speed' ? tempoFocus(state, current) : view.waitingCreature;
+  const actor = (view.board.allies ?? []).find(creature => creature.id === acting);
   element('decision-context').textContent = actor
     ? `${healthText(actor)} HP · ${actor.energy ?? 0} energy`
     : '';
@@ -2772,7 +2775,7 @@ function stepHeading(state, current) {
 function titleOf(state, view) {
   switch (view.waitingFor) {
     case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · acquire a mutation`;
-    case 'Speed': return `Creature ${view.waitingCreature} · choose tempo`;
+    case 'Speed': return `Creature ${tempoCreatures(view).includes(state.tempoFocus) ? state.tempoFocus : view.waitingCreature} · choose tempo`;
     case 'Intent': return view.askedAs === 'Action'
       ? `Creature ${view.waitingCreature} · your turn: choose a spell`
       : `Creature ${view.waitingCreature} · choose spell`;
@@ -3339,17 +3342,12 @@ function setupPhaseControls(state) {
 // would be inventing a rule; a screen that offered less would be hiding one.
 function buttonsFor(state, current) {
   const view = current.view;
-  const send = decision => () => submit(state, current, decision);
   switch (view.waitingFor) {
     case 'Evolution': {
       return evolutionButtons(state, current);
     }
     case 'Speed':
-      return SPEEDS.map(speed => {
-        const choice = button(tempoLabel(speed), send({ kind: 'Speed', creature: view.waitingCreature, speed }));
-        choice.dataset.focus = `speed-${speed}`;
-        return choice;
-      });
+      return tempoButtons(state, current);
     case 'TieOrder':
       return tieOrderButtons(state, current);
     case 'Intent':
@@ -3361,6 +3359,118 @@ function buttonsFor(state, current) {
   }
 }
 
+
+// The creatures this seat still owes a tempo this round: the ones the options name that the host has not been
+// told of yet, and always the one it is asking about.
+function tempoCreatures(view) {
+  const given = new Set((view.board.speedChoices ?? []).map(choice => choice.creature));
+  const missing = (view.options.speed?.missing ?? []).filter(creature => !given.has(creature));
+  return missing.includes(view.waitingCreature) ? missing : [view.waitingCreature, ...missing];
+}
+
+// The tempos chosen this round and not sent yet, by creature. Nothing reaches the host before Confirm: the
+// host asks one creature at a time and hands a seat's tempos to the match only once all are in (ADR 0111),
+// so until then a choice is the player's to change, from any creature's tab.
+function tempoDraft(state, current) {
+  const key = `${current.seat}/${current.view.board.roundNumber}`;
+  state.tempoDrafts ??= new Map();
+  if (!state.tempoDrafts.has(key)) state.tempoDrafts.set(key, new Map());
+  return state.tempoDrafts.get(key);
+}
+
+// The creature whose tempo the sheet shows: the one the player picked a tab for, else the first without one.
+function tempoFocus(state, current) {
+  const creatures = tempoCreatures(current.view);
+  const draft = tempoDraft(state, current);
+  // A new round, or the other seat in hotseat, starts at its own first creature, not at the tab left open.
+  if (state.tempoFocusKey !== tempoKey(current) || !creatures.includes(state.tempoFocus)) {
+    state.tempoFocusKey = tempoKey(current);
+    state.tempoFocus = creatures.find(creature => !draft.has(creature)) ?? creatures[0];
+  }
+  return state.tempoFocus;
+}
+
+// One tab a creature, its two tempos, and the one Confirm that sends them all.
+function tempoButtons(state, current) {
+  const creatures = tempoCreatures(current.view);
+  const draft = tempoDraft(state, current);
+  const focus = tempoFocus(state, current);
+  const sending = state.tempoSending === tempoKey(current);
+  const controls = [];
+  if (creatures.length > 1) {
+    const picker = document.createElement('div');
+    picker.className = 'creature-picker tempo-picker';
+    picker.append(...creatures.map(creature => {
+      const chosen = draft.get(creature);
+      const tab = button(`Creature ${creature} · ${chosen ? tempoLabel(chosen) : '—'}`, () => {
+        state.tempoFocus = creature;
+        redraw(state);
+      });
+      tab.dataset.focus = `tempo-creature-${creature}`;
+      tab.setAttribute('aria-pressed', String(creature === focus));
+      tab.disabled = sending;
+      return tab;
+    }));
+    controls.push(picker);
+  }
+  for (const speed of SPEEDS) {
+    const choice = button(tempoLabel(speed), () => chooseTempo(state, current, focus, speed));
+    choice.dataset.focus = `speed-${speed}`;
+    choice.setAttribute('aria-pressed', String(draft.get(focus) === speed));
+    choice.disabled = sending;
+    controls.push(choice);
+  }
+  const ready = creatures.every(creature => draft.has(creature));
+  const confirm = button(sending ? 'Sending tempos…' : `Confirm tempos · ${draft.size} of ${creatures.length}`, () => confirmTempos(state, current));
+  confirm.className = 'tempo-confirm';
+  confirm.dataset.focus = 'tempo-confirm';
+  confirm.disabled = !ready || sending;
+  controls.push(confirm);
+  return controls;
+}
+
+function tempoKey(current) {
+  return `${current.seat}/${current.view.board.roundNumber}`;
+}
+
+// A tempo is a choice, not a submission: it is kept for its creature, and the sheet moves on to the next
+// creature without one, so three taps and Confirm play a round while any tab can still go back.
+function chooseTempo(state, current, creature, speed) {
+  if (!canInteract(state, current, 'Speed') || state.tempoSending === tempoKey(current)) return;
+  const draft = tempoDraft(state, current);
+  draft.set(creature, speed);
+  state.feedback?.cue('select');
+  const creatures = tempoCreatures(current.view);
+  state.tempoFocus = creatures.find(one => !draft.has(one)) ?? creature;
+  redraw(state);
+}
+
+function confirmTempos(state, current) {
+  if (!canInteract(state, current, 'Speed')) return;
+  const draft = tempoDraft(state, current);
+  if (!tempoCreatures(current.view).every(creature => draft.has(creature))) return;
+  state.tempoSending = tempoKey(current);
+  sendTempo(state, current);
+}
+
+// Confirmed tempos go to the host the way it asks for them, one creature at a time: each answer is sent when
+// the host asks about its creature, once a question, so a refused answer is shown rather than sent again.
+function sendTempo(state, current) {
+  const view = current.view;
+  if (state.tempoSending !== tempoKey(current) || !isAsked(view) || view.waitingFor !== 'Speed') return;
+  const speed = tempoDraft(state, current).get(view.waitingCreature);
+  const asked = `${current.seat}/${view.waitingAsked}`;
+  if (!speed || state.tempoSent === asked || !canInteract(state, current, 'Speed')) return;
+  state.tempoSent = asked;
+  void Promise.resolve().then(async () => {
+    await submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed });
+    // Refused, the tempos are the player's again: the error says why, and Confirm can be pressed once more.
+    if (state.error && state.tempoSending === tempoKey(current)) {
+      state.tempoSending = null;
+      redraw(state);
+    }
+  });
+}
 
 // Only one creature's packages occupy the sheet at a time; every server-offered creature stays reachable.
 function evolutionButtons(state, current) {
@@ -3536,8 +3646,14 @@ function setupFeedback(state) {
   const settings = state.feedback.settings();
   sound.checked = settings.sound;
   haptics.checked = settings.haptics;
-  sound.addEventListener('change', () => state.feedback.update({ sound: sound.checked }));
-  haptics.addEventListener('change', () => state.feedback.update({ haptics: haptics.checked }));
+  const panel = element('feedback-preferences');
+  const lit = () => panel.classList.toggle('on', sound.checked || haptics.checked);
+  lit();
+  sound.addEventListener('change', () => { state.feedback.update({ sound: sound.checked }); lit(); });
+  haptics.addEventListener('change', () => { state.feedback.update({ haptics: haptics.checked }); lit(); });
+  // One masthead popover at a time: the settings and the Round guide open in the same place.
+  panel.addEventListener('toggle', () => { if (panel.open) element('shape').open = false; });
+  element('shape').addEventListener('toggle', () => { if (element('shape').open) panel.open = false; });
 }
 
 function chooseCard(state, current, spell) {
@@ -3993,7 +4109,7 @@ function keyboardDecision(state, event) {
   if (number !== null) {
     event.preventDefault();
     if (view.waitingFor === 'Speed' && number < 2) {
-      return submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed: SPEEDS[number] });
+      return chooseTempo(state, current, tempoFocus(state, current), SPEEDS[number]);
     }
     if (view.waitingFor === 'TieOrder') {
       const offered = untapped(view.options.tieOrder?.ties, state.ordered).filter(group => group.length > 1).flat();
@@ -4123,7 +4239,7 @@ function navigateChoices(state, current, event) {
     else focus(next ?? active);
     return;
   }
-  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-', 'declare-'], Target: ['target-', 'mini-target-', 'slot-'] }[view.waitingFor];
+  const prefixes = { Speed: ['tempo-creature-', 'speed-', 'tempo-confirm'], TieOrder: ['tie-'], Intent: ['card-', 'declare-'], Target: ['target-', 'mini-target-', 'slot-'] }[view.waitingFor];
   if (!prefixes) return;
   const controls = prefixes.flatMap(nodes).filter(node => node.checkVisibility?.() ?? true);
   if (!controls.length) return;

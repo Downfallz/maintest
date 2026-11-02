@@ -79,8 +79,10 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
       continue;
     }
 
+    // A tempo is chosen for every creature, then confirmed: Confirm is enabled once each has one.
     const answer = await offered(page, '#choices button', { hasText: /^Pass/ })
-      ?? await offered(page, '#choices button', { hasText: /^Precision$/ })
+      ?? await offered(page, '[data-focus="tempo-confirm"]')
+      ?? await offered(page, '#choices button[aria-pressed="false"]', { hasText: /^Precision$/ })
       ?? await offered(page, '#choices button', { hasText: /^Keep the order/ });
     if (answer) { await answer.click(); continue; }
     await page.waitForTimeout(200);
