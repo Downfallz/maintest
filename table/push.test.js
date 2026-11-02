@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyBytes, noticeButton, pushSupported, sameKey, testReading } from './push.js';
+import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading } from './push.js';
 
 test('a browser pushes when it has a worker, a push manager, notifications and a secure context', () => {
   const nav = { serviceWorker: {} };
@@ -37,13 +37,31 @@ test('the button is offered only where a notice could reach, and says what tappi
   assert.equal(noticeButton({ ...base, busy: true }).disabled, true);
   assert.equal(noticeButton({ ...base, permission: 'denied' }).disabled, true);
   assert.match(noticeButton({ ...base, permission: 'denied' }).hint, /browser's settings/);
-  assert.equal(noticeButton({ ...base, supported: false }).hidden, true);
+  assert.equal(noticeButton({ ...base, supported: false }).label, 'This browser cannot notify you', 'a chat app\'s browser is told, not left without a button');
+  assert.equal(noticeButton({ ...base, supported: false }).disabled, true);
+  assert.match(noticeButton({ ...base, supported: false }).hint, /Chrome, Firefox or Safari/);
+  assert.equal(noticeButton({ ...base, supported: false, secure: false }).label, 'Notifications need https');
+  assert.equal(noticeButton({ ...base, supported: false, secure: false }).offered, false, 'plain http is the operator\'s affair, not offered to a player');
   assert.equal(noticeButton({ ...base, supported: false, ios: true }).label, 'Notifications need the home screen', 'an iPhone is told what to do');
   assert.equal(noticeButton({ ...base, supported: false, ios: true, keyed: false }).hidden, true, 'not without keys');
   assert.equal(noticeButton({ ...base, keyed: false }).hidden, true, 'a host without keys');
   assert.equal(noticeButton({ ...base, practice: true }).hidden, true);
-  assert.equal(noticeButton({ ...base, hotseat: true }).hidden, true, 'two seats on one device: nobody is away');
+  assert.equal(noticeButton({ ...base, hotseat: true }).label, 'No notices with both seats here', 'two seats on one device: the panel says why');
+  assert.equal(noticeButton({ ...base, hotseat: true }).disabled, true);
+  assert.equal(noticeButton({ ...base, hotseat: true }).offered, false, 'two seats on one device: nobody is away, nothing is offered');
   assert.equal(noticeButton({}).hidden, true);
+});
+
+test('the offer is made once, to a page that could be told and is not yet', () => {
+  const offerable = noticeButton({ supported: true, keyed: true, permission: 'default' });
+
+  assert.equal(offerShown(offerable, { permission: 'default' }), true);
+  assert.equal(offerShown(offerable, { permission: 'default' }, true), false, 'declined once, not asked again');
+  assert.equal(offerShown(offerable, { permission: 'denied' }), false, 'a person who blocked them said no already');
+  assert.equal(offerShown(offerable, { subscribed: true }), false);
+  assert.equal(offerShown(noticeButton({ supported: false, keyed: true, ios: true }), {}), true, 'an iPhone is told the way once');
+  assert.equal(offerShown(noticeButton({ supported: true, keyed: true, hotseat: true }), {}), false);
+  assert.equal(offerShown(noticeButton({ supported: true, keyed: false }), {}), false, 'a host without keys offers nothing');
 });
 
 test('the test reads the two notices together: the page\'s own, the host\'s, and what each outcome means', () => {

@@ -125,6 +125,11 @@
           <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Mutation Tree ↗</button>
           <span class="table-caption">Plan. Reveal. Resolve.</span>
         </nav>
+        <!-- "Your turn" on this phone (ADR 0118), offered once to every seat page: the second player to arrive never waits in a room. -->
+        <section id="notices-offer" class="notices-offer" aria-labelledby="notices-offer-title" hidden>
+          <p><strong id="notices-offer-title">Get told when it's your turn</strong> <span id="notices-offer-hint" class="muted"></span></p>
+          <div class="notices-offer-actions"><button id="notices-offer-yes" type="button"></button><button id="notices-offer-no" type="button" class="secondary">Not now</button></div>
+        </section>
         <section id="planning" aria-label="Plan your move">
           <aside class="action-area" aria-label="Your turn">
             <section id="decision" class="sheet" aria-labelledby="asking">

@@ -2,7 +2,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, pushSupported, sameKey, testReading, TAG } from './push.js';
+import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -916,16 +916,21 @@ function setupLeave(state) {
 // must hear of it. Nothing is asked of the person here; the button is.
 function setupNotices(state) {
   state.push = {
-    supported: pushSupported(), keyed: false, practice: state.practice, subscribed: false, busy: false,
+    // A replay is nobody's seat: like practice, nothing to be told about.
+    supported: pushSupported(), keyed: false, practice: state.practice || state.replaying, subscribed: false, busy: false,
     permission: globalThis.Notification?.permission ?? 'default', registration: null, publicKey: null,
     // An iPhone pushes only to a page added to the home screen; the button says so instead of hiding.
     ios: /iPad|iPhone|iPod/.test(globalThis.navigator?.userAgent ?? ''),
+    // Plain http on a LAN address takes no push in any browser: said as such, not as a browser that cannot.
+    secure: globalThis.isSecureContext !== false,
+    declined: offerDeclined(),
   };
-  for (const id of ['notices', 'notices-match']) element(id)?.addEventListener('click', () => toggleNotices(state));
+  for (const id of ['notices', 'notices-match', 'notices-offer-yes']) element(id)?.addEventListener('click', () => toggleNotices(state));
+  element('notices-offer-no')?.addEventListener('click', () => declineOffer(state));
   element('notices-test')?.addEventListener('click', () => testNotices(state));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') void closeNotices(state); });
   renderNotices(state);
-  if (state.practice || state.seats.length === 0) return;
+  if (state.push.practice || state.seats.length === 0) return;
   void (async () => {
     try {
       const key = await state.seats[0].transport.pushKey();
@@ -972,7 +977,7 @@ async function tellHeld(state) {
 function renderNotices(state) {
   // Two seats of the table on this device is hotseat: nobody is away from it, and no notice would say anything.
   const shown = noticeButton({ ...state.push ?? {}, hotseat: (state.seats?.length ?? 0) > 1 });
-  for (const id of ['notices', 'notices-match']) {
+  for (const id of ['notices', 'notices-match', 'notices-offer-yes']) {
     const button = element(id);
     if (!button) continue;
     button.hidden = shown.hidden;
@@ -980,11 +985,42 @@ function renderNotices(state) {
     button.textContent = shown.label;
     button.title = shown.hint;
   }
-  if (element('notices-row')) element('notices-row').hidden = shown.hidden;
+  const offer = offerShown(shown, state.push, state.push?.declined);
+  if (element('notices-offer')) element('notices-offer').hidden = !offer;
+  if (element('notices-offer-hint')) element('notices-offer-hint').textContent = shown.hint;
+  // The room says it too, unless the offer above already does.
+  if (element('notices-row')) element('notices-row').hidden = !shown.offered || offer;
   if (element('notices-hint')) element('notices-hint').textContent = shown.hint;
   // The test is offered once this phone is subscribed: what it answers is the host's own word on whether a
   // notice reaches it, which is what to read when "your turn" never came.
-  if (element('notices-test')) element('notices-test').hidden = shown.hidden || !state.push?.subscribed;
+  if (element('notices-test')) element('notices-test').hidden = !shown.offered || !state.push?.subscribed;
+}
+
+// The offer is made once a browser: its answer is remembered, and the match panel keeps the button.
+const OfferKey = 'downfall.table.notices-offer';
+
+function offerDeclined() {
+  try {
+    return storage?.getItem(OfferKey) === 'answered';
+  } catch {
+    return false;
+  }
+}
+
+// Answered is answered, whichever way: "Not now", and any tap on the button itself -- a person who turned the
+// notices on and then off again said no, and is not asked a second time.
+function answerOffer(state) {
+  state.push.declined = true;
+  try {
+    storage?.setItem(OfferKey, 'answered');
+  } catch {
+    // A browser that keeps nothing is offered again on its next visit.
+  }
+}
+
+function declineOffer(state) {
+  answerOffer(state);
+  renderNotices(state);
 }
 
 async function testNotices(state) {
@@ -1042,6 +1078,7 @@ async function showOwn(state) {
 async function toggleNotices(state) {
   const push = state.push;
   if (!push?.registration || push.busy) return;
+  answerOffer(state);
   push.busy = true;
   renderNotices(state);
   try {

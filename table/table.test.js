@@ -2208,6 +2208,7 @@ test('the notices button is drawn from where the page stands, in the room and in
   const p = page();
   p.state.push = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false, practice: false };
 
+  p.state.push.declined = true;
   p.context.renderNotices(p.state);
   assert.equal(p.nodes.notices.hidden, false);
   assert.equal(p.nodes['notices-row'].hidden, false);
@@ -2218,6 +2219,50 @@ test('the notices button is drawn from where the page stands, in the room and in
   p.context.renderNotices(p.state);
   assert.equal(p.nodes.notices.hidden, true, 'a host without keys offers nothing');
   assert.equal(p.nodes['notices-row'].hidden, true);
+  assert.equal(p.nodes['notices-offer'].hidden, true);
+});
+
+// The second player to arrive never waits in a room, which is where the button used to be offered: every seat
+// page offers it once on entering, and the room does not say it twice.
+test('a seat page offers the notices once on entering, in place of the room, until declined', () => {
+  const p = page();
+  p.state.push = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false, practice: false };
+
+  p.context.renderNotices(p.state);
+  assert.equal(p.nodes['notices-offer'].hidden, false);
+  assert.equal(p.nodes['notices-offer-yes'].textContent, "Notify me when it's my turn");
+  assert.equal(p.nodes['notices-offer-hint'].textContent, 'Even with the screen off or the browser closed.');
+  assert.equal(p.nodes['notices-row'].hidden, true, 'the offer says it already');
+
+  p.context.declineOffer(p.state);
+  assert.equal(p.nodes['notices-offer'].hidden, true);
+  assert.equal(p.nodes['notices-row'].hidden, false);
+  assert.equal(p.nodes['notices-match'].hidden, false, 'the match panel keeps the button');
+});
+
+test('a person who turns the notices on and off again is not offered them a second time', async () => {
+  const p = page();
+  const held = { unsubscribe: async () => true };
+  p.state.push = { supported: true, keyed: true, permission: 'granted', subscribed: true, busy: false, practice: false,
+    registration: { pushManager: { getSubscription: async () => held } } };
+  p.current.transport.forgetPush = async () => ({ ok: true });
+
+  await p.context.toggleNotices(p.state);
+
+  assert.equal(p.state.push.subscribed, false);
+  assert.equal(p.nodes['notices-offer'].hidden, true);
+  assert.equal(p.nodes['notices-match'].textContent, "Notify me when it's my turn");
+});
+
+test('a browser that cannot take a push says so in the match panel instead of showing nothing', () => {
+  const p = page();
+  p.state.push = { supported: false, keyed: true, permission: 'default', subscribed: false, busy: false, practice: false, declined: true };
+
+  p.context.renderNotices(p.state);
+
+  assert.equal(p.nodes['notices-match'].hidden, false);
+  assert.equal(p.nodes['notices-match'].disabled, true);
+  assert.equal(p.nodes['notices-match'].textContent, 'This browser cannot notify you');
 });
 
 test('a hidden page acknowledges nothing, and the next poll in front of somebody does', () => {
@@ -2336,13 +2381,17 @@ test('a notice the browser still lists was shown', async () => {
   assert.match(p.nodes['notices-problem'].textContent, /^The page showed one itself\. Sent\./);
 });
 
-test('a page holding both seats of its table is hotseat and offers no notices: nobody is away from it', () => {
+test('a page holding both seats of its table is hotseat and offers no notices, and its match panel says why', () => {
   const p = page();
   p.state.push = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false };
   p.state.seats = [{ seat: 'player1' }, { seat: 'player2' }];
 
+  p.state.push.subscribed = true;
   p.context.renderNotices(p.state);
 
-  assert.equal(p.nodes['notices-match'].hidden, true);
+  assert.equal(p.nodes['notices-match'].disabled, true, 'said, not offered');
+  assert.equal(p.nodes['notices-match'].textContent, 'No notices with both seats here');
+  assert.equal(p.nodes['notices-offer'].hidden, true);
+  assert.equal(p.nodes['notices-row'].hidden, true);
   assert.equal(p.nodes['notices-test'].hidden, true);
 });
