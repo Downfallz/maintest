@@ -949,3 +949,46 @@ test('sound and haptics sit in the masthead beside the Round guide, one popover 
   await expect(page.locator('#feedback-sound')).toBeHidden();
   await expectNoSidewaysScroll(page);
 });
+
+// A round that ends turns over in steps: once the action that ended it is read, its Cleanup says what ran out,
+// and the next Upkeep moves the bars by what its ticks dealt -- the float a hit gets, on the creature it bled.
+test('the round turns over in steps after its last action, and the upkeep floats its bleed', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.floats = [];
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.classList?.contains('combat-float')) {
+            globalThis.floats.push({ text: node.textContent, id: node.parentElement.dataset.creatureId,
+              struck: node.parentElement.classList.contains('fx-damage') });
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  // The seat has read its own action of round 3, so what follows it is read as steps.
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, feed: [resolved(5, 1, [2], [])], feedNext: 6 } }));
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+
+  const turnedOver = { ...view, feedNext: 11, feed: [resolved(5, 1, [2], []), resolved(7, 2, [1], []),
+    { sequence: 8, round: 4, subPhase: 'Upkeep', event: { kind: 'ConditionsExpired', roundId: 3, expired: { 1: [{ effect: { kind: 'Stun' }, remainingRounds: 0 }] } } },
+    { sequence: 9, round: 4, subPhase: 'Upkeep', event: { kind: 'RoundEnded', roundId: 3 } },
+    { sequence: 10, round: 4, subPhase: 'Upkeep', event: { kind: 'OngoingEffectsApplied', roundId: 4, bleedTicks: [{ creature: 2, damage: 2 }] } }],
+    board: { ...view.board, roundNumber: 4, enemies: [{ ...view.board.enemies[0], health: 18 }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: turnedOver }));
+
+  const step = page.locator('#combat-step-count');
+  await expect(step).toContainText('Round 3 · opponent action', { timeout: 10000 });
+  await page.locator('[data-focus="step-next"]').click();
+  await expect(step).toContainText('Round 3 · cleanup');
+  await expect(page.locator('#combat-step-action')).toContainText('Stun ends');
+  expect(await page.evaluate(() => globalThis.floats)).toEqual([]);
+  await page.locator('[data-focus="step-next"]').click();
+  await expect(step).toContainText('Round 4 · upkeep');
+  await expect.poll(() => page.evaluate(() => globalThis.floats.length)).toBeGreaterThan(0);
+  const floats = await page.evaluate(() => globalThis.floats);
+  expect(floats.every(float => float.text === '-2' && float.id === '2' && float.struck)).toBe(true);
+  await page.locator('[data-focus="step-next"]').click();
+  await expect(page.locator('#combat-step')).toBeHidden();
+});
