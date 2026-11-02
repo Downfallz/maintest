@@ -1154,8 +1154,13 @@ function renderNotes(view) {
 
 // The initiative track: the engine's order, banded by speed, wrapping on a phone rather than scrolling. The strip never
 // sorts -- ties and all, this is the order the round is played in (timeline.js).
+let previousInitiativeCursor = null;
 function renderTimeline(board) {
-  const cursor = withCursor(board.timeline, cursorOf(board));
+  const index = cursorOf(board);
+  const timelineKey = `${board.roundNumber}/${board.subPhase}/${(board.timeline ?? []).map(slot => slot.creature).join(',')}`;
+  const newlyActive = previousInitiativeCursor?.key === timelineKey && index >= 0 && index !== previousInitiativeCursor.index;
+  previousInitiativeCursor = { key: timelineKey, index };
+  const cursor = withCursor(board.timeline, index);
   const strip = bands(cursor).map(band => {
     const box = document.createElement('div');
     box.className = 'band';
@@ -1169,17 +1174,19 @@ function renderTimeline(board) {
     slots.className = 'slots';
     for (const slot of band.slots) {
       const one = document.createElement('div');
-      one.className = `slot ${side(slot, board.slot)}${slot.isNow ? ' now' : ''}`;
+      const position = turnOrder({ id: slot.creature }, board);
+      const past = index >= 0 && position !== null && position - 1 < index;
+      one.className = `slot ${side(slot, board.slot)}${slot.isNow ? ' now' : ''}${past ? ' completed' : ''}${slot.isNow && newlyActive ? ' arrived' : ''}`;
       const order = document.createElement('span');
       order.className = 'slot-order';
-      order.textContent = `${turnOrder({ id: slot.creature }, board)}`;
+      order.textContent = `${position}`;
       order.style.setProperty('--turn-color', turnColour(Number(order.textContent), board.timeline.length));
       const creature = document.createElement('strong');
       creature.textContent = `Creature ${slot.creature}`;
       const initiative = document.createElement('span');
       initiative.className = 'slot-initiative';
       initiative.textContent = `Initiative ${slot.initiative}`;
-      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
+      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : past ? ', already acted' : ''}`);
       one.append(order, creature, initiative);
       const rolled = rollText(board.rollOffs, slot.creature);
       if (rolled) {
