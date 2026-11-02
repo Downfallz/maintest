@@ -36,7 +36,9 @@ test.afterAll(async () => {
 /** A visible control matching the selector, or null: what the page offers right now. */
 async function offered(page, selector, options) {
   const found = page.locator(selector, options).filter({ visible: true }).first();
-  return (await found.count()) > 0 && await found.isEnabled() ? found : null;
+  // A control can go between the count and the check -- Confirm leaves as soon as the tempos are sent -- and an
+  // unbounded check would then wait out the whole test for an element that is not coming back.
+  return (await found.count()) > 0 && await found.isEnabled({ timeout: 1000 }).catch(() => false) ? found : null;
 }
 
 test('a person plays their creatures\' actions at the slot, a card then its targets', async ({ page }, info) => {
@@ -79,8 +81,10 @@ test('a person plays their creatures\' actions at the slot, a card then its targ
       continue;
     }
 
+    // A tempo is chosen for every creature, then confirmed: Confirm is enabled once each has one.
     const answer = await offered(page, '#choices button', { hasText: /^Pass/ })
-      ?? await offered(page, '#choices button', { hasText: /^Precision$/ })
+      ?? await offered(page, '[data-focus="tempo-confirm"]')
+      ?? await offered(page, '#choices button[aria-pressed="false"]', { hasText: /^Precision$/ })
       ?? await offered(page, '#choices button', { hasText: /^Keep the order/ });
     if (answer) { await answer.click(); continue; }
     await page.waitForTimeout(200);

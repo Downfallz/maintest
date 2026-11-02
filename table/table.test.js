@@ -916,13 +916,16 @@ test('Enter on a focused control is left to that control instead of activating t
   assert.equal(p.state.sending, false);
 });
 
-test('speed shortcuts submit the named speed and atlas numbers only change the inspected creature', async () => {
+test('speed shortcuts choose the named speed, Confirm sends it, and atlas numbers only change the inspected creature', async () => {
   const p = page(); const sent = []; p.view.waitingFor = 'Speed'; p.view.options = { speed: {} };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
-  await p.context.keyboardDecision(p.state, keyEvent('2')); assert.equal(sent[0].speed, 'Standard');
+  await p.context.keyboardDecision(p.state, keyEvent('2'));
+  assert.equal(sent.length, 0, 'a tempo is chosen, not sent');
   await p.context.keyboardDecision(p.state, keyEvent('t'));
   await p.context.keyboardDecision(p.state, keyEvent('1'));
-  assert.equal(p.state.inspectCreature, 1); assert.equal(sent.length, 1);
+  assert.equal(p.state.inspectCreature, 1); assert.equal(sent.length, 0);
+  tempoConfirm(p).click(); await settle();
+  assert.deepEqual(sent.map(one => [one.creature, one.speed]), [[1, 'Standard']]);
 });
 
 test('enemy cards show public speed and the revealed spell while keeping the new round distinct', () => {
@@ -2485,6 +2488,71 @@ test('a target tap past the most a spell takes changes nothing and is not answer
   for (const candidate of [2, 3, 4]) p.context.pick(p.state, p.current, candidate);
   assert.deepEqual([...p.state.picked], [2, 3]);
   assert.deepEqual(cues, ['select', 'select']);
+});
+
+// A tempo is chosen for each creature from its own tab and can be changed until Confirm, which sends them all;
+// the host asks one creature at a time, so each is sent when its creature is asked, and only once.
+const settle = () => new Promise(resolve => setImmediate(resolve));
+const tempoConfirm = p => p.nodes.choices.children.find(child => child.dataset.focus === 'tempo-confirm');
+const tempoTab = (p, creature) => p.nodes.choices.children[0].children.find(child => child.dataset.focus === `tempo-creature-${creature}`);
+const tempoButton = (p, speed) => p.nodes.choices.children.find(child => child.dataset.focus === `speed-${speed}`);
+
+function tempoPage() {
+  const p = page();
+  p.view.board.allies.push({ id: 3, name: 'Third', health: 12, maxHealth: 20, energy: 5, knownSpells: ['two'] });
+  p.view.board.subPhase = 'Speed'; p.view.waitingFor = 'Speed'; p.view.options = { speed: { missing: [1, 3] } };
+  const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  return { p, sent };
+}
+
+test('tempos are chosen creature by creature, nothing is sent, and a tab goes back to change one', () => {
+  const { p, sent } = tempoPage(); p.draw();
+  assert.equal(p.nodes.asking.textContent, 'Creature 1 · choose tempo');
+  assert.equal(tempoConfirm(p).disabled, true);
+  tempoButton(p, 'Quick').click();
+  assert.equal(p.nodes.asking.textContent, 'Creature 3 · choose tempo', 'the sheet moves on to the next creature');
+  assert.match(tempoTab(p, 1).textContent, /Creature 1 · Instinct/);
+  tempoButton(p, 'Standard').click();
+  assert.equal(tempoConfirm(p).disabled, false);
+  assert.match(tempoConfirm(p).textContent, /2 of 2/);
+
+  tempoTab(p, 1).click();
+  assert.equal(p.nodes.asking.textContent, 'Creature 1 · choose tempo');
+  assert.equal(tempoButton(p, 'Quick').getAttribute('aria-pressed'), 'true');
+  tempoButton(p, 'Standard').click();
+  assert.match(tempoTab(p, 1).textContent, /Creature 1 · Precision/);
+  assert.deepEqual(sent, []);
+});
+
+test('Confirm sends each tempo when the host asks for its creature, once', async () => {
+  const { p, sent } = tempoPage(); p.draw();
+  tempoButton(p, 'Standard').click(); tempoButton(p, 'Quick').click();
+  tempoConfirm(p).click(); await settle();
+  assert.deepEqual(sent.map(one => [one.creature, one.speed]), [[1, 'Standard']]);
+  assert.match(tempoConfirm(p).textContent, /Sending tempos/);
+
+  p.view.waitingCreature = 3; p.view.waitingAsked++; p.view.board.speedChoices = [{ creature: 1, speed: 'Standard' }];
+  await p.context.refresh(p.state); await settle();
+  p.draw(); await settle();
+  assert.deepEqual(sent.map(one => [one.creature, one.speed]), [[1, 'Standard'], [3, 'Quick']]);
+});
+
+test('a refused tempo is shown, not sent again on its own, and Confirm retries it', async () => {
+  const { p, sent } = tempoPage();
+  p.view.options = { speed: { missing: [1] } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: false, status: 409, body: { message: 'Late.' } }; };
+  p.draw();
+  tempoButton(p, 'Quick').click(); tempoConfirm(p).click(); await settle(); await settle();
+  p.draw(); await settle();
+  assert.equal(sent.length, 1);
+  assert.match(p.nodes.problem.textContent, /Late/);
+  assert.equal(tempoConfirm(p).disabled, false, 'Confirm can be pressed again');
+
+  tempoButton(p, 'Standard').click();
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  tempoConfirm(p).click(); await settle(); await settle();
+  assert.deepEqual(sent.map(one => one.speed), ['Quick', 'Standard'], 'the retry sends the tempo chosen since');
 });
 
 // After the seat's own closing action the round turns over in steps: the Cleanup ends a condition, the next

@@ -15,6 +15,14 @@
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></div>
       <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" aria-live="polite">Connecting…</p><a class="admin-link" href="/">Tables</a> <a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>
+      <!-- Sound and haptics are a setting, not part of the match: a small toggle beside the guide (UX 19). -->
+      <details id="feedback-preferences" class="feedback-preferences">
+        <summary aria-label="Sound and haptics" title="Sound &amp; haptics"><span aria-hidden="true">♪</span></summary>
+        <div class="feedback-body">
+          <label><input id="feedback-sound" type="checkbox" /> Quiet UI sounds</label>
+          <label><input id="feedback-haptics" type="checkbox" /> Haptic feedback (supported devices)</label>
+        </div>
+      </details>
       <details id="shape">
         <summary>Round guide</summary>
         <div class="guide-body"><p id="rules" class="muted"></p><ol id="sub-phases"></ol><ul id="orderings"></ul></div>
@@ -199,11 +207,6 @@
           </header>
           <section id="mat" aria-label="Mutation Tree"></section>
         </dialog>
-        <details id="feedback-preferences" class="feedback-preferences">
-          <summary>Sound &amp; haptics</summary>
-          <label><input id="feedback-sound" type="checkbox" /> Quiet UI sounds</label>
-          <label><input id="feedback-haptics" type="checkbox" /> Haptic feedback (supported devices)</label>
-        </details>
         <section id="notes" class="notes" hidden>
           <h2>Playtest notes</h2>
           <div id="note-buttons" class="note-buttons"></div>

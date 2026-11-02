@@ -155,6 +155,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   over its buttons), and closes itself after nine seconds or on a tap anywhere on it; a laptop shows the same
   order beside the battlefield, so there it opens on request. Muting the phase pop-ups does not silence it.
   While a spell is chosen, the decision heading and the spellbook rows say where each creature acts (`Acts 2 of 6 · Quick`), since the order is set before intents.
+- A tempo is chosen for each creature from its own tab (`Creature 1 · Instinct`) and nothing is sent until
+  **Confirm tempos**, so any choice can be changed until then. Confirm sends them the way the host asks for them,
+  one creature at a time; a refused one is shown and Confirm can be pressed again.
+- **♪** in the masthead, beside the Round guide, holds the two optional settings, quiet UI sounds and haptic
+  feedback, both off by default and kept on the device; it is lit while either is on.
 - Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
   Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
   throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
@@ -268,7 +273,7 @@ a decision has been sent.
 
 | Key | Action |
 | --- | --- |
-| 1 / 2 during Speed | Quick / Standard |
+| 1 / 2 during Speed | Choose Quick / Standard for the creature on screen (Confirm sends every tempo) |
 | 1–9 during Intent or Target | Select the numbered card or legal target; repeated numbers do not commit |
 | Enter | Confirm the selected intent or valid target set; activate a focused button normally |
 | 1–9 during Evolution or in the atlas | Choose the creature to evolve or inspect |
