@@ -1223,9 +1223,6 @@ function animateHealthBars(board, changes) {
   }
 }
 
-// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
-// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
-// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 // Small, nonblocking effects on newly confirmed combat changes. No spell intent is
 // inferred: values come from visible server snapshots only. The nodes are rebuilt
 // on render, so effects are attached after replaceChildren and never intercept taps.
@@ -1265,6 +1262,9 @@ function combatFeedback(board, changes) {
   }
 }
 
+// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
+// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
+// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 function healthFx(state, current, board) {
   if (state.replaying) return;
   const confirmed = (current.view.roundEvents ?? [])

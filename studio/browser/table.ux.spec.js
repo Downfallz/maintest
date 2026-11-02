@@ -648,6 +648,35 @@ test('a confirmed hit eases its health bar once, and a redraw does not replay it
   expect(await page.evaluate(() => globalThis.barMoves.length)).toBe(moves.length);
 });
 
+// UX 08-11: a confirmed hit flashes the creature it struck and floats the health it cost, on the row and the
+// chip alike, and a stun the board shows wears its own colour on the condition chip.
+test('a confirmed hit floats its damage on the creature it struck, and a stun chip wears its colour', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.floats = [];
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.classList?.contains('combat-float')) {
+            globalThis.floats.push({ text: node.textContent, struck: node.parentElement.classList.contains('fx-damage') });
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+
+  const hit = { ...view, feed: [resolved(5, 2, [1], [])], feedNext: 6,
+    board: { ...view.board, allies: [{ ...view.board.allies[0], health: 3, isStunned: true,
+      conditions: [{ effect: { kind: 'Stun', duration: { rounds: 1 } }, remainingRounds: 1 }] }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: hit }));
+  await expect.poll(() => page.evaluate(() => globalThis.floats.length), { timeout: 10000 }).toBeGreaterThan(0);
+
+  const floats = await page.evaluate(() => globalThis.floats);
+  expect(floats.every(float => float.text === '-3' && float.struck)).toBe(true);
+  await expect(page.locator('.chip.condition-stun').first()).toBeAttached();
+});
+
 for (const kind of ['Speed', 'Evolution', 'Target']) {
   test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
     const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
