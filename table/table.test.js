@@ -2535,7 +2535,7 @@ test('Confirm sends each tempo when the host asks for its creature, once', async
   assert.deepEqual(sent.map(one => [one.creature, one.speed]), [[1, 'Standard'], [3, 'Quick']]);
 });
 
-test('a refused tempo is shown, not sent again', async () => {
+test('a refused tempo is shown, not sent again on its own, and Confirm retries it', async () => {
   const { p, sent } = tempoPage();
   p.view.options = { speed: { missing: [1] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: false, status: 409, body: { message: 'Late.' } }; };
@@ -2545,4 +2545,9 @@ test('a refused tempo is shown, not sent again', async () => {
   assert.equal(sent.length, 1);
   assert.match(p.nodes.problem.textContent, /Late/);
   assert.equal(tempoConfirm(p).disabled, false, 'Confirm can be pressed again');
+
+  tempoButton(p, 'Standard').click();
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  tempoConfirm(p).click(); await settle(); await settle();
+  assert.deepEqual(sent.map(one => one.speed), ['Quick', 'Standard'], 'the retry sends the tempo chosen since');
 });

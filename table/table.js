@@ -3449,6 +3449,8 @@ function confirmTempos(state, current) {
   if (!canInteract(state, current, 'Speed')) return;
   const draft = tempoDraft(state, current);
   if (!tempoCreatures(current.view).every(creature => draft.has(creature))) return;
+  // An explicit Confirm is a new attempt: a question an earlier one was refused on may be answered again.
+  state.tempoSent = null;
   state.tempoSending = tempoKey(current);
   sendTempo(state, current);
 }
@@ -3467,6 +3469,7 @@ function sendTempo(state, current) {
     // Refused, the tempos are the player's again: the error says why, and Confirm can be pressed once more.
     if (state.error && state.tempoSending === tempoKey(current)) {
       state.tempoSending = null;
+      state.tempoSent = null;
       redraw(state);
     }
   });
