@@ -714,6 +714,8 @@ test('an opponent\'s confirmed cast lights its caster and its target, beside the
   const targets = reveals.filter(one => !one.caster);
   expect(targets.length).toBeGreaterThan(0);
   expect(targets.every(one => one.id === '1' && one.effects.includes('spell-target-reveal') && one.effects.includes('combat-hit'))).toBe(true);
+});
+
 // UX 14: the round label lights up when the round turns over, once, and not on the board the page first draws.
 test('a new round lights the round label once, and the first board does not', async ({ page }) => {
   await page.addInitScript(() => {
