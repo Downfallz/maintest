@@ -621,6 +621,33 @@ const resolved = (sequence, actor, targets, outcomes) => ({ sequence, round: 3, 
   resolution: { action: { actor, spell: cards[3].id, targets } },
   appliedOutcomes: outcomes.map(target => ({ kind: 'ConditionOutcome', target, effect: { kind: 'DefenseModifier', amount: -3, duration: { rounds: 2 } } })) } });
 
+// UX 07: a health bar eases from the health a confirmed action found to the health it left, once. A redraw,
+// a repeated poll of the same event and the first board the page sees animate nothing.
+test('a confirmed hit eases its health bar once, and a redraw does not replay it', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.barMoves = [];
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (frames, options) {
+      if (this.matches('.bar, .mini-bar')) globalThis.barMoves.push(frames.map(frame => frame.width));
+      return animate.call(this, frames, options);
+    };
+  });
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+  expect(await page.evaluate(() => globalThis.barMoves)).toEqual([]);
+
+  const hit = { ...view, feed: [resolved(5, 2, [1], [])], feedNext: 6,
+    board: { ...view.board, allies: [{ ...view.board.allies[0], health: 3 }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: hit }));
+  await expect.poll(() => page.evaluate(() => globalThis.barMoves.length), { timeout: 10000 }).toBeGreaterThan(0);
+  const moves = await page.evaluate(() => globalThis.barMoves);
+  expect(moves.every(([from, to]) => from === '20%' && to === '10%')).toBe(true);
+
+  await page.locator('#hand-view').evaluate(button => button.click());
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => globalThis.barMoves.length)).toBe(moves.length);
+});
+
 for (const kind of ['Speed', 'Evolution', 'Target']) {
   test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
     const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });

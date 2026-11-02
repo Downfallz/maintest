@@ -12,6 +12,7 @@ import { classColour, talentClasses, packageForest, passiveOf, requirementLine, 
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { healthChange, playbackBoard, playbackChanges, playbackRound } from './replay.js';
+import { createCombatTransitionTracker } from './combat-fx.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { actionDecision, askedKey, slotView } from './slot.js';
@@ -1197,6 +1198,45 @@ function renderTimeline(board) {
   element('timeline').replaceChildren(...strip);
 }
 
+// New bar nodes replace the old ones each render. Animate their width from the
+// previous confirmed HP, never from a DOM node that no longer exists.
+const healthFxTracker = createCombatTransitionTracker();
+function animateHealthBars(board, changes) {
+  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  for (const change of changes) {
+    if (!Number.isFinite(change.health) || change.health === 0) continue;
+    const creature = [...(board.allies ?? []), ...(board.enemies ?? [])].find(one => one.id === change.creature);
+    if (!creature || !(creature.maxHealth > 0)) continue;
+    const from = Math.max(0, Math.min(100, (creature.health - change.health) / creature.maxHealth * 100));
+    const to = Math.max(0, Math.min(100, creature.health / creature.maxHealth * 100));
+    for (const container of ['enemies', 'allies', 'mini-enemies', 'mini-allies']) {
+      const root = element(container);
+      const nodes = root.querySelectorAll?.('.creature, .mini-creature') ?? [];
+      for (const node of nodes) {
+        if (node.dataset.creatureId !== String(change.creature)) continue;
+        const bar = node.querySelector?.('.bar, .mini-bar');
+        bar?.animate?.([{ width: from + '%' }, { width: to + '%' }], {
+          duration: 360, easing: 'cubic-bezier(.2, .8, .2, 1)'
+        });
+      }
+    }
+  }
+}
+
+// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
+// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
+// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
+function healthFx(state, current, board) {
+  if (state.replaying) return;
+  const confirmed = (current.view.roundEvents ?? [])
+    .filter(entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'OngoingEffectsApplied')
+    .reduce((max, entry) => Math.max(max, entry.sequence ?? -1), -1);
+  const changes = healthFxTracker.observe({
+    board, contextKey: `${current.seat}/${board.roundNumber}`, confirmedEventId: confirmed >= 0 ? confirmed : null,
+  });
+  animateHealthBars(board, changes);
+}
+
 function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
@@ -1244,6 +1284,7 @@ function renderBoard(state, current, spellbook = current) {
   element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
   element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
   element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
+  healthFx(state, current, board);
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, spellbook));
 }
@@ -1449,6 +1490,7 @@ function line(state, creature, which, marks) {
   if (marks?.live) box.classList.toggle('live', true);
   if (marks?.playback?.actor.id === creature.id) box.classList.toggle('replay-caster', true);
   if (marks?.playback?.targets.some(target => target.id === creature.id)) box.classList.toggle('replay-target', true);
+  box.dataset.creatureId = String(creature.id);
   state.creatureRows?.set(creature.id, box);
   if (legal) {
     state.targetAnchor ??= box;
@@ -1582,6 +1624,7 @@ function miniCreature(state, creature, which, marks) {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = miniClasses(creature, which, marks, legal, picked);
+  chip.dataset.creatureId = String(creature.id);
   const id = document.createElement('span');
   id.className = 'mini-id';
   id.textContent = creature.id;
