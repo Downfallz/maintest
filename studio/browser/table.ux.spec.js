@@ -777,8 +777,10 @@ test('a spell just learned glows in the tempo list, and the first board does not
     globalThis.unlocked = [];
     new MutationObserver(records => {
       for (const record of records) {
-        for (const node of record.addedNodes) {
-          if (node.classList?.contains('spell-just-unlocked')) globalThis.unlocked.push({ text: node.textContent, effects: getComputedStyle(node).animationName });
+        // The hand is built whole before it is inserted: the card is a descendant of the node added, never one.
+        for (const added of record.addedNodes) {
+          const found = [added, ...(added.querySelectorAll?.('.spell-just-unlocked') ?? [])].filter(node => node.classList?.contains('spell-just-unlocked'));
+          for (const node of found) globalThis.unlocked.push({ text: node.textContent, effects: getComputedStyle(node).animationName });
         }
       }
     }).observe(document, { childList: true, subtree: true });
