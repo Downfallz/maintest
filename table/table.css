@@ -1386,3 +1386,6 @@ body:has(#table) { padding-bottom: 24px; }
   .spell-reveal-caster { --fx-reveal: spell-caster-reveal 520ms var(--motion-enter); }
   .spell-reveal-target { --fx-reveal: spell-target-reveal 520ms var(--motion-enter); }
 }
+
+/* PWA connectivity lives in the dock; it never covers or disables controls. */
+#connection-state:not([hidden]) { grid-column: 1 / -1; color: #f1c78d; font-size: 11px; line-height: 1.3; }
