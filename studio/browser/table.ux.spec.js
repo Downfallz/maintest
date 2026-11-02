@@ -47,6 +47,27 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.speed-spell')).toHaveCount(6);
 });
 
+// The motion tokens (UX 01): buttons, creatures and held cards ease their colours over --motion-fast, and a
+// person who asks the system for reduced motion gets every token at zero and no transition or animation that
+// lasts, whether or not the effect was built on the tokens.
+test('interaction transitions use the motion tokens, and reduced motion makes every one immediate', async ({ page }) => {
+  const read = () => page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const button = getComputedStyle(document.querySelector('#board-toggle'));
+    return { normal: root.getPropertyValue('--motion-normal').trim(), duration: button.transitionDuration, easing: button.transitionTimingFunction };
+  });
+
+  const moving = await read();
+  expect(moving.normal).toBe('220ms');
+  expect(moving.duration).toBe('0.12s, 0.12s');
+  expect(moving.easing).toContain('cubic-bezier(0.2, 0, 0, 1)');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const still = await read();
+  expect(still.normal).toBe('0ms');
+  expect(still.duration.split(', ').map(parseFloat).every(seconds => seconds < 0.001)).toBe(true);
+});
+
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {
   await page.evaluate(() => scrollTo(0, 0));
   if (isPhone(page)) {

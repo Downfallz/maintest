@@ -11,6 +11,15 @@
   --ally: #96ccb0;
   --enemy: #e3a29a;
   --refused: #ffb3a7;
+  /* Shared motion language: future effects use these tokens instead of hard-coded timings.
+     Keep gameplay readable if the user requests reduced motion. */
+  --motion-instant: 80ms;
+  --motion-fast: 120ms;
+  --motion-normal: 220ms;
+  --motion-slow: 360ms;
+  --motion-enter: cubic-bezier(.2, .8, .2, 1);
+  --motion-exit: cubic-bezier(.4, 0, 1, 1);
+  --motion-standard: cubic-bezier(.2, 0, 0, 1);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 14px;
 }
@@ -122,7 +131,29 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   .initiative-section { margin: 16px 0; padding: 12px; }.hand-section > .section-heading { display: block; }.hand-section > .section-heading .muted { display: block; margin-top: 5px; }.held { flex-basis: 185px; }.action-area { position: sticky; bottom: 0; top: auto; width: 100%; z-index: 10; }.sheet { max-height: 44dvh; border-radius: 12px 12px 0 0; padding: 15px; padding-bottom: max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -10px 35px #0006; }.decision-heading { margin-bottom: 8px; }#asking { font-size: 22px; margin-bottom: 13px; }.notes { background: var(--paper); padding: 12px 2px; }.action-area:has(#decision[data-kind="Evolution"]) .notes { display: none; }
   .choice-cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
-@media (prefers-reduced-motion: no-preference) { button, .creature, .held { transition: border-color 120ms, background-color 120ms; } }
+/* Existing interaction transitions consume the shared tokens. */
+@media (prefers-reduced-motion: no-preference) {
+  button, .creature, .held {
+    transition: border-color var(--motion-fast) var(--motion-standard),
+                background-color var(--motion-fast) var(--motion-standard);
+  }
+}
+/* Motion tokens become effectively immediate for effects added in later PRs.
+   This fallback also covers animations built without tokens. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-instant: 0ms;
+    --motion-fast: 0ms;
+    --motion-normal: 0ms;
+    --motion-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Keep the revealed spell prominent while the player chooses its targets. */
 #decision[data-kind="Target"] #asking { font-size: 32px; color: var(--gold); overflow-wrap: anywhere; }
