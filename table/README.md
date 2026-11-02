@@ -201,7 +201,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   never as obsolete spell stats. Targeting and effect cues retain their visual markers.
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
-  the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
+  the entrance animation, and with them every transition and animation of the page: the motion tokens in
+  `table.css` (`--motion-fast`, `--motion-normal`, ... and the `--motion-enter`/`exit`/`standard` easings),
+  which effects use instead of their own timings, all fall to zero; hotseat handovers hide and cancel the departing seat's announcement.
   Before the match begins, the dock says it is waiting for players; upkeep and phase announcements wait
   for the host to clear `waiting`, even if round one's board and upkeep events are already prepared.
   New rounds get a larger, gold-accented “Round N begins” announcement. When there are ongoing health ticks,
