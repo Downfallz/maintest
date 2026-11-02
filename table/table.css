@@ -1387,7 +1387,6 @@ body:has(#table) { padding-bottom: 24px; }
   .spell-reveal-target { --fx-reveal: spell-target-reveal 520ms var(--motion-enter); }
 }
 
-
 /* UX 16–17: a single, nonblocking pulse after confirmed mutation/spell unlocks. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes mutation-acquired-glow {
@@ -1427,3 +1426,9 @@ body:has(#table) { padding-bottom: 24px; }
 
 /* PWA connectivity lives in the dock; it never covers or disables controls. */
 #connection-state:not([hidden]) { grid-column: 1 / -1; color: #f1c78d; font-size: 11px; line-height: 1.3; }
+
+/* Optional interaction-feedback preferences, collapsed by default. */
+.feedback-preferences { margin: 18px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); }
+.feedback-preferences summary { cursor: pointer; color: var(--ink); }
+.feedback-preferences label { display: flex; align-items: center; gap: 9px; margin-top: 10px; font-size: 12px; }
+.feedback-preferences input { accent-color: var(--gold); }

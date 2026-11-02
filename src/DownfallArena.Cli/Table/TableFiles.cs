@@ -69,6 +69,7 @@ internal sealed class TableFiles
             ["/slot.js"] = (Path.Combine(tableDirectory, "slot.js"), JavaScript),
             ["/terms.js"] = (Path.Combine(tableDirectory, "terms.js"), JavaScript),
             ["/combat-fx.js"] = (Path.Combine(tableDirectory, "combat-fx.js"), JavaScript),
+            ["/feedback.js"] = (Path.Combine(tableDirectory, "feedback.js"), JavaScript),
 
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
             // same session -- and it is reached only by somebody holding the pilot token, which the console
