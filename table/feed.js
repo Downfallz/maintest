@@ -77,7 +77,8 @@ export function accumulate(kept, arriving, limit) {
 // Kept separately from the short activity log, per seat, before that log is trimmed. Only public combat
 // and upkeep events enter the references. A first poll can contain a whole match; keep two rounds.
 export function retainRoundEvents(kept, arriving, currentRound) {
-  const relevant = entry => ['CombatActionResolved', 'RoundEnded', 'OngoingEffectsApplied'].includes(entry?.event?.kind);
+  const relevant = entry => ['CombatActionResolved', 'RoundEnded', 'ConditionsExpired', 'StunImmunityGained', 'OngoingEffectsApplied']
+    .includes(entry?.event?.kind);
   const events = accumulate(kept, (arriving ?? []).filter(relevant));
   const latest = Math.max(Number.isInteger(currentRound) ? currentRound : 0, ...events.map(eventRound));
   return events.filter(entry => eventRound(entry) >= latest - 1 && eventRound(entry) <= latest)
@@ -176,12 +177,19 @@ export function opponentSteps(entries, seen, board, cards) {
 // Only for a seat that has read something: a page that drew a board before anything resolved and then hears of
 // several rounds at once -- a reconnection, a match's result -- did not watch those rounds close, and holding
 // their closing actions would put an old round's cast over the board it is shown.
+//
+// After a round's closing action come the steps that turn the round over (turnoverSteps): what its Cleanup ended,
+// then what the next Upkeep dealt and healed. They are read like the actions, in the order they happened.
 export function readingSteps(entries, seen, board, cards) {
-  const closers = Number.isInteger(seen) && seen >= 0 ? roundClosers(entries) : new Set();
-  return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally' || closers.has(action.sequence));
+  if (!Number.isInteger(seen) || seen < 0) return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally');
+  const closers = roundClosers(entries);
+  const closing = new Set(closers.values());
+  const actions = resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally' || closing.has(action.sequence));
+  const turnovers = [...closers.keys()].flatMap(round => turnoverSteps(entries, round, board)).filter(step => step.sequence > seen);
+  return [...actions, ...turnovers].sort((left, right) => left.sequence - right.sequence);
 }
 
-// The sequence of the last action resolved in each round that has ended.
+// The sequence of the last action resolved in each round that has ended, by round.
 function roundClosers(entries) {
   const ended = new Set((entries ?? []).filter(entry => entry?.event?.kind === 'RoundEnded').map(eventRound));
   const last = new Map();
@@ -190,7 +198,39 @@ function roundClosers(entries) {
     const round = eventRound(entry);
     if (!last.has(round) || entry.sequence > last.get(round)) last.set(round, entry.sequence);
   }
-  return new Set(last.values());
+  return last;
+}
+
+// What turns a round into the next, as steps read after its closing action: the round's Cleanup when it ended a
+// condition or left a creature immune to stun, then the next round's Upkeep when an ongoing effect ticked.
+// Without them the page goes from the last hit straight to the next round's question, with conditions gone and
+// bleeds dealt in between, none of it seen. A turnover that changed nothing is not a step: the next round's
+// notice says it began.
+export function turnoverSteps(entries, round, board) {
+  const find = (kind, of) => (entries ?? []).find(entry => entry?.event?.kind === kind && eventRound(entry) === of);
+  const steps = [];
+  const expired = find('ConditionsExpired', round);
+  const immunity = find('StunImmunityGained', round);
+  const ended = Object.entries(expired?.event?.expired ?? {})
+    .filter(([, conditions]) => conditions?.length)
+    .map(([id, conditions]) => ({ creature: recapCreature(Number(id), board), conditions }));
+  const immune = (immunity?.event?.creatures ?? []).map(id => recapCreature(id, board));
+  const cleanup = expired ?? immunity;
+  if (cleanup && (ended.length || immune.length)) steps.push({ sequence: cleanup.sequence, round, follows: round, interlude: 'aftermath', ended, immune });
+  const upkeep = find('OngoingEffectsApplied', round + 1);
+  const ticks = upkeep ? upkeepTicks(upkeep.event).filter(tick => tick.amount > 0) : [];
+  if (ticks.length) steps.push({ sequence: upkeep.sequence, round: round + 1, follows: round, interlude: 'upkeep', ticks });
+  return steps;
+}
+
+// A turnover step as one line, for the round bar.
+export function turnoverText(step) {
+  if (step.interlude === 'upkeep') {
+    return `Upkeep · ${step.ticks.map(tick => `${tick.label} ${tick.sign}${tick.amount} ${tick.unit} → Creature ${tick.creature}`).join(', ')}`;
+  }
+  const ended = step.ended.map(one => `${one.conditions.map(condition => condition?.effect?.kind ?? 'Condition').join(' + ')} ends → ${one.creature.label}`);
+  const immune = step.immune.map(one => `${one.label} immune to stun`);
+  return `Cleanup · ${[...ended, ...immune].join(', ')}`;
 }
 
 // Where stepping starts for a seat the page has just picked up (a load, a reload): after the seat's own latest

@@ -7,7 +7,7 @@ import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -842,13 +842,16 @@ function render(state, views) {
     // Where the action being read was played from, off its recorded frame; without one, only while the round bar
     // is on that action's combat, because the last slot of a round is often read once the host has moved on to
     // the next round or the result, and the bar must not mix the two.
-    const stepped = state.step && (state.step.action.frame || (state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation'));
+    const stepped = state.step && !state.step.action.interlude
+      && (state.step.action.frame || (state.step.round === view.board.roundNumber && view.board.subPhase === 'Activation'));
     if (stepped && !view.over) element('phase-turn').textContent = stepTurnText(state.step, display.view.board);
   }
   refreshUnlockFx(state, current);
   renderTimeline(display.view.board);
-  // The spellbook stays the live one while an opponent action is read: it is the player's, not the replay's.
-  renderBoard(state, display, state.playback ? display : current);
+  // The spellbook stays the live one while an opponent action of this round is read: it is the player's, not the
+  // replay's. Read while the next round has begun, it is the one of the round being read: the live one would
+  // already show the next Upkeep's energy under the action that ended the round before it.
+  renderBoard(state, display, state.playback || readingEarlierRound(state, view) ? display : current);
   renderMat(state, display);
   renderFeed(state, view.feed);
   renderRecap(state, view);
@@ -1444,6 +1447,35 @@ function showSpellReveal(current, board, action, animated) {
   }
 }
 
+// The upkeep ticks marked on the chips: an Upkeep read as a step, else the one the notice is reading. A replay
+// marks none: its chips carry what the replayed action did.
+function chipTicks(state, replayed, board) {
+  if (replayed?.interlude === 'upkeep' && !state.playback) return healthTicks(replayed.ticks);
+  return state.playback || state.step ? [] : noticeTicks(state, board);
+}
+
+// What an upkeep's ticks did to each creature's health, as the chips and the hit effects read it. The ticks are
+// the host's applied amounts: no snapshot is subtracted (roundUpkeep).
+function healthTicks(ticks) {
+  return (ticks ?? []).filter(tick => tick.unit === 'HP' && tick.amount > 0)
+    .map(tick => ({ creature: tick.creature, change: tick.tone === 'harm' ? -tick.amount : tick.amount }));
+}
+
+// An Upkeep read as a step moves the bars by its ticks, once: the board under it is the next round's, which the
+// transition tracker takes as a new baseline rather than a hit.
+function upkeepStepFx(state, board) {
+  const step = state.playback ? null : state.step;
+  if (step?.action.interlude !== 'upkeep') return;
+  const key = `${step.seat}/${step.action.sequence}`;
+  if (state.upkeepFx === key) return;
+  state.upkeepFx = key;
+  const totals = new Map();
+  for (const tick of healthTicks(step.action.ticks)) totals.set(tick.creature, (totals.get(tick.creature) ?? 0) + tick.change);
+  const changes = [...totals].filter(([, change]) => change !== 0).map(([creature, health]) => ({ creature, health }));
+  animateHealthBars(board, changes);
+  combatFeedback(board, changes);
+}
+
 // Replay FX follow the recorded before/after boundary, never a live network delta.
 // Navigating Previous/Next may revisit a frame; a new navigation may cue it again,
 // but an ordinary redraw of the same frame must not.
@@ -1499,7 +1531,7 @@ function renderBoard(state, current, spellbook = current) {
     playback: cast ?? live,
     playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
-    ticks: replay ? [] : noticeTicks(state, board),
+    ticks: chipTicks(state, replayed, board),
     // At the slot the spell is chosen before its targets, so the row shows it while they are picked (ADR 0110).
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen
       : isAsked(view) && view.askedAs === 'Action' && view.waitingFor === 'Target' ? view.options.target?.spell ?? null : null,
@@ -1523,6 +1555,7 @@ function renderBoard(state, current, spellbook = current) {
   showSpellReveal(current, board, revealAction, revealNew);
   healthFx(state, current, board);
   replayCombatFx(state, board);
+  upkeepStepFx(state, board);
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, spellbook));
 }
@@ -1943,7 +1976,7 @@ function targetStatus(marks, picked) {
 // upkeep tick the notice is reading.
 function miniDelta(creature, marks) {
   let change = 0;
-  if (marks.playbackStage === 'after') change = healthChange(marks.playback, creature);
+  if (marks.playback && marks.playbackStage === 'after') change = healthChange(marks.playback, creature);
   else change = (marks.ticks ?? []).filter(one => one.creature === creature.id).reduce((sum, one) => sum + one.change, 0);
   if (change === 0) return [];
   const delta = document.createElement('span');
@@ -2216,12 +2249,28 @@ function stepOf(state, current) {
   if (!state.stepSeen.has(current.seat)) state.stepSeen.set(current.seat, stepStart(view.roundEvents, view.board, state.cards));
   const steps = readingSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
   if (steps.length === 0) return null;
-  const [action] = steps;
+  const [action, next] = steps;
+  const read = { seat: current.seat, round: action.round, follows: action.follows ?? action.round, stage: 'after',
+    left: steps.length, last: steps.at(-1).sequence, next: next ?? null };
+  if (action.interlude) return { ...read, ...turnoverReplay(state, view, action) };
   const actions = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === action.round);
-  return {
-    seat: current.seat, round: action.round, actions, index: actions.findIndex(one => one.sequence === action.sequence),
-    stage: 'after', action, left: steps.length, last: steps.at(-1).sequence,
-  };
+  return { ...read, actions, index: actions.findIndex(one => one.sequence === action.sequence), action };
+}
+
+// A turnover step as a one-step replay. A Cleanup stands on the board its round's last action left, with every
+// slot of that round turned over; an Upkeep on the board as it is now, which the next round's question has not
+// moved yet, since nothing is played before it is answered.
+function turnoverReplay(state, view, step) {
+  if (step.interlude !== 'aftermath') return { actions: [step], index: 0, action: step };
+  const casts = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === step.round);
+  const frame = casts.at(-1)?.frame;
+  const action = frame ? { ...step, frame: { ...frame, before: frame.after } } : step;
+  return { actions: [...casts, action], index: casts.length, action };
+}
+
+// Whether the step being read is of a round the live board has already left.
+function readingEarlierRound(state, view) {
+  return Boolean(state.step) && (state.step.action.interlude === 'aftermath' || state.step.round !== view.board.roundNumber);
 }
 
 function advanceStep(state, seat, sequence) {
@@ -2243,23 +2292,25 @@ function renderStep(state, current) {
     state.stepTimerFor = null;
     return;
   }
-  // Auto belongs to the seat that asked for it: in hotseat the other player reads their own actions by hand.
-  const auto = state.stepAuto?.seat === step.seat && state.stepAuto.round === step.round;
+  // Auto belongs to the seat that asked for it: in hotseat the other player reads their own actions by hand. The
+  // turnover after a round is still that round's, so Auto reads it too and stops at the next round's actions.
+  const auto = state.stepAuto?.seat === step.seat && state.stepAuto.round === step.follows;
   if (!auto && state.stepTimerFor !== null) {
     clearTimeout(state.stepTimer);
     state.stepTimerFor = null;
   }
   const asked = isAsked(current.view) && !current.view.over;
-  const whose = step.action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
-  element('combat-step-count').textContent = `Round ${step.round} · ${whose}${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
-  element('combat-step-action').replaceChildren(recapRow(step.action));
-  let label = 'OK';
-  if (step.left > 1) label = 'OK · next action →';
-  else if (asked) label = 'OK · your move →';
-  const next = button(label, () => advanceStep(state, step.seat, step.action.sequence));
+  element('combat-step-count').textContent = `Round ${step.round} · ${stepKind(step.action)}${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
+  element('combat-step-action').replaceChildren(...(step.action.interlude
+    ? interludeRows(state, current.view.board, step.action) : [recapRow(step.action)]));
+  if (step.action.interlude === 'upkeep') {
+    state.upkeepRead ??= new Map();
+    state.upkeepRead.set(step.seat, step.round);
+  }
+  const next = button(stepOkLabel(step, asked), () => advanceStep(state, step.seat, step.action.sequence));
   next.dataset.focus = 'step-next';
   const fast = button(auto ? 'Stop auto' : 'Auto this round ▸▸', () => {
-    state.stepAuto = auto ? null : { seat: step.seat, round: step.round };
+    state.stepAuto = auto ? null : { seat: step.seat, round: step.follows };
     if (auto) redraw(state);
     else advanceStep(state, step.seat, step.action.sequence);
   });
@@ -2281,6 +2332,24 @@ function renderStep(state, current) {
   }
 }
 
+function stepLine(action) {
+  return action.interlude ? turnoverText(action) : lastResolvedText(action);
+}
+
+// The OK names what it leads to: the turnover step after it, the next action, or the seat's own move.
+function stepOkLabel(step, asked) {
+  if (step.next?.interlude) return `OK · ${stepKind(step.next)} →`;
+  if (step.left > 1) return 'OK · next action →';
+  return asked ? 'OK · your move →' : 'OK';
+}
+
+// What a step is, as its card's eyebrow names it.
+function stepKind(action) {
+  if (action.interlude === 'aftermath') return 'cleanup';
+  if (action.interlude === 'upkeep') return 'upkeep';
+  return action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
+}
+
 // The round bar's one line of play-by-play: the opponent action being read, else the action resolved last while
 // combat runs -- the player's own included, which resolved the moment its targets were confirmed (ADR 0083).
 function renderCombatLine(state, view) {
@@ -2289,7 +2358,7 @@ function renderCombatLine(state, view) {
   line.hidden = !action;
   line.dataset.pending = String(Boolean(state.step));
   const text = document.createElement('span');
-  text.textContent = action ? lastResolvedText(action) : '';
+  text.textContent = action ? stepLine(action) : '';
   line.replaceChildren(text);
   line.title = text.textContent;
 }
@@ -2571,6 +2640,12 @@ function interludeRows(state, board, action) {
   if (action.interlude === 'purchases') {
     return action.choices.map(choice => row(choice.creature, state.packages?.get(choice.tier)?.name ?? choice.tier, 'neutral'));
   }
+  if (action.interlude === 'aftermath') {
+    return [
+      ...action.ended.map(one => row(one.creature, `${one.conditions.map(condition => chipText(condition) || 'Condition').join(' · ')} ends`, 'neutral')),
+      ...action.immune.map(creature => row(creature, 'Immune to stun next round', 'recovery')),
+    ];
+  }
   const allies = new Set((board.allies ?? []).map(creature => creature.id));
   const ticks = action.ticks.map(tick => {
     const side = allies.has(tick.creature) ? 'ally' : 'enemy';
@@ -2674,8 +2749,10 @@ function renderDecision(state, current) {
   const view = current.view;
   element('planning').dataset.kind = view.waitingFor ?? 'Waiting';
   element('decision-context').textContent = '';
-  element('evolution-budget').hidden = view.waitingFor !== 'Evolution' || !isAsked(view);
-  element('evolution-budget').replaceChildren(...(view.waitingFor === 'Evolution' && isAsked(view) ? [evolutionBudget(state, view)] : []));
+  // Not under a step: Evolution opens a round, and what is being read is still the round before it.
+  const budget = view.waitingFor === 'Evolution' && isAsked(view) && !state.step;
+  element('evolution-budget').hidden = !budget;
+  element('evolution-budget').replaceChildren(...(budget ? [evolutionBudget(state, view)] : []));
   const asking = element('asking');
   const choices = element('choices');
   element('decision').classList.toggle('match-finished', Boolean(view.over));
@@ -2754,19 +2831,27 @@ function renderDecision(state, current) {
 function stepHeading(state, current) {
   const view = current.view;
   const step = state.step;
+  // The next round's question is named only once that round is the one being read: under the action that ended
+  // the round before, it would announce a round the battlefield has not reached.
+  const next = isAsked(view) && !view.over && !view.playedByBot && !readingEarlierRound(state, view);
+  const turn = activeTurn(view.board) ?? plannedTurn(view);
+  element('decision-context').textContent = next
+    ? `Then your move: ${titleOf(state, view)}${turn ? ` (turn ${turn.position} of ${turn.total})` : ''}.`
+    : '';
+  element('choices').replaceChildren();
+  element('decision-state').textContent = 'Reading';
+  if (step.action.interlude) {
+    element('decision-phase').textContent = step.action.interlude === 'aftermath' ? `Round ${step.round} ends` : `Round ${step.round} begins`;
+    element('decision-turn').hidden = true;
+    element('asking').textContent = step.action.interlude === 'aftermath' ? 'Cleanup · conditions run out' : 'Upkeep · ongoing effects';
+    return;
+  }
   const board = step.action.frame ? { timeline: step.action.frame.timeline } : view.board;
   const slot = (board.timeline ?? []).findIndex(one => one.creature === step.action.actor.id);
   element('decision-phase').textContent = step.action.actor.side === 'ally' ? 'Your last action' : "Opponent's turn";
   element('decision-turn').textContent = slot < 0 ? '' : `Turn ${slot + 1} of ${board.timeline.length}`;
   element('decision-turn').hidden = slot < 0;
-  element('decision-state').textContent = 'Reading';
   element('asking').textContent = `${step.action.actor.label} · ${step.action.spell}`;
-  element('choices').replaceChildren();
-  const next = isAsked(view) && !view.over && !view.playedByBot;
-  const turn = activeTurn(view.board) ?? plannedTurn(view);
-  element('decision-context').textContent = next
-    ? `Then your move: ${titleOf(state, view)}${turn ? ` (turn ${turn.position} of ${turn.total})` : ''}.`
-    : '';
 }
 
 function titleOf(state, view) {
@@ -2929,8 +3014,7 @@ function renderPhaseGuide(state, view, seat) {
   const stepName = step => (!step ? null : step[0] === step[3] ? step[0] : `${step[3]} · ${step[0]}`);
   // An opponent action of an earlier round being read keeps the dock on that round's combat: the battlefield under
   // it is that round's (playbackBoard), and a dock announcing the next round would contradict what is on screen.
-  const board = state.step && state.step.round !== view.board.roundNumber
-    ? { ...view.board, roundNumber: state.step.round, phase: 'Combat', subPhase: 'Activation' } : view.board;
+  const board = stepDock(state.step, view.board);
   const current = board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(board.subPhase));
   element('phase-round').textContent = `Round ${board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
   const currentStep = phases[current];
@@ -2961,7 +3045,9 @@ function renderPhaseGuide(state, view, seat) {
   const evolution = board.nextEvolutionRound > board.roundNumber ? ` Next evolution: round ${board.nextEvolutionRound}.` : '';
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
     : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${evolution}`;
-  const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
+  // An Upkeep read as a step is not announced again once the steps are done.
+  const stepped = state.upkeepRead?.get(seat) === view.board.roundNumber;
+  const upkeep = stepped ? null : roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   // The next round's Upkeep panel waits with its notice: a dock on round N's combat with round N+1's ticks one
   // tap away would let the player read them before the action they follow.
   renderUpkeep(state, view, board === view.board ? upkeep : null, seat);
@@ -2993,6 +3079,15 @@ function renderPhaseGuide(state, view, seat) {
   state.announcements.set(seat, [...(state.announcements.get(seat) ?? []), entry].slice(-12));
   renderAnnouncements(state, seat);
   showPhaseNotice(state, entry);
+}
+
+// The round and phase the dock shows while a step is read: a Cleanup or an Upkeep is its own phase, and an
+// action of a round the host has left keeps the dock on that round's combat.
+function stepDock(step, board) {
+  if (step?.action.interlude === 'aftermath') return { ...board, roundNumber: step.round, phase: 'Combat', subPhase: 'Cleanup' };
+  if (step?.action.interlude === 'upkeep') return { ...board, roundNumber: step.round, phase: 'StartOfRound', subPhase: 'Upkeep' };
+  if (step && step.round !== board.roundNumber) return { ...board, roundNumber: step.round, phase: 'Combat', subPhase: 'Activation' };
+  return board;
 }
 
 function upkeepEnergy(state) {
