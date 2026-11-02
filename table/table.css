@@ -1386,3 +1386,22 @@ body:has(#table) { padding-bottom: 24px; }
   .spell-reveal-caster { --fx-reveal: spell-caster-reveal 520ms var(--motion-enter); }
   .spell-reveal-target { --fx-reveal: spell-target-reveal 520ms var(--motion-enter); }
 }
+
+
+/* UX 18: endgame is a result inside the existing sheet, never a blocking modal. */
+.match-finished .decision-heading { opacity: .7; }
+.match-result { --result-accent: #e7c37b; margin: 4px 0 20px; padding: 22px; border: 1px solid var(--result-accent); border-radius: 12px; background: linear-gradient(135deg, #e7c37b14, #14211f 75%); }
+.match-result.defeat { --result-accent: #e3a29a; }
+.match-result.draw { --result-accent: #b0bbb2; }
+.match-result-eyebrow { display: block; font-size: 10px; letter-spacing: 2px; font-weight: 700; color: var(--result-accent); }
+.match-result-title { display: block; margin: 9px 0 5px; color: var(--result-accent); font: 650 clamp(28px, 5vw, 44px) Georgia, serif; letter-spacing: 1px; }
+.match-result-detail { color: var(--ink); font-size: 13px; line-height: 1.5; }
+.match-result-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.match-result-stat { display: grid; gap: 5px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #0002; }
+.match-result-stat span { color: var(--muted); font-size: 11px; }
+.match-result-stat strong { font-size: 13px; }
+@media (max-width: 480px) { .match-result { padding: 14px; } .match-result-stats { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes result-enter { from { opacity: .45; } to { opacity: 1; } }
+  .match-result { animation: result-enter var(--motion-slow) var(--motion-enter) both; }
+}
