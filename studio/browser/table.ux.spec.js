@@ -537,6 +537,8 @@ for (const candidates of [[2, 3, 4], [1, 5, 6], [1, 2, 5]]) {
     if (isLaptop(page)) {
       await expect(page.locator('#mini-board')).toBeHidden();
       await expect(page.locator('#board .creature.legal')).toHaveCount(candidates.length);
+      // UX 04: a legal target carries a gold outline besides its dashed border.
+      expect(await page.locator('#board .creature.legal').first().evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
       return;
     }
     const chips = page.locator('#mini-board .mini-creature.legal');
@@ -557,8 +559,16 @@ for (const candidates of [[2, 3, 4], [1, 5, 6], [1, 2, 5]]) {
     }
     // A tap near the bottom corner must select the creature, without casting or opening the full board.
     const chip = chips.first(); const box = await chip.boundingBox();
+    const breathing = node => getComputedStyle(node).animationName;
+    // UX 04: an eligible chip breathes until it is picked; a picked one stays still.
+    expect(await chip.evaluate(breathing)).toBe('target-available-glow');
     await chip.tap({ position: { x: box.width - 10, y: box.height - 10 } });
     await expect(chip).toHaveClass(/picked/);
+    expect(await chip.evaluate(breathing)).toBe('none');
+    // And nothing breathes for a person who asked for reduced motion.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await chips.nth(1).evaluate(breathing)).toBe('none');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
     await expect(page.locator('#board')).toBeHidden();
     expect(submissions).toBe(0);
