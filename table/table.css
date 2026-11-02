@@ -133,11 +133,37 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 }
 /* Existing interaction transitions consume the shared tokens. */
 @media (prefers-reduced-motion: no-preference) {
-  button, .creature, .held {
+  .creature, .held {
     transition: border-color var(--motion-fast) var(--motion-standard),
                 background-color var(--motion-fast) var(--motion-standard);
   }
+  /* Buttons react without changing layout, click targets, or triggering a second action.
+     Touch gets a press cue; only fine-pointer devices get hover elevation. */
+  button:not(:disabled) {
+    transition: border-color var(--motion-fast) var(--motion-standard),
+                background-color var(--motion-fast) var(--motion-standard),
+                box-shadow var(--motion-fast) var(--motion-standard),
+                transform var(--motion-instant) var(--motion-standard);
+  }
 }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):hover {
+    box-shadow: 0 3px 12px #0003, inset 0 0 0 1px #e7c37b22;
+  }
+}
+/* :active works for mouse and touch without JS or delaying submission. */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):active {
+    transform: translateY(1px) scale(.992);
+    box-shadow: inset 0 2px 5px #0004;
+  }
+}
+/* Pressed/toggled controls retain a clear visual state after release.
+   Existing component-specific selected styles remain authoritative. */
+button[aria-pressed="true"]:not(:disabled) {
+  border-color: var(--gold);
+}
+
 /* Motion tokens become effectively immediate for effects added in later PRs.
    This fallback also covers animations built without tokens. */
 @media (prefers-reduced-motion: reduce) {
