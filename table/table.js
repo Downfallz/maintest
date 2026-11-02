@@ -884,6 +884,57 @@ function outcomeText(view, seat) {
   return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
 }
 
+// UX 18: a readable conclusion using only the authoritative outcome and
+// final public creature snapshot; no independent winner calculation.
+function matchResult(state, current) {
+  const { view, seat } = current;
+  const outcome = view.outcome;
+  const result = document.createElement('section');
+  const won = outcome?.winner === seat;
+  // A host from before outcomes says only that the match is over: that is no draw, and the card says no more.
+  const draw = Boolean(outcome) && !outcome.winner;
+  result.className = `match-result ${resultTone(outcome, won)}`;
+  result.setAttribute('aria-label', 'Match result');
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'match-result-eyebrow';
+  eyebrow.textContent = 'DOWNFALL ARENA · FINAL';
+  const heading = document.createElement('strong');
+  heading.className = 'match-result-title';
+  heading.textContent = resultTitle(view, outcome, won, draw);
+  // The sentence itself stays the sheet's heading (#asking, which a screen reader announces); the card adds
+  // the word and the final count.
+  result.append(eyebrow, heading);
+  const stats = document.createElement('div');
+  stats.className = 'match-result-stats';
+  for (const [label, creatures] of [['Your creatures', view.board.allies ?? []], ['Opponents', view.board.enemies ?? []]]) {
+    const value = document.createElement('div');
+    value.className = 'match-result-stat';
+    const alive = creatures.filter(c => c.isAlive !== false).length;
+    const hp = creatures.reduce((total, c) => total + (Number.isFinite(c.health) ? c.health : 0), 0);
+    const name = document.createElement('span');
+    name.textContent = label;
+    const figures = document.createElement('strong');
+    figures.textContent = alive + '/' + creatures.length + ' standing · ' + hp + ' HP';
+    value.append(name, figures);
+    stats.append(value);
+  }
+  result.append(stats);
+  return result;
+}
+
+function resultTone(outcome, won) {
+  if (!outcome) return 'unknown';
+  if (!outcome.winner) return 'draw';
+  return won ? 'victory' : 'defeat';
+}
+
+function resultTitle(view, outcome, won, draw) {
+  if (!outcome) return 'MATCH OVER';
+  if (draw) return 'DRAW';
+  if (view.replay) return `${nameOf(outcome.winner)} WINS`;
+  return won ? 'VICTORY' : 'DEFEAT';
+}
+
 // The one thing a player can do to the match itself: give it up (ADR 0087). It is a dock tool like the
 // upkeep's, so it never sits on a decision, and it takes two taps because there is no undo. Not while a bot
 // plays the seat, not once the match is over, and not at practice, whose scenarios restart instead.
@@ -2589,6 +2640,7 @@ function renderDecision(state, current) {
   element('evolution-budget').replaceChildren(...(view.waitingFor === 'Evolution' && isAsked(view) ? [evolutionBudget(state, view)] : []));
   const asking = element('asking');
   const choices = element('choices');
+  element('decision').classList.toggle('match-finished', Boolean(view.over));
   element('decision-guide').replaceChildren();
   element('problem').hidden = !state.error;
   element('problem').textContent = state.error;
@@ -2610,6 +2662,14 @@ function renderDecision(state, current) {
   }
   if (view.over) {
     asking.textContent = outcomeText(view, current.seat);
+    element('decision').classList.toggle('match-finished', true);
+    const result = matchResult(state, current);
+    const key = current.seat + '/' + view.board.roundNumber;
+    if (state.lastShownMatchResult !== key) {
+      result.classList.toggle('new-result', true);
+      state.lastShownMatchResult = key;
+    }
+    element('decision-guide').replaceChildren(result);
     const replay = button('Replay the match action by action', () => replayMatch(state, current));
     replay.dataset.focus = 'match-replay';
     choices.replaceChildren(replay);

@@ -805,6 +805,25 @@ test('opponent spellbooks grow only from public known spells and preserve their 
   assert.doesNotMatch(p.nodes['enemy-hand'].textContent, /First card/);
 });
 
+// UX 18: the result card says the word -- victory, defeat or draw -- and the final count, from the host's
+// outcome only; a host from before outcomes calls nothing a draw.
+test('the result card names the outcome the host gave, and calls a missing one no draw', () => {
+  const titleOf = p => p.nodes['decision-guide'].children[0].children[1].textContent;
+  const toneOf = p => p.nodes['decision-guide'].children[0].className;
+  const finished = outcome => { const p = page(); Object.assign(p.view, { over: true, waitingFor: null, outcome }); p.draw(); return p; };
+
+  const won = finished({ winner: 'player1', reason: 'Elimination' });
+  assert.equal(titleOf(won), 'VICTORY');
+  assert.match(toneOf(won), /victory/);
+  assert.equal(won.nodes.asking.textContent, 'You win · the last team standing.');
+  assert.match(won.nodes['decision-guide'].textContent, /Your creatures1\/1 standing · 20 HP/);
+  assert.equal(titleOf(finished({ winner: 'player2', reason: 'RoundCap' })), 'DEFEAT');
+  assert.equal(titleOf(finished({ winner: null, reason: 'RoundCap' })), 'DRAW');
+  const unknown = finished(undefined);
+  assert.equal(titleOf(unknown), 'MATCH OVER');
+  assert.match(toneOf(unknown), /unknown/);
+});
+
 test('battlefield turn badges appear only after the timeline exists and follow its current cursor', () => {
   const p = page(); p.draw(); assert.doesNotMatch(p.nodes.allies.textContent, /Turn/);
   p.view.board.timeline = [{ creature: 2 }, { creature: 1 }];
