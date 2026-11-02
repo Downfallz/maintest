@@ -698,9 +698,14 @@ function refreshUnlockFx(state, current) {
   for (const [id, currentInventory] of inventory) {
     const previous = old.get(id);
     if (!previous) continue;
-    for (const tier of currentInventory.tiers) if (!previous.tiers.has(tier)) state.unlockFx.tiers.add(id + '/' + tier);
-    for (const spell of currentInventory.spells) if (!previous.spells.has(spell)) state.unlockFx.spells.add(id + '/' + spell);
+    gained(previous.tiers, currentInventory.tiers).forEach(tier => state.unlockFx.tiers.add(`${id}/${tier}`));
+    gained(previous.spells, currentInventory.spells).forEach(spell => state.unlockFx.spells.add(`${id}/${spell}`));
   }
+}
+
+// What a set holds now that it did not before.
+function gained(before, now) {
+  return [...now].filter(item => !before.has(item));
 }
 
 function render(state, views) {
