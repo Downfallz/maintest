@@ -1303,7 +1303,10 @@ function markNewReveal(seat, round, action) {
   const key = seat + '/' + round;
   const sequence = revealKey(action);
   const previous = revealSeen.get(key);
-  if (sequence === null) return false;
+  if (sequence === null) {
+    if (!revealSeen.has(key)) revealSeen.set(key, null);
+    return false;
+  }
   revealSeen.set(key, sequence);
   // Bound memory across long playtests.
   if (revealSeen.size > 12) revealSeen.delete(revealSeen.keys().next().value);
@@ -1317,8 +1320,6 @@ function showSpellReveal(current, board, action, animated) {
       if (action.targets?.some(target => String(target.id) === node.dataset.creatureId)) node.classList.toggle('spell-reveal-target', true);
     }
   }
-  const text = element('combat-line');
-  if (!text.hidden) text.classList.toggle('spell-reveal-line', true);
 }
 
 function renderBoard(state, current, spellbook = current) {
