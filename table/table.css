@@ -1271,7 +1271,7 @@ body:has(#table) { padding-bottom: 24px; }
 
 
 /* UX 08–11: effects are purely visual, never change layout or capture taps. */
-.creature, .mini-creature { isolation: isolate; }
+.creature, .mini-creature { isolation: isolate; position: relative; }
 .combat-float {
   position: absolute; z-index: 3; top: 2px; right: 8px; pointer-events: none;
   font-size: 18px; font-weight: 800; text-shadow: 0 2px 5px #000;
@@ -1315,5 +1315,9 @@ body:has(#table) { padding-bottom: 24px; }
   .fx-defeated { animation: combat-defeat 650ms ease-out both; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .combat-float { opacity: 1; position: static; font-size: 12px; }
+  .combat-float { display: none; }
 }
+
+/* Persistent condition identity, even when motion is disabled. */
+.chip.condition-bleed { border-color: #be655f; color: #f2b7ab; background: #462521; }
+.chip.condition-stun { border-color: #9d82bd; color: #e7ccff; background: #362845; }
