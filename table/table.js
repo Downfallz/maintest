@@ -635,16 +635,8 @@ function showTab(state, name) {
 // and nothing has to be scrolled to reach the board or to come back from it.
 function showBoard(state, open, fromHistory = false) {
   if (open === state.boardOpen) return;
-  if (!fromHistory && globalThis.history?.pushState && globalThis.history?.back) {
-    if (open) {
-      globalThis.history.pushState({ downfallBoard: true }, '');
-      state.boardHistory = true;
-    } else if (state.boardHistory) {
-      state.boardHistory = false;
-      globalThis.history.back();
-    }
-  }
   if (fromHistory) state.boardHistory = open;
+  else followBoardHistory(state, open);
   // Taking the board out of the page shortens it, which can clamp the scroll; closing puts the player back.
   if (open && !state.boardOpen) state.boardReturn = globalThis.scrollY ?? 0;
   const returning = !open && state.boardOpen;
@@ -666,6 +658,18 @@ function showBoard(state, open, fromHistory = false) {
   globalThis.scrollTo?.(0, state.boardReturn ?? 0);
   const current = activeSeat(state.views, state.holder, state.holding);
   if (current && !state.playback && !needsPass(current, state.holder)) guideDecision(state, current);
+}
+
+// The open battlefield is a history entry of its own, so the phone's Back closes it rather than the page.
+function followBoardHistory(state, open) {
+  if (!globalThis.history?.pushState || !globalThis.history?.back) return;
+  if (open) {
+    globalThis.history.pushState({ downfallBoard: true }, '');
+    state.boardHistory = true;
+  } else if (state.boardHistory) {
+    state.boardHistory = false;
+    globalThis.history.back();
+  }
 }
 
 function placeBoard(state) {
