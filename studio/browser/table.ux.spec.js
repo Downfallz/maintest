@@ -480,6 +480,40 @@ test('a finished match replays every round from its result, and the round can be
   await expect(page.locator('#asking')).toHaveText(/You win/);
 });
 
+// UX 15: walking a replay forward onto a cast's result plays that cast's effects once, from its recorded frames:
+// one floating number on each place the struck creature is drawn, never one more from the live tracker.
+test('a replayed cast floats its damage once when the replay reaches its result', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.floats = [];
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.classList?.contains('combat-float')) globalThis.floats.push({ text: node.textContent, id: node.parentElement.dataset.creatureId });
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.reload();
+  const ally = view.board.allies[0]; const enemy = view.board.enemies[0];
+  const frame = { before: [ally, { ...enemy, health: 27 }], after: [ally, { ...enemy, health: 20 }], timeline: [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }], rollOffs: [] };
+  const feed = [{ sequence: 10, round: 1, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 1,
+    resolution: { action: { actor: 1, spell: cards[3].id, targets: [2] } }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 7 }], frame } }];
+  const over = { ...view, over: true, waitingFor: null, waitingCreature: null, options: {}, outcome: { winner: 'player1', reason: 'RoundCap' }, feed, feedNext: 11 };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: over }));
+  await page.getByRole('button', { name: 'Replay the match action by action' }).click();
+  await expect(page.locator('#playback')).toBeVisible();
+  expect(await page.evaluate(() => globalThis.floats)).toEqual([]);
+
+  await page.locator('[data-focus="playback-next"]').click();
+  await expect.poll(() => page.evaluate(() => globalThis.floats.length), { timeout: 5000 }).toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+
+  const floats = await page.evaluate(() => globalThis.floats);
+  const drawn = await page.locator('[data-creature-id="2"]').count();
+  expect(floats.every(float => float.text === '-7' && float.id === '2')).toBe(true);
+  expect(floats.length).toBe(drawn);
+});
+
 test('a session opened from the admin panel goes straight to its replay, and its result names the winner', async ({ page }) => {
   const ally = view.board.allies[0]; const enemy = view.board.enemies[0];
   const frame = { before: [ally, { ...enemy, health: 27 }], after: [ally, enemy], timeline: [{ creature: 1, speed: 'Standard' }], rollOffs: [] };

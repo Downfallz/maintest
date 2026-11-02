@@ -277,6 +277,7 @@ test("a seat's own action is held only when it closed its round", () => {
 
   assert.deepEqual(readingSteps(entries, 2, board, cards).map(action => action.sequence), [5, 7, 11]);
   assert.deepEqual(readingSteps(entries, 7, board, cards).map(action => action.sequence), [11]);
+  assert.deepEqual(readingSteps(entries, -1, board, cards).map(action => action.sequence), [5, 11], 'a seat that read nothing yet holds only the opponent');
 });
 
 test('a match replay reads each round as it happened: upkeep, the packages revealed, then the casts', () => {

@@ -12,7 +12,7 @@ import { classColour, talentClasses, packageForest, passiveOf, requirementLine, 
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { healthChange, playbackBoard, playbackChanges, playbackRound } from './replay.js';
-import { createCombatTransitionTracker } from './combat-fx.js';
+import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './combat-fx.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { actionDecision, askedKey, slotView } from './slot.js';
@@ -1281,7 +1281,8 @@ function combatFeedback(board, changes) {
 // by its own hit, once, and the live board after the last step moves nothing more: an opponent's hit arrives with
 // its step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 function healthFx(state, current, board) {
-  if (state.replaying) return;
+  // A replay the player opened animates from its recorded frames (replayCombatFx), whichever way it is walked.
+  if (state.replaying || state.playback) return;
   const confirmed = (current.view.roundEvents ?? [])
     .filter(entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'OngoingEffectsApplied')
     .reduce((max, entry) => Math.max(max, entry.sequence ?? -1), -1);
@@ -1320,6 +1321,31 @@ function showSpellReveal(current, board, action, animated) {
       if (action.targets?.some(target => String(target.id) === node.dataset.creatureId)) node.classList.toggle('spell-reveal-target', true);
     }
   }
+}
+
+// Replay FX follow the recorded before/after boundary, never a live network delta.
+// Navigating Previous/Next may revisit a frame; a new navigation may cue it again,
+// but an ordinary redraw of the same frame must not.
+function replayCombatFx(state, board) {
+  const replay = state.playback;
+  if (!replay) {
+    state.replayFxFrame = null;
+    return;
+  }
+  const action = replay.actions[replay.index];
+  const frame = replay.seat + '/' + (replay.match ? 'match' : 'round') + '/'
+    + replay.index + '/' + replay.stage;
+  if (state.replayFxFrame === frame) return;
+  const prior = state.replayFxFrame;
+  state.replayFxFrame = frame;
+  if (!prior || replay.stage !== 'after' || !action?.frame?.before || !action?.frame?.after) return;
+  const changes = combatChanges(
+    combatSnapshot({ allies: action.frame.before }),
+    combatSnapshot({ allies: action.frame.after })
+  );
+  animateHealthBars(board, changes);
+  combatFeedback(board, changes);
+  showSpellReveal(null, board, action, true);
 }
 
 function renderBoard(state, current, spellbook = current) {
@@ -1375,6 +1401,7 @@ function renderBoard(state, current, spellbook = current) {
   const revealNew = !state.playback && markNewReveal(current.seat, board.roundNumber, revealAction);
   showSpellReveal(current, board, revealAction, revealNew);
   healthFx(state, current, board);
+  replayCombatFx(state, board);
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, spellbook));
 }
@@ -2303,6 +2330,7 @@ function startPlayback(state, seat, recap) {
 }
 
 function finishPlayback(state) {
+  state.replayFxFrame = null;
   state.playback = null;
   state.guidedAsking = null;
   redraw(state);
