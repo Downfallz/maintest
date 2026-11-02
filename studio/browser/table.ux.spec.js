@@ -736,6 +736,33 @@ test('a new round lights the round label once, and the first board does not', as
   expect(await page.evaluate(() => globalThis.cues)).toEqual(['phase-round']);
 });
 
+// UX 16-17: a spell a creature has just learned glows where it is first seen -- the tempo question's list, the
+// round's first after Evolution -- once; the first board the page draws glows nothing.
+test('a spell just learned glows in the tempo list, and the first board does not', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.unlocked = [];
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.classList?.contains('spell-just-unlocked')) globalThis.unlocked.push({ text: node.textContent, effects: getComputedStyle(node).animationName });
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  const ally = view.board.allies[0];
+  const earlier = { ...view, board: { ...view.board, allies: [{ ...ally, knownSpells: ally.knownSpells.slice(1) }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: earlier }));
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(5);
+  expect(await page.evaluate(() => globalThis.unlocked)).toEqual([]);
+
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, waitingAsked: 4 } }));
+  await expect.poll(() => page.evaluate(() => globalThis.unlocked.length), { timeout: 10000 }).toBeGreaterThan(0);
+  const unlocked = await page.evaluate(() => globalThis.unlocked);
+  expect(unlocked.every(one => one.effects === 'learned-spell-glow')).toBe(true);
+  expect(unlocked.every(one => one.text.includes(cards[0].name))).toBe(true);
+});
+
 for (const kind of ['Speed', 'Evolution', 'Target']) {
   test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
     const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });

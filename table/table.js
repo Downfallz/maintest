@@ -1481,6 +1481,9 @@ function speedSpell(state, spell, creature, current) {
   const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell.spell) : null;
   const reference = document.createElement('details');
   reference.className = 'speed-spell';
+  // The round's first question after Evolution is its tempo, asked over this list: where a spell just learned is
+  // first seen (UX 17).
+  if (state.unlockFx?.spells.has(`${creature}/${spell.spell}`)) reference.className += ' spell-just-unlocked';
   const summary = document.createElement('summary');
   const name = document.createElement('strong');
   name.textContent = cardTitle(card) || spell.spell;

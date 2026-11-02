@@ -1403,7 +1403,7 @@ body:has(#table) { padding-bottom: 24px; }
   .tree-node.mutation-just-acquired {
     animation: mutation-acquired-glow 850ms var(--motion-enter);
   }
-  #own-hand .held.spell-just-unlocked {
+  #own-hand .held.spell-just-unlocked, #own-hand .speed-spell.spell-just-unlocked {
     animation: learned-spell-glow 850ms var(--motion-enter);
   }
 }
