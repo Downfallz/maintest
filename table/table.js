@@ -855,6 +855,44 @@ function outcomeText(view, seat) {
 // The one thing a player can do to the match itself: give it up (ADR 0087). It is a dock tool like the
 // upkeep's, so it never sits on a decision, and it takes two taps because there is no undo. Not while a bot
 // plays the seat, not once the match is over, and not at practice, whose scenarios restart instead.
+// UX 18: a readable conclusion using only the authoritative outcome and
+// final public creature snapshot; no independent winner calculation.
+function matchResult(state, current) {
+  const { view, seat } = current;
+  const outcome = view.outcome;
+  const result = document.createElement('section');
+  const won = outcome?.winner === seat;
+  const draw = !outcome?.winner;
+  result.className = 'match-result ' + (draw ? 'draw' : won ? 'victory' : 'defeat');
+  result.setAttribute('aria-label', 'Match result');
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'match-result-eyebrow';
+  eyebrow.textContent = 'DOWNFALL ARENA · FINAL';
+  const heading = document.createElement('strong');
+  heading.className = 'match-result-title';
+  heading.textContent = view.replay ? draw ? 'DRAW' : nameOf(outcome.winner) + ' WINS' : draw ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
+  const detail = document.createElement('p');
+  detail.className = 'match-result-detail';
+  detail.textContent = outcomeText(view, seat);
+  result.append(eyebrow, heading, detail);
+  const stats = document.createElement('div');
+  stats.className = 'match-result-stats';
+  for (const [label, creatures] of [['Your creatures', view.board.allies ?? []], ['Opponents', view.board.enemies ?? []]]) {
+    const value = document.createElement('div');
+    value.className = 'match-result-stat';
+    const alive = creatures.filter(c => c.isAlive !== false).length;
+    const hp = creatures.reduce((total, c) => total + (Number.isFinite(c.health) ? c.health : 0), 0);
+    const name = document.createElement('span');
+    name.textContent = label;
+    const figures = document.createElement('strong');
+    figures.textContent = alive + '/' + creatures.length + ' standing · ' + hp + ' HP';
+    value.append(name, figures);
+    stats.append(value);
+  }
+  result.append(stats);
+  return result;
+}
+
 function renderMatchTools(state, view) {
   const tools = element('match-tools');
   const hidden = Boolean(view.over || view.playedByBot || state.practice || state.playback);
@@ -2525,6 +2563,7 @@ function renderDecision(state, current) {
   element('evolution-budget').replaceChildren(...(view.waitingFor === 'Evolution' && isAsked(view) ? [evolutionBudget(state, view)] : []));
   const asking = element('asking');
   const choices = element('choices');
+  element('decision').classList.toggle('match-finished', Boolean(view.over));
   element('decision-guide').replaceChildren();
   element('problem').hidden = !state.error;
   element('problem').textContent = state.error;
@@ -2545,7 +2584,9 @@ function renderDecision(state, current) {
     return;
   }
   if (view.over) {
-    asking.textContent = outcomeText(view, current.seat);
+    asking.textContent = 'Match complete';
+    element('decision').classList.toggle('match-finished', true);
+    element('decision-guide').replaceChildren(matchResult(state, current));
     const replay = button('Replay the match action by action', () => replayMatch(state, current));
     replay.dataset.focus = 'match-replay';
     choices.replaceChildren(replay);
