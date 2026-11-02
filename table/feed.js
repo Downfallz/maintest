@@ -172,8 +172,12 @@ export function opponentSteps(entries, seen, board, cards) {
 // next question on the next round's board and never shows the closing action resolved: the round would end
 // unseen, its last hit, its Cleanup and the next Upkeep all at once. Held as a step, the closing action is read
 // before the round turns over, and the Upkeep notice -- which waits for the last OK -- follows it.
+//
+// Only for a seat that has read something: a page that drew a board before anything resolved and then hears of
+// several rounds at once -- a reconnection, a match's result -- did not watch those rounds close, and holding
+// their closing actions would put an old round's cast over the board it is shown.
 export function readingSteps(entries, seen, board, cards) {
-  const closers = roundClosers(entries);
+  const closers = Number.isInteger(seen) && seen >= 0 ? roundClosers(entries) : new Set();
   return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally' || closers.has(action.sequence));
 }
 
