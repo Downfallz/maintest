@@ -107,6 +107,44 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .held:is(.castable, .reference) { background: #e8e5d7; border-color: #c9c4ac; color: #27332b; }.held:is(.castable, .reference) .card-meta, .held:is(.castable, .reference) .card-body { color: #414f41; }.held:is(.castable, .reference) .card-body { border-color: #c8c9b6; }.held:is(.castable, .reference) .card-cost { background: #d3d8c3; border-color: #b3b7a4; }
 .held.offered { cursor: pointer; }.held.short.offered { border-style: dashed; border-color: #8a7a4a; }.held.short.offered .card-availability { color: #d9c27a; }.held.chosen { outline: 3px solid var(--gold); outline-offset: 0; }
 .card-availability { display: block; margin-top: 12px; font-size: 10px; font-weight: 650; }
+
+/* UX 03: make the selectable spellbook feel like cards without changing tap behavior.
+   Only offered cards are interactive; reference and enemy cards stay still. */
+#own-hand .held.offered {
+  position: relative;
+  transform-origin: center bottom;
+  -webkit-tap-highlight-color: transparent;
+}
+#own-hand .held.offered.chosen {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 7px 22px #0005, 0 0 20px #e7c37b26;
+}
+/* Focus must remain obvious for keyboard selection, regardless of motion settings. */
+#own-hand .held.offered:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #own-hand .held.offered {
+    transition: border-color var(--motion-fast) var(--motion-standard),
+                background-color var(--motion-fast) var(--motion-standard),
+                box-shadow var(--motion-normal) var(--motion-enter),
+                transform var(--motion-fast) var(--motion-enter);
+  }
+  #own-hand .held.offered.chosen {
+    transform: translateY(-3px);
+  }
+  #own-hand .held.offered:active {
+    transform: translateY(1px) scale(.99);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  #own-hand .held.offered:not(.chosen):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px #0003;
+  }
+}
+
 .action-area { position: sticky; top: 22px; }.sheet { padding: 22px; background: #222d25; border: 1px solid #667051; border-radius: 13px; box-shadow: 0 15px 35px #0002; max-height: calc(100dvh - 44px); overflow-y: auto; scrollbar-width: thin; }
 .decision-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 18px; }.status-tag { color: var(--gold); border: 1px solid #756443; border-radius: 99px; font-size: 10px; padding: 4px 8px; }
 #asking { font: 26px/1.2 Georgia, serif; margin-bottom: 20px; text-wrap: balance; }
