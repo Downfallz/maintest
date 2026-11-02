@@ -115,6 +115,8 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   transform-origin: center bottom;
   -webkit-tap-highlight-color: transparent;
 }
+/* The chosen card is marked in place, never moved: the second tap that declares it has to land where the
+   first one did (the "spell rows stay put" browser test). */
 #own-hand .held.offered.chosen {
   border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold), 0 7px 22px #0005, 0 0 20px #e7c37b26;
@@ -130,9 +132,6 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
                 background-color var(--motion-fast) var(--motion-standard),
                 box-shadow var(--motion-normal) var(--motion-enter),
                 transform var(--motion-fast) var(--motion-enter);
-  }
-  #own-hand .held.offered.chosen {
-    transform: translateY(-3px);
   }
   #own-hand .held.offered:active {
     transform: translateY(1px) scale(.99);
