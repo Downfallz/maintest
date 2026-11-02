@@ -267,6 +267,9 @@ test('spell rows stay put between the tap that chooses and the tap that declares
     expect(Math.abs(after.height - before.height)).toBeLessThan(2);
     expect(Math.abs((await page.locator('#decision').boundingBox()).height - headerBefore.height)).toBeLessThan(2);
   }
+  // Marked where it is (UX 03): a gold ring and glow, no lift.
+  expect(await pummel.evaluate(node => getComputedStyle(node).boxShadow)).toContain('rgb(231, 195, 123)');
+  expect(await pummel.evaluate(node => getComputedStyle(node).transform)).toBe('none');
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
   await pummel.click();
   await expect.poll(() => decisions.length).toBe(1);
