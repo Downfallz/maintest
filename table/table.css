@@ -1386,3 +1386,9 @@ body:has(#table) { padding-bottom: 24px; }
   .spell-reveal-caster { --fx-reveal: spell-caster-reveal 520ms var(--motion-enter); }
   .spell-reveal-target { --fx-reveal: spell-target-reveal 520ms var(--motion-enter); }
 }
+
+/* Optional interaction-feedback preferences, collapsed by default. */
+.feedback-preferences { margin: 18px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); }
+.feedback-preferences summary { cursor: pointer; color: var(--ink); }
+.feedback-preferences label { display: flex; align-items: center; gap: 9px; margin-top: 10px; font-size: 12px; }
+.feedback-preferences input { accent-color: var(--gold); }
