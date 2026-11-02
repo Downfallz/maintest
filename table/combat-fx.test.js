@@ -42,3 +42,17 @@ test('missing or newly spawned actors do not synthesize damage', () => {
   const after = combatSnapshot({ allies: [{ id: 'B', health: 1 }] });
   assert.deepEqual(combatChanges(before, after), []);
 });
+
+
+test('detects a newly applied stun only once from a confirmed event', () => {
+  const tracker = createCombatTransitionTracker();
+  const make = stunned => ({
+    allies: [{ id: 'A', health: 9, energy: 2, totalDefense: 0, isAlive: true, isStunned: stunned }],
+    enemies: [],
+  });
+  tracker.observe({ contextKey: 'seat1/round2', confirmedEventId: 5, board: make(false) });
+  assert.deepEqual(tracker.observe({ contextKey: 'seat1/round2', confirmedEventId: 6, board: make(true) }), [
+    { creature: 'A', stunned: true },
+  ]);
+  assert.deepEqual(tracker.observe({ contextKey: 'seat1/round2', confirmedEventId: 6, board: make(true) }), []);
+});

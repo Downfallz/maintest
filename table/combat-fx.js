@@ -11,6 +11,7 @@ export function combatSnapshot(board) {
       energy: creature.energy,
       defense: creature.totalDefense,
       alive: creature.isAlive,
+      stunned: creature.isStunned,
     });
   }
   return actors;
@@ -28,6 +29,7 @@ export function combatChanges(before, after) {
       }
     }
     if (previous.alive === true && next.alive === false) delta.defeated = true;
+    if (previous.stunned !== true && next.stunned === true) delta.stunned = true;
     if (Object.keys(delta).length) changes.push({ creature: id, ...delta });
   }
   return changes;

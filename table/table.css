@@ -1268,3 +1268,69 @@ body:has(#table) { padding-bottom: 24px; }
     animation: panel-enter var(--motion-normal) var(--motion-enter) both;
   }
 }
+
+
+/* UX 08–11: effects are purely visual, never change layout or capture taps. */
+.creature, .mini-creature { isolation: isolate; position: relative; }
+.combat-float {
+  position: absolute; z-index: 3; top: 2px; right: 8px; pointer-events: none;
+  font-size: 18px; font-weight: 800; text-shadow: 0 2px 5px #000;
+  color: #ffaea4; opacity: 0; white-space: nowrap;
+}
+.combat-float.heal { color: #a8efd0; }
+.combat-float.defense { color: #e4d4ff; }
+/* The chip clips what overflows it (overflow: hidden), so its number starts at the bottom and rises inside. */
+.mini-creature .combat-float { font-size: 13px; right: 3px; top: auto; bottom: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes combat-number-rise {
+    0% { opacity: 0; transform: translateY(5px) scale(.9); }
+    16% { opacity: 1; transform: translateY(-2px) scale(1.08); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-21px); }
+  }
+  @keyframes combat-hit {
+    0%, 100% { filter: none; }
+    35% { filter: brightness(1.65) sepia(.4); }
+  }
+  @keyframes combat-heal {
+    0%, 100% { filter: none; }
+    40% { filter: brightness(1.35); }
+  }
+  @keyframes combat-shield {
+    0%, 100% { box-shadow: none; }
+    40% { box-shadow: inset 0 0 0 3px #c4a6f7, 0 0 16px #b49bee77; }
+  }
+  @keyframes combat-stun {
+    0%, 100% { outline-color: transparent; }
+    40% { outline: 3px solid #c4a6f7; outline-offset: -2px; }
+  }
+  @keyframes combat-defeat {
+    0% { filter: grayscale(0); opacity: 1; }
+    100% { filter: grayscale(.8); opacity: .55; }
+  }
+  @keyframes combat-number-rise-inside {
+    0% { opacity: 0; transform: translateY(3px); }
+    16% { opacity: 1; transform: translateY(0); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+  .combat-float { animation: combat-number-rise 700ms var(--motion-enter) both; }
+  .mini-creature .combat-float { animation-name: combat-number-rise-inside; }
+  /* One action can hit, stun and break a shield at once: each effect names its own layer and one rule plays
+     them all, so none replaces another. Defeat waits for the hit's flash, both being filters. */
+  .fx-damage { --fx-flash: combat-hit 340ms ease-out; }
+  .fx-heal { --fx-flash: combat-heal 400ms ease-out; }
+  .fx-defense { --fx-shield: combat-shield 420ms ease-out; }
+  .fx-stun { --fx-stun: combat-stun 540ms ease-out; }
+  .fx-defeated { --fx-defeat: combat-defeat 650ms ease-out 340ms forwards; }
+  :is(.fx-damage, .fx-heal, .fx-defense, .fx-stun, .fx-defeated) {
+    animation: var(--fx-flash, none), var(--fx-shield, none), var(--fx-stun, none), var(--fx-defeat, none);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-float { display: none; }
+}
+
+/* Persistent condition identity, even when motion is disabled. */
+.chip.condition-bleed { border-color: #be655f; color: #f2b7ab; background: #462521; }
+.chip.condition-stun { border-color: #9d82bd; color: #e7ccff; background: #362845; }
