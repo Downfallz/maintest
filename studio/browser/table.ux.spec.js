@@ -684,6 +684,38 @@ test('a confirmed hit floats its damage on the creature it struck, and a stun ch
   await expect(page.locator('.chip.condition-stun').first()).toBeAttached();
 });
 
+// UX 13: an opponent's resolved cast arrives as a step, and that is when it is revealed: its caster and its
+// target light up once, and a target the cast hurt keeps its hit flash beside the cue.
+test('an opponent\'s confirmed cast lights its caster and its target, beside the hit it dealt', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.reveals = [];
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.classList?.contains('spell-reveal-caster') || node.classList?.contains('spell-reveal-target')) {
+            globalThis.reveals.push({ id: node.dataset.creatureId, caster: node.classList.contains('spell-reveal-caster'),
+              effects: getComputedStyle(node).animationName });
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+  expect(await page.evaluate(() => globalThis.reveals)).toEqual([]);
+
+  const hit = { ...view, feed: [resolved(5, 2, [1], [])], feedNext: 6,
+    board: { ...view.board, allies: [{ ...view.board.allies[0], health: 3 }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: hit }));
+  await expect.poll(() => page.evaluate(() => globalThis.reveals.length), { timeout: 10000 }).toBeGreaterThan(0);
+
+  const reveals = await page.evaluate(() => globalThis.reveals);
+  expect(reveals.filter(one => one.caster).every(one => one.id === '2')).toBe(true);
+  const targets = reveals.filter(one => !one.caster);
+  expect(targets.length).toBeGreaterThan(0);
+  expect(targets.every(one => one.id === '1' && one.effects.includes('spell-target-reveal') && one.effects.includes('combat-hit'))).toBe(true);
+});
+
 for (const kind of ['Speed', 'Evolution', 'Target']) {
   test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
     const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
