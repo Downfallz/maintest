@@ -1323,8 +1323,8 @@ body:has(#table) { padding-bottom: 24px; }
   .fx-defense { --fx-shield: combat-shield 420ms ease-out; }
   .fx-stun { --fx-stun: combat-stun 540ms ease-out; }
   .fx-defeated { --fx-defeat: combat-defeat 650ms ease-out 340ms forwards; }
-  :is(.fx-damage, .fx-heal, .fx-defense, .fx-stun, .fx-defeated) {
-    animation: var(--fx-flash, none), var(--fx-shield, none), var(--fx-stun, none), var(--fx-defeat, none);
+  :is(.fx-damage, .fx-heal, .fx-defense, .fx-stun, .fx-defeated, .spell-reveal-caster, .spell-reveal-target) {
+    animation: var(--fx-reveal, none), var(--fx-flash, none), var(--fx-shield, none), var(--fx-stun, none), var(--fx-defeat, none);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1382,10 +1382,7 @@ body:has(#table) { padding-bottom: 24px; }
     0%, 100% { box-shadow: none; }
     45% { box-shadow: inset 0 0 0 2px #8ad4de, 0 0 14px #8ad4de66; }
   }
-  .creature.spell-reveal-caster, .mini-creature.spell-reveal-caster {
-    animation: spell-caster-reveal 520ms var(--motion-enter);
-  }
-  .creature.spell-reveal-target, .mini-creature.spell-reveal-target {
-    animation: spell-target-reveal 520ms var(--motion-enter);
-  }
+  /* A layer of the combat effects' one animation list (UX 08-11): a target the cast hurts also flashes. */
+  .spell-reveal-caster { --fx-reveal: spell-caster-reveal 520ms var(--motion-enter); }
+  .spell-reveal-target { --fx-reveal: spell-target-reveal 520ms var(--motion-enter); }
 }

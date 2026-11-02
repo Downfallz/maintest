@@ -1369,9 +1369,10 @@ function renderBoard(state, current, spellbook = current) {
   element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
   element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
   element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
-  // Never animate replay navigation or an unconfirmed plan.
-  const revealAction = !replay ? live : null;
-  const revealNew = !replay && markNewReveal(current.seat, board.roundNumber, revealAction);
+  // Never an unconfirmed plan, nor a replay the player opened. An opponent's action arrives as a step, which shows
+  // it as resolved: the step is when it is revealed, and the live board after it reveals nothing new.
+  const revealAction = state.playback ? null : cast ?? live;
+  const revealNew = !state.playback && markNewReveal(current.seat, board.roundNumber, revealAction);
   showSpellReveal(current, board, revealAction, revealNew);
   healthFx(state, current, board);
   enemyBooks(state, current);
