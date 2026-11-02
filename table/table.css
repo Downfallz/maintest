@@ -1369,3 +1369,28 @@ body:has(#table) { padding-bottom: 24px; }
     animation: initiative-arrival var(--motion-slow) var(--motion-enter) both;
   }
 }
+
+
+/* UX 13: the public cast appears as a brief, nonblocking light cue.
+   No positioning, hitbox or DOM order changes; private intents are never animated. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes spell-caster-reveal {
+    0%, 100% { outline-color: transparent; }
+    45% { outline: 2px solid var(--gold); outline-offset: 2px; box-shadow: 0 0 18px #e7c37b77; }
+  }
+  @keyframes spell-target-reveal {
+    0%, 100% { box-shadow: none; }
+    45% { box-shadow: inset 0 0 0 2px #8ad4de, 0 0 14px #8ad4de66; }
+  }
+  @keyframes spell-label-reveal {
+    from { opacity: .35; }
+    to { opacity: 1; }
+  }
+  .creature.spell-reveal-caster, .mini-creature.spell-reveal-caster {
+    animation: spell-caster-reveal 520ms var(--motion-enter);
+  }
+  .creature.spell-reveal-target, .mini-creature.spell-reveal-target {
+    animation: spell-target-reveal 520ms var(--motion-enter);
+  }
+  .combat-line.spell-reveal-line { animation: spell-label-reveal var(--motion-normal) var(--motion-enter); }
+}
