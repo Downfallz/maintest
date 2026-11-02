@@ -1269,9 +1269,9 @@ function combatFeedback(board, changes) {
   }
 }
 
-// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
-// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
-// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
+// A stepped action draws the board as that action left it, with the events up to it, so each step moves the bars
+// by its own hit, once, and the live board after the last step moves nothing more: an opponent's hit arrives with
+// its step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 function healthFx(state, current, board) {
   if (state.replaying) return;
   const confirmed = (current.view.roundEvents ?? [])
