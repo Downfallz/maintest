@@ -649,7 +649,8 @@ test('a confirmed hit eases its health bar once, and a redraw does not replay it
 });
 
 // UX 08-11: a confirmed hit flashes the creature it struck and floats the health it cost, on the row and the
-// chip alike, and a stun the board shows wears its own colour on the condition chip.
+// chip alike -- inside the chip, which clips -- with the stun it also applied, and a stun the board shows wears
+// its own colour on the condition chip.
 test('a confirmed hit floats its damage on the creature it struck, and a stun chip wears its colour', async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.floats = [];
@@ -657,7 +658,11 @@ test('a confirmed hit floats its damage on the creature it struck, and a stun ch
       for (const record of records) {
         for (const node of record.addedNodes) {
           if (node.classList?.contains('combat-float')) {
-            globalThis.floats.push({ text: node.textContent, struck: node.parentElement.classList.contains('fx-damage') });
+            const chip = node.parentElement;
+            globalThis.floats.push({ text: node.textContent, struck: chip.classList.contains('fx-damage'),
+              effects: getComputedStyle(chip).animationName,
+              // A chip clips what overflows it: its number has to start inside it.
+              inside: !chip.classList.contains('mini-creature') || (node.offsetTop >= 0 && node.offsetTop + node.offsetHeight <= chip.clientHeight) });
           }
         }
       }
@@ -673,7 +678,9 @@ test('a confirmed hit floats its damage on the creature it struck, and a stun ch
   await expect.poll(() => page.evaluate(() => globalThis.floats.length), { timeout: 10000 }).toBeGreaterThan(0);
 
   const floats = await page.evaluate(() => globalThis.floats);
-  expect(floats.every(float => float.text === '-3' && float.struck)).toBe(true);
+  expect(floats.every(float => float.text === '-3' && float.struck && float.inside)).toBe(true);
+  // The hit stunned too: both play, neither replaces the other.
+  expect(floats.every(float => float.effects.includes('combat-hit') && float.effects.includes('combat-stun'))).toBe(true);
   await expect(page.locator('.chip.condition-stun').first()).toBeAttached();
 });
 
