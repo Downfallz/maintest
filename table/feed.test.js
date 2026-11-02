@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, readingSteps, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, readingSteps, stepStart, turnoverSteps, turnoverText } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -303,4 +303,52 @@ test('an upkeep with no cast after it in its round has no battlefield to borrow'
   const entries = [{ sequence: 2, round: 3, event: { kind: 'OngoingEffectsApplied', roundId: 3 } }];
 
   assert.equal(matchReplay(entries, { allies: [], enemies: [] }, cards)[0].frame, undefined);
+});
+
+// After a round's closing action the round turns over: its Cleanup ends conditions, the next Upkeep deals and heals.
+// The host has done both by the time the page hears of the closing action, so they are read as steps after it,
+// and only when they changed something.
+const stun = { effect: { kind: 'Stun' }, remainingRounds: 0 };
+const bleed = { effect: { kind: 'Bleed', amountPerRound: 3 }, remainingRounds: 0 };
+function turnover(round) {
+  return [
+    { sequence: 20, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 1, spell: 's', targets: [2] } }, appliedOutcomes: [] } },
+    { sequence: 22, round: round + 1, event: { kind: 'ConditionsExpired', roundId: round, expired: { 2: [stun, bleed], 1: [] } } },
+    { sequence: 23, round: round + 1, event: { kind: 'StunImmunityGained', roundId: round, creatures: [2] } },
+    { sequence: 24, round: round + 1, event: { kind: 'RoundEnded', roundId: round } },
+    { sequence: 26, round: round + 1, event: { kind: 'OngoingEffectsApplied', roundId: round + 1, energyRegenerationTicks: [],
+      regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 2, damage: 3 }] } },
+  ];
+}
+
+test('a round turns over as its cleanup, then the next upkeep, each holding only what it changed', () => {
+  const board = { roundNumber: 3, allies: [{ id: 1 }], enemies: [{ id: 2 }] };
+  const [cleanup, upkeep] = turnoverSteps(turnover(2), 2, board);
+
+  assert.deepEqual([cleanup.sequence, cleanup.round, cleanup.interlude], [22, 2, 'aftermath']);
+  assert.deepEqual(cleanup.ended.map(one => [one.creature.label, one.creature.side, one.conditions.length]), [['Creature 2', 'enemy', 2]]);
+  assert.deepEqual(cleanup.immune.map(one => one.label), ['Creature 2']);
+  assert.deepEqual([upkeep.sequence, upkeep.round, upkeep.follows, upkeep.interlude], [26, 3, 2, 'upkeep']);
+  assert.deepEqual(upkeep.ticks.map(tick => [tick.creature, tick.amount, tick.tone]), [[2, 3, 'harm']], 'a heal of 0 is no tick');
+  assert.equal(turnoverText(cleanup), 'Cleanup · Stun + Bleed ends → Creature 2, Creature 2 immune to stun');
+  assert.equal(turnoverText(upkeep), 'Upkeep · Ongoing damage −3 HP → Creature 2');
+});
+
+test('a turnover that changed nothing is not a step', () => {
+  const quiet = turnover(2).map(entry => ({ ...entry, event: { ...entry.event, expired: {}, creatures: [], bleedTicks: [] } }));
+  assert.deepEqual(turnoverSteps(quiet, 2, { allies: [{ id: 1 }], enemies: [{ id: 2 }] }), []);
+});
+
+test('the turnover is read after the closing action, and only by a seat that has read something', () => {
+  const board = { roundNumber: 3, allies: [{ id: 1 }], enemies: [{ id: 2 }] };
+  const entries = turnover(2);
+  assert.deepEqual(readingSteps(entries, 10, board, cards).map(step => step.interlude ?? step.sequence), [20, 'aftermath', 'upkeep']);
+  assert.deepEqual(readingSteps(entries, 22, board, cards).map(step => step.interlude), ['upkeep']);
+  assert.deepEqual(readingSteps(entries, -1, board, cards), []);
+});
+
+test('the cleanup events are kept with the round they ended', () => {
+  const kept = retainRoundEvents([], turnover(2), 3);
+  assert.deepEqual(kept.map(entry => entry.event.kind),
+    ['CombatActionResolved', 'ConditionsExpired', 'StunImmunityGained', 'RoundEnded', 'OngoingEffectsApplied']);
 });

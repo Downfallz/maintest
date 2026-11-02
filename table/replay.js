@@ -9,16 +9,18 @@ export function playbackBoard(replay, board) {
   const earlier = replay.actions.slice(0, replay.index + 1).filter(item => (item.round ?? round) === round && !item.interlude);
   // A round's upkeep or its purchases happen before its combat: nothing is on the timeline or turned over yet.
   const before = { upkeep: 'Upkeep', purchases: 'Evolution' }[action.interlude];
+  // Its Cleanup comes after every slot of the round: the cursor is past the last one.
+  const cleanup = action.interlude === 'aftermath';
   return {
     ...board,
     roundNumber: round,
-    phase: before ? 'Planning' : 'Combat', subPhase: before ?? 'Activation',
+    phase: before ? 'Planning' : 'Combat', subPhase: before ?? (cleanup ? 'Cleanup' : 'Activation'),
     allies: creatures.filter(creature => allies.has(creature.id)),
     enemies: creatures.filter(creature => !allies.has(creature.id)),
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
     // The slot the action was played from: a creature that fizzled unasked is still a slot, so the action's
     // index among the round's resolutions is only a fallback.
-    activationCursor: slotOf(action, earlier.length - 1),
+    activationCursor: cleanup ? (action.frame.timeline ?? []).length : slotOf(action, earlier.length - 1),
     // Only the slots up to this one had been turned over when it resolved (ADR 0083).
     revealedActions: earlier.map(item => item.action).filter(Boolean),
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
