@@ -1152,10 +1152,23 @@ function renderNotes(view) {
   element('comment').hidden = !kept || !commentIsOpen(view);
 }
 
+// Where a slot stands in the round's activation (UX 12): acting now, and just reached when the cursor moved onto it
+// on this draw, or already acted -- in the slot's classes and in the words its label ends with.
+function slotProgress(slot, position, cursor, newlyActive) {
+  if (slot.isNow) return { classes: newlyActive ? ' now arrived' : ' now', said: ', acting now' };
+  const past = cursor >= 0 && position !== null && position - 1 < cursor;
+  return past ? { classes: ' completed', said: ', already acted' } : { classes: '', said: '' };
+}
+
 // The initiative track: the engine's order, banded by speed, wrapping on a phone rather than scrolling. The strip never
 // sorts -- ties and all, this is the order the round is played in (timeline.js).
+let previousInitiativeCursor = null;
 function renderTimeline(board) {
-  const cursor = withCursor(board.timeline, cursorOf(board));
+  const index = cursorOf(board);
+  const timelineKey = `${board.roundNumber}/${board.subPhase}/${(board.timeline ?? []).map(slot => slot.creature).join(',')}`;
+  const newlyActive = previousInitiativeCursor?.key === timelineKey && index >= 0 && index !== previousInitiativeCursor.index;
+  previousInitiativeCursor = { key: timelineKey, index };
+  const cursor = withCursor(board.timeline, index);
   const strip = bands(cursor).map(band => {
     const box = document.createElement('div');
     box.className = 'band';
@@ -1169,17 +1182,19 @@ function renderTimeline(board) {
     slots.className = 'slots';
     for (const slot of band.slots) {
       const one = document.createElement('div');
-      one.className = `slot ${side(slot, board.slot)}${slot.isNow ? ' now' : ''}`;
+      const position = turnOrder({ id: slot.creature }, board);
+      const progress = slotProgress(slot, position, index, newlyActive);
+      one.className = `slot ${side(slot, board.slot)}${progress.classes}`;
       const order = document.createElement('span');
       order.className = 'slot-order';
-      order.textContent = `${turnOrder({ id: slot.creature }, board)}`;
+      order.textContent = `${position}`;
       order.style.setProperty('--turn-color', turnColour(Number(order.textContent), board.timeline.length));
       const creature = document.createElement('strong');
       creature.textContent = `Creature ${slot.creature}`;
       const initiative = document.createElement('span');
       initiative.className = 'slot-initiative';
       initiative.textContent = `Initiative ${slot.initiative}`;
-      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
+      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${progress.said}`);
       one.append(order, creature, initiative);
       const rolled = rollText(board.rollOffs, slot.creature);
       if (rolled) {
@@ -1262,9 +1277,9 @@ function combatFeedback(board, changes) {
   }
 }
 
-// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
-// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
-// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
+// A stepped action draws the board as that action left it, with the events up to it, so each step moves the bars
+// by its own hit, once, and the live board after the last step moves nothing more: an opponent's hit arrives with
+// its step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
 function healthFx(state, current, board) {
   if (state.replaying) return;
   const confirmed = (current.view.roundEvents ?? [])

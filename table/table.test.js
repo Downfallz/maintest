@@ -815,6 +815,30 @@ test('battlefield turn badges appear only after the timeline exists and follow i
   p.view.board.timeline = []; p.draw(); assert.doesNotMatch(p.nodes.allies.textContent, /Turn/);
 });
 
+// UX 12: the strip dims the slots that already acted, and the slot the cursor reaches pulses once -- on the
+// draw that moved it, not on the first draw, a redraw, or outside Activation.
+test('the initiative strip dims acted slots and marks the slot the cursor just reached, once', () => {
+  const slotsOf = node => node.children.flatMap(child => [...(child.className.split(' ').includes('slot') ? [child] : []), ...slotsOf(child)]);
+  const p = page();
+  p.view.board.timeline = [{ creature: 1, speed: 'Standard' }, { creature: 2, speed: 'Standard' }, { creature: 3, speed: 'Standard' }];
+  p.view.board.subPhase = 'Activation'; p.view.board.activationCursor = 0; p.draw();
+  assert.deepEqual(slotsOf(p.nodes.timeline).map(slot => /arrived|completed/.test(slot.className)), [false, false, false]);
+
+  p.view.board.activationCursor = 1; p.draw();
+  const [first, second, third] = slotsOf(p.nodes.timeline);
+  assert.match(first.className, /completed/);
+  assert.match(first.attributes['aria-label'], /already acted/);
+  assert.match(second.className, /now/);
+  assert.match(second.className, /arrived/);
+  assert.doesNotMatch(third.className, /completed|arrived/);
+
+  p.state.rendered = null; p.draw();
+  assert.doesNotMatch(slotsOf(p.nodes.timeline)[1].className, /arrived/);
+
+  p.view.board.subPhase = 'Cleanup'; p.draw();
+  assert.deepEqual(slotsOf(p.nodes.timeline).map(slot => /completed/.test(slot.className)), [false, false, false]);
+});
+
 test('the initial talent preview follows the first offered evolution creature even if an earlier ally is absent from options', () => {
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution'; p.view.waitingCreature = null;
   p.view.options = { evolution: { creatures: [{ creature: 3, availableTiers: ['tier:one:v1'] }] } }; p.draw();
