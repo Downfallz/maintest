@@ -159,8 +159,9 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   }
 }
 /* Pressed/toggled controls retain a clear visual state after release.
-   Existing component-specific selected styles remain authoritative. */
-button[aria-pressed="true"]:not(:disabled) {
+   :where() keeps it at no specificity, so a component's own selected style stays authoritative: a selected
+   node of the mutation tree keeps its family's colour. */
+:where(button[aria-pressed="true"]:not(:disabled)) {
   border-color: var(--gold);
 }
 
