@@ -1159,3 +1159,44 @@ body:has(#table) { padding-bottom: 24px; }
   }
   #decision[data-kind="Evolution"] .package-card { min-height: 66px; }
 }
+
+
+/* UX 04: legal targets are discoverable and picked targets unmistakable.
+   All effects are paint-only: no resizing, transforms, pointer overlays or layout shifts. */
+#board .creature.legal,
+.mini-board.targeting .mini-creature.legal {
+  outline: 1px solid #e7c37b88;
+  outline-offset: -3px;
+}
+#board .creature.picked,
+.mini-board.targeting .mini-creature.picked {
+  outline: 2px solid var(--gold);
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 2px #e7c37b38, 0 0 16px #e7c37b28;
+}
+.mini-board.targeting .mini-creature.legal:not(.picked) {
+  box-shadow: inset 0 0 0 1px #e7c37b55;
+}
+.mini-board.targeting .mini-creature.legal:focus-visible,
+#board .creature.legal:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #board .creature.legal,
+  #board .creature.picked,
+  .mini-board.targeting .mini-creature.legal {
+    transition: background-color var(--motion-fast) var(--motion-standard),
+                border-color var(--motion-fast) var(--motion-standard),
+                outline-color var(--motion-fast) var(--motion-standard),
+                box-shadow var(--motion-normal) var(--motion-enter);
+  }
+  /* Only eligible, unselected targets breathe; selected ones stay stable. */
+  @keyframes target-available-glow {
+    0%, 100% { box-shadow: inset 0 0 0 1px #e7c37b55; }
+    50% { box-shadow: inset 0 0 0 1px #e7c37b99, 0 0 11px #e7c37b22; }
+  }
+  .mini-board.targeting .mini-creature.legal:not(.picked) {
+    animation: target-available-glow 2s ease-in-out infinite;
+  }
+}
