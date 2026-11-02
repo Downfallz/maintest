@@ -56,3 +56,19 @@ test('detects a newly applied stun only once from a confirmed event', () => {
   ]);
   assert.deepEqual(tracker.observe({ contextKey: 'seat1/round2', confirmedEventId: 6, board: make(true) }), []);
 });
+
+
+test('replay frame boundaries generate damage, healing, defense and defeat deltas', () => {
+  const before = combatSnapshot({ allies: [
+    { id: 'A', health: 10, energy: 2, totalDefense: 3, isAlive: true },
+    { id: 'B', health: 5, energy: 0, totalDefense: 0, isAlive: true },
+  ] });
+  const after = combatSnapshot({ allies: [
+    { id: 'A', health: 0, energy: 2, totalDefense: 1, isAlive: false },
+    { id: 'B', health: 7, energy: 0, totalDefense: 0, isAlive: true },
+  ] });
+  assert.deepEqual(combatChanges(before, after), [
+    { creature: 'A', health: -10, defense: -2, defeated: true },
+    { creature: 'B', health: 2 },
+  ]);
+});
