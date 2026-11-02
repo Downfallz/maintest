@@ -1577,7 +1577,9 @@ function renderBoard(state, current, spellbook = current) {
 function hand(state, current) {
   const view = current.view;
   state.activeHand = null;
-  const asked = isAsked(view) && ['Speed', 'Intent'].includes(view.waitingFor) ? (view.waitingFor === 'Speed' ? tempoFocus(state, current) : view.waitingCreature) : null;
+  let asked = null;
+  if (isAsked(view) && view.waitingFor === 'Speed') asked = tempoFocus(state, current);
+  else if (isAsked(view) && view.waitingFor === 'Intent') asked = view.waitingCreature;
   const rows = handRows(view.board.allies, view.options?.intent, view.board.intents);
   const box = document.createElement('div');
   box.className = 'hand-cards';
