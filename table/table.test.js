@@ -2557,3 +2557,21 @@ test("the next round's question waits under the action that ended the round befo
   assert.equal(p.nodes['evolution-budget'].hidden, false);
   assert.match(p.nodes['own-hand'].textContent, /Second card/);
 });
+
+// A seat whose creatures are all stunned is asked nothing, so the other side can play into the next round before
+// its Upkeep is read: the Upkeep stands on the board that round's first action found, not on the live board.
+test('an upkeep read after the next round has begun stands on the board that round first found', () => {
+  const p = page(); turnoverRound(p);
+  const next = opponentAction(37, 6, 4);
+  const found = [{ ...p.view.board.allies[0] }, { ...p.view.board.enemies[0], health: 8 }];
+  next.event.frame = { before: found, after: [{ ...found[0], health: 14 }, found[1]], timeline: [], rollOffs: [] };
+  p.view.roundEvents.push(next);
+  p.view.board.allies[0] = { ...p.view.board.allies[0], health: 14 };
+  p.view.board.enemies[0] = { ...p.view.board.enemies[0], health: 8 };
+  p.draw(); stepOk(p); stepOk(p);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · upkeep/);
+  assert.match(p.nodes.allies.textContent, /20\/20 HP/, 'not the 14 the next action left');
+  stepOk(p);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · opponent action/);
+  assert.match(p.nodes.allies.textContent, /14\/20 HP/);
+});

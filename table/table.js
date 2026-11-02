@@ -851,7 +851,7 @@ function render(state, views) {
   // The spellbook stays the live one while an opponent action of this round is read: it is the player's, not the
   // replay's. Read while the next round has begun, it is the one of the round being read: the live one would
   // already show the next Upkeep's energy under the action that ended the round before it.
-  renderBoard(state, display, state.playback || readingEarlierRound(state, view) ? display : current);
+  renderBoard(state, display, state.playback || state.step?.action.interlude || readingEarlierRound(state, view) ? display : current);
   renderMat(state, display);
   renderFeed(state, view.feed);
   renderRecap(state, view);
@@ -2258,11 +2258,17 @@ function stepOf(state, current) {
 }
 
 // A turnover step as a one-step replay. A Cleanup stands on the board its round's last action left, with every
-// slot of that round turned over; an Upkeep on the board as it is now, which the next round's question has not
-// moved yet, since nothing is played before it is answered.
+// slot of that round turned over. An Upkeep stands on the board the next round's first recorded action found,
+// when that round has one: a seat whose creatures are all stunned is asked nothing, so the other side can have
+// played into the round before this one is read, and the live board would show those hits ahead of their steps.
+// With nothing played yet, the live board is the Upkeep's.
 function turnoverReplay(state, view, step) {
-  if (step.interlude !== 'aftermath') return { actions: [step], index: 0, action: step };
   const casts = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === step.round);
+  if (step.interlude !== 'aftermath') {
+    const found = casts[0]?.frame?.before;
+    const action = found ? { ...step, frame: { before: found, after: found, timeline: [], rollOffs: [] } } : step;
+    return { actions: [action], index: 0, action };
+  }
   const frame = casts.at(-1)?.frame;
   const action = frame ? { ...step, frame: { ...frame, before: frame.after } } : step;
   return { actions: [...casts, action], index: casts.length, action };
