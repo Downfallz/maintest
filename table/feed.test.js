@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, readingSteps, stepStart } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -265,6 +265,18 @@ test("only the opponent's actions are held, and a seat picked up again starts af
   assert.equal(stepStart(entries, board, cards), 9);
   assert.equal(stepStart(entries.filter(entry => entry.event.resolution.action.actor === 2), board, cards), 3);
   assert.equal(stepStart([], board, cards), -1);
+});
+
+// A seat's own action that closed its round is read like an opponent's: the host has already begun the next
+// round when the page hears of it, so it would never be seen resolved. Its other actions never wait.
+test("a seat's own action is held only when it closed its round", () => {
+  const board = { roundNumber: 2, allies: [{ id: 1 }], enemies: [{ id: 2 }] };
+  const resolved = (sequence, round, actor) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor, spell: 's', targets: [] } }, appliedOutcomes: [] } });
+  const ended = (sequence, round) => ({ sequence, round: round + 1, event: { kind: 'RoundEnded', roundId: round } });
+  const entries = [resolved(3, 1, 1), resolved(5, 1, 2), resolved(7, 1, 1), ended(8, 1), resolved(9, 2, 1), resolved(11, 2, 2)];
+
+  assert.deepEqual(readingSteps(entries, 2, board, cards).map(action => action.sequence), [5, 7, 11]);
+  assert.deepEqual(readingSteps(entries, 7, board, cards).map(action => action.sequence), [11]);
 });
 
 test('a match replay reads each round as it happened: upkeep, the packages revealed, then the casts', () => {

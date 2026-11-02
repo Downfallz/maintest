@@ -684,6 +684,26 @@ test('a confirmed hit floats its damage on the creature it struck, and a stun ch
   await expect(page.locator('.chip.condition-stun').first()).toBeAttached();
 });
 
+// UX 14: the round label lights up when the round turns over, once, and not on the board the page first draws.
+test('a new round lights the round label once, and the first board does not', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.cues = [];
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (frames, options) {
+      if (this.id === 'phase-round' || this.id === 'phase-current') globalThis.cues.push(this.id);
+      return animate.call(this, frames, options);
+    };
+  });
+  await page.reload();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+  expect(await page.evaluate(() => globalThis.cues)).toEqual([]);
+
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board: { ...view.board, roundNumber: 4 } } }));
+  await expect.poll(() => page.evaluate(() => globalThis.cues), { timeout: 10000 }).toEqual(['phase-round']);
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => globalThis.cues)).toEqual(['phase-round']);
+});
+
 for (const kind of ['Speed', 'Evolution', 'Target']) {
   test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
     const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });

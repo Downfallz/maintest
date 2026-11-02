@@ -1090,6 +1090,29 @@ test('Skip leaves the upkeep steps at once and is gone on the last one', () => {
   assert.equal(p.nodes.upkeep.hidden, false, 'Upkeep keeps the list');
 });
 
+// The seat's own action that closed the round is read as a step too: the host turned the round over before the
+// page heard of it, so without the step the last hit, the Cleanup and the next Upkeep would all land at once.
+test("a seat's own action that closed the round is read before the next round's notice", () => {
+  const own = (sequence, round) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 1, spell: 'one', targets: [2] } },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 3 }] } });
+  const p = page(); p.context.setupPhaseControls(p.state);
+  p.view.board.roundNumber = 3; p.view.roundEvents = [opponentAction(28, 2, 3)]; p.draw();
+  p.nodes['combat-step-controls'].children[0].click();
+  p.context.hidePhaseNotice(p.state);
+
+  p.view.board.roundNumber = 4;
+  p.view.roundEvents = [opponentAction(28, 2, 3), own(30, 3), { sequence: 31, round: 4, event: { kind: 'RoundEnded', roundId: 3 } }];
+  p.draw();
+
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.equal(p.nodes['decision-phase'].textContent, 'Your last action');
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 3 · your action closed the round/);
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'the next round waits for the OK');
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.equal(p.nodes['combat-step'].hidden, true);
+  assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
+});
+
 test("the next round's notice waits until the opponent's actions are read, and its ticks are marked on the chips", () => {
   const p = page(); p.context.setupPhaseControls(p.state); p.draw();
   p.context.hidePhaseNotice(p.state);

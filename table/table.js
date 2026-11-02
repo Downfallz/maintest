@@ -6,7 +6,7 @@ import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -2027,7 +2027,7 @@ function stepOf(state, current) {
   const view = current.view;
   if (view.playedByBot || state.playback) return null;
   if (!state.stepSeen.has(current.seat)) state.stepSeen.set(current.seat, stepStart(view.roundEvents, view.board, state.cards));
-  const steps = opponentSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
+  const steps = readingSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
   if (steps.length === 0) return null;
   const [action] = steps;
   const actions = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === action.round);
@@ -2063,7 +2063,8 @@ function renderStep(state, current) {
     state.stepTimerFor = null;
   }
   const asked = isAsked(current.view) && !current.view.over;
-  element('combat-step-count').textContent = `Round ${step.round} · opponent action${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
+  const whose = step.action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
+  element('combat-step-count').textContent = `Round ${step.round} · ${whose}${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
   element('combat-step-action').replaceChildren(recapRow(step.action));
   let label = 'OK';
   if (step.left > 1) label = 'OK · next action →';
@@ -2558,7 +2559,7 @@ function stepHeading(state, current) {
   const step = state.step;
   const board = step.action.frame ? { timeline: step.action.frame.timeline } : view.board;
   const slot = (board.timeline ?? []).findIndex(one => one.creature === step.action.actor.id);
-  element('decision-phase').textContent = "Opponent's turn";
+  element('decision-phase').textContent = step.action.actor.side === 'ally' ? 'Your last action' : "Opponent's turn";
   element('decision-turn').textContent = slot < 0 ? '' : `Turn ${slot + 1} of ${board.timeline.length}`;
   element('decision-turn').hidden = slot < 0;
   element('decision-state').textContent = 'Reading';
