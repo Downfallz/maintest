@@ -1,3 +1,4 @@
+import { createFeedback } from './feedback.js';
 import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
@@ -266,12 +267,14 @@ function start(seats, holder = null, practicing = false, replaying = false) {
     stepSeen: new Map(), stepAuto: null, quietKey: seats.map(seat => seat.token).join('/'),
   };
   state.quiet = quietTables().includes(state.quietKey);
+  state.feedback = createFeedback(globalThis, storage);
   void load(state);
   setupTalentWindow(state);
   setupPhaseControls(state);
   setupConcede(state);
   setupLeave(state);
   setupNotices(state);
+  setupFeedback(state);
   document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -3396,6 +3399,16 @@ function declareLabel(chosen, name, option) {
   return (option?.unaffordableSpells ?? []).includes(chosen) ? `Declare ${name} · may fizzle` : `Declare ${name}`;
 }
 
+function setupFeedback(state) {
+  const sound = element('feedback-sound');
+  const haptics = element('feedback-haptics');
+  const settings = state.feedback.settings();
+  sound.checked = settings.sound;
+  haptics.checked = settings.haptics;
+  sound.addEventListener('change', () => state.feedback.update({ sound: sound.checked }));
+  haptics.addEventListener('change', () => state.feedback.update({ haptics: haptics.checked }));
+}
+
 function chooseCard(state, current, spell) {
   if (!canInteract(state, current, 'Intent')) return;
   const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
@@ -3410,6 +3423,7 @@ function chooseCard(state, current, spell) {
   // button it has just named (a phone's notice sits exactly on it).
   if (!element('phase-notice').hidden) hidePhaseNotice(state);
   state.chosen = spell;
+  state.feedback.cue('select');
   redraw(state);
 }
 
@@ -3452,6 +3466,7 @@ function pick(state, current, candidate) {
   const legal = current.view.options.target?.legalTargets;
   if (!legal?.candidates.includes(candidate)) return;
   if (state.picked.includes(candidate)) return castTargets(state, current);
+  state.feedback.cue('select');
   if (legal.maxTargets === 1) state.picked = [candidate];
   else if (state.picked.length < legal.maxTargets) state.picked = [...state.picked, candidate];
   redraw(state);
