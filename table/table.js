@@ -2670,10 +2670,34 @@ function unlockedPackages(state, seat, board, phaseVisible) {
   return record.unlocked.map(one => ({ ...one, side: allies.has(one.creature) ? 'yours' : 'opponent' }));
 }
 
+// UX 14: a passive cue on the existing phase heading. Never hold an action,
+// create a dialog, or animate historical snapshots while reading a replay.
+const phaseMotionSeen = new Map();
+function cuePhaseChange(state, seat, board, heading, roundLabel) {
+  if (state.playback || state.replaying || state.step) return;
+  const key = String(seat);
+  const round = board.roundNumber;
+  const phase = board.phase + '/' + board.subPhase;
+  const previous = phaseMotionSeen.get(key);
+  phaseMotionSeen.set(key, { round, phase });
+  if (!previous || previous.round === round && previous.phase === phase) return;
+  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const roundChanged = previous.round !== round;
+  // Web Animations runs independently from the render loop. Cancel any old cue
+  // when a rapid SSE update advances phases again; no timers or blocking UI.
+  const target = roundChanged ? roundLabel : heading;
+  target.getAnimations?.().forEach(animation => animation.cancel());
+  target.animate?.([
+    { opacity: .55, filter: 'brightness(1.4)' },
+    { opacity: 1, filter: 'brightness(1)' }
+  ], { duration: roundChanged ? 360 : 200, easing: 'ease-out' });
+}
+
 function renderPhaseGuide(state, view, seat) {
   // The engine prepares round one before the driver starts. Even an empty waiting.seats still means
   // the host has not begun; leave the first phase unseen so its announcement arrives when it does.
   if (view.waiting && !view.over) {
+    phaseMotionSeen.delete(String(seat));
     element('phase-round').textContent = 'Match not started';
     element('phase-current').textContent = 'Waiting for players';
     element('phase-turn').textContent = '';
@@ -2723,6 +2747,7 @@ function renderPhaseGuide(state, view, seat) {
     heading.replaceChildren(major, document.createTextNode(currentStep[0]));
   }
   heading.title = heading.textContent;
+  cuePhaseChange(state, seat, board, heading, element('phase-round'));
   const turn = activeTurn(board);
   element('phase-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total} · Creature ${turn.slot.creature}` : '';
   element('phase-steps').replaceChildren(...phases.map(([label, , , major], index) => {
