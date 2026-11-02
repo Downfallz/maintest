@@ -1781,6 +1781,9 @@ function dock(state, conditions) {
     for (const condition of group.conditions) {
       const chip = document.createElement('span');
       chip.className = 'chip';
+      const kind = String(condition?.effect?.kind ?? '').toLowerCase();
+      if (kind.includes('bleed')) chip.classList.toggle('condition-bleed', true);
+      if (kind.includes('stun')) chip.classList.toggle('condition-stun', true);
       chip.textContent = chipText(condition);
       const source = chipSource(condition, state.cards);
       if (source !== '') {
