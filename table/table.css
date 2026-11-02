@@ -1268,3 +1268,52 @@ body:has(#table) { padding-bottom: 24px; }
     animation: panel-enter var(--motion-normal) var(--motion-enter) both;
   }
 }
+
+
+/* UX 08–11: effects are purely visual, never change layout or capture taps. */
+.creature, .mini-creature { isolation: isolate; }
+.combat-float {
+  position: absolute; z-index: 3; top: 2px; right: 8px; pointer-events: none;
+  font-size: 18px; font-weight: 800; text-shadow: 0 2px 5px #000;
+  color: #ffaea4; opacity: 0; white-space: nowrap;
+}
+.combat-float.heal { color: #a8efd0; }
+.combat-float.defense { color: #e4d4ff; }
+.mini-creature .combat-float { font-size: 13px; right: 3px; top: -4px; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes combat-number-rise {
+    0% { opacity: 0; transform: translateY(5px) scale(.9); }
+    16% { opacity: 1; transform: translateY(-2px) scale(1.08); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-21px); }
+  }
+  @keyframes combat-hit {
+    0%, 100% { filter: none; }
+    35% { filter: brightness(1.65) sepia(.4); }
+  }
+  @keyframes combat-heal {
+    0%, 100% { filter: none; }
+    40% { filter: brightness(1.35); }
+  }
+  @keyframes combat-shield {
+    0%, 100% { box-shadow: none; }
+    40% { box-shadow: inset 0 0 0 3px #c4a6f7, 0 0 16px #b49bee77; }
+  }
+  @keyframes combat-stun {
+    0%, 100% { outline-color: transparent; }
+    40% { outline: 3px solid #c4a6f7; outline-offset: -2px; }
+  }
+  @keyframes combat-defeat {
+    0% { filter: grayscale(0); opacity: 1; }
+    100% { filter: grayscale(.8); opacity: .55; }
+  }
+  .combat-float { animation: combat-number-rise 700ms var(--motion-enter) both; }
+  .fx-damage { animation: combat-hit 340ms ease-out; }
+  .fx-heal { animation: combat-heal 400ms ease-out; }
+  .fx-defense { animation: combat-shield 420ms ease-out; }
+  .fx-stun { animation: combat-stun 540ms ease-out; }
+  .fx-defeated { animation: combat-defeat 650ms ease-out both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-float { opacity: 1; position: static; font-size: 12px; }
+}
