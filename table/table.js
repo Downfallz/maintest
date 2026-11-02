@@ -289,9 +289,12 @@ function start(seats, holder = null, practicing = false, replaying = false) {
 
   element('board-toggle').addEventListener('click', () => showBoard(state, !state.boardOpen));
   globalThis.addEventListener?.('resize', () => placeBoard(state));
-  // Android installed-app Back closes the battlefield before navigating away.
-  globalThis.addEventListener?.('popstate', () => {
-    if (state.boardOpen) showBoard(state, false, true);
+  // Android installed-app Back closes the battlefield before navigating away. The entry arrived at says whether the
+  // battlefield is open, Back or Forward alike: Forward onto the battlefield's entry opens it again, and owns it.
+  globalThis.addEventListener?.('popstate', event => {
+    const onBoard = event.state?.downfallBoard === true;
+    if (onBoard !== state.boardOpen) showBoard(state, onBoard, true);
+    state.boardHistory = onBoard;
   });
   globalThis.addEventListener?.('online', () => { connectionStatus('Reconnecting…'); void refresh(state); });
   globalThis.addEventListener?.('offline', () => connectionStatus('Offline · reconnect when online'));
@@ -641,7 +644,7 @@ function showBoard(state, open, fromHistory = false) {
       globalThis.history.back();
     }
   }
-  if (fromHistory) state.boardHistory = false;
+  if (fromHistory) state.boardHistory = open;
   // Taking the board out of the page shortens it, which can clamp the scroll; closing puts the player back.
   if (open && !state.boardOpen) state.boardReturn = globalThis.scrollY ?? 0;
   const returning = !open && state.boardOpen;
