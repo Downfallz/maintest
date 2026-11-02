@@ -1226,6 +1226,45 @@ function animateHealthBars(board, changes) {
 // The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
 // with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
 // step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
+// Small, nonblocking effects on newly confirmed combat changes. No spell intent is
+// inferred: values come from visible server snapshots only. The nodes are rebuilt
+// on render, so effects are attached after replaceChildren and never intercept taps.
+function combatFeedback(board, changes) {
+  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  for (const change of changes) {
+    const hasHealth = Number.isFinite(change.health) && change.health !== 0;
+    const hasDefense = Number.isFinite(change.defense) && change.defense !== 0;
+    if (!hasHealth && !hasDefense && !change.stunned && !change.defeated) continue;
+    for (const container of ['enemies', 'allies', 'mini-enemies', 'mini-allies']) {
+      const root = element(container);
+      for (const node of root.querySelectorAll?.('.creature, .mini-creature') ?? []) {
+        if (node.dataset.creatureId !== String(change.creature)) continue;
+        const effects = [];
+        if (hasHealth) effects.push(change.health < 0 ? 'fx-damage' : 'fx-heal');
+        if (hasDefense && change.defense < 0) effects.push('fx-defense');
+        if (change.stunned) effects.push('fx-stun');
+        if (change.defeated) effects.push('fx-defeated');
+        for (const effect of effects) node.classList.toggle(effect, true);
+        // A transient, readable number. CSS controls placement and fades it out;
+        // never make it a button or an overlay that can steal pointer input.
+        if (hasHealth) {
+          const amount = document.createElement('span');
+          amount.className = 'combat-float ' + (change.health < 0 ? 'harm' : 'heal');
+          amount.textContent = (change.health > 0 ? '+' : '') + change.health;
+          amount.setAttribute('aria-hidden', 'true');
+          node.append(amount);
+        } else if (hasDefense && change.defense < 0) {
+          const amount = document.createElement('span');
+          amount.className = 'combat-float defense';
+          amount.textContent = '◇' + change.defense;
+          amount.setAttribute('aria-hidden', 'true');
+          node.append(amount);
+        }
+      }
+    }
+  }
+}
+
 function healthFx(state, current, board) {
   if (state.replaying) return;
   const confirmed = (current.view.roundEvents ?? [])
@@ -1235,6 +1274,7 @@ function healthFx(state, current, board) {
     board, contextKey: `${current.seat}/${board.roundNumber}`, confirmedEventId: confirmed >= 0 ? confirmed : null,
   });
   animateHealthBars(board, changes);
+  combatFeedback(board, changes);
 }
 
 function renderBoard(state, current, spellbook = current) {
