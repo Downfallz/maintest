@@ -6,7 +6,7 @@ import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
 import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -2062,7 +2062,7 @@ function stepOf(state, current) {
   const view = current.view;
   if (view.playedByBot || state.playback) return null;
   if (!state.stepSeen.has(current.seat)) state.stepSeen.set(current.seat, stepStart(view.roundEvents, view.board, state.cards));
-  const steps = opponentSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
+  const steps = readingSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
   if (steps.length === 0) return null;
   const [action] = steps;
   const actions = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === action.round);
@@ -2098,7 +2098,8 @@ function renderStep(state, current) {
     state.stepTimerFor = null;
   }
   const asked = isAsked(current.view) && !current.view.over;
-  element('combat-step-count').textContent = `Round ${step.round} · opponent action${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
+  const whose = step.action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
+  element('combat-step-count').textContent = `Round ${step.round} · ${whose}${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
   element('combat-step-action').replaceChildren(recapRow(step.action));
   let label = 'OK';
   if (step.left > 1) label = 'OK · next action →';
@@ -2593,7 +2594,7 @@ function stepHeading(state, current) {
   const step = state.step;
   const board = step.action.frame ? { timeline: step.action.frame.timeline } : view.board;
   const slot = (board.timeline ?? []).findIndex(one => one.creature === step.action.actor.id);
-  element('decision-phase').textContent = "Opponent's turn";
+  element('decision-phase').textContent = step.action.actor.side === 'ally' ? 'Your last action' : "Opponent's turn";
   element('decision-turn').textContent = slot < 0 ? '' : `Turn ${slot + 1} of ${board.timeline.length}`;
   element('decision-turn').hidden = slot < 0;
   element('decision-state').textContent = 'Reading';
@@ -2705,10 +2706,34 @@ function unlockedPackages(state, seat, board, phaseVisible) {
   return record.unlocked.map(one => ({ ...one, side: allies.has(one.creature) ? 'yours' : 'opponent' }));
 }
 
+// UX 14: a passive cue on the existing phase heading. Never hold an action,
+// create a dialog, or animate historical snapshots while reading a replay.
+const phaseMotionSeen = new Map();
+function cuePhaseChange(state, seat, board, heading, roundLabel) {
+  if (state.playback || state.replaying || state.step) return;
+  const key = String(seat);
+  const round = board.roundNumber;
+  const phase = board.phase + '/' + board.subPhase;
+  const previous = phaseMotionSeen.get(key);
+  phaseMotionSeen.set(key, { round, phase });
+  if (!previous || previous.round === round && previous.phase === phase) return;
+  if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const roundChanged = previous.round !== round;
+  // Web Animations runs independently from the render loop. Cancel any old cue
+  // when a rapid SSE update advances phases again; no timers or blocking UI.
+  const target = roundChanged ? roundLabel : heading;
+  target.getAnimations?.().forEach(animation => animation.cancel());
+  target.animate?.([
+    { opacity: .55, filter: 'brightness(1.4)' },
+    { opacity: 1, filter: 'brightness(1)' }
+  ], { duration: roundChanged ? 360 : 200, easing: 'ease-out' });
+}
+
 function renderPhaseGuide(state, view, seat) {
   // The engine prepares round one before the driver starts. Even an empty waiting.seats still means
   // the host has not begun; leave the first phase unseen so its announcement arrives when it does.
   if (view.waiting && !view.over) {
+    phaseMotionSeen.delete(String(seat));
     element('phase-round').textContent = 'Match not started';
     element('phase-current').textContent = 'Waiting for players';
     element('phase-turn').textContent = '';
@@ -2758,6 +2783,7 @@ function renderPhaseGuide(state, view, seat) {
     heading.replaceChildren(major, document.createTextNode(currentStep[0]));
   }
   heading.title = heading.textContent;
+  cuePhaseChange(state, seat, board, heading, element('phase-round'));
   const turn = activeTurn(board);
   element('phase-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total} · Creature ${turn.slot.creature}` : '';
   element('phase-steps').replaceChildren(...phases.map(([label, , , major], index) => {

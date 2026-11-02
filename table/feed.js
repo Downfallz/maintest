@@ -167,6 +167,28 @@ export function opponentSteps(entries, seen, board, cards) {
   return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally');
 }
 
+// What a seat reads one OK at a time: the opponent's actions, and its own action when that action closed its
+// round. The host ends the round and begins the next the moment the last slot resolves, so the page is asked its
+// next question on the next round's board and never shows the closing action resolved: the round would end
+// unseen, its last hit, its Cleanup and the next Upkeep all at once. Held as a step, the closing action is read
+// before the round turns over, and the Upkeep notice -- which waits for the last OK -- follows it.
+export function readingSteps(entries, seen, board, cards) {
+  const closers = roundClosers(entries);
+  return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally' || closers.has(action.sequence));
+}
+
+// The sequence of the last action resolved in each round that has ended.
+function roundClosers(entries) {
+  const ended = new Set((entries ?? []).filter(entry => entry?.event?.kind === 'RoundEnded').map(eventRound));
+  const last = new Map();
+  for (const entry of entries ?? []) {
+    if (entry?.event?.kind !== 'CombatActionResolved' || !ended.has(eventRound(entry))) continue;
+    const round = eventRound(entry);
+    if (!last.has(round) || entry.sequence > last.get(round)) last.set(round, entry.sequence);
+  }
+  return new Set(last.values());
+}
+
 // Where stepping starts for a seat the page has just picked up (a load, a reload): after the seat's own latest
 // action, which it decided on, else after every earlier round. Only what resolved since the seat last acted is
 // shown again, rather than the two rounds the page retains.
