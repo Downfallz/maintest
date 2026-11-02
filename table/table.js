@@ -1223,6 +1223,20 @@ function animateHealthBars(board, changes) {
   }
 }
 
+// The board drawn is always the live one -- a stepped or replayed action only marks it -- so its health moves
+// with the events confirmed to this seat, whatever is being stepped through: an opponent's hit arrives with its
+// step, and is the one most worth seeing. Only a whole-match replay, whose jumps are navigation, animates nothing.
+function healthFx(state, current, board) {
+  if (state.replaying) return;
+  const confirmed = (current.view.roundEvents ?? [])
+    .filter(entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'OngoingEffectsApplied')
+    .reduce((max, entry) => Math.max(max, entry.sequence ?? -1), -1);
+  const changes = healthFxTracker.observe({
+    board, contextKey: `${current.seat}/${board.roundNumber}`, confirmedEventId: confirmed >= 0 ? confirmed : null,
+  });
+  animateHealthBars(board, changes);
+}
+
 function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
@@ -1270,16 +1284,7 @@ function renderBoard(state, current, spellbook = current) {
   element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
   element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
   element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
-  // Only public server events cue effects. Replay/stepping has its own navigation
-  // and must not animate arbitrary historical snapshot jumps.
-  const fxContext = current.seat + '/' + board.roundNumber + '/' + (replay ? 'recorded' : 'live');
-  const lastEvent = !replay ? (view.roundEvents ?? []).filter(entry =>
-    entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'OngoingEffectsApplied'
-  ).reduce((max, entry) => Math.max(max, entry.sequence ?? -1), -1) : null;
-  const changes = healthFxTracker.observe({
-    board, contextKey: fxContext, confirmedEventId: lastEvent >= 0 ? lastEvent : null
-  });
-  animateHealthBars(board, changes);
+  healthFx(state, current, board);
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, spellbook));
 }
