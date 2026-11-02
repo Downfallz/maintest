@@ -764,6 +764,8 @@ function render(state, views) {
     state.evolving = null;
     state.inspectCreature = null;
     state.ordered = [];
+    // A new asking starts at the creature it names first, not at the tab the last one was left on.
+    state.tempoFocus = null;
     element('decision').scrollTop = 0;
     // On a phone the spellbook and the desk scroll on their own: the next creature's speed or spell starts at the
     // top of its list, not where the last creature's choice left it.
@@ -3403,6 +3405,7 @@ function tempoButtons(state, current) {
     picker.append(...creatures.map(creature => {
       const chosen = draft.get(creature);
       const tab = button(`Creature ${creature} · ${chosen ? tempoLabel(chosen) : '—'}`, () => {
+        if (!element('phase-notice').hidden) hidePhaseNotice(state);
         state.tempoFocus = creature;
         redraw(state);
       });
@@ -3437,6 +3440,9 @@ function tempoKey(current) {
 // creature without one, so three taps and Confirm play a round while any tab can still go back.
 function chooseTempo(state, current, creature, speed) {
   if (!canInteract(state, current, 'Speed') || state.tempoSending === tempoKey(current)) return;
+  // Choosing is the player moving on: the phase's announcement would sit over the tabs and Confirm (a phone's
+  // notice covers the sheet), as it does over Declare.
+  if (!element('phase-notice').hidden) hidePhaseNotice(state);
   const draft = tempoDraft(state, current);
   draft.set(creature, speed);
   state.feedback?.cue('select');

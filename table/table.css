@@ -1437,8 +1437,12 @@ body:has(#table) { padding-bottom: 24px; }
 .feedback-body label { display: flex; align-items: center; gap: 9px; min-height: 36px; color: var(--ink); font-size: 12px; }
 .feedback-body input { accent-color: var(--gold); }
 @media (max-width: 760px) {
-  .feedback-preferences { margin-left: auto; flex-shrink: 0; }
+  /* Anchored to the masthead rather than the note, which sits mid-row: it opens under the row's right edge
+     and never past the left of a narrow screen. */
+  .masthead { position: relative; }
+  .feedback-preferences { position: static; margin-left: auto; flex-shrink: 0; }
   .feedback-preferences + #shape { margin-left: 0; }
+  .feedback-body { top: 44px; z-index: 30; }
 }
 
 /* Tempos are chosen per creature from its tab and sent together: the tabs and Confirm span both tempo buttons,
