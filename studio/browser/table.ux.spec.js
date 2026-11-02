@@ -59,13 +59,44 @@ test('interaction transitions use the motion tokens, and reduced motion makes ev
 
   const moving = await read();
   expect(moving.normal).toBe('220ms');
-  expect(moving.duration).toBe('0.12s, 0.12s');
+  // Border and background over --motion-fast; UX 02 adds the shadow, and the press over --motion-instant.
+  expect(moving.duration).toBe('0.12s, 0.12s, 0.12s, 0.08s');
   expect(moving.easing).toContain('cubic-bezier(0.2, 0, 0, 1)');
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const still = await read();
   expect(still.normal).toBe('0ms');
   expect(still.duration.split(', ').map(parseFloat).every(seconds => seconds < 0.001)).toBe(true);
+});
+
+// Buttons (UX 02): a pressed toggle says so in gold, but a component's own selected look stays its own -- a
+// selected node of the mutation tree keeps its family's colour -- and a pointer that can hover lifts a button.
+test('pressed buttons are marked without overriding a component\'s own selected colour', async ({ page }) => {
+  await expect(page.locator('#tab-board')).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.locator('#tab-board').evaluate(node => getComputedStyle(node).borderBottomColor)).toBe('rgb(231, 195, 123)');
+
+  await page.locator('#hand-talents').click();
+  const node = page.locator('#mat .tree-node').first();
+  await node.click();
+  await expect(node).toHaveAttribute('aria-pressed', 'true');
+  // Off the node: a hovered button is gold whatever it is. Polled: the border eases over --motion-fast.
+  await page.mouse.move(0, 0);
+  await expect.poll(() => node.evaluate(button => {
+    const probe = document.createElement('span');
+    probe.style.color = getComputedStyle(button).getPropertyValue('--class-color');
+    document.body.append(probe);
+    const family = getComputedStyle(probe).color;
+    probe.remove();
+    return getComputedStyle(button).borderLeftColor === family;
+  })).toBe(true);
+});
+
+test('a pointer that can hover lifts an enabled button', async ({ page }) => {
+  test.skip(isPhone(page) || !(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)));
+  const button = page.locator('#tab-mat');
+  const before = await button.evaluate(node => getComputedStyle(node).boxShadow);
+  await button.hover();
+  await expect.poll(() => button.evaluate(node => getComputedStyle(node).boxShadow)).not.toBe(before);
 });
 
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {
