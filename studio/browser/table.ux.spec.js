@@ -1012,8 +1012,8 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await page.reload();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
 
-  // Dismiss the initial Tempo announcement as a player would: at 320px it otherwise covers the
-  // cleanup step's next button. Keep the turn-over fixture and all its effect assertions unchanged.
+  // Dismiss the Tempo announcement first, as a player would. At 320px it can stand over the step button,
+  // depending on the platform's font metrics: it does not here, it did on the author's machine.
   await page.locator('#phase-notice-close').click();
 
   const turnedOver = { ...view, feedNext: 11, feed: [resolved(5, 1, [2], []), resolved(7, 2, [1], []),
