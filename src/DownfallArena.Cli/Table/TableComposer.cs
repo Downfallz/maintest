@@ -11,6 +11,7 @@ using DownfallArena.Application.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Resources;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -450,7 +451,8 @@ internal sealed class TableComposer
         // as it was recorded: taken, still offered, or, from before invitations, reached by its token itself.
         var taken = recorded is null ? false : recorded.Taken ?? false;
         var invitation = recorded is null ? Token() : recorded.Invitation;
-        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken, Push = recorded?.Push });
+        var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
+        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken, Push = recorded?.Push, Account = account });
     }
 
     /// <summary>

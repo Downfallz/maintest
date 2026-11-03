@@ -214,9 +214,41 @@ internal sealed class TableServer : IDisposable
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");
         }
 
+        if (await SeatRefusalAsync(table, token, account) is { } refused)
+        {
+            return refused;
+        }
+
         table.Touch(now);
         await _admin.Lobby.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
+    }
+
+    /// <summary>
+    /// On a host where players sign in, a seat is its account's (ADR 0122): its token alone is not enough. A seat
+    /// that belongs to nobody yet -- one reached by a link or a code from before, or saved by a browser before its
+    /// player signed in -- becomes the account's that first reaches it signed in. Null where the request may go on;
+    /// a pilot's token reaches no seat and is not asked.
+    /// </summary>
+    private async Task<StudioResponse?> SeatRefusalAsync(PlayedTable table, string? token, AccountRequest account)
+    {
+        if (_accounts is null || table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is not { } seat)
+        {
+            return null;
+        }
+
+        if (await _accounts.WhoAsync(account) is not { } player)
+        {
+            return StudioResponse.OfPlainText(401, "Sign in to play this seat: open the home page and continue with Google.");
+        }
+
+        // A finished table is only read now, and a seat nobody owned stays nobody's.
+        if (seat.Account is null && (table.IsOver || await _admin.Lobby.BindAsync(table, seat, player.Account.Id)))
+        {
+            return null;
+        }
+
+        return seat.Account == player.Account.Id ? null : StudioResponse.OfPlainText(403, "This seat belongs to another player.");
     }
 
     /// <summary>

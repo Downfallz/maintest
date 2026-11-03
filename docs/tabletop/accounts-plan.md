@@ -1,7 +1,7 @@
 # Plan: player accounts, a Google sign-in and a home page
 
 Status: plan, accepted with [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md) on 2026-11-03,
-with every recommendation under "Open questions" taken. Stages 1 and 2 are built; the rest is not.
+with every recommendation under "Open questions" taken. Stages 1 to 3 are built, and stage 4 is started; the rest is not.
 
 ## What the owner asked for
 
@@ -189,9 +189,12 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    session key in the account store, `AccountSessions` (cookie and ticket), `AccountApi`, `--accounts` and
    `--google-client-id`, the account routes, `/api/me`. The home page's states 1 and 2, and the account chip.
    Nothing is required yet: a signed-in player still plays the way they do today.
-3. **Seats belong to accounts.** Binding on create, join, claim and leave; the `403`; `GET /api/account/games`
-   replacing the browser's history; `adopt`; usernames on the cards and on the table page; state 4. Here
-   "signed in to play" becomes true. `table/README.md`, `playtest-app.md` and `AGENTS.md` updated.
+3. **Seats belong to accounts.** *Built*: a seat records its account (`TableSeat.Account`, kept in `table.json`
+   and rebuilt with the table); creating, joining and claiming need a session and bind; leaving unbinds; a seat
+   request answers `401` signed out and `403` to another account, and binds a seat nobody owns to the first account
+   that reaches it. The account list is `GET /api/lobby/mine` (not `/api/account/games`: the lobby holds the tables),
+   and `POST /api/lobby/adopt` takes over the seats a browser saved. Cards name each side. Not done: the table
+   page's masthead does not name the players yet.
 4. **On Azure.** *Started*: the deployment passes the project's client id (or `TABLE_GOOGLE_CLIENT_ID`) as
    `--accounts google`, `infra/README.md` says how the client is made, and a loopback host answers to `localhost`,
    the one loopback origin Google accepts. The OAuth client exists (a *Web application*; JavaScript origins: the

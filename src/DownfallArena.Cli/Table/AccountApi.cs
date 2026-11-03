@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Studio;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Cli.Table;
@@ -19,6 +21,15 @@ internal sealed class AccountApi
     private const string NamesPrefix = Prefix + "/names/";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// How long an account read from the store answers for it. Every request of a seat checks its session once
+    /// seats belong to accounts (ADR 0122), and a page polls; this is what keeps that off the store. A change made
+    /// by this host (signing out everywhere) replaces the entry at once; one replica is the most the table runs.
+    /// </summary>
+    public static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(30);
+
+    private readonly ConcurrentDictionary<AccountId, (Account Account, DateTimeOffset Read)> _cache = new();
 
     private readonly AccountRegistry _registry;
     private readonly AccountSessions _sessions;
@@ -68,7 +79,7 @@ internal sealed class AccountApi
     {
         ArgumentNullException.ThrowIfNull(request);
         if (_sessions.Read(request.Session) is not { } claim
-            || await _registry.FindAsync(claim.Account, cancellationToken) is not { } account
+            || await AccountAsync(claim.Account, cancellationToken) is not { } account
             || account.Generation != claim.Generation)
         {
             return null;
@@ -78,6 +89,26 @@ internal sealed class AccountApi
             ? AccountSessions.SetCookie(_sessions.Issue(account), request.Secure)
             : null;
         return new SignedIn(account, renewed);
+    }
+
+    /// <summary>The account by its id, from the cache while it is fresh: what a seat's owner and a card's name are read from.</summary>
+    public async Task<Account?> AccountAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        var now = _sessions.Clock.GetUtcNow();
+        if (_cache.TryGetValue(id, out var cached) && now - cached.Read < CacheFor)
+        {
+            return cached.Account;
+        }
+
+        var account = await _registry.FindAsync(id, cancellationToken);
+        if (account is null)
+        {
+            _cache.TryRemove(id, out _);
+            return null;
+        }
+
+        _cache[id] = (account, now);
+        return account;
     }
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, AccountRequest request)
@@ -171,7 +202,10 @@ internal sealed class AccountApi
     {
         if (Read<SignOutBody>(body)?.Everywhere == true && await WhoAsync(request) is { } who)
         {
-            await _registry.SignOutEverywhereAsync(who.Account.Id);
+            if (await _registry.SignOutEverywhereAsync(who.Account.Id) is { } raised)
+            {
+                _cache[raised.Id] = (raised, _sessions.Clock.GetUtcNow());
+            }
         }
 
         return Answer(new { signedOut = true }, AccountSessions.ClearCookie(request.Secure));
