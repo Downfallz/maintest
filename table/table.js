@@ -231,6 +231,8 @@ function invite(plan) {
 async function verifiedSeats(held) {
   const tokens = resumeTokens(savedSeats(storage), held);
   const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+  // Signed out where players sign in: the saved seats are kept, and the player signs in on the way back to them.
+  if (response.status === 401) { signInFirst(); return held; }
   if (!response.ok) return held;
   const matches = (await response.json()).tables;
   const requested = seatsFromLocation(globalThis.location?.search ?? '');

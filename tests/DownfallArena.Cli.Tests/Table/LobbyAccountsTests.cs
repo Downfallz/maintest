@@ -58,6 +58,23 @@ public sealed class LobbyAccountsTests : IDisposable
         table.Seats[1].Taken.ShouldBeFalse();
     }
 
+    /// <summary>A saved seat signed out is a player to send to sign in, not a seat to forget.</summary>
+    [Fact]
+    public async Task Resuming_saved_seats_signed_out_asks_for_a_sign_in_instead_of_answering_none()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var (table, _) = await OpenAsync(mark);
+        var lobby = await LobbyAsync();
+        var tokens = JsonSerializer.Serialize(new { tokens = new[] { table.Seats[0].Token } });
+
+        var signedOut = await lobby.HandleAsync("POST", "/api/lobby/resume", tokens);
+        var signedIn = Read(await lobby.HandleAsync("POST", "/api/lobby/resume", tokens, player: mark));
+
+        signedOut.Status.ShouldBe(401);
+        Read(signedOut).GetProperty("error").GetString().ShouldBe("Account.SignInRequired");
+        signedIn.GetProperty("tables").GetArrayLength().ShouldBe(1);
+    }
+
     [Fact]
     public async Task A_seat_handed_out_belongs_to_the_account_that_took_it_and_says_so_after_a_redeploy()
     {

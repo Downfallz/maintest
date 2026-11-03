@@ -51,7 +51,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return (method, path) switch
             {
                 ("GET", Prefix) => await ListAsync(),
-                ("POST", Prefix + "/resume") => await ResumeAsync(body, account),
+                // Signed out where players sign in, a saved seat is not "nothing": it is a seat that needs its player
+                // signed in, and a page told nothing would forget it instead of sending them to sign in.
+                ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
                 ("GET", Prefix + "/mine") => await MineAsync(account),
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
