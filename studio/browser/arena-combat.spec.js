@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+// Match the lab/live suites: software-rendered Phaser pages run one case at a time within this file.
+test.describe.configure({ mode: 'default' });
 const legal = (candidates, minTargets = 1, maxTargets = 1) => ({ candidates, minTargets, maxTargets });
 const creature = id => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['bolt', 'ward', 'locked'], conditions: [] });
