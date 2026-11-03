@@ -31,42 +31,86 @@ async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
   await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY'); await expect(page.locator('#loading')).toBeHidden();
 }
+// Every hit target and control inside the viewport and at least 44px, read until the layout has settled: the
+// targets follow the scene's own resize, which lands a frame or two after the viewport does. One evaluation a
+// read: nine round trips to a page rendering a 1440x1000 canvas in software can outlast the poll on their own.
 async function fits(page) {
-  const viewport = page.viewportSize();
-  expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([viewport.width, viewport.height]);
-  for (const node of await page.locator('.creature, #switch-seat, #settings, #play-link').all()) {
-    const box = await node.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
-    expect(box.x).toBeGreaterThanOrEqual(-1); expect(box.y).toBeGreaterThanOrEqual(-1);
-    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1); expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
-  }
+  await expect.poll(() => page.evaluate(({ width, height }) => {
+    const wrong = [];
+    const root = document.documentElement;
+    if (root.scrollWidth !== width || root.scrollHeight !== height) wrong.push(`document ${root.scrollWidth}x${root.scrollHeight}`);
+    for (const node of document.querySelectorAll('.creature, #switch-seat, #settings, #play-link')) {
+      const box = node.getBoundingClientRect();
+      if (box.width < 44 || box.height < 44 || box.left < -1 || box.top < -1 || box.right > width + 1 || box.bottom > height + 1) {
+        wrong.push(`${node.id || node.dataset.creature} ${Math.round(box.left)},${Math.round(box.top)} ${Math.round(box.width)}x${Math.round(box.height)}`);
+      }
+    }
+    return wrong;
+  }, page.viewportSize()), { timeout: 15000 }).toEqual([]);
 }
-test('only the chosen viewpoint loads and the real host fields fit the viewport', async ({ page }, info) => {
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
+test('no seat is read before a viewpoint is chosen, and only the chosen one after', async ({ page }) => {
   const state = await mount(page);
   expect(state.requests.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
   await choose(page, 2);
+  const reads = state.requests.filter(one => one.path.startsWith('/api/seat/'));
+  expect(reads.length).toBeGreaterThan(0);
+  expect(reads.every(one => one.token === 'second' && one.path.includes('player2'))).toBe(true);
+});
+
+test('the board is drawn from the chosen seat: its side, its round, its cursor', async ({ page }) => {
+  await mount(page); await choose(page, 2);
   await expect(page.locator('.creature')).toHaveCount(6);
   await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/); await expect(page.locator('[data-creature="1"]')).toHaveClass(/enemy/);
   await expect(page.locator('#round-number')).toHaveText('04'); await expect(page.locator('#actor-name')).toHaveText('Creature 2');
   await expect(page.locator('#timeline [aria-current="step"]')).toContainText('Creature 2');
+});
+
+test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
+  await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
   await expect(page.locator('#inspect-spells')).toHaveText('Host spell name');
   await expect(page.locator('#inspect-stats')).toContainText('21/30 HP · 5 energy · 2 defense');
-  await page.keyboard.press('Escape'); await fits(page); await page.screenshot({ path: info.outputPath('live-board.png') });
-  expect(state.requests.filter(one => one.path.startsWith('/api/seat/')).every(one => one.token === 'second' && one.path.includes('player2'))).toBe(true);
-  expect(state.requests.some(one => one.query.includes('shown='))).toBe(false);
-  expect(state.requests.filter(one => one.method !== 'GET').map(one => one.path)).toEqual(['/api/lobby/resume']); expect(errors).toEqual([]);
 });
-test('snapshots update stun, defeat, conditions and completion without acknowledging the question', async ({ page }) => {
+
+test('the real host fields fit the viewport without a page error', async ({ page }, info) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await mount(page); await choose(page, 2);
+  await fits(page); await page.screenshot({ path: info.outputPath('live-board.png') });
+  expect(errors).toEqual([]);
+});
+
+test('the preview writes nothing but the seat discovery, and never says a question was shown', async ({ page }) => {
+  const state = await mount(page); await choose(page);
+  await expect.poll(() => state.requests.filter(one => one.path.startsWith('/api/seat/')).length).toBeGreaterThan(0);
+  expect(state.requests.some(one => one.query.includes('shown='))).toBe(false);
+  expect(state.requests.filter(one => one.method !== 'GET').map(one => one.path)).toEqual(['/api/lobby/resume']);
+});
+
+test('a notification on the stream refreshes the board at once, ahead of the poll', async ({ page }) => {
+  const state = await mount(page);
+  // The stream stays open and silent until the test lets it speak: one `changed`, then it closes.
+  let speak; const spoken = new Promise(resolve => { speak = resolve; });
+  await page.route('**/events', async route => { await spoken; await route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'event: changed\ndata: 2\n\n' }); });
+  await choose(page);
+  state.first.board.roundNumber = 9;
+  speak();
+  await expect(page.locator('#round-number')).toHaveText('09', { timeout: 2500 });
+});
+
+test('snapshots update stun, defeat and conditions', async ({ page }) => {
   const state = await mount(page); await choose(page);
   state.first.board.allies[0] = creature(1, { health: 8, isStunned: true, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 3 }, remainingRounds: 2, isFresh: true }] });
   state.first.board.enemies[0] = creature(4, { health: 0, isAlive: false }); state.first.board.activationCursor = 2;
   await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('8/30', { timeout: 10000 });
   await expect(page.locator('[data-creature="1"] .creature-tag')).toHaveText('STUNNED'); await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
-  await page.locator('[data-creature="1"]').click(); await expect(page.locator('#inspect-effects')).toContainText('Bleed 3 · new · first countdown pending'); await page.keyboard.press('Escape');
-  state.first.over = true; state.first.outcome = { winner: 'Player1' }; await expect(page.locator('#actor-name')).toHaveText('Match complete', { timeout: 10000 });
-  expect(state.requests.some(one => one.query === '?since=83')).toBe(true); expect(state.requests.some(one => one.query.includes('shown='))).toBe(false);
+  await page.locator('[data-creature="1"]').click(); await expect(page.locator('#inspect-effects')).toContainText('Bleed 3 · new · first countdown pending');
+});
+
+test('a finished match reads as complete, polled from the host\'s own cursor', async ({ page }) => {
+  const state = await mount(page); await choose(page);
+  state.first.over = true; state.first.outcome = { winner: 'Player1' };
+  await expect(page.locator('#actor-name')).toHaveText('Match complete', { timeout: 10000 });
+  expect(state.requests.some(one => one.query === '?since=83')).toBe(true);
 });
 for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the field after rotation`, async ({ page }) => {
   await mount(page, { size }); await choose(page); await expect(page.locator('.creature')).toHaveCount(size * 2); await fits(page);
@@ -94,11 +138,14 @@ test('an invitation is reviewed at the table and never claimed here', async ({ p
   await expect(page.locator('#access-link')).toHaveText('Review invitation'); await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?player1=invite');
   expect(state.requests.map(one => one.path)).toEqual(['/api/lobby/resume', '/api/lobby/invitations']);
 });
-test('sign-in retains the destination and blocked storage supports linked seats', async ({ page }) => {
-  await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }));
-  const state = await mount(page, { saved: false, search: '?player1=first', resumeStatus: 401 });
+test('a refused discovery sends the player to sign in, and back here afterwards', async ({ page }) => {
+  await mount(page, { saved: false, search: '?player1=first', resumeStatus: 401 });
   await expect(page.locator('#access-link')).toHaveText('Sign in'); await expect(page.locator('#access-link')).toHaveAttribute('href', /next=.*arena/);
-  state.resumeStatus = 200; await page.locator('#retry').click(); await choose(page);
+});
+
+test('blocked storage still opens a linked seat, and the way back to the table keeps its token', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }));
+  await mount(page, { saved: false, search: '?player1=first' }); await choose(page);
   await expect(page.locator('#play-link')).toHaveAttribute('href', '/play?table=table-a&seat=player1&player1=first');
 });
 test('missing art retains usable labelled figures', async ({ page }) => {
