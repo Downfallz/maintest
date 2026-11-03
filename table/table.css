@@ -1516,13 +1516,12 @@ body:has(#table) { padding-bottom: 24px; }
   #decision, #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 0; }
   #decision .decision-heading, #decision #asking, .decision-context, #choices { grid-column: 1; grid-row: auto; }
   #decision #asking { font-size: 22px; }
-  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { padding: 12px; }
   #decision[data-kind="Speed"] #choices > button { min-height: 52px; font-size: 18px; text-align: center; padding: 8px; }
   #decision[data-kind="Speed"] #choices > button::before { display: inline; margin: 0 8px 0 0; }
   /* The desk has the screen's whole height beside the bar, not what is left under it, and no board to stay
      clear of: the question is a sheet in the page, not one pinned to the bottom of it. */
   .action-area { position: static; }
   .sheet { max-height: none; border-radius: 12px; box-shadow: none; }
-  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { height: auto; max-height: calc(100dvh - 52px); }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { height: auto; max-height: calc(100dvh - 52px); padding: 12px; }
   #decision[data-kind="Evolution"] { max-height: calc(100dvh - 52px); }
 }
