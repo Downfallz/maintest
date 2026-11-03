@@ -4,21 +4,22 @@ import { test, expect } from '@playwright/test';
 // thing this suite opens, and two of them side by side starved the worker until clicks never returned.
 test.describe.configure({ mode: 'default' });
 
+// One snapshot checks every bound. Separate visibility/boundingBox round trips cost over 17 seconds on
+// the CI software renderer, exhausting the test even when every assertion passed (the live suite does this too).
 async function fits(page) {
-  const viewport = page.viewportSize();
-  const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
-  expect(dimensions.width).toBeLessThanOrEqual(viewport.width);
-  expect(dimensions.height).toBeLessThanOrEqual(viewport.height);
-  for (const node of await page.locator('.creature, #choose, #confirm, #cancel, #skip, #reset, #settings').all()) {
-    if (!await node.isVisible()) continue;
-    const box = await node.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
-    expect(box.x).toBeGreaterThanOrEqual(-1);
-    expect(box.y).toBeGreaterThanOrEqual(-1);
-    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
-    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
-  }
+  await expect.poll(() => page.evaluate(({ width, height }) => {
+    const wrong = [];
+    const root = document.documentElement;
+    if (root.scrollWidth > width || root.scrollHeight > height) wrong.push(`document ${root.scrollWidth}x${root.scrollHeight}`);
+    for (const node of document.querySelectorAll('.creature, #choose, #confirm, #cancel, #skip, #reset, #settings')) {
+      const box = node.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0 || ['hidden', 'collapse'].includes(getComputedStyle(node).visibility)) continue;
+      if (box.width < 44 || box.height < 44 || box.left < -1 || box.top < -1 || box.right > width + 1 || box.bottom > height + 1) {
+        wrong.push(`${node.id || node.dataset.creature} ${Math.round(box.left)},${Math.round(box.top)} ${Math.round(box.width)}x${Math.round(box.height)}`);
+      }
+    }
+    return wrong;
+  }, page.viewportSize())).toEqual([]);
 }
 // Fake timers, paused: from here on the page's clock moves only when the test runs it.
 async function pauseClock(page) {
