@@ -39,10 +39,11 @@ internal sealed class TableServer : IDisposable
     private readonly StoredSessions? _stored;
     private readonly TimeProvider _clock;
     private readonly AccountApi? _accounts;
+    private readonly LeaderboardApi? _leaderboard;
 
     /// <param name="accounts">The players' sign-in (ADR 0122), or none for a host with accounts off.</param>
     /// <param name="stored">The host's store, read for a session page whose table this process no longer has; none for a host that records nothing.</param>
-    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null)
+    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null, LeaderboardApi? leaderboard = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(files);
@@ -55,6 +56,7 @@ internal sealed class TableServer : IDisposable
         _stored = stored;
         _clock = clock;
         _accounts = accounts;
+        _leaderboard = leaderboard;
         _host = new HttpHost(address, port, AnswerAsync);
     }
 
@@ -199,6 +201,13 @@ internal sealed class TableServer : IDisposable
             return _accounts is null
                 ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off).")
                 : await _accounts.HandleAsync(method, path, body, account);
+        }
+
+        if (LeaderboardApi.Names(path))
+        {
+            return _leaderboard is null
+                ? StudioResponse.OfPlainText(404, "This host keeps no ladder: players do not sign in here (--accounts off).")
+                : await _leaderboard.HandleAsync(method, account);
         }
 
         var token = request.Headers[TableApi.TokenHeader];
