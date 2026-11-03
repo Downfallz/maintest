@@ -2,7 +2,7 @@ namespace DownfallArena.Application.Leaderboard;
 
 /// <summary>
 /// Mark Glickman's Glicko-2 rating system ("Example of the Glicko-2 system", 2012), step by step, for one player
-/// and the games of one rating period (ADR 0125). Pure arithmetic: no clock, no store.
+/// and the games of one rating period (ADR 0124). Pure arithmetic: no clock, no store.
 /// </summary>
 public static class Glicko2
 {

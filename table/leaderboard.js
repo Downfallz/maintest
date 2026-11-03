@@ -1,4 +1,4 @@
-// The ladder (ADR 0125): who ranks where among the players with an account, and, for whoever is signed in,
+// The ladder (ADR 0124): who ranks where among the players with an account, and, for whoever is signed in,
 // their own place and their record against each bot. The host computes everything; this page only draws it.
 
 /** A record as a ladder writes it: wins, losses and draws. */

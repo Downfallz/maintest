@@ -446,7 +446,7 @@ A recorded match with an account in it leaves a result for a future leaderboard 
 plan): `results/<yyyy-MM>/<matchId>.json` beside the accounts, with each seat's account id or bot, the winner, the
 rounds and whether it is *ranked* (two seats, two different accounts). No name is written there.
 
-`/leaderboard` is the ladder (ADR 0125), linked from the lobby when players sign in: every account with a ranked
+`/leaderboard` is the ladder (ADR 0124), linked from the lobby when players sign in: every account with a ranked
 game, by Glicko-2 rating with its ± and its record, provisional players (± above 110) after the others, and for
 whoever is signed in their place and their record against each bot. `GET /api/leaderboard` answers anybody; the
 ladder is recomputed from the results every half minute at most.

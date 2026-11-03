@@ -6,7 +6,7 @@ using DownfallArena.Cli.Studio;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// The ladder (ADR 0125): every account with a ranked game, by Glicko-2 rating, named by the name its account chose,
+/// The ladder (ADR 0124): every account with a ranked game, by Glicko-2 rating, named by the name its account chose,
 /// and, for whoever is signed in, their own place and their record against each bot. Read by anybody, signed in or
 /// not. The ladder is computed from the kept results and held for half a minute, so a page left open costs one read
 /// of the results a half-minute, however many people have it open.

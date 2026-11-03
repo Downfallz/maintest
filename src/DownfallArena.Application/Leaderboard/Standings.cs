@@ -4,7 +4,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Application.Leaderboard;
 
 /// <summary>
-/// The ladder read from the kept results (ADR 0125). Ranked games, oldest first, each a rating period of its own
+/// The ladder read from the kept results (ADR 0124). Ranked games, oldest first, each a rating period of its own
 /// for its two players, rated against each other as they stood before it; a day without a game grows a player's
 /// deviation by one idle period, up to the day asked about. Games against a bot are tallied per bot and never rated.
 /// </summary>

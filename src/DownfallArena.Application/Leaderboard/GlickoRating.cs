@@ -1,7 +1,7 @@
 namespace DownfallArena.Application.Leaderboard;
 
 /// <summary>
-/// A player's strength as Glicko-2 states it (ADR 0125), on the familiar scale: a rating, how uncertain it is (the
+/// A player's strength as Glicko-2 states it (ADR 0124), on the familiar scale: a rating, how uncertain it is (the
 /// rating deviation, roughly one standard deviation), and how erratic the player has been (the volatility).
 /// </summary>
 public readonly record struct GlickoRating(double Rating, double Deviation, double Volatility)
