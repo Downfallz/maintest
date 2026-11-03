@@ -57,7 +57,11 @@ internal static class TableHost
 
         using var sender = keys is null ? null : new WebPushSender(keys);
         var push = keys is null ? null : new PushNotices(sender!, keys.PublicKey, clock) { Record = table => table.RecordAsync(registry.Codes) };
-        var composer = new TableComposer(services, rules, store) { Agents = agents, Push = push };
+        // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
+        var results = options.Accounts != AccountsMode.Off && store is not null
+            ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
+            : null;
+        var composer = new TableComposer(services, rules, store) { Agents = agents, Push = push, Results = results };
         var stored = store is null ? null : new StoredSessions(store);
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere

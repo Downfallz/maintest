@@ -61,6 +61,23 @@ internal static class ArtifactStores
         return await BlobAccountStore.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>Where finished matches with an account in them are kept (ADR 0122, stage 5): beside the accounts, under <c>results/</c>.</summary>
+    public static async Task<IMatchResults> OpenResultsAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileMatchResults(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
+        }
+
+        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobMatchResults.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>The recordings' container URL with its container swapped for the accounts' one.</summary>
     public static Uri AccountsUri(Uri recordings)
     {
