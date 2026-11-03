@@ -457,3 +457,20 @@ plays the other seat of that table is offered **Back to** its own seat instead, 
 meant for their opponent does not take that seat by accident; playing both seats on that device is an explicit
 second button. A player who lost the device holding a seat gets a **New invitation** from the admin panel,
 which cuts that device off.
+
+## Arena design laboratory
+
+`/arena-lab` opens an isolated Phaser battlefield that fits the viewport in portrait and landscape.
+It has provisional illustrated creatures, a fixed sample action with three target outcomes, animated
+impact, keyboard/touch controls and inspection/settings overlays. It uses no seat or API. Reset, skip,
+2× playback, optional sound and reduced motion are available. `/play` remains the actual game.
+
+Build the local renderer before opening the lab or running host route tests:
+
+```bash
+npm --prefix arena ci --ignore-scripts
+npm --prefix arena run build
+```
+
+Docker and CI build it automatically. See [build details](../arena/README.md) and the
+[browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.

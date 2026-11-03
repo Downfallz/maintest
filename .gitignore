@@ -95,3 +95,6 @@ coverage.xml
 node_modules
 studio/browser/test-results/
 studio/browser/playwright-report/
+
+# Reproducible Phaser bundle (npm --prefix arena run build).
+/table/arena-build/

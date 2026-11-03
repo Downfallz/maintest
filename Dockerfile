@@ -11,6 +11,17 @@
 # an image that trusts it; the defaults are Microsoft's, and CI builds on those.
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/runtime:10.0
+ARG NODE_IMAGE=node:22-bookworm-slim
+
+FROM ${NODE_IMAGE} AS arena-build
+WORKDIR /src/arena
+COPY arena/package.json arena/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY arena/ ./
+# The bundle imports modules of the page itself (the state machine, the fixture, the layout, the terms); every
+# one of them, so a new import never has to be listed here. The test files are kept out by .dockerignore.
+COPY table/*.js /src/table/
+RUN npm run build
 
 FROM ${SDK_IMAGE} AS build
 
@@ -38,6 +49,7 @@ WORKDIR /app
 COPY --from=build /out/bin/ bin/
 COPY --from=build /out/data/dst/ data/dst/
 COPY table/ table/
+COPY --from=arena-build /src/table/arena-build/ table/arena-build/
 COPY viewer/index.html viewer/viewer.css viewer/
 COPY docs/tabletop/playtest.rules.json docs/tabletop/
 COPY learning/weights/ learning/weights/
