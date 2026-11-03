@@ -1,7 +1,7 @@
 # 0123. Prototype the arena as an isolated presentation
 
 Date: 2026-11-03
-Status: Accepted for the isolated prototype; live adoption remains undecided
+Status: Accepted for the isolated prototype; live adoption is a later decision
 
 ## Context
 
@@ -42,3 +42,20 @@ becomes a game command. The fixture must never be imported by a live adapter. Se
 - WebGL uses Phaser's canvas fallback where available. Missing art remains playable; renderer failure
   offers reload. Real-device Safari/Android, screen-reader and GPU-loss testing remain release work.
 - Accepting Phaser for this experiment does not approve replacing `/play`. Live integration is A3–A8.
+
+## Alternatives considered
+
+- Keep the DOM study and animate it with CSS: it stayed a scrolling page, and a battlefield of large figures
+  with depth, particles and a camera is what the DOM does worst. It lost on the feel the prototype exists to test.
+- PixiJS: a renderer alone, with scenes, scaling, tweens, cameras and a loader to write or assemble. Phaser
+  ships all of them, and the prototype is a spike, not a framework; the heavier bundle is the price.
+- A CDN build of Phaser: no local build, but a runtime dependency on a third party for a page the hosted
+  table serves, and nothing to pin. Bundling locally keeps the lockfile as the one version.
+- A Phaser-only page, with the targets drawn on the canvas: no duplicated positions, but no keyboard, no
+  screen reader and no native dialogs. Accessible DOM targets over the canvas cost a shared layout instead.
+
+## Follow-up
+
+- `TableFiles` routes the bundle and the art; `TableFilesTests` holds them, and says to build when it is absent.
+- `AGENTS.md`, the `/verify` skill, CI, the Docker image and Dependabot know the `arena/` package.
+- The live adapter (A3–A4) replaces the fixture with the seat projection; this ADR's fixture rule holds until then.

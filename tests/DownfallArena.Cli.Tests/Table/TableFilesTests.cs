@@ -14,30 +14,6 @@ public sealed class TableFilesTests
     private static TableFiles Files => new(Directory);
 
     [Fact]
-    public void The_isolated_arena_laboratory_and_its_assets_are_served()
-    {
-        var page = Files.Get("/arena-lab");
-
-        page.Status.ShouldBe(200);
-        page.ContentType.ShouldContain("text/html");
-        Text(page).ShouldContain("arena-build/game.js");
-        Files.Get("/arena-build/game.js").Status.ShouldBe(200);
-        Files.Get("/arena-build/game.js").ContentType.ShouldContain("text/javascript");
-        Files.Get("/arena-build/PHASER-LICENSE.txt").Status.ShouldBe(200);
-        foreach (var asset in new[] { "eclipse-arena", "creatures" })
-        {
-            var image = Files.Get($"/arena-art/{asset}.webp");
-            image.Status.ShouldBe(200);
-            image.ContentType.ShouldBe("image/webp");
-            Encoding.ASCII.GetString(image.Body, 0, 4).ShouldBe("RIFF");
-        }
-        Files.Get("/arena-lab.css").ContentType.ShouldContain("text/css");
-        Files.Get("/arena-lab-state.js").ContentType.ShouldContain("text/javascript");
-        Files.Get("/arena-lab-fixture.js").ContentType.ShouldContain("text/javascript");
-        Files.Get("/arena-lab.test.js").Status.ShouldBe(404);
-    }
-
-    [Fact]
     public void The_page_and_its_stylesheet_are_served_at_the_paths_the_page_asks_for()
     {
         Text(Files.Get("/")).ShouldContain("<title>");
@@ -90,11 +66,62 @@ public sealed class TableFilesTests
         Files.Get($"/{module}").Status.ShouldBe(200);
     }
 
+    /// <summary>
+    /// The arena laboratory (ADR 0123) is a page of this host like the others, and what it loads is relative to
+    /// itself: the stylesheet and the bundle it names resolve to routes of the host.
+    /// </summary>
+    [Fact]
+    public void The_arena_laboratory_is_served_with_the_stylesheet_and_the_bundle_it_names()
+    {
+        var page = Files.Get("/arena-lab");
+
+        page.Status.ShouldBe(200);
+        page.ContentType.ShouldContain("text/html");
+        Text(page).ShouldContain("href=\"arena-lab.css\"");
+        Text(page).ShouldContain("src=\"arena-build/game.js\"");
+        Files.Get("/arena-lab.css").ContentType.ShouldContain("text/css");
+        Files.Get("/arena-build/game.js").ContentType.ShouldContain("text/javascript");
+    }
+
+    /// <summary>
+    /// The bundle is built, not committed: a route to a file that is not there answers 500 and says so, and this
+    /// test's own failure says what to run.
+    /// </summary>
+    [Fact]
+    public void The_arena_bundle_and_the_notices_built_beside_it_are_served()
+    {
+        const string hint = "Run `npm --prefix arena ci --ignore-scripts && npm --prefix arena run build` first";
+
+        foreach (var file in new[] { "game.js", "game.js.LEGAL.txt", "PHASER-LICENSE.txt" })
+        {
+            var served = Files.Get($"/arena-build/{file}");
+            served.Status.ShouldBe(200, $"arena-build/{file} is not served. {hint}");
+        }
+
+        Text(Files.Get("/arena-build/game.js.LEGAL.txt")).ShouldContain("Phaser");
+        Files.Get("/arena-build/PHASER-LICENSE.txt").ContentType.ShouldContain("text/plain");
+    }
+
+    /// <summary>The scene's art is bytes, served as the image it is rather than decoded as text.</summary>
+    [Theory]
+    [InlineData("eclipse-arena")]
+    [InlineData("creatures")]
+    public void The_arena_art_is_served_as_webp_bytes(string asset)
+    {
+        var image = Files.Get($"/arena-art/{asset}.webp");
+
+        image.Status.ShouldBe(200);
+        image.ContentType.ShouldBe("image/webp");
+        Encoding.ASCII.GetString(image.Body, 0, 4).ShouldBe("RIFF");
+        Encoding.ASCII.GetString(image.Body, 8, 4).ShouldBe("WEBP");
+    }
+
     /// <summary>A test module is not part of the page, and the host must not hand one out.</summary>
     [Fact]
     public void A_path_the_route_table_does_not_hold_is_not_read_from_disk()
     {
         Files.Get("/transport.test.js").Status.ShouldBe(404);
+        Files.Get("/arena-lab.test.js").Status.ShouldBe(404);
         Files.Get("/../appsettings.json").Status.ShouldBe(404);
         Files.Get("/favicon.ico").Status.ShouldBe(204);
     }

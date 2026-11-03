@@ -123,7 +123,9 @@ scripts/iterate.sh --explore 0.2 --clone-on-explore                  # fit the c
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
-ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`. CI runs exactly these, then sends the build and the coverage
+ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
+when `arena/` or `table/arena-lab*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
+`arena-lab.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

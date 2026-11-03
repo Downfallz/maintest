@@ -27,10 +27,15 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 
 - `src/main.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
-- `src/layout.ts`: separate portrait/landscape geometry shared with HTML hit targets.
 - `src/types.ts`: presentation types only.
-- `table/arena-lab-state.js`: existing deterministic sample state machine and cancellation generation.
+- `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
+  and the cancellation generation.
+- `table/arena-lab-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit
+  targets so the two cannot drift.
 - `table/arena-lab-fixture.js`: fictional before/after frames. Never import this into a live adapter.
+
+The three `table/` modules are plain JavaScript so `node --test table/*.test.js` covers them without a build:
+the TypeScript imports them, and holds nothing that is not Phaser or the DOM.
 
 No rules, legality, damage or random resolution are reimplemented here. There is no API request, saved
 seat, live stream or service worker. The next PR should extract the read-only controller boundary before
@@ -56,14 +61,3 @@ packaged bundle. Screenshots in the delivery plan come from the actual .NET host
 
 This is one authored action, three reused static forms and illustrative UI text. Real-device Safari,
 Android GPU/performance, screen readers, high zoom and a complete real match remain future acceptance.
-
-## Local validation record — 2026-11-03
-
-- TypeScript/esbuild and .NET build passed (0 warnings/errors; .NET used `-m:1 -p:UseSharedCompilation=false`).
-- 659 Node tests and 24 Chromium browser checks passed.
-- Direct .NET test applications: 2,102 passed; 17 blob-storage tests skipped because Azurite was absent.
-- Real .NET host: local assets, target selection, animated resolution and three viewport captures passed
-  with no browser page errors or HTTP failures.
-- Aggregate `dotnet test` and full `dotnet format --verify-no-changes` were blocked by the environment's
-  named-pipe permission restriction. Changed C# files passed folder-based whitespace verification.
-- Docker was unavailable locally. CI must verify the container build, full formatting and Azurite tests.

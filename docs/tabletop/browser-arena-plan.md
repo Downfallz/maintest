@@ -186,7 +186,8 @@ Primary references consulted for the renderer recommendation:
 ## Captured Phaser prototype
 
 Actual browser screenshots of the interactive implementation, captured through the .NET host. Each image
-is a single viewport, not a full-page scrolling capture. Earlier DOM-study images are retained as history.
+is a single viewport, not a full-page scrolling capture. The earlier DOM study's captures live in this branch's
+history, not in the tree: nothing refers to them any more.
 
 ![Phaser battlefield](images/arena-lab/phaser-desktop.png)
 
