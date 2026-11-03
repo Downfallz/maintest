@@ -75,9 +75,11 @@ test('targeting, cancellation and inspection work without leaving the game scree
   await expect(page.locator('.is-selected')).toHaveCount(0);
 });
 
-test('reduced motion reaches all fixed outcomes including defeat, then resets cleanly', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const [target, result] of [['b1', '14/24 HP'], ['b2', '5/24 HP'], ['b3', '0/24 HP']]) {
+// Each fixed outcome owns its page and deadline; three complete casts plus reset exceed one test's
+// budget on the software renderer. Every outcome still checks the resolved state and the reset.
+for (const [target, result] of [['b1', '14/24 HP'], ['b2', '5/24 HP'], ['b3', '0/24 HP']]) {
+  test(`reduced motion resolves ${target} to ${result}, then resets cleanly`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await choose(page, target);
     await page.locator('#confirm').click();
     await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
@@ -91,8 +93,8 @@ test('reduced motion reaches all fixed outcomes including defeat, then resets cl
     await page.locator('#reset').click();
     await expect(page.locator('.is-defeated')).toHaveCount(0);
     await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
-  }
-});
+  });
+}
 
 test('keyboard casting and skip need no live API', async ({ page }) => {
   const apiRequests = [];
