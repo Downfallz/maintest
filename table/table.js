@@ -172,9 +172,13 @@ function referredSeats() {
 // which case the address is the only thing a reload can find them in.
 function settle(seats) {
   activateSeats(seats, storage);
+  const kept = keeps(storage);
   if (globalThis.history?.replaceState) {
-    globalThis.history.replaceState(null, '', addressAfter(playPath(globalThis.location?.pathname), seats, keeps(storage)));
+    globalThis.history.replaceState(null, '', addressAfter(playPath(globalThis.location?.pathname), seats, kept));
   }
+  // The live preview finds its seats where this page keeps them: in storage, or, when nothing is kept, in the
+  // address it is opened from (ADR 0125).
+  element('arena-link').href = addressAfter('/arena', seats, kept);
 
   enter(seats, null);
 }

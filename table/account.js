@@ -21,7 +21,7 @@ export function signInPath(here) {
 /** The page to go back to after signing in: only a seat or an invitation of this host, never another site. */
 export function nextPath(search) {
   const next = new URLSearchParams(search ?? '').get('next');
-  return next && /^\/(?:play|j\/|\?)/.test(next) && !next.startsWith('//') ? next : null;
+  return next && /^\/(?:play|arena(?:[?#]|$)|j\/|\?)/.test(next) && !next.startsWith('//') ? next : null;
 }
 
 /** The player half of /api/me, with off for an older host that does not say. */

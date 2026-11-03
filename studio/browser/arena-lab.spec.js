@@ -180,7 +180,7 @@ test('the hit targets stand over the figures the scene places', async ({ page })
   // The page serves the layout the scene uses, so the test asks it where the figures are and holds every hit
   // target against that: a target that is not over its figure is a tap that misses.
   const stage = await page.locator('#battle-zone').boundingBox();
-  const placed = await page.evaluate(async size => (await import('/table/arena-lab-layout.js')).placements(...size), [stage.width, stage.height]);
+  const placed = await page.evaluate(async size => (await import('/table/arena-layout.js')).placements(...size), [stage.width, stage.height]);
   expect(placed).toHaveLength(6);
   for (const [index, node] of (await page.locator('.creature').all()).entries()) {
     const box = await node.boundingBox();

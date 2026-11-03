@@ -35,7 +35,8 @@ studio/                        Static HTML content studio: browse, edit, version
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
                                presentation.js is the pure seat-to-presentation boundary shared with future live arena work.
                                `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
-                               (docs/tabletop/browser-arena-plan.md, ADR 0123).
+                               (docs/tabletop/browser-arena-plan.md, ADR 0123); `/arena` is the opt-in read-only Phaser
+                               view of one authenticated seat (ADR 0125).
 arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
@@ -125,8 +126,8 @@ scripts/iterate.sh --explore 0.2 --clone-on-explore                  # fit the c
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
-when `arena/` or `table/arena-lab*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
-`arena-lab.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
+when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
+`arena-lab.spec.js` and `arena-live.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

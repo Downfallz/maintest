@@ -123,7 +123,7 @@ Numbers below belong to this arena workstream, not the earlier UI-polish PR list
 | A1 — Design laboratory (implemented) | `table/arena-lab*`, explicit host routes, this plan | Compare two layouts; one action with three fixed outcomes; cancel/reset/skip/reduced-motion tests; route test | Current main |
 | A2 — Immersive viewport prototype (implemented in this PR) | Phaser/TypeScript renderer spike, viewport shell, layered environment, three provisional forms, HUD and asset mapping | No document scrolling or clipped commands; visible actor/targets/action bar; decision/targeting/resolution at 1440×1000, 844×390 and 390×844; missing-art fallback | A1 design review |
 | A3 — Presentation/controller boundary (implemented) | `table/presentation.js` extracts local question adaptation, historical display selection and team/timeline mapping; `/play` consumes it | Frozen-input tests cover seat/asking changes, historical resources, public event cutoffs, host order and missing frames; browser journeys exercise the existing renderer | A1; based on `69ce758d` including #420 fixes |
-| A4 — Real board, read-only | Opt-in arena route over existing authenticated seat transport | Correct seat projection, account/invitation handling, dead/stunned/condition states, reconnect; no decisions emitted | A3 |
+| A4 — Real board, read-only (implemented) | Opt-in arena route over existing authenticated seat transport | Correct seat projection, account/invitation handling, dead/stunned/condition states, reconnect; no decisions emitted | A3 |
 | A5 — Real action and target controls | Existing `slotView`/command builder + scene targets + catalogue-backed action list | At-activation and hidden-intent paths, friendly/self/multiple/no-target spells, unaffordable/unavailable cards, stale asking, server rejection, double-click prevention | A2, A4 |
 | A6 — Confirmed-action playback | Ordered frame queue, action motifs, existing `combat-fx` + `feed`/`replay` helpers | No duplicate effects from SSE/poll; multiple events in one response; final action before upkeep; skip/reconnect/hidden tab; legacy frame fallback | A4; integrate A5 |
 | A7 — Complete game loop | Mutation Tree, Tempo/ties, upkeep, aftermath, result and replay in the scene shell | Complete 3v3 match, simultaneous choices, eliminated creatures, round cap, concession, finished-session replay | A5, A6 |
@@ -144,6 +144,35 @@ This step intentionally leaves `/arena-lab` on its sample state machine: wiring 
 Parity today is tested between the shared board model and `/play`; parity with a live Phaser renderer can
 only be asserted once A4 exists. A4 must use a separate entry point and must not import the lab fixture or
 start a second instance of `table.js`. Refresh `main` again before implementing that transport lifecycle.
+
+### A4 delivery boundary
+
+Built on `main` at `96edfe27` after PR #425 merged, including its replay guard, preserved asked creature,
+fixture-based browser assertions and choice-field analyser correction. The account result changes from
+#421 are included in the integration baseline.
+[ADR 0125](../adr/0125-read-one-authenticated-seat-in-the-live-arena.md) records live adoption without
+rewriting the accepted prototype decision.
+
+`/arena` asks for a viewpoint, resumes accepted seats through the lobby, and displays the selected
+seat's host board through `boardPresentation`. It reads one seat only, never claims an invitation,
+never sends a decision or `shown`, and does not replace saved `/play` seats. The existing host's read
+routes still mark that accepted seat as arrived. `/play` now links to the opt-in preview; decisions
+remain there. The laboratory retains its fictional state and cannot enter the live dependency graph.
+
+One-, two- and three-creature teams, activation order, health, energy, defense, stun, immunity,
+conditions, spell inspection and match completion use live data. SSE refresh, polling fallback,
+bounded stream reconnect, stale-state labels and generation fencing cover the transport lifecycle.
+Revocation clears every private surface; a viewpoint change requires another explicit selection.
+
+Validation adds deterministic controller/discovery tests, mobile/desktop browser journeys and a real
+host journey that advances the match from another client. The artwork remains provisional, and this
+step deliberately has no action controls or combat playback. A5 is the next slice.
+
+Screens captured from the actual .NET host in this slice (Evolution, before decisions):
+
+![Live arena on desktop](images/arena-live/desktop.jpg)
+
+[Live arena on phone](images/arena-live/phone.jpg)
 
 ## Revised immersive prototype (A2)
 
