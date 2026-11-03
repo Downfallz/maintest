@@ -2,7 +2,7 @@
 
 Date: 2026-11-03
 
-Status: Proposed. Would amend ADRs 0081, 0115 and 0116.
+Status: Accepted. Amends ADRs 0081, 0115 and 0116.
 
 ## Context
 

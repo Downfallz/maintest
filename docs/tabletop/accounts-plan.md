@@ -1,7 +1,7 @@
 # Plan: player accounts, a Google sign-in and a home page
 
-Status: plan. The decision it rests on is [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md)
-(Proposed). Nothing here is built yet.
+Status: plan, accepted with [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md) on 2026-11-03,
+with every recommendation under "Open questions" taken. Stage 1 is built; the rest is not.
 
 ## What the owner asked for
 
@@ -57,7 +57,7 @@ weighs in full:
 - **It can be tested.** The verifier takes its keys from a port; a test signs its own token with its own RSA key.
 
 What it costs: about a hundred lines of JWT verification that have to be right, and a session key the host
-generates once and keeps in its store (blob `accounts/session.key`, behind the managed identity like
+generates once and keeps in its store (blob `session.key` in the accounts container, behind the managed identity like
 everything else). That key is made by the host, never typed by anyone, and rotating it signs everyone out.
 
 ### The session cookie
@@ -84,7 +84,7 @@ repository variable passed to `infra/main.bicep`, like `signInClientId`.
 ```jsonc
 // accounts/<accountId>.json
 {
-  "id": "acct_7kq2m9x4p1d8w3zc",   // internal id: random, 16 base32 characters after the prefix
+  "id": "acct_7kq2m9x4p2d8w3zc",   // internal id: random, 16 base32 characters after the prefix
   "provider": "google",
   "subject": "109876543210987654321", // Google's sub
   "username": "MarkF",              // as typed
@@ -93,8 +93,11 @@ repository variable passed to `infra/main.bicep`, like `signInClientId`.
 }
 ```
 
+Accounts live in a blob container of their own, `accounts`, next to the recordings' one and never inside it: the
+session store reads every top-level prefix of its container as a session. On a laptop they are a directory.
+
 Two index records make look-ups and uniqueness atomic, written with "create only if absent" (`If-None-Match: *`
-on a blob, `FileMode.CreateNew` on a file):
+on a blob, a move that does not overwrite on a file):
 
 - `accounts/by-subject/google/<sub>.json` → the account id;
 - `accounts/by-name/<username, lower-cased>.json` → the account id.
@@ -119,7 +122,8 @@ account can be deleted (stage 4).
 
 | Layer | What |
 | --- | --- |
-| Application | `Accounts/`: `AccountId`, `Username` (the rules above, returning `Result` with `Account.*` error codes), `Account`, the port `IAccountStore`, and the use cases `SignIn` (subject → existing account or "needs a username") and `Register` (subject + username → account). The port `IIdentityTokenVerifier` so the use cases never see a JWT. |
+| SharedKernel | `Identifiers/AccountId`, beside the other strongly typed ids. |
+| Application | `Accounts/`: `Username` (the rules above, returning `Result` with `Account.*` error codes), `Account`, the port `IAccountStore`, and `AccountRegistry`, the use cases: find the account of a sign-in (or none: it needs a username), check a name, register. The port `IIdentityTokenVerifier` so the use cases never see a JWT. |
 | Infrastructure | `FileAccountStore` and `BlobAccountStore` (create-if-absent semantics), `GoogleIdTokenVerifier` with its key cache behind a fetcher. |
 | Cli | `AccountApi` (routes below), the session cookie, `--accounts` and `--google-client-id`, the binding of seats in `LobbyApi` and `TableRecord`. |
 | Domain | Nothing. |
@@ -177,8 +181,9 @@ page's masthead says the same: *You: MarkF · against Greedy*.
 
 Each stage is one pull request, built, tested, formatted, with the node tests when a page changes.
 
-1. **Accounts, alone.** `Username`, `AccountId`, `Account`, `IAccountStore`, the two adapters, `SignIn` and
-   `Register`, with tests (uniqueness under a race, reserved names, case, the crash between the name and the
+1. **Accounts, alone.** *Built*: `AccountId` (SharedKernel), `Username`, `Account`, `IAccountStore` and
+   `AccountRegistry` (`FindAsync`, `CheckUsernameAsync`, `RegisterAsync`) in `Application/Accounts`,
+   `FileAccountStore` and `BlobAccountStore` in `Infrastructure/Accounts`, with tests (uniqueness under a race, reserved names, case, the crash between the name and the
    account). No route, no page.
 2. **Signing in.** `GoogleIdTokenVerifier` (tested with a key a test makes), the cookie, `--accounts` and
    `--google-client-id`, the account routes, `/api/me`. The home page's states 1 and 2, and the account chip.
@@ -199,7 +204,7 @@ games — and a separate record against each bot; shared-device and abandoned ma
 with a player's history, "your turn" sent to every device of an account instead of each seat (ADR 0118), a
 rename, and letting the operator open a table for a named player.
 
-## Open questions for the owner
+## Questions the owner settled (2026-11-03: every recommendation taken)
 
 1. **The sign-in mechanism.** The host verifying Google's ID token (recommended, above) or the platform's
    Google provider (less code, but a client secret and one identity per browser). ADR 0122 decides; it is

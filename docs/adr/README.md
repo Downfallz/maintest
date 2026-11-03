@@ -127,4 +127,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0120](0120-a-device-holding-both-seats-gets-no-notice.md) | A device holding both seats of a table gets no notice | Accepted |
 | [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md) | Offer one bot in the public lobby: the strongest | Accepted |
 | [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
-| [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Proposed |
+| [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted |
