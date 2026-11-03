@@ -1484,6 +1484,35 @@ body:has(#table) { padding-bottom: 24px; }
     background: var(--paper); border-right: 1px solid #64735a; z-index: 22;
   }
   #board .team-grid { grid-template-columns: 1fr; gap: 6px; }
+  /* A creature in a few lines, as a phone's opened battlefield draws it (its stats as the cards' symbols, the
+     word kept for a screen reader), whatever the width: the column is a phone's either way. */
+  #board .creature { display: grid; }
+  #board .who { margin: 0; }
+  #board .creature-name { font-size: 13px; }
+  #board :is(.badges, .dock, .markers) { grid-column: 1 / -1; margin-top: 2px; }
+  #board .creature { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 10px; }
+  #board .creature.legal, #board .creature.picked { padding: 8px 9px; }
+  #board .creature:not(.legal, .picked, .active, .dead) .creature-label { display: none; }
+  #board .creature-id { min-width: 24px; height: 24px; }
+  #board .health { grid-column: 1 / -1; height: 17px; }
+  #board .stats { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 8px; }
+  #board .stat { flex-direction: row; align-items: baseline; gap: 3px; }
+  #board .stat strong { font-size: 15px; }
+  #board .stat strong::before { margin-right: 1px; font-size: 12px; }
+  #board .stat-energy strong::before { content: 'ϟ'; }
+  #board .stat-defense strong::before { content: '◇'; }
+  #board .stat-initiative strong::before { content: '↟'; }
+  #board .stat span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #board .round-choice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 2px; padding-top: 5px; }
+  #board .round-choice .choice-spell { margin: 0; font-size: 13px; }
+  #board .round-choice .choice-targets, #board .round-choice .choice-previous { margin: 0; font-size: 11px; }
+  #board .team-section .section-heading { margin-bottom: 6px; }
+  #board .team-grid { gap: 6px; }
+  .initiative-section .strip { display: grid; gap: 8px; overflow: visible; }
+  .initiative-section .band { display: block; min-width: 0; }
+  .initiative-section .band-name { margin-bottom: 4px; }
+  .initiative-section .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .initiative-section .slot { min-width: 0; padding: 5px; }
   #decision, #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 0; }
   #decision .decision-heading, #decision #asking, .decision-context, #choices { grid-column: 1; grid-row: auto; }
   #decision #asking { font-size: 22px; }
