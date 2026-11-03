@@ -218,6 +218,22 @@ public sealed class AccountRegistryTests
         (await registry.DeleteAsync(account.Id, Cancel)).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Signing_out_everywhere_while_the_account_is_deleted_does_not_bring_it_back()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+        _store.SlowReads = true;
+        _store.SlowWrites = true;
+
+        var raising = Enumerable.Range(0, 10).Select(_ => Task.Run(() => registry.SignOutEverywhereAsync(account.Id, Cancel), Cancel)).ToList();
+        var deleting = Task.Run(() => registry.DeleteAsync(account.Id, Cancel), Cancel);
+        await Task.WhenAll([.. raising, deleting]);
+
+        (await deleting).ShouldBeTrue();
+        _store.Accounts.ShouldNotContainKey(account.Id);
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

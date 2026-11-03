@@ -23,6 +23,9 @@ internal sealed class MemoryAccountStore : IAccountStore
     /// <summary>Lets every read of an account yield first, as a store across a network does, so racing callers interleave.</summary>
     public bool SlowReads { get; set; }
 
+    /// <summary>Lets every write of an account wait first, so a write can land after something read before it.</summary>
+    public bool SlowWrites { get; set; }
+
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default)
     {
         if (SlowReads)
@@ -36,17 +39,26 @@ internal sealed class MemoryAccountStore : IAccountStore
         }
     }
 
-    public Task SaveAsync(Account account, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
+        if (SlowWrites)
+        {
+            await Task.Delay(5, cancellationToken);
+        }
+
         lock (Accounts)
         {
             Accounts[account.Id] = account;
         }
-
-        return Task.CompletedTask;
     }
 
-    public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => Task.FromResult(Accounts.Remove(id));
+    public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        lock (Accounts)
+        {
+            return Task.FromResult(Accounts.Remove(id));
+        }
+    }
 
     public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         Task.FromResult(Subjects.TryGetValue(identity, out var id) ? id : (AccountId?)null);
