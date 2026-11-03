@@ -45,7 +45,14 @@ internal sealed class AdminApi
     public AccountApi? Accounts
     {
         get => Lobby.Accounts;
-        init => Lobby.Accounts = value;
+        init
+        {
+            Lobby.Accounts = value;
+            if (value is not null)
+            {
+                value.ReleaseSeats = account => Lobby.ReleaseAsync(account);
+            }
+        }
     }
 
     /// <param name="rules">The line the console prints of the rule set: which one, and where it came from.</param>

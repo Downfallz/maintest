@@ -32,3 +32,12 @@ test('after signing in a player goes back only to a seat or an invitation of thi
   for (const away of ['https://evil.example', '//evil.example/play', '/admin', 'javascript:alert(1)', '']) assert.equal(nextPath(`?next=${encodeURIComponent(away)}`), null, away);
   assert.equal(nextPath(''), null);
 });
+
+test('deleting an account is a DELETE with the typed name, and its refusal is said', async () => {
+  const refused = accountRequest('/api/account', { username: 'Mark' }, async (path, request) => {
+    assert.equal(request.method, 'DELETE');
+    assert.equal(JSON.parse(request.body).username, 'Mark');
+    return { ok: false, status: 400, text: async () => JSON.stringify({ error: 'Account.ConfirmDelete', message: 'Type your player name exactly to delete your account.' }) };
+  }, 'DELETE');
+  await assert.rejects(refused, error => error.code === 'Account.ConfirmDelete');
+});

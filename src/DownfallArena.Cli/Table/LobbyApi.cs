@@ -257,36 +257,79 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "Only a saved, unfinished game can offer a place to another player.");
             }
 
-            // A fresh token revokes this browser, and a fresh invitation and code offer the place to the next
-            // player (ADR 0116): the ones the seat was first offered under were spent when this player took it.
-            var previous = registry.KeysOf(seat);
-            var arrived = seat.Person!.HasArrived;
-            var open = table.OpenSeats;
-            if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+            return await VacateAsync(table, seat)
+                ? Json(new { left = true })
+                : Problem(409, "This table is no longer available.");
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>
+    /// Under the claim gate: the seat is offered to the next player. A fresh token revokes the browser that held it,
+    /// and a fresh invitation and code offer the place (ADR 0116): the ones the seat was first offered under were
+    /// spent when its player took it. Saved before it counts; false, with nothing changed, once the table is gone.
+    /// </summary>
+    private async Task<bool> VacateAsync(PlayedTable table, TableSeat seat)
+    {
+        var previous = registry.KeysOf(seat);
+        var arrived = seat.Person!.HasArrived;
+        var open = table.OpenSeats;
+        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        {
+            return false;
+        }
+
+        seat.Person.Depart();
+        table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
+        try
+        {
+            await table.RecordAsync(registry.Codes);
+            table.Api.Changes.Bump();
+            return true;
+        }
+        catch
+        {
+            registry.Rekey(table, seat, previous);
+            table.OpenSeats = open;
+            if (arrived)
             {
-                return Problem(409, "This table is no longer available.");
+                seat.Person.Arrive();
             }
 
-            seat.Person.Depart();
-            table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
-            try
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// What a deleted account leaves behind at the tables (ADR 0122): every seat it holds in a saved, unfinished
+    /// game is offered to another player, as leaving does, and a seat at a finished or unsaved table simply belongs
+    /// to nobody now. The recording keeps the account's id, never its name. The number of seats offered.
+    /// </summary>
+    public async Task<int> ReleaseAsync(AccountId account)
+    {
+        await Claims.WaitAsync();
+        try
+        {
+            var offered = 0;
+            foreach (var table in registry.All())
             {
-                await table.RecordAsync(registry.Codes);
-                table.Api.Changes.Bump();
-            }
-            catch
-            {
-                registry.Rekey(table, seat, previous);
-                table.OpenSeats = open;
-                if (arrived)
+                foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null).ToArray())
                 {
-                    seat.Person.Arrive();
+                    if (!table.IsOver && table.Run is not null && await VacateAsync(table, seat))
+                    {
+                        offered++;
+                    }
+                    else
+                    {
+                        seat.Account = null;
+                    }
                 }
-
-                throw;
             }
 
-            return Json(new { left = true });
+            return offered;
         }
         finally
         {

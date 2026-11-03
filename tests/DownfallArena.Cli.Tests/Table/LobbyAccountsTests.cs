@@ -166,6 +166,26 @@ public sealed class LobbyAccountsTests : IDisposable
         theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
     }
 
+    [Fact]
+    public async Task A_deleted_accounts_seats_in_unfinished_games_are_offered_to_other_players()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        var (marks, _) = await OpenAsync(mark);
+        var (theirs, _) = await OpenAsync(bastien);
+        var token = marks.Seats[0].Token;
+        var lobby = await LobbyAsync();
+
+        var offered = await lobby.ReleaseAsync(mark.Account.Id);
+
+        offered.ShouldBe(1);
+        marks.Seats[0].Account.ShouldBeNull();
+        marks.OpenSeats.ShouldContain("player1");
+        _registry.ByToken(token).ShouldBeNull();
+        theirs.Seats[0].Account.ShouldBe(bastien.Account.Id);
+        (await _hosted.Stored!.RecordAsync(marks.Id, Cancel)).ShouldNotBeNull().Seats.Single(seat => seat.Slot == "player1").Account.ShouldBeNull();
+    }
+
     [Theory]
     [InlineData("Lookahead (lookahead-55) — the strongest: searched from search-51's weights", "Lookahead (lookahead-55)")]
     [InlineData("Greedy", "Greedy")]

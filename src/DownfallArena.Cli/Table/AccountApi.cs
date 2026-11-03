@@ -58,6 +58,12 @@ internal sealed class AccountApi
 
     public AccountsMode Mode { get; }
 
+    /// <summary>
+    /// What deleting an account does at the tables before the account goes: the lobby offers its seats to other
+    /// players. Set by the host that holds the tables; none where there are none.
+    /// </summary>
+    public Func<AccountId, Task>? ReleaseSeats { get; set; }
+
     /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
     public string? GoogleClientId { get; }
 
@@ -124,6 +130,7 @@ internal sealed class AccountApi
                 ("POST", Prefix + "/google") => await GoogleAsync(body, request),
                 ("POST", Prefix + "/dev") => await DevelopmentAsync(body, request),
                 ("POST", Prefix + "/signout") => await SignOutAsync(body, request),
+                ("DELETE", Prefix) => await DeleteAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
             };
@@ -209,6 +216,32 @@ internal sealed class AccountApi
         }
 
         return Answer(new { signedOut = true }, AccountSessions.ClearCookie(request.Secure));
+    }
+
+    /// <summary>
+    /// Deletes the signed-in account (ADR 0122), once its player has typed their name to confirm: its seats in
+    /// unfinished games are offered to other players, the name is freed, and every session of it stops working.
+    /// </summary>
+    private async Task<StudioResponse> DeleteAsync(string body, AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in to delete your account.");
+        }
+
+        if (!string.Equals(Read<RegisterBody>(body)?.Username?.Trim(), who.Account.Username.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(400, "Account.ConfirmDelete", "Type your player name exactly to delete your account.");
+        }
+
+        if (ReleaseSeats is { } release)
+        {
+            await release(who.Account.Id);
+        }
+
+        await _registry.DeleteAsync(who.Account.Id);
+        _cache.TryRemove(who.Account.Id, out _);
+        return Answer(new { deleted = true }, AccountSessions.ClearCookie(request.Secure));
     }
 
     private async Task<StudioResponse> NameAsync(string candidate)

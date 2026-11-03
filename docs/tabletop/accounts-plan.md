@@ -1,7 +1,7 @@
 # Plan: player accounts, a Google sign-in and a home page
 
 Status: plan, accepted with [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md) on 2026-11-03,
-with every recommendation under "Open questions" taken. Stages 1 to 3 are built, and stage 4 is started; the rest is not.
+with every recommendation under "Open questions" taken. Stages 1 to 4 are built; stage 5 is not.
 
 ## What the owner asked for
 
@@ -195,11 +195,14 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    that reaches it. The account list is `GET /api/lobby/mine` (not `/api/account/games`: the lobby holds the tables),
    and `POST /api/lobby/adopt` takes over the seats a browser saved. Cards name each side. Not done: the table
    page's masthead does not name the players yet.
-4. **On Azure.** *Started*: the deployment passes the project's client id (or `TABLE_GOOGLE_CLIENT_ID`) as
+4. **On Azure.** *Built*: the deployment passes the project's client id (or `TABLE_GOOGLE_CLIENT_ID`) as
    `--accounts google`, `infra/README.md` says how the client is made, and a loopback host answers to `localhost`,
    the one loopback origin Google accepts. The OAuth client exists (a *Web application*; JavaScript origins: the
-   app's address and `http://localhost:5099`; no redirect URI, no secret). Still to do: `DELETE /api/account` and
-   the privacy line before the address is shared.
+   app's address and `http://localhost:5099`; no redirect URI, no secret). `DELETE /api/account` deletes the
+   signed-in account once its player types their name: its seats in unfinished games are offered to other players,
+   seats at finished tables belong to nobody, its sign-in and name are freed, and every session of it stops working;
+   recordings keep the id only. The lobby says what is kept ("What we keep") and offers *Delete account…* in the
+   account menu.
 5. **Results for a ladder.** When a match with at least one account ends, append
    `results/<yyyy-mm>/<matchId>.json`: when, format, declaration, content hash, each seat's account id or agent,
    the winner, the rounds. Recorded sessions carry the seat accounts instead of `who`; `train-clone`'s export keeps

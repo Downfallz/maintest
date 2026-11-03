@@ -91,8 +91,9 @@ Services, Credentials, *Create OAuth client ID*, type *Web application*:
   `http://localhost:5099` for a laptop's table (`table --accounts google --google-client-id <id>`).
 - No redirect URI and no client secret: the button hands the page an ID token directly.
 
-Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name and
-an internal id. No email is kept.
+Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
+internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
+account menu on the home page; the lobby's *What we keep* panel says the same to players.
 
 ## "Your turn" on a phone
 

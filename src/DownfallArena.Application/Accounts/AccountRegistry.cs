@@ -24,9 +24,10 @@ public sealed class AccountRegistry
     private readonly Func<AccountId> _newId;
 
     // A generation is read, raised and written back: two at once would both write the same number, and one that
-    // stalled could write back a number already passed, bringing revoked sessions back. One host runs at most one
-    // replica (ADR 0080), so one lock in the process is the whole of the ordering.
-    private static readonly SemaphoreSlim Generations = new(1, 1);
+    // stalled could write back a number already passed, bringing revoked sessions back -- or write back an account
+    // deleted meanwhile, bringing it back without its indexes. Raising and deleting take this one lock; one host
+    // runs at most one replica (ADR 0080), so one lock in the process is the whole of the ordering.
+    private static readonly SemaphoreSlim Writes = new(1, 1);
 
     public AccountRegistry(IAccountStore store, TimeProvider clock, Func<AccountId>? newId = null)
     {
@@ -52,7 +53,7 @@ public sealed class AccountRegistry
     /// </summary>
     public async Task<Account?> SignOutEverywhereAsync(AccountId id, CancellationToken cancellationToken = default)
     {
-        await Generations.WaitAsync(cancellationToken);
+        await Writes.WaitAsync(cancellationToken);
         try
         {
             if (await _store.FindAsync(id, cancellationToken) is not { } account)
@@ -66,7 +67,33 @@ public sealed class AccountRegistry
         }
         finally
         {
-            Generations.Release();
+            Writes.Release();
+        }
+    }
+
+    /// <summary>
+    /// Removes the account (ADR 0122): its sign-in first, so nobody signs in to it again, then the account, then its
+    /// name, which another player may then take. The same sign-in can register afresh afterwards, under a new id.
+    /// False when there is no such account.
+    /// </summary>
+    public async Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return false;
+            }
+
+            await _store.UnbindSubjectAsync(account.Identity, id, cancellationToken);
+            await _store.DeleteAsync(id, cancellationToken);
+            await _store.ReleaseUsernameAsync(new UsernameReservation(account.Username, id, account.CreatedAt), cancellationToken);
+            return true;
+        }
+        finally
+        {
+            Writes.Release();
         }
     }
 
