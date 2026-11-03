@@ -1,4 +1,5 @@
 using DownfallArena.Domain.Matches;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
 
@@ -33,6 +34,12 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
     /// keys: it goes when the token does, since it is that browser's and not the next one's.
     /// </summary>
     public PushSubscription? Push { get; set; }
+
+    /// <summary>
+    /// The account this seat belongs to (ADR 0122), or none: a bot's seat, one nobody has taken, or one taken on a
+    /// host without accounts. One of the seat's keys, so it goes when the token does: leaving gives the place back.
+    /// </summary>
+    public AccountId? Account { get; set; }
 
     /// <summary>
     /// What a link or a code hands out for this seat: its invitation, or, for a seat recorded before invitations

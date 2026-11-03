@@ -3,6 +3,7 @@ using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
 
@@ -17,6 +18,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     // host has one of each; a seat request only takes it when its seat is still open (SeatReachedAsync).
     private static readonly SemaphoreSlim Claims = new(1, 1);
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// The players' sign-in (ADR 0122), when this host has one. With it, playing needs an account: opening a table,
+    /// taking a place and accepting an invitation are refused to nobody, and every seat handed out belongs to the
+    /// account that took it.
+    /// </summary>
+    public AccountApi? Accounts { get; set; }
 
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
@@ -34,23 +42,27 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token = null)
+    /// <param name="player">Who the request's session says is signed in, when this host signs players in.</param>
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token = null, SignedIn? player = null)
     {
+        var account = player?.Account.Id;
         try
         {
             return (method, path) switch
             {
                 ("GET", Prefix) => await ListAsync(),
-                ("POST", Prefix + "/resume") => await ResumeAsync(body),
-                ("POST", Prefix + "/tables") => await OpenAsync(body),
-                ("POST", Prefix + "/leave") => await LeaveAsync(token),
+                ("POST", Prefix + "/resume") => await ResumeAsync(body, account),
+                ("GET", Prefix + "/mine") => await MineAsync(account),
+                ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
+                ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
+                ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
                 ("POST", Prefix + "/invitations") => await InvitationsAsync(body),
-                ("POST", Prefix + "/claim") => await ClaimAsync(body),
+                ("POST", Prefix + "/claim") => SignInRequired(account) ?? await ClaimAsync(body, account),
                 ("GET", Prefix + "/push") => Json(new { publicKey = push?.PublicKey }),
-                ("PUT", Prefix + "/push") => await SubscribeAsync(token, body),
-                ("DELETE", Prefix + "/push") => await SubscribeAsync(token, null),
-                ("POST", Prefix + "/push/test") => await TestPushAsync(token),
-                ("POST", _) when JoinedTable(path) is { } id => await JoinAsync(id),
+                ("PUT", Prefix + "/push") => await SubscribeAsync(token, body, account),
+                ("DELETE", Prefix + "/push") => await SubscribeAsync(token, null, account),
+                ("POST", Prefix + "/push/test") => await TestPushAsync(token, account),
+                ("POST", _) when JoinedTable(path) is { } id => SignInRequired(account) ?? await JoinAsync(id, account),
                 _ => Problem(404, "No such lobby route."),
             };
         }
@@ -79,10 +91,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         recording = composer.Records,
         format = composer.Rules.Format.ToString(),
         formats = MatchFormat.Offered.Select(format => format.ToString()).ToArray(),
+        accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
         tables = await Task.WhenAll(registry.All().Where(table => !table.IsOver).Select(DescribeAsync)),
     });
 
-    private async Task<StudioResponse> ResumeAsync(string body)
+    private async Task<StudioResponse> ResumeAsync(string body, AccountId? account)
     {
         var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
         if (tokens is null || tokens.Count > 128)
@@ -92,7 +105,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var held = tokens.Distinct(StringComparer.Ordinal)
             .Select(token => (Token: token, Table: registry.ByToken(token)))
-            .Where(held => held.Table?.Seats.Any(seat => seat.Token == held.Token && seat.Person is not null) == true)
+            .Where(held => held.Table?.Seats.Any(seat => seat.Token == held.Token && seat.Person is not null && Owns(seat, account)) == true)
             .GroupBy(held => held.Table!);
 
         // Described together, as the listing is: each description may wait on its table's round.
@@ -111,7 +124,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// </summary>
     private string Strongest => composer.Agents.FirstOrDefault(agent => agent.Featured)?.Value ?? "greedy";
 
-    private async Task<StudioResponse> OpenAsync(string body)
+    private async Task<StudioResponse> OpenAsync(string body, AccountId? account)
     {
         if (!composer.Records)
         {
@@ -161,7 +174,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var handed = table.Seats.Where(seat => seat.Person is not null && (seat.Name == "player1" || opponent == "hotseat")).ToArray();
             foreach (var seat in handed)
             {
-                registry.Rekey(table, seat, SeatKeys.TakenBy(seat.Token));
+                registry.Rekey(table, seat, SeatKeys.TakenBy(seat.Token, account));
             }
 
             try
@@ -187,7 +200,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    private async Task<StudioResponse> JoinAsync(string id)
+    private async Task<StudioResponse> JoinAsync(string id, AccountId? account)
     {
         await Claims.WaitAsync();
         try
@@ -203,9 +216,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "Someone has already taken this place. Refresh the tables to find another.");
             }
 
+            // Both sides of one online table are two people; a player who wants both opens a shared-device table.
+            if (account is not null && table.Seats.Any(held => held.Account == account))
+            {
+                return Problem(409, "You already play at this table. Open it from Your games.");
+            }
+
             // The place is handed over under a fresh token, and its invitation and code are spent: they are in a
             // link and on the admin panel, and whoever holds those must not reach a seat someone else took.
-            if (!await TakeAsync(table, [seat]))
+            if (!await TakeAsync(table, [seat], account))
             {
                 return Problem(409, "This table is no longer available. Refresh the tables to find another.");
             }
@@ -219,13 +238,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    private async Task<StudioResponse> LeaveAsync(string? token)
+    private async Task<StudioResponse> LeaveAsync(string? token, AccountId? account)
     {
         await Claims.WaitAsync();
         try
         {
             var table = registry.ByToken(token);
-            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
             if (table is null || seat is null)
             {
                 return Problem(403, "This seat is no longer yours.");
@@ -278,7 +297,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// gives it, or nowhere for a <c>DELETE</c>. The seat's token says which seat; a shared browser sends the same
     /// subscription for both of its seats. Written to the record before the answer, so the next host sends there too.
     /// </summary>
-    private async Task<StudioResponse> SubscribeAsync(string? token, string? body)
+    private async Task<StudioResponse> SubscribeAsync(string? token, string? body, AccountId? account)
     {
         if (push is null)
         {
@@ -308,7 +327,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         try
         {
             var table = registry.ByToken(token);
-            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+            var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
             if (table is null || seat is null)
             {
                 return Problem(403, "This seat is no longer yours.");
@@ -335,7 +354,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>A notice to this seat's phone now, and what came of it: how a player sees that the phone can be reached.</summary>
-    private async Task<StudioResponse> TestPushAsync(string? token)
+    private async Task<StudioResponse> TestPushAsync(string? token, AccountId? account)
     {
         if (push is null)
         {
@@ -343,7 +362,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
 
         var table = registry.ByToken(token);
-        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null);
+        var seat = table?.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null && Owns(seat, account));
         if (table is null || seat is null)
         {
             return Problem(403, "This seat is no longer yours.");
@@ -389,7 +408,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// the seat under a fresh token and the invitation is spent, so the same link opened again finds the place
     /// taken rather than a second key to it. All or none, and saved before the token is returned.
     /// </summary>
-    private async Task<StudioResponse> ClaimAsync(string body)
+    private async Task<StudioResponse> ClaimAsync(string body, AccountId? account)
     {
         var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
         if (tokens is null || tokens.Count is 0 or > 2)
@@ -408,7 +427,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             var table = found[0]!.Value.Table;
             var seats = found.Select(one => one!.Value.Seat).ToArray();
-            if (!await TakeAsync(table, seats))
+            if (!await TakeAsync(table, seats, account))
             {
                 return Problem(409, "This table is no longer available: it was closed.");
             }
@@ -427,7 +446,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// are spent and it is no longer an open place, and the record says so before the token leaves the host.
     /// False, with nothing changed, when the table was let go of meanwhile.
     /// </summary>
-    private async Task<bool> TakeAsync(PlayedTable table, TableSeat[] seats)
+    private async Task<bool> TakeAsync(PlayedTable table, TableSeat[] seats, AccountId? account)
     {
         var before = seats.Select(registry.KeysOf).ToArray();
         void Undo()
@@ -438,7 +457,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
         }
 
-        if (!seats.All(seat => registry.Rekey(table, seat, SeatKeys.TakenBy(TableComposer.Token()))))
+        if (!seats.All(seat => registry.Rekey(table, seat, SeatKeys.TakenBy(TableComposer.Token(), account))))
         {
             Undo();
             return false;
@@ -504,23 +523,158 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    private static async Task<object> DescribeAsync(PlayedTable table) => new
+    private async Task<object> DescribeAsync(PlayedTable table)
     {
-        id = table.Id,
-        createdAt = table.CreatedAt,
-        format = table.Session.Rules.Format.ToString(),
-        waiting = !table.Session.HasBegun && !table.IsOver,
-        over = table.IsOver,
-        round = await AdminApi.RoundNowAsync(table),
-        openSeats = table.IsOver ? 0 : table.Seats.Count(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false }),
-        players = table.Seats.Select(seat => seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : "Player").ToArray(),
-    };
+        var seats = await Task.WhenAll(table.Seats.Select(seat => SeatAsync(table, seat)));
+        return new
+        {
+            id = table.Id,
+            createdAt = table.CreatedAt,
+            format = table.Session.Rules.Format.ToString(),
+            waiting = !table.Session.HasBegun && !table.IsOver,
+            over = table.IsOver,
+            round = await AdminApi.RoundNowAsync(table),
+            openSeats = table.IsOver ? 0 : table.Seats.Count(seat => table.OpenSeats.Contains(seat.Name) && seat.Person is { HasArrived: false }),
+            players = seats.Select(seat => seat.Name).ToArray(),
+            seats,
+        };
+    }
+
+    /// <summary>
+    /// Who sits in a seat, as a card says it (ADR 0122): a person by the name their account chose, a bot by its
+    /// own, an open place as open. A person's seat that belongs to no account (a host without accounts, or a
+    /// table older than them) is "Player", as it always was.
+    /// </summary>
+    private async Task<SeatSummary> SeatAsync(PlayedTable table, TableSeat seat)
+    {
+        if (seat.Person is null)
+        {
+            // The name the bot list gives it (search-19, Greedy), not the spec it was seated by, which is a path.
+            var spec = table.Session.Seat(seat.Slot).Seated.Name;
+            var label = composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label;
+            return new SeatSummary(seat.Name, "bot", BotName(label ?? spec));
+        }
+
+        if (!table.IsOver && table.OpenSeats.Contains(seat.Name) && !seat.Taken)
+        {
+            return new SeatSummary(seat.Name, "open", "Open seat");
+        }
+
+        var name = seat.Account is { } id && Accounts is { } accounts ? (await accounts.AccountAsync(id))?.Username.Value : null;
+        return new SeatSummary(seat.Name, "person", name ?? "Player");
+    }
+
+    /// <summary>
+    /// A bot's name for a card: its label up to the description the bot list adds after a dash ("Lookahead
+    /// (lookahead-55) — the strongest: ..."), or a spec's agent kind when there is no label ("greedy").
+    /// </summary>
+    internal static string BotName(string label)
+    {
+        var dash = label.IndexOf(" — ", StringComparison.Ordinal);
+        var name = dash > 0 ? label[..dash] : label;
+        var kind = name.IndexOf(':', StringComparison.Ordinal);
+        return name.Contains('/', StringComparison.Ordinal) && kind > 0 ? name[..kind] : name;
+    }
+
+    /// <summary>Whether a request may act for a seat: any seat on a host without accounts, and otherwise only one that belongs to nobody or to it.</summary>
+    private bool Owns(TableSeat seat, AccountId? account) => Accounts is null || seat.Account is null || seat.Account == account;
+
+    /// <summary>The refusal a host with accounts gives a request that is nobody's; null where it may go on.</summary>
+    private StudioResponse? SignInRequired(AccountId? account) =>
+        Accounts is not null && account is null
+            ? StudioResponse.OfJson(new { error = "Account.SignInRequired", message = "Sign in to play: open the home page and continue with Google." }, ArtifactJson.LineOptions, 401)
+            : null;
+
+    /// <summary>
+    /// The tables a signed-in player has seats at, on any device (ADR 0122): what "Your games" lists, with the
+    /// tokens this browser plays them by. Finished ones are kept for the hour a host keeps them, as on a browser.
+    /// </summary>
+    private async Task<StudioResponse> MineAsync(AccountId? account)
+    {
+        if (account is null)
+        {
+            return Json(new { tables = Array.Empty<object>() });
+        }
+
+        var tables = await Task.WhenAll(registry.All()
+            .Where(table => table.Seats.Any(seat => seat.Account == account))
+            .Select(async table => (object)new
+            {
+                table = await DescribeAsync(table),
+                seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
+            }));
+        return Json(new { tables });
+    }
+
+    /// <summary>
+    /// Seats a browser saved before its player signed in, made the account's (ADR 0122): a seat its token reaches
+    /// that belongs to nobody yet. A seat another account holds is left as it is. Answered as <see cref="MineAsync" />.
+    /// </summary>
+    private async Task<StudioResponse> AdoptAsync(string body, AccountId? account)
+    {
+        if (account is not { } owner)
+        {
+            return SignInRequired(account) ?? Problem(404, "Players do not sign in at this host.");
+        }
+
+        var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
+        if (tokens is null || tokens.Count > 128)
+        {
+            return Problem(400, "Send at most 128 saved seat tokens.");
+        }
+
+        foreach (var token in tokens.Distinct(StringComparer.Ordinal))
+        {
+            if (registry.ByToken(token) is { IsOver: false } table && table.Seats.FirstOrDefault(seat => seat.Token == token && seat.Person is not null) is { Account: null } seat)
+            {
+                await BindAsync(table, seat, owner);
+            }
+        }
+
+        return await MineAsync(owner);
+    }
+
+    /// <summary>
+    /// Makes a seat nobody owns the account's, under the claim gate, and saved before it counts: what a seat reached
+    /// by its token alone becomes once its player has signed in. False when somebody else got it first.
+    /// </summary>
+    public async Task<bool> BindAsync(PlayedTable table, TableSeat seat, AccountId account)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(seat);
+        await Claims.WaitAsync();
+        try
+        {
+            if (seat.Account is { } held)
+            {
+                return held == account;
+            }
+
+            seat.Account = account;
+            try
+            {
+                await table.RecordAsync(registry.Codes);
+                return true;
+            }
+            catch
+            {
+                seat.Account = null;
+                throw;
+            }
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
 
     private static StudioResponse Json(object value, int status = 200) => StudioResponse.OfJson(value, ArtifactJson.LineOptions, status);
 
     private static StudioResponse Problem(int status, string message) => Json(new { message }, status);
 
     private sealed record Opening(string? Opponent, string? Format);
+
+    private sealed record SeatSummary(string Seat, string Kind, string Name);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
 

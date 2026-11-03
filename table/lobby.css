@@ -23,6 +23,16 @@
 .game-card .status-tag.available { color: var(--ally); border-color: #5e8e73; }
 .game-id { overflow-wrap: anywhere; font-size: 11px; color: var(--muted); }
 .game-players { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.versus .side { min-width: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.versus .side.player2 { justify-content: flex-end; text-align: right; }
+.versus .who { font-weight: 650; overflow-wrap: anywhere; }
+.versus .player1 .who.person { color: var(--ally); }
+.versus .player2 .who.person { color: var(--enemy); }
+.versus .who.open { color: var(--muted); font-weight: 400; border: 1px dashed var(--line); border-radius: 6px; padding: 2px 8px; }
+.versus .side.you .who::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
+.versus .vs { font: italic 14px Georgia, serif; color: var(--muted); }
+.bot-tag { font-size: 9px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
 .game-card button { width: 100%; text-align: center; margin-top: auto; }
 .game-card a { color: var(--gold); }
 .lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; padding: 0; border: 0; min-width: 0; }

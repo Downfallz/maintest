@@ -407,9 +407,16 @@ Google's own button, then asks a first-time player for a unique name (3 to 20 le
 names reserved), and puts the account in the masthead with *Sign out* and *Sign out everywhere*. The host checks
 Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty days. Accounts are kept beside the
 recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
-email, no real name, no picture. Seats do not belong to accounts yet; that is stage 3 of
-`docs/tabletop/accounts-plan.md`. The routes are `/api/account/*`, and `/api/me` says `accounts`, `googleClientId`
+email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts`, `googleClientId`
 and `account`.
+
+With accounts on, playing needs a sign-in, and a seat belongs to the account that took it: opening a table, taking
+an open place and accepting an invitation answer `401` to nobody, and a seat's token alone is refused (`401`
+signed out, `403` for another account). A seat that belongs to nobody yet, from a link or a code handed out before,
+becomes the account's that first reaches it signed in. **Your games** is the host's list (`GET /api/lobby/mine`),
+the same on every device; the seats a browser saved before signing in are handed over once
+(`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its label, an open place
+as *Open seat*. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in.
 
 ## "Your turn" on a phone
 

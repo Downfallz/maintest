@@ -17,7 +17,7 @@ public sealed class TableServerTests : IAsyncDisposable
     private readonly TableRegistry _registry = new();
     private readonly Clock _clock = new();
     private readonly CancellationTokenSource _stopping = new();
-    private readonly HttpClient _client = new(new HttpClientHandler { AllowAutoRedirect = false });
+    private readonly HttpClient _client = new(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
     private TableServer? _server;
     private Task? _serving;
 
@@ -272,6 +272,55 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}session/no-such-session", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    /// <summary>On a host where players sign in, a seat answers its own account only, and the first to reach an unowned one signed in owns it (ADR 0122).</summary>
+    [Fact]
+    public async Task A_seat_answers_only_the_account_it_belongs_to()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"server-accounts-{Guid.CreateVersion7():N}");
+        try
+        {
+            var url = await ServeWithAccountsAsync(root);
+            var table = await Opened();
+            var seat = $"{url}api/seat/player1";
+            var mark = await SignInAsync(url, "MarkF");
+            var bastien = await SignInAsync(url, "bastien");
+
+            (await Get(seat, table.Seats[0].Token)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            (await Get(seat, table.Seats[0].Token, mark)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            (await Get(seat, table.Seats[0].Token, bastien)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+            (await Get(seat, table.Seats[0].Token, mark)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            table.Seats[0].Account.ShouldNotBeNull();
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private async Task<string> ServeWithAccountsAsync(string root)
+    {
+        var store = new Infrastructure.Accounts.FileAccountStore(root);
+        var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, _clock), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock), AccountsMode.Development);
+        var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.BehindPlatform(), _clock, "Rules 2 creatures (a test)", _hosted.Stored) { Accounts = accounts };
+        _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored, accounts);
+        _serving = _server.RunAsync(_stopping.Token);
+        return _server.Url;
+    }
+
+    /// <summary>Signs in by a typed name over the wire, and gives back the session cookie the host set.</summary>
+    private async Task<string> SignInAsync(string url, string name)
+    {
+        using var content = new StringContent(JsonSerializer.Serialize(new { username = name }), System.Text.Encoding.UTF8, "application/json");
+        var answer = await _client.PostAsync($"{url}api/account/dev", content, TestContext.Current.CancellationToken);
+        answer.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var cookie = answer.Headers.GetValues("Set-Cookie").Single();
+        cookie.ShouldContain("HttpOnly");
+        return cookie.Split(';')[0];
+    }
+
     private string Serve(OperatorGate gate)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);
@@ -287,12 +336,17 @@ public sealed class TableServerTests : IAsyncDisposable
         return table;
     }
 
-    private Task<HttpResponseMessage> Get(string url, string? token)
+    private Task<HttpResponseMessage> Get(string url, string? token, string? cookie = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (token is not null)
         {
             request.Headers.Add(TableApi.TokenHeader, token);
+        }
+
+        if (cookie is not null)
+        {
+            request.Headers.Add("Cookie", cookie);
         }
 
         return _client.SendAsync(request, TestContext.Current.CancellationToken);

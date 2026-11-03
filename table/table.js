@@ -16,6 +16,7 @@ import { healthChange, playbackBoard, playbackChanges, playbackRound } from './r
 import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './combat-fx.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
+import { signInPath } from './account.js';
 import { actionDecision, askedKey, slotView } from './slot.js';
 import { practice, storage } from './startup.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
@@ -119,8 +120,15 @@ function arrivalFailed(failure) {
   else invite({ kind: 'unreachable' });
 }
 
+// A host where players sign in refuses a seat to nobody (ADR 0122): the player signs in on the home page and is
+// brought back here, link and all.
+function signInFirst() {
+  globalThis.location.assign(signInPath(`${globalThis.location.pathname}${globalThis.location.search}`));
+}
+
 async function lobbyPost(path, body) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (response.status === 401) signInFirst();
   const text = await response.text();
   const answer = text ? JSON.parse(text) : {};
   if (!response.ok) throw Object.assign(new Error(answer.message ?? `The host answered ${response.status}.`), { status: response.status });
@@ -536,6 +544,7 @@ async function poll(state) {
     // and its answer still has to arrive and be laid out before anybody has read anything.
     const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
     if (revision !== state.revision) return;
+    if (answer.status === 401) { signInFirst(); return; }
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the

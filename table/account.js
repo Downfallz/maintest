@@ -12,6 +12,18 @@ export function nameProblem(value) {
   return NAME.test(name) ? null : '3 to 20 characters: letters, digits, _ and -. Starts with a letter.';
 }
 
+/** Where a page sends a player who must sign in first, coming back to `here` afterwards. */
+export function signInPath(here) {
+  // The lobby by its own name: `/` with a query is the game page, for links from before the lobby.
+  return `/lobby?next=${encodeURIComponent(here)}`;
+}
+
+/** The page to go back to after signing in: only a seat or an invitation of this host, never another site. */
+export function nextPath(search) {
+  const next = new URLSearchParams(search ?? '').get('next');
+  return next && /^\/(?:play|j\/|\?)/.test(next) && !next.startsWith('//') ? next : null;
+}
+
 /** The player half of /api/me, with off for an older host that does not say. */
 export function accountState(me) {
   return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: me?.googleClientId ?? null };
@@ -67,7 +79,7 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
       el('account-name').textContent = state.account.username;
       el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
     }
-    onChange(state.account);
+    onChange(state.account, state.mode);
   }
 
   async function refresh() {
