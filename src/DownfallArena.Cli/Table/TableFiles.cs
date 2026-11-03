@@ -22,6 +22,8 @@ internal sealed class TableFiles
 
     private const string Png = "image/png";
 
+    private const string Webp = "image/webp";
+
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
 
     public TableFiles(string tableDirectory)
@@ -72,6 +74,21 @@ internal sealed class TableFiles
             ["/combat-fx.js"] = (Path.Combine(tableDirectory, "combat-fx.js"), JavaScript),
             ["/feedback.js"] = (Path.Combine(tableDirectory, "feedback.js"), JavaScript),
 
+            // An isolated design study with authored sample frames (ADR 0123); it never opens a seat or posts a
+            // decision. Its renderer is a bundle built from arena/ into arena-build/, which is not committed: the
+            // route is here, the file is there once `npm --prefix arena run build` has run. The bundle's legal
+            // notices ship beside it, as esbuild links them.
+            ["/arena-lab"] = (Path.Combine(tableDirectory, "arena-lab.html"), StudioResponse.Html),
+            ["/arena-lab.css"] = (Path.Combine(tableDirectory, "arena-lab.css"), Css),
+            ["/arena-build/game.js"] = (Path.Combine(tableDirectory, "arena-build", "game.js"), JavaScript),
+            ["/arena-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "arena-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
+            ["/arena-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "arena-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
+            ["/arena-art/eclipse-arena.webp"] = (Path.Combine(tableDirectory, "arena-art", "eclipse-arena.webp"), Webp),
+            ["/arena-art/creatures.webp"] = (Path.Combine(tableDirectory, "arena-art", "creatures.webp"), Webp),
+            ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
+            ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
+            ["/arena-lab-layout.js"] = (Path.Combine(tableDirectory, "arena-lab-layout.js"), JavaScript),
+
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
             // same session -- and it is reached only by somebody holding the pilot token, which the console
             // prints and no player's link carries.
@@ -109,8 +126,8 @@ internal sealed class TableFiles
         }
 
         // A bitmap is bytes; everything else the table ships is text.
-        return route.ContentType == Png
-            ? new StudioResponse(200, Png, File.ReadAllBytes(route.Path))
+        return route.ContentType is Png or Webp
+            ? new StudioResponse(200, route.ContentType, File.ReadAllBytes(route.Path))
             : StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path));
     }
 }
