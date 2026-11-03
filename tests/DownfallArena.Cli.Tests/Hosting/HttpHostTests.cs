@@ -94,6 +94,14 @@ public sealed class HttpHostTests
         HttpHost.Prefix(HttpHost.Loopback, 5123, wildcardNeedsReservation: true).ShouldBe("http://127.0.0.1:5123/");
     }
 
+    /// <summary>Google accepts <c>http://localhost</c> as a sign-in origin and no address (ADR 0122).</summary>
+    [Fact]
+    public void The_loopback_host_also_answers_to_localhost_and_no_other_host_does()
+    {
+        HttpHost.Prefixes(HttpHost.Loopback, 5099, wildcardNeedsReservation: false).ShouldBe(["http://127.0.0.1:5099/", "http://localhost:5099/"]);
+        HttpHost.Prefixes("192.168.1.12", 5099, wildcardNeedsReservation: false).ShouldBe(["http://192.168.1.12:5099/"]);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("localhost")]

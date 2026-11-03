@@ -192,9 +192,11 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
 3. **Seats belong to accounts.** Binding on create, join, claim and leave; the `403`; `GET /api/account/games`
    replacing the browser's history; `adopt`; usernames on the cards and on the table page; state 4. Here
    "signed in to play" becomes true. `table/README.md`, `playtest-app.md` and `AGENTS.md` updated.
-4. **On Azure.** The OAuth client in Google Cloud (a *Web application*, JavaScript origins: the app's address
-   and `http://localhost:5100`; no redirect URI, no secret), the repository variable, the Bicep argument,
-   `infra/README.md`'s one-time steps. `DELETE /api/account` and the privacy line before the address is shared.
+4. **On Azure.** *Started*: the deployment passes the project's client id (or `TABLE_GOOGLE_CLIENT_ID`) as
+   `--accounts google`, `infra/README.md` says how the client is made, and a loopback host answers to `localhost`,
+   the one loopback origin Google accepts. The OAuth client exists (a *Web application*; JavaScript origins: the
+   app's address and `http://localhost:5099`; no redirect URI, no secret). Still to do: `DELETE /api/account` and
+   the privacy line before the address is shared.
 5. **Results for a ladder.** When a match with at least one account ends, append
    `results/<yyyy-mm>/<matchId>.json`: when, format, declaration, content hash, each seat's account id or agent,
    the winner, the rounds. Recorded sessions carry the seat accounts instead of `who`; `train-clone`'s export keeps

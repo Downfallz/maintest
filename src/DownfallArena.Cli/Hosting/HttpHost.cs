@@ -42,21 +42,30 @@ internal sealed class HttpHost : IDisposable
         // Sonar's S5332 says this line is insecure and is right about the protocol; it is ignored for this
         // file alone, in ci.yml, where the reasoning is written out beside the repository's one other ignore.
         Url = $"http://{Bindable(address)}:{port}/";
-        _listener.Prefixes.Add(Prefix(address, port));
+        foreach (var prefix in Prefixes(address, port, OperatingSystem.IsWindows()))
+        {
+            _listener.Prefixes.Add(prefix);
+        }
     }
+
+    /// <summary>
+    /// Every prefix the listener is given: the address's own, and on the default loopback address the name
+    /// <c>localhost</c> too. It is the same machine, but a browser sends the name it was given as the request's
+    /// host, and <c>localhost</c> is the one loopback name Google accepts as a sign-in origin (ADR 0122) where an
+    /// address is refused.
+    /// </summary>
+    internal static IReadOnlyList<string> Prefixes(string address, int port, bool wildcardNeedsReservation) =>
+        address == Loopback
+            ? [Prefix(address, port, wildcardNeedsReservation), $"http://localhost:{port}/"]
+            : [Prefix(address, port, wildcardNeedsReservation)];
 
     /// <summary>
     /// What the listener is given for an address. The wildcard is not a host this runtime's
     /// <see cref="HttpListener" /> accepts in a prefix (it answers "the request is not supported" at start);
     /// it spells every interface <c>+</c>. Every other address is its own prefix, and <see cref="Url" /> keeps
-    /// the address as typed either way, because that is the one a player is told.
-    /// </summary>
-    private static string Prefix(string address, int port) => Prefix(address, port, OperatingSystem.IsWindows());
-
-    /// <summary>
-    /// <see cref="Prefix(string, int)" /> with the platform fact passed in, the way <see cref="Bindable(string, bool)" />
-    /// takes it: the translation is the same on every platform, and a test of it should not depend on which one
-    /// runs it.
+    /// the address as typed either way, because that is the one a player is told. The platform fact is passed
+    /// in, the way <see cref="Bindable(string, bool)" /> takes it: the translation is the same on every platform,
+    /// and a test of it should not depend on which one runs it.
     /// </summary>
     internal static string Prefix(string address, int port, bool wildcardNeedsReservation) =>
         $"http://{(Bindable(address, wildcardNeedsReservation) == AnyInterface ? "+" : address)}:{port}/";

@@ -17,8 +17,11 @@ param signInClientId string
 @description('The table\'s VAPID key pair, the JSON `push-keys` prints (ADR 0118). Empty, the table sends no notices.')
 param pushKeys string = ''
 
-@description('The object ids of the people who may sign in to the lobby, comma-separated. Players never sign in.')
+@description('The object ids of the people who may sign in to the admin panel, comma-separated.')
 param operators string
+
+@description('The Google OAuth client id players sign in with (ADR 0122). Public, not a secret. Empty, players do not sign in.')
+param googleClientId string = ''
 
 @description('A short word every resource name starts with.')
 @minLength(3)
@@ -27,6 +30,14 @@ param namePrefix string = 'downfall'
 
 var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
+
+// The players' sign-in (ADR 0122): the host checks Google's ID token itself, so the id is all it takes.
+var accountArgs = empty(googleClientId) ? [] : [
+  '--accounts'
+  'google'
+  '--google-client-id'
+  googleClientId
+]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
 var subnetName = 'apps'
@@ -218,7 +229,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'table'
           image: image
-          args: [
+          args: concat([
             'table'
             '--lobby'
             '--platform-auth'
@@ -230,7 +241,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             'docs/tabletop/playtest.rules.json'
             '--record'
             '${storage.properties.primaryEndpoints.blob}${containerName}'
-          ]
+          ], accountArgs)
           env: empty(pushKeys) ? [] : [
             {
               name: 'DOWNFALL_PUSH_KEYS'
