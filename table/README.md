@@ -160,6 +160,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   one creature at a time; a refused one is shown and Confirm can be pressed again.
 - **♪** in the masthead, beside the Round guide, holds the two optional settings, quiet UI sounds and haptic
   feedback, both off by default and kept on the device; it is lit while either is on.
+- A phone held sideways (landscape, at most 520px tall) puts the battlefield and the desk side by side: the
+  round bar and its chips head a fixed left column whose board scrolls on its own, and the decision and
+  spellbook are the page on the right. The Battlefield button is not drawn there: the board is always in view.
 - Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
   Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
   throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
