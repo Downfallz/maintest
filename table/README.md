@@ -504,7 +504,6 @@ npm --prefix arena run build
 Docker and CI build it automatically. See [build details](../arena/README.md) and the
 [browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.
 
-
 ## Live arena preview
 
 `/arena` is an opt-in read-only view, linked from **Match → Open live arena preview**. It asks for a

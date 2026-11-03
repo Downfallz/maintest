@@ -92,7 +92,9 @@ internal sealed class TableFiles
             ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
 
-            // The opt-in live renderer reads one authenticated seat (ADR 0125).
+            // The opt-in live renderer reads one authenticated seat (ADR 0125). Its three modules are bundled into
+            // live.js and the page loads none of them by name; they are served because every module beside the page
+            // is (TableFilesTests), and the laboratory's browser test imports the layout to check its hit targets.
             ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),
             ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
             ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),

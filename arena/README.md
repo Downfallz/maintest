@@ -1,6 +1,7 @@
 # Phaser arena presentations
 
-A viewport-bound visual experiment at `/arena-lab`, isolated from the actual `/play` client.
+Two Phaser pages: a viewport-bound visual experiment at `/arena-lab`, isolated from the actual `/play` client,
+and `/arena`, the opt-in read-only view of one authenticated seat (ADR 0125).
 Pinned Phaser 3.90.0 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the choice; the [delivery plan](../docs/tabletop/browser-arena-plan.md) covers live integration.
 
