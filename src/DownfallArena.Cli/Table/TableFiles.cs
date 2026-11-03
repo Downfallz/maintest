@@ -39,6 +39,7 @@ internal sealed class TableFiles
             ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
+            ["/players.js"] = (Path.Combine(tableDirectory, "players.js"), JavaScript),
             ["/leaderboard"] = (Path.Combine(tableDirectory, "leaderboard.html"), StudioResponse.Html),
             ["/leaderboard.js"] = (Path.Combine(tableDirectory, "leaderboard.js"), JavaScript),
             ["/leaderboard.css"] = (Path.Combine(tableDirectory, "leaderboard.css"), Css),

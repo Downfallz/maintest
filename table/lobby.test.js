@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, lobbyRequest, tableState, versus, visibleTables } from './lobby.js';
+import { codePath, lobbyRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -69,4 +69,14 @@ test('a card names each side as the host does, and an older host as players', ()
   const named = versus({ seats: [{ seat: 'player1', kind: 'person', name: 'MarkF' }, { seat: 'player2', kind: 'bot', name: 'search-19' }] });
   assert.deepEqual(named.map(side => `${side.kind}:${side.name}`), ['person:MarkF', 'bot:search-19']);
   assert.deepEqual(versus({ players: ['Player', 'greedy'] }).map(side => side.seat), ['player1', 'player2']);
+});
+
+test("a card says whose turn it is at an unfinished table, and when it is this browser's", () => {
+  const seats = (first, second) => [{ seat: 'player1', kind: 'person', name: 'MarkF', turn: first }, { seat: 'player2', kind: 'person', name: 'bastien', turn: second }];
+  assert.deepEqual(turnOf({ seats: seats(true, false) }, ['player1']), { mine: true, text: 'Your turn' });
+  assert.deepEqual(turnOf({ seats: seats(false, true) }, ['player1']), { mine: false, text: "bastien's turn" });
+  assert.equal(turnOf({ seats: seats(true, true) }, ['player2']).text, 'Your turn · both players choose');
+  assert.equal(turnOf({ seats: seats(true, true) }).text, 'Both players to play');
+  assert.equal(turnOf({ seats: [{ seat: 'player1', kind: 'open', name: 'Open seat', turn: true }, { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false }] }).text, 'Waiting for a player to take the open seat');
+  for (const table of [{ seats: seats(false, false) }, { over: true, seats: seats(true, false) }, { waiting: true, seats: seats(true, false) }, {}]) assert.equal(turnOf(table, ['player1']), null);
 });

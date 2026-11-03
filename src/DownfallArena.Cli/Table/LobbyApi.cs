@@ -598,16 +598,19 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             // The name the bot list gives it (search-19, Greedy), not the spec it was seated by, which is a path.
             var spec = table.Session.Seat(seat.Slot).Seated.Name;
             var label = composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label;
-            return new SeatSummary(seat.Name, "bot", BotName(label ?? spec));
+            return new SeatSummary(seat.Name, "bot", BotName(label ?? spec), Turn: false);
         }
 
+        // Whose turn it is: a seat whose person is being asked a question right now. Both seats can be at once
+        // (ADR 0092, 0111); a bot's is never, since a bot answers as it is asked.
+        var turn = !table.IsOver && seat.Person.Waiting is not null;
         if (!table.IsOver && table.OpenSeats.Contains(seat.Name) && !seat.Taken)
         {
-            return new SeatSummary(seat.Name, "open", "Open seat");
+            return new SeatSummary(seat.Name, "open", "Open seat", turn);
         }
 
         var name = seat.Account is { } id && Accounts is { } accounts ? (await accounts.AccountAsync(id))?.Username.Value : null;
-        return new SeatSummary(seat.Name, "person", name ?? "Player");
+        return new SeatSummary(seat.Name, "person", name ?? "Player", turn);
     }
 
     /// <summary>
@@ -720,7 +723,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     private sealed record Opening(string? Opponent, string? Format);
 
-    private sealed record SeatSummary(string Seat, string Kind, string Name);
+    /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
+    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
 
