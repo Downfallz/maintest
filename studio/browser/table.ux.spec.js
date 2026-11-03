@@ -992,3 +992,29 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await page.locator('[data-focus="step-next"]').click();
   await expect(page.locator('#combat-step')).toBeHidden();
 });
+
+// A phone held sideways: the battlefield and the desk side by side, both in view without scrolling, each
+// scrolling on its own, and the board always there rather than behind a button.
+for (const [width, height] of [[844, 390], [740, 360]]) {
+  test(`held sideways at ${width}×${height}, the battlefield and the desk sit side by side`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await expect(page.locator('.speed-spell')).toHaveCount(6);
+    const board = await page.locator('#board').boundingBox();
+    const desk = await page.locator('#decision').boundingBox();
+    const dock = await page.locator('#phase-dock').boundingBox();
+    expect(board.x).toBeLessThan(2);
+    expect(desk.x).toBeGreaterThanOrEqual(board.x + board.width);
+    expect(dock.x + dock.width).toBeLessThanOrEqual(desk.x);
+    expect(board.y).toBeGreaterThanOrEqual(dock.y + dock.height - 1);
+    expect(board.y + board.height).toBeLessThanOrEqual(height + 1);
+    await expect(page.locator('#mini-board')).toBeVisible();
+    await expect(page.locator('#board-toggle')).toBeHidden();
+    await expect(page.locator('[data-focus="speed-Quick"]')).toBeInViewport();
+    await expectNoSidewaysScroll(page);
+
+    // The board scrolls on its own: the desk stays where it is.
+    const before = await page.locator('#decision').boundingBox();
+    await page.locator('#board').evaluate(node => { node.scrollTop = node.scrollHeight; });
+    expect((await page.locator('#decision').boundingBox()).y).toBe(before.y);
+  });
+}
