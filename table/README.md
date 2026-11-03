@@ -505,3 +505,13 @@ npm --prefix arena run build
 
 Docker and CI build it automatically. See [build details](../arena/README.md) and the
 [browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.
+
+## Live arena preview
+
+`/arena` is an opt-in read-only view, linked from **Match → Open live arena preview**. It asks for a
+viewpoint before reading any private board, supports accepted saved or linked seats, and returns to
+`/play` for decisions or invitation acceptance. `arena-live.js` consumes the same `boardPresentation`
+as the table; the separate `arena-build/live.js` bundle cannot import the lab sample. See
+[ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) and
+[the build instructions](../arena/README.md). This preview sends no decisions or `shown`; the existing
+host still marks a selected accepted seat as arrived on its authenticated reads.

@@ -15,3 +15,13 @@ export interface LabState {
 export interface Placement { x: number; y: number; size: number; hitWidth: number; }
 export const creaturesOf = (state: LabState) => [...state.board.allies, ...state.board.enemies];
 export const isEnemy = (state: LabState, id: string) => state.board.enemies.some(one => one.id === id);
+
+// A render frame has presentation state only. The live adapter never imports the lab's sample or reducer.
+export interface SceneFrame {
+  stage: Stage; target: string | null; actor: string | null; targets: readonly string[];
+  creatures: { id: string; form: string; isAlive: boolean; enemy: boolean }[];
+}
+export const labSceneFrame = (state: LabState): SceneFrame => ({
+  stage: state.stage, target: state.target, actor: state.action.actor, targets: state.action.targets,
+  creatures: creaturesOf(state).map(one => ({ ...one, enemy: isEnemy(state, one.id) })),
+});

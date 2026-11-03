@@ -5,6 +5,6 @@
   "scripts": {
     "build": "tsc --noEmit && node build.mjs"
   },
-  "dependencies": { "phaser": "3.90.0" },
+  "dependencies": { "phaser": "4.2.1" },
   "devDependencies": { "esbuild": "0.25.12", "typescript": "5.9.3" }
 }

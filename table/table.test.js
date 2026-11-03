@@ -2659,3 +2659,21 @@ test('the mat keeps following the creature being asked while a replay is shown',
   assert.equal(p.state.playback.round, 1);
   assert.match(p.nodes.mat.children[0].textContent, /Creature 3 · Mutation Tree/);
 });
+
+// The live arena (ADR 0125) discovers seats in storage or in its own address. A browser that keeps nothing holds
+// its seats in /play's address, so the link to the preview has to carry them too, or it opens on no seat at all.
+test('a browser that keeps nothing hands the live arena its seats in the link', () => {
+  const p = page();
+  p.context.start = () => {};
+  p.context.settle([{ seat: 'player1', token: 'one' }, { seat: 'player2', token: 'two' }]);
+  assert.equal(p.nodes['arena-link'].href, '/arena?player1=one&player2=two');
+});
+
+test('a browser that keeps its seats links the live arena bare, with no token in the address', () => {
+  const p = page();
+  p.context.start = () => {};
+  const kept = new Map();
+  p.context.storage = { getItem: key => kept.get(key) ?? null, setItem: (key, value) => kept.set(key, String(value)), removeItem: key => kept.delete(key) };
+  p.context.settle([{ seat: 'player1', token: 'one' }]);
+  assert.equal(p.nodes['arena-link'].href, '/arena');
+});
