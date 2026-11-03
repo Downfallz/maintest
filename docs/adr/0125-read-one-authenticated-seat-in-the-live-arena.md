@@ -1,4 +1,4 @@
-# 0124. Read one authenticated seat in the live arena
+# 0125. Read one authenticated seat in the live arena
 
 Date: 2026-11-03
 Status: Accepted for the opt-in read-only integration

@@ -210,10 +210,11 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    each its own account. An abandoned match leaves no result. The seats' accounts are in `table.json` too, so an
    exported session carries ids and no names.
 
-Later, each its own plan: the leaderboard (a rating for person-vs-person only — Glicko-2 suits few, irregular
-games — and a separate record against each bot; shared-device and abandoned matches unranked), a profile page
-with a player's history, "your turn" sent to every device of an account instead of each seat (ADR 0118), a
-rename, and letting the operator open a table for a named player.
+Built since, by its own ADR: the leaderboard ([ADR 0125](../adr/0124-rank-players-with-glicko-2-over-ranked-results.md),
+`/leaderboard`): Glicko-2 over person-vs-person games only, a separate record against each bot, shared-device and
+abandoned matches unranked. Later, each its own plan: a profile page with a player's history, "your turn" sent to
+every device of an account instead of each seat (ADR 0118), a rename, and letting the operator open a table for a
+named player.
 
 ## Questions the owner settled (2026-11-03: every recommendation taken)
 

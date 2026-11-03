@@ -39,6 +39,9 @@ internal sealed class TableFiles
             ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
+            ["/leaderboard"] = (Path.Combine(tableDirectory, "leaderboard.html"), StudioResponse.Html),
+            ["/leaderboard.js"] = (Path.Combine(tableDirectory, "leaderboard.js"), JavaScript),
+            ["/leaderboard.css"] = (Path.Combine(tableDirectory, "leaderboard.css"), Css),
             ["/lobby.css"] = (Path.Combine(tableDirectory, "lobby.css"), Css),
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/table.js"] = (Path.Combine(tableDirectory, "table.js"), JavaScript),
@@ -89,7 +92,7 @@ internal sealed class TableFiles
             ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
 
-            // The opt-in live renderer reads one authenticated seat (ADR 0124).
+            // The opt-in live renderer reads one authenticated seat (ADR 0125).
             ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),
             ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
             ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),

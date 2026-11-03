@@ -218,6 +218,7 @@ if (typeof document !== 'undefined') {
       // Sent here to sign in on the way to a seat or an invitation: once signed in, back to it.
       if (account && next) { globalThis.location.assign(next); return; }
       eyebrow.textContent = account ? `Welcome back, ${account.username}` : 'Gather your creatures';
+      document.getElementById('leaderboard-link').hidden = mode === 'off';
       lobby.setAccount(account, mode);
     },
   });

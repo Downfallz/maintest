@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111917" />
+  <title>Downfall Arena — the ladder</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="table.css" />
+  <link rel="stylesheet" href="lobby.css" />
+  <link rel="stylesheet" href="leaderboard.css" />
+</head>
+<body class="lobby-page">
+  <header class="masthead lobby-header">
+    <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></a>
+    <nav aria-label="Ladder navigation"><a href="/">Tables</a></nav>
+  </header>
+  <main class="lobby-main">
+    <section class="lobby-hero" aria-labelledby="ladder-title">
+      <div><p class="eyebrow">Ranked games between two players</p><h2 id="ladder-title">The ladder.</h2><p class="hero-detail">Every finished game between two accounts moves both ratings. Beat a stronger player and you climb further.</p></div>
+    </section>
+    <output id="ladder-status" class="lobby-status muted">Reading the ladder…</output>
+    <p id="ladder-problem" class="problem" role="alert" hidden></p>
+    <div class="lobby-layout">
+      <section class="lobby-section" aria-labelledby="players-heading">
+        <div class="section-heading"><h2 id="players-heading">Players <span id="players-count" class="lobby-count"></span></h2><span class="muted">Rating ± how sure it is</span></div>
+        <div class="ladder-scroll">
+          <table class="ladder" aria-labelledby="players-heading">
+            <thead><tr><th scope="col" class="rank">#</th><th scope="col">Player</th><th scope="col" class="number">Rating</th><th scope="col" class="number">W–L–D</th><th scope="col" class="number games">Games</th></tr></thead>
+            <tbody id="ladder-rows"></tbody>
+          </table>
+        </div>
+        <p id="ladder-empty" class="empty-state" hidden>No ranked games yet. Open a table for another player from the lobby: every finished game between two accounts counts here.</p>
+      </section>
+      <aside class="lobby-sidebar" aria-label="Your record">
+        <section class="lobby-panel" aria-labelledby="you-heading"><p class="eyebrow">Your record</p><h2 id="you-heading">Where you stand</h2><div id="you"></div></section>
+        <section class="lobby-panel" aria-labelledby="how-heading"><p class="eyebrow">How it counts</p><h2 id="how-heading">Glicko-2</h2>
+          <p class="muted">Everyone starts at 1500, very uncertain. Each ranked game moves your rating by how surprising the result was, and makes it surer. A player is <strong>provisional</strong> while the ± is above <span id="provisional-above">110</span>.</p>
+          <p class="muted">Games against a bot or on a shared device are not ranked; your record against each bot is kept apart. A day without a game makes a rating a little less sure.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <script type="module" src="leaderboard.js"></script>
+</body>
+</html>

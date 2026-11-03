@@ -446,6 +446,11 @@ A recorded match with an account in it leaves a result for a future leaderboard 
 plan): `results/<yyyy-MM>/<matchId>.json` beside the accounts, with each seat's account id or bot, the winner, the
 rounds and whether it is *ranked* (two seats, two different accounts). No name is written there.
 
+`/leaderboard` is the ladder (ADR 0125), linked from the lobby when players sign in: every account with a ranked
+game, by Glicko-2 rating with its ± and its record, provisional players (± above 110) after the others, and for
+whoever is signed in their place and their record against each bot. `GET /api/leaderboard` answers anybody; the
+ladder is recomputed from the results every half minute at most.
+
 ## "Your turn" on a phone
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
@@ -506,6 +511,6 @@ Docker and CI build it automatically. See [build details](../arena/README.md) an
 viewpoint before reading any private board, supports accepted saved or linked seats, and returns to
 `/play` for decisions or invitation acceptance. `arena-live.js` consumes the same `boardPresentation`
 as the table; the separate `arena-build/live.js` bundle cannot import the lab sample. See
-[ADR 0124](../docs/adr/0124-read-one-authenticated-seat-in-the-live-arena.md) and
+[ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) and
 [the build instructions](../arena/README.md). This preview sends no decisions or `shown`; the existing
 host still marks a selected accepted seat as arrived on its authenticated reads.

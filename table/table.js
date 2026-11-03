@@ -177,7 +177,7 @@ function settle(seats) {
     globalThis.history.replaceState(null, '', addressAfter(playPath(globalThis.location?.pathname), seats, kept));
   }
   // The live preview finds its seats where this page keeps them: in storage, or, when nothing is kept, in the
-  // address it is opened from (ADR 0124).
+  // address it is opened from (ADR 0125).
   element('arena-link').href = addressAfter('/arena', seats, kept);
 
   enter(seats, null);

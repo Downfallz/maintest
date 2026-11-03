@@ -150,7 +150,7 @@ start a second instance of `table.js`. Refresh `main` again before implementing 
 Built on `main` at `96edfe27` after PR #425 merged, including its replay guard, preserved asked creature,
 fixture-based browser assertions and choice-field analyser correction. The account result changes from
 #421 are included in the integration baseline.
-[ADR 0124](../adr/0124-read-one-authenticated-seat-in-the-live-arena.md) records live adoption without
+[ADR 0125](../adr/0125-read-one-authenticated-seat-in-the-live-arena.md) records live adoption without
 rewriting the accepted prototype decision.
 
 `/arena` asks for a viewpoint, resumes accepted seats through the lobby, and displays the selected

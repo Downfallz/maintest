@@ -40,7 +40,7 @@ the TypeScript imports them and owns Phaser and DOM integration.
 No rules, legality, damage or random resolution are reimplemented here. `/arena-lab` keeps its fixture
 and makes no API requests. `/arena` is the opt-in live entry point: choose an accepted seat, inspect its
 board, and return to `/play` to decide. It shares [`table/presentation.js`](../table/presentation.js)
-with the table. [ADR 0124](../docs/adr/0124-read-one-authenticated-seat-in-the-live-arena.md) describes
+with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) describes
 seat discovery, explicit viewpoints, read-only transport, arrival behavior and recovery.
 
 - `src/live.ts`: live DOM adapter and lifecycle; no lab imports.
