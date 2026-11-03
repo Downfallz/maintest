@@ -85,6 +85,21 @@ public sealed class LeaderboardApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_day_old_session_is_issued_again_by_the_ladder()
+    {
+        var clock = new MovableClock(Start);
+        var accounts = new AccountApi(_registry, new AccountSessions(await _store.SessionKeyAsync(Cancel), clock), AccountsMode.Development);
+        var session = await SessionOfAsync(accounts, "MarkF");
+        var ladder = new LeaderboardApi(_results, accounts, clock);
+        (await ladder.HandleAsync("GET", new AccountRequest(session, Secure: false))).Headers.ShouldBeNull();
+
+        clock.Advance(AccountSessions.RenewAfter);
+        var renewed = await ladder.HandleAsync("GET", new AccountRequest(session, Secure: false));
+
+        renewed.Headers.ShouldNotBeNull().Single().Value.ShouldStartWith(AccountSessions.Cookie + "=");
+    }
+
+    [Fact]
     public async Task A_deleted_account_leaves_the_ladder()
     {
         var mark = await PlayerAsync("MarkF");
@@ -112,6 +127,15 @@ public sealed class LeaderboardApiTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+
+    private sealed class MovableClock(DateTimeOffset start) : TimeProvider
+    {
+        private DateTimeOffset _now = start;
+
+        public void Advance(TimeSpan by) => _now += by;
+
+        public override DateTimeOffset GetUtcNow() => _now;
     }
 
     private sealed class Clock(DateTimeOffset now) : TimeProvider

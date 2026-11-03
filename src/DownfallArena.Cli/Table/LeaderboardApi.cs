@@ -55,7 +55,7 @@ internal sealed class LeaderboardApi(IMatchResults results, AccountApi accounts,
         var bots = who is null
             ? []
             : standings.AgainstBots(who.Account.Id).Select(record => new { bot = botName?.Invoke(record.Agent) ?? record.Agent, record.Games, record.Wins, record.Losses, record.Draws }).ToArray();
-        return StudioResponse.OfJson(
+        var ladder = StudioResponse.OfJson(
             new
             {
                 provisionalAbove = Standing.ProvisionalDeviation,
@@ -63,6 +63,9 @@ internal sealed class LeaderboardApi(IMatchResults results, AccountApi accounts,
                 you = who is null ? null : new { username = who.Account.Username.Value, standing = you, bots },
             },
             Web);
+
+        // A player who only ever comes back to the ladder keeps their session, as one who opens the lobby does.
+        return who?.Renewed is { } renewed ? ladder with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : ladder;
     }
 
     private static object Row(int rank, string username, Standing standing, bool mine) => new
