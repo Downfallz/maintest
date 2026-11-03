@@ -63,7 +63,7 @@ The existing `/play` uses it; a future live Phaser adapter can import it without
 | Function | Input and responsibility |
 | --- | --- |
 | `decisionView(seat, latest, { asked, chosen, answered })` | Adapt an Action into spell/target screens only for the matching seat and asking; hide an already accepted Action until the next poll. Other question kinds pass through. |
-| `presentedView(latest, replay, entries)` | Select the recorded before/after board and the public events up to that point. Clear the displayed question/options; keep the current view separate. Without a frame, retain current totals, as the replay's existing note explains. |
+| `presentedView(latest, replay, entries)` | Select the recorded before/after board and the public events up to that point. Clear the question and its options, but keep who is being asked: the spellbook and the Mutation Tree follow that creature while the frame is read. Keep the current view separate. Without a frame, retain current totals, as the replay's existing note explains. |
 | `boardPresentation(board)` | Expose teams, round/phase and ordered timeline slots with position, side, rolls and cursor. Preserve the host's creature stats, conditions and order. |
 | `activeTurn(board)` | Read the current slot only during Activation; never infer one during planning or cleanup. |
 

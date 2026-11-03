@@ -2644,3 +2644,18 @@ test('an upkeep read after the next round has begun stands on the board that rou
   assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · opponent action/);
   assert.match(p.nodes.allies.textContent, /14\/20 HP/);
 });
+
+// A replay (or a stepped opponent action) shows a historical board with no question on it, but the person reading
+// it is still the one being asked: the Mutation Tree keeps following that creature instead of falling back to
+// the first ally the moment the replay opens.
+test('the mat keeps following the creature being asked while a replay is shown', () => {
+  const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2;
+  p.view.board.allies.push({ id: 3, name: 'Third', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one'] });
+  p.view.waitingCreature = 3;
+  p.view.options = { intent: { creatures: [{ creature: 3, castableSpells: ['one'] }] } };
+  p.draw();
+  assert.match(p.nodes.mat.children[0].textContent, /Creature 3 · Mutation Tree/);
+  openReplay(p);
+  assert.equal(p.state.playback.round, 1);
+  assert.match(p.nodes.mat.children[0].textContent, /Creature 3 · Mutation Tree/);
+});

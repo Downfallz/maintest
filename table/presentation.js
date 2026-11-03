@@ -17,13 +17,17 @@ export function decisionView(seat, latest, { asked = null, chosen = null, answer
 
 // Displaying a recorded frame never replaces the current legal question. Controllers keep `latest` for
 // decisions and acknowledge it only once it is visible, outside playback and the hotseat fence.
+//
+// What goes is the question itself: what is asked and what may be answered. Who is asked stays, because the
+// person reading the frame is still that creature's player, and the spellbook, its guidance and the Mutation
+// Tree follow that creature while they read rather than jumping to the first ally.
 export function presentedView(latest, replay = null, entries = null) {
   if (!replay) return latest;
   const action = replay.actions[replay.index];
   return {
     ...latest,
     board: playbackBoard(replay, latest.board),
-    waitingFor: null, waitingCreature: null, waitingAsked: null, askedAs: null, options: {},
+    waitingFor: null, options: {},
     roundEvents: (entries ?? latest.roundEvents ?? []).filter(entry => entry.sequence < action.sequence
       || (replay.stage === 'after' && entry.sequence === action.sequence)),
   };
@@ -44,12 +48,12 @@ export function boardPresentation(board) {
     subPhase: board?.subPhase,
     cursor,
     timeline,
-    turn: activeTurn(board),
+    turn: activeTurn(board, cursor),
   };
 }
 
-export function activeTurn(board) {
-  const cursor = cursorOf(board);
+// The slot the round is on, during Activation only (timeline.js): never one inferred while planning or cleaning up.
+export function activeTurn(board, cursor = cursorOf(board)) {
   const slot = board?.timeline?.[cursor];
   return slot ? { slot, position: cursor + 1, total: board.timeline.length } : null;
 }
