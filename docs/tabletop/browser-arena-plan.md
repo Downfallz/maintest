@@ -4,7 +4,8 @@ Status: design experiment, not a replacement for the table. First slice: `/arena
 
 **Immersive revision (2026-11-03):** A2 now uses Phaser and TypeScript. The canvas, HUD and primary
 commands fit the viewport in portrait and landscape. The earlier scrolling DOM study is superseded.
-Baseline inspected: `748557b4` on `main` (player accounts stage 3). Re-check `main` before each integration PR.
+Initial audit: `748557b4` on `main` (player accounts stage 3). A3 refreshes that baseline to `69ce758d`
+(#420 merged, on top of player accounts stage 4, #417). Re-check `main` before each integration PR.
 
 ## Decision summary
 
@@ -121,7 +122,7 @@ Numbers below belong to this arena workstream, not the earlier UI-polish PR list
 | --- | --- | --- | --- |
 | A1 — Design laboratory (implemented) | `table/arena-lab*`, explicit host routes, this plan | Compare two layouts; one action with three fixed outcomes; cancel/reset/skip/reduced-motion tests; route test | Current main |
 | A2 — Immersive viewport prototype (implemented in this PR) | Phaser/TypeScript renderer spike, viewport shell, layered environment, three provisional forms, HUD and asset mapping | No document scrolling or clipped commands; visible actor/targets/action bar; decision/targeting/resolution at 1440×1000, 844×390 and 390×844; missing-art fallback | A1 design review |
-| A3 — Presentation/controller boundary | Extract minimal read-only view mapping from table orchestration; focused modules/tests | Both interfaces agree on creature values, initiative and asking; existing `/play` behaves unchanged | A1; refresh main |
+| A3 — Presentation/controller boundary (implemented) | `table/presentation.js` extracts local question adaptation, historical display selection and team/timeline mapping; `/play` consumes it | Frozen-input tests cover seat/asking changes, historical resources, public event cutoffs, host order and missing frames; browser journeys exercise the existing renderer | A1; based on `69ce758d` including #420 fixes |
 | A4 — Real board, read-only | Opt-in arena route over existing authenticated seat transport | Correct seat projection, account/invitation handling, dead/stunned/condition states, reconnect; no decisions emitted | A3 |
 | A5 — Real action and target controls | Existing `slotView`/command builder + scene targets + catalogue-backed action list | At-activation and hidden-intent paths, friendly/self/multiple/no-target spells, unaffordable/unavailable cards, stale asking, server rejection, double-click prevention | A2, A4 |
 | A6 — Confirmed-action playback | Ordered frame queue, action motifs, existing `combat-fx` + `feed`/`replay` helpers | No duplicate effects from SSE/poll; multiple events in one response; final action before upkeep; skip/reconnect/hidden tab; legacy frame fallback | A4; integrate A5 |
@@ -131,6 +132,18 @@ Numbers below belong to this arena workstream, not the earlier UI-polish PR list
 A3/A4 can use the provisional art while A2 is reviewed. A5 must land with the current instant/state-only
 result path available; A6 enriches that path rather than making animation completion mandatory. Do not
 replace `/play` in any of A1–A6. Audit account work and table orchestration changes on `main` before A3/A4.
+
+### A3 delivery boundary
+
+`table/presentation.js` is now the shared, framework-independent mapping used by the current table, served
+through the real host's explicit route table. See its [contract](../../table/README.md#read-only-presentation-boundary).
+The latest seat response, locally adapted question and displayed historical board remain distinct. The
+module neither polls nor sends commands and does not own hotseat selection or acknowledgement timing.
+
+This step intentionally leaves `/arena-lab` on its sample state machine: wiring a real seat belongs to A4.
+Parity today is tested between the shared board model and `/play`; parity with a live Phaser renderer can
+only be asserted once A4 exists. A4 must use a separate entry point and must not import the lab fixture or
+start a second instance of `table.js`. Refresh `main` again before implementing that transport lifecycle.
 
 ## Revised immersive prototype (A2)
 

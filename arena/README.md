@@ -38,8 +38,10 @@ The three `table/` modules are plain JavaScript so `node --test table/*.test.js`
 the TypeScript imports them, and holds nothing that is not Phaser or the DOM.
 
 No rules, legality, damage or random resolution are reimplemented here. There is no API request, saved
-seat, live stream or service worker. The next PR should extract the read-only controller boundary before
-connecting seat-filtered views. The compiled bundle is about 1.2 MB uncompressed; the two art files total
+seat, live stream or service worker. A3 extracts the shared read-only boundary in
+[`table/presentation.js`](../table/presentation.js), already used by `/play`. A4 will connect seat-filtered
+views through that boundary in a separate live adapter; the lab keeps its fixture.
+The compiled bundle is about 1.2 MB uncompressed; the two art files total
 about 0.8 MB. Device performance and transfer compression remain to be measured before release.
 
 ## Verify

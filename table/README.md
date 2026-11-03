@@ -55,6 +55,26 @@ when the host was started with `--declaration hidden-intent`, when its `--rules`
 player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
 action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
+## Read-only presentation boundary
+
+`presentation.js` is the shared seam between a seat controller and a renderer (ADR 0123, arena step A3).
+The existing `/play` uses it; a future live Phaser adapter can import it without starting this page.
+
+| Function | Input and responsibility |
+| --- | --- |
+| `decisionView(seat, latest, { asked, chosen, answered })` | Adapt an Action into spell/target screens only for the matching seat and asking; hide an already accepted Action until the next poll. Other question kinds pass through. |
+| `presentedView(latest, replay, entries)` | Select the recorded before/after board and the public events up to that point. Clear the question and its options, but keep who is being asked: the spellbook and the Mutation Tree follow that creature while the frame is read. Keep the current view separate. Without a frame, retain current totals, as the replay's existing note explains. |
+| `boardPresentation(board)` | Expose teams, round/phase and ordered timeline slots with position, side, rolls and cursor. Preserve the host's creature stats, conditions and order. |
+| `activeTurn(board)` | Read the current slot only during Activation; never infer one during planning or cleanup. |
+
+These functions perform no I/O and borrow their inputs as immutable snapshots; they do not clone or freeze
+the host payload. They accept an **already seat-filtered** view, not a full match or another player's view,
+and are not a security filter. Local choices are scoped to one controller/table and are discarded when that
+controller is replaced. The controller still owns polling/SSE, feed cursors, seat selection, the hotseat
+fence, choice resets, acknowledgement after actual display, and command submission. In `/play`, `rawViews`
+remain the latest responses; `drawnViews` adapts questions, and `render` builds a separate historical display.
+Neither renderer may post from a historical view or make animation completion advance the match.
+
 ## Player-facing words
 
 The page shows the player's words for what the host serves under the domain's names: tempo **Instinct** and

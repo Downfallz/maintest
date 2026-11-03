@@ -33,6 +33,7 @@ benchmarks/                    The fixed benchmark seeds and one outcome digest 
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
+                               presentation.js is the pure seat-to-presentation boundary shared with future live arena work.
                                `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-arena-plan.md, ADR 0123).
 arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.

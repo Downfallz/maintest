@@ -73,6 +73,7 @@ internal sealed class TableFiles
             ["/notes.js"] = (Path.Combine(tableDirectory, "notes.js"), JavaScript),
             ["/waiting.js"] = (Path.Combine(tableDirectory, "waiting.js"), JavaScript),
             ["/slot.js"] = (Path.Combine(tableDirectory, "slot.js"), JavaScript),
+            ["/presentation.js"] = (Path.Combine(tableDirectory, "presentation.js"), JavaScript),
             ["/terms.js"] = (Path.Combine(tableDirectory, "terms.js"), JavaScript),
             ["/combat-fx.js"] = (Path.Combine(tableDirectory, "combat-fx.js"), JavaScript),
             ["/feedback.js"] = (Path.Combine(tableDirectory, "feedback.js"), JavaScript),
