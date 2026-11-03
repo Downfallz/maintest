@@ -28,7 +28,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();
     async function nextQuestion() {
       let view;
-      await expect.poll(async () => { view = await read(); return view.waitingFor ?? (view.over ? 'over' : null); }, { timeout: 15000 }).not.toBeNull();
+      await expect.poll(async () => { view = await read(); return view?.waitingFor ?? (view?.over ? 'over' : null); }, { timeout: 15000 }).not.toBeNull();
+      if (!view) throw new Error('The host did not supply a question.');
       return view;
     }
     // The driver answers only planning questions; every combat decision comes from the visible arena.
