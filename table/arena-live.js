@@ -26,10 +26,12 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
     cancel(previous.pollTimer);
     cancel(previous.streamTimer);
   }
-  function start(transport) {
+  // A catalogue already read (by this page, before it was suspended) is handed back in: it cannot change while
+  // the host runs, so a resumed seat reads its board and nothing else.
+  function start(transport, catalogue) {
     stop();
     const connection = { abort: new AbortController(), pollTimer: null, streamTimer: null,
-      busy: false, owed: false, since: 0, catalogue: null, retry: 1000 };
+      busy: false, owed: false, since: 0, catalogue: catalogue ?? null, retry: 1000, streams: 0 };
     active = connection;
     const current = () => active === connection;
     function refused(answer) {
@@ -70,9 +72,14 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       }
     }
     async function stream() {
+      // The stream opens with `ready`. On the first stream the poll already in flight is the board as it
+      // stands, so that `ready` owes nothing; on a reconnect it says what may have changed meanwhile.
+      const first = connection.streams++ === 0;
       try {
-        const answer = await transport.events(() => {
-          if (current()) { connection.retry = 1000; void refresh(); }
+        const answer = await transport.events(event => {
+          if (!current()) return;
+          connection.retry = 1000;
+          if (!(first && event?.event === 'ready')) void refresh();
         }, connection.abort.signal);
         if (!current() || (answer && refused(answer))) return;
       } catch { if (!current()) return; }

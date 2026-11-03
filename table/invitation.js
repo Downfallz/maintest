@@ -8,7 +8,10 @@
 
 const NAMES = { player1: 'Player 1', player2: 'Player 2' };
 
-const names = seats => seats.map(one => NAMES[one.seat] ?? one.seat).join(' and ');
+// A seat as a player reads it, for every page that names one.
+export const seatLabel = seat => NAMES[seat] ?? seat;
+
+const names = seats => seats.map(one => seatLabel(one.seat)).join(' and ');
 
 /**
  * What to do, from the host's answer about each key (`invitations`) and the seats this browser holds at the

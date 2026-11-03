@@ -106,3 +106,38 @@ test('identical host names remain distinguishable without replacing their names 
   assert.deepEqual(result.creatures.map(one => one.label), ['Main · 1', 'Main · 4']);
   assert.deepEqual(result.creatures.map(one => one.name), ['Main', 'Main']);
 });
+
+test('the first stream\'s ready owes no second poll; a reconnect\'s ready refreshes', async () => {
+  const h = harness(); let calls = 0; const notify = [];
+  h.transport.seat = async () => { calls++; return ok({ board: {}, feedNext: 1 }); };
+  h.transport.events = callback => { notify.push(callback); return new Promise(() => {}); };
+  h.connection.start(h.transport); await tick();
+  notify[0]({ event: 'ready' }); await tick();
+  assert.equal(calls, 1, 'the board already in flight is the one ready announces');
+  assert.equal(h.jobs.size, 1, 'only the next poll is due');
+  notify[0]({ event: 'changed' }); await tick();
+  assert.equal(calls, 2);
+  h.connection.stop();
+});
+
+test('a reconnected stream\'s ready refreshes the board', async () => {
+  const h = harness(); let calls = 0; const notify = [];
+  h.transport.seat = async () => { calls++; return ok({ board: {}, feedNext: 1 }); };
+  h.transport.events = callback => { notify.push(callback); return notify.length === 1 ? Promise.resolve({ ok: true, status: 200 }) : new Promise(() => {}); };
+  h.connection.start(h.transport); await tick();
+  // The reconnect job opens a stream that stays open: run it without waiting for it to close.
+  const [id, reconnect] = [...h.jobs].find(([, job]) => job.delay === 1000);
+  h.jobs.delete(id); void reconnect.run(); await tick();
+  notify[1]({ event: 'ready' }); await tick();
+  assert.equal(calls, 2);
+  h.connection.stop();
+});
+
+test('a catalogue handed to a started connection is not read again', async () => {
+  const h = harness(); let reads = 0;
+  h.transport.catalogue = async () => { reads++; return ok({ cards: [] }); };
+  h.connection.start(h.transport, { cards: ['known'] }); await tick();
+  assert.equal(reads, 0);
+  assert.deepEqual(h.views.at(-1)[1], { cards: ['known'] });
+  h.connection.stop();
+});

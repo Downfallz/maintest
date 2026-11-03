@@ -1,12 +1,13 @@
-import Phaser from 'phaser';
 import { ArenaScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets } from './targets';
+import { bootScene } from './boot';
 import { httpTransport } from '../../table/transport.js';
 import { arenaSeats, seatPath } from '../../table/arena-seats.js';
 import { createLiveConnection, livePresentation } from '../../table/arena-live.js';
 import { chipText, chipSource, laneOf } from '../../table/board.js';
 import { signInPath } from '../../table/account.js';
+import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, tempoLabel, decisionLabel, stepLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
@@ -37,9 +38,9 @@ let discovering = 0;
 let rendererFailed = false;
 const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
-const seatName = (seat: string) => seat === 'player1' ? 'Player 1' : 'Player 2';
+const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
-  view = next; catalogue = content; render();
+  view = next; catalogue = content ?? catalogue; render();
 } });
 
 function status(state: string) {
@@ -159,7 +160,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
-  connection.start(httpTransport(choice.seat, choice.token, request));
+  connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
 }
 
 async function discover() {
@@ -203,18 +204,14 @@ $('switch-seat').addEventListener('click', () => { void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
 $('reduce-motion').addEventListener('change', render); motion.addEventListener('change', render);
-function suspend() { discovering++; connection.stop(); view = null; catalogue = null; render(); text('connection', 'Paused'); }
+// The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
+function suspend() { discovering++; connection.stop(); view = null; render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });
 window.addEventListener('pagehide', suspend);
 window.addEventListener('pageshow', event => { if (event.persisted) { if (selected) choose(selected); else void discover(); } });
 try {
-  const game = new Phaser.Game({ type: Phaser.AUTO, parent: 'phaser-mount', backgroundColor: '#17272b',
-    scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' }, audio: { noAudio: true }, scene, banner: false });
-  const resize = new ResizeObserver(() => { const { width, height } = $('phaser-mount').getBoundingClientRect(); if (width && height) game.scale.resize(width, height); });
-  resize.observe($('phaser-mount')); game.events.once(Phaser.Core.Events.DESTROY, () => resize.disconnect());
-  game.events.once(Phaser.Core.Events.READY, () => game.canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); failRenderer(); }));
+  bootScene(scene, $('phaser-mount'), { isReady: () => ready || rendererFailed, onContextLost: failRenderer, onNeverReady: failRenderer });
 } catch { failRenderer(); }
-setTimeout(() => { if (!ready && !rendererFailed) failRenderer(); }, 15000);
 void discover();

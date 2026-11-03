@@ -1,7 +1,7 @@
-import Phaser from 'phaser';
 import { ArenaScene } from './scene';
 import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState } from './types';
 import { creatureButton, placeHitTargets } from './targets';
+import { bootScene } from './boot';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/arena-lab-state.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
 
@@ -237,23 +237,9 @@ scene.onReady = () => {
   render();
 };
 try {
-  const game = new Phaser.Game({ type: Phaser.AUTO, parent: 'phaser-mount', backgroundColor: '#17272b',
-    scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
-    render: { antialias: true, roundPixels: false }, fps: { target: 60, forceSetTimeOut: false },
-    audio: { noAudio: true }, scene, banner: false });
-  // Observe the stage itself: mobile browser chrome and rotation need not trigger
-  // the same window-resize path as a desktop browser.
-  const stage = $('phaser-mount');
-  const resize = new ResizeObserver(() => {
-    const { width, height } = stage.getBoundingClientRect();
-    if (width > 0 && height > 0) game.scale.resize(width, height);
-  });
-  resize.observe(stage);
-  game.events.once(Phaser.Core.Events.DESTROY, () => resize.disconnect());
-  game.events.once(Phaser.Core.Events.READY, () => {
-    game.canvas.addEventListener('webglcontextlost', event => {
-      event.preventDefault(); skip(false); fail('The graphics context was interrupted. Reload to reopen the scene.');
-    });
+  bootScene(scene, $('phaser-mount'), {
+    isReady: () => ready,
+    onContextLost: () => { skip(false); fail('The graphics context was interrupted. Reload to reopen the scene.'); },
+    onNeverReady: () => fail('The scene could not finish loading. Check the connection and reload.'),
   });
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
-setTimeout(() => { if (!ready) fail('The scene could not finish loading. Check the connection and reload.'); }, 15000);
