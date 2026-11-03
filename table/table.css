@@ -1459,18 +1459,23 @@ body:has(#table) { padding-bottom: 24px; }
    so every creature is in view at once; the board under them is the detail. The board being always there, the
    Battlefield button is not drawn, nor the phase's reminder line. */
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 1099px) {
-  :root { --side: clamp(280px, 44vw, 460px); }
-  body:has(#table:not([hidden])) { padding: 0 10px 12px calc(var(--side) + 12px); }
+  :root { --side: clamp(270px, 38vw, 380px); }
+  body:has(#table:not([hidden])) { padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) calc(var(--side) + 12px); }
   body:has(#table:not([hidden])) .masthead { min-height: 0; padding: 4px 0; gap: 10px; flex-wrap: nowrap; }
   body:has(#table:not([hidden])) .masthead .brand { display: none; }
+  .tabs, .session-state #phase { display: none; }
   body:has(#table:not([hidden])) .session-state { flex: 1; width: auto; order: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; text-align: left; }
   #table { margin-top: 4px; }
-  #phase-dock { position: fixed; top: 0; left: 0; width: var(--side); margin: 0; padding: 8px 10px; gap: 5px; border-width: 0 1px 1px 0; border-radius: 0 0 10px 0; z-index: 24; }
+  #phase-dock { position: fixed; top: 0; left: 0; width: var(--side); margin: 0; padding: max(8px, env(safe-area-inset-top)) 10px 8px max(10px, env(safe-area-inset-left)); gap: 5px; border-width: 0 1px 1px 0; border-radius: 0 0 10px 0; z-index: 24; }
   /* What opens from the bar opens over both columns from its left edge, rather than off the screen's. */
   #phase-notice, #phase-steps, #announcement-list, #upkeep-panel, #match-panel, #recap-actions, #order-panel {
     left: 0; right: auto; width: min(520px, calc(100vw - 20px)); max-height: min(70dvh, 320px);
   }
   #phase-reminder, .board-toggle, #phase-turn { display: none; }
+  .phase-primary { flex-wrap: nowrap; gap: 10px; }
+  #phase-round { font-size: 14px; }
+  #phase-current { font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #phase-current .phase-major { display: none; }
   /* The bar stays short enough to leave the board most of the column: the last action on one line (its full
      text is its title), the tools on one row that slides sideways. */
   .combat-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1480,8 +1485,8 @@ body:has(#table) { padding-bottom: 24px; }
   body.board-open { overflow: auto; }
   #board, body.board-open #board, body:not(.board-open) #board {
     display: block; position: fixed; inset: auto; top: var(--phase-height, 120px); left: 0; bottom: 0; width: var(--side);
-    margin: 0; padding: 8px 10px max(16px, env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain;
-    background: var(--paper); border-right: 1px solid #64735a; z-index: 22;
+    margin: 0; padding: 10px 10px max(16px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--paper); border-right: 1px solid #64735a; z-index: 22; scroll-margin-top: 12px;
   }
   /* A creature in a few lines, as a phone's opened battlefield draws it (its stats as the cards' symbols, the
      word kept for a screen reader), whatever the width: the column is a phone's either way. */
@@ -1492,7 +1497,7 @@ body:has(#table) { padding-bottom: 24px; }
   #board .creature.legal, #board .creature.picked { padding: 8px 9px; }
   #board .creature:not(.legal, .picked, .active, .dead) .creature-label { display: none; }
   #board .creature-id { min-width: 24px; height: 24px; }
-  #board .health { grid-column: 1 / -1; height: 17px; }
+  #board .health { grid-column: 1 / -1; height: 17px; margin-bottom: 2px; }
   #board .stats { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 8px; }
   #board .stat { flex-direction: row; align-items: baseline; gap: 3px; }
   #board .stat strong { font-size: 15px; }
@@ -1511,15 +1516,47 @@ body:has(#table) { padding-bottom: 24px; }
   .initiative-section .band-name { margin-bottom: 4px; }
   .initiative-section .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
   .initiative-section .slot { min-width: 0; padding: 5px; }
-  #decision, #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 0; }
-  #decision .decision-heading, #decision #asking, .decision-context, #choices { grid-column: 1; grid-row: auto; }
-  #decision #asking { font-size: 22px; }
-  #decision[data-kind="Speed"] #choices > button { min-height: 52px; font-size: 18px; text-align: center; padding: 8px; }
-  #decision[data-kind="Speed"] #choices > button::before { display: inline; margin: 0 8px 0 0; }
-  /* The desk has the screen's whole height beside the bar, not what is left under it, and no board to stay
-     clear of: the question is a sheet in the page, not one pinned to the bottom of it. */
-  .action-area { position: static; }
+  /* One continuous right column. A capped sheet with overflow:visible paints choices over the next
+     section; the portrait flex/scroll rules also leave no usable list height on a short screen. */
+  #planning, #planning:is([data-kind="Speed"], [data-kind="Intent"]) {
+    display: block; min-width: 0; height: auto; max-height: none; overflow: visible;
+    padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); scroll-margin-top: 12px;
+  }
+  .play-area:has(#decision[data-kind="Target"]) .action-area, .action-area { position: static; }
   .sheet { max-height: none; border-radius: 12px; box-shadow: none; }
-  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { height: auto; max-height: calc(100dvh - 52px); padding: 12px; }
-  #decision[data-kind="Evolution"] { max-height: calc(100dvh - 52px); }
+  #decision, #decision[data-kind="Evolution"], #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision {
+    display: block; max-height: none; overflow: visible; padding: 0 0 12px; border: 0; background: transparent; box-shadow: none; scroll-margin-top: 12px;
+  }
+  #decision .decision-heading { margin-bottom: 8px; }
+  #decision #asking { font-size: 22px; margin: 0 0 6px; }
+  .decision-context { margin: 0 0 10px; font-size: 12px; }
+  #decision .shortcuts { display: none; }
+  #evolution-budget .pick-budget { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px; margin-bottom: 8px; }
+  #evolution-budget .pick-budget > strong { font-size: 12px; }
+  #evolution-budget .pick-tokens { margin: 0; gap: 4px; }
+  #evolution-budget .pick-token { padding: 2px 5px; }
+  #evolution-budget .pick-note { flex-basis: 100%; }
+  #choices, #decision[data-kind="Evolution"] #choices { grid-column: 1; grid-row: auto; grid-template-rows: none; overflow: visible; gap: 10px; }
+  #decision[data-kind="Evolution"] .choice-cards {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+    gap: 8px; overflow: visible; min-height: 0;
+  }
+  #decision .package-card {
+    display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+    min-width: 0; min-height: 88px; padding: 12px; border-color: #4b6052;
+    border-top-color: var(--class-color, var(--gold)); border-radius: 10px;
+    background: #26382e; color: var(--ink); box-shadow: none;
+  }
+  #decision .package-card .card-title { display: block; font-size: 19px; overflow-wrap: anywhere; }
+  #decision .package-card .card-meta { color: #b7c9bd; margin-top: 4px; font-size: 11px; }
+  #decision .package-card .card-body { margin-top: 9px; padding-top: 8px; border-top: 1px solid #465b4d; color: #e0e8dc; font-size: 12px; line-height: 1.5; }
+  #decision .package-card .package-requires { color: #b7c9bd; margin-top: 6px; font-size: 11px; }
+  #decision[data-kind="Evolution"] #choices > button { min-height: 44px; font-size: 12px; padding: 8px; }
+  #decision[data-kind="Speed"] #choices > button { min-height: 48px; font-size: 18px; text-align: center; padding: 8px; }
+  #decision[data-kind="Speed"] #choices > button::before { display: inline; margin: 0 8px 0 0; }
+  #planning .hand-section, #planning:is([data-kind="Speed"], [data-kind="Intent"]) .hand-section {
+    height: auto; min-height: 0; overflow: visible; padding-top: 12px;
+  }
+  .hand-section > .section-heading { display: flex; align-items: center; gap: 8px; }
+  .hand-actions .reference-link { min-height: 44px; padding: 6px 8px; font-size: 11px; }
 }

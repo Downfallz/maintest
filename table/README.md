@@ -162,7 +162,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   feedback, both off by default and kept on the device; it is lit while either is on.
 - A phone held sideways (landscape, at most 520px tall) puts the battlefield and the desk side by side: the
   round bar and its chips head a fixed left column whose board scrolls on its own, and the decision and
-  spellbook are the page on the right. The Battlefield button is not drawn there: the board is always in view.
+  spellbook form one continuous scrolling panel on the right, without a height cap or nested lists. Mutation
+  choices use dark cards with family accents and readable secondary text; they wrap to two columns when
+  space permits. The Battlefield button is not drawn there: the board is always in view. Safe-area padding
+  keeps controls clear of the phone’s cutout and gesture area.
 - Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
   Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
   throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
