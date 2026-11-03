@@ -1,7 +1,7 @@
 # Plan: player accounts, a Google sign-in and a home page
 
 Status: plan, accepted with [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md) on 2026-11-03,
-with every recommendation under "Open questions" taken. Stage 1 is built; the rest is not.
+with every recommendation under "Open questions" taken. Stages 1 and 2 are built; the rest is not.
 
 ## What the owner asked for
 
@@ -185,7 +185,8 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    `AccountRegistry` (`FindAsync`, `CheckUsernameAsync`, `RegisterAsync`) in `Application/Accounts`,
    `FileAccountStore` and `BlobAccountStore` in `Infrastructure/Accounts`, with tests (uniqueness under a race, reserved names, case, the crash between the name and the
    account). No route, no page.
-2. **Signing in.** `GoogleIdTokenVerifier` (tested with a key a test makes), the cookie, `--accounts` and
+2. **Signing in.** *Built*: `GoogleIdTokenVerifier` and `GoogleSigningKeys` (tested with a key a test makes), the
+   session key in the account store, `AccountSessions` (cookie and ticket), `AccountApi`, `--accounts` and
    `--google-client-id`, the account routes, `/api/me`. The home page's states 1 and 2, and the account chip.
    Nothing is required yet: a signed-in player still plays the way they do today.
 3. **Seats belong to accounts.** Binding on create, join, claim and leave; the `403`; `GET /api/account/games`

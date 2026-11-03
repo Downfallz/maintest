@@ -48,6 +48,21 @@
 #create-help { margin-top: 18px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
 .lobby-page .problem { margin: 12px 0; }
+.account { position: relative; }
+.account-chip { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: 22px; background: var(--raised); list-style: none; font-weight: 650; }
+.account-chip::-webkit-details-marker { display: none; }
+.account-initial { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #2f3f36; color: var(--gold); border: 1px solid #a9915e; font: 15px Georgia, serif; }
+.account-menu { position: absolute; right: 0; top: 48px; z-index: 10; display: grid; gap: 6px; padding: 8px; min-width: 210px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 15px 40px #0008; }
+.account-menu button { width: 100%; }
+.sign-in-panel { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px 28px; }
+.sign-in-panel > div { min-width: 0; }
+.sign-in-panel h2 { margin: 8px 0 6px; }
+.sign-in-actions { display: grid; gap: 8px; min-width: min(320px, 100%); }
+.google-button { min-height: 44px; }
+.name-title { font: 400 28px Georgia, serif; margin: 8px 0 10px; }
+.name-check { margin: 10px 0 0; font-size: 13px; }
+.name-check.good { color: var(--ally); }
+.name-check.bad { color: var(--refused); }
 @media (max-width: 1040px) { .lobby-layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 22px; } .lobby-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) {
   .lobby-page { padding-left: 18px; padding-right: 18px; }

@@ -17,8 +17,8 @@ namespace DownfallArena.Cli.Table;
 /// type.
 /// </para>
 /// <para>
-/// The players are never asked for either. A seat is joined by its code, without an account, because the
-/// people who sit down at a table are not the people who have one (ADR 0080); the platform is configured to
+/// The players are never asked for either. They sign in with the host's own session (ADR 0122, Google, beside
+/// this door rather than through it), or join a seat by its code with no account at all; the platform is configured to
 /// let an anonymous request through, and only the admin panel looks for the stamp.
 /// </para>
 /// </remarks>

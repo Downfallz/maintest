@@ -1,3 +1,4 @@
+using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Tests;
@@ -260,6 +261,35 @@ public sealed class CliOptionsTests
     public void The_lobby_and_the_platform_s_sign_in_are_the_table_s_alone(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args));
+    }
+
+    [Theory]
+    [InlineData("off")]
+    [InlineData("google")]
+    [InlineData("dev")]
+    public void The_table_says_how_players_sign_in(string value)
+    {
+        AccountApi.Named(CliOptions.Parse(["table", "--accounts", value]).Accounts).ShouldBe(value);
+    }
+
+    [Fact]
+    public void Players_do_not_sign_in_unless_asked_and_the_client_id_is_taken_as_given()
+    {
+        CliOptions.Parse(["table"]).Accounts.ShouldBe(AccountsMode.Off);
+        CliOptions.Parse(["table", "--accounts", "google", "--google-client-id", "1234.apps.googleusercontent.com"]).GoogleClientId.ShouldBe("1234.apps.googleusercontent.com");
+    }
+
+    [Theory]
+    [InlineData("table", "--accounts", "facebook")]
+    [InlineData("play", "--accounts", "google")]
+    [InlineData("table", "--accounts", "google", "--no-record")]
+    [InlineData("table", "--accounts", "dev", "--practice")]
+    [InlineData("table", "--accounts", "dev", "--bind", "0.0.0.0")]
+    [InlineData("table", "--google-client-id", "1234")]
+    [InlineData("table", "--accounts", "dev", "--google-client-id", "1234")]
+    public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");
     }
 
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>

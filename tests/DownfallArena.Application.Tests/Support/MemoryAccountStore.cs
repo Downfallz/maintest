@@ -62,4 +62,8 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) =>
         Task.FromResult(Names.TryGetValue(reservation.Username.Key, out var held) && held.Account == reservation.Account && Names.Remove(reservation.Username.Key));
+
+    public byte[] Key { get; } = [.. Enumerable.Range(1, 32).Select(value => (byte)value)];
+
+    public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => Task.FromResult(Key);
 }

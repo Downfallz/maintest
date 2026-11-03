@@ -62,6 +62,13 @@ public sealed class FileAccountStore : IAccountStore
             cancellationToken);
     }
 
+    public async Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default)
+    {
+        await ExclusivelyAsync(async () => await ReadAsync(AccountDocuments.SessionKeyPath, cancellationToken) is null
+            && await WriteAsync(AccountDocuments.SessionKeyPath, AccountDocuments.NewSessionKey(), overwrite: false, cancellationToken), cancellationToken);
+        return AccountDocuments.ReadSessionKey((await ReadAsync(AccountDocuments.SessionKeyPath, cancellationToken))!);
+    }
+
     private static async Task<bool> ExclusivelyAsync(Func<Task<bool>> change, CancellationToken cancellationToken)
     {
         await Indexes.WaitAsync(cancellationToken);

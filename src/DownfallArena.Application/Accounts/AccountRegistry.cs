@@ -41,6 +41,22 @@ public sealed class AccountRegistry
 
     public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => _store.FindAsync(id, cancellationToken);
 
+    /// <summary>
+    /// Raises the account's generation, so every session issued before is refused: "sign out everywhere". Null
+    /// when there is no such account.
+    /// </summary>
+    public async Task<Account?> SignOutEverywhereAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        if (await _store.FindAsync(id, cancellationToken) is not { } account)
+        {
+            return null;
+        }
+
+        var raised = account with { Generation = account.Generation + 1 };
+        await _store.SaveAsync(raised, cancellationToken);
+        return raised;
+    }
+
     /// <summary>Whether a name could be registered now: what the page says while a player types.</summary>
     public async Task<Result> CheckUsernameAsync(string? candidate, CancellationToken cancellationToken = default)
     {

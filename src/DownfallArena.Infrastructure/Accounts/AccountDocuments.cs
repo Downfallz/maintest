@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
@@ -14,6 +15,18 @@ namespace DownfallArena.Infrastructure.Accounts;
 internal static class AccountDocuments
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+
+    public const string SessionKeyPath = "session.key";
+
+    private const int SessionKeyBytes = 32;
+
+    public static string NewSessionKey() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(SessionKeyBytes));
+
+    public static byte[] ReadSessionKey(string text)
+    {
+        var key = Convert.FromBase64String(text.Trim());
+        return key.Length >= SessionKeyBytes ? key : throw new InvalidDataException($"The session key holds {key.Length} bytes; it takes {SessionKeyBytes}.");
+    }
 
     public static string AccountPath(AccountId id) => $"accounts/{id.Value}.json";
 

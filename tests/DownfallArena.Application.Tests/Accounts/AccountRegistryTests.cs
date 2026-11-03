@@ -178,6 +178,19 @@ public sealed class AccountRegistryTests
         _store.Accounts.ContainsKey(stranded.Id).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Signing_out_everywhere_raises_the_generation_sessions_are_checked_against()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        var raised = (await registry.SignOutEverywhereAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        raised.Generation.ShouldBe(2);
+        (await registry.FindAsync(account.Id, Cancel)).ShouldBe(raised);
+        (await registry.SignOutEverywhereAsync(AccountId.New(), Cancel)).ShouldBeNull();
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

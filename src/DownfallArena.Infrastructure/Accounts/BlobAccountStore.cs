@@ -76,6 +76,18 @@ public sealed class BlobAccountStore : IAccountStore
             && await DeleteIfUnchangedAsync(path, read.ETag, cancellationToken);
     }
 
+    /// <summary>Created once with <c>If-None-Match: *</c>, so two replicas starting together agree on one key.</summary>
+    public async Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default)
+    {
+        if (await ReadAsync(AccountDocuments.SessionKeyPath, cancellationToken) is not { } read)
+        {
+            await CreateAsync(AccountDocuments.SessionKeyPath, AccountDocuments.NewSessionKey(), cancellationToken);
+            read = (await ReadAsync(AccountDocuments.SessionKeyPath, cancellationToken))!.Value;
+        }
+
+        return AccountDocuments.ReadSessionKey(read.Json);
+    }
+
     private static BlobUploadOptions Options(BlobRequestConditions? conditions) => new()
     {
         Conditions = conditions,

@@ -290,6 +290,36 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Whether_players_sign_in_and_as_whom_is_answered_beside_the_operator()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"accounts-me-{Guid.CreateVersion7():N}");
+        try
+        {
+            var store = new Infrastructure.Accounts.FileAccountStore(root);
+            var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.Development);
+            var signedIn = await accounts.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", new AccountRequest(null, Secure: false));
+            var session = signedIn.Headers!.Single().Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..];
+            var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules", _hosted.Stored) { Accounts = accounts };
+
+            var me = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, new AccountRequest(session, Secure: false)))).RootElement;
+            var nobody = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, new AccountRequest(null, Secure: false)))).RootElement;
+
+            me.GetProperty("operator").GetBoolean().ShouldBeFalse();
+            me.GetProperty("accounts").GetString().ShouldBe("dev");
+            me.GetProperty("account").GetProperty("username").GetString().ShouldBe("MarkF");
+            nobody.GetProperty("account").ValueKind.ShouldBe(JsonValueKind.Null);
+            JsonDocument.Parse(Text(await Admin(OperatorGate.WithToken(OperatorToken)).HandleAsync("GET", "/api/me", "", null, null))).RootElement.GetProperty("accounts").GetString().ShouldBe("off");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task The_store_s_sessions_are_listed_with_what_their_manifest_says_and_whether_this_host_still_has_them()
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));

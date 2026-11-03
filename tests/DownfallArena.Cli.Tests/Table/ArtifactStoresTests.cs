@@ -34,4 +34,20 @@ public sealed class ArtifactStoresTests
     {
         ArtifactStores.IsEmulator(new Uri(url)).ShouldBe(emulator);
     }
+
+    [Theory]
+    [InlineData("https://downfall.blob.core.windows.net/playtests", "https://downfall.blob.core.windows.net/accounts")]
+    [InlineData("http://127.0.0.1:10000/devstoreaccount1/playtests/", "http://127.0.0.1:10000/devstoreaccount1/accounts")]
+    public void Accounts_are_a_container_of_their_own_beside_the_recordings(string recordings, string accounts)
+    {
+        ArtifactStores.AccountsUri(new Uri(recordings)).ShouldBe(new Uri(accounts));
+    }
+
+    [Fact]
+    public async Task Accounts_are_a_directory_beside_the_runs_directory()
+    {
+        var store = await ArtifactStores.OpenAccountsAsync(Path.Combine(Path.GetTempPath(), "downfall", "playtest"), TestContext.Current.CancellationToken);
+
+        store.ShouldBeOfType<Infrastructure.Accounts.FileAccountStore>().RootDirectory.ShouldBe(Path.Combine(Path.GetTempPath(), "downfall", "accounts"));
+    }
 }
