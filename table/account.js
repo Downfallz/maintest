@@ -29,8 +29,8 @@ export function accountState(me) {
   return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: me?.googleClientId ?? null };
 }
 
-export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bind(globalThis)) {
-  const options = { method: body === undefined ? 'GET' : 'POST', headers: {}, credentials: 'same-origin' };
+export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
+  const options = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
   const response = await fetchImpl(path, options);
   const text = await response.text();
@@ -74,6 +74,7 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
     el('sign-in-panel').hidden = state.mode === 'off' || signedIn;
     el('account').hidden = !signedIn;
     el('dev-sign-in').hidden = state.mode !== 'dev';
+    el('privacy-panel').hidden = state.mode === 'off';
     el('google-button').hidden = state.mode !== 'google';
     if (signedIn) {
       el('account-name').textContent = state.account.username;
@@ -162,6 +163,27 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
       await refresh();
     });
   }
+
+  // Deleting is final, so it asks for the player's own name, the one thing a stray tap cannot type.
+  el('delete-account').addEventListener('click', () => {
+    el('account-menu').open = false;
+    el('delete-confirm').value = '';
+    say('delete-problem');
+    el('delete-dialog').showModal();
+    el('delete-confirm').focus();
+  });
+  el('delete-cancel').addEventListener('click', () => el('delete-dialog').close());
+  el('delete-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    el('delete-submit').disabled = true;
+    try {
+      await request('/api/account', { username: el('delete-confirm').value }, undefined, 'DELETE');
+      el('delete-dialog').close();
+      await refresh();
+    } catch (error) {
+      say('delete-problem', error.message);
+    } finally { el('delete-submit').disabled = false; }
+  });
 
   return refresh().then(state => withGoogle(state).then(() => state));
 }

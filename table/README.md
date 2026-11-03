@@ -418,6 +418,10 @@ the same on every device; the seats a browser saved before signing in are handed
 (`POST /api/lobby/adopt`). Cards name each side: a person by their player name, a bot by its label, an open place
 as *Open seat*. A seat link opened signed out goes to `/lobby?next=...` and comes back after the sign-in.
 
+The account menu's *Delete account…* (`DELETE /api/account {"username":"<their name>"}`) deletes the account once
+its player types their name: its seats in unfinished games are offered to other players, its name and sign-in are
+freed, and every session of it stops working. The lobby's *What we keep* panel says what an account holds.
+
 ## "Your turn" on a phone
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told

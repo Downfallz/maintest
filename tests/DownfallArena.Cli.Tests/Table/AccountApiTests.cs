@@ -177,6 +177,43 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Deleting_an_account_needs_its_session_and_its_name_typed()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var nobody = await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Nobody);
+        var unconfirmed = await api.HandleAsync("DELETE", "/api/account", """{"username":"Mark"}""", Signed(session));
+
+        nobody.Status.ShouldBe(401);
+        unconfirmed.Status.ShouldBe(400);
+        Json(unconfirmed).GetProperty("error").GetString().ShouldBe("Account.ConfirmDelete");
+        (await api.WhoAsync(Signed(session), TestContext.Current.CancellationToken)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_deleted_account_signs_nobody_in_frees_its_name_and_releases_its_seats()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var released = new List<SharedKernel.Identifiers.AccountId>();
+        api.ReleaseSeats = account =>
+        {
+            released.Add(account);
+            return Task.CompletedTask;
+        };
+        var signedIn = await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody);
+        var session = Session(signedIn);
+
+        var deleted = await api.HandleAsync("DELETE", "/api/account", """{"username":"markf"}""", Signed(session));
+
+        deleted.Status.ShouldBe(200);
+        deleted.Headers.ShouldNotBeNull().Single().Value.ShouldContain("Max-Age=0");
+        released.Select(id => id.Value).ShouldBe([Json(signedIn).GetProperty("account").GetProperty("id").GetString()]);
+        (await api.WhoAsync(Signed(session), TestContext.Current.CancellationToken)).ShouldBeNull();
+        Json(await api.HandleAsync("GET", "/api/account/names/MarkF", "", Nobody)).GetProperty("available").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_typed_name_signs_in_as_the_same_account_each_time()
     {
         var api = await ApiAsync(AccountsMode.Development);

@@ -203,6 +203,21 @@ public sealed class AccountRegistryTests
         (await registry.FindAsync(account.Id, Cancel)).ShouldNotBeNull().Generation.ShouldBe(21);
     }
 
+    [Fact]
+    public async Task A_deleted_account_frees_its_name_and_its_sign_in()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        (await registry.DeleteAsync(account.Id, Cancel)).ShouldBeTrue();
+
+        (await registry.FindAsync(account.Id, Cancel)).ShouldBeNull();
+        (await registry.FindAsync(Mark, Cancel)).ShouldBeNull();
+        (await registry.CheckUsernameAsync("MarkF", Cancel)).IsSuccess.ShouldBeTrue();
+        (await registry.RegisterAsync(Mark, "MarkAgain", Cancel)).Value.Id.ShouldNotBe(account.Id);
+        (await registry.DeleteAsync(account.Id, Cancel)).ShouldBeFalse();
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

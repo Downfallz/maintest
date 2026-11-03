@@ -15,7 +15,7 @@
 <body class="lobby-page">
   <header class="masthead lobby-header">
     <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></a>
-    <nav aria-label="Lobby navigation"><a id="admin-link" href="/admin" hidden>Admin</a><div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button></div></details></div><button id="refresh" type="button" class="secondary">Refresh</button></nav>
+    <nav aria-label="Lobby navigation"><a id="admin-link" href="/admin" hidden>Admin</a><div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button><button id="delete-account" type="button" class="danger">Delete account…</button></div></details></div><button id="refresh" type="button" class="secondary">Refresh</button></nav>
   </header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="welcome">
@@ -46,6 +46,7 @@
       </div>
       <aside class="lobby-sidebar" aria-label="Join and reconnect">
         <section class="lobby-panel" aria-labelledby="code-heading"><p class="eyebrow">Have an invitation?</p><h2 id="code-heading">Join with a code</h2><form id="join-code"><label for="code">Seat code</label><div class="code-row"><input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7F2Q9XM" maxlength="16" required /><button type="submit">Join →</button></div></form></section>
+        <section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading" hidden><p class="eyebrow">Your data</p><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>The games your seats play are recorded under the internal id, to replay them and to improve the bots.</p><p>Delete your account any time from your name at the top: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p></section>
         <section class="lobby-panel reconnect-panel" aria-labelledby="reconnect-heading"><span class="reconnect-mark" aria-hidden="true">↻</span><h2 id="reconnect-heading">Your battle can wait.</h2><p>Close the tab and come back here to resume. Games and seats survive a server restart.</p><p>Use <strong>Leave table</strong> during a match to offer your team to another player. Closing the page keeps your seat.</p><details><summary>Playing on another device?</summary><p>Use your seat’s invitation link or code. Your saved seats belong to this browser; clearing browser data removes those shortcuts.</p></details></section>
       </aside>
     </div>
@@ -67,6 +68,14 @@
       <p class="muted">3 to 20 characters: letters, digits, _ and -. Starts with a letter.</p>
       <p id="name-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Enter the arena →</button></div>
+    </form>
+  </dialog>
+  <dialog id="delete-dialog" aria-labelledby="delete-title">
+    <form id="delete-form"><p class="eyebrow">This cannot be undone</p><h2 id="delete-title" class="name-title">Delete your account</h2>
+      <p class="muted">Your player name is freed for someone else. Your seats in unfinished games are offered to other players. Finished games keep only an internal id, never your name. You can sign in again later as a new player.</p>
+      <label for="delete-confirm">Type your player name to confirm</label><input id="delete-confirm" name="delete-confirm" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" required />
+      <p id="delete-problem" class="problem" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="delete-cancel" type="button" class="secondary">Keep my account</button><button id="delete-submit" class="danger" type="submit">Delete my account</button></div>
     </form>
   </dialog>
   <script type="module" src="lobby.js"></script>

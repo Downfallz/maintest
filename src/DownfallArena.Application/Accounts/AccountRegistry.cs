@@ -70,6 +70,24 @@ public sealed class AccountRegistry
         }
     }
 
+    /// <summary>
+    /// Removes the account (ADR 0122): its sign-in first, so nobody signs in to it again, then the account, then its
+    /// name, which another player may then take. The same sign-in can register afresh afterwards, under a new id.
+    /// False when there is no such account.
+    /// </summary>
+    public async Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        if (await _store.FindAsync(id, cancellationToken) is not { } account)
+        {
+            return false;
+        }
+
+        await _store.UnbindSubjectAsync(account.Identity, id, cancellationToken);
+        await _store.DeleteAsync(id, cancellationToken);
+        await _store.ReleaseUsernameAsync(new UsernameReservation(account.Username, id, account.CreatedAt), cancellationToken);
+        return true;
+    }
+
     /// <summary>Whether a name could be registered now: what the page says while a player types.</summary>
     public async Task<Result> CheckUsernameAsync(string? candidate, CancellationToken cancellationToken = default)
     {
