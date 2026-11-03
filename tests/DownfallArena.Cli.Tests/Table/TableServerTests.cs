@@ -321,6 +321,32 @@ public sealed class TableServerTests : IAsyncDisposable
         return cookie.Split(';')[0];
     }
 
+    /// <summary>
+    /// A host serves while it rebuilds the tables an earlier host left open, so the platform finds its port; a seat
+    /// it does not hold yet is "try again", never "no such seat", which a page would read as a seat it lost.
+    /// </summary>
+    [Fact]
+    public async Task While_the_tables_are_being_rebuilt_a_seat_not_back_yet_is_asked_to_wait_rather_than_refused()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        _server!.Starting = true;
+
+        var seat = await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet");
+        using var resumeBody = new StringContent("""{"tokens":["a-token-of-a-table-not-rebuilt-yet"]}""", System.Text.Encoding.UTF8, "application/json");
+        var resume = await _client.PostAsync($"{url}api/lobby/resume", resumeBody, TestContext.Current.CancellationToken);
+        var listing = await Get($"{url}api/lobby", token: null);
+        var page = await Get(url, token: null);
+
+        seat.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        seat.Headers.RetryAfter.ShouldNotBeNull();
+        resume.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        listing.StatusCode.ShouldBe(HttpStatusCode.OK);
+        page.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        _server.Starting = false;
+        (await Get($"{url}api/seat/player1", "a-token-of-a-table-not-rebuilt-yet")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
     private string Serve(OperatorGate gate)
     {
         var admin = new AdminApi(_registry, _hosted.Composer, gate, _clock, "Rules 2 creatures (a test)", _hosted.Stored);

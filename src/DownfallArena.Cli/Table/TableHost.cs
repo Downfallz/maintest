@@ -113,35 +113,6 @@ internal static class TableHost
         // answering to its codes. An empty host always has the place.
         using var place = options.Lobby ? null : registry.Reserve() ?? throw new InvalidOperationException("An empty host has a place for its first table.");
 
-        // The tables an earlier host left unfinished are rebuilt before anybody is served (ADR 0091): a page
-        // polling a seat of one must find it where it left it, not a 403 and then, a moment later, its seat.
-        // And before the table the command line asks for: that one is recorded as open the moment it is, and
-        // rebuilt after itself it would be the same match twice.
-        if (stored is not null)
-        {
-            foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
-            {
-                Console.WriteLine($"  {line}");
-            }
-        }
-
-        // The table the command line asks for, unless it asks for the admin panel and nothing else.
-        if (place is not null)
-        {
-            var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
-            registry.Add(table, place);
-            await table.RecordAsync(registry.Codes, stopping.Token);
-            Announce(server, registry, table);
-        }
-
-        Console.WriteLine(gate.Token is { } token
-            ? $"  Admin: {server.Url}admin?token={token}"
-            : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
-
-        Console.WriteLine(server.IsLoopback
-            ? $"  Only this machine can reach it.{Elsewhere()}"
-            : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
-
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -150,9 +121,49 @@ internal static class TableHost
         Console.CancelKeyPress += stop;
         try
         {
+            // Serving starts before the rebuild: the container's platform waits a minute for the port to answer
+            // and then restarts it (ADR 0080), and replaying every table an earlier host left open can take longer
+            // than that -- a host that rebuilt before serving never came up again. Until the rebuild is done the
+            // server answers a table it does not hold yet with "try again in a moment" (TableServer.Starting),
+            // which keeps what ADR 0091 asked of it: a page polling a seat never reads it as lost.
+            server.Starting = true;
+            var serving = server.RunAsync(stopping.Token);
+            if (serving.IsFaulted)
+            {
+                await serving;
+            }
+
+            // And before the table the command line asks for: that one is recorded as open the moment it is, and
+            // rebuilt after itself it would be the same match twice.
+            if (stored is not null)
+            {
+                foreach (var line in await TableRestorer.RestoreAsync(stored, composer, registry, clock, stopping.Token))
+                {
+                    Console.WriteLine($"  {line}");
+                }
+            }
+
+            // The table the command line asks for, unless it asks for the admin panel and nothing else.
+            if (place is not null)
+            {
+                var table = await composer.ComposeAsync(TableRequest.Of(options, seed), stopping.Token);
+                registry.Add(table, place);
+                await table.RecordAsync(registry.Codes, stopping.Token);
+                Announce(server, registry, table);
+            }
+
+            server.Starting = false;
+            Console.WriteLine(gate.Token is { } token
+                ? $"  Admin: {server.Url}admin?token={token}"
+                : $"  Admin: {server.Url}admin, behind the platform's sign-in ({OperatorGate.PrincipalHeader} is trusted).");
+
+            Console.WriteLine(server.IsLoopback
+                ? $"  Only this machine can reach it.{Elsewhere()}"
+                : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
+
             // Serving stops on Ctrl+C, which is also how a session that ended badly is left readable rather
             // than vanishing: the host keeps serving after a match so its players can read the end screen.
-            await server.RunAsync(stopping.Token);
+            await serving;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)
@@ -161,6 +172,11 @@ internal static class TableHost
             // line to read and a flag to change, not a stack trace across a table with two people waiting.
             await Console.Error.WriteLineAsync($"Cannot serve {server.Url}: {exception.Message}.{Elsewhere()}");
             return 1;
+        }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            // Ctrl+C while the tables were being rebuilt: nothing was half-served, and the records are as they were.
+            return 0;
         }
         finally
         {

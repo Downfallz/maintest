@@ -62,6 +62,20 @@ internal sealed class TableServer : IDisposable
 
     public string Url => _host.Url;
 
+    /// <summary>
+    /// Whether the host is still rebuilding the tables an earlier host left open (ADR 0091). It serves from the
+    /// first moment, because a platform that waits for the port to answer gives up after a minute and a host with
+    /// many records to replay takes longer (ADR 0080); but while this is true a request for a table it does not
+    /// hold yet is "try again in a moment", never "no such seat", which a page would read as a seat it lost.
+    /// </summary>
+    public bool Starting
+    {
+        get => Volatile.Read(ref _starting);
+        set => Volatile.Write(ref _starting, value);
+    }
+
+    private bool _starting;
+
     /// <summary>Whether only this machine can reach the table, which is a thing its players are told.</summary>
     public bool IsLoopback => _host.IsLoopback;
 
@@ -149,6 +163,11 @@ internal sealed class TableServer : IDisposable
     private async Task<StudioResponse> AnswerAsync(HttpListenerRequest request, string body)
     {
         var path = request.Url?.AbsolutePath ?? "/";
+        if (Starting && JoinCodes.Names(path))
+        {
+            return StartingUp();
+        }
+
         if (JoinCodes.Names(path))
         {
             return _registry.Codes.Answer(path);
@@ -211,6 +230,14 @@ internal sealed class TableServer : IDisposable
         }
 
         var token = request.Headers[TableApi.TokenHeader];
+
+        // A seat's own lobby routes find their seat by its token, and a token whose table is still being rebuilt
+        // would read as spent: the page would forget a seat it still has.
+        if (Starting && path.StartsWith(LobbyApi.Prefix + "/", StringComparison.Ordinal))
+        {
+            return StartingUp();
+        }
+
         if (AdminApi.Names(path))
         {
             return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account);
@@ -220,6 +247,11 @@ internal sealed class TableServer : IDisposable
         // answered as a missing one: which half of it was wrong is not information a stranger is given.
         if (_registry.ByToken(token) is not { } table)
         {
+            if (Starting && !string.IsNullOrEmpty(token))
+            {
+                return StartingUp();
+            }
+
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");
         }
 
@@ -232,6 +264,12 @@ internal sealed class TableServer : IDisposable
         await _admin.Lobby.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
+
+    private static StudioResponse StartingUp() =>
+        StudioResponse.OfPlainText(503, "This host is starting: its tables are being rebuilt. Try again in a moment.") with
+        {
+            Headers = [new KeyValuePair<string, string>("Retry-After", "5")],
+        };
 
     /// <summary>
     /// On a host where players sign in, a seat is its account's (ADR 0122): its token alone is not enough. A seat
