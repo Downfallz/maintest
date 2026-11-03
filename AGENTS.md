@@ -34,7 +34,8 @@ viewer/                        Static HTML viewer for learning artifacts (traces
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
                                `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
-                               (docs/tabletop/browser-arena-plan.md, proposed ADR 0123).
+                               (docs/tabletop/browser-arena-plan.md, ADR 0123).
+arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
@@ -73,6 +74,7 @@ legacy/         Frozen prototypes from before the clean slate. Read-only referen
 ## Commands
 
 ```bash
+npm --prefix arena ci --ignore-scripts && npm --prefix arena run build   # arena assets required by host route tests
 dotnet restore
 dotnet build --no-restore                 # warnings are errors
 dotnet test --no-build                    # Microsoft.Testing.Platform runner (see global.json)

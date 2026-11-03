@@ -1,0 +1,10 @@
+{
+  "name": "downfall-arena-visual-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && node build.mjs"
+  },
+  "dependencies": { "phaser": "3.90.0" },
+  "devDependencies": { "esbuild": "0.25.12", "typescript": "5.9.3" }
+}

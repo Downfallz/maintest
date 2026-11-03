@@ -2,10 +2,8 @@
 
 Status: design experiment, not a replacement for the table. First slice: `/arena-lab`.
 
-**Direction clarified after the first screenshots (2026-11-03):** the target is an immersive browser game
-that fits the available viewport, like a game embedded on Poki. The current scrollable laboratory is an
-interaction baseline, not the accepted visual direction. A2 must replace the page composition with a
-viewport-bound game stage before live-match integration proceeds.
+**Immersive revision (2026-11-03):** A2 now uses Phaser and TypeScript. The canvas, HUD and primary
+commands fit the viewport in portrait and landscape. The earlier scrolling DOM study is superseded.
 Baseline inspected: `748557b4` on `main` (player accounts stage 3). Re-check `main` before each integration PR.
 
 ## Decision summary
@@ -23,34 +21,28 @@ seat, storage, stream or service worker. Its names and numbers are explicitly il
 content restrictions on production modules remain in force; the future live adapter must use catalogue
 text and legal options from the host, never the lab fixture.
 
-## What this first PR lets us review
+## What this PR lets us review
 
-- Six provisional SVG silhouettes with health, energy, defense, conditions and an inspected-creature summary.
-- Two compositions of exactly the same scenario: **Arena** (figures in shared space) and **Tableau** (framed
-  figures). Changing composition preserves the selected target and the displayed state.
-- Three review states: decision, targeting and resolution. One illustrative action has three authored target
-  outcomes, including a defeat. Nothing calculates combat damage or costs in the browser.
-- Selection, explicit confirmation, cancellation, inspect, reset, skip, 1×/2× playback, reduced motion and
-  a stable activation order using the existing player-facing terminology.
-- Desktop and landscape put teams side by side. The initial narrow portrait stacks opponents above allies and scrolls vertically. This is a known
-  limitation of A1, explicitly rejected as the final interaction model after screenshot review.
+- A locally bundled Phaser battlefield with an eclipse environment and three illustrated creature forms
+  reused across two teams. Ambient motes, idle movement, lunge, recoil, impact sparks and camera shake.
+- One sample action with three authored outcomes, including defeat. No browser-side damage rules.
+- Accessible DOM targets, explicit confirmation/cancellation, inspection and settings overlays, reset,
+  skip, 1×/2× playback, optional sound, keyboard controls and system/manual reduced motion.
+- Distinct portrait and landscape formations; no document scrolling or offscreen primary commands at
+  the tested sizes. Rotation resizes the stage and settles any in-flight presentation.
+- Local art loading, selectable missing-art fallback and renderer-error reload UI.
 
-Run the existing host and visit `http://127.0.0.1:5099/arena-lab`:
+Build once, then run the existing host and visit `/arena-lab`:
 
 ```bash
+npm --prefix arena ci --ignore-scripts
+npm --prefix arena run build
 dotnet run --project src/DownfallArena.Cli -- table --lobby
 ```
 
-For a design-only preview without .NET, from the repository root:
-
-```bash
-python3 -m http.server 8765
-# http://127.0.0.1:8765/table/arena-lab.html
-```
-
-The static preview's lobby link requires the real host. No build step or third-party renderer is needed.
-This PR is a thin sample across the original scene/interaction/animation ideas, not completion of the
-full interaction and animation milestones below.
+For a design-only preview after the build, run `python3 -m http.server 8765` from the repository root
+and open `http://127.0.0.1:8765/table/arena-lab.html`. The lobby link requires the actual host.
+See [arena/README.md](../../arena/README.md) for packaging and the presentation boundary.
 
 ## Art direction and review questions
 
@@ -59,10 +51,9 @@ world; warm gold identifies the active creature and selected target. Team colour
 Use the creatures' silhouettes as the dominant shapes, keep numbers and labels outside the artwork, and
 keep the command panel in the same place across decision and targeting.
 
-The provisional SVG forms test occupancy, contrast and silhouettes. They are not proposed final creature
-art. Before commissioning six portraits, produce one finished creature and one environment crop and check
-that readable eyes, limbs and target outlines survive the smallest layout. A reusable static illustration
-with small transforms is enough for this experiment; skeletal animation and 3D are deferred.
+The provisional generated environment and transparent sprite sheet test creature presence and silhouette
+readability. They are not final catalogue art: each team reuses the same three forms, with the enemy team
+mirrored and tinted. See [art provenance](../../arena/ART.md). Skeletal animation and 3D remain deferred.
 
 | Review | Accept when | Reject when |
 | --- | --- | --- |
@@ -70,12 +61,12 @@ with small transforms is enough for this experiment; skeletal animation and 3D a
 | Decision | Action, actor and current resources are visible together | Artwork or decoration hides a game value |
 | Targeting | Tap a creature, see its selected state, explicitly confirm or cancel | A second accidental tap commits a decision |
 | Resolution | Identify target, actual HP change and defeat without reading a log | Numbers overlap labels or animation obscures the next choice |
-| Viewport | In A2, no document scrolling in either axis at 390×844, 844×390 and 1440×1000; arena and primary commands remain visible | Hiding overflow clips required controls or shrinking text makes it unreadable |
+| Viewport | No document scrolling in either axis at 390×844, 844×390 and 1440×1000; arena and primary commands remain visible | Hiding overflow clips required controls or shrinking text makes it unreadable |
 | Phone | At least 44 px touch controls, portrait-specific composition, paged actions and inspect overlays | Six tiny cards squeezed into a desktop layout |
 | Accessibility | Keyboard operation, visible focus, non-colour selection labels, reduced motion | The player must wait for movement or rely on colour |
 
-Review the same action in both compositions, including the lowest-health target, with motion on and off.
-Decide the composition, figure scale, command position and tolerable timing before replacing the silhouettes.
+Review the same action in portrait and landscape, including the lowest-health target, with motion on and off.
+Decide the composition, figure scale, command position and tolerable timing before adding live commands.
 The lab uses a sample impact after 420 ms and settles at 1,250 ms (halved at 2×); these are tuning starting
 points, not minimum waiting times for a real match. Skip and reduced motion always reach the same final state.
 
@@ -128,8 +119,8 @@ Numbers below belong to this arena workstream, not the earlier UI-polish PR list
 
 | PR | Scope and main files | Acceptance / tests | Depends on |
 | --- | --- | --- | --- |
-| A1 — Design laboratory (this PR) | `table/arena-lab*`, explicit host routes, this plan | Compare two layouts; one action with three fixed outcomes; cancel/reset/skip/reduced-motion tests; route test | Current main |
-| A2 — Immersive viewport prototype | Phaser/TypeScript renderer spike, viewport shell, layered environment, one finished creature, HUD and asset mapping | No document scrolling or clipped commands; visible actor/targets/action bar; decision/targeting/resolution at 1440×1000, 844×390 and 390×844; missing-art fallback | A1 design review |
+| A1 — Design laboratory (implemented) | `table/arena-lab*`, explicit host routes, this plan | Compare two layouts; one action with three fixed outcomes; cancel/reset/skip/reduced-motion tests; route test | Current main |
+| A2 — Immersive viewport prototype (implemented in this PR) | Phaser/TypeScript renderer spike, viewport shell, layered environment, three provisional forms, HUD and asset mapping | No document scrolling or clipped commands; visible actor/targets/action bar; decision/targeting/resolution at 1440×1000, 844×390 and 390×844; missing-art fallback | A1 design review |
 | A3 — Presentation/controller boundary | Extract minimal read-only view mapping from table orchestration; focused modules/tests | Both interfaces agree on creature values, initiative and asking; existing `/play` behaves unchanged | A1; refresh main |
 | A4 — Real board, read-only | Opt-in arena route over existing authenticated seat transport | Correct seat projection, account/invitation handling, dead/stunned/condition states, reconnect; no decisions emitted | A3 |
 | A5 — Real action and target controls | Existing `slotView`/command builder + scene targets + catalogue-backed action list | At-activation and hidden-intent paths, friendly/self/multiple/no-target spells, unaffordable/unavailable cards, stale asking, server rejection, double-click prevention | A2, A4 |
@@ -143,13 +134,10 @@ replace `/play` in any of A1–A6. Audit account work and table orchestration ch
 
 ## Revised immersive prototype (A2)
 
-This is a presentation recommendation, not an approved framework migration. Evaluate **Phaser + TypeScript**
-for the next isolated scene: scene lifecycle, camera, animation/tweens, input, audio and scaling are relevant
-here. **PixiJS** remains an alternative if a rendering layer plus our own orchestration proves simpler.
-Unity is not required to create this kind of browser experience. Preserve the .NET authority and the API
-boundary; choosing a renderer does not imply rewriting the combat engine in JavaScript or Unity C#.
-A2 must amend the ADR before adding a pinned renderer/build pipeline and must explain deployment, asset
-packaging and accessible DOM controls alongside the rendered scene.
+The maintainer authorized the **Phaser + TypeScript** spike. [ADR 0123](../adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
+records the scoped dependency and build decision. The .NET engine and existing API boundary remain
+unchanged. The implementation proves one action's presentation; live play is still a separate workstream.
+The following direction continues to guide A3–A8:
 
 - Stage fills the available viewport (including browser chrome and safe-area insets); an optional fullscreen
   button is a convenience, never a prerequisite for fitting the interface.
@@ -175,38 +163,35 @@ Primary references consulted for the renderer recommendation:
 
 ## Asset and performance starting constraints
 
-- Three silhouette forms reused across the lab; six distinct finished creatures are a later art task.
+- Three illustrated forms reused across the lab; six distinct finished creatures are a later art task.
 - Later asset manifest: presentation identifier → image source, aspect ratio, anchor and fallback; separate
   from combat rules. Asset absence never prevents selecting a legal target.
 - Aim for at most 2 MB of initially loaded scene art and no external font request; measure before accepting
   final illustrations. Do not preload every mutation or spell effect.
 - Prefer transform/opacity for movement; do not reconstruct the entire board on every animation frame.
-- Effects should remain short, cancellable and skippable. Sound is initially absent; later opt-in sound must
+- Effects should remain short, cancellable and skippable. The lab has optional synthesized impact sound; sound must
   not be the only way to learn that an action occurred.
 
 ## Validation checklist
 
 - `node --test studio/*.test.js table/*.test.js`.
 - `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes` (requires the .NET 10 SDK).
-- Browser checks: both layouts, all three target outcomes, cancel, reset while animating, skip, 2×, keyboard
+- Browser checks: both orientations, all three target outcomes, cancel, reset while animating, skip, 2×, keyboard
   focus, system/manual reduced motion, hidden-tab return and no API calls.
 - Browser regression suite: `cd studio/browser && npm ci --ignore-scripts && npx playwright install chromium`,
   then `npm test -- arena-lab.spec.js`; the existing Studio browser workflow includes it and retains screenshots.
-- Screens: 1440×1000 desktop, 844×390 landscape, 390×844 and 360×800 portrait; check horizontal overflow.
+- Screens: 1440×1000 desktop, 844×390 landscape, 390×844, 320×740 and 320×568 portrait; check both axes and control bounds.
 - Run the .NET-hosted `/arena-lab` route as well as a static preview before merging.
 
-## Captured prototype
+## Captured Phaser prototype
 
-These are actual browser captures of this PR, not final-art mockups. Desktop and phone composition captures
-come from the browser regression suite; targeting and resolution were also exercised through the .NET
-host's `/arena-lab` route. The landscape capture is full-page: the page deliberately scrolls vertically.
+Actual browser screenshots of the interactive implementation, captured through the .NET host. Each image
+is a single viewport, not a full-page scrolling capture. Earlier DOM-study images are retained as history.
 
-| Arena, desktop | Tableau, desktop |
-| --- | --- |
-| ![Arena composition](images/arena-lab/desktop-arena.png) | ![Tableau composition](images/arena-lab/desktop-tableau.png) |
+![Phaser battlefield](images/arena-lab/phaser-desktop.png)
 
 | Target selected | Sample action resolved |
 | --- | --- |
-| ![Targeting](images/arena-lab/desktop-targeting.png) | ![Resolution](images/arena-lab/desktop-resolution.png) |
+| ![Targeting](images/arena-lab/phaser-targeting.png) | ![Resolution](images/arena-lab/phaser-resolution.png) |
 
-[Phone portrait](images/arena-lab/phone-portrait.png) · [Phone landscape](images/arena-lab/phone-landscape.png)
+[Phone portrait](images/arena-lab/phaser-portrait.png) · [Phone landscape](images/arena-lab/phaser-landscape.png)

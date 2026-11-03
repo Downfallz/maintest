@@ -22,6 +22,8 @@ internal sealed class TableFiles
 
     private const string Png = "image/png";
 
+    private const string Webp = "image/webp";
+
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
 
     public TableFiles(string tableDirectory)
@@ -75,7 +77,11 @@ internal sealed class TableFiles
             // An isolated design study with authored sample frames; it never opens a seat or posts a decision.
             ["/arena-lab"] = (Path.Combine(tableDirectory, "arena-lab.html"), StudioResponse.Html),
             ["/arena-lab.css"] = (Path.Combine(tableDirectory, "arena-lab.css"), Css),
-            ["/arena-lab.js"] = (Path.Combine(tableDirectory, "arena-lab.js"), JavaScript),
+            ["/arena-build/game.js"] = (Path.Combine(tableDirectory, "arena-build", "game.js"), JavaScript),
+            ["/arena-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "arena-build", "game.js.LEGAL.txt"), "text/plain; charset=utf-8"),
+            ["/arena-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "arena-build", "PHASER-LICENSE.txt"), "text/plain; charset=utf-8"),
+            ["/arena-art/eclipse-arena.webp"] = (Path.Combine(tableDirectory, "arena-art", "eclipse-arena.webp"), Webp),
+            ["/arena-art/creatures.webp"] = (Path.Combine(tableDirectory, "arena-art", "creatures.webp"), Webp),
             ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
 
@@ -116,8 +122,8 @@ internal sealed class TableFiles
         }
 
         // A bitmap is bytes; everything else the table ships is text.
-        return route.ContentType == Png
-            ? new StudioResponse(200, Png, File.ReadAllBytes(route.Path))
+        return route.ContentType is Png or Webp
+            ? new StudioResponse(200, route.ContentType, File.ReadAllBytes(route.Path))
             : StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path));
     }
 }

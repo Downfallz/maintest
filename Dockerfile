@@ -12,6 +12,14 @@
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/runtime:10.0
 
+FROM node:22-bookworm-slim AS arena-build
+WORKDIR /src/arena
+COPY arena/package.json arena/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY arena/ ./
+COPY table/arena-lab-fixture.js table/arena-lab-state.js table/combat-fx.js table/terms.js /src/table/
+RUN npm run build
+
 FROM ${SDK_IMAGE} AS build
 
 # The engine version a recording is stamped with (ADR 0013). The build reads it from git, which the image
@@ -38,6 +46,7 @@ WORKDIR /app
 COPY --from=build /out/bin/ bin/
 COPY --from=build /out/data/dst/ data/dst/
 COPY table/ table/
+COPY --from=arena-build /src/table/arena-build/ table/arena-build/
 COPY viewer/index.html viewer/viewer.css viewer/
 COPY docs/tabletop/playtest.rules.json docs/tabletop/
 COPY learning/weights/ learning/weights/

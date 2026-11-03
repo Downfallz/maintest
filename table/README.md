@@ -456,8 +456,17 @@ which cuts that device off.
 
 ## Arena design laboratory
 
-`/arena-lab` opens an isolated browser-game presentation study: two switchable compositions, six provisional
-silhouettes and one sample action with three fixed target outcomes. It uses no seat or API and cannot affect
-a match. The values and artwork are illustrative. Reset, skip, 2× playback and reduced motion are available.
-See the [browser arena plan](../docs/tabletop/browser-arena-plan.md) for review criteria, the current-code audit
-and the PR sequence. The normal `/play` interface remains the game.
+`/arena-lab` opens an isolated Phaser battlefield that fits the viewport in portrait and landscape.
+It has provisional illustrated creatures, a fixed sample action with three target outcomes, animated
+impact, keyboard/touch controls and inspection/settings overlays. It uses no seat or API. Reset, skip,
+2× playback, optional sound and reduced motion are available. `/play` remains the actual game.
+
+Build the local renderer before opening the lab or running host route tests:
+
+```bash
+npm --prefix arena ci --ignore-scripts
+npm --prefix arena run build
+```
+
+Docker and CI build it automatically. See [build details](../arena/README.md) and the
+[browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.

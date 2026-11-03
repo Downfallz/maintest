@@ -20,7 +20,17 @@ public sealed class TableFilesTests
 
         page.Status.ShouldBe(200);
         page.ContentType.ShouldContain("text/html");
-        Text(page).ShouldContain("arena-lab.js");
+        Text(page).ShouldContain("arena-build/game.js");
+        Files.Get("/arena-build/game.js").Status.ShouldBe(200);
+        Files.Get("/arena-build/game.js").ContentType.ShouldContain("text/javascript");
+        Files.Get("/arena-build/PHASER-LICENSE.txt").Status.ShouldBe(200);
+        foreach (var asset in new[] { "eclipse-arena", "creatures" })
+        {
+            var image = Files.Get($"/arena-art/{asset}.webp");
+            image.Status.ShouldBe(200);
+            image.ContentType.ShouldBe("image/webp");
+            Encoding.ASCII.GetString(image.Body, 0, 4).ShouldBe("RIFF");
+        }
         Files.Get("/arena-lab.css").ContentType.ShouldContain("text/css");
         Files.Get("/arena-lab-state.js").ContentType.ShouldContain("text/javascript");
         Files.Get("/arena-lab-fixture.js").ContentType.ShouldContain("text/javascript");
