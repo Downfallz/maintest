@@ -4,6 +4,7 @@ on:
     paths:
       - 'studio/**'
       - 'table/**'
+      - 'arena/**'
       - 'src/**'
       - 'viewer/viewer.css'
       - 'data/**'
@@ -27,6 +28,9 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Build the isolated arena prototype
+        run: npm --prefix arena ci --ignore-scripts && npm --prefix arena run build
+
       - name: Build the practice host and catalogue
         run: |
           dotnet build src/DownfallArena.Cli

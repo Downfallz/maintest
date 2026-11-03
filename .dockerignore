@@ -11,6 +11,7 @@
 !tools/
 !data/
 !table/
+!arena/
 !viewer/index.html
 !viewer/viewer.css
 !docs/tabletop/playtest.rules.json
@@ -24,3 +25,7 @@
 data/dst/
 table/*.test.js
 table/README.md
+
+# Build the browser bundle in its own stage.
+**/node_modules
+table/arena-build/

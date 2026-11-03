@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 const root = resolve('../..');
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp' };
 createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname.replace(/^\/maintest/, '');
   const table = pathname.startsWith('/table/');

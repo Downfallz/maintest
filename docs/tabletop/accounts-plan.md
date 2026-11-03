@@ -1,7 +1,7 @@
 # Plan: player accounts, a Google sign-in and a home page
 
 Status: plan, accepted with [ADR 0122](../adr/0122-a-player-signs-in-with-google-and-owns-their-seats.md) on 2026-11-03,
-with every recommendation under "Open questions" taken. Stages 1 to 4 are built; stage 5 is not.
+with every recommendation under "Open questions" taken. Stages 1 to 5 are built; the leaderboard itself is the next plan.
 
 ## What the owner asked for
 
@@ -203,10 +203,12 @@ Each stage is one pull request, built, tested, formatted, with the node tests wh
    seats at finished tables belong to nobody, its sign-in and name are freed, and every session of it stops working;
    recordings keep the id only. The lobby says what is kept ("What we keep") and offers *Delete account…* in the
    account menu.
-5. **Results for a ladder.** When a match with at least one account ends, append
-   `results/<yyyy-mm>/<matchId>.json`: when, format, declaration, content hash, each seat's account id or agent,
-   the winner, the rounds. Recorded sessions carry the seat accounts instead of `who`; `train-clone`'s export keeps
-   the ids and drops the usernames.
+5. **Results for a ladder.** *Built*: when a recorded match with at least one account ends, the host keeps a
+   `MatchResult` beside the accounts, at `results/<yyyy-MM>/<matchId>.json` (`IMatchResults`, a file and a blob
+   adapter): when it finished, format, declaration, content hash, rounds, the winning seat (or a draw), and each
+   seat's account id or bot spec, never a name. `Ranked` says whether it counts on a ladder of people: two seats,
+   each its own account. An abandoned match leaves no result. The seats' accounts are in `table.json` too, so an
+   exported session carries ids and no names.
 
 Later, each its own plan: the leaderboard (a rating for person-vs-person only — Glicko-2 suits few, irregular
 games — and a separate record against each bot; shared-device and abandoned matches unranked), a profile page

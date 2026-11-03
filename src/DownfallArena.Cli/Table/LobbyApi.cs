@@ -305,8 +305,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <summary>
     /// What a deleted account leaves behind at the tables (ADR 0122): every seat it holds in a saved, unfinished
-    /// game is offered to another player, as leaving does, and a seat at a finished or unsaved table simply belongs
-    /// to nobody now. The recording keeps the account's id, never its name. The number of seats offered.
+    /// game is offered to another player, as leaving does, and a seat at an unsaved one simply belongs to nobody
+    /// now. A finished table is history and keeps the id it was played under, as its recording and its result do;
+    /// a card names it "Player", since the account is gone. The number of seats offered.
     /// </summary>
     public async Task<int> ReleaseAsync(AccountId account)
     {
@@ -316,9 +317,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var offered = 0;
             foreach (var table in registry.All())
             {
-                foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null).ToArray())
+                foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
                 {
-                    if (!table.IsOver && table.Run is not null && await VacateAsync(table, seat))
+                    if (table.Run is not null && await VacateAsync(table, seat))
                     {
                         offered++;
                     }

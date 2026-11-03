@@ -25,6 +25,8 @@
     <!-- Every module beside the page, by pattern rather than by name: a list per file is a list that goes stale,
          and StudioFilesTests asserts the served set against whatever lands here. Tests are not part of the page. -->
     <Content Include="..\..\studio\*.js" Exclude="..\..\studio\*.test.js" Link="studio\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\arena-build\*" Link="table\arena-build\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\arena-art\*.webp" Link="table\arena-art\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.html" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.css" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.js" Exclude="..\..\table\*.test.js" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

@@ -422,6 +422,10 @@ The account menu's *Delete account…* (`DELETE /api/account {"username":"<their
 its player types their name: its seats in unfinished games are offered to other players, its name and sign-in are
 freed, and every session of it stops working. The lobby's *What we keep* panel says what an account holds.
 
+A recorded match with an account in it leaves a result for a future leaderboard when it ends (stage 5 of the
+plan): `results/<yyyy-MM>/<matchId>.json` beside the accounts, with each seat's account id or bot, the winner, the
+rounds and whether it is *ranked* (two seats, two different accounts). No name is written there.
+
 ## "Your turn" on a phone
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
@@ -457,3 +461,20 @@ plays the other seat of that table is offered **Back to** its own seat instead, 
 meant for their opponent does not take that seat by accident; playing both seats on that device is an explicit
 second button. A player who lost the device holding a seat gets a **New invitation** from the admin panel,
 which cuts that device off.
+
+## Arena design laboratory
+
+`/arena-lab` opens an isolated Phaser battlefield that fits the viewport in portrait and landscape.
+It has provisional illustrated creatures, a fixed sample action with three target outcomes, animated
+impact, keyboard/touch controls and inspection/settings overlays. It uses no seat or API. Reset, skip,
+2× playback, optional sound and reduced motion are available. `/play` remains the actual game.
+
+Build the local renderer before opening the lab or running host route tests:
+
+```bash
+npm --prefix arena ci --ignore-scripts
+npm --prefix arena run build
+```
+
+Docker and CI build it automatically. See [build details](../arena/README.md) and the
+[browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.
