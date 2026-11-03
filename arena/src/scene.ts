@@ -1,11 +1,20 @@
 import Phaser from 'phaser';
-import { placements } from './layout';
-import { creaturesOf, isPlaying, type LabState, type Placement } from './types';
+import { placements } from '../../table/arena-lab-layout.js';
+import { isLabPlaying } from '../../table/arena-lab-state.js';
+import { creaturesOf, isEnemy, type LabState, type Placement } from './types';
 
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
   home: Placement;
 }
+
+const GOLD = 0xeac88e;
+const EMBER = 0xd18472;
+const MOTES = 24;
+
+// A remainder that stays in [0, span) whatever the sign of the value: `%` alone turns negative once a
+// drift outgrows its offset, and a mote that goes negative leaves the screen for good.
+const wrap = (value: number, span: number) => ((value % span) + span) % span;
 
 export class ArenaScene extends Phaser.Scene {
   private figures = new Map<string, Figure>();
@@ -44,9 +53,9 @@ export class ArenaScene extends Phaser.Scene {
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
     fallback.generateTexture('missing-figure', 80, 100);
     fallback.destroy();
-    for (let index = 0; index < 24; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, 0xeac88e, .24).setDepth(1000));
+    for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
     this.scale.on('resize', () => {
-      if (this.state && isPlaying(this.state)) this.onResizeDuringPlayback();
+      if (this.state && isLabPlaying(this.state)) this.onResizeDuringPlayback();
       this.arrange();
     });
     this.ready = true;
@@ -64,9 +73,10 @@ export class ArenaScene extends Phaser.Scene {
     this.arrange();
     for (const creature of creaturesOf(state)) {
       const figure = this.figures.get(creature.id)!;
+      const acting = creature.id === state.action.actor;
       const selected = creature.id === state.target;
-      const legal = state.stage === 'targeting' && state.board.enemies.some(one => one.id === creature.id);
-      figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || creature.id === 'a1' ? 0xeac88e : 0xd18472, selected || legal || creature.id === 'a1' ? .95 : .15);
+      const legal = state.stage === 'targeting' && state.action.targets.includes(creature.id);
+      figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(creature.isAlive ? 1 : .20);
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
     }
@@ -79,14 +89,16 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private makeFigures() {
-    for (const [index, creature] of creaturesOf(this.state).entries()) {
+    for (const creature of creaturesOf(this.state)) {
+      const enemy = isEnemy(this.state, creature.id);
       const shadow = this.add.ellipse(0, 0, 100, 20, 0x020608, .55);
-      const ring = this.add.ellipse(0, 0, 110, 26).setStrokeStyle(1, 0xeac88e, .2);
+      const ring = this.add.ellipse(0, 0, 110, 26).setStrokeStyle(1, GOLD, .2);
       const image = this.textures.exists('creature-sheet')
         ? this.add.image(0, 0, 'creature-sheet', creature.form)
         : this.add.image(0, 0, 'missing-figure');
-      image.setOrigin(.5, 1).setFlipX(index >= 3);
-      if (index >= 3) image.setTint(0xefbfb0);
+      // The enemy team reuses the three forms, mirrored and tinted so the two sides still read apart.
+      image.setOrigin(.5, 1).setFlipX(enemy);
+      if (enemy) image.setTint(0xefbfb0);
       this.figures.set(creature.id, { image, shadow, ring, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
@@ -100,29 +112,33 @@ export class ArenaScene extends Phaser.Scene {
     }
     if (!this.figures.size) return;
     const positions = placements(width, height);
-    [...this.figures.values()].forEach((figure, index) => {
+    const playing = isLabPlaying(this.state);
+    for (const [index, creature] of creaturesOf(this.state).entries()) {
+      const figure = this.figures.get(creature.id)!;
       const home = positions[index];
       figure.home = home;
       figure.image.setDisplaySize(home.size, home.size).setDepth(home.y);
-      if (!isPlaying(this.state)) figure.image.setPosition(home.x, home.y).setAngle(0);
+      if (!playing) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
-    });
+    }
     this.onLayout(positions);
+  }
+
+  private actorAndTarget() {
+    return { actor: this.figures.get(this.state.action.actor)!, target: this.figures.get(this.state.target!)! };
   }
 
   private windup() {
     this.clearMotion();
-    const actor = this.figures.get('a1')!;
-    const target = this.figures.get(this.state.target!)!;
+    const { actor, target } = this.actorAndTarget();
     const destination = target.home.x - target.home.size * .55;
     this.tweens.add({ targets: actor.image, x: actor.home.x - 14, angle: -7, duration: 120 / this.rate,
       onComplete: () => this.tweens.add({ targets: actor.image, x: destination, y: target.home.y, angle: 9, duration: 300 / this.rate, ease: 'Cubic.In' }) });
   }
 
   private impact() {
-    const target = this.figures.get(this.state.target!)!;
-    const actor = this.figures.get('a1')!;
+    const { actor, target } = this.actorAndTarget();
     this.tweens.killTweensOf(actor.image);
     this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
     this.tweens.add({ targets: target.image, x: target.home.x + 18, angle: 5, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
@@ -149,14 +165,17 @@ export class ArenaScene extends Phaser.Scene {
 
   update(time: number) {
     if (!this.state) return;
+    const idle = !this.reduced && !isLabPlaying(this.state);
     let index = 0;
     for (const figure of this.figures.values()) {
-      if (!this.reduced && !isPlaying(this.state)) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
+      if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
       index++;
     }
+    const width = Math.max(1, this.scale.width);
+    const height = Math.max(1, this.scale.height);
+    const drift = this.reduced ? 0 : time * .007;
     this.motes.forEach((mote, i) => {
-      const drift = this.reduced ? 0 : time * .007;
-      mote.setPosition((i * 131 + drift) % Math.max(1, this.scale.width), (i * 73 - drift * .7 + this.scale.height * 100) % Math.max(1, this.scale.height));
+      mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));
       mote.visible = !this.reduced;
     });
   }
