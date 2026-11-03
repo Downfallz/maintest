@@ -1,0 +1,27 @@
+#arena .command-dock { grid-template-columns: 1fr 1.4fr auto; }
+#arena .actor-summary h1 { font-size: 25px; }
+#connection { color: var(--gold); font-size: 11px; letter-spacing: 1px; }
+#instruction { color: #c0cec3; font-size: 12px; line-height: 1.5; margin: 7px 0 0; }
+.table-return { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 44px; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 12px; }
+#no-timeline { color: var(--muted); font-size: 11px; }
+#seat-choices { display: grid; gap: 8px; width: min(420px,90%); overflow: auto; max-height: 45%; padding: 4px; }
+#seat-choices button { text-align: left; overflow-wrap: anywhere; }
+#loading { gap: 10px; padding: 12px; overflow: auto; }
+#loading p { margin: 0; }
+#access-link { color: var(--gold); min-height: 44px; padding: 12px; font-size: 13px; }
+#arena[data-connection="stale"] #connection { color: #ffa58d; }
+#arena[data-connection="stale"] #actor-layer { opacity: .65; }
+#inspect-stats, #inspect-effects, #inspect-spells { font-size: 13px; line-height: 1.8; }
+@media (max-width: 619px) {
+  #arena .command-dock { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 8px; }
+  #arena .actor-summary h1 { font-size: 21px; }
+  .live-status { grid-column: 1/-1; grid-row: 2; }
+  #instruction { font-size: 10px; margin-top: 4px; }
+  .table-return { font-size: 11px; padding: 10px; gap: 6px; }
+  #connection { font-size: 10px; }
+}
+@media (max-height: 520px) and (min-width: 620px) {
+  #arena .actor-summary h1 { font-size: 21px; }
+  #instruction { font-size: 10px; }
+  #loading .loading-mark { display: none; }
+}

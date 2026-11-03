@@ -90,6 +90,15 @@ internal sealed class TableFiles
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
             ["/arena-lab-layout.js"] = (Path.Combine(tableDirectory, "arena-lab-layout.js"), JavaScript),
 
+            // The opt-in live renderer reads one authenticated seat (ADR 0124).
+            ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),
+            ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
+            ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),
+            ["/arena-seats.js"] = (Path.Combine(tableDirectory, "arena-seats.js"), JavaScript),
+            ["/arena-layout.js"] = (Path.Combine(tableDirectory, "arena-layout.js"), JavaScript),
+            ["/arena-build/live.js"] = (Path.Combine(tableDirectory, "arena-build", "live.js"), JavaScript),
+            ["/arena-build/live.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "arena-build", "live.js.LEGAL.txt"), StudioResponse.Plain),
+
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
             // same session -- and it is reached only by somebody holding the pilot token, which the console
             // prints and no player's link carries.

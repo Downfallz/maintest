@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ArenaScene } from './scene';
-import { creaturesOf, isEnemy, type Creature, type LabState, type Placement } from './types';
+import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState, type Placement } from './types';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/arena-lab-state.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
 
@@ -131,7 +131,7 @@ function render() {
   const { kicker, title } = callout();
   $('callout-kicker').textContent = kicker;
   $('callout-title').textContent = title;
-  scene.present(state, reduced(), speed());
+  scene.present(labSceneFrame(state), reduced(), speed());
 }
 
 function reset() {

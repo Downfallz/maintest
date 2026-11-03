@@ -83,6 +83,18 @@ public sealed class TableFilesTests
         Files.Get("/arena-build/game.js").ContentType.ShouldContain("text/javascript");
     }
 
+    [Fact]
+    public void The_live_arena_loads_its_own_bundle_beside_the_shared_art_and_styles()
+    {
+        var page = Files.Get("/arena");
+
+        page.Status.ShouldBe(200);
+        Text(page).ShouldContain("src=\"arena-build/live.js\"");
+        Text(page).ShouldContain("href=\"arena.css\"");
+        Files.Get("/arena.css").ContentType.ShouldContain("text/css");
+        Files.Get("/arena-build/live.js").ContentType.ShouldContain("text/javascript");
+    }
+
     /// <summary>
     /// The bundle is built, not committed: a route to a file that is not there answers 500 and says so, and this
     /// test's own failure says what to run.
@@ -92,7 +104,7 @@ public sealed class TableFilesTests
     {
         const string hint = "Run `npm --prefix arena ci --ignore-scripts && npm --prefix arena run build` first";
 
-        foreach (var file in new[] { "game.js", "game.js.LEGAL.txt", "PHASER-LICENSE.txt" })
+        foreach (var file in new[] { "game.js", "game.js.LEGAL.txt", "live.js", "live.js.LEGAL.txt", "PHASER-LICENSE.txt" })
         {
             var served = Files.Get($"/arena-build/{file}");
             served.Status.ShouldBe(200, $"arena-build/{file} is not served. {hint}");

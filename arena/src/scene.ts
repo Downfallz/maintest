@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { placements } from '../../table/arena-lab-layout.js';
-import { isLabPlaying } from '../../table/arena-lab-state.js';
-import { creaturesOf, isEnemy, type LabState, type Placement } from './types';
+import { placements } from '../../table/arena-layout.js';
+import type { SceneFrame, Placement } from './types';
+
+const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
@@ -21,11 +22,12 @@ export class ArenaScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
-  private state!: LabState;
+  private state!: SceneFrame;
   private reduced = false;
   private rate = 1;
   private previous = '';
   private ready = false;
+  private roster = '';
   onLayout: (positions: Placement[]) => void = () => {};
   onReady: () => void = () => {};
   onResizeDuringPlayback: () => void = () => {};
@@ -55,27 +57,34 @@ export class ArenaScene extends Phaser.Scene {
     fallback.destroy();
     for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
     this.scale.on('resize', () => {
-      if (this.state && isLabPlaying(this.state)) this.onResizeDuringPlayback();
+      if (this.state && playing(this.state)) this.onResizeDuringPlayback();
       this.arrange();
     });
     this.ready = true;
     this.onReady();
   }
 
-  present(state: LabState, reduced: boolean, rate: number) {
+  present(state: SceneFrame, reduced: boolean, rate: number) {
     this.state = state;
     this.reduced = reduced;
     this.rate = rate;
     if (!this.ready) return;
-    if (!this.figures.size) this.makeFigures();
+    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy]));
+    if (roster !== this.roster) {
+      this.clearMotion();
+      for (const figure of this.figures.values()) { figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      this.figures.clear();
+      this.roster = roster;
+      this.makeFigures();
+    }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange();
-    for (const creature of creaturesOf(state)) {
+    for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
-      const acting = creature.id === state.action.actor;
+      const acting = creature.id === state.actor;
       const selected = creature.id === state.target;
-      const legal = state.stage === 'targeting' && state.action.targets.includes(creature.id);
+      const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(creature.isAlive ? 1 : .20);
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
@@ -89,8 +98,8 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private makeFigures() {
-    for (const creature of creaturesOf(this.state)) {
-      const enemy = isEnemy(this.state, creature.id);
+    for (const creature of this.state.creatures) {
+      const enemy = creature.enemy;
       const shadow = this.add.ellipse(0, 0, 100, 20, 0x020608, .55);
       const ring = this.add.ellipse(0, 0, 110, 26).setStrokeStyle(1, GOLD, .2);
       const image = this.textures.exists('creature-sheet')
@@ -111,14 +120,14 @@ export class ArenaScene extends Phaser.Scene {
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
     }
     if (!this.figures.size) return;
-    const positions = placements(width, height);
-    const playing = isLabPlaying(this.state);
-    for (const [index, creature] of creaturesOf(this.state).entries()) {
+    const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length, this.state.creatures.filter(one => one.enemy).length);
+    const inFlight = playing(this.state);
+    for (const [index, creature] of this.state.creatures.entries()) {
       const figure = this.figures.get(creature.id)!;
       const home = positions[index];
       figure.home = home;
       figure.image.setDisplaySize(home.size, home.size).setDepth(home.y);
-      if (!playing) figure.image.setPosition(home.x, home.y).setAngle(0);
+      if (!inFlight) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
@@ -126,7 +135,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private actorAndTarget() {
-    return { actor: this.figures.get(this.state.action.actor)!, target: this.figures.get(this.state.target!)! };
+    return { actor: this.figures.get(this.state.actor!)!, target: this.figures.get(this.state.target!)! };
   }
 
   private windup() {
@@ -165,7 +174,7 @@ export class ArenaScene extends Phaser.Scene {
 
   update(time: number) {
     if (!this.state) return;
-    const idle = !this.reduced && !isLabPlaying(this.state);
+    const idle = !this.reduced && !playing(this.state);
     let index = 0;
     for (const figure of this.figures.values()) {
       if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
