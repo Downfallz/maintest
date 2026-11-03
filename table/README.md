@@ -453,3 +453,11 @@ plays the other seat of that table is offered **Back to** its own seat instead, 
 meant for their opponent does not take that seat by accident; playing both seats on that device is an explicit
 second button. A player who lost the device holding a seat gets a **New invitation** from the admin panel,
 which cuts that device off.
+
+## Arena design laboratory
+
+`/arena-lab` opens an isolated browser-game presentation study: two switchable compositions, six provisional
+silhouettes and one sample action with three fixed target outcomes. It uses no seat or API and cannot affect
+a match. The values and artwork are illustrative. Reset, skip, 2× playback and reduced motion are available.
+See the [browser arena plan](../docs/tabletop/browser-arena-plan.md) for review criteria, the current-code audit
+and the PR sequence. The normal `/play` interface remains the game.

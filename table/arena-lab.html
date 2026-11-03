@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101819">
+  <title>Downfall Arena · Arena laboratory</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="arena-lab.css">
+  <script type="module" src="arena-lab.js"></script>
+</head>
+<body>
+  <svg class="symbol-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#61716c"/><stop offset=".5" stop-color="#293838"/><stop offset="1" stop-color="#111b20"/></linearGradient>
+      <symbol id="horns" viewBox="0 0 180 220">
+        <path fill="#10191b" d="M37 191 30 129 45 93 64 77 59 46 31 28 43 67 21 48 28 18 71 40 84 64 104 64 114 38 157 17 151 51 134 69 139 31 122 49 122 82 148 103 158 153 144 190 119 183 114 139 109 186 119 214 92 211 81 175 72 211 44 214 54 183Z"/>
+        <path fill="url(#body)" stroke="currentColor" stroke-opacity=".45" d="M45 107 67 88 86 98 105 87 137 109 127 143 112 133 104 184 88 199 76 175 69 135 50 150Z"/>
+        <path fill="#819087" d="m65 64 23 8 27-7-9 35-19 13-18-17Z"/>
+        <path fill="currentColor" d="m71 81 12 3-3 5-9-3m21-2 13-5-2 7-10 4"/>
+        <path fill="none" stroke="currentColor" stroke-opacity=".5" d="m58 113 20 15 17-6 22-18M83 141l5 31 8-30"/>
+      </symbol>
+      <symbol id="wings" viewBox="0 0 180 220">
+        <path fill="#152025" stroke="currentColor" stroke-opacity=".45" d="m70 87-30-38-30 5 20 16-15 51 28-20-7 41 35-28M105 86l36-37 29 5-21 16 16 51-28-20 7 41-36-29"/>
+        <path fill="url(#body)" stroke="currentColor" stroke-opacity=".5" d="m79 72-8-34 20 15 18-13-4 37 13 27-14 60 27 40-26-6-17-24-19 25-22 8 25-46-8-58Z"/>
+        <path fill="#76877e" d="m74 72 16-11 16 11-9 26-15-2Z"/>
+        <path fill="currentColor" d="m77 78 11 3-4 5-7-4m17-1 10-4-2 7-8 2"/>
+        <path fill="none" stroke="currentColor" stroke-opacity=".5" d="m79 111 10 21 11-23M68 111l-29 54-14 7m84-61 30 54 15 7"/>
+      </symbol>
+      <symbol id="veil" viewBox="0 0 180 220">
+        <path fill="#121c20" d="m87 25 29 37-9 40 19 37 29 63-37-12-30 24-31-18-34 6 30-65 17-37-10-38Z"/>
+        <path fill="url(#body)" stroke="currentColor" stroke-opacity=".5" d="m87 29 24 34-14 26 12 56 28 45-34-16-17 29-15-29-30 12 25-48 12-48-13-28Z"/>
+        <path fill="#0d151a" d="m88 49 15 20-6 18H79l-7-18Z"/>
+        <path fill="currentColor" d="M79 69h6v4h-6m13-4h6v4h-6"/>
+        <path fill="none" stroke="currentColor" stroke-opacity=".6" d="m77 105 11 42 11-42m-11 43v34M49 43l-8 110m86-113 12 113"/>
+        <circle cx="49" cy="40" r="10" fill="none" stroke="currentColor"/><circle cx="127" cy="37" r="7" fill="currentColor" opacity=".7"/>
+      </symbol>
+    </defs>
+  </svg>
+  <div class="lab-shell" id="lab" data-layout="arena" data-stage="decision">
+    <header class="masthead">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><div>DOWNFALL <span>ARENA</span><small>COMBAT LABORATORY / 01</small></div></div>
+      <a href="/">Back to lobby ↗</a>
+    </header>
+    <section class="lab-tools" aria-label="Design controls">
+      <div class="segmented" role="group" aria-label="Visual direction">
+        <button type="button" data-layout="arena" aria-pressed="true">01 · Arena</button>
+        <button type="button" data-layout="tableau" aria-pressed="false">02 · Tableau</button>
+      </div>
+      <div class="playback-tools">
+        <label><input type="checkbox" id="reduce-motion"> Less motion</label>
+        <label>Playback <select id="playback-speed"><option value="1">1×</option><option value="2">2×</option></select></label>
+        <button type="button" id="reset">Reset scene</button>
+      </div>
+    </section>
+    <main>
+      <section class="battle" aria-labelledby="battle-title">
+        <div class="battle-heading"><div><p class="eyebrow">THE LAST LIGHT</p><h1 id="battle-title">The fractured arena</h1></div><div class="round"><span>ROUND</span><strong>05</strong><span id="phase-label">Combat</span></div></div>
+        <div class="scene" id="scene">
+          <div class="eclipse" aria-hidden="true"></div><div class="rift" aria-hidden="true"></div>
+          <div class="side-label ours">YOUR CREATURES</div><div class="side-label theirs">OPPOSING CREATURES</div>
+          <div class="formation" id="allies" role="group" aria-label="Your creatures"></div>
+          <div class="versus" aria-hidden="true">⋮</div>
+          <div class="formation" id="enemies" role="group" aria-label="Opposing creatures"></div>
+        </div>
+        <div class="timeline-wrap"><span class="eyebrow">ACTIVATION ORDER</span><ol id="timeline" aria-label="Activation order"></ol></div>
+      </section>
+      <section class="command-dock" aria-label="Action preview">
+        <div class="actor-summary"><p class="eyebrow">YOUR ACTIVATION · 1 / 6</p><h2 id="actor-name">Brute</h2><p id="actor-meta"></p></div>
+        <div class="action-choice"><p class="eyebrow">SAMPLE ACTION</p><button type="button" id="choose" aria-pressed="false"><span class="action-icon" aria-hidden="true">↗</span><span><strong id="action-name">Strike</strong><small>Choose a target to preview the impact</small></span><span aria-hidden="true">→</span></button></div>
+        <div class="decision"><p id="instruction" role="status" aria-live="polite"></p><div class="decision-buttons"><button type="button" id="cancel" hidden>Cancel</button><button type="button" id="confirm" class="primary" disabled>Choose an action</button><button type="button" id="skip" hidden>Skip animation</button></div></div>
+      </section>
+      <aside class="inspection" aria-label="Creature details"><span class="eyebrow">INSPECTING</span><strong id="inspect-name"></strong><span id="inspect-stats"></span><span id="inspect-effects"></span></aside>
+    </main>
+    <footer><span><b>DESIGN STUDY</b> · Fixed illustrative scenario. Names, values and silhouettes are placeholders.</span><span>No live match · No decisions sent</span></footer>
+    <noscript>This laboratory needs JavaScript to display the scene. The live game remains available from the lobby.</noscript>
+  </div>
+</body>
+</html>

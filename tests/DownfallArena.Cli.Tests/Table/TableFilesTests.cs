@@ -14,6 +14,20 @@ public sealed class TableFilesTests
     private static TableFiles Files => new(Directory);
 
     [Fact]
+    public void The_isolated_arena_laboratory_and_its_assets_are_served()
+    {
+        var page = Files.Get("/arena-lab");
+
+        page.Status.ShouldBe(200);
+        page.ContentType.ShouldContain("text/html");
+        Text(page).ShouldContain("arena-lab.js");
+        Files.Get("/arena-lab.css").ContentType.ShouldContain("text/css");
+        Files.Get("/arena-lab-state.js").ContentType.ShouldContain("text/javascript");
+        Files.Get("/arena-lab-fixture.js").ContentType.ShouldContain("text/javascript");
+        Files.Get("/arena-lab.test.js").Status.ShouldBe(404);
+    }
+
+    [Fact]
     public void The_page_and_its_stylesheet_are_served_at_the_paths_the_page_asks_for()
     {
         Text(Files.Get("/")).ShouldContain("<title>");

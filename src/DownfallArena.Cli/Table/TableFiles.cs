@@ -72,6 +72,13 @@ internal sealed class TableFiles
             ["/combat-fx.js"] = (Path.Combine(tableDirectory, "combat-fx.js"), JavaScript),
             ["/feedback.js"] = (Path.Combine(tableDirectory, "feedback.js"), JavaScript),
 
+            // An isolated design study with authored sample frames; it never opens a seat or posts a decision.
+            ["/arena-lab"] = (Path.Combine(tableDirectory, "arena-lab.html"), StudioResponse.Html),
+            ["/arena-lab.css"] = (Path.Combine(tableDirectory, "arena-lab.css"), Css),
+            ["/arena-lab.js"] = (Path.Combine(tableDirectory, "arena-lab.js"), JavaScript),
+            ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
+            ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
+
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
             // same session -- and it is reached only by somebody holding the pilot token, which the console
             // prints and no player's link carries.
