@@ -47,6 +47,47 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.speed-spell')).toHaveCount(6);
 });
 
+test('the shared presentation keeps a local Action choice through a poll and discards it at the next asking', async ({ page }) => {
+  let served = { ...view, waitingFor: 'Action', waitingAsked: 4,
+    options: { action: { actor: 1, spells: [0, 3].map(index => ({ actor: 1, spell: cards[index].id,
+      legalTargets: { minTargets: 1, maxTargets: 1, candidates: [2] } })) } },
+    board: { ...view.board, subPhase: 'Activation' } };
+  let reads = 0;
+  const decisions = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().endsWith('/decision')) decisions.push(request.postData());
+  });
+  await page.route('**/api/seat/player1**', route => { reads++; return route.fulfill({ json: served }); });
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+  await page.locator('#phase-notice-close').click();
+  await page.locator('#own-hand .held.offered').first().click();
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+  const selectedAt = reads;
+  await expect.poll(() => reads).toBeGreaterThan(selectedAt);
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+  served = { ...served, waitingAsked: 5 };
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+  await expect(page.locator('#own-hand .held.chosen')).toHaveCount(0);
+  expect(decisions).toEqual([]);
+});
+
+test('the table draws the timeline in the host\'s order, with its cursor and its rolls, off the shared board model', async ({ page }) => {
+  // The expectations are the fixture's own values, not the module's reading of them: the page draws through
+  // boardPresentation, so asking the module what to expect would agree with any mistake it made.
+  const board = { ...view.board, slot: 'player1', subPhase: 'Activation', activationCursor: 1,
+    timeline: [{ creature: 2, owner: 'player2', speed: 'Quick', initiative: 5 },
+      { creature: 1, owner: 'player1', speed: 'Standard', initiative: 8 }],
+    rollOffs: [{ creature: 1, rolls: [2, 18] }] };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board } }));
+  await expect(page.locator('#timeline .slot')).toHaveCount(2);
+  await expect(page.locator('#timeline .slot > strong')).toHaveText(['Creature 2', 'Creature 1']);
+  await expect(page.locator('#timeline .slot.now > strong')).toHaveText('Creature 1');
+  await expect(page.locator('#timeline .slot.enemy > strong')).toHaveText('Creature 2');
+  await expect(page.locator('#timeline .roll')).toHaveText(['d20 2 → 18']);
+  await expect(page.locator('#allies .health .number')).toHaveText(board.allies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+  await expect(page.locator('#enemies .health .number')).toHaveText(board.enemies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+});
+
 // The motion tokens (UX 01): buttons, creatures and held cards ease their colours over --motion-fast, and a
 // person who asks the system for reduced motion gets every token at zero and no transition or animation that
 // lasts, whether or not the effect was built on the tokens.
@@ -908,9 +949,14 @@ test('tempos are chosen per creature, can go back, and Confirm sends them as the
   const posted = [];
   const asked = (creature, waitingAsked, speedChoices = []) => ({ ...view, waitingCreature: creature, waitingAsked, options: { speed: { missing: [1, 3] } },
     board: { ...view.board, speedChoices, allies: [view.board.allies[0], { ...view.board.allies[0], id: 3, name: 'Creature 3' }] } });
-  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(1, 4) }));
+  let served = asked(1, 4);
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: served }));
   await page.route('**/api/seat/player1/decision', route => {
     posted.push(route.request().postDataJSON());
+    // The host moves on to the next creature once it holds the first answer, and never before: a poll that
+    // found creature 3 asked while creature 1 was still being confirmed would read creature 1 as answered
+    // already and send one tempo instead of two.
+    served = asked(3, 5, [{ creature: 1, speed: 'Standard' }]);
     return route.fulfill({ status: 204 });
   });
   await page.reload();
@@ -927,11 +973,6 @@ test('tempos are chosen per creature, can go back, and Confirm sends them as the
   expect(posted).toEqual([]);
   await expectNoSidewaysScroll(page);
 
-  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(3, 5, [{ creature: 1, speed: 'Standard' }]) }));
-  await page.route('**/api/seat/player1/decision', route => {
-    posted.push(route.request().postDataJSON());
-    return route.fulfill({ status: 204 });
-  });
   await confirm.click();
   await expect.poll(() => posted.map(one => [one.creature, one.speed]), { timeout: 10000 }).toEqual([[1, 'Standard'], [3, 'Quick']]);
 });
