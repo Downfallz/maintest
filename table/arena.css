@@ -25,3 +25,39 @@
   #instruction { font-size: 10px; }
   #loading .loading-mark { display: none; }
 }
+.arena-actions { display: flex; align-items: center; gap: 4px; min-width: 0; }
+#combat-open, #combat-targets { flex: 1; }
+#combat-targets { min-width: 0; }
+.arena-actions .table-return { white-space: nowrap; }
+#combat-title { display: block; font: 16px Georgia,serif; color: var(--gold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#combat-selection { margin: 5px 0; color: var(--muted); font-size: 11px; }
+.combat-buttons { display: flex; gap: 5px; }
+.combat-buttons button { font-size: 12px; padding: 8px; }
+#combat-confirm { flex: 1; }
+#combat-error, #combat-dialog-error { color: #ffbca9; font-size: 11px; margin: 5px 0 0; max-height: 48px; overflow: auto; }
+#arena[data-combat="targets"] #play-link { display: none; }
+#arena[data-combat="targets"] .creature.is-targetable { cursor: pointer; }
+#arena .creature[aria-pressed="true"] .caption { background: #5a48297d; border-bottom: 1px solid var(--gold); }
+#combat-dialog { width: min(760px,calc(100vw - 28px)); padding: 24px; }
+#combat-dialog h2 { margin-bottom: 10px; font-size: 24px; }
+#combat-help { color: var(--muted); font-size: 12px; line-height: 1.5; }
+#combat-spells { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.combat-spell { text-align: left; display: grid; gap: 7px; align-content: start; padding: 14px; }
+.combat-spell strong { font: 21px Georgia,serif; color: var(--gold); overflow-wrap: anywhere; }
+.combat-spell[aria-pressed="true"] { border-color: var(--gold); background: #433d2d; }
+.spell-cost { font-size: 12px; color: #e4d9ba; }
+.spell-detail { font-size: 12px; line-height: 1.5; color: #c2d0c5; }
+.spell-availability { font-size: 10px; color: #d6b983; }
+.combat-dialog-footer { position: sticky; bottom: -24px; background: #132228; padding: 12px 0 0; }
+#combat-declare { width: 100%; }
+@media (max-width: 619px) {
+  #combat-spells { grid-template-columns: 1fr; }
+  #combat-dialog { padding: 18px; }
+  #arena[data-combat="targets"] .actor-summary { display: none; }
+  #arena[data-combat="targets"] .arena-actions { grid-column: 1/-1; grid-row: 1; }
+  #arena[data-combat="targets"] .live-status { grid-row: 2; }
+  #combat-title { font-size: 17px; }
+  #combat-open { font-size: 12px; padding: 8px; }
+  .arena-actions .table-return { padding: 6px; }
+  #arena .command-dock { grid-template-rows: minmax(0,1fr) auto; }
+}

@@ -1,8 +1,8 @@
 # Phaser arena presentations
 
 Two Phaser pages: a viewport-bound visual experiment at `/arena-lab`, isolated from the actual `/play` client,
-and `/arena`, the opt-in read-only view of one authenticated seat (ADR 0125).
-Pinned Phaser 3.90.0 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
+and `/arena`, the opt-in view and combat controls for one authenticated seat (ADRs 0125–0126).
+Pinned Phaser 4.2.1 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the choice; the [delivery plan](../docs/tabletop/browser-arena-plan.md) covers live integration.
 
 ## Build and run
@@ -40,7 +40,7 @@ the TypeScript imports them and owns Phaser and DOM integration.
 
 No rules, legality, damage or random resolution are reimplemented here. `/arena-lab` keeps its fixture
 and makes no API requests. `/arena` is the opt-in live entry point: choose an accepted seat, inspect its
-board, and return to `/play` to decide. It shares [`table/presentation.js`](../table/presentation.js)
+board, and answer combat questions. Return to `/play` for planning and the rest of the game loop. It shares [`table/presentation.js`](../table/presentation.js)
 with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) describes
 seat discovery, explicit viewpoints, read-only transport, arrival behavior and recovery.
 
@@ -49,7 +49,11 @@ seat discovery, explicit viewpoints, read-only transport, arrival behavior and r
 - `table/arena-seats.js`: read-only capability discovery and return links.
 - `table/arena-layout.js`: shared geometry for 1v1, 2v2 and 3v3.
 
-The live preview has no decision or shown acknowledgement. Invitation acceptance stays at `/play`.
+Opening combat controls acknowledges the visible asking. Explicit confirmation sends Action, Intent or
+Target through the existing transport; inspection alone remains read-only. `table/arena-combat.js`
+fences drafts and pending commands, while `src/combat.ts` draws their accessible controls.
+[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) records this extension.
+Invitation acceptance stays at `/play`.
 401/403 clears private content; a transient failure labels the last snapshot stale. A hidden page
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
 accepted seat as arrived, which may start a waiting match.
@@ -62,7 +66,7 @@ about 0.8 MB. Device performance and transfer compression remain to be measured 
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes

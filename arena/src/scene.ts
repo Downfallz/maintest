@@ -83,7 +83,7 @@ export class ArenaScene extends Phaser.Scene {
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
-      const selected = creature.id === state.target;
+      const selected = creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(creature.isAlive ? 1 : .20);

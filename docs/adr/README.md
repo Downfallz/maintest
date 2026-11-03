@@ -131,3 +131,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype |
 | [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted |
 | [0125](0125-read-one-authenticated-seat-in-the-live-arena.md) | Read one authenticated seat in the live arena | Accepted for the opt-in read-only integration |
+| [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |

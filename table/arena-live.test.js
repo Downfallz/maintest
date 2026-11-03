@@ -141,3 +141,36 @@ test('a catalogue handed to a started connection is not read again', async () =>
   assert.deepEqual(h.views.at(-1)[1], { cards: ['known'] });
   h.connection.stop();
 });
+
+test('a read begun before a command cannot repaint its old board after the write', async () => {
+  const h = harness(), old = pending(), write = pending(); let reads = 0;
+  h.transport.seat = () => ++reads === 2 ? old.promise : Promise.resolve(ok({ board: { roundNumber: reads } }));
+  h.transport.decide = () => write.promise;
+  h.connection.start(h.transport); await tick(); const read = h.connection.refresh(); await tick();
+  const send = h.connection.submit({ kind: 'Action', asked: 11 }); write.resolve(ok(null)); await send;
+  old.resolve(ok({ board: { roundNumber: 2 } })); await read; await h.run(0);
+  assert.deepEqual(h.views.filter(([view]) => view).map(([view]) => view.board.roundNumber), [1, 3]); h.connection.stop();
+});
+test('notifications during a command do not read until it settles', async () => {
+  const h = harness(), write = pending(); let notify, reads = 0;
+  h.transport.seat = async () => { reads++; return ok({ board: {} }); };
+  h.transport.decide = () => write.promise;
+  h.transport.events = callback => { notify = callback; return new Promise(() => {}); };
+  h.connection.start(h.transport); await tick(); const send = h.connection.submit({ kind: 'Action' });
+  notify({ event: 'changed' }); notify({ event: 'changed' }); await tick(); assert.equal(reads, 1);
+  write.resolve(ok(null)); await send; await tick(); assert.equal(reads, 2); assert.deepEqual([...h.jobs.values()].map(job => job.delay), [5000]); h.connection.stop();
+});
+test('a failed write refreshes the board without retrying the command', async () => {
+  const h = harness(); let writes = 0, reads = 0;
+  h.transport.seat = async () => { reads++; return ok({ board: {} }); };
+  h.transport.decide = async () => { writes++; throw new Error('lost'); };
+  h.connection.start(h.transport); await tick(); await assert.rejects(h.connection.submit({ kind: 'Action' }), /lost/); await tick();
+  assert.equal(reads, 2); assert.equal(writes, 1); h.connection.stop();
+});
+for (const status of [401, 403]) for (const source of ['shown', 'submit']) test(`${status} on ${source} erases the private board`, async () => {
+  const h = harness(); h.connection.start(h.transport); await tick();
+  if (source === 'shown') h.transport.seat = async () => ({ ok: false, status });
+  else h.transport.decide = async () => ({ ok: false, status });
+  await h.connection[source](11);
+  assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.states.at(-1), status === 401 ? 'signin' : 'revoked'); assert.equal(h.jobs.size, 0);
+});

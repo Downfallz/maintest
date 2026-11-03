@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { actionDecision, askedKey, slotView } from './slot.js';
+import { actionDecision, askedKey, slotView, validTargets, combatDecision } from './slot.js';
 
 const strike = { actor: 1, spell: 'spell:strike:v1', legalTargets: { minTargets: 1, maxTargets: 1, candidates: [3, 4] } };
 const guard = { actor: 1, spell: 'spell:guard:v1', legalTargets: { minTargets: 1, maxTargets: 1, candidates: [1] } };
@@ -41,4 +41,17 @@ test('choosing a spell is the same asking, so the choice survives the change of 
 
 test('the action posted names the creature, the spell on the target screen and the targets picked', () => {
   assert.deepEqual(actionDecision(slotView(asked, 'spell:strike:v1'), [4]), { kind: 'Action', creature: 1, spell: 'spell:strike:v1', targets: [4] });
+});
+
+test('target bounds reject duplicate ids, foreign candidates and excess targets', () => {
+  const legal = { candidates: [1, 2, 3], minTargets: 2, maxTargets: 2 };
+  for (const targets of [[1, 1], [1, 9], [1], [1, 2, 3]]) assert.equal(validTargets(legal, targets), false);
+  assert.equal(validTargets(legal, [1, 2]), true);
+});
+test('a combat command copies a frozen draft and never submits the local spell screen', () => {
+  const targets = Object.freeze([4]);
+  assert.equal(combatDecision(slotView(asked), 'spell:strike:v1', targets), null);
+  const decision = combatDecision(slotView(asked, 'spell:strike:v1'), 'spell:strike:v1', targets);
+  assert.deepEqual(decision, { kind: 'Action', creature: 1, spell: 'spell:strike:v1', targets: [4] });
+  assert.notEqual(decision.targets, targets);
 });
