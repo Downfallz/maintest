@@ -7,6 +7,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// Google's signing keys, read from its published JSON Web Key Set and kept for as long as the answer's
 /// <c>Cache-Control: max-age</c> says (an hour when it says nothing). A refresh is refused for a minute after the
 /// last fetch, so a stream of tokens naming a key that does not exist cannot make the host ask Google once each.
+/// A key handed out is never disposed while the host runs: a verification may still be using it after a refresh
+/// has replaced it, and a key is a few hundred bytes the collector takes back once nobody holds it.
 /// </summary>
 public sealed class GoogleSigningKeys : ISigningKeySource, IDisposable
 {
@@ -80,11 +82,6 @@ public sealed class GoogleSigningKeys : ISigningKeySource, IDisposable
                     Exponent = Base64Url.Decode(exponent.GetString()!),
                 });
             }
-        }
-
-        foreach (var old in _keys.Values)
-        {
-            old.Dispose();
         }
 
         _keys = keys;

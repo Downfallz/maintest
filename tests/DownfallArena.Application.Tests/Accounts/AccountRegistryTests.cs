@@ -191,6 +191,18 @@ public sealed class AccountRegistryTests
         (await registry.SignOutEverywhereAsync(AccountId.New(), Cancel)).ShouldBeNull();
     }
 
+    [Fact]
+    public async Task Signing_out_everywhere_at_once_raises_the_generation_once_for_each_request()
+    {
+        var registry = Registry();
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+        _store.SlowReads = true;
+
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => registry.SignOutEverywhereAsync(account.Id, Cancel), Cancel)));
+
+        (await registry.FindAsync(account.Id, Cancel)).ShouldNotBeNull().Generation.ShouldBe(21);
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

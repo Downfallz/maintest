@@ -61,6 +61,21 @@ public sealed class GoogleSigningKeysTests : IDisposable
         _handler.Fetches.ShouldBe(2);
     }
 
+    [Fact]
+    public async Task A_key_handed_out_before_a_refresh_still_verifies_after_it()
+    {
+        using var keys = new GoogleSigningKeys(_http, _clock);
+        var data = "signed"u8.ToArray();
+        var signature = _key.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var held = (await keys.KeyAsync("k1", refresh: false, Cancel)).ShouldNotBeNull();
+
+        _clock.Advance(TimeSpan.FromHours(1));
+        await keys.KeyAsync("k1", refresh: false, Cancel);
+
+        _handler.Fetches.ShouldBe(2);
+        held.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1).ShouldBeTrue();
+    }
+
     public void Dispose()
     {
         _http.Dispose();
