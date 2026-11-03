@@ -44,6 +44,9 @@ internal sealed class AccountSessions
         _clock = clock;
     }
 
+    /// <summary>The host's clock, which every age a session or a cached account has is measured by.</summary>
+    public TimeProvider Clock => _clock;
+
     public string Issue(Account account)
     {
         ArgumentNullException.ThrowIfNull(account);

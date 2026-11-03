@@ -42,7 +42,11 @@ internal sealed class AdminApi
     public LobbyApi Lobby { get; }
 
     /// <summary>The players' sign-in (ADR 0122), when this host has one; <c>/api/me</c> says who is signed in through it.</summary>
-    public AccountApi? Accounts { get; init; }
+    public AccountApi? Accounts
+    {
+        get => Lobby.Accounts;
+        init => Lobby.Accounts = value;
+    }
 
     /// <param name="rules">The line the console prints of the rule set: which one, and where it came from.</param>
     /// <param name="stored">The host's store, or none for a host that records nothing.</param>
@@ -75,7 +79,8 @@ internal sealed class AdminApi
         ArgumentNullException.ThrowIfNull(path);
         if (LobbyApi.Names(path))
         {
-            return await Lobby.HandleAsync(method, path, body, token);
+            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+            return await Lobby.HandleAsync(method, path, body, token, player);
         }
 
         var operatorName = _gate.Admit(token, principal);

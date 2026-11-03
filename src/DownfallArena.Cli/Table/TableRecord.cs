@@ -88,7 +88,7 @@ internal sealed record TableRecord
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
             Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
-            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push))],
+            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value))],
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,
@@ -112,6 +112,7 @@ internal sealed record TableRecord
 /// still outstanding for it, and whether a browser has taken it (ADR 0116). <paramref name="Taken" /> is null in
 /// a record written before invitations existed, whose links carried the seat's token itself. <paramref name="Push" />
 /// is where the browser holding the seat asked its notices to be sent (ADR 0118), kept so the next host sends
-/// there too.
+/// there too. <paramref name="Account" /> is the account the seat belongs to (ADR 0122), so a rebuilt table is still
+/// theirs.
 /// </summary>
-internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null);
+internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null, string? Account = null);

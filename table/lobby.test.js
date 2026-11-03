@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, lobbyRequest, tableState, visibleTables } from './lobby.js';
+import { codePath, lobbyRequest, tableState, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -63,4 +63,10 @@ test('a race for a place surfaces the servers refusal instead of opening a broke
     assert.equal(request.headers['Content-Type'], 'application/json');
     return { ok: false, status: 409, text: async () => JSON.stringify({ message: 'Already occupied' }) };
   }), /Already occupied/);
+});
+
+test('a card names each side as the host does, and an older host as players', () => {
+  const named = versus({ seats: [{ seat: 'player1', kind: 'person', name: 'MarkF' }, { seat: 'player2', kind: 'bot', name: 'search-19' }] });
+  assert.deepEqual(named.map(side => `${side.kind}:${side.name}`), ['person:MarkF', 'bot:search-19']);
+  assert.deepEqual(versus({ players: ['Player', 'greedy'] }).map(side => side.seat), ['player1', 'player2']);
 });
