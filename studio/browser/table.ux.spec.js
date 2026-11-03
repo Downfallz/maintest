@@ -1018,3 +1018,68 @@ for (const [width, height] of [[844, 390], [740, 360]]) {
     expect((await page.locator('#decision').boundingBox()).y).toBe(before.y);
   });
 }
+
+// The landscape regression was vertical: the capped decision let its cards paint over the spellbook.
+// Exercise the real evolution DOM, including enough choices to outgrow a short screen, and rotate back.
+for (const [width, height] of [[740, 360], [844, 390], [960, 432]]) {
+  test(`landscape mutations stay inside their panel at ${width}×${height}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height });
+    const creature = id => ({ id, name: `Creature ${id}`, health: 30, maxHealth: 30, energy: 2, currentInitiative: 5, knownSpells: cards.map(card => card.id) });
+    const evolving = { ...view, waitingFor: 'Evolution', options: { evolution: { remainingPicks: 2,
+      creatures: [1, 2, 3].map(creature => ({ creature, availableTiers: packages.map(item => item.id) })) } },
+      board: { ...view.board, subPhase: 'Evolution', allies: [1, 2, 3].map(creature), enemies: [4, 5, 6].map(creature), evolutionChoices: [] } };
+    await page.route('**/api/seat/player1**', route => route.fulfill({ json: evolving }));
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Evolution');
+    await page.locator('#phase-notice-close').click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const decision = await page.locator('#decision').boundingBox();
+    const hand = await page.locator('#hand-section').boundingBox();
+    const lastCard = page.locator('#decision .package-card').last();
+    const last = await lastCard.boundingBox();
+    expect(last.y + last.height).toBeLessThanOrEqual(decision.y + decision.height + 1);
+    expect(hand.y).toBeGreaterThanOrEqual(decision.y + decision.height);
+    await expectNoSidewaysScroll(page);
+    await page.screenshot({ path: info.outputPath('landscape-evolution.png'), animations: 'disabled' });
+    const board = await page.locator('#board').boundingBox();
+    await lastCard.scrollIntoViewIfNeeded();
+    await expect(lastCard).toBeInViewport();
+    expect((await page.locator('#board').boundingBox()).y).toBe(board.y);
+    await expect(page.locator('#phase-dock')).toBeInViewport();
+    // Returning to portrait restores the bounded list and the battlefield toggle.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator('#board-toggle')).toBeVisible();
+    expect(await page.locator('#decision .choice-cards').evaluate(node => getComputedStyle(node).overflowY)).toBe('auto');
+    await expectNoSidewaysScroll(page);
+  });
+}
+
+for (const width of [740, 844]) {
+  test(`landscape spell selection and targeting remain usable at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 390 });
+    const creature = id => ({ id, health: 30, maxHealth: 30, energy: 4, currentInitiative: 6, knownSpells: cards.map(card => card.id) });
+    const board = { ...view.board, subPhase: 'Activation', allies: [1, 5, 6].map(creature), enemies: [2, 3, 4].map(creature) };
+    let served = { ...view, board, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } } };
+    await page.route('**/api/seat/player1**', route => route.fulfill({ json: served }));
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+    await page.locator('#phase-notice-close').click();
+    await page.locator('#own-hand .held.offered').first().click();
+    await expect(page.locator('#own-hand .held.chosen')).toHaveCount(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectNoSidewaysScroll(page);
+    await page.screenshot({ path: info.outputPath('landscape-spells.png'), animations: 'disabled' });
+
+    served = { ...served, waitingAsked: 4, waitingFor: 'Target', options: { target: { actor: 1, spell: cards[3].id,
+      legalTargets: { candidates: [1, 2, 5], minTargets: 1, maxTargets: 1 } } } };
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+    const target = page.locator('#board .creature.legal').first();
+    await target.click();
+    await expect(target).toHaveClass(/picked/);
+    await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
+    const panel = await page.locator('#decision').boundingBox();
+    const hand = await page.locator('#hand-section').boundingBox();
+    expect(hand.y).toBeGreaterThanOrEqual(panel.y + panel.height);
+    await expectNoSidewaysScroll(page);
+    await page.screenshot({ path: info.outputPath('landscape-target.png'), animations: 'disabled' });
+  });
+}
