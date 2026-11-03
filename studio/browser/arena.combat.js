@@ -1,21 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
-import { createServer } from 'node:net';
-
-const root = resolve('../..');
-async function startHost(declaration) {
-  const probe = createServer(); await new Promise(done => probe.listen(0, '127.0.0.1', done));
-  const port = probe.address().port; await new Promise(done => probe.close(done));
-  const host = spawn(resolve(process.env.DOTNET_ROOT ?? '/usr/share/dotnet', 'dotnet'),
-    [resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll'), 'table', '--declaration', declaration,
-      '--p2', 'greedy', '--no-record', '--seed', '7', '--port', String(port)], { cwd: root });
-  let log = ''; host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });
-  try {
-    await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
-    return { host, join: /joins at (\S+)/.exec(log)[1] };
-  } catch (error) { host.kill('SIGINT'); throw error; }
-}
+import { startHost, stopHost } from './host.js';
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: arena combat commands resolve through the real engine`, async ({ page, context }, info) => {
   test.setTimeout(90000);
@@ -93,6 +77,6 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     }
   } finally {
     await page.close();
-    if (host.exitCode === null) { const closed = new Promise(done => host.once('exit', done)); host.kill('SIGINT'); await closed; }
+    await stopHost(host);
   }
 });

@@ -1,26 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { fitsViewport } from './fit.js';
 
 // One Phaser page at a time: under the runner's software rendering a 1440x1000 WebGL canvas is the heaviest
 // thing this suite opens, and two of them side by side starved the worker until clicks never returned.
 test.describe.configure({ mode: 'default' });
 
-// One snapshot checks every bound. Separate visibility/boundingBox round trips cost over 17 seconds on
-// the CI software renderer, exhausting the test even when every assertion passed (the live suite does this too).
-async function fits(page) {
-  await expect.poll(() => page.evaluate(({ width, height }) => {
-    const wrong = [];
-    const root = document.documentElement;
-    if (root.scrollWidth > width || root.scrollHeight > height) wrong.push(`document ${root.scrollWidth}x${root.scrollHeight}`);
-    for (const node of document.querySelectorAll('.creature, #choose, #confirm, #cancel, #skip, #reset, #settings')) {
-      const box = node.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0 || ['hidden', 'collapse'].includes(getComputedStyle(node).visibility)) continue;
-      if (box.width < 44 || box.height < 44 || box.left < -1 || box.top < -1 || box.right > width + 1 || box.bottom > height + 1) {
-        wrong.push(`${node.id || node.dataset.creature} ${Math.round(box.left)},${Math.round(box.top)} ${Math.round(box.width)}x${Math.round(box.height)}`);
-      }
-    }
-    return wrong;
-  }, page.viewportSize())).toEqual([]);
-}
+const fits = page => fitsViewport(page, '.creature, #choose, #confirm, #cancel, #skip, #reset, #settings');
 // Fake timers, paused: from here on the page's clock moves only when the test runs it.
 async function pauseClock(page) {
   await page.clock.install({ time: '2026-11-03T12:00:00Z' });
@@ -95,6 +80,20 @@ for (const [target, result] of [['b1', '14/24 HP'], ['b2', '5/24 HP'], ['b3', '0
     await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   });
 }
+
+// What a reset is for: the next cast on the same page, after the heaviest outcome, resolves as the first did.
+test('reduced motion casts again after a reset on the same page', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await choose(page, 'b3');
+  await page.locator('#confirm').click();
+  await expect(page.locator('[data-creature="b3"]')).toHaveClass(/is-defeated/);
+  await page.locator('#reset').click();
+  await choose(page, 'b1');
+  await page.locator('#confirm').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
+  await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('14/24 HP');
+  await expect(page.locator('.is-defeated')).toHaveCount(0);
+});
 
 test('keyboard casting and skip need no live API', async ({ page }) => {
   const apiRequests = [];

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { fitsViewport } from './fit.js';
 // Match the lab/live suites: software-rendered Phaser pages run one case at a time within this file.
 test.describe.configure({ mode: 'default' });
 const legal = (candidates, minTargets = 1, maxTargets = 1) => ({ candidates, minTargets, maxTargets });
@@ -20,6 +21,8 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]) } = {})
     if (url.pathname.endsWith('/decision')) {
       state.writes.push(request.postDataJSON()); if (state.wait) await state.wait;
       if (state.status === 204) { state.view.waitingFor = null; state.view.waitingAsked = null; state.view.board.enemies[0].health = 12; return route.fulfill({ status: 204 }); }
+      // A refusal is the host's: the asking it refused has moved on, and the next read says so.
+      state.view.waitingAsked += 1;
       return route.fulfill({ status: state.status, json: { message: state.message } });
     }
     if (url.pathname === '/api/seat/player1') {
@@ -80,10 +83,15 @@ test('a pending command disables confirmation and target changes', async ({ page
   await expect(page.locator('#combat-confirm')).toBeDisabled(); await expect(page.locator('[data-creature="5"]')).toBeDisabled();
   await expect.poll(() => state.writes.length).toBe(1); release(); await expect(page.locator('#combat-targets')).toBeHidden();
 });
-test('host rejection is readable after the draft closes', async ({ page }) => {
+test('host rejection stays readable after the draft closes and the next asking arrives', async ({ page }) => {
   const state = await mount(page); state.status = 409; state.message = 'This question has already ended.';
   await bolt(page); await page.locator('[data-creature="4"]').click(); await page.locator('#combat-confirm').click();
   await expect(page.locator('#combat-error')).toHaveText(state.message); await expect(page.locator('#combat-targets')).toBeHidden(); expect(state.writes).toHaveLength(1);
+  // The refresh the write triggered has delivered the new asking by now: the message is still there to read.
+  await expect(page.locator('#combat-open')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#combat-error')).toHaveText(state.message);
+  await page.locator('#combat-open').click();
+  await expect(page.locator('#combat-error')).toBeHidden();
 });
 test('keyboard users can leave the spell dialog and confirm a field target', async ({ page }) => {
   const state = await mount(page); await page.locator('#combat-open').focus(); await page.keyboard.press('Enter');
@@ -91,19 +99,13 @@ test('keyboard users can leave the spell dialog and confirm a field target', asy
   await expect(page.locator('[data-creature="4"]')).toBeFocused(); await page.keyboard.press('Enter');
   await page.locator('#combat-confirm').focus(); await page.keyboard.press('Enter'); await expect.poll(() => state.writes.length).toBe(1);
 });
-test('combat controls and all field targets fit short portrait and landscape', async ({ page }) => {
+// The test sets its own viewports: one project runs it, three would run it three times.
+test('combat controls and all field targets fit short portrait and landscape', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The viewports are the test\'s own');
   await mount(page); await bolt(page);
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 1440, height: 1000 }]) {
     await page.setViewportSize(viewport);
-    await expect.poll(() => page.evaluate(({ width, height }) => {
-      const wrong = [];
-      if (document.documentElement.scrollWidth !== width || document.documentElement.scrollHeight !== height) wrong.push('document scrolls');
-      for (const node of document.querySelectorAll('.creature, #combat-confirm, #combat-back, #combat-cancel, #switch-seat, #settings')) {
-        const box = node.getBoundingClientRect();
-        if (box.width < 44 || box.height < 44 || box.left < -1 || box.top < -1 || box.right > width + 1 || box.bottom > height + 1) wrong.push(node.id || node.dataset.creature);
-      }
-      return wrong;
-    }, viewport), { timeout: 15000 }).toEqual([]);
+    await fitsViewport(page, '.creature, #combat-confirm, #combat-back, #combat-cancel, #switch-seat, #settings');
   }
 });
 
@@ -144,7 +146,8 @@ test('too few candidates expose an explicit empty cast without partial target bu
   await expect.poll(() => state.writes[0]?.targets).toEqual([]);
 });
 
-test('opening and rejected-action controls stay inside the dock on short screens', async ({ page }) => {
+test('opening and rejected-action controls stay inside the dock on short screens', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The viewports are the test\'s own');
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport); const state = await mount(page); state.status = 409; state.message = 'This action could not be accepted. Please review the latest question before trying again.';
     async function contained() {

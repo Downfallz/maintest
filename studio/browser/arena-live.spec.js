@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { fitsViewport } from './fit.js';
 test.describe.configure({ mode: 'default' });
 const creature = (id, extras = {}) => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['spell:host:v1'], conditions: [], ...extras });
@@ -31,23 +32,7 @@ async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
   await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY'); await expect(page.locator('#loading')).toBeHidden();
 }
-// Every hit target and control inside the viewport and at least 44px, read until the layout has settled: the
-// targets follow the scene's own resize, which lands a frame or two after the viewport does. One evaluation a
-// read: nine round trips to a page rendering a 1440x1000 canvas in software can outlast the poll on their own.
-async function fits(page) {
-  await expect.poll(() => page.evaluate(({ width, height }) => {
-    const wrong = [];
-    const root = document.documentElement;
-    if (root.scrollWidth !== width || root.scrollHeight !== height) wrong.push(`document ${root.scrollWidth}x${root.scrollHeight}`);
-    for (const node of document.querySelectorAll('.creature, #switch-seat, #settings, #play-link')) {
-      const box = node.getBoundingClientRect();
-      if (box.width < 44 || box.height < 44 || box.left < -1 || box.top < -1 || box.right > width + 1 || box.bottom > height + 1) {
-        wrong.push(`${node.id || node.dataset.creature} ${Math.round(box.left)},${Math.round(box.top)} ${Math.round(box.width)}x${Math.round(box.height)}`);
-      }
-    }
-    return wrong;
-  }, page.viewportSize()), { timeout: 15000 }).toEqual([]);
-}
+const fits = page => fitsViewport(page, '.creature, #switch-seat, #settings, #play-link');
 test('no seat is read before a viewpoint is chosen, and only the chosen one after', async ({ page }) => {
   const state = await mount(page);
   expect(state.requests.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
