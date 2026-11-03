@@ -950,9 +950,14 @@ test('tempos are chosen per creature, can go back, and Confirm sends them as the
   const posted = [];
   const asked = (creature, waitingAsked, speedChoices = []) => ({ ...view, waitingCreature: creature, waitingAsked, options: { speed: { missing: [1, 3] } },
     board: { ...view.board, speedChoices, allies: [view.board.allies[0], { ...view.board.allies[0], id: 3, name: 'Creature 3' }] } });
-  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(1, 4) }));
+  let served = asked(1, 4);
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: served }));
   await page.route('**/api/seat/player1/decision', route => {
     posted.push(route.request().postDataJSON());
+    // The host moves on to the next creature once it holds the first answer, and never before: a poll that
+    // found creature 3 asked while creature 1 was still being confirmed would read creature 1 as answered
+    // already and send one tempo instead of two.
+    served = asked(3, 5, [{ creature: 1, speed: 'Standard' }]);
     return route.fulfill({ status: 204 });
   });
   await page.reload();
@@ -969,11 +974,6 @@ test('tempos are chosen per creature, can go back, and Confirm sends them as the
   expect(posted).toEqual([]);
   await expectNoSidewaysScroll(page);
 
-  await page.route('**/api/seat/player1**', route => route.fulfill({ json: asked(3, 5, [{ creature: 1, speed: 'Standard' }]) }));
-  await page.route('**/api/seat/player1/decision', route => {
-    posted.push(route.request().postDataJSON());
-    return route.fulfill({ status: 204 });
-  });
   await confirm.click();
   await expect.poll(() => posted.map(one => [one.creature, one.speed]), { timeout: 10000 }).toEqual([[1, 'Standard'], [3, 'Quick']]);
 });

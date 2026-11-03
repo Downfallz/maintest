@@ -622,7 +622,7 @@ function redraw(state) {
 // host last answered on every redraw, so choosing or going back is a redraw and never a poll.
 function drawnViews(state) {
   return (state.rawViews ?? state.views).map(one => {
-    const view = decisionView(one.seat, one.view, state);
+    const view = decisionView(one.seat, one.view, { asked: state.asked, chosen: state.chosen, answered: state.answered });
     // Any other question is drawn as it was asked, and the seat stays the very object it was.
     return view === one.view ? one : { ...one, view };
   });
