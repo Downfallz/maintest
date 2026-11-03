@@ -83,7 +83,11 @@ internal static class TableHost
             ? null
             : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts);
+        // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
+        var leaderboard = accounts is null || results is null
+            ? null
+            : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard);
 
         Console.WriteLine($"Table on {server.Url}");
 

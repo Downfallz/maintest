@@ -129,3 +129,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
 | [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted |
 | [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype |
+| [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted |
