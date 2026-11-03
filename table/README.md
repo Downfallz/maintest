@@ -422,6 +422,10 @@ The account menu's *Delete account…* (`DELETE /api/account {"username":"<their
 its player types their name: its seats in unfinished games are offered to other players, its name and sign-in are
 freed, and every session of it stops working. The lobby's *What we keep* panel says what an account holds.
 
+A recorded match with an account in it leaves a result for a future leaderboard when it ends (stage 5 of the
+plan): `results/<yyyy-MM>/<matchId>.json` beside the accounts, with each seat's account id or bot, the winner, the
+rounds and whether it is *ranked* (two seats, two different accounts). No name is written there.
+
 ## "Your turn" on a phone
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told

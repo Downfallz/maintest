@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Ports;
@@ -61,6 +63,12 @@ internal sealed class TableComposer
 
     /// <summary>The notices a seat's phone gets when nobody is looking at its page (ADR 0118), or none on a host without push keys.</summary>
     public PushNotices? Push { get; init; }
+
+    /// <summary>
+    /// Where a finished match with an account in it is kept for a ladder (ADR 0122, stage 5), or nowhere: a host
+    /// without accounts has nobody to rank.
+    /// </summary>
+    public IMatchResults? Results { get; init; }
 
     /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
@@ -319,7 +327,7 @@ internal sealed class TableComposer
     /// that says "this was abandoned" out loud, where a manifest counting the steps of an unfinished match
     /// would read exactly like a finished one (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
     /// </summary>
-    private static async Task CloseWhenOverAsync(PlayedTable table, PlaytestRun run)
+    private async Task CloseWhenOverAsync(PlayedTable table, PlaytestRun run)
     {
         var session = table.Session;
         try
@@ -342,6 +350,10 @@ internal sealed class TableComposer
 
             await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+            if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, _clock.GetUtcNow()) is { } result)
+            {
+                await results.RecordAsync(result);
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
@@ -354,6 +366,35 @@ internal sealed class TableComposer
             // Finished, written or not: what is not marked here is a table that is never swept.
             table.MarkClosed();
         }
+    }
+
+    /// <summary>
+    /// The result a ladder reads of a finished table (ADR 0122, stage 5), or null when no seat belongs to an
+    /// account: a match nobody with an account played is nobody's to rank. A person's seat is named by its
+    /// account's id, a bot's by the spec it was seated by.
+    /// </summary>
+    internal static MatchResult? ResultOf(PlayedTable table, MatchOutcome outcome, PlayerBoardState board, DateTimeOffset finishedAt)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(outcome);
+        ArgumentNullException.ThrowIfNull(board);
+        if (!table.Seats.Any(seat => seat.Account is not null))
+        {
+            return null;
+        }
+
+        var rules = table.Session.Rules;
+        return new MatchResult(
+            table.Session.MatchId.ToString(),
+            finishedAt,
+            rules.Format.ToString(),
+            CombatDeclarationText.Of(rules.CombatDeclaration),
+            board.ContentHash,
+            board.RoundNumber ?? 0,
+            outcome.Winner is { } winner ? TableSeat.NameOf(winner) : null,
+            [.. table.Seats.Select(seat => seat.Person is null
+                ? new ResultSeat(seat.Name, null, table.Session.Seat(seat.Slot).Seated.Name)
+                : new ResultSeat(seat.Name, seat.Account, null))]);
     }
 
     /// <summary>
