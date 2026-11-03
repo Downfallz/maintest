@@ -5,7 +5,8 @@ Status: Accepted for the opt-in combat integration
 
 ## Context
 
-A4 reads one authenticated seat (ADR 0125). A5 must let that player choose real spells and targets
+A4 reads one authenticated seat (ADR 0125), and promises to send no decision and no `shown`. This ADR
+amends that promise for combat questions alone; it holds for inspection. A5 must let that player choose real spells and targets
 without duplicating rules, abandoning the table, or attaching a command to an animation. The merged
 A4 corrections also establish shared scene boot/hit targets, retained catalogues, nonredundant SSE
 reads and return links that work without storage. Those boundaries remain in place.
@@ -48,6 +49,17 @@ The preview supports combat, not a complete match. Both entry points share the w
 and host legality but retain their own presentation lifecycles. No Domain, Application, API contract,
 content or game rules change. No new dependency is needed.
 
+Acknowledging on opening the controls, not on drawing the question, has two costs, accepted here. The
+decision clock starts later than it does at the table, which draws and acknowledges at once: a duration
+recorded from the arena measures from the opening, and `playtest-timing` cannot tell the two apart. And
+a push notice (ADR 0118) goes out after its grace to a device whose person is reading the arena with the
+controls closed; opening them later does not take it back. Acknowledging on draw would start clocks for
+a person who only came to look, which ADR 0125 promised not to do.
+
+Two clients can hold the same asking. Whichever posts second is refused with the next asking in hand, and
+the refusal stays on the arena's dock until the player's next move: the refresh the write triggers must
+not take it down.
+
 Deterministic tests cover target bounds, stale questions/options, duplicate confirmation, rejected and
 uncertain writes, seat changes and late reads. Browser tests cover catalogue choices, keyboard input,
 selection, mobile bounds and readonly inspection. Real-host journeys send both combat declarations
@@ -60,3 +72,10 @@ from the arena while an external driver answers only the planning questions stil
 - Submit on a second target tap or on animation completion: both make presentation an implicit command.
   Keep a separate confirmation button, including casts with no targets.
 - Disable unaffordable hidden plans: that changes an existing game choice. Follow the host's offerings.
+
+## Follow-up
+
+- `TableFiles` routes `arena-combat.js` with the other bundled modules; `TableFilesTests` holds every module beside the page.
+- `.github/workflows/studio-browser.yml` budgets twenty minutes for the three projects plus the real-host journeys.
+- A6 consumes confirmed event frames for playback without making an animation a prerequisite for the next command.
+- A7 brings Evolution, Tempo and ties into the arena, and with them the question of acknowledging on draw.

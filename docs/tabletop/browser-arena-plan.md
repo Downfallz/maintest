@@ -189,7 +189,10 @@ A pure controller fences drafts by seat and asking, revalidates before posting, 
 writes, and exposes server refusals or uncertain outcomes without automatic write retries. The
 connection discards pre-command reads and refreshes after every command outcome. Scene selection is
 presentation only. Results arrive immediately as authoritative snapshots; A6 adds playback later.
-Mutation, Tempo and tie questions still return to `/play` until A7.
+Mutation, Tempo and tie questions still return to `/play` until A7. Acknowledging on opening the controls
+starts the decision clock later than the table does and lets a push notice reach a device already reading the
+arena; ADR 0126 accepts both. A refusal (the other client answered first) stays on the dock until the player's
+next move.
 
 Validation includes deterministic controller/transport tests, mobile/desktop combat journeys,
 unchanged lab/read-only regression journeys, and both combat declarations against the real .NET host.
