@@ -47,6 +47,48 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('.speed-spell')).toHaveCount(6);
 });
 
+test('the shared presentation keeps a local Action choice through a poll and discards it at the next asking', async ({ page }) => {
+  let served = { ...view, waitingFor: 'Action', waitingAsked: 4,
+    options: { action: { actor: 1, spells: [0, 3].map(index => ({ actor: 1, spell: cards[index].id,
+      legalTargets: { minTargets: 1, maxTargets: 1, candidates: [2] } })) } },
+    board: { ...view.board, subPhase: 'Activation' } };
+  let reads = 0;
+  const decisions = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().endsWith('/decision')) decisions.push(request.postData());
+  });
+  await page.route('**/api/seat/player1**', route => { reads++; return route.fulfill({ json: served }); });
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+  if (await page.locator('#phase-notice-close').isVisible()) await page.locator('#phase-notice-close').click();
+  await page.locator('#own-hand .held.offered').first().click();
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+  const selectedAt = reads;
+  await expect.poll(() => reads).toBeGreaterThan(selectedAt);
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+  served = { ...served, waitingAsked: 5 };
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
+  await expect(page.locator('#own-hand .held.chosen')).toHaveCount(0);
+  expect(decisions).toEqual([]);
+});
+
+test('the table renders the shared board model in host order with the same resources and active slot', async ({ page }) => {
+  const board = { ...view.board, slot: 'player1', subPhase: 'Activation', activationCursor: 1,
+    timeline: [{ creature: 2, owner: 'player2', speed: 'Quick', initiative: 5 },
+      { creature: 1, owner: 'player1', speed: 'Standard', initiative: 8 }],
+    rollOffs: [{ creature: 1, rolls: [2, 18] }] };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board } }));
+  await expect(page.locator('#timeline .slot')).toHaveCount(2);
+  const shared = await page.evaluate(async board => {
+    const { boardPresentation } = await import('/table/presentation.js');
+    return boardPresentation(board);
+  }, board);
+  await expect(page.locator('#timeline .slot > strong')).toHaveText(shared.timeline.map(slot => `Creature ${slot.creature}`));
+  await expect(page.locator('#timeline .slot.now > strong')).toHaveText(`Creature ${shared.turn.slot.creature}`);
+  await expect(page.locator('#timeline .roll')).toHaveText(shared.timeline[1].roll);
+  await expect(page.locator('#allies .health .number')).toHaveText(shared.allies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+  await expect(page.locator('#enemies .health .number')).toHaveText(shared.enemies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+});
+
 // The motion tokens (UX 01): buttons, creatures and held cards ease their colours over --motion-fast, and a
 // person who asks the system for reduced motion gets every token at zero and no transition or animation that
 // lasts, whether or not the effect was built on the tokens.
@@ -970,6 +1012,9 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, feed: [resolved(5, 1, [2], [])], feedNext: 6 } }));
   await page.reload();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
+  // Dismiss the initial Tempo announcement before advancing the fixture: on a narrow phone it otherwise
+  // covers the step buttons, and hovering it while Playwright retries the click pauses its dismissal timer.
+  await page.locator('#phase-notice-close').click();
 
   const turnedOver = { ...view, feedNext: 11, feed: [resolved(5, 1, [2], []), resolved(7, 2, [1], []),
     { sequence: 8, round: 4, subPhase: 'Upkeep', event: { kind: 'ConditionsExpired', roundId: 3, expired: { 1: [{ effect: { kind: 'Stun' }, remainingRounds: 0 }] } } },

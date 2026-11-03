@@ -20,6 +20,7 @@ import * as guidance from './guidance.js';
 import * as waiting from './waiting.js';
 import * as practice from './practice.js';
 import * as slot from './slot.js';
+import * as presentation from './presentation.js';
 import * as terms from './terms.js';
 import * as combatFx from './combat-fx.js';
 import * as feedback from './feedback.js';
@@ -74,7 +75,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...terms, ...combatFx, ...feedback,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...invitation, ...push, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice, ...waiting, ...slot, ...presentation, ...terms, ...combatFx, ...feedback,
     document, storage: null, practice: null, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });

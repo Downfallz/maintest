@@ -58,4 +58,9 @@ becomes a game command. The fixture must never be imported by a live adapter. Se
 
 - `TableFiles` routes the bundle and the art; `TableFilesTests` holds them, and says to build when it is absent.
 - `AGENTS.md`, the `/verify` skill, CI, the Docker image and Dependabot know the `arena/` package.
-- The live adapter (A3–A4) replaces the fixture with the seat projection; this ADR's fixture rule holds until then.
+- A3 extracts `table/presentation.js`, a pure read-only boundary already consumed by `/play`: local Action
+  screens, historical board selection, and public team/timeline facts. It accepts one already-filtered seat
+  view, borrows immutable snapshots and performs no I/O. The controller retains transport, hotseat fencing,
+  acknowledgements and commands. `table/presentation.test.js` and browser journeys hold those boundaries.
+- A4 will consume the shared mapping from a separate live arena adapter. `/arena-lab` keeps its authored
+  fixture; a live client must never import it or bootstrap `table.js` as a second controller.

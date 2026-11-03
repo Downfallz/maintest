@@ -8,16 +8,17 @@ import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } 
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
-import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
+import { bands, cursorOf, speedReveal } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
-import { healthChange, playbackBoard, playbackChanges, playbackRound } from './replay.js';
+import { healthChange, playbackChanges, playbackRound } from './replay.js';
 import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './combat-fx.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
-import { actionDecision, askedKey, slotView } from './slot.js';
+import { actionDecision, askedKey } from './slot.js';
+import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
@@ -621,14 +622,7 @@ function redraw(state) {
 // host last answered on every redraw, so choosing or going back is a redraw and never a poll.
 function drawnViews(state) {
   return (state.rawViews ?? state.views).map(one => {
-    // An action this page has just had accepted is answered: the host replies with nothing, so until the next
-    // poll the last one still holds the question, and drawing it would put the cards back up for an action
-    // already resolving -- one more tap and the host refuses it as late.
-    if (one.view?.waitingFor === 'Action' && `${one.seat}/${one.view.waitingAsked}` === state.answered) {
-      return { ...one, view: { ...one.view, waitingFor: null, waitingCreature: null } };
-    }
-    const chosen = askedKey(one.seat, slotView(one.view)) === state.asked ? state.chosen : null;
-    const view = slotView(one.view, chosen);
+    const view = decisionView(one.seat, one.view, state);
     // Any other question is drawn as it was asked, and the seat stays the very object it was.
     return view === one.view ? one : { ...one, view };
   });
@@ -842,11 +836,8 @@ function render(state, views) {
   // A replay the player opened, or the opponent's action being stepped through: the battlefield as it stood
   // right after that action (when the host recorded it), and no question on it.
   const replay = state.playback ?? state.step;
-  const display = replay ? { ...current, view: {
-    ...view, board: playbackBoard(replay, view.board), waitingFor: null, options: {},
-    roundEvents: ((state.playback?.match ? state.matchFeed?.entries : null) ?? view.roundEvents ?? []).filter(entry => entry.sequence < replay.actions[replay.index].sequence
-      || (replay.stage === 'after' && entry.sequence === replay.actions[replay.index].sequence)),
-  } } : current;
+  const displayed = presentedView(view, replay, state.playback?.match ? state.matchFeed?.entries : null);
+  const display = displayed === view ? current : { ...current, view: displayed };
   // The dock and its notice before the battlefield: the upkeep tick the notice is on is marked on the chip whose
   // bar it moved (`noticeTicks`), so the chips are drawn once the notice knows its step.
   if (state.playback) renderPlayback(state, current);
@@ -1303,12 +1294,12 @@ function slotProgress(slot, position, cursor, newlyActive) {
 // sorts -- ties and all, this is the order the round is played in (timeline.js).
 let previousInitiativeCursor = null;
 function renderTimeline(board) {
-  const index = cursorOf(board);
+  const presentation = boardPresentation(board);
+  const index = presentation.cursor;
   const timelineKey = `${board.roundNumber}/${board.subPhase}/${(board.timeline ?? []).map(slot => slot.creature).join(',')}`;
   const newlyActive = previousInitiativeCursor?.key === timelineKey && index >= 0 && index !== previousInitiativeCursor.index;
   previousInitiativeCursor = { key: timelineKey, index };
-  const cursor = withCursor(board.timeline, index);
-  const strip = bands(cursor).map(band => {
+  const strip = bands(presentation.timeline).map(band => {
     const box = document.createElement('div');
     box.className = 'band';
 
@@ -1321,9 +1312,9 @@ function renderTimeline(board) {
     slots.className = 'slots';
     for (const slot of band.slots) {
       const one = document.createElement('div');
-      const position = turnOrder({ id: slot.creature }, board);
+      const position = slot.position;
       const progress = slotProgress(slot, position, index, newlyActive);
-      one.className = `slot ${side(slot, board.slot)}${progress.classes}`;
+      one.className = `slot ${slot.side}${progress.classes}`;
       const order = document.createElement('span');
       order.className = 'slot-order';
       order.textContent = `${position}`;
@@ -1335,7 +1326,7 @@ function renderTimeline(board) {
       initiative.textContent = `Initiative ${slot.initiative}`;
       one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${progress.said}`);
       one.append(order, creature, initiative);
-      const rolled = rollText(board.rollOffs, slot.creature);
+      const rolled = slot.roll;
       if (rolled) {
         const dice = document.createElement('span');
         dice.className = 'roll';
@@ -1519,6 +1510,7 @@ function replayCombatFx(state, board) {
 function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
+  const presentation = boardPresentation(board);
   const handView = element('hand-view');
   handView.hidden = view.waitingFor !== 'Intent' || !isAsked(view);
   handView.textContent = state.fullSpellView ? 'Compact view' : 'Full details';
@@ -1556,13 +1548,13 @@ function renderBoard(state, current, spellbook = current) {
     onPick: candidate => pick(state, current, candidate),
     canConfirm: canCastTargets(state, view),
     // A replayed or stepped action outlines its caster as the one acting; the live cursor is somewhere else.
-    turn: replay ? null : activeTurn(board)?.slot.creature ?? null,
+    turn: replay ? null : presentation.turn?.slot.creature ?? null,
   };
-  element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
-  element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
+  element('enemies').replaceChildren(...presentation.enemies.map(creature => line(state, creature, 'enemy', marks)));
+  element('allies').replaceChildren(...presentation.allies.map(creature => line(state, creature, 'ally', marks)));
   element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
-  element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
-  element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
+  element('mini-enemies').replaceChildren(...presentation.enemies.map(creature => miniCreature(state, creature, 'enemy', marks)));
+  element('mini-allies').replaceChildren(...presentation.allies.map(creature => miniCreature(state, creature, 'ally', marks)));
   // Never an unconfirmed plan, nor a replay the player opened. An opponent's action arrives as a step, which shows
   // it as resolved: the step is when it is revealed, and the live board after it reveals nothing new.
   const revealAction = state.playback ? null : cast ?? live;
@@ -2899,12 +2891,6 @@ function decisionPhase(view) {
   if (view.over) return 'Match complete';
   const phases = { Evolution: 'Evolution', Speed: 'Choose tempo', TieOrder: 'Order tied creatures', Intent: 'Choose spell', Target: 'Targeting' };
   return phases[view.waitingFor] ?? (view.board.subPhase === 'Activation' ? 'Combat' : 'Waiting');
-}
-
-function activeTurn(board) {
-  const cursor = cursorOf(board);
-  const slot = board.timeline?.[cursor];
-  return slot ? { slot, position: cursor + 1, total: board.timeline.length } : null;
 }
 
 // Where the creature being asked for a spell will act. The timeline is built before intents are declared, so the
