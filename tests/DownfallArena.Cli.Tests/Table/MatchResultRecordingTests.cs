@@ -15,8 +15,8 @@ public sealed class MatchResultRecordingTests : IDisposable
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private TableComposer Composer() =>
-        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = _results };
+    private TableComposer Composer(IMatchResults? results = null) =>
+        new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory)) { Results = results ?? _results };
 
     /// <summary>A person's seat its understudy plays to the end: a seat with a person in it that finishes on its own.</summary>
     private static TableRequest PlayedByTheUnderstudy => new(null, AgentSpec.Parse("greedy"), Who: null, Handover: 999, Seed: 7);
@@ -65,7 +65,47 @@ public sealed class MatchResultRecordingTests : IDisposable
         table.Dispose();
     }
 
+    [Fact]
+    public async Task A_result_that_could_not_be_kept_leaves_the_table_open_for_the_next_host_to_finish()
+    {
+        var table = await Composer(new Failing()).ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+        using var registry = new TableRegistry();
+        registry.TryAdd(table).ShouldBeTrue();
+        await table.RecordAsync(registry.Codes, Cancel);
+
+        await FinishedAsync(table);
+
+        var record = (await new StoredSessions(new FileArtifactStore(_hosted.RunsDirectory)).RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
+        record.Status.ShouldBe(TableRecord.Open);
+        table.Dispose();
+    }
+
+    [Fact]
+    public async Task Deleting_an_account_leaves_a_finished_table_naming_the_account_it_was_played_under()
+    {
+        var account = AccountId.New();
+        var composer = Composer();
+        var table = await composer.ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = account;
+        await FinishedAsync(table);
+        using var registry = new TableRegistry();
+        registry.TryAdd(table).ShouldBeTrue();
+
+        var offered = await new LobbyApi(registry, composer, TimeProvider.System).ReleaseAsync(account);
+
+        offered.ShouldBe(0);
+        table.Seats[0].Account.ShouldBe(account);
+    }
+
     public void Dispose() => _hosted.Dispose();
+
+    private sealed class Failing : IMatchResults
+    {
+        public Task RecordAsync(MatchResult result, CancellationToken cancellationToken = default) => throw new IOException("The results store is out.");
+
+        public Task<IReadOnlyList<MatchResult>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<MatchResult>>([]);
+    }
 
     private sealed class Kept : IMatchResults
     {

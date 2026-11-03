@@ -341,6 +341,10 @@ internal sealed class TableComposer
                 return;
             }
 
+            // Who held each seat when the match ended and when, taken before anything is awaited: an account
+            // deleted while the files are written must not change who played (ADR 0122, stage 5).
+            var owners = table.Seats.Select(seat => seat.Account).ToArray();
+            var finishedAt = _clock.GetUtcNow();
             var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
             if (board.IsFailure)
             {
@@ -348,12 +352,15 @@ internal sealed class TableComposer
                 return;
             }
 
-            await run.FinishAsync(session.MatchId, board.Value);
-            Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
-            if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, _clock.GetUtcNow()) is { } result)
+            // The result before the record says finished: a host that fails to keep it leaves the table open, and
+            // the next host rebuilds it from its decisions and keeps it then. Kept twice, it is kept once.
+            if (Results is { } results && ResultOf(table, session.Outcome.Result.Value, board.Value, finishedAt, owners) is { } result)
             {
                 await results.RecordAsync(result);
             }
+
+            await run.FinishAsync(session.MatchId, board.Value);
+            Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
@@ -373,12 +380,14 @@ internal sealed class TableComposer
     /// account: a match nobody with an account played is nobody's to rank. A person's seat is named by its
     /// account's id, a bot's by the spec it was seated by.
     /// </summary>
-    internal static MatchResult? ResultOf(PlayedTable table, MatchOutcome outcome, PlayerBoardState board, DateTimeOffset finishedAt)
+    /// <param name="owners">Each seat's account as it was when the match ended, in seat order; the seats' own when not given.</param>
+    internal static MatchResult? ResultOf(PlayedTable table, MatchOutcome outcome, PlayerBoardState board, DateTimeOffset finishedAt, IReadOnlyList<AccountId?>? owners = null)
     {
         ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(outcome);
         ArgumentNullException.ThrowIfNull(board);
-        if (!table.Seats.Any(seat => seat.Account is not null))
+        var accounts = owners ?? [.. table.Seats.Select(seat => seat.Account)];
+        if (!accounts.Any(account => account is not null))
         {
             return null;
         }
@@ -392,9 +401,9 @@ internal sealed class TableComposer
             board.ContentHash,
             board.RoundNumber ?? 0,
             outcome.Winner is { } winner ? TableSeat.NameOf(winner) : null,
-            [.. table.Seats.Select(seat => seat.Person is null
+            [.. table.Seats.Select((seat, index) => seat.Person is null
                 ? new ResultSeat(seat.Name, null, table.Session.Seat(seat.Slot).Seated.Name)
-                : new ResultSeat(seat.Name, seat.Account, null))]);
+                : new ResultSeat(seat.Name, accounts[index], null))]);
     }
 
     /// <summary>
