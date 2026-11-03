@@ -94,6 +94,11 @@ test('without playback, presentation returns the current view unchanged', () => 
   assert.equal(presentedView(decision), decision);
 });
 
+test('a replay pointing past its actions shows the current view rather than nothing', () => {
+  assert.equal(presentedView(latest, { ...replay, index: 1 }), latest);
+  assert.equal(presentedView(latest, { ...replay, actions: [] }), latest);
+});
+
 test('a historical frame shows its own round and resources, and leaves the current view as it was', () => {
   const displayed = presentedView(latest, replay);
   assert.equal(displayed.board.roundNumber, 3);
@@ -194,9 +199,7 @@ test('public board mapping never consults hidden plans or invents enemy spells',
   for (const key of ['intents', 'speedChoices', 'evolutionChoices']) {
     Object.defineProperty(source, key, { get() { throw new Error(`private ${key} read`); } });
   }
-  const display = boardPresentation(source);
-  assert.equal(display.enemies[0].knownSpells, undefined);
-  assert.equal(display.intents, undefined);
+  assert.equal(boardPresentation(source).enemies[0], source.enemies[0]);
 });
 
 test('planning, finished cursors and empty boards have no active turn', () => {

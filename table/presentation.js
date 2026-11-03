@@ -22,8 +22,9 @@ export function decisionView(seat, latest, { asked = null, chosen = null, answer
 // person reading the frame is still that creature's player, and the spellbook, its guidance and the Mutation
 // Tree follow that creature while they read rather than jumping to the first ally.
 export function presentedView(latest, replay = null, entries = null) {
-  if (!replay) return latest;
-  const action = replay.actions[replay.index];
+  // A replay pointing past its actions has nothing to show: the current view, rather than a page that cannot draw.
+  const action = replay?.actions[replay.index];
+  if (!action) return latest;
   return {
     ...latest,
     board: playbackBoard(replay, latest.board),

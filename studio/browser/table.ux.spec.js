@@ -59,7 +59,7 @@ test('the shared presentation keeps a local Action choice through a poll and dis
   });
   await page.route('**/api/seat/player1**', route => { reads++; return route.fulfill({ json: served }); });
   await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Intent');
-  if (await page.locator('#phase-notice-close').isVisible()) await page.locator('#phase-notice-close').click();
+  await page.locator('#phase-notice-close').click();
   await page.locator('#own-hand .held.offered').first().click();
   await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
   const selectedAt = reads;
@@ -71,22 +71,21 @@ test('the shared presentation keeps a local Action choice through a poll and dis
   expect(decisions).toEqual([]);
 });
 
-test('the table renders the shared board model in host order with the same resources and active slot', async ({ page }) => {
+test('the table draws the timeline in the host\'s order, with its cursor and its rolls, off the shared board model', async ({ page }) => {
+  // The expectations are the fixture's own values, not the module's reading of them: the page draws through
+  // boardPresentation, so asking the module what to expect would agree with any mistake it made.
   const board = { ...view.board, slot: 'player1', subPhase: 'Activation', activationCursor: 1,
     timeline: [{ creature: 2, owner: 'player2', speed: 'Quick', initiative: 5 },
       { creature: 1, owner: 'player1', speed: 'Standard', initiative: 8 }],
     rollOffs: [{ creature: 1, rolls: [2, 18] }] };
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, board } }));
   await expect(page.locator('#timeline .slot')).toHaveCount(2);
-  const shared = await page.evaluate(async board => {
-    const { boardPresentation } = await import('/table/presentation.js');
-    return boardPresentation(board);
-  }, board);
-  await expect(page.locator('#timeline .slot > strong')).toHaveText(shared.timeline.map(slot => `Creature ${slot.creature}`));
-  await expect(page.locator('#timeline .slot.now > strong')).toHaveText(`Creature ${shared.turn.slot.creature}`);
-  await expect(page.locator('#timeline .roll')).toHaveText(shared.timeline[1].roll);
-  await expect(page.locator('#allies .health .number')).toHaveText(shared.allies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
-  await expect(page.locator('#enemies .health .number')).toHaveText(shared.enemies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+  await expect(page.locator('#timeline .slot > strong')).toHaveText(['Creature 2', 'Creature 1']);
+  await expect(page.locator('#timeline .slot.now > strong')).toHaveText('Creature 1');
+  await expect(page.locator('#timeline .slot.enemy > strong')).toHaveText('Creature 2');
+  await expect(page.locator('#timeline .roll')).toHaveText(['d20 2 → 18']);
+  await expect(page.locator('#allies .health .number')).toHaveText(board.allies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
+  await expect(page.locator('#enemies .health .number')).toHaveText(board.enemies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
 });
 
 // The motion tokens (UX 01): buttons, creatures and held cards ease their colours over --motion-fast, and a
@@ -1012,9 +1011,6 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, feed: [resolved(5, 1, [2], [])], feedNext: 6 } }));
   await page.reload();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
-  // Dismiss the initial Tempo announcement before advancing the fixture: on a narrow phone it otherwise
-  // covers the step buttons, and hovering it while Playwright retries the click pauses its dismissal timer.
-  await page.locator('#phase-notice-close').click();
 
   const turnedOver = { ...view, feedNext: 11, feed: [resolved(5, 1, [2], []), resolved(7, 2, [1], []),
     { sequence: 8, round: 4, subPhase: 'Upkeep', event: { kind: 'ConditionsExpired', roundId: 3, expired: { 1: [{ effect: { kind: 'Stun' }, remainingRounds: 0 }] } } },

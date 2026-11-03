@@ -4,8 +4,8 @@ Status: design experiment, not a replacement for the table. First slice: `/arena
 
 **Immersive revision (2026-11-03):** A2 now uses Phaser and TypeScript. The canvas, HUD and primary
 commands fit the viewport in portrait and landscape. The earlier scrolling DOM study is superseded.
-Initial audit: `748557b4` on `main` (player accounts stage 3). A3 refreshes that baseline to `69ce758d`,
-including the merged #420 fixes and player accounts stage 4. Re-check `main` before each integration PR.
+Initial audit: `748557b4` on `main` (player accounts stage 3). A3 refreshes that baseline to `69ce758d`
+(#420 merged, on top of player accounts stage 4, #417). Re-check `main` before each integration PR.
 
 ## Decision summary
 
