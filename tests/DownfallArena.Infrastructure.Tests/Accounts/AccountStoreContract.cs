@@ -85,6 +85,29 @@ public abstract class AccountStoreContract
     }
 
     [Fact]
+    public async Task Registrations_reclaiming_one_abandoned_name_at_once_leave_one_holder()
+    {
+        var store = await StoreAsync();
+        var name = Username.Create("MarkF").Value;
+        var abandoned = new UsernameReservation(name, AccountId.New(), Now);
+        await store.TryReserveUsernameAsync(abandoned, Cancel);
+        var attempts = Enumerable.Range(0, 16).Select(_ => new UsernameReservation(name, AccountId.New(), Now)).ToArray();
+
+        // What the registry does with an abandoned name: free the holder it read, then reserve. A release that
+        // read the abandoned holder must not delete a reservation made after it read.
+        var won = await Task.WhenAll(attempts.Select(attempt => Task.Run(
+            async () =>
+            {
+                await store.ReleaseUsernameAsync(abandoned, Cancel);
+                return await store.TryReserveUsernameAsync(attempt, Cancel);
+            },
+            Cancel)));
+
+        won.Count(result => result).ShouldBe(1);
+        (await store.FindUsernameAsync(name, Cancel)).ShouldNotBeNull().Account.ShouldBe(attempts[Array.IndexOf(won, true)].Account);
+    }
+
+    [Fact]
     public async Task A_name_is_released_only_for_the_account_that_holds_it()
     {
         var store = await StoreAsync();

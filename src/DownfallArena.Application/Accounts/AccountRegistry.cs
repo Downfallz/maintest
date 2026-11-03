@@ -76,45 +76,88 @@ public sealed class AccountRegistry
 
         var now = _clock.GetUtcNow();
         var reservation = new UsernameReservation(name.Value, _newId(), now);
-        if (!await ReserveAsync(reservation, cancellationToken))
+        var held = await ReserveAsync(reservation, identity, cancellationToken);
+        if (held is null)
         {
             return Result.Failure<Account>(AccountErrors.UsernameTaken);
         }
 
-        var account = new Account(reservation.Account, identity, name.Value, now, Generation: 1);
-        await _store.SaveAsync(account, cancellationToken);
-        if (!await _store.TryBindSubjectAsync(identity, account.Id, cancellationToken))
+        // An account this sign-in wrote before the registration stopped short of binding it is taken up again,
+        // rather than left holding the name the player is asking for once more.
+        var resumed = held.Account != reservation.Account;
+        var account = resumed
+            ? await _store.FindAsync(held.Account, cancellationToken)
+            : new Account(reservation.Account, identity, name.Value, now, Generation: 1);
+        if (account is null)
+        {
+            // The interrupted account went between reading its name and reading it: somebody reclaimed both.
+            return Result.Failure<Account>(AccountErrors.UsernameTaken);
+        }
+
+        if (!resumed)
+        {
+            await _store.SaveAsync(account, cancellationToken);
+        }
+
+        if (!await _store.TryBindSubjectAsync(identity, account.Id, cancellationToken)
+            && await _store.FindBySubjectAsync(identity, cancellationToken) != account.Id)
         {
             // The same sign-in registered at the same moment, and the other registration bound it first.
-            await _store.DeleteAsync(account.Id, cancellationToken);
-            await _store.ReleaseUsernameAsync(reservation, cancellationToken);
+            if (!resumed)
+            {
+                await _store.DeleteAsync(account.Id, cancellationToken);
+                await _store.ReleaseUsernameAsync(reservation, cancellationToken);
+            }
+
             return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
         }
 
         return Result.Success(account);
     }
 
-    private async Task<bool> ReserveAsync(UsernameReservation reservation, CancellationToken cancellationToken)
+    /// <summary>
+    /// The reservation that holds the name for this registration: its own, or one an interrupted registration of
+    /// the same sign-in left; null when somebody else holds the name.
+    /// </summary>
+    private async Task<UsernameReservation?> ReserveAsync(UsernameReservation reservation, ExternalIdentity identity, CancellationToken cancellationToken)
     {
         if (await _store.TryReserveUsernameAsync(reservation, cancellationToken))
         {
-            return true;
+            return reservation;
         }
 
         var holder = await _store.FindUsernameAsync(reservation.Username, cancellationToken);
-        if (holder is not null && !await AbandonedAsync(holder, cancellationToken))
-        {
-            return false;
-        }
-
         if (holder is not null)
         {
+            var account = await _store.FindAsync(holder.Account, cancellationToken);
+            if (account is not null && account.Identity == identity)
+            {
+                return holder;
+            }
+
+            if (!await AbandonedAsync(holder, account, cancellationToken))
+            {
+                return null;
+            }
+
             await _store.ReleaseUsernameAsync(holder, cancellationToken);
+            if (account is not null)
+            {
+                await _store.DeleteAsync(account.Id, cancellationToken);
+            }
         }
 
-        return await _store.TryReserveUsernameAsync(reservation, cancellationToken);
+        return await _store.TryReserveUsernameAsync(reservation, cancellationToken) ? reservation : null;
     }
 
     private async Task<bool> AbandonedAsync(UsernameReservation holder, CancellationToken cancellationToken) =>
-        _clock.GetUtcNow() - holder.ReservedAt >= AbandonedAfter && await _store.FindAsync(holder.Account, cancellationToken) is null;
+        await AbandonedAsync(holder, await _store.FindAsync(holder.Account, cancellationToken), cancellationToken);
+
+    /// <summary>
+    /// A name is abandoned when it has been held an hour for an account that was never written, or for one whose
+    /// sign-in was never bound to it: both are a registration that stopped between its writes.
+    /// </summary>
+    private async Task<bool> AbandonedAsync(UsernameReservation holder, Account? account, CancellationToken cancellationToken) =>
+        _clock.GetUtcNow() - holder.ReservedAt >= AbandonedAfter
+        && (account is null || await _store.FindBySubjectAsync(account.Identity, cancellationToken) != account.Id);
 }

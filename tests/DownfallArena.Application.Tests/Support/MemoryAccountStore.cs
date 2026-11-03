@@ -4,7 +4,10 @@ using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Tests.Support;
 
-/// <summary>The account store's contract in memory; <see cref="RefuseNextBinding" /> plays a registration that lost a race.</summary>
+/// <summary>
+/// The account store's contract in memory; <see cref="RefuseNextBinding" /> plays a registration that lost a race,
+/// <see cref="FailNextBinding" /> one whose host stopped before it bound its sign-in.
+/// </summary>
 internal sealed class MemoryAccountStore : IAccountStore
 {
     public Dictionary<AccountId, Account> Accounts { get; } = [];
@@ -14,6 +17,8 @@ internal sealed class MemoryAccountStore : IAccountStore
     public Dictionary<string, UsernameReservation> Names { get; } = [];
 
     public bool RefuseNextBinding { get; set; }
+
+    public bool FailNextBinding { get; set; }
 
     public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Accounts.GetValueOrDefault(id));
@@ -31,6 +36,12 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
     {
+        if (FailNextBinding)
+        {
+            FailNextBinding = false;
+            throw new IOException("The store went away.");
+        }
+
         if (RefuseNextBinding)
         {
             RefuseNextBinding = false;

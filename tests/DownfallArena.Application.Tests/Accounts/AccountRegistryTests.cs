@@ -138,6 +138,46 @@ public sealed class AccountRegistryTests
         _store.Subjects[Mark].ShouldBe(account.Id);
     }
 
+    [Fact]
+    public async Task A_registration_interrupted_before_its_sign_in_was_bound_is_taken_up_by_the_same_sign_in()
+    {
+        var registry = Registry();
+        _store.FailNextBinding = true;
+        await Should.ThrowAsync<IOException>(() => registry.RegisterAsync(Mark, "MarkF", Cancel));
+        var stranded = _store.Accounts.Values.Single();
+
+        var account = (await registry.RegisterAsync(Mark, "MarkF", Cancel)).Value;
+
+        account.Id.ShouldBe(stranded.Id);
+        (await registry.FindAsync(Mark, Cancel)).ShouldBe(stranded);
+        _store.Accounts.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_name_held_by_an_account_whose_sign_in_was_never_bound_stays_held_for_an_hour()
+    {
+        _store.FailNextBinding = true;
+        await Should.ThrowAsync<IOException>(() => Registry().RegisterAsync(Mark, "MarkF", Cancel));
+        _clock.Advance(AccountRegistry.AbandonedAfter - TimeSpan.FromMinutes(1));
+
+        (await Registry().RegisterAsync(Bastien, "MarkF", Cancel)).Error.ShouldBe(AccountErrors.UsernameTaken);
+    }
+
+    [Fact]
+    public async Task A_name_held_by_an_account_whose_sign_in_was_never_bound_is_taken_back_after_an_hour()
+    {
+        _store.FailNextBinding = true;
+        await Should.ThrowAsync<IOException>(() => Registry().RegisterAsync(Mark, "MarkF", Cancel));
+        var stranded = _store.Accounts.Values.Single();
+        _clock.Advance(AccountRegistry.AbandonedAfter);
+
+        var account = (await Registry().RegisterAsync(Bastien, "MarkF", Cancel)).Value;
+
+        _store.Names["markf"].Account.ShouldBe(account.Id);
+        _store.Accounts.Keys.ShouldBe([account.Id]);
+        _store.Accounts.ContainsKey(stranded.Id).ShouldBeFalse();
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;
