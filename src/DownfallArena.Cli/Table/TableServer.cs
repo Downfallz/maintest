@@ -38,9 +38,11 @@ internal sealed class TableServer : IDisposable
     private readonly AdminApi _admin;
     private readonly StoredSessions? _stored;
     private readonly TimeProvider _clock;
+    private readonly AccountApi? _accounts;
 
+    /// <param name="accounts">The players' sign-in (ADR 0122), or none for a host with accounts off.</param>
     /// <param name="stored">The host's store, read for a session page whose table this process no longer has; none for a host that records nothing.</param>
-    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null)
+    public TableServer(string address, int port, TableRegistry registry, TableFiles files, AdminApi admin, TimeProvider clock, StoredSessions? stored = null, AccountApi? accounts = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(files);
@@ -52,6 +54,7 @@ internal sealed class TableServer : IDisposable
         _admin = admin;
         _stored = stored;
         _clock = clock;
+        _accounts = accounts;
         _host = new HttpHost(address, port, AnswerAsync);
     }
 
@@ -190,10 +193,18 @@ internal sealed class TableServer : IDisposable
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
 
+        var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request));
+        if (AccountApi.Names(path))
+        {
+            return _accounts is null
+                ? StudioResponse.OfPlainText(404, "Players do not sign in at this host (--accounts off).")
+                : await _accounts.HandleAsync(method, path, body, account);
+        }
+
         var token = request.Headers[TableApi.TokenHeader];
         if (AdminApi.Names(path))
         {
-            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader]);
+            return await _admin.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader], account);
         }
 
         // The token says which table, and the table's own API says the rest. A token no table holds is
@@ -207,4 +218,12 @@ internal sealed class TableServer : IDisposable
         await _admin.Lobby.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
+
+    /// <summary>
+    /// Whether a cookie set back must be <c>Secure</c>: everywhere but a host reached at a loopback name. The
+    /// container is reached over https through the platform's ingress even though the request it forwards is http,
+    /// so the scheme the host sees says nothing; the name the browser used does.
+    /// </summary>
+    private static bool Secure(HttpListenerRequest request) =>
+        request.Url is not { } url || !(url.IsLoopback || string.Equals(url.Host, "localhost", StringComparison.OrdinalIgnoreCase));
 }

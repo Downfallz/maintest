@@ -399,6 +399,18 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
+## Signing in (ADR 0122)
+
+`table --accounts google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the
+home page with Google; `--accounts dev` signs in by a typed name instead, on a loopback host only. The page shows
+Google's own button, then asks a first-time player for a unique name (3 to 20 letters, digits, `_` or `-`; bot
+names reserved), and puts the account in the masthead with *Sign out* and *Sign out everywhere*. The host checks
+Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty days. Accounts are kept beside the
+recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
+email, no real name, no picture. Seats do not belong to accounts yet; that is stage 3 of
+`docs/tabletop/accounts-plan.md`. The routes are `/api/account/*`, and `/api/me` says `accounts`, `googleClientId`
+and `account`.
+
 ## "Your turn" on a phone
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told

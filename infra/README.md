@@ -66,7 +66,8 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
 ## Playing
 
 Open `https://<address>/` for the player lobby: resume games saved in this browser, take an open seat,
-or create a table (another player, a bot, or two people sharing a device). Players need no account.
+or create a table (another player, a bot, or two people sharing a device). Players sign in with Google and choose
+a player name (ADR 0122); see "Player sign-in" below.
 Closing the page keeps a seat; **Leave table** revokes its token and invitation code and offers the same
 team to a replacement player, including during a match. Saved open places and claimed seats survive a redeploy.
 An invitation link or code is accepted once, after a confirmation: a second device opening it finds the place
@@ -78,6 +79,20 @@ and the pilot links. Its invitation-only tables are listed but cannot be claimed
 
 To let somebody else open tables, add their Entra object id to the `TABLE_OPERATORS` variable,
 comma-separated, and run the workflow again.
+
+## Player sign-in
+
+Players sign in on the home page with Google (ADR 0122). The host checks Google's ID token itself, so the only
+setting is a public OAuth client id, and no secret exists. The deployment passes the project's own client id unless
+the `TABLE_GOOGLE_CLIENT_ID` variable names another. The client is made once in Google Cloud Console, under APIs &
+Services, Credentials, *Create OAuth client ID*, type *Web application*:
+
+- *Authorized JavaScript origins*: the table's address, `https://downfall-table.<...>.azurecontainerapps.io`, and
+  `http://localhost:5099` for a laptop's table (`table --accounts google --google-client-id <id>`).
+- No redirect URI and no client secret: the button hands the page an ID token directly.
+
+Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name and
+an internal id. No email is kept.
 
 ## "Your turn" on a phone
 

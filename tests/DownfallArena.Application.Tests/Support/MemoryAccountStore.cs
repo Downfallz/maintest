@@ -20,12 +20,29 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public bool FailNextBinding { get; set; }
 
-    public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Accounts.GetValueOrDefault(id));
+    /// <summary>Lets every read of an account yield first, as a store across a network does, so racing callers interleave.</summary>
+    public bool SlowReads { get; set; }
+
+    public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        if (SlowReads)
+        {
+            await Task.Delay(1, cancellationToken);
+        }
+
+        lock (Accounts)
+        {
+            return Accounts.GetValueOrDefault(id);
+        }
+    }
 
     public Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
-        Accounts[account.Id] = account;
+        lock (Accounts)
+        {
+            Accounts[account.Id] = account;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -62,4 +79,8 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) =>
         Task.FromResult(Names.TryGetValue(reservation.Username.Key, out var held) && held.Account == reservation.Account && Names.Remove(reservation.Username.Key));
+
+    public byte[] Key { get; } = [.. Enumerable.Range(1, 32).Select(value => (byte)value)];
+
+    public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => Task.FromResult(Key);
 }

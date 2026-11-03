@@ -1,6 +1,8 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Infrastructure.Accounts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Table;
@@ -62,8 +64,22 @@ internal static class TableHost
         // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
         var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
         var described = RuleSetFile.Describe(rules, options.Rules);
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push);
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored);
+        // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
+        // one line here rather than a page whose button never draws.
+        var googleClientId = options.GoogleClientId ?? Environment.GetEnvironmentVariable(GoogleClientIdEnvironment);
+        if (options.Accounts == AccountsMode.Google && string.IsNullOrWhiteSpace(googleClientId))
+        {
+            await Console.Error.WriteLineAsync($"'--accounts google' needs the Google client id: --google-client-id <id>, or {GoogleClientIdEnvironment}.");
+            return 1;
+        }
+
+        using var google = options.Accounts == AccountsMode.Google ? new HttpClient() : null;
+        using var signingKeys = google is null ? null : new GoogleSigningKeys(google, clock);
+        var accounts = options.Accounts == AccountsMode.Off
+            ? null
+            : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
+        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts);
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -77,6 +93,9 @@ internal static class TableHost
         // the engine's default caps at thirty, so a table that took one silently would be testing another
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
+        Console.WriteLine(accounts is null
+            ? "  Accounts: off. Seats are their tokens and codes; --accounts google signs players in (ADR 0122)."
+            : $"  Accounts: {AccountApi.Named(accounts.Mode)}{(accounts.GoogleClientId is { } id ? $" (client {id})" : "")}, kept in '{AccountsLocation(options)}'.");
         Console.WriteLine(push is null
             ? $"  Notices: off. A phone is told \"your turn\" when the host has push keys: --push-keys <file>, or {PushKeys.Environment} (push-keys prints a pair)."
             : "  Notices: on. A seat's page offers \"Notify me when it's my turn\".");
@@ -183,5 +202,24 @@ internal static class TableHost
         return addresses.Count == 0
             ? " For a phone on the same network, bind this machine's address: --bind <address>."
             : $" For a phone on the same network: --bind {string.Join(" or --bind ", addresses)}.";
+    }
+
+    /// <summary>The variable the hosted table reads its Google client id from (ADR 0122).</summary>
+    public const string GoogleClientIdEnvironment = "DOWNFALL_GOOGLE_CLIENT_ID";
+
+    private static string AccountsLocation(CliOptions options)
+    {
+        var record = options.Record ?? DefaultRunsDirectory;
+        return ArtifactStores.IsContainerUrl(record)
+            ? ArtifactStores.AccountsUri(new Uri(record)).ToString()
+            : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(record).TrimEnd(Path.DirectorySeparatorChar)) ?? record, ArtifactStores.AccountsContainer);
+    }
+
+    private static async Task<AccountApi> OpenAccountsAsync(CliOptions options, string? googleClientId, GoogleSigningKeys? keys, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        var store = await ArtifactStores.OpenAccountsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken);
+        var sessions = new AccountSessions(await store.SessionKeyAsync(cancellationToken), clock);
+        var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
+        return new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId);
     }
 }

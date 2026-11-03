@@ -1,3 +1,4 @@
+import { mountAccount } from './account.js';
 import { activateSeats, isOperator, operatorToken, savedSeats } from './session.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -161,4 +162,6 @@ if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   mountLobby(document, globalThis.location, storage);
+  const eyebrow = document.getElementById('hero-eyebrow');
+  void mountAccount(document, { onChange: account => { eyebrow.textContent = account ? `Welcome back, ${account.username}` : 'Gather your creatures'; } });
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Hosting;
+using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli;
@@ -84,6 +85,15 @@ internal sealed record CliOptions
     public string? PushKeys { get; init; }
 
     /// <summary>
+    /// Whether players sign in, and how (ADR 0122): <c>off</c>, the default, <c>google</c>, or <c>dev</c>, a typed name
+    /// on a loopback host. Accounts are kept beside the recordings, so a host that records nothing has none.
+    /// </summary>
+    public AccountsMode Accounts { get; init; }
+
+    /// <summary>The Google client id the sign-in is for; <c>DOWNFALL_GOOGLE_CLIENT_ID</c> when not given. Public, not a secret.</summary>
+    public string? GoogleClientId { get; init; }
+
+    /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
     /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
     /// than calling them the same player (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
@@ -145,7 +155,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|push-keys [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -164,6 +174,10 @@ internal sealed record CliOptions
 
     private const string FormatOption = "--format";
 
+    private const string AccountsOption = "--accounts";
+
+    private const string GoogleClientIdOption = "--google-client-id";
+
     private const string DeclarationOption = "--declaration";
 
     private const string SlotLogOption = "--slot-log";
@@ -172,7 +186,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption,
     ];
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2", FormatOption, DeclarationOption];
@@ -216,6 +230,8 @@ internal sealed record CliOptions
             Lobby = flags.Contains(LobbyOption),
             PlatformAuth = flags.Contains(PlatformAuthOption),
             PushKeys = values.GetValueOrDefault(PushKeysOption),
+            Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
+            GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -251,6 +267,11 @@ internal sealed record CliOptions
         if (values.ContainsKey(PushKeysOption) && command != "table")
         {
             return "'--push-keys' is for table only: it names the keys a table signs its notices with.";
+        }
+
+        if (AccountsContradiction(command, values, flags) is { } accounts)
+        {
+            return accounts;
         }
 
         if (values.ContainsKey(SlotLogOption) && command is not ("play" or "simulate" or "evaluate"))
@@ -312,6 +333,46 @@ internal sealed record CliOptions
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
     private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
+
+    /// <summary>
+    /// What a sign-in cannot be had with. Accounts live beside the recordings, so a host that records nothing, or
+    /// a practice table, has none; and a typed-name sign-in is anybody who can type, so it never leaves this machine.
+    /// </summary>
+    private static string? AccountsContradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
+    {
+        if (!values.TryGetValue(AccountsOption, out var accounts))
+        {
+            return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;
+        }
+
+        if (command != "table")
+        {
+            return "'--accounts' is for table only: it says how players sign in.";
+        }
+
+        var mode = ParseAccounts(accounts);
+        if (mode != AccountsMode.Off && (flags.Contains("--no-record") || flags.Contains(PracticeOption)))
+        {
+            return "'--accounts' needs a recording host: accounts are kept beside the recordings, and --no-record and --practice keep nothing.";
+        }
+
+        if (mode == AccountsMode.Development && values.TryGetValue("--bind", out var bind) && HttpHost.Bindable(bind) != HttpHost.Loopback)
+        {
+            return "'--accounts dev' signs in whoever types a name, so it serves this machine only: drop '--bind', or sign in with '--accounts google'.";
+        }
+
+        return values.ContainsKey(GoogleClientIdOption) && mode != AccountsMode.Google
+            ? "'--google-client-id' goes with '--accounts google'."
+            : null;
+    }
+
+    private static AccountsMode ParseAccounts(string text) => text switch
+    {
+        "off" => AccountsMode.Off,
+        "google" => AccountsMode.Google,
+        "dev" => AccountsMode.Development,
+        _ => throw new ArgumentException($"'--accounts' takes off, google or dev, not '{text}'.", nameof(text)),
+    };
 
     /// <summary>A combat declaration as a command line names it (ADR 0110); anything else is one line, not a stack.</summary>
     private static CombatDeclaration ParseDeclaration(string text) =>

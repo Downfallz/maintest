@@ -33,4 +33,10 @@ public interface IAccountStore
 
     /// <summary>Frees the name if it is still held for that reservation's account; false otherwise.</summary>
     Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The key the host signs its sessions with, made the first time it is asked for and the same afterwards, on
+    /// this host and on the next. It is never typed by anyone; replacing it signs everybody out.
+    /// </summary>
+    Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default);
 }

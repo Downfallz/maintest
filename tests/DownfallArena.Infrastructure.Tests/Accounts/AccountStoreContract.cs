@@ -149,4 +149,16 @@ public abstract class AccountStoreContract
         (await store.FindUsernameAsync(Username.Create("markf").Value, Cancel)).ShouldBeNull();
         (await store.FindBySubjectAsync(new ExternalIdentity(ExternalIdentity.Development, "../by-name/markf"), Cancel)).ShouldBeNull();
     }
+
+    [Fact]
+    public async Task The_session_key_is_made_once_and_the_same_on_every_later_read()
+    {
+        var store = await StoreAsync();
+
+        var keys = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => store.SessionKeyAsync(Cancel), Cancel)));
+
+        keys[0].Length.ShouldBe(32);
+        keys.ShouldAllBe(key => key.SequenceEqual(keys[0]));
+        (await store.SessionKeyAsync(Cancel)).ShouldBe(keys[0]);
+    }
 }

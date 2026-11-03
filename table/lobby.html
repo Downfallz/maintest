@@ -15,15 +15,23 @@
 <body class="lobby-page">
   <header class="masthead lobby-header">
     <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></a>
-    <nav aria-label="Lobby navigation"><a id="admin-link" href="/admin" hidden>Admin</a><button id="refresh" type="button" class="secondary">Refresh</button></nav>
+    <nav aria-label="Lobby navigation"><a id="admin-link" href="/admin" hidden>Admin</a><div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button></div></details></div><button id="refresh" type="button" class="secondary">Refresh</button></nav>
   </header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="welcome">
-      <div><p class="eyebrow">Gather your creatures</p><h2 id="welcome">Find your table.</h2><p class="hero-detail">Pick up a battle. Take an open seat. Start something new.</p></div>
+      <div><p id="hero-eyebrow" class="eyebrow">Gather your creatures</p><h2 id="welcome">Find your table.</h2><p class="hero-detail">Pick up a battle. Take an open seat. Start something new.</p></div>
       <button id="new-table" class="primary" type="button">＋ New table</button>
     </section>
     <output id="lobby-status" class="lobby-status muted">Finding tables…</output>
     <p id="lobby-problem" class="problem" role="alert" hidden></p>
+    <section id="sign-in-panel" class="lobby-panel sign-in-panel" aria-labelledby="sign-in-heading" hidden>
+      <div><p class="eyebrow">Your player name</p><h2 id="sign-in-heading">Sign in to keep your games on every device.</h2><p class="muted">We keep a player name and an internal id. Never your email.</p></div>
+      <div class="sign-in-actions">
+        <div id="google-button" class="google-button" hidden></div>
+        <form id="dev-sign-in" hidden><label for="dev-username">Developer sign-in: any player name</label><div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div></form>
+        <p id="sign-in-problem" class="problem" role="alert" hidden></p>
+      </div>
+    </section>
     <div class="lobby-layout">
       <div class="lobby-games">
         <section aria-labelledby="mine-heading" class="lobby-section">
@@ -49,6 +57,16 @@
       <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
       <p id="create-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="create-cancel" type="button" class="secondary">Cancel</button><button id="create-submit" class="primary" type="submit">Create &amp; play →</button></div>
+    </form>
+  </dialog>
+  <dialog id="name-dialog" aria-labelledby="name-title">
+    <form id="name-form"><p class="eyebrow">Welcome to the arena</p><h2 id="name-title" class="name-title">Choose your player name</h2>
+      <p class="muted">This is the name other players see on every table. It can't be changed for now.</p>
+      <label for="username">Player name</label><input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" required />
+      <p id="name-check" class="name-check" role="status" hidden></p>
+      <p class="muted">3 to 20 characters: letters, digits, _ and -. Starts with a letter.</p>
+      <p id="name-problem" class="problem" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Enter the arena →</button></div>
     </form>
   </dialog>
   <script type="module" src="lobby.js"></script>

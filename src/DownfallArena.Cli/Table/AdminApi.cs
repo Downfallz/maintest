@@ -41,6 +41,9 @@ internal sealed class AdminApi
 
     public LobbyApi Lobby { get; }
 
+    /// <summary>The players' sign-in (ADR 0122), when this host has one; <c>/api/me</c> says who is signed in through it.</summary>
+    public AccountApi? Accounts { get; init; }
+
     /// <param name="rules">The line the console prints of the rule set: which one, and where it came from.</param>
     /// <param name="stored">The host's store, or none for a host that records nothing.</param>
     /// <param name="agents">The bots a seat is offered, in the order they are offered.</param>
@@ -67,7 +70,7 @@ internal sealed class AdminApi
 
     private static bool Under(string path, string prefix) => path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? principal, AccountRequest? account = null)
     {
         ArgumentNullException.ThrowIfNull(path);
         if (LobbyApi.Names(path))
@@ -80,7 +83,20 @@ internal sealed class AdminApi
         {
             // Not a refusal when it is nobody's: the table page asks this to know whether to show the way back
             // to the panel, and a player's page must read "no" rather than an error.
-            return StudioResponse.OfJson(new { @operator = operatorName is not null, admin = Page }, ArtifactJson.LineOptions);
+            // The player half answers the same question for the home page: whether this host signs players in,
+            // how, and as whom. The operator and the player are two sign-ins and one request can carry both.
+            var player = Accounts is null || account is null ? null : await Accounts.WhoAsync(account);
+            var me = StudioResponse.OfJson(
+                new
+                {
+                    @operator = operatorName is not null,
+                    admin = Page,
+                    accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
+                    googleClientId = Accounts?.GoogleClientId,
+                    account = player is null ? null : AccountApi.Describe(player.Account),
+                },
+                ArtifactJson.LineOptions);
+            return player?.Renewed is { } renewed ? me with { Headers = [new KeyValuePair<string, string>("Set-Cookie", renewed)] } : me;
         }
 
         if (operatorName is null)
