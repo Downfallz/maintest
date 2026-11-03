@@ -21,6 +21,9 @@
 .game-card h3 { margin: 0; font: 400 23px Georgia, serif; }
 .game-card .status-tag { font-size: 11px; padding: 4px 8px; white-space: nowrap; }
 .game-card .status-tag.available { color: var(--ally); border-color: #5e8e73; }
+.game-card .status-tag.your-turn { color: #1b211a; background: var(--gold); border-color: var(--gold); font-weight: 700; }
+.game-turn { font-size: 13px; color: var(--ink); }
+.game-turn.mine { color: var(--gold); font-weight: 650; }
 .game-id { overflow-wrap: anywhere; font-size: 11px; color: var(--muted); }
 .game-players { font-size: 13px; color: var(--muted); line-height: 1.5; }
 .versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }

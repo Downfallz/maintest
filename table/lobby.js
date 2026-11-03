@@ -37,6 +37,24 @@ export function versus(table) {
   return (table.players ?? []).map((name, index) => ({ seat: `player${index + 1}`, kind: 'person', name }));
 }
 
+/**
+ * Whose turn it is at an unfinished table, from the seats the host says are being asked something now, and
+ * whether it is this browser's: null before the match begins, once it is over, or while nobody is asked (the
+ * bots are thinking or a round is resolving).
+ */
+export function turnOf(table, held = []) {
+  if (table.over || table.waiting || !Array.isArray(table.seats)) return null;
+  const asked = table.seats.filter(seat => seat.turn);
+  if (asked.length === 0) return null;
+  if (asked.some(seat => held.includes(seat.seat))) {
+    return { mine: true, text: asked.length > 1 ? 'Your turn · both players choose' : 'Your turn' };
+  }
+  if (asked.every(seat => seat.kind === 'open')) return { mine: false, text: 'Waiting for a player to take the open seat' };
+  if (asked.length > 1) return { mine: false, text: 'Both players to play' };
+  const name = asked[0].name && asked[0].name !== 'Player' ? asked[0].name : 'The other player';
+  return { mine: false, text: `${name}'s turn` };
+}
+
 function cardAction(table, entry) {
   if (!entry) return 'Take a seat →';
   return table.over ? 'View game →' : 'Resume game →';
@@ -89,7 +107,10 @@ export function mountLobby(doc, location, storage) {
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
     const top = node('div', '', 'game-card-top');
-    top.append(node('h3', `${table.format} battle`), node('span', tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}`));
+    const turn = turnOf(table, (entry?.seats ?? []).map(held => held.seat));
+    top.append(node('h3', `${table.format} battle`), turn?.mine
+      ? node('span', 'Your turn', 'status-tag your-turn')
+      : node('span', tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}`));
     const line = node('div', '', 'versus');
     const sides = versus(table);
     sides.forEach((side, index) => {
@@ -101,7 +122,9 @@ export function mountLobby(doc, location, storage) {
       line.append(who);
     });
     line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
-    root.append(top, line, node('p', table.id, 'game-id'));
+    root.append(top, line);
+    if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
+    root.append(node('p', table.id, 'game-id'));
     const button = node('button', cardAction(table, entry));
     button.type = 'button';
     button.setAttribute('aria-label', `${entry ? 'Resume' : 'Join'} ${table.format} table ${table.id}`);

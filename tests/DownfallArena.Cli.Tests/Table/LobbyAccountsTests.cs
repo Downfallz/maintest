@@ -110,6 +110,24 @@ public sealed class LobbyAccountsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_card_says_whose_turn_it_is_once_the_match_asks_someone()
+    {
+        var (table, _) = await OpenAsync(await PlayerAsync("MarkF"), opponent: "bot");
+        var lobby = await LobbyAsync();
+        static bool[] Turns(JsonElement listed) => [.. listed.GetProperty("tables")[0].GetProperty("seats").EnumerateArray().Select(seat => seat.GetProperty("turn").GetBoolean())];
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([false, false]);
+
+        table.Seats[0].Person!.Arrive();
+        table.Session.Begin();
+        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        Turns(Read(await lobby.HandleAsync("GET", "/api/lobby", ""))).ShouldBe([true, false]);
+    }
+
+    [Fact]
     public async Task Your_games_are_the_hosts_list_of_the_seats_your_account_holds()
     {
         var mark = await PlayerAsync("MarkF");
