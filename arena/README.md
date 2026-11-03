@@ -30,7 +30,7 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/types.ts`: presentation types only.
 - `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
   and the cancellation generation.
-- `table/arena-lab-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit
+- `table/arena-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit
   targets so the two cannot drift.
 - `table/arena-lab-fixture.js`: fictional before/after frames. Never import this into a live adapter.
 

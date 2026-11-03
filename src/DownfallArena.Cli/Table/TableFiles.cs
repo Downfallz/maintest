@@ -88,7 +88,6 @@ internal sealed class TableFiles
             ["/arena-art/creatures.webp"] = (Path.Combine(tableDirectory, "arena-art", "creatures.webp"), Webp),
             ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
-            ["/arena-lab-layout.js"] = (Path.Combine(tableDirectory, "arena-lab-layout.js"), JavaScript),
 
             // The opt-in live renderer reads one authenticated seat (ADR 0124).
             ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),

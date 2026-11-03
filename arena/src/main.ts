@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ArenaScene } from './scene';
-import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState, type Placement } from './types';
+import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState } from './types';
+import { creatureButton, placeHitTargets } from './targets';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/arena-lab-state.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
 
@@ -29,32 +30,14 @@ function dispatch(action: { type: string; id?: string }) {
 }
 
 function makeCreature(one: Creature) {
-  const node = document.createElement('button');
-  node.type = 'button';
+  const node = creatureButton(one.id);
   node.className = `creature ${isEnemy(state, one.id) ? 'enemy' : 'ally'}`;
-  node.dataset.creature = one.id;
-  node.disabled = true;
-  // Static structure only; authored text is assigned through textContent below.
-  node.innerHTML = '<span class="creature-tag"></span><span class="creature-result"></span><span class="caption"><span class="creature-name"></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats"></span></span>';
   node.addEventListener('click', () => {
     dispatch({ type: 'inspect', id: one.id });
     if (state.stage === 'targeting') dispatch({ type: 'target', id: one.id });
   });
   $('actor-layer').append(node);
   nodes.set(one.id, node);
-}
-
-// The hit targets sit over the figures, in the board's order, which is the layout's order too.
-function placeTargets(positions: Placement[]) {
-  for (const [index, one] of creaturesOf(state).entries()) {
-    const node = nodes.get(one.id)!;
-    const position = positions[index];
-    node.style.left = `${position.x - position.hitWidth / 2}px`;
-    node.style.top = `${Math.max(0, position.y - position.size)}px`;
-    node.style.width = `${position.hitWidth}px`;
-    node.style.height = `${Math.max(44, position.size + 42)}px`;
-    node.style.zIndex = String(Math.round(position.y));
-  }
 }
 
 function tagOf(one: Creature, selected: boolean, targetable: boolean) {
@@ -244,7 +227,7 @@ document.addEventListener('keydown', event => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && isLabPlaying(state)) skip(false); });
 window.addEventListener('pagehide', () => { playback.cancel(); if (isLabPlaying(state)) dispatch({ type: 'skip' }); });
 
-scene.onLayout = placeTargets;
+scene.onLayout = positions => placeHitTargets(creaturesOf(state).map(one => nodes.get(one.id)!), positions);
 scene.onImpact = impactSound;
 scene.onResizeDuringPlayback = () => skip(false);
 scene.onReady = () => {

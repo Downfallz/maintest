@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ArenaScene } from './scene';
-import type { Placement, SceneFrame } from './types';
+import type { SceneFrame } from './types';
+import { creatureButton, placeHitTargets } from './targets';
 import { httpTransport } from '../../table/transport.js';
 import { arenaSeats, seatPath } from '../../table/arena-seats.js';
 import { createLiveConnection, livePresentation } from '../../table/arena-live.js';
@@ -11,7 +12,7 @@ import { phaseLabel, tempoLabel, decisionLabel, stepLabel } from '../../table/te
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
 interface Creature { id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
-  knownSpells: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
+  knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
   outcome?: { winner?: string; reason?: string } }
 interface Catalogue { cards?: { id: string; name: string }[] }
@@ -76,9 +77,32 @@ function renderInspection() {
     return [chipText(condition), duration, chipSource(condition, cards)].filter(Boolean).join(' · ');
   });
   text('inspect-effects', [!one.isAlive ? 'Defeated' : '', one.isStunned ? 'Stunned' : '', one.isStunImmune ? 'Stun immune' : '', ...effects].filter(Boolean).join(' / ') || 'No ongoing effects');
-  $('inspect-spells').replaceChildren(...one.knownSpells.map(id => {
+  $('inspect-spells').replaceChildren(...(one.knownSpells ?? []).map(id => {
     const item = document.createElement('li'); item.textContent = catalogue?.cards?.find(card => card.id === id)?.name ?? id; return item;
   }));
+}
+
+// The one word over a figure: what stops it acting first, then whose slot it is.
+function tagOf(one: Creature) {
+  if (!one.isAlive) return 'DEFEATED';
+  if (one.isStunned) return 'STUNNED';
+  return frame.actor === one.id ? 'ACTING' : '';
+}
+
+// The dock's heading: the match's end, the creature whose slot it is, or where the round stands.
+function headline(board: { turn: { slot: { creature: unknown } } | null; phase: string }) {
+  if (!view) return 'Live arena';
+  if (view.over) return 'Match complete';
+  if (board.turn) return name(board.turn.slot.creature);
+  return phaseLabel(board.phase) || 'Waiting room';
+}
+
+// What the player can do about what they see: nothing here, and the table says what it is waiting for.
+function instruction() {
+  if (!view) return 'Inspect the real board here. Make decisions at the table.';
+  if (view.over) return view.outcome?.winner ? `${view.outcome.winner} wins. Review the match at the table.` : 'The match has ended. Review it at the table.';
+  if (view.waitingFor) return `${decisionLabel(view.waitingFor)} is waiting at the table. Inspect creatures here; return there to decide.`;
+  return 'Inspect the real board here. Make decisions at the table.';
 }
 
 function render() {
@@ -90,14 +114,13 @@ function render() {
   for (const one of creatures) {
     let node = nodes.get(one.id);
     if (!node) {
-      node = document.createElement('button'); node.type = 'button'; node.dataset.creature = one.id;
-      node.innerHTML = '<span class="creature-tag"></span><span class="caption"><span class="creature-name"></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats"></span></span>';
+      node = creatureButton(one.id);
       node.addEventListener('click', () => { inspected = one.id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal(); });
       $('actor-layer').append(node); nodes.set(one.id, node);
     }
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     node.disabled = !ready;
-    const condition = !one.isAlive ? 'DEFEATED' : one.isStunned ? 'STUNNED' : frame.actor === one.id ? 'ACTING' : '';
+    const condition = tagOf(one);
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
@@ -117,9 +140,9 @@ function render() {
   $('timeline').hidden = board.timeline.length === 0;
   $('no-timeline').hidden = board.timeline.length > 0;
   text('no-timeline', view ? 'Activation order has not been set' : 'Waiting for a board');
-  text('actor-name', view?.over ? 'Match complete' : board.turn ? name(board.turn.slot.creature) : view ? phaseLabel(board.phase) || 'Waiting room' : 'Live arena');
+  text('actor-name', headline(board));
   text('actor-meta', view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter');
-  text('instruction', view?.over ? (view.outcome?.winner ? `${view.outcome.winner} wins. Review the match at the table.` : 'The match has ended. Review it at the table.') : view?.waitingFor ? `${decisionLabel(view.waitingFor)} is waiting at the table. Inspect creatures here; return there to decide.` : 'Inspect the real board here. Make decisions at the table.');
+  text('instruction', instruction());
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
     inspected = null; renderInspection();
@@ -169,11 +192,7 @@ async function discover() {
   }
 }
 
-scene.onLayout = (positions: Placement[]) => creatures.forEach((one, index) => {
-  const node = nodes.get(one.id)!; const position = positions[index];
-  node.style.left = `${position.x - position.hitWidth / 2}px`; node.style.top = `${Math.max(0, position.y - position.size)}px`;
-  node.style.width = `${position.hitWidth}px`; node.style.height = `${Math.max(44, position.size + 42)}px`; node.style.zIndex = String(Math.round(position.y));
-});
+scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   rendererFailed = true; ready = false; connection.stop();

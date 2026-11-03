@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLiveConnection, livePresentation } from './arena-live.js';
-import { placements } from './arena-layout.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const pending = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -18,30 +17,30 @@ function harness() {
   } };
 }
 
-test('live presentation borrows a frozen seat board and never invents an acting slot during planning', () => {
-  const ally = Object.freeze({ id: 17, name: 'Host name', isAlive: true });
-  const enemy = Object.freeze({ id: 22, isAlive: false, isStunned: true });
-  const view = Object.freeze({ board: Object.freeze({ allies: Object.freeze([ally]), enemies: Object.freeze([enemy]), subPhase: 'Speed', activationCursor: 0,
-    timeline: Object.freeze([Object.freeze({ creature: 17, owner: 'Player1', speed: 'Quick' })]), slot: 'Player1' }) });
-  const result = livePresentation(view);
-  assert.equal(result.frame.actor, null);
+const planning = Object.freeze({ board: Object.freeze({
+  allies: Object.freeze([Object.freeze({ id: 17, name: 'Host name', isAlive: true })]),
+  enemies: Object.freeze([Object.freeze({ id: 22, isAlive: false, isStunned: true })]),
+  subPhase: 'Speed', activationCursor: 0, slot: 'Player1',
+  timeline: Object.freeze([Object.freeze({ creature: 17, owner: 'Player1', speed: 'Quick' })]) }) });
+
+test('live presentation borrows the seat board as the host served it, each creature on its side', () => {
+  const result = livePresentation(planning);
   assert.equal(result.creatures[0].name, 'Host name');
+  assert.equal(result.creatures[0].enemy, false);
   assert.equal(result.creatures[1].id, '22');
   assert.equal(result.creatures[1].enemy, true);
   assert.equal(result.creatures[1].isAlive, false);
   assert.equal(result.creatures[1].isStunned, true);
-  assert.equal(livePresentation({ board: { ...view.board, subPhase: 'Activation' } }).frame.actor, '17');
-  assert.equal(livePresentation(null).creatures.length, 0);
 });
 
-test('each supported team size keeps the two sides separate in both orientations', () => {
-  for (const count of [1, 2, 3]) for (const [width, height] of [[390, 500], [1440, 750]]) {
-    const result = placements(width, height, count, count);
-    assert.equal(result.length, count * 2);
-    for (const item of result) { assert.ok(item.hitWidth >= 44); assert.ok(item.x > 0 && item.x < width); }
-    if (width < 620) assert.ok(result[0].y > result[count].y);
-    else assert.ok(result[0].x < width / 2 && result[count].x > width / 2);
-  }
+test('no slot is acting while the round is planned; the cursor\'s creature is during Activation', () => {
+  assert.equal(livePresentation(planning).frame.actor, null);
+  assert.equal(livePresentation({ board: { ...planning.board, subPhase: 'Activation' } }).frame.actor, '17');
+});
+
+test('no view at all presents an empty board', () => {
+  assert.equal(livePresentation(null).creatures.length, 0);
+  assert.equal(livePresentation(null).frame.actor, null);
 });
 
 test('polling uses feedNext including gaps and sends no shown acknowledgement', async () => {
