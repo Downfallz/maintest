@@ -17,6 +17,7 @@ import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
+import { seatsOf, versusLine } from './players.js';
 import { actionDecision, askedKey } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
@@ -258,6 +259,21 @@ function enter(held, practice) {
   start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), holder, Boolean(practice));
 }
 
+// Who plays whom, under the seat's name (ADR 0122): the names the lobby gives the seats, asked of the host when
+// the page starts and every half minute after, so an opponent who takes the open place shows up by name.
+async function showPlayers(state) {
+  const tokens = state.seats.map(seat => seat.token);
+  try {
+    const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+    if (!response.ok) return;
+    const line = versusLine(seatsOf(await response.json(), tokens), state.seats.map(seat => seat.seat));
+    element('versus').textContent = line ?? '';
+    element('versus').hidden = !line;
+  } catch {
+    // The line is a courtesy: a host that cannot be asked leaves the masthead as it was.
+  }
+}
+
 function tidy() {
   if (globalThis.location?.search && globalThis.history?.replaceState) {
     globalThis.history.replaceState(null, '', playPath(globalThis.location.pathname));
@@ -280,6 +296,10 @@ function start(seats, holder = null, practicing = false, replaying = false) {
   state.quiet = quietTables().includes(state.quietKey);
   state.feedback = createFeedback(globalThis, storage);
   void load(state);
+  if (!practicing && !replaying) {
+    void showPlayers(state);
+    globalThis.setInterval(() => { if (!document.hidden) void showPlayers(state); }, 30000);
+  }
   setupTalentWindow(state);
   setupPhaseControls(state);
   setupConcede(state);
