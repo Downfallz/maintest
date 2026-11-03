@@ -97,7 +97,9 @@ internal sealed class TableServer : IDisposable
     {
         if (_registry.ById(id) is not { } table)
         {
-            return await StoredSessionPageAsync(id);
+            // A table still being rebuilt is a match under way, and its stored trace holds both seats' boards: it
+            // is served once the host either holds it (and refuses it until it ends) or has given up on it.
+            return Starting ? StartingUp() : await StoredSessionPageAsync(id);
         }
 
         // Somebody reading the session is somebody at the table: the hour a finished table is kept for is

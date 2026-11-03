@@ -336,8 +336,10 @@ public sealed class TableServerTests : IAsyncDisposable
         var resume = await _client.PostAsync($"{url}api/lobby/resume", resumeBody, TestContext.Current.CancellationToken);
         var listing = await Get($"{url}api/lobby", token: null);
         var page = await Get(url, token: null);
+        var session = await Get($"{url}session/a-session-not-rebuilt-yet", token: null);
 
         seat.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        session.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
         seat.Headers.RetryAfter.ShouldNotBeNull();
         resume.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
         listing.StatusCode.ShouldBe(HttpStatusCode.OK);
