@@ -7,7 +7,9 @@ import { cursorOf, rollText, side, withCursor } from './timeline.js';
 
 // The current legal question, adapted for a local spell choice. Choosing or going back is a redraw, never a
 // fetch. A choice belongs to the seat AND the host's asking, regardless of which Action screen is displayed.
-export function decisionView(seat, latest, { asked = null, chosen = null, answered = null } = {}) {
+// The choice's three fields are optional and compared as they come: a default of null would type them as
+// null for the analyser, which then reads every comparison with a key as always false.
+export function decisionView(seat, latest, { asked, chosen, answered } = {}) {
   if (latest?.waitingFor === 'Action' && `${seat}/${latest.waitingAsked}` === answered) {
     // The host accepted the command but the next poll has not arrived. Do not offer that action twice.
     return { ...latest, waitingFor: null, waitingCreature: null };
