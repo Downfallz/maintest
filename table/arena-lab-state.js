@@ -53,7 +53,11 @@ export function labTransition(state, action) {
 const CUES = Object.freeze([[420, 'impact'], [1250, 'finish']]);
 
 // Reset/skip/unmount invalidate pending work, even if an old callback has already been queued.
-export function createLabPlayback(schedule = setTimeout, unschedule = clearTimeout) {
+//
+// The default scheduler is the page's clock at the moment a cue is posted, not at the moment the playback was
+// created: a page creates its playback once, at load, and a clock installed later (a test's) must be the one
+// the cues run on.
+export function createLabPlayback(schedule = (callback, delay) => setTimeout(callback, delay), unschedule = id => clearTimeout(id)) {
   let generation = 0;
   let timers = [];
   function cancel() {

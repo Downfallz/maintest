@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// One Phaser page at a time: under the runner's software rendering a 1440x1000 WebGL canvas is the heaviest
+// thing this suite opens, and two of them side by side starved the worker until clicks never returned.
+test.describe.configure({ mode: 'default' });
+
 async function fits(page) {
   const viewport = page.viewportSize();
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
@@ -15,6 +19,11 @@ async function fits(page) {
     expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
   }
+}
+// Fake timers, paused: from here on the page's clock moves only when the test runs it.
+async function pauseClock(page) {
+  await page.clock.install({ time: '2026-11-03T12:00:00Z' });
+  await page.clock.pauseAt('2026-11-03T12:00:01Z');
 }
 async function choose(page, target = 'b1') {
   await page.locator('#choose').click();
@@ -101,19 +110,21 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
 });
 
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
+  // The page's timers are the test's to run: a cast is then in flight for as long as the test says, and the
+  // cancelled cues get their due time to fire, which a stale one would, on a board asked to forget it.
+  await pauseClock(page);
   await choose(page);
   await page.locator('#confirm').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.locator('#reset').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
-  // The cancelled cast's cues were due at 420 ms and 1250 ms: outlive both before looking again, because a
-  // stale cue that still fired would show the impact on a board that was asked to forget it.
-  await page.waitForTimeout(1500);
+  await page.clock.runFor(2000);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('');
   await choose(page, 'b2');
   await page.locator('#confirm').click();
+  await page.clock.runFor(1250);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b2"] .creature-stats')).toContainText('5/24 HP');
@@ -140,28 +151,29 @@ test('manual reduced motion, chosen in a contained settings dialog, settles a ca
   await expect(page.locator('#skip')).toBeHidden();
 });
 
-test('2× playback still runs the timed cast, with a skip on offer, before it settles', async ({ page }) => {
+test('2× playback runs the timed cast at half its cues, with a skip on offer until it settles', async ({ page }) => {
   await page.locator('#settings').click();
   await page.locator('#playback-speed').selectOption('2');
   await page.getByRole('button', { name: 'Close settings' }).click();
   await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'full');
+  await pauseClock(page);
   await choose(page);
-  // At 2× the whole cast lasts 625 ms, too short for a poll from outside to be sure of seeing it in flight:
-  // the page records its own stage changes, with the clock and whether a skip was on offer at each.
-  await page.evaluate(() => {
-    const lab = document.getElementById('lab');
-    globalThis.__stages = [];
-    new MutationObserver(() => globalThis.__stages.push({ stage: lab.dataset.stage, at: performance.now(), skip: !document.getElementById('skip').hidden }))
-      .observe(lab, { attributes: true, attributeFilter: ['data-stage'] });
-  });
   await page.locator('#confirm').click();
-  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
-  await expect(page.locator('#confirm')).toBeFocused();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
+  await expect(page.locator('#skip')).toBeVisible();
+  await expect(page.locator('#skip')).toBeFocused();
+  // The impact is due at 210 ms and the settled frame at 625 ms, half of 420 and 1250.
+  await page.clock.runFor(209);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
+  await page.clock.runFor(1);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('-4 HP');
-  const stages = await page.evaluate(() => globalThis.__stages);
-  expect(stages.map(one => one.stage)).toEqual(['windup', 'impact', 'resolved']);
-  expect(stages.map(one => one.skip)).toEqual([true, true, false]);
-  expect(stages[2].at - stages[0].at).toBeGreaterThanOrEqual(600);
+  await page.clock.runFor(414);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
+  await page.clock.runFor(1);
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
+  await expect(page.locator('#skip')).toBeHidden();
+  await expect(page.locator('#confirm')).toBeFocused();
 });
 
 test('the hit targets stand over the figures the scene places', async ({ page }) => {

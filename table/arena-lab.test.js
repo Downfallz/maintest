@@ -146,6 +146,23 @@ test('a second playback supersedes the first: its timers are unscheduled and its
   assert.deepEqual(received, ['second', 'second']);
 });
 
+test('the default scheduler is the clock of the moment a cue is posted, not of the playback\'s creation', () => {
+  const playback = createLabPlayback();
+  const real = { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
+  const queued = [];
+  const cleared = [];
+  globalThis.setTimeout = (callback, delay) => queued.push(delay);
+  globalThis.clearTimeout = id => cleared.push(id);
+  try {
+    playback.play(() => {});
+    playback.cancel();
+  } finally {
+    Object.assign(globalThis, real);
+  }
+  assert.deepEqual(queued, [420, 1250]);
+  assert.deepEqual(cleared, [1, 2]);
+});
+
 test('reduced motion applies the final frame synchronously without scheduling animation', () => {
   const playback = createLabPlayback(() => assert.fail('No timer should be scheduled'));
   let state = playing('b2');
