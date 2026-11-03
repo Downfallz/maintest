@@ -35,9 +35,13 @@ for (const [label, targets, picked] of [
   assert.deepEqual(h.writes, []); await h.control.submit();
   assert.deepEqual(h.writes, [{ kind: 'Action', creature: 1, spell: 'bolt', targets: picked, asked: 11 }]);
 });
-test('insufficient target selection and unavailable spells cannot submit', async () => {
+test('a known spell the host did not offer cannot be chosen', async () => {
   const h = harness(action(legal([4, 5], 2, 2))); h.control.open(); h.control.choose('locked'); await h.control.submit();
-  assert.equal(h.control.model().chosen, null); h.control.choose('bolt'); h.control.pick(4); await h.control.submit(); assert.deepEqual(h.writes, []);
+  assert.equal(h.control.model().chosen, null); assert.deepEqual(h.writes, []);
+});
+test('too few targets picked cannot submit', async () => {
+  const h = harness(action(legal([4, 5], 2, 2))); h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  assert.deepEqual(h.writes, []);
 });
 test('a hidden unaffordable intent remains an offered plan, separate from binding targets', async () => {
   const h = harness({ ...action(), waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: [], unaffordableSpells: ['bolt'] }] } } });
@@ -103,12 +107,18 @@ test('unrelated planning, bot and ended views offer no combat controls', () => {
   }
 });
 
-test('a failed acknowledgement requires closing and reopening before any command', async () => {
+test('a failed acknowledgement blocks every command until the controls are reopened', async () => {
   const h = harness(); let calls = 0;
   h.connection.shown = async () => { if (++calls === 1) throw new Error('offline'); return ok(action()); };
   h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit(); await h.control.submit();
   assert.deepEqual(h.writes, []); assert.equal(calls, 1); assert.match(h.control.model().error, /Close and reopen/);
-  h.control.close(); h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit(); assert.equal(h.writes.length, 1);
+});
+test('reopening after a failed acknowledgement asks again and then posts', async () => {
+  const h = harness(); let calls = 0;
+  h.connection.shown = async () => { if (++calls === 1) throw new Error('offline'); return ok(action()); };
+  h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  h.control.close(); h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  assert.equal(calls, 2); assert.equal(h.writes.length, 1);
 });
 test('a connection that becomes stale during acknowledgement cannot post', async () => {
   const h = harness(), ack = pending(); h.connection.shown = () => ack.promise;
@@ -120,4 +130,31 @@ test('too few candidates offer an empty cast, never a partial target set', async
   const h = harness(action(legal([4], 2, 2))); h.control.open(); h.control.choose('bolt'); h.control.pick(4);
   assert.deepEqual(h.control.model().picked, []); assert.equal(h.control.model().emptyCast, true);
   await h.control.submit(); assert.deepEqual(h.writes[0].targets, []);
+});
+
+// The host refuses a stale asking with the next one in hand: the refresh the write triggers delivers that new
+// asking, and the refusal has to survive it, or the player never learns why nothing happened.
+test('a refusal is still readable once the refresh after the write has moved the asking on', async () => {
+  const h = harness(); h.connection.submit = async () => ({ ok: false, status: 409, body: { message: 'Another client answered first.' } });
+  h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  h.receive({ ...action(), waitingAsked: 12 });
+  assert.equal(h.control.model().error, 'Another client answered first.');
+  assert.equal(h.control.model().opened, false);
+});
+
+test('an uncertain write\'s warning survives the refresh, and the player\'s next move takes it down', async () => {
+  const h = harness(); h.connection.submit = async () => { throw new Error('lost'); };
+  h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  h.receive({ ...action(), waitingAsked: 12 });
+  assert.match(h.control.model().error, /may have arrived/);
+  h.control.open();
+  assert.equal(h.control.model().error, '');
+});
+
+test('a question that stops being combat closes the draft and keeps the host\'s last word', async () => {
+  const h = harness(); h.connection.submit = async () => ({ ok: false, status: 409, body: { message: 'Refused' } });
+  h.control.open(); h.control.choose('bolt'); h.control.pick(4); await h.control.submit();
+  h.receive({ ...action(), waitingFor: 'Speed', waitingAsked: 12 });
+  assert.equal(h.control.model().opened, false);
+  assert.equal(h.control.model().error, 'Refused');
 });

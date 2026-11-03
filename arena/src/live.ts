@@ -110,6 +110,7 @@ function headline(board: { turn: { slot: { creature: unknown } } | null; phase: 
 function instruction() {
   if (!view) return 'Inspect the real board here. Make decisions at the table.';
   if (view.over) return view.outcome?.winner ? `${view.outcome.winner} wins. Review the match at the table.` : 'The match has ended. Review it at the table.';
+  if (combat.model().accepted) return 'Sent. Waiting for the host to resolve it.';
   if (combat.model().target) return 'Select figures, then confirm. Tap again to deselect.';
   if (combat.model().available) return 'Choose a spell or target to answer this combat question here.';
   if (view.waitingFor) return `${decisionLabel(view.waitingFor)} is waiting at the table. Inspect creatures here; return there to decide.`;

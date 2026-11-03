@@ -29,20 +29,26 @@ export function createArenaCombat({ connection, onChange, visible = () => true }
       accepted: answered === key, online };
   }
   const emit = () => onChange(model());
-  function clearDraft() { acknowledgementFailed = false; draft++; opened = false; chosen = null; picked = []; acknowledgement = null; error = ''; }
+  // What the host answered outlives the refresh the write itself triggered: a 409 arrives with the next asking,
+  // which changes the key, and the player still has to read why their action was refused. Only their own next
+  // move (open, choose, back, close) takes the message down.
+  function clearDraft({ keepError = false } = {}) {
+    acknowledgementFailed = false; draft++; opened = false; chosen = null; picked = []; acknowledgement = null;
+    if (!keepError) error = '';
+  }
   function reset(nextSeat) {
     generation++; seat = nextSeat ?? null; latest = null; key = ''; online = false;
     sending = false; answered = null; clearDraft(); emit();
   }
   function receive(next) {
     const nextKey = askedKey(seat, next);
-    if (nextKey !== key) { key = nextKey; clearDraft(); }
+    if (nextKey !== key) { key = nextKey; clearDraft({ keepError: true }); }
     latest = next;
     // A poll may change the offered set without changing the question identity. Keep only what it still offers.
     if (chosen && !offeredForLatest().includes(chosen)) { chosen = null; picked = []; }
     const legal = drawn()?.options?.target?.legalTargets;
     picked = emptyCastAllowed(legal) ? [] : picked.filter(id => legal?.candidates.includes(id)).slice(0, legal?.maxTargets ?? 0);
-    if (!combatQuestion(next)) opened = false;
+    if (!combatQuestion(next) && opened) clearDraft({ keepError: true });
     emit();
   }
   function offeredForLatest() {

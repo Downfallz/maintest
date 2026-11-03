@@ -11,6 +11,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
   const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const dialog = el<HTMLDialogElement>('combat-dialog');
   let listKey = '';
+  let listCatalogue: SpellCatalogue | null = null;
   let buttons = new Map<string, HTMLButtonElement>();
   const click = (id: string, action: () => void) => el(id).addEventListener('click', action);
   click('combat-open', () => controller.open());
@@ -41,9 +42,10 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
       el('combat-heading').textContent = `${name(model.actor)} · choose a spell`;
       el('combat-help').textContent = model.waitingFor === 'Action' ? 'Choose a spell, then select its targets on the field. Confirm to cast.' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
       const ids: string[] = [...new Set<string>([...model.spells, ...model.known])];
-      const nextKey = JSON.stringify([model.question, ids, catalogue]);
-      if (nextKey !== listKey) {
-        listKey = nextKey; buttons = new Map();
+      // The catalogue cannot change while the host runs: its identity is enough, serialising it on every poll is not.
+      const nextKey = JSON.stringify([model.question, ids]);
+      if (nextKey !== listKey || catalogue !== listCatalogue) {
+        listKey = nextKey; listCatalogue = catalogue; buttons = new Map();
         el('combat-spells').replaceChildren(...ids.map(id => {
           const card = cards.get(id);
           const node = document.createElement('button'); node.type = 'button'; node.className = 'combat-spell'; node.dataset.spell = id;
