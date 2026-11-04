@@ -45,10 +45,13 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
   function finish() {
     stage = 'resolved'; emit(); later(next, SETTLE_MS);
   }
+  // Settling shows the latest board with one result to read, whichever the caller names.
+  function settle(text) {
+    cancelTimer(); queue = []; current = null; stage = 'decision'; summary = text; emit();
+  }
   // What the player reads after a skip is the last result they would have reached, not the one cut short.
   function skip() {
-    if (queue.length) summary = resultText(queue.at(-1));
-    cancelTimer(); queue = []; current = null; stage = 'decision'; emit();
+    settle(queue.length ? resultText(queue.at(-1)) : summary);
   }
   function reset() {
     cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; summary = ''; emit();
@@ -69,7 +72,7 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
     // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog.
     if (!animate || arriving.some(action => !framed(action)) || arriving.length > limit) {
-      summary = resultText(arriving.at(-1)); skip(); return;
+      settle(resultText(arriving.at(-1))); return;
     }
     queue.push(...arriving);
     if (!current) next(); else emit();

@@ -93,6 +93,12 @@ test('a read mixing a legacy event with framed ones settles them all on the late
   assert.equal(h.queue.model().active, false); assert.equal(h.timers.size, 0);
   assert.match(h.queue.model().summary, /Strike/);
 });
+test('a fallback while older actions are queued reports the newest result, not the queue\'s last', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(5)]);
+  h.receive([event(6, { frame: undefined, resolution: { action: { actor: 2, spell: 'recovery', targets: [2] } }, appliedOutcomes: [{ kind: 'HealOutcome', target: 2, amount: 3 }] })]);
+  assert.equal(h.queue.model().active, false);
+  assert.match(h.queue.model().summary, /recovery.*Heal 3/);
+});
 test('an arrival under an open draft settles the action in flight too', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]); h.tick();
   h.receive([event(5)], {}, { animate: false });
