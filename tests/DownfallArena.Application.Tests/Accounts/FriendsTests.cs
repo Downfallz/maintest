@@ -167,6 +167,21 @@ public sealed class FriendsTests
     }
 
     [Fact]
+    public async Task A_request_from_an_account_that_is_gone_writes_nothing_back()
+    {
+        await _friends.AskAsync(_bastien, "markf", Cancel);
+        _accounts.Accounts.Remove(_mark);
+
+        (await _friends.AskAsync(_mark, "bastien", Cancel)).Error.ShouldBe(FriendErrors.NoSuchPlayer, "asking back is accepting, and Mark is gone");
+        (await _friends.AcceptAsync(_mark, _bastien, Cancel)).Error.ShouldBe(FriendErrors.NoSuchPlayer);
+
+        (await _friends.ListAsync(_bastien, Cancel)).Friends.ShouldBeEmpty();
+        await _friends.ForgetAsync(_mark, Cancel);
+        (await _friends.ListAsync(_mark, Cancel)).ShouldBe(FriendList.Empty, "nothing was written for the deleted account");
+        (await _friends.ListAsync(_bastien, Cancel)).ShouldBe(FriendList.Empty);
+    }
+
+    [Fact]
     public async Task A_list_written_on_one_side_only_is_put_right_by_the_next_change_between_the_two()
     {
         await _friends.AskAsync(_mark, "bastien", Cancel);

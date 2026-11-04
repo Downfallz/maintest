@@ -62,8 +62,9 @@ public sealed class Friends
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            // Checked again under the lock: an account deleted since the name was resolved is nobody to ask.
-            if (await _accounts.FindAsync(other, cancellationToken) is null)
+            // Checked again under the lock, on both sides: an account deleted since the name was resolved is nobody
+            // to ask, and a request that signed in before its own account went must not write that account back.
+            if (await _accounts.FindAsync(other, cancellationToken) is null || await _accounts.FindAsync(me, cancellationToken) is null)
             {
                 return Result.Failure<FriendAsked>(FriendErrors.NoSuchPlayer);
             }
@@ -115,7 +116,7 @@ public sealed class Friends
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            if (await _accounts.FindAsync(other, cancellationToken) is null)
+            if (await _accounts.FindAsync(other, cancellationToken) is null || await _accounts.FindAsync(me, cancellationToken) is null)
             {
                 return Result.Failure(FriendErrors.NoSuchPlayer);
             }
