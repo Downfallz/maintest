@@ -32,10 +32,23 @@ test('tempos, ties and both declaration modes explain their actual current quest
     assert.equal(g.topic, topic); assert.ok(text(g).includes(word), kind);
   }
 });
-test('unknown declaration mode is explicit, while a spell question can explain itself', () => {
+test('a catalogue whose rules name no declaration plays hidden intents, the way the stamp is written', () => {
+  const served = { rules: { roundCap: 12 } };
+  for (const kind of ['Evolution', 'Speed', 'TieOrder', null]) assert.match(text(arenaGuidance(view(kind), served)), /declare hidden spells/, String(kind));
+  assert.doesNotMatch(text(arenaGuidance(view(), served)), /does not supply the declaration mode/);
+  assert.match(text(arenaGuidance(view(), { rules: { combatDeclaration: 'AtActivation' } })), /when your creature acts/);
+});
+test('without any rules the mode is explicitly unknown, while a spell question can explain itself', () => {
   assert.match(text(arenaGuidance(view(), null)), /does not supply the declaration mode/);
   assert.match(text(arenaGuidance(view('Intent'), null)), /declare hidden spells/);
   assert.doesNotMatch(text(arenaGuidance(view('Action'), null)), /declare hidden spells/);
+});
+test('the objective names the creature the way the scene does', () => {
+  assert.equal(arenaGuidance(view('Speed'), catalogue).objective, 'First: choose a tempo, then confirm.');
+  assert.equal(arenaGuidance(view('Speed'), catalogue).context, 'Command · First');
+  const twins = view('Action'); twins.board.allies = [{ id: 1, name: 'Twin' }, { id: 2, name: 'Twin' }];
+  assert.match(arenaGuidance(twins, catalogue).objective, /^Twin · 1: choose a spell/);
+  assert.match(arenaGuidance(view('Target', { waitingCreature: 9 }), catalogue, { targeting: true }).objective, /^Creature 9: select targets/);
 });
 test('opponent turns use public order without reading unrevealed plans', () => {
   const input = view(null); input.board.subPhase = 'Activation'; input.board.phase = 'Combat';

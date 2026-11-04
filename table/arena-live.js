@@ -1,12 +1,22 @@
 import { creatureForm } from './arena-art.js';
 import { boardPresentation } from './presentation.js';
 
+// How every surface of the arena names a creature off a seat's board (the scene, the journal, the guide):
+// its name, and its id beside it only when another creature on the board shares that name. A creature the
+// board does not know, or one the host left unnamed, is named by its id alone.
+export function creatureLabel(board, id) {
+  const roster = [...(board?.allies ?? []), ...(board?.enemies ?? [])];
+  const one = roster.find(creature => creature.id === id);
+  if (!one?.name) return `Creature ${id ?? '?'}`;
+  return roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${id}` : one.name;
+}
+
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
 export function livePresentation(view) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];
   const creatures = roster.map((one, index) => ({
-    ...one, label: roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name,
+    ...one, label: creatureLabel(board, one.id),
     id: String(one.id), enemy: index >= board.allies.length,
     form: creatureForm(one),
   }));

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningArenaPlayer } from './arena-help-fixture.js';
-test.beforeEach(returningArenaPlayer);
 import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
 const roster = [1, 2, 3, 4, 5, 6].map(id => creature(id));

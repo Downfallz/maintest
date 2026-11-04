@@ -1,11 +1,11 @@
 import { phaseLabel, TEMPO_RULE } from './terms.js';
 import { activeTurn } from './presentation.js';
+import { creatureLabel } from './arena-live.js';
 
 export const HELP_PREFERENCE_KEY = 'downfall.arena.help.v1';
 const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
 const topicOf = { Evolution: 'mutation', Speed: 'tempo', TieOrder: 'ties', Action: 'action', Intent: 'intent', Target: 'target' };
 const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
-const creature = id => `Creature ${id ?? '—'}`;
 
 // Only generic instructional preferences cross sessions. No match, seat, question, token or choice is saved.
 export function helpPreferences(storage) {
@@ -28,10 +28,12 @@ export function helpPreferences(storage) {
   };
 }
 
+// The rule-set stamp names its declaration only when it is not the hidden intent (ArtifactJson, ADR 0110), so a
+// catalogue whose rules say nothing plays hidden intents, the way /play reads it. Without any rules at all, the
+// current question can still explain itself.
 function declaration(view, catalogue) {
   const mode = catalogue?.rules?.combatDeclaration;
-  if (mode === 'AtActivation' || mode === 'HiddenIntent') return mode;
-  // The current question can explain itself even when an old catalogue has no declaration setting.
+  if (catalogue?.rules) return mode === 'AtActivation' ? 'AtActivation' : 'HiddenIntent';
   if (view.waitingFor === 'Action') return 'AtActivation';
   if (['Intent', 'Target'].includes(view.waitingFor)) return 'HiddenIntent';
   return null;
@@ -83,7 +85,7 @@ function question(view) {
   return topic ?? null;
 }
 function objective(view, topic) {
-  const actor = creature(view.waitingCreature);
+  const actor = creatureLabel(view.board, view.waitingCreature);
   switch (topic) {
     case 'mutation': {
       const offer = view.options?.evolution;
@@ -100,7 +102,7 @@ function objective(view, topic) {
     default: {
       if (view.playedByBot) return 'Your team is controlled by a bot. Follow its actions in History.';
       const turn = view.board.subPhase === 'Activation' ? activeTurn(view.board) : null;
-      if (turn && turn.slot.owner !== view.board.slot) return `${creature(turn.slot.creature)} (opponent) is acting. Follow History.`;
+      if (turn && turn.slot.owner !== view.board.slot) return `${creatureLabel(view.board, turn.slot.creature)} (opponent) is acting. Follow History.`;
       return 'Waiting for the next decision or the other team. History stays available.';
     }
   }
@@ -114,15 +116,14 @@ export function arenaGuidance(view, catalogue, { accepted = false, targeting = f
   let topic = waiting || view.over || historical || accepted ? null : question(view);
   let current = objective(view, topic);
   if (topic === 'mutation' && view.options?.evolution?.remainingPicks === 0) topic = null;
-  if (targeting) current = `${creature(view.waitingCreature)}: select targets, then Confirm cast.`;
+  if (targeting) current = `${creatureLabel(board, view.waitingCreature)}: select targets, then Confirm cast.`;
   if (accepted) current = 'Choice sent. Waiting for the next decision or the other team.';
   if (!online) current = 'Connection interrupted. Reconnect before choosing.';
   if (view.over) current = 'Match complete. Open Match result or History.';
   if (historical) current = 'Reading recorded results. Return to the current board to choose.';
   if (waiting) current = 'Waiting for players. The match begins when everyone is seated.';
   const tip = topic ? tips[topic] : null;
-  const named = board.allies?.find(one => one.id === view.waitingCreature);
-  const actor = topic && topic !== 'mutation' && topic !== 'ties' ? [creature(view.waitingCreature), named?.name].filter(Boolean).join(' · ') : '';
+  const actor = topic && topic !== 'mutation' && topic !== 'ties' ? creatureLabel(board, view.waitingCreature) : '';
   const next = !waiting && !view.over && !historical && Number.isInteger(board.nextEvolutionRound)
     ? board.nextEvolutionRound > board.roundNumber ? `Next mutation opportunity: round ${board.nextEvolutionRound}.`
       : board.nextEvolutionRound === board.roundNumber ? 'Mutation opportunity this round.' : '' : '';

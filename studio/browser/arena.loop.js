@@ -125,6 +125,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await expect(page.locator('#help-dialog')).toBeVisible();
     await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
     await expect(page.locator('#help-objective')).toContainText('team picks');
+    await expect(page.locator('#help-flow li').nth(2)).toContainText(declaration === 'hidden-intent' ? 'declare hidden spells' : 'when your creature acts');
     expect(shown).toEqual([]); expect(writes).toEqual([]);
     await page.screenshot({ path: info.outputPath('guidance-real-host.jpg'), type: 'jpeg', quality: 85 });
     await page.locator('#help-close').click();

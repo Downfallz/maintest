@@ -55,7 +55,6 @@ when the host was started with `--declaration hidden-intent`, when its `--rules`
 player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
 action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
-
 A starting host serves at once and rebuilds the tables an earlier host left open behind it (ADR 0091): the
 container's platform restarts a host whose port does not answer within a minute, and replaying many records takes
 longer. Until the rebuild is done, a seat whose table is not back yet, the lobby's seat routes and the join codes

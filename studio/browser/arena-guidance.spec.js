@@ -26,7 +26,8 @@ async function mount(page, { waiting = null, mode = 'AtActivation', kind = 'Evol
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== 'GET') state.writes.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, combatDeclaration: mode }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
+    // The host's stamp names the declaration only when it is not the hidden intent; `mode: null` serves it that way.
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, ...(mode ? { combatDeclaration: mode } : {}) }, cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) { state.shown.push(url.searchParams.get('shown')); if (state.ack) await state.ack; }
       return route.fulfill({ status: state.status, json: state.view });
@@ -175,4 +176,11 @@ test('blocked preference storage keeps first-use help and in-memory dismissal wo
   await h.publish([], { waitingAsked: 12 }); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#help-open').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('a hidden-intent table, whose catalogue names no declaration, teaches hidden spells from the first tip', async ({ page }) => {
+  const h = await mount(page, { mode: null });
+  await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
+  await expect(page.locator('#help-flow li').nth(2)).toContainText('declare hidden spells');
+  await expect(page.locator('#help-dialog')).not.toContainText('does not supply');
+  expect(h.state.errors).toEqual([]);
 });

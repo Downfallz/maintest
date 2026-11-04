@@ -251,7 +251,7 @@ No implementation slice is completed by this document.
 | ID | Reviewable result | Main areas | Depends on |
 | --- | --- | --- | --- |
 | AU1 (implemented) | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
-| AU2 | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
+| AU2 (implemented) | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
 | AU3a | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
@@ -299,6 +299,9 @@ Acceptance: start, later even round, depleted picks, opponent turn and tie quest
 next action. Waiting-room events do not trigger tips/receipts prematurely. Help is keyboard-operable,
 can be reopened, never obscures the sole confirmation, and does not mark a covered question shown.
 Test both declaration modes and “mute tips but keep history”.
+
+Delivered: `table/arena-guidance.js` and `arena/src/guidance.ts`, described in
+[the arena README](../../arena/README.md#au2-objectives-and-contextual-help).
 
 ### AU3a — Record ordinary energy before designing its receipt
 

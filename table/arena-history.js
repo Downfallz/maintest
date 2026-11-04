@@ -1,6 +1,7 @@
 import { resolvedSince, roundUpkeep, turnoverSteps } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { outcomeText } from './outcome.js';
+import { creatureLabel } from './arena-live.js';
 import { stepLabel, tempoLabel } from './terms.js';
 
 // This journal is public even though a seat feed also contains that seat's own hidden decisions.
@@ -20,14 +21,11 @@ const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === 
 const orderRows = (timeline, board) => (Array.isArray(timeline?.slots) ? timeline.slots : [])
   .map((slot, index) => line(`${index + 1} · ${who(slot.creature, board)} · ${tempoLabel(slot.speed)}`));
 
-// Named the way the scene names it (arena-live.js): the id joins a name only when two creatures share it,
-// so a line in the journal reads the same as the figure it is about.
+// Named the way the scene names it (creatureLabel), so a line in the journal reads the same as the figure.
 function person(id, board) {
-  const allies = board?.allies ?? [], roster = [...allies, ...(board?.enemies ?? [])];
-  const one = roster.find(creature => creature.id === id);
-  const shared = Boolean(one?.name) && roster.filter(other => other.name === one.name).length > 1;
-  const label = !one?.name ? `Creature ${id ?? '?'}` : shared ? `${one.name} · ${id}` : one.name;
-  return { label, side: allies.some(creature => creature.id === id) ? 'Your team' : one ? 'Opponent' : 'Unknown team' };
+  const ally = (board?.allies ?? []).some(creature => creature.id === id);
+  const known = ally || (board?.enemies ?? []).some(creature => creature.id === id);
+  return { label: creatureLabel(board, id), side: ally ? 'Your team' : known ? 'Opponent' : 'Unknown team' };
 }
 const who = (id, board) => { const one = person(id, board); return `${one.label} (${one.side})`; };
 

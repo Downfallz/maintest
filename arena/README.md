@@ -127,14 +127,14 @@ AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional ar
 [desktop history](../docs/tabletop/images/arena-history/desktop.jpg) ·
 [phone history](../docs/tabletop/images/arena-history/phone.jpg).
 
-
 ## AU2: objectives and contextual help
 
 The command bar names the current objective: shared mutation picks, the creature choosing its tempo,
 a tied group, an on-turn spell, a hidden intent, or targets for an already revealed spell. Waiting rooms,
 opponent turns, sent choices, lost connections and recorded playback have separate instructions.
 The **Help** button opens the current explanation and a four-phase round guide. The next mutation
-opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode.
+opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
+a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
 
 Each instructional subject opens automatically once, after playback and other dialogs have settled.
 **Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
