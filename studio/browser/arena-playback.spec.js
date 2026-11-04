@@ -234,7 +234,7 @@ test('ART-4 live playback separates necromantic recipients from the caster blood
   const h = await mount(page);
   const shapes = ['tier:occultist:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:occultist:v1'];
   const start = before.map((one, index) => ({ ...one, acquiredTiers: [shapes[index]] }));
-  const after = start.map(one => ({ ...one, health: one.id === 1 ? 18 : 20,
+  const after = start.map(one => ({ ...one, health: one.id === 1 ? 18 : 20, energy: one.id === 1 ? 2 : 5,
     conditions: [4, 5].includes(one.id) ? [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }] : [] }));
   const action = entry(10, { spell: 'spell:summon_minions:v1', targets: [4, 5], after, outcomes: [
     { kind: 'DamageOutcome', target: 1, amount: 2, onCaster: true },
@@ -242,7 +242,8 @@ test('ART-4 live playback separates necromantic recipients from the caster blood
     { kind: 'ConditionOutcome', target: 5, effect: { kind: 'Bleed', amountPerRound: 2 } },
   ] });
   action.event.frame.before = start;
-  await h.publish([action]);
+  action.event.resolution.isCritical = false;
+  await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
   await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(460);
   await expect(page.locator('[data-creature="1"] .creature-effect')).toContainText('Damage 2');
