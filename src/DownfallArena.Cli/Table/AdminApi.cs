@@ -323,7 +323,7 @@ internal sealed class AdminApi
     }
 
     /// <summary>The events a finished match's replay reads: every one public, so nothing either seat held is served.</summary>
-    private static readonly HashSet<string> Replayed = ["OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"];
+    private static readonly HashSet<string> Replayed = ["RoundEnergyGranted", "OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"];
 
     /// <summary>
     /// A finished session as the table page replays it: the match's outcome, each seat's last board, the catalogue

@@ -246,3 +246,23 @@ intents included, since a trace is a debugging record rather than something a pl
 `viewer/index.html` opens any of these files from disk (see `viewer/README.md`): a run directory or a CSV as
 a batch, a trace as a match to step through, `evaluation.json` as an evaluation, `training.jsonl` as a
 training run, and two artifacts of the same kind as a comparison with the stamp diff.
+
+## Ordinary upkeep energy and event stream versions
+
+New traces carry `eventStreamVersion: 2` and a public `RoundEnergyGranted` event per EnergyGain step
+([ADR 0132](../adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md)). Its `roundId`
+is authoritative; `grants` contains `creature`, `baseRequested`, `passiveRequested`, `gained`, `before`
+and `after`, all plain numbers. `gained` is the return value of the engine's combined grant, including zero.
+Do not reconstruct it from requests or the entry's post-command board. An already-dead creature is absent;
+a recipient killed by the following ongoing effects still has its receipt.
+
+Missing `eventStreamVersion` on an old table record means version 1. Resuming it omits only this new event
+before assigning trace sequences, for the rest of that match, and persists version 1 again. Existing
+checkpoints, live feed cursors and replay identities keep their original meaning. New tables use version 2;
+unknown table versions are refused without rewriting the record. Version 2 checkpoints also compare the
+receipt payload, in addition to existing board/sequence checks. Legacy traces remain readable but contain
+no exact ordinary-energy receipt: never substitute the nominal allowance for a missing fact.
+
+The console, match viewer, seat journal and recorded replay recognize the new event. Spell statistics,
+training datasets and outcome digests are unchanged: ordinary energy is not an ongoing effect credited to
+a spell, and no decision or random draw is added. Browser automatic receipts are a separate AU3b change.

@@ -222,12 +222,12 @@ Transient errors and help notices can have separate labels and must not imperson
 Clear all seat-bound text, filters with creature identities, drafts and cached frames on viewpoint/access changes.
 Do not persist tokens or private event payloads into a new local history store.
 
-### Important evidence gap: ordinary upkeep energy
+### Original evidence gap: ordinary upkeep energy (addressed by AU3a)
 
 `OngoingEffectsApplied` contains ongoing energy-regeneration, healing and bleed ticks.
 `RoundStarted` contains the round identity, not ordinary energy gains.
-`UpkeepRules.EnergyGain` grants the rule allowance plus passive upkeep energy but currently returns no
-per-creature receipt; the normal seat feed removes trace boards. Thus the existing “no ongoing ticks”
+At the original audit, `UpkeepRules.EnergyGain` granted the rule allowance plus passive upkeep energy
+without a per-creature receipt; the normal seat feed removes trace boards. Thus the existing “no ongoing ticks”
 line cannot explain all upkeep, and the catalogue allowance is not proof that every creature actually gained it.
 
 Decide and implement the missing event contract first, in required PR **AU3a**, before the **AU3b**
@@ -252,7 +252,7 @@ No implementation slice is completed by this document.
 | --- | --- | --- | --- |
 | AU1 (implemented) | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
 | AU2 (implemented) | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
-| AU3a | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
+| AU3a (implemented) | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
 | AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
@@ -304,6 +304,11 @@ Delivered: `table/arena-guidance.js` and `arena/src/guidance.ts`, described in
 [the arena README](../../arena/README.md#au2-objectives-and-contextual-help).
 
 ### AU3a — Record ordinary energy before designing its receipt
+
+Implementation: `RoundEnergyGranted`, public journal/replay readers and versioned recording compatibility
+are specified in [ADR 0132](../adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
+New matches record actual grants; legacy resumed matches retain their original event sequences for life.
+The automatic receipt remains AU3b.
 
 Write the persistent-contract ADR and add a public event at the ordinary energy-grant boundary.
 For each eligible living creature, record the configured base and passive request amounts, actual combined

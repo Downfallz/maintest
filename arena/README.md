@@ -121,7 +121,7 @@ is already there; otherwise **Latest** announces their count. First loads popula
 animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
 
 This implements AU1 of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
-The ordinary round energy receipt and phase guidance belong to AU2–AU3; older-round loading, filtering and
+Automatic upkeep presentation belongs to AU3b; older-round loading, filtering and
 links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
 rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
 read-only access, deduplication, scroll retention and clearing on access loss. The real-host complete-match
@@ -168,3 +168,12 @@ ART-5 adds [mutation cues](../docs/art/mutation-cues.md): one dominant body sele
 acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cues.ts` follows the figure
 transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
 The live suite checks all nine branch pairs and lifecycle behavior with the production scene.
+
+## AU3a: recorded ordinary energy
+
+New matches include **Upkeep · round energy** in History, with each recipient's actual gain, before/after
+energy and base/passive request amounts. Zero gains are visible. These facts are captured before ongoing
+energy, healing and bleed; a creature killed afterward retains its earlier receipt. Journal reads remain
+read-only and deduplicated. Old recordings and resumed legacy matches have no ordinary-energy receipt;
+the UI does not invent one from the default allowance. See [ADR 0132](../docs/adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
+The automatic first-round/round-transition receipt remains AU3b; this PR supplies its recorded facts.

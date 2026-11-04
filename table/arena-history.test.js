@@ -156,3 +156,20 @@ test('normalization never mutates a frozen response or retains its raw frame', (
   const history = createArenaHistory(); history.receive(view([input]), catalogue);
   assert.doesNotMatch(JSON.stringify(history.model()), /"frame"|"resolution"|"knownSpells"/);
 });
+
+test('round-energy facts remain public history after a recipient dies and survive duplicate reads', () => {
+  const history = createArenaHistory();
+  const receipt = { sequence: 5, round: 2, event: { kind: 'RoundEnergyGranted', roundId: 2, grants: [
+    { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 5, before: 2, after: 7 },
+    { creature: 3, baseRequested: 0, passiveRequested: 0, gained: 0, before: 3, after: 3 },
+  ] } };
+  const view = { board: { ...board, allies: [creature(1, 0)] }, feed: [receipt] };
+  history.receive(view, catalogue); history.receive(view, catalogue);
+  const rows = history.model().rows;
+  assert.equal(rows.length, 1); assert.equal(history.model().unsupported, false);
+  assert.ok(rows[0].details[0].text.includes('+5 energy · 2 → 7 (base 4, passive 1)'));
+  assert.ok(rows[0].details[1].text.includes('+0 energy'));
+  history.receive({ ...view, waiting: { seats: [] } }, catalogue);
+  assert.deepEqual(history.model().rows, []);
+  history.receive({ ...view, feed: [] }, catalogue); assert.equal(history.model().rows.length, 1);
+});

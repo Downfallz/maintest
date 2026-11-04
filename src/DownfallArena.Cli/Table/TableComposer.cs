@@ -159,6 +159,11 @@ internal sealed class TableComposer
             return null;
         }
 
+        if (record.EventStreamVersion is not (1 or MatchTrace.CurrentEventStreamVersion))
+        {
+            throw new InvalidDataException($"Unsupported table event stream version {record.EventStreamVersion}.");
+        }
+
         var table = await BuildAsync(record.Request(), (record, journal), cancellationToken);
         var replayed = table.Run!.Journal.Exhausted;
         await Task.WhenAny(replayed, table.Session.Outcome, Task.Delay(ReplayWithin, cancellationToken));
@@ -253,6 +258,7 @@ internal sealed class TableComposer
     {
         var stopping = new CancellationTokenSource();
         TableSession? session = null;
+        MatchId? legacyStream = null;
         try
         {
             var agents = _services.GetRequiredService<IAgentFactory>();
@@ -286,6 +292,12 @@ internal sealed class TableComposer
             // that was still waiting waits again, whatever handover the pilot had scheduled meanwhile.
             var waits = (seat1.Seat.Person is not null || seat2.Seat.Person is not null) && (rebuilding is null || !DecisionJournal.HoldsDecision(rebuilding.Value.Journal));
             var start = new TableStart(run is { } recording ? recording.Wrap : null, rebuilding?.Record.MatchId, waits);
+            if (rebuilding?.Record is { EventStreamVersion: 1 } legacy)
+            {
+                events.UseLegacyEventStream(legacy.MatchId);
+                legacyStream = legacy.MatchId;
+            }
+
             session = await TableSession.StartAsync(_services, rules, seed, seat1.Agent, seat2.Agent, start, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
@@ -302,6 +314,7 @@ internal sealed class TableComposer
             var api = new TableApi(session, session.Queries, seats, Catalogue(rules), events, run, pilot) { Guide = Guide(rules), Agents = Agents, Push = Push };
             var table = new PlayedTable(new TableOpening(id, rebuilding?.Record.CreatedAt ?? _clock.GetUtcNow(), request), session, api, seats, pilot, run, stopping)
             {
+                EventStreamVersion = rebuilding?.Record.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
                 OpenSeats = rebuilding?.Record.OpenSeats ?? [],
             };
             Push?.Watch(table);
@@ -319,6 +332,11 @@ internal sealed class TableComposer
         catch
         {
             await stopping.CancelAsync();
+            if (session is null && legacyStream is { } abandoned)
+            {
+                _services.GetRequiredService<MatchTraceRecorder>().Forget(abandoned);
+            }
+
             Abandon(session, stopping);
             throw;
         }

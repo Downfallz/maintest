@@ -22,6 +22,15 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     // a match still running (ADR 0054), and enumerating a List<T> another thread is appending to throws.
     private readonly ConcurrentDictionary<MatchId, Recorded> _entries = new();
 
+    /// <summary>Before rebuilding an old table, retain its original event indices for checkpoints and connected clients.</summary>
+    public void UseLegacyEventStream(MatchId matchId)
+    {
+        if (!_entries.TryAdd(matchId, new Recorded(1)))
+        {
+            throw new InvalidOperationException("An event stream version must be selected before recording begins.");
+        }
+    }
+
     public Type EventType => typeof(IMatchEvent);
 
     /// <summary>
@@ -42,7 +51,13 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         var match = await matches.FindAsync(matchEvent.MatchId, cancellationToken)
             ?? throw new InvalidOperationException($"Match {matchEvent.MatchId} raised an event but is not stored.");
 
-        _entries.GetOrAdd(match.Id, _ => new Recorded()).Add(
+        var recorded = _entries.GetOrAdd(match.Id, _ => new Recorded(MatchTrace.CurrentEventStreamVersion));
+        if (recorded.EventStreamVersion == 1 && matchEvent is RoundEnergyGranted)
+        {
+            return;
+        }
+
+        recorded.Add(
             matchEvent,
             PlayerBoardStateProjection.Build(match, PlayerSlot.Player1),
             PlayerBoardStateProjection.Build(match, PlayerSlot.Player2));
@@ -84,7 +99,7 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         ArgumentNullException.ThrowIfNull(stamp);
 
         _entries.TryRemove(matchId, out var recorded);
-        return Trace(matchId, stamp, seed, recorded?.Snapshot(0) ?? []);
+        return Trace(matchId, stamp, seed, recorded?.Snapshot(0) ?? [], recorded?.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion);
     }
 
     /// <summary>
@@ -103,16 +118,17 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     {
         ArgumentNullException.ThrowIfNull(stamp);
 
-        return _entries.TryGetValue(matchId, out var recorded) ? Trace(matchId, stamp, seed, recorded.Snapshot(0)) : null;
+        return _entries.TryGetValue(matchId, out var recorded) ? Trace(matchId, stamp, seed, recorded.Snapshot(0), recorded.EventStreamVersion) : null;
     }
 
     /// <summary>
     /// One definition of what a trace is, so a checkpoint and a finished match cannot disagree about it. The
     /// outcome is the last entry's, which is null until the match has one.
     /// </summary>
-    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, List<TraceEntry> entries) =>
+    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, List<TraceEntry> entries, int eventStreamVersion) =>
         new()
         {
+            EventStreamVersion = eventStreamVersion,
             MatchId = matchId,
             Seed = seed,
             Stamp = stamp,
@@ -121,8 +137,10 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         };
 
     /// <summary>One match's entries, and the lock that lets them be read while they are still being written.</summary>
-    private sealed class Recorded
+    private sealed class Recorded(int eventStreamVersion)
     {
+        public int EventStreamVersion { get; } = eventStreamVersion;
+
         private readonly Lock _gate = new();
         private readonly List<TraceEntry> _entries = [];
 

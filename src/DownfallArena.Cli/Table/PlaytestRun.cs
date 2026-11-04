@@ -291,6 +291,11 @@ internal sealed class PlaytestRun
         foreach (var entry in written.EnumerateArray())
         {
             var again = rebuilt[index++];
+            if (!EnergyReceiptAgrees(entry, again))
+            {
+                return false;
+            }
+
             foreach (var field in new[] { "sequence", "round", "subPhase", "player1", "player2" })
             {
                 var had = entry.TryGetProperty(field, out var before);
@@ -303,6 +308,18 @@ internal sealed class PlaytestRun
         }
 
         return true;
+    }
+
+    // Event payloads generally contain identities minted on join. Ordinary energy contains only public facts;
+    // compare its payload explicitly so an equal final board cannot conceal a changed grant (ADR 0132).
+    private static bool EnergyReceiptAgrees(System.Text.Json.JsonElement before, System.Text.Json.JsonElement after)
+    {
+        var had = before.TryGetProperty("event", out var oldEvent) && oldEvent.TryGetProperty("kind", out var oldKind) && oldKind.GetString() == "RoundEnergyGranted";
+        var has = after.TryGetProperty("event", out var newEvent) && newEvent.TryGetProperty("kind", out var newKind) && newKind.GetString() == "RoundEnergyGranted";
+        return had == has && (!had || (oldEvent.TryGetProperty("grants", out var oldGrants) && newEvent.TryGetProperty("grants", out var newGrants) &&
+            System.Text.Json.JsonElement.DeepEquals(oldGrants, newGrants) &&
+            oldEvent.TryGetProperty("roundId", out var oldRound) && newEvent.TryGetProperty("roundId", out var newRound) &&
+            System.Text.Json.JsonElement.DeepEquals(oldRound, newRound)));
     }
 
     /// <summary>

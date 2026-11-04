@@ -90,3 +90,16 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }
   await page.setViewportSize(viewport); const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
   await fitsViewport(page, '#planning-close, #planning-confirm'); await page.locator('#planning-confirm').click(); await expect.poll(() => h.writes.length).toBe(1); expect(h.errors).toEqual([]);
 });
+
+test('recorded zero ordinary energy stays visible in replay before ongoing effects', async ({ page }) => {
+  const h = await mount(page, { over: true });
+  h.view.feed = [{ sequence: 0, round: 1, event: { kind: 'RoundEnergyGranted', roundId: 1, grants: [
+    { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },
+  ] } }, ...feed];
+  await page.locator('#match-open').click(); await page.locator('#match-replay').click();
+  await expect(page.locator('#replay-text')).toHaveText('Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
+  await page.locator('#replay-next').click(); await expect(page.locator('#replay-text')).toContainText('Ongoing damage');
+  await page.locator('#replay-previous').click(); await expect(page.locator('#replay-text')).toContainText('+0 energy');
+  await fitsViewport(page, '#replay-next, #replay-previous, #replay-close');
+  expect(h.writes).toEqual([]); expect(h.shown).toEqual([]); expect(h.errors).toEqual([]);
+});
