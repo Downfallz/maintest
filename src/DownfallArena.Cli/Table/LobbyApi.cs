@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
@@ -25,6 +26,15 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// account that took it.
     /// </summary>
     public AccountApi? Accounts { get; set; }
+
+    /// <summary>The friendships (ADR 0129), when this host has accounts: who a table may be opened for.</summary>
+    public Friends? Friends { get; set; }
+
+    /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
+    public AccountNotices? Notices { get; set; }
+
+    /// <summary>How long a seat is kept for a friend (ADR 0129): past this, the invitation counts as declined.</summary>
+    public static readonly TimeSpan InvitationFor = TimeSpan.FromHours(24);
 
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
@@ -58,13 +68,21 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
-                ("POST", Prefix + "/invitations") => await InvitationsAsync(body),
+                ("POST", Prefix + "/invitations") => await InvitationsAsync(body, account),
                 ("POST", Prefix + "/claim") => SignInRequired(account) ?? await ClaimAsync(body, account),
                 ("GET", Prefix + "/push") => Json(new { publicKey = push?.PublicKey }),
                 ("PUT", Prefix + "/push") => await SubscribeAsync(token, body, account),
                 ("DELETE", Prefix + "/push") => await SubscribeAsync(token, null, account),
                 ("POST", Prefix + "/push/test") => await TestPushAsync(token, account),
-                ("POST", _) when JoinedTable(path) is { } id => SignInRequired(account) ?? await JoinAsync(id, account),
+                ("POST", _) when TableRoute(path, "/join") is { } id => SignInRequired(account) ?? await JoinAsync(id, account),
+                // A seat kept for a friend (ADR 0129): accepted or declined by that friend, cancelled, given to another
+                // friend or opened to everyone by the inviter; and an unbegun table closed by whoever holds its seats.
+                ("POST", _) when TableRoute(path, "/accept") is { } id => SignInRequired(account) ?? await AcceptAsync(id, player!),
+                ("POST", _) when TableRoute(path, "/decline") is { } id => SignInRequired(account) ?? await DeclineAsync(id, player!),
+                ("DELETE", _) when TableRoute(path, "/invitation") is { } id => SignInRequired(account) ?? await CancelAsync(id, player!),
+                ("POST", _) when TableRoute(path, "/invitation") is { } id => SignInRequired(account) ?? await ReinviteAsync(id, body, player!),
+                ("POST", _) when TableRoute(path, "/open") is { } id => SignInRequired(account) ?? await OpenToEveryoneAsync(id, player!),
+                ("DELETE", _) when TableRoute(path, "") is { } id => SignInRequired(account) ?? await CloseAsync(id, player!),
                 _ => Problem(404, "No such lobby route."),
             };
         }
@@ -74,17 +92,16 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    /// <summary>The table id of <c>/api/lobby/tables/&lt;id&gt;/join</c>, or null for any other path, an empty id among them.</summary>
-    private static string? JoinedTable(string path)
+    /// <summary>The table id of <c>/api/lobby/tables/&lt;id&gt;&lt;suffix&gt;</c>, or null for any other path, an empty id among them.</summary>
+    private static string? TableRoute(string path, string suffix)
     {
         const string tables = Prefix + "/tables/";
-        const string join = "/join";
-        if (!path.StartsWith(tables, StringComparison.Ordinal) || !path.EndsWith(join, StringComparison.Ordinal) || path.Length <= tables.Length + join.Length)
+        if (!path.StartsWith(tables, StringComparison.Ordinal) || !path.EndsWith(suffix, StringComparison.Ordinal) || path.Length <= tables.Length + suffix.Length)
         {
             return null;
         }
 
-        var id = path[tables.Length..^join.Length];
+        var id = path[tables.Length..^suffix.Length];
         return id.Contains('/', StringComparison.Ordinal) ? null : id;
     }
 
@@ -135,10 +152,14 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var opening = JsonSerializer.Deserialize<Opening>(body, Web);
         var opponent = opening?.Opponent ?? "person";
-        if (opponent is not ("person" or "hotseat" or "bot"))
+        if (opponent is not ("person" or "hotseat" or "bot" or "friend"))
         {
-            return Problem(400, "Choose another player, a shared device, or the bot.");
+            return Problem(400, "Choose another player, a friend, a shared device, or the bot.");
         }
+
+        // A table for a friend (ADR 0129): the second seat is kept for that account, and one such seat at a time.
+        // Checked under the claim gate below: two requests of one account must not both pass the one-at-a-time rule.
+        var friend = opponent == "friend" ? opening?.Friend : null;
 
         var format = composer.Rules.Format;
         if (opening?.Format is { } named && (!MatchFormat.TryParse(named, out format) || !MatchFormat.Offered.Contains(format)))
@@ -149,6 +170,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         await Claims.WaitAsync();
         try
         {
+            if (opponent == "friend" && await FriendRefusalAsync(account, friend) is { } refused)
+            {
+                return refused;
+            }
+
             using var reservation = registry.Reserve();
             if (reservation is null)
             {
@@ -179,6 +205,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 registry.Rekey(table, seat, SeatKeys.TakenBy(seat.Token, account));
             }
 
+            if (friend is not null)
+            {
+                registry.Rekey(table, table.Seats[1], SeatKeys.KeptFor(AccountId.Parse(friend), clock.GetUtcNow()));
+            }
+
             try
             {
                 await table.RecordAsync(registry.Codes);
@@ -188,6 +219,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 // A game that cannot be saved is not offered: it would be lost on the next redeploy.
                 registry.Remove(table.Id);
                 return Problem(503, $"The table could not be saved, so it was not opened: {failure.Message}");
+            }
+
+            if (friend is not null)
+            {
+                await InviteNoticeAsync(AccountId.Parse(friend), account!.Value, table);
             }
 
             return Json(new
@@ -201,6 +237,398 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             Claims.Release();
         }
     }
+
+    /// <summary>
+    /// Why a seat cannot be kept for that friend, or null: this host has no friends, the id is not one, they are
+    /// not a friend, or the asker already has an invitation waiting (ADR 0129). Expired invitations are let go of
+    /// first, so one nobody answered a day ago does not stand in the way. Under the claim gate, as its callers are.
+    /// </summary>
+    private async Task<StudioResponse?> FriendRefusalAsync(AccountId? account, string? friendId)
+    {
+        if (Friends is not { } friends || account is not { } me)
+        {
+            return Problem(404, "Lobby.NoFriends", "Players do not keep friends at this host.");
+        }
+
+        if (!AccountId.TryParse(friendId, out var friend) || friend == me)
+        {
+            return Problem(400, "Lobby.NoSuchFriend", "Choose a friend from your list.");
+        }
+
+        if (!await friends.AreFriendsAsync(me, friend))
+        {
+            return Problem(403, FriendErrors.NotFriends.Code, FriendErrors.NotFriends.Message);
+        }
+
+        await ExpireInvitationsAsync();
+        return HasOutstandingInvitation(me)
+            ? Problem(409, "Lobby.InvitationOutstanding", "You already have an invitation waiting for an answer. Cancel it first, or wait for it.")
+            : null;
+    }
+
+    /// <summary>Whether the account holds a table with a seat still kept for a friend: one such at a time (ADR 0129).</summary>
+    private bool HasOutstandingInvitation(AccountId me) =>
+        registry.All().Any(table => !table.IsOver && Inviter(table, me) && table.Seats.Any(seat => seat.InvitedAccount is not null && !seat.Taken));
+
+    /// <summary>Whether the account holds a taken seat at the table: who may cancel, re-invite, open or close it.</summary>
+    private static bool Inviter(PlayedTable table, AccountId me) =>
+        table.Seats.Any(seat => seat.Person is not null && seat.Taken && seat.Account == me);
+
+    /// <summary>The seat at that table kept for the account, while it still is, or none.</summary>
+    private (PlayedTable Table, TableSeat Seat)? InvitedSeat(string id, AccountId me) =>
+        registry.ById(id) is { IsOver: false } table && table.Seats.FirstOrDefault(seat => seat.InvitedAccount == me && !seat.Taken) is { } seat
+            ? (table, seat)
+            : null;
+
+    /// <summary>
+    /// Invitations nobody answered in a day count as declined (ADR 0129): the seat is let go of the way a decline
+    /// lets go of it, and the inviter's card says who did not answer. Under the claim gate, as every seat change is.
+    /// </summary>
+    private async Task ExpireInvitationsAsync()
+    {
+        var now = clock.GetUtcNow();
+        foreach (var table in registry.All().Where(table => !table.IsOver))
+        {
+            foreach (var seat in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken).ToArray())
+            {
+                // Ran out, or the two are no longer friends (removing a friend cancels the invitation between them).
+                var inviter = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account;
+                var unfriended = Friends is { } friends && inviter is { } host && !await friends.AreFriendsAsync(host, seat.InvitedAccount!.Value);
+                if (now - (seat.InvitedAt ?? now) >= InvitationFor || unfriended)
+                {
+                    await LetGoAsync(table, seat, declinedBy: unfriended ? null : seat.InvitedAccount);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The seat kept for a friend is kept for nobody now: fresh keys, so a link may name it again, and the table
+    /// is its inviter's alone to decide on. Saved before it counts; nothing changed once the table is gone.
+    /// </summary>
+    private async Task<bool> LetGoAsync(PlayedTable table, TableSeat seat, AccountId? declinedBy)
+    {
+        var previous = registry.KeysOf(seat);
+        var before = seat.DeclinedBy;
+        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        {
+            return false;
+        }
+
+        seat.DeclinedBy = declinedBy;
+        try
+        {
+            await table.RecordAsync(registry.Codes);
+            table.Api.Changes.Bump();
+            return true;
+        }
+        catch
+        {
+            registry.Rekey(table, seat, previous);
+            seat.DeclinedBy = before;
+            throw;
+        }
+    }
+
+    /// <summary>The invited friend takes the seat kept for them (ADR 0129): the claim of ADR 0116, by their account instead of a key.</summary>
+    private async Task<StudioResponse> AcceptAsync(string id, SignedIn player)
+    {
+        var me = player.Account.Id;
+        await Claims.WaitAsync();
+        try
+        {
+            if (InvitedSeat(id, me) is not { } invited)
+            {
+                return Problem(404, "Lobby.NotInvited", "This invitation is no longer open: it was cancelled, it ran out, or the table is gone.");
+            }
+
+            var (table, seat) = invited;
+            if (clock.GetUtcNow() - (seat.InvitedAt ?? clock.GetUtcNow()) >= InvitationFor)
+            {
+                await LetGoAsync(table, seat, declinedBy: me);
+                return Problem(409, "Lobby.InvitationExpired", "This invitation ran out: it waited a day. Ask your friend for a new one.");
+            }
+
+            // Removing a friend cancels the invitation between the two, even on a card drawn before the removal.
+            var inviterSeat = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null);
+            if (Friends is { } friends && inviterSeat?.Account is { } host && !await friends.AreFriendsAsync(host, me))
+            {
+                await LetGoAsync(table, seat, declinedBy: null);
+                return Problem(404, "Lobby.NotInvited", "This invitation is no longer open: you are no longer friends.");
+            }
+
+            if (!await TakeAsync(table, [seat], me))
+            {
+                return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
+            }
+
+            seat.DeclinedBy = null;
+            table.Touch(clock.GetUtcNow());
+            if (inviterSeat?.Account is { } inviter)
+            {
+                await NoticeAsync(inviter, $"{player.Account.Username.Value} accepted", "Take your seat: the battle begins when you are both there.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"invite:{table.Id}");
+            }
+
+            return Json(new { table = await DescribeAsync(table), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    private async Task<StudioResponse> DeclineAsync(string id, SignedIn player)
+    {
+        var me = player.Account.Id;
+        await Claims.WaitAsync();
+        try
+        {
+            if (InvitedSeat(id, me) is not { } invited)
+            {
+                return Problem(404, "Lobby.NotInvited", "This invitation is no longer open.");
+            }
+
+            var (table, seat) = invited;
+            if (!await LetGoAsync(table, seat, declinedBy: me))
+            {
+                return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
+            }
+
+            if (table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account is { } inviter)
+            {
+                await NoticeAsync(inviter, "Invitation declined", $"{player.Account.Username.Value} declined your invitation.", "/lobby", $"invite:{table.Id}");
+            }
+
+            return Json(new { declined = true });
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>The inviter's table with a seat still kept, or the refusal: not theirs, begun, or gone.</summary>
+    private StudioResponse? InviterRefusal(string id, AccountId me, out PlayedTable table, out TableSeat seat)
+    {
+        table = null!;
+        seat = null!;
+        if (registry.ById(id) is not { IsOver: false } found)
+        {
+            return Problem(404, "Lobby.Gone", "This table is no longer available.");
+        }
+
+        if (!Inviter(found, me))
+        {
+            return Problem(403, "Lobby.NotYours", "This is not your table.");
+        }
+
+        if (found.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) is not { } waiting)
+        {
+            return Problem(409, "Lobby.NoSeatWaiting", "Every seat at this table is taken.");
+        }
+
+        table = found;
+        seat = waiting;
+        return null;
+    }
+
+    private async Task<StudioResponse> CancelAsync(string id, SignedIn player)
+    {
+        await Claims.WaitAsync();
+        try
+        {
+            if (InviterRefusal(id, player.Account.Id, out var table, out var seat) is { } refused)
+            {
+                return refused;
+            }
+
+            if (seat.InvitedAccount is null)
+            {
+                return Problem(409, "Lobby.NotInvited", "No invitation is waiting at this table.");
+            }
+
+            return await LetGoAsync(table, seat, declinedBy: null)
+                ? Json(new { cancelled = true })
+                : Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>The seat is kept for another friend (ADR 0129): after a cancel, a decline, or an expiry.</summary>
+    private async Task<StudioResponse> ReinviteAsync(string id, string body, SignedIn player)
+    {
+        var me = player.Account.Id;
+        var friendId = JsonSerializer.Deserialize<Opening>(body, Web)?.Friend;
+        await Claims.WaitAsync();
+        try
+        {
+            if (InviterRefusal(id, me, out var table, out var seat) is { } refused)
+            {
+                return refused;
+            }
+
+            if (seat.InvitedAccount is not null)
+            {
+                return Problem(409, "Lobby.InvitationOutstanding", "This seat is already kept for a friend. Cancel that invitation first.");
+            }
+
+            if (await FriendRefusalAsync(me, friendId) is { } notFriend)
+            {
+                return notFriend;
+            }
+
+            var friend = AccountId.Parse(friendId!);
+            var previous = registry.KeysOf(seat);
+            var open = table.OpenSeats;
+            var declined = seat.DeclinedBy;
+            if (!registry.Rekey(table, seat, SeatKeys.KeptFor(friend, clock.GetUtcNow())))
+            {
+                return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
+            }
+
+            seat.DeclinedBy = null;
+            table.OpenSeats = [.. open.Where(name => name != seat.Name)];
+            try
+            {
+                await table.RecordAsync(registry.Codes);
+            }
+            catch
+            {
+                registry.Rekey(table, seat, previous);
+                table.OpenSeats = open;
+                seat.DeclinedBy = declined;
+                throw;
+            }
+
+            table.Api.Changes.Bump();
+            await InviteNoticeAsync(friend, me, table);
+            return Json(new { invited = await InvitedOfAsync(table, seat) });
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>The seat kept for nobody is offered to everyone: the open place of ADR 0115.</summary>
+    private async Task<StudioResponse> OpenToEveryoneAsync(string id, SignedIn player)
+    {
+        await Claims.WaitAsync();
+        try
+        {
+            if (InviterRefusal(id, player.Account.Id, out var table, out var seat) is { } refused)
+            {
+                return refused;
+            }
+
+            var previous = registry.KeysOf(seat);
+            var open = table.OpenSeats;
+            var declined = seat.DeclinedBy;
+            if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+            {
+                return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
+            }
+
+            seat.DeclinedBy = null;
+            table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
+            try
+            {
+                await table.RecordAsync(registry.Codes);
+            }
+            catch
+            {
+                registry.Rekey(table, seat, previous);
+                table.OpenSeats = open;
+                seat.DeclinedBy = declined;
+                throw;
+            }
+
+            table.Api.Changes.Bump();
+            return Json(new { table = await DescribeAsync(table) });
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    /// <summary>
+    /// Closes a table that has not begun, for whoever holds every taken seat of it (ADR 0129): what a player does
+    /// with a table nobody came to, which until now waited twenty hours for the operator.
+    /// </summary>
+    private async Task<StudioResponse> CloseAsync(string id, SignedIn player)
+    {
+        var me = player.Account.Id;
+        await Claims.WaitAsync();
+        try
+        {
+            if (registry.ById(id) is not { } table)
+            {
+                return Problem(404, "Lobby.Gone", "This table is no longer available.");
+            }
+
+            if (table.Session.HasBegun || table.IsOver)
+            {
+                return Problem(409, "Lobby.Begun", "This table has begun: leave it instead, so another player can take your team.");
+            }
+
+            var taken = table.Seats.Where(seat => seat.Person is not null && seat.Taken).ToArray();
+            if (taken.Length == 0 || taken.Any(seat => seat.Account != me))
+            {
+                return Problem(403, "Lobby.NotYours", "Only the player holding every seat of a table can close it.");
+            }
+
+            registry.Remove(id);
+            Console.WriteLine($"  Session {id} closed by its player before it began.");
+            return new StudioResponse(204, StudioResponse.Plain, []);
+        }
+        finally
+        {
+            Claims.Release();
+        }
+    }
+
+    private async Task InviteNoticeAsync(AccountId friend, AccountId me, PlayedTable table) =>
+        await NoticeAsync(friend, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
+
+    private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag)
+    {
+        if (Notices is { } notices)
+        {
+            await notices.SendAsync(to, AccountNotices.Payload(title, body, url, tag), "invitation");
+        }
+    }
+
+    /// <summary>
+    /// What a card says of the seat nobody has taken at the inviter's table: kept for a friend (who, since when),
+    /// declined by one, or kept for nobody after a cancel, an unfriending or an expiry, which still needs a way
+    /// out. Null for an open place and for a seat somebody holds.
+    /// </summary>
+    private async Task<object?> InvitedOfAsync(PlayedTable table, TableSeat seat)
+    {
+        if (seat.InvitedAccount is { } friend)
+        {
+            return new { id = friend.Value, username = await NameAsync(friend), sentAt = seat.InvitedAt, declined = false, free = false };
+        }
+
+        if (seat.DeclinedBy is { } decliner)
+        {
+            return new { id = decliner.Value, username = await NameAsync(decliner), sentAt = (DateTimeOffset?)null, declined = true, free = false };
+        }
+
+        if (seat.Person is not null && !seat.Taken && !table.OpenSeats.Contains(seat.Name) && !table.Session.HasBegun)
+        {
+            return new { id = (string?)null, username = (string?)null, sentAt = (DateTimeOffset?)null, declined = false, free = true };
+        }
+
+        return null;
+    }
+
+    private async Task<string> NameAsync(AccountId account) =>
+        Accounts is { } accounts && await accounts.AccountAsync(account) is { } found ? found.Username.Value : "A player";
 
     private async Task<StudioResponse> JoinAsync(string id, AccountId? account)
     {
@@ -423,7 +851,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// outstanding, a seat's own token (a link from before invitations, or a browser that keeps no storage), or
     /// nothing any more. Asking spends nothing, so a page can show what accepting would do and wait for a tap.
     /// </summary>
-    private async Task<StudioResponse> InvitationsAsync(string body)
+    private async Task<StudioResponse> InvitationsAsync(string body, AccountId? account)
     {
         var tokens = JsonSerializer.Deserialize<ResumeRequest>(body, Web)?.Tokens;
         if (tokens is null || tokens.Count is 0 or > 2)
@@ -433,7 +861,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         var invitations = await Task.WhenAll(tokens.Distinct(StringComparer.Ordinal).Select(async token =>
         {
-            if (registry.ByInvitation(token) is { Table.IsOver: false } offered)
+            // A seat kept for a friend answers that friend alone (ADR 0129); to anybody else its key is spent.
+            if (registry.ByInvitation(token) is { Table.IsOver: false } offered && (offered.Seat.InvitedAccount is null || offered.Seat.InvitedAccount == account))
             {
                 return new { token, kind = "invitation", seat = (string?)offered.Seat.Name, table = (object?)await DescribeAsync(offered.Table) };
             }
@@ -473,6 +902,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             var table = found[0]!.Value.Table;
             var seats = found.Select(one => one!.Value.Seat).ToArray();
+            if (seats.Any(seat => seat.InvitedAccount is { } friend && friend != account))
+            {
+                return Problem(409, "Lobby.KeptForFriend", "This seat is kept for a friend of the player who opened the table.");
+            }
+
             if (!await TakeAsync(table, seats, account))
             {
                 return Problem(409, "This table is no longer available: it was closed.");
@@ -507,6 +941,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             Undo();
             return false;
+        }
+
+        foreach (var seat in seats)
+        {
+            seat.DeclinedBy = null;
         }
 
         var open = table.OpenSeats;
@@ -609,6 +1048,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return new SeatSummary(seat.Name, "open", "Open seat", turn);
         }
 
+        // Kept for a friend (ADR 0129): the card names who is expected, as it names who sits.
+        if (!table.IsOver && !seat.Taken && seat.InvitedAccount is { } invited)
+        {
+            return new SeatSummary(seat.Name, "invited", await NameAsync(invited), turn);
+        }
+
         var name = seat.Account is { } id && Accounts is { } accounts ? (await accounts.AccountAsync(id))?.Username.Value : null;
         return new SeatSummary(seat.Name, "person", name ?? "Player", turn);
     }
@@ -642,7 +1087,18 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         if (account is null)
         {
-            return Json(new { tables = Array.Empty<object>() });
+            return Json(new { tables = Array.Empty<object>(), invitations = Array.Empty<object>() });
+        }
+
+        // Under the gate, as every seat change is: an invitation that ran out is let go of as this list is read.
+        await Claims.WaitAsync();
+        try
+        {
+            await ExpireInvitationsAsync();
+        }
+        finally
+        {
+            Claims.Release();
         }
 
         var tables = await Task.WhenAll(registry.All()
@@ -651,8 +1107,24 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 table = await DescribeAsync(table),
                 seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
+                invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
             }));
-        return Json(new { tables });
+
+        // The tables waiting for this account (ADR 0129): each with who asked, and since when.
+        var invitations = await Task.WhenAll(registry.All()
+            .Where(table => !table.IsOver && table.Seats.Any(seat => seat.InvitedAccount == account && !seat.Taken))
+            .Select(async table =>
+            {
+                var seat = table.Seats.First(seat => seat.InvitedAccount == account);
+                var from = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account;
+                return (object)new
+                {
+                    table = await DescribeAsync(table),
+                    from = from is { } inviter ? new { id = inviter.Value, username = await NameAsync(inviter) } : null,
+                    sentAt = seat.InvitedAt,
+                };
+            }));
+        return Json(new { tables, invitations });
     }
 
     /// <summary>
@@ -721,7 +1193,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     private static StudioResponse Problem(int status, string message) => Json(new { message }, status);
 
-    private sealed record Opening(string? Opponent, string? Format);
+    private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
+
+    private sealed record Opening(string? Opponent, string? Format, string? Friend);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
     private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn);

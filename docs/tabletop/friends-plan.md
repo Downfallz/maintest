@@ -3,7 +3,7 @@
 Status: plan, settled with the owner on 2026-11-04 (every recommendation under "Questions the owner settled"
 taken, and every notice of stage 4 wanted) and recorded by [ADR 0129](../adr/0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md).
 Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat invitations of ADR 0116 and the push notices
-of ADR 0118. Stages 1 and 2 are built.
+of ADR 0118. Stages 1 to 3 are built.
 
 ## What the owner asked for
 
@@ -184,14 +184,16 @@ Each stage is one pull request: built, tested, formatted, the node tests when a 
    Tested: a request made twice is one; asking back accepts; declining, withdrawing and removing are silent and leave
    neither side a link; a hundred and first is refused; one side written and the other missing is put right by the
    next change between the two; a deleted account leaves no request and no friendship behind, on either side.
-3. **Invite a friend.** `InvitedAccount` and `DeclinedBy` on the seat and in `table.json`, the invitation routes,
-   the one-at-a-time rule, expiry, the three ways out, closing an unbegun table, the cards, the three invitation
-   notices. Tests: an invited seat never appears in `/api/lobby`'s tables nor opens to a join; only the invited
-   account accepts, once, and the second device to ask is refused; a second invitation while one is pending is
-   `409`; cancel, decline and expiry each leave the inviter's table with no invited account; a restart rebuilds
-   a waiting invitation; removing the friend cancels it; the inviter is told once at acceptance; the
-   `/api/seat/*` route still answers the invited seat nothing before it is taken (the hidden-information
-   boundary of `playtest-app.md` §4 is asserted on the serialised bytes).
+3. **Invite a friend.** *Built*: `InvitedAccount`, `InvitedAt` and `DeclinedBy` on the seat, in its keys and in
+   `table.json` (a seat kept for a friend has no code and no link: `TableSeat.Key` is null); `opponent: "friend"`
+   on `POST /api/lobby/tables`, the invitation routes, the one-at-a-time rule, the 24-hour expiry and the
+   unfriending both read as the lists are, the three ways out, closing an unbegun table, the *Invitations* cards
+   and the inviter's card, *Invite* on the Friends panel and *A friend* in the create dialog, the waiting room
+   saying it waits for a friend, and the three invitation notices. Tested: an invited seat is listed as *invited*
+   and never as open, a join and a claim by its key are refused and `/api/seat/*` answers its key nothing; only the
+   invited account accepts, once, and the inviter is told; a second invitation while one waits is `409`; cancel,
+   decline and expiry each leave the inviter's table with no seat kept and the card saying who declined; removing
+   the friend cancels it; a restart rebuilds a waiting invitation; a begun table is not closed from the lobby.
 4. **What else would be missed.** *Left the table* and the end-of-match notices to each seat's account,
    *Rematch* on the outcome, and the account deletion cleaning up everything stage 2 and 3 added. Tests: a
    shared-device table sends nothing to its one account about itself (ADR 0120); a bot's seat is told nothing;

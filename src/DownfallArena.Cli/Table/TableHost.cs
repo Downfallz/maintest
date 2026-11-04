@@ -94,6 +94,7 @@ internal static class TableHost
             : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
         var accounts = opened?.Api;
         FriendsApi? friends = null;
+        Friends? friendships = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -102,11 +103,14 @@ internal static class TableHost
             accounts.Devices = devices;
             accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
-            var friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
+            friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, accounts.Notices);
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
         }
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
+        // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
+        admin.Lobby.Friends = friendships;
+        admin.Lobby.Notices = accounts?.Notices;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null

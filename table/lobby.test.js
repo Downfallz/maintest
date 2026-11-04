@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, lobbyRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, invitationLine, invitedState, lobbyRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -79,4 +79,16 @@ test("a card says whose turn it is at an unfinished table, and when it is this b
   assert.equal(turnOf({ seats: seats(true, true) }).text, 'Both players to play');
   assert.equal(turnOf({ seats: [{ seat: 'player1', kind: 'open', name: 'Open seat', turn: true }, { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false }] }).text, 'Waiting for a player to take the open seat');
   for (const table of [{ seats: seats(false, false) }, { over: true, seats: seats(true, false) }, { waiting: true, seats: seats(true, false) }, {}]) assert.equal(turnOf(table, ['player1']), null);
+});
+
+test('an inviter\'s card says who it waits for, or who declined and the ways out', () => {
+  assert.equal(invitedState(null), null);
+  assert.deepEqual(invitedState({ username: 'bastien', declined: false }), { tag: 'Waiting for bastien…', waiting: true, actions: ['cancel'] });
+  assert.deepEqual(invitedState({ username: 'bastien', declined: true }), { tag: 'bastien declined', waiting: false, actions: ['reinvite', 'open', 'close'] });
+  assert.deepEqual(invitedState({ free: true, declined: false }), { tag: 'Seat kept for nobody', waiting: false, actions: ['reinvite', 'open', 'close'] }, 'after a cancel the ways out stay');
+});
+
+test('an invitation card says who asks and to what', () => {
+  assert.equal(invitationLine({ from: { username: 'MarkF' }, table: { format: '2v2' } }), 'MarkF invites you to a 2v2 battle');
+  assert.equal(invitationLine({ table: { format: '2v2' } }), 'A player invites you to a 2v2 battle');
 });
