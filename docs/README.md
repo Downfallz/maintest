@@ -10,6 +10,7 @@
 | [learning/training.md](learning/training.md) | The Python side: weight search, behaviour cloning, value regression, the policy file format, the loop. |
 | [learning/explained.md](learning/explained.md) | The learning loop in plain words, for a newcomer: what the pieces are for and how to read a report. |
 | [learning/journal.md](learning/journal.md) | One entry per change that moves a number: content, engine, agents, benchmark digest. |
+| [art/creature-art-direction.md](art/creature-art-direction.md) | Approved creature concepts, spell staging, mutation cues, and the ART-2–6 asset plan. |
 | [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |

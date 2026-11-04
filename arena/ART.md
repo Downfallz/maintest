@@ -1,5 +1,7 @@
 # Prototype art
 
+**Historical prototype only:** the current [creature art direction bible](../docs/art/creature-art-direction.md) supersedes the winged predator and robed wraith concepts below. Keep these asset briefs as provenance, not current approval.
+
 Generated on 2026-11-03 with the built-in ImageGen tool for this isolated visual proof of concept.
 The assets are provisional direction studies, not final catalogue creature identities or commissioned art.
 Original PNGs were converted to WebP (quality 90, alpha quality 100); no other raster editing was applied.
