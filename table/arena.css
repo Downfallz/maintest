@@ -122,3 +122,43 @@
   .replay-buttons { align-content: center; margin-top: 0; }
 }
 #planning-close { float: right; margin-left: 8px; }
+
+/* The journal is a reference drawer, independent of the scene's animation queue. */
+#history-open { width: 190px; min-width: 74px; display: grid; align-content: center; gap: 2px; text-align: left; font-size: 12px; }
+#history-preview { display: block; font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.history-reference { float: right; font-size: 12px; margin: 0 8px 6px; }
+#history-dialog { width: min(560px,calc(100vw - 24px)); height: min(760px,calc(100dvh - 32px)); max-height: calc(100dvh - 32px); padding: 0; margin: auto 16px auto auto; overflow: hidden; border: 1px solid #75867a; background: #101e24; color: #ece9dc; }
+#history-dialog[open] { display: flex; flex-direction: column; }
+.history-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px; border-bottom: 1px solid #52695e; flex: none; }
+#history-title { font: 28px Georgia,serif; margin: 0; }
+#history-range { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+#history-list { overflow: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 12px; scroll-padding: 8px; }
+.history-entry { border: 1px solid #42594f; border-left: 3px solid #8dab9d; background: #192b30; margin-bottom: 9px; border-radius: 5px; overflow-wrap: anywhere; }
+.history-entry summary { min-height: 44px; padding: 12px; cursor: pointer; font-size: 14px; }
+.history-entry summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
+.history-entry summary strong { display: block; line-height: 1.5; margin-top: 4px; }
+.history-meta { color: #b7c9be; font-size: 11px; }
+.history-status { display: inline-block; font-size: 11px; color: var(--gold); margin-top: 6px; border: 1px solid #8d7958; border-radius: 3px; padding: 2px 6px; }
+.history-effects { margin: 0; padding: 0 16px 12px 30px; font-size: 13px; line-height: 1.6; }
+.history-effects li { padding: 3px 0; }
+.history-effects [data-tone="harm"] { color: #ffb9a8; }
+.history-effects [data-tone="recovery"] { color: #ace0bf; }
+.history-effects [data-tone="energy"] { color: #a9d4f4; }
+.history-effects [data-tone="condition"] { color: #d9bdf2; }
+#history-empty { padding: 12px 18px; font-size: 14px; }
+.history-footer { flex: none; height: auto; display: block; padding: 10px 18px; border-top: 1px solid #52695e; text-transform: none; letter-spacing: 0; }
+.history-footer p { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+#history-new { font-size: 12px; margin-bottom: 8px; }
+@media (max-width: 619px) {
+  #history-open { width: 82px; font-size: 12px; }
+  #arena .brand div { display: none; }
+  #arena .brand > span { display: block; font-size: 25px; }
+  #arena .hud-top { gap: 6px; }
+  #history-dialog { margin: auto auto 12px; height: min(700px,calc(100dvh - 24px)); }
+  .history-header { padding: 12px; }
+}
+@media (max-height: 520px) and (min-width: 620px) {
+  #history-dialog { width: min(540px,65vw); }
+  .history-header { padding: 8px 12px; }
+  #history-title { font-size: 22px; }
+}

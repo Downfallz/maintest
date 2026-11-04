@@ -48,6 +48,7 @@ seat discovery, explicit viewpoints, read-only transport, arrival behavior and r
 - `src/live.ts`: live DOM adapter and lifecycle; no lab imports.
 - `table/arena-live.js`: snapshot adapter and fenced polling/SSE connection.
 - `table/arena-playback.js`: bounded confirmed-action queue; pure historical frames, motifs and cancellation.
+- `table/arena-history.js`: public recent-event journal, independent of playback; `src/history.ts` renders its accessible drawer.
 - `table/arena-seats.js`: read-only capability discovery and return links.
 - `table/arena-layout.js`: shared geometry for 1v1, 2v2 and 3v3.
 
@@ -68,7 +69,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -97,3 +98,29 @@ finished recording using the same operator authorization as `/play?replay=...`.
 `node node_modules/playwright/cli.js test --config table.config.js arena.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
 simultaneous choices and concession against the real .NET engine.
+
+## AU1: recent match history
+
+The **History** button previews the latest public event and opens a chronological journal of the current
+and previous round (up to 200 events). Expand an attack to read its caster, spell, targets, critical/fizzle,
+applied effects, dropped targets and recorded before/after values. Upkeep ticks, public mutation reveals,
+phase changes, skipped turns and aftermath share the same list. Unknown event payloads and unrevealed
+choices are never rendered; a generic notice identifies unsupported event types. Missing action frames
+are labelled rather than inferred from the current board.
+
+History is available from the header, planning/combat choices and action result. Opening it settles
+playback without sending a decision or acknowledging a question. Command drafts and focus return on close;
+expanded entries and reading position survive polling. New events follow the bottom only when the reader
+is already there; otherwise **Latest** announces their count. First loads populate history without replaying
+animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
+
+This implements AU1 of the [UX parity plan (PR #438)](https://github.com/Downfallz/maintest/pull/438).
+The ordinary round energy receipt and phase guidance belong to AU2–AU3; older-round loading, filtering and
+links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
+rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
+read-only access, deduplication, scroll retention and clearing on access loss. The real-host complete-match
+journeys compare journal action identities against actual seat responses in both declaration modes.
+
+AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional artwork):
+[desktop history](../docs/tabletop/images/arena-history/desktop.jpg) ·
+[phone history](../docs/tabletop/images/arena-history/phone.jpg).
