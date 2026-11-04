@@ -61,5 +61,6 @@ Pure tests cover host offers, tempo values, group ordering, duplicate confirmati
 seat changes, hidden/offline states, refusals, history boundaries, missing frames and concession fencing.
 The browser suites cover planning, tie selection, concession, round review, recorded perspectives and short
 portrait/landscape bounds. `arena.loop.js` completes 3v3 games in both declarations through visible arena
-controls, reaches a configured round cap, reads the real recorded session, and checks simultaneous private
+controls: at-activation uses the normal twelve-round rules and verifies later mutations and eliminations;
+hidden-intent exercises a short round cap. Both read the real recorded session. The suite also checks simultaneous private
 choices on two independent browser contexts. Existing A4–A6 browser suites remain required.

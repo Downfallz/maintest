@@ -22,7 +22,7 @@ async function answer(page, view, capture) {
         await page.locator('#planning-creatures button').filter({ hasText: new RegExp(` · ${offer.creature}$`) }).click();
         const tier = offer.availableTiers[0];
         // Each branch is an actual details element; open ancestors through their visible summaries.
-        const node = page.locator(`[data-mutation="${tier}"]`);
+        const node = page.locator(`[data-mutation="${tier}"]`).first();
         const ancestors = node.locator('xpath=ancestor::details');
         for (let index = 0; index < await ancestors.count(); index++) {
           const ancestor = ancestors.nth(index);
@@ -42,16 +42,16 @@ async function answer(page, view, capture) {
   }
   if (kind !== 'Intent') {
     const legal = (kind === 'Target' ? view.options.target : view.options.action.spells.find(one => one.spell === spell)).legalTargets;
-    for (const id of legal.candidates.slice(0, legal.minTargets)) await page.locator(`[data-creature="${id}"]`).click();
+    for (const id of legal.candidates.length < legal.minTargets ? [] : legal.candidates.slice(0, legal.minTargets)) await page.locator(`[data-creature="${id}"]`).click();
   }
   const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
   await page.locator(kind === 'Intent' ? '#combat-declare' : '#combat-confirm').click(); expect((await response).status()).toBe(204);
 }
 
-for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: a full 3v3 arena match reaches the cap and replays its recorded session`, async ({ page, context }, info) => {
-  test.setTimeout(180000);
+for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: a complete 3v3 arena match and its recorded session`, async ({ page, context }, info) => {
+  test.setTimeout(240000);
   const directory = await mkdtemp(pathJoin(tmpdir(), 'arena-loop-'));
-  const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: 2, combatDeclaration: declaration }));
+  const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: declaration === 'at-activation' ? 12 : 2, combatDeclaration: declaration }));
   const hostInfo = await startHost(declaration, ['--rules', rules, '--record', pathJoin(directory, 'sessions')]);
   const errors = [], writes = [], shown = []; let latest;
   page.on('pageerror', error => errors.push(error.message));
@@ -61,7 +61,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
     await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
     let captured = false;
-    for (let step = 0; step < 100; step++) {
+    for (let step = 0; step < 200; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       if (latest.over) break;
       const view = structuredClone(latest), asked = view.waitingAsked;
@@ -70,10 +70,16 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       } : null);
       await expect.poll(() => latest?.waitingAsked, { timeout: 10000 }).not.toBe(asked);
     }
-    expect(latest.over).toBe(true); expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2);
+    expect(latest.over).toBe(true);
+    if (declaration === 'hidden-intent') { expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2); }
+    else {
+      expect(latest.board.roundNumber).toBeGreaterThan(2);
+      expect([...latest.board.allies, ...latest.board.enemies].some(one => !one.isAlive)).toBe(true);
+      expect(writes.filter(one => one.command.kind === 'Evolution' && one.command.tier).length).toBeGreaterThan(2);
+    }
     if (await page.locator('#playback-skip').isVisible()) await page.locator('#playback-skip').click();
     await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
-    await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText('round cap'); await page.locator('#match-replay').click();
+    await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing'); await page.locator('#match-replay').click();
     await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
     await fitsBattlefield(page); await fitsViewport(page, '.creature, #replay-next, #replay-previous, #replay-close');
     await page.screenshot({ path: info.outputPath('replay.jpg'), type: 'jpeg', quality: 85 });
