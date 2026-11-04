@@ -25,8 +25,10 @@ browser's text-only zoom or assistive technology.
 | Resource | Measured bytes at implementation | Enforced limit |
 | --- | ---: | ---: |
 | Both initial WebP images | 802,728 | 2,097,152 |
-| Live JavaScript | 1,451,913 | 1,638,400 |
-| Live JavaScript, gzip estimate | 395,280 | 524,288 |
+| Live JavaScript | 1,451,907 | 1,638,400 |
+| Live JavaScript, gzip estimate | 395,277 | 524,288 |
+
+The backdrop is 1672×941 and the sheet 2172×724 pixels: roughly 12 MiB total at four bytes per pixel before GPU copies and other surfaces. The download budget does not bound GPU memory.
 
 Rerun the build for the exact final bundle size. No remote fonts or audio downloads are needed.
 
@@ -45,6 +47,29 @@ scene and explicit sound opt-in. The table retains account/invitation recovery, 
 its richer reference surfaces. Choosing Arena does not transfer a seat, accept an invitation, acknowledge
 a question or submit a decision; those actions keep their existing explicit boundaries.
 
+## Local automated evidence
+
+On 2026-11-04, the six arena browser suites passed 225 cases with six pre-existing duplicate-viewport
+skips. All 836 JavaScript tests and 11 direct host route tests passed; the .NET solution built with zero
+warnings/errors. The standard local .NET test/format launchers hit a named-pipe permission restriction;
+CI runs the normal commands. Changed C# whitespace was checked separately.
+
+The release suite additionally passed all 16 desktop Chromium/Android-profile cases locally, including
+both complete-match declarations, recorded sessions and simultaneous seats. WebKit runs in CI; its native
+libraries were unavailable in the local container. These remain emulated browsers, not physical phones.
+
+Headless Chromium 153 in this container, with two test workers and an idle loaded board:
+
+| CSS viewport | Sample median frame interval | Sample 95th percentile |
+| --- | ---: | ---: |
+| 320×740 | 16.7 ms | 33.3 ms |
+| 390×844 | 16.7 ms | 33.4 ms |
+| 1440×1000 | 49.9 ms | 50.1 ms |
+
+The desktop sample shows why these measurements cannot certify device performance. It is a loaded
+headless environment; the separate single-worker desktop sample measured 33.3/50.1 ms. Reproduce the
+release suite on target hardware and retain its JSON before changing the default. No FPS guarantee is made.
+
 ## Physical-device release gate — still pending
 
 | Environment | Required exercise | Evidence needed |
@@ -59,3 +84,8 @@ controls visible and tappable; hiding overflow alone is not acceptance. If a can
 in the lobby and use the retained Table link; no deployment or data migration is needed.
 
 Do not promote the arena to the default until these physical-device checks and final art review are recorded.
+
+## Captures from the real host
+
+[Desktop presentation settings](images/arena-release/desktop-settings.jpg) ·
+[Android-profile settings](images/arena-release/phone-settings.jpg)
