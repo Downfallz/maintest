@@ -71,6 +71,15 @@ internal sealed class TableComposer
     public IMatchResults? Results { get; init; }
 
     /// <summary>
+    /// What tells each seat's account how the match ended (ADR 0129, stage 4), when the host has push keys and
+    /// accounts; set once the accounts are open, which is after the composer exists.
+    /// </summary>
+    public AccountNotices? Notices { get; set; }
+
+    /// <summary>The name an account chose, for the notice that names the opponent; "A player" for one that is gone.</summary>
+    public Func<AccountId, Task<string?>>? NameOf { get; set; }
+
+    /// <summary>
     /// The basis this host replays recorded tables on (ADR 0091), or none when it cannot name one: a record its
     /// replay refuses is marked with it, and one already marked with it is not replayed again.
     /// </summary>
@@ -388,6 +397,10 @@ internal sealed class TableComposer
 
             await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+
+            // Told after the files are written, and on its own: a device store or an account that cannot be read is
+            // a notice that did not arrive, never a recording left unfinished.
+            await NotifyFinishedAsync(table, session.Outcome.Result.Value, owners);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
@@ -400,6 +413,71 @@ internal sealed class TableComposer
             // Finished, written or not: what is not marked here is a table that is never swept.
             table.MarkClosed();
         }
+    }
+
+    /// <summary>
+    /// How the match ended, to each seat's account (ADR 0129, stage 4): a victory, a defeat or a draw against the
+    /// other side, named as a card names it. A bot's seat is told nothing; one account holding both seats (a shared
+    /// device) is told once, in the room's words, since neither "you won" nor "you lost" would be true of it. The
+    /// worker keeps the notice from a page already in front of somebody.
+    /// </summary>
+    private async Task NotifyFinishedAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners)
+    {
+        if (Notices is not { } notices)
+        {
+            return;
+        }
+
+        try
+        {
+            await NotifyEachAsync(table, outcome, owners, notices);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or Azure.RequestFailedException or HttpRequestException)
+        {
+            Console.WriteLine($"  Session {table.Id}: the players could not be told how the match ended: {failure.Message}");
+        }
+    }
+
+    private async Task NotifyEachAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners, AccountNotices notices)
+    {
+        var url = $"/play?table={Uri.EscapeDataString(table.Id)}";
+        var tag = $"match:{table.Id}";
+        var held = owners.Where(owner => owner is not null).Select(owner => owner!.Value).Distinct().ToArray();
+        if (held.Length == 1 && owners.All(owner => owner == held[0]))
+        {
+            var who = outcome.Winner is { } slot ? $"{(slot == PlayerSlot.Player1 ? "Player 1" : "Player 2")} wins." : "a draw.";
+            await notices.SendAsync(held[0], AccountNotices.Payload("Match over", $"The match is over: {who}", url, tag), "match");
+            return;
+        }
+
+        for (var index = 0; index < table.Seats.Count; index++)
+        {
+            if (owners[index] is not { } account)
+            {
+                continue;
+            }
+
+            var seat = table.Seats[index];
+            var otherIndex = index == 0 ? 1 : 0;
+            var opponent = await OpponentNameAsync(table, table.Seats[otherIndex], owners[otherIndex]);
+            var (title, body) = outcome.Winner is null
+                ? ("A draw", $"A draw against {opponent}.")
+                : outcome.Winner == seat.Slot
+                    ? ("Victory", $"You won against {opponent}.")
+                    : ("Defeat", $"{opponent} won.");
+            await notices.SendAsync(account, AccountNotices.Payload(title, body, url, tag), "match");
+        }
+    }
+
+    private async Task<string> OpponentNameAsync(PlayedTable table, TableSeat seat, AccountId? owner)
+    {
+        if (seat.Person is null)
+        {
+            var spec = table.Session.Seat(seat.Slot).Seated.Name;
+            return LobbyApi.BotName(Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec);
+        }
+
+        return owner is { } account && NameOf is { } nameOf && await nameOf(account) is { } name ? name : "the other player";
     }
 
     /// <summary>
@@ -529,7 +607,18 @@ internal sealed class TableComposer
         var taken = recorded is null ? false : recorded.Taken ?? false;
         var invitation = recorded is null ? Token() : recorded.Invitation;
         var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
-        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken, Push = recorded?.Push, Account = account });
+        var invited = !taken && AccountId.TryParse(recorded?.InvitedAccount, out var friend) ? friend : (AccountId?)null;
+        var declinedBy = AccountId.TryParse(recorded?.DeclinedBy, out var decliner) ? decliner : (AccountId?)null;
+        return (seat, new TableSeat(slot, token ?? Token(), human)
+        {
+            Invitation = taken ? null : invitation,
+            Taken = taken,
+            Push = recorded?.Push,
+            Account = account,
+            InvitedAccount = invited,
+            InvitedAt = invited is null ? null : recorded?.InvitedAt,
+            DeclinedBy = declinedBy,
+        });
     }
 
     /// <summary>

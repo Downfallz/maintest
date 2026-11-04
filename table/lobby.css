@@ -37,6 +37,10 @@
 .versus .vs { font: italic 14px Georgia, serif; color: var(--muted); }
 .bot-tag { font-size: 9px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
 .game-card button { width: 100%; text-align: center; margin-top: auto; }
+.game-card .status-tag.invited { color: var(--gold); border-color: var(--gold); }
+.game-card.invitation { border-top: 2px solid var(--gold); }
+.card-ways { display: flex; flex-direction: column; gap: 8px; } .card-ways button { margin-top: 0; }
+.card-ways .danger { color: var(--enemy); }
 .game-card a { color: var(--gold); }
 .lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; padding: 0; border: 0; min-width: 0; }
 .lobby-filters > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -75,6 +79,16 @@
 .lobby-page button.danger { color: var(--refused); border-color: #8a4b45; }
 .lobby-page button.danger:hover:not(:disabled) { border-color: var(--refused); }
 .privacy-panel p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
+.friends-panel .code-row input { text-transform: none; letter-spacing: 0; }
+.friend-subheading { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin: 14px 0 6px; }
+.friend-list { list-style: none; padding: 0; margin: 0 0 14px; }
+.friend-list .empty-state { padding: 14px; font-size: 13px; }
+.friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.friend-name { font-weight: 600; }
+.friend-actions { display: flex; gap: 6px; } .friend-actions button { min-height: 36px; padding: 0 12px; font-size: 13px; }
+.friends-panel p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
+.device-panel p:not(.eyebrow), .device-panel output { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; display: block; }
+.device-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; } .device-actions button { flex: 1; min-height: 44px; }
 .name-title { font: 400 28px Georgia, serif; margin: 8px 0 10px; }
 .name-check { margin: 10px 0 0; font-size: 13px; }
 .name-check.good { color: var(--ally); }

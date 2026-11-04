@@ -639,7 +639,7 @@ public sealed class LobbyApiTests : IDisposable
         /// <summary>Run while the send is in flight: what a browser or the next player does to the seat meanwhile.</summary>
         public Action? Replace { get; set; }
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
+        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             if (Failure is { } failure)
             {
@@ -689,7 +689,7 @@ public sealed class LobbyApiTests : IDisposable
 
     private sealed class NothingSent : IPushSender
     {
-        public Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 
     private async Task<JsonElement> Open() => Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", "{}"));

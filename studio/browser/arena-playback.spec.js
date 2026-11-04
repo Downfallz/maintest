@@ -2,7 +2,9 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/arena-playback.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: health > 0, isStunned: false, isStunImmune: false, knownSpells: ['strike'], conditions: [] });
 const before = [1, 2, 3, 4, 5, 6].map(id => creature(id));
@@ -109,7 +111,7 @@ test('the dock\'s instruction is back once the last action has settled', async (
   await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
-  await expect(page.locator('#instruction')).toContainText('Choose a spell, then targets');
+  await expect(page.locator('#instruction')).toContainText('choose a spell, then targets');
 });
 test('reduced motion shows applied results immediately and resize cancels playback safely', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); const h = await mount(page); await h.publish([entry(10)]);

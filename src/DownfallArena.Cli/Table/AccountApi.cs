@@ -20,6 +20,8 @@ internal sealed class AccountApi
 
     private const string NamesPrefix = Prefix + "/names/";
 
+    private const string PushRoute = Prefix + "/push";
+
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     /// <summary>
@@ -66,6 +68,18 @@ internal sealed class AccountApi
 
     /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
     public string? GoogleClientId { get; }
+
+    /// <summary>
+    /// The devices an account can be told on (friends plan, stage 1), set by the host that keeps them; none on a
+    /// host without a store. Forgotten with "sign out everywhere" and with the account.
+    /// </summary>
+    public AccountDevices? Devices { get; set; }
+
+    /// <summary>What sends a notice to those devices; none when the host has no push keys, and then no device is registered either.</summary>
+    public AccountNotices? Notices { get; set; }
+
+    /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
+    public Func<AccountId, Task>? ForgetFriends { get; set; }
 
     /// <summary>How <c>/api/me</c> names the mode to a page.</summary>
     public static string Named(AccountsMode mode) => mode switch
@@ -131,6 +145,9 @@ internal sealed class AccountApi
                 ("POST", Prefix + "/dev") => await DevelopmentAsync(body, request),
                 ("POST", Prefix + "/signout") => await SignOutAsync(body, request),
                 ("DELETE", Prefix) => await DeleteAsync(body, request),
+                ("PUT", PushRoute) => await RegisterDeviceAsync(body, request),
+                ("DELETE", PushRoute) => await ForgetDeviceAsync(body, request),
+                ("POST", PushRoute + "/test") => await TestDeviceAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
             };
@@ -213,6 +230,12 @@ internal sealed class AccountApi
             {
                 _cache[raised.Id] = (raised, _sessions.Clock.GetUtcNow());
             }
+
+            // Every device too: a phone that signed out everywhere was lost or lent, and must be told nothing more.
+            if (Devices is { } devices)
+            {
+                await devices.ForgetAsync(who.Account.Id);
+            }
         }
 
         return Answer(new { signedOut = true }, AccountSessions.ClearCookie(request.Secure));
@@ -239,9 +262,93 @@ internal sealed class AccountApi
             await release(who.Account.Id);
         }
 
+        // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the
+        // friendship lock; what the account was still on is cleaned up after, under that same lock.
         await _registry.DeleteAsync(who.Account.Id);
         _cache.TryRemove(who.Account.Id, out _);
+        if (Devices is { } devices)
+        {
+            await devices.ForgetAsync(who.Account.Id);
+        }
+
+        if (ForgetFriends is { } forget)
+        {
+            await forget(who.Account.Id);
+        }
+
         return Answer(new { deleted = true }, AccountSessions.ClearCookie(request.Secure));
+    }
+
+    /// <summary>
+    /// This browser is one of the signed-in account's devices from now on (friends plan, stage 1), as the browser's
+    /// <c>PushSubscription.toJSON()</c> gives it. <c>410</c> for a subscription a push service already said was gone:
+    /// the browser still holds it and sends it on every load, and that answer is how the page learns to make a new one.
+    /// </summary>
+    private async Task<StudioResponse> RegisterDeviceAsync(string body, AccountRequest request)
+    {
+        if (Notices is not { } notices || Devices is not { } devices)
+        {
+            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+        }
+
+        var sent = Read<BrowserSubscription>(body);
+        var subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
+        if (subscription is null)
+        {
+            return Problem(400, "Account.BadSubscription", "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
+        }
+
+        if (notices.IsDead(subscription.Endpoint))
+        {
+            return Problem(410, "Account.DeviceGone", "This subscription is gone from its push service. Subscribe again.");
+        }
+
+        var held = await devices.AddAsync(who.Account.Id, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
+        return Answer(new { notices = true, devices = held.Count }, who.Renewed);
+    }
+
+    /// <summary>This browser is told nothing more; the account's other devices are left as they are.</summary>
+    private async Task<StudioResponse> ForgetDeviceAsync(string body, AccountRequest request)
+    {
+        if (Devices is not { } devices)
+        {
+            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        if (Read<BrowserSubscription>(body)?.Endpoint is not { Length: > 0 } endpoint)
+        {
+            return Problem(400, "Account.BadSubscription", "Say which device, by its endpoint.");
+        }
+
+        await devices.RemoveAsync(who.Account.Id, endpoint);
+        return Answer(new { notices = false }, who.Renewed);
+    }
+
+    /// <summary>A notice to this device now, and what came of it: how a player sees that the browser can be reached.</summary>
+    private async Task<StudioResponse> TestDeviceAsync(string body, AccountRequest request)
+    {
+        if (Notices is not { } notices)
+        {
+            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
+        return StudioResponse.OfJson(new { sent = test.Sent, message = test.Message }, Web, test.Sent ? 200 : 502);
     }
 
     private async Task<StudioResponse> NameAsync(string candidate)
@@ -274,4 +381,8 @@ internal sealed class AccountApi
     private sealed record RegisterBody(string? Ticket, string? Username);
 
     private sealed record SignOutBody(bool? Everywhere);
+
+    private sealed record BrowserSubscription(string? Endpoint, BrowserKeys? Keys);
+
+    private sealed record BrowserKeys(string? P256dh, string? Auth);
 }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -107,6 +108,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const errors = [], writes = [], shown = [], actions = new Map(); let latest;
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
+    if (!new URL(page.url()).pathname.startsWith('/arena')) return; // Invitation acceptance lives on /play.
     const url = new URL(request.url());
     if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
     if (url.pathname.endsWith('/decision')) writes.push({ command: request.postDataJSON(), seen: [...shown] });
@@ -120,11 +122,24 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   });
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
+    await expect(page.locator('#help-dialog')).toBeVisible();
+    await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
+    await expect(page.locator('#help-objective')).toContainText('team picks');
+    await expect(page.locator('#help-flow li').nth(2)).toContainText(declaration === 'hidden-intent' ? 'declare hidden spells' : 'when your creature acts');
+    expect(shown).toEqual([]); expect(writes).toEqual([]);
+    await page.screenshot({ path: info.outputPath('guidance-real-host.jpg'), type: 'jpeg', quality: 85 });
+    await page.locator('#help-close').click();
+    const taught = new Set(['Evolution']);
     await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
     let captured = false;
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
+      if (!taught.has(view.waitingFor)) {
+        await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });
+        await expect(page.locator('#help-objective')).not.toBeEmpty();
+        await page.locator('#help-close').click(); taught.add(view.waitingFor);
+      }
       await answer(page, view, !captured && view.waitingFor === 'Evolution' ? async name => {
         await fitsViewport(page, '#planning-confirm, #planning-close'); await page.screenshot({ path: info.outputPath(`${name}.jpg`), type: 'jpeg', quality: 85 }); captured = true;
       } : null);
@@ -137,6 +152,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect([...latest.board.allies, ...latest.board.enemies].some(one => !one.isAlive)).toBe(true);
       expect(writes.filter(one => one.command.kind === 'Evolution' && one.command.tier).length).toBeGreaterThan(2);
     }
+    expect(taught.has('Speed')).toBe(true);
+    expect(taught.has(declaration === 'at-activation' ? 'Action' : 'Intent')).toBe(true);
+    if (declaration === 'hidden-intent') expect(taught.has('Target')).toBe(true);
     await reviewAndReplay(page, latest, info, actions);
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
@@ -146,10 +164,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   } finally { await page.close(); await stopHost(hostInfo.host); await rm(directory, { recursive: true, force: true }); }
 });
 
-test('two arena seats plan simultaneously without revealing the other team choices', async ({ page, browser }, info) => {
+test('two arena seats plan simultaneously without revealing the other team choices', async ({ page, context, browser }, info) => {
   test.setTimeout(120000);
+  await returningArenaPlayer({ context });
   const hostInfo = await startHost('at-activation', [], { twoPeople: true });
   const otherContext = await browser.newContext({ viewport: page.viewportSize() }); const other = await otherContext.newPage();
+  await returningArenaPlayer({ context: otherContext });
   const errors = []; for (const surface of [page, other]) surface.on('pageerror', error => errors.push(error.message));
   try {
     const firstTokens = await enter(page, hostInfo.joins[0]), secondTokens = await enter(other, hostInfo.joins[1]);

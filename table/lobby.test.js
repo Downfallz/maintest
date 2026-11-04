@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, lobbyRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -79,4 +79,32 @@ test("a card says whose turn it is at an unfinished table, and when it is this b
   assert.equal(turnOf({ seats: seats(true, true) }).text, 'Both players to play');
   assert.equal(turnOf({ seats: [{ seat: 'player1', kind: 'open', name: 'Open seat', turn: true }, { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false }] }).text, 'Waiting for a player to take the open seat');
   for (const table of [{ seats: seats(false, false) }, { over: true, seats: seats(true, false) }, { waiting: true, seats: seats(true, false) }, {}]) assert.equal(turnOf(table, ['player1']), null);
+});
+
+test('an inviter\'s card says who it waits for, or who declined and the ways out', () => {
+  assert.equal(invitedState(null), null);
+  assert.deepEqual(invitedState({ username: 'bastien', declined: false }), { tag: 'Waiting for bastien…', waiting: true, actions: ['cancel'] });
+  assert.deepEqual(invitedState({ username: 'bastien', declined: true }), { tag: 'bastien declined', waiting: false, actions: ['reinvite', 'open', 'close'] });
+  assert.deepEqual(invitedState({ free: true, declined: false }), { tag: 'Seat kept for nobody', waiting: false, actions: ['reinvite', 'open', 'close'] }, 'after a cancel the ways out stay');
+});
+
+test('an invitation card says who asks and to what', () => {
+  assert.equal(invitationLine({ from: { username: 'MarkF' }, table: { format: '2v2' } }), 'MarkF invites you to a 2v2 battle');
+  assert.equal(invitationLine({ table: { format: '2v2' } }), 'A player invites you to a 2v2 battle');
+});
+
+test('a rematch link names the opponent to choose again, or nothing', () => {
+  assert.deepEqual(rematchRequest('?rematch=acct_abcdefghijklmnop&format=2v2'), { opponent: 'friend', friend: 'acct_abcdefghijklmnop', format: '2v2' });
+  assert.deepEqual(rematchRequest('?rematch=bot'), { opponent: 'bot', friend: null, format: null });
+  assert.deepEqual(rematchRequest('?rematch=hotseat&format=1v1'), { opponent: 'hotseat', friend: null, format: '1v1' });
+  assert.equal(rematchRequest('?rematch=../admin'), null);
+  assert.equal(rematchRequest(''), null);
+});
+
+test('the create dialog starts on the friend asked for, and on nobody when they are not a friend', () => {
+  const friends = [{ id: 'acct_mark', username: 'MarkF' }, { id: 'acct_bastien', username: 'bastien' }];
+  assert.deepEqual(friendChoice(friends, 'acct_bastien'), { value: 'acct_bastien', missing: false });
+  assert.deepEqual(friendChoice(friends, 'acct_stranger'), { value: '', missing: true }, 'a rematch against a non-friend picks nobody by default');
+  assert.deepEqual(friendChoice(friends, null), { value: '', missing: false });
+  assert.deepEqual(friendChoice([], 'acct_mark'), { value: '', missing: true });
 });

@@ -1,4 +1,6 @@
 import { mountAccount, nextPath } from './account.js';
+import { mountDevices } from './devices.js';
+import { mountFriends } from './friends.js';
 import { activateSeats, isOperator, operatorToken, savedSeats } from './session.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -18,10 +20,10 @@ export function codePath(value) {
   return /^[A-Z0-9]{8}$/.test(code) ? `/j/${code}` : null;
 }
 
-export async function lobbyRequest(path, body, token, fetchImpl = globalThis.fetch.bind(globalThis)) {
+export async function lobbyRequest(path, body, token, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
   const headers = {};
   if (token) headers['X-Seat-Token'] = token;
-  const options = { method: body === undefined ? 'GET' : 'POST', headers };
+  const options = { method, headers };
   if (body !== undefined) { headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
   const response = await fetchImpl(path, options);
   const text = await response.text();
@@ -60,6 +62,46 @@ function cardAction(table, entry) {
   return table.over ? 'View game →' : 'Resume game →';
 }
 
+/**
+ * What an inviter's card says of the seat kept for a friend (ADR 0129): waiting, with a cancel; or declined (or
+ * run out), with the three ways out; null when the seat is kept for nobody and nobody declined it.
+ */
+export function invitedState(invited) {
+  if (!invited) return null;
+  if (invited.free) return { tag: 'Seat kept for nobody', waiting: false, actions: ['reinvite', 'open', 'close'] };
+  if (invited.declined) return { tag: `${invited.username} declined`, waiting: false, actions: ['reinvite', 'open', 'close'] };
+  return { tag: `Waiting for ${invited.username}…`, waiting: true, actions: ['cancel'] };
+}
+
+/**
+ * What a "Rematch" link asks of the lobby (ADR 0129, stage 4): the opponent to choose again, as `?rematch=` names
+ * it (a friend's account id, `bot`, or `hotseat`), and the format; null when the query asks for none.
+ */
+export function rematchRequest(search) {
+  const params = new URLSearchParams(search ?? '');
+  const again = params.get('rematch');
+  if (!again) return null;
+  const format = params.get('format') || null;
+  if (again === 'bot' || again === 'hotseat') return { opponent: again, friend: null, format };
+  return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format } : null;
+}
+
+/**
+ * Which friend the create dialog starts on (ADR 0129): the one asked for when they are in the list, nobody when
+ * they are not or none was asked for, so a rematch against a player who is not a friend never sends an
+ * invitation to whoever happens to be first in the list.
+ */
+export function friendChoice(friends, wanted) {
+  const found = wanted && (friends ?? []).some(friend => friend.id === wanted);
+  return { value: found ? wanted : '', missing: Boolean(wanted) && !found };
+}
+
+/** The line an invitation card leads with: who asks, to what. */
+export function invitationLine(invitation) {
+  const from = invitation?.from?.username ?? 'A player';
+  return `${from} invites you to a ${invitation?.table?.format ?? ''} battle`.replace('  ', ' ');
+}
+
 function statusText(state) {
   if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
   const tables = state.tables.length === 1 ? 'table' : 'tables';
@@ -70,6 +112,11 @@ export function mountLobby(doc, location, storage) {
   const el = id => doc.getElementById(id);
   let listing = null;
   let mine = [];
+  let invitations = [];
+  let friends = [];
+  let reinviting = null;
+  let pendingRematch = rematchRequest(location.search);
+  let onOutstanding = () => {};
   let showAll = false;
   let loading = false;
   let drawn = '';
@@ -104,13 +151,28 @@ export function mountLobby(doc, location, storage) {
     catch (error) { problem(error.message || 'Could not reach the table. Try again.'); await refresh(); }
     finally { busy = false; button.disabled = false; }
   }
+  function tableAction(label, className, path, method = 'POST', body = {}) {
+    const button = node('button', label, className);
+    button.type = 'button';
+    button.addEventListener('click', async () => {
+      if (busy) return;
+      busy = true;
+      button.disabled = true;
+      problem();
+      try { await lobbyRequest(path, body, undefined, undefined, method); await refresh(); }
+      catch (error) { problem(error.message || 'Could not reach the host. Try again.'); }
+      finally { busy = false; button.disabled = false; }
+    });
+    return button;
+  }
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
     const top = node('div', '', 'game-card-top');
     const turn = turnOf(table, (entry?.seats ?? []).map(held => held.seat));
+    const invited = invitedState(entry?.invited);
     top.append(node('h3', `${table.format} battle`), turn?.mine
       ? node('span', 'Your turn', 'status-tag your-turn')
-      : node('span', tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}`));
+      : node('span', invited?.tag ?? tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}${invited ? ' invited' : ''}`));
     const line = node('div', '', 'versus');
     const sides = versus(table);
     sides.forEach((side, index) => {
@@ -131,13 +193,45 @@ export function mountLobby(doc, location, storage) {
     if (entry) { button.className = 'primary'; button.addEventListener('click', () => enter(entry)); }
     else button.addEventListener('click', () => act(button, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
     if (entry || table.openSeats > 0) root.append(button);
+    if (invited) {
+      // The ways out of a seat kept for a friend (ADR 0129): cancel while they have not answered; after a no,
+      // another friend, everyone, or nobody.
+      const ways = node('div', '', 'card-ways');
+      const at = `/api/lobby/tables/${encodeURIComponent(table.id)}`;
+      for (const way of invited.actions) {
+        if (way === 'cancel') ways.append(tableAction('Cancel invitation', 'secondary', `${at}/invitation`, 'DELETE'));
+        if (way === 'reinvite') { const b = node('button', 'Invite another friend', 'secondary'); b.type = 'button'; b.addEventListener('click', () => openCreate({ reinvite: table.id })); ways.append(b); }
+        if (way === 'open') ways.append(tableAction('Open the seat to everyone', 'secondary', `${at}/open`));
+        if (way === 'close') ways.append(tableAction('Close the table', 'secondary danger', at, 'DELETE'));
+      }
+      root.append(ways);
+    }
+    return root;
+  }
+  // A table waiting for this player (ADR 0129): who asks, and the two answers.
+  function invitationCard(invitation) {
+    const table = invitation.table;
+    const root = node('article', '', 'game-card invitation');
+    const top = node('div', '', 'game-card-top');
+    top.append(node('h3', invitationLine(invitation)), node('span', 'Invitation', 'status-tag invited'));
+    root.append(top, node('p', `${table.format} battle · ${table.id}`, 'game-id'));
+    const ways = node('div', '', 'card-ways');
+    const accept = node('button', 'Accept & play →', 'primary');
+    accept.type = 'button';
+    accept.addEventListener('click', () => act(accept, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/accept`, {})));
+    ways.append(accept, tableAction('Decline', 'secondary', `/api/lobby/tables/${encodeURIComponent(table.id)}/decline`));
+    root.append(ways);
     return root;
   }
   function render() {
-    const key = JSON.stringify([listing, mine, showAll, account, mode]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode]);
     if (key === drawn) return;
     drawn = key;
     const available = visibleTables(listing.tables, mine, showAll);
+    el('invitations').hidden = invitations.length === 0;
+    el('invitations-count').textContent = invitations.length || '';
+    el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
+    onOutstanding(mine.some(entry => invitedState(entry.invited)?.waiting));
     el('mine-count').textContent = mine.length;
     el('tables-count').textContent = available.length;
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
@@ -161,7 +255,9 @@ export function mountLobby(doc, location, storage) {
       const [publicTables, saved] = await Promise.all([lobbyRequest('/api/lobby'), yours(tokens)]);
       listing = publicTables;
       mine = saved.tables;
+      invitations = saved.invitations ?? [];
       render();
+      maybeRematch();
     } catch (error) {
       el('lobby-status').textContent = 'Connection interrupted. Your saved seats are kept; refresh to retry.';
       problem(error.message || 'Could not load the tables. Try again.');
@@ -191,26 +287,83 @@ export function mountLobby(doc, location, storage) {
     else { problem('Enter the eight-character seat code from your invitation.'); el('code').focus(); }
   });
   const dialog = el('create-dialog');
-  el('new-table').addEventListener('click', () => {
+  // The friends a seat can be kept for (ADR 0129), read when the dialog opens: the list is short and changes rarely.
+  async function loadFriends(chosen) {
+    if (mode === 'off' || !account) { friends = []; }
+    else {
+      try { friends = (await lobbyRequest('/api/friends')).friends ?? []; } catch { friends = []; }
+    }
+    const placeholder = node('option', 'Choose a friend…');
+    placeholder.value = '';
+    el('friend').replaceChildren(placeholder, ...friends.map(friend => { const option = node('option', friend.username); option.value = friend.id; return option; }));
+    el('friend').value = friendChoice(friends, chosen).value;
+    el('opponent').querySelector('option[value="friend"]').hidden = mode === 'off';
+  }
+  let wanted = null;
+  function showOpponent() {
+    const value = el('opponent').value;
+    const missing = value === 'friend' && friendChoice(friends, wanted).missing;
+    el('create-help').textContent = missing
+      ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
+      : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
+    el('friend-row').hidden = value !== 'friend';
+    // No friend chosen, nothing to send: a seat is kept for the friend the player picked, never for a default.
+    el('create-submit').disabled = value === 'friend' && !el('friend').value;
+  }
+  el('friend').addEventListener('change', showOpponent);
+  function openCreate({ friend = null, reinvite = null, opponent = null, format = null } = {}) {
     if (signInFirst()) { askSignIn(); return; }
-    if (listing) { el('create-problem').hidden = true; dialog.showModal(); }
-  });
+    if (!listing) return;
+    reinviting = reinvite;
+    wanted = friend;
+    el('create-problem').hidden = true;
+    el('create-title').textContent = reinvite ? 'Invite another friend' : 'Create a table';
+    el('create-submit').textContent = reinvite ? 'Invite →' : 'Create & play →';
+    el('opponent').disabled = Boolean(reinvite);
+    el('format').disabled = Boolean(reinvite);
+    if (friend || reinvite) el('opponent').value = 'friend';
+    else if (opponent) el('opponent').value = opponent;
+    if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
+    void loadFriends(friend).then(() => { showOpponent(); dialog.showModal(); });
+  }
+  // Sent here by "Rematch" (ADR 0129): the dialog opens on the same opponent once the player is signed in and the
+  // tables are listed, and the address is cleaned so a reload does not ask again.
+  function maybeRematch() {
+    if (!pendingRematch || !listing || signInFirst()) return;
+    const again = pendingRematch;
+    pendingRematch = null;
+    globalThis.history?.replaceState?.(null, '', '/lobby');
+    openCreate(again);
+  }
+  el('new-table').addEventListener('click', () => openCreate());
   for (const id of ['create-close', 'create-cancel']) el(id).addEventListener('click', () => dialog.close());
   const help = {
     person: 'You take the first seat. Another player can join from this lobby or with your invitation.',
+    friend: 'The second seat is kept for your friend: nobody else can take it. They are told on their phone, and you wait at the table. One invitation at a time.',
     bot: 'The strongest bot the game has plays the other side. Your game is saved so you can come back later.',
     hotseat: 'Both players use this device. Pass it between turns; both seats are saved here.',
   };
-  el('opponent').addEventListener('change', () => { el('create-help').textContent = help[el('opponent').value]; });
+  el('opponent').addEventListener('change', showOpponent);
   el('create-table').addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
     busy = true;
     el('create-submit').disabled = true;
     el('create-problem').hidden = true;
-    try { enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value })); }
-    catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
-    finally { busy = false; el('create-submit').disabled = false; }
+    try {
+      if (el('opponent').value === 'friend' && !el('friend').value) {
+        throw new Error('Choose a friend to keep the seat for.');
+      }
+
+      if (reinviting) {
+        await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
+        dialog.close();
+        await refresh();
+      } else {
+        enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined }));
+      }
+    } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
+    finally { busy = false; showOpponent(); }
   });
   void lobbyRequest('/api/me', undefined, operatorToken(storage)).then(body => {
     if (isOperator({ ok: true, body })) el('admin-link').hidden = false;
@@ -219,6 +372,10 @@ export function mountLobby(doc, location, storage) {
   const interval = globalThis.setInterval(() => { if (!doc.hidden && !dialog.open && !busy) void refresh(); }, 10000);
   return {
     stop: () => globalThis.clearInterval(interval),
+    /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
+    invite: friend => openCreate({ friend: friend?.id ?? null }),
+    /** Told whenever whether an invitation of this player's is waiting changes, so the Friends panel can say so. */
+    onOutstanding(tell) { onOutstanding = tell; },
     /** Told by the sign-in whenever who is signed in changes; the lists are read again for them. */
     setAccount(next, nextMode) {
       const changed = (next?.id ?? null) !== (account?.id ?? null) || nextMode !== mode;
@@ -234,6 +391,9 @@ if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
+  const devices = mountDevices(document, { storage });
+  const friends = mountFriends(document, { onInvite: friend => lobby.invite(friend) });
+  lobby.onOutstanding(outstanding => friends.setOutstanding(outstanding));
   const eyebrow = document.getElementById('hero-eyebrow');
   const next = nextPath(globalThis.location.search);
   void mountAccount(document, {
@@ -243,6 +403,8 @@ if (typeof document !== 'undefined') {
       eyebrow.textContent = account ? `Welcome back, ${account.username}` : 'Gather your creatures';
       document.getElementById('leaderboard-link').hidden = mode === 'off';
       lobby.setAccount(account, mode);
+      devices.setAccount(account);
+      friends.setAccount(account);
     },
   });
 }

@@ -55,7 +55,6 @@ when the host was started with `--declaration hidden-intent`, when its `--rules`
 player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
 action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
-
 A starting host serves at once and rebuilds the tables an earlier host left open behind it (ADR 0091): the
 container's platform restarts a host whose port does not answer within a minute, and replaying many records takes
 longer. Until the rebuild is done, a seat whose table is not back yet, the lobby's seat routes and the join codes
@@ -487,6 +486,57 @@ itself, through the worker and no push service, and one the host sends through t
 the service answered under the button. Both appearing is a phone that works; only the page's is a push that
 does not reach this browser; neither is a browser not showing notifications for this site.
 
+With accounts on as well (ADR 0122), a signed-in player's lobby offers **Notify me on this device**
+(`docs/tabletop/friends-plan.md`, stage 1): the browser's push subscription becomes one of the account's
+**devices**, kept beside the accounts (`devices/<accountId>.json`, five at most, the oldest replaced), where a
+notice that is not about a seat will reach the player: a friend's request, an invitation, the end of a match. A
+seat's "your turn" still goes to the seat's browser as above; the same subscription is registered for both, and
+the host tells each endpoint once. **Stop notifying this device** forgets the device and leaves the subscription
+to the seats; **Send a test** sends one notice through the push service to this device. *Sign out everywhere* and
+deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
+`POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
+The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
+game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
+reads its lists again at once.
+
+## Friends
+
+Signed in, the lobby's **Friends** panel (ADR 0129, `docs/tabletop/friends-plan.md` stage 2) lists your friends, the
+players who asked to be your friend (*Accept*, *Decline*), and the ones you asked who have not answered (*Withdraw*),
+and asks a player by their exact player name, the one on their cards: there is no directory and no search. A
+friendship is mutual: a request until the other accepts, and asking somebody who already asked you accepts.
+Declining, withdrawing and removing a friend are silent to the other side; a declined player may ask again. A player
+keeps at most a hundred friends and a hundred pending requests. On a host with push keys, the other player's devices
+are told of a request (*MarkF wants to be your friend*) and of an acceptance; a tap opens the lobby. Friendships are
+kept beside the accounts (`friends/<accountId>.json`, both sides written) and go with the account. The routes, all
+signed in: `GET /api/friends`, `POST /api/friends/requests {"username":"..."}`, `POST /api/friends/requests/<id>/accept`,
+`DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>`.
+
+## Inviting a friend
+
+*Invite* beside a friend, or *A friend · seat kept for them* in the create dialog, opens a table whose second seat
+is **kept for that account** (ADR 0129, stage 3): it is not an open place, has no code and no link, and only that
+friend, signed in, accepts it from the **Invitations** section of their lobby (*Accept & play*, *Decline*). Their
+devices are told (*MarkF invites you to a 2v2 battle*; a tap opens the lobby), the inviter waits at the table
+(*Waiting for your friend to accept…*), and is told when the friend accepts (a tap opens the table; the first
+"your turn" that follows is the match starting, ADR 0092) or declines. One invitation of a player's waits at a
+time, for a day at most; removing the friend cancels it. The inviter's card says *Waiting for bastien…* with
+*Cancel invitation*, or *bastien declined* with the three ways out: *Invite another friend*, *Open the seat to
+everyone* (today's open place) and *Close the table*, which any player holding every taken seat of a table that has
+not begun may do. A rebuilt table (ADR 0091) still waits for the friend. Cards name an invited seat by the friend
+(`kind: "invited"`). The routes, all signed in: `POST /api/lobby/tables {"opponent":"friend","friend":"<accountId>"}`,
+`POST /api/lobby/tables/<id>/accept`, `/decline`, `DELETE /api/lobby/tables/<id>/invitation`,
+`POST /api/lobby/tables/<id>/invitation {"friend"}`, `POST /api/lobby/tables/<id>/open`, `DELETE /api/lobby/tables/<id>`;
+`GET /api/lobby/mine` adds `invitations` and each own table's `invited`.
+
+When a match ends, each seat's account is told how, against the other side by name (*Victory · You won against
+bastien*, *Defeat · bastien won*, *A draw*); a bot's seat is told nothing, and one account holding both seats of a
+shared device is told once, in the room's words. A player who leaves a begun match is announced to the other
+seat's account (*bastien left the table*). The outcome card offers **Rematch**, which opens the lobby's create
+dialog on the same opponent and format: the friend (or, if they are not a friend yet, a word to ask them first),
+the bot, or the shared device. Deleting an account also offers the seats it kept for friends to everyone, as ADR
+0122 offers its own, and frees the seats kept for it (stage 4 of the plan).
+
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
 dotnet run --project src/DownfallArena.Cli -- table --push-keys push-keys.json --p2 greedy
@@ -545,4 +595,10 @@ Attacks expand into actual applied effects and recorded before/after changes; re
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
-round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).
+round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
+
+The arena's **Help** dialog explains the current objective and the round flow, including the configured
+spell declaration mode. First-use tips appear once per subject and can be muted; Help remains available.
+`arena-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
+It does not acknowledge questions or send commands, and opening it preserves pending choices.
+See [AU2 and its verification](../arena/README.md#au2-objectives-and-contextual-help).

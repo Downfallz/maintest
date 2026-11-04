@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
 // Match the lab/live suites: software-rendered Phaser pages run one case at a time within this file.
 test.describe.configure({ mode: 'default' });
 const legal = (candidates, minTargets = 1, maxTargets = 1) => ({ candidates, minTargets, maxTargets });

@@ -2,7 +2,9 @@ import { creatureAppearance } from '../../table/arena-art.js';
 import { mountSpellScene, presentSpell } from './arena-spell-scene.js';
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
 
 // The packages as the host serves them: the authored level and the mutation art the builder publishes.
 const mutationArt = JSON.parse(readFileSync(new URL('../../data/presentation/mutation-art.json', import.meta.url), 'utf8'));
