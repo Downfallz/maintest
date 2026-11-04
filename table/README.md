@@ -513,10 +513,15 @@ Docker and CI build it automatically. See [build details](../arena/README.md) an
 
 ## Live arena preview
 
-`/arena` is an opt-in read-only view, linked from **Match → Open live arena preview**. It asks for a
-viewpoint before reading any private board, supports accepted saved or linked seats, and returns to
-`/play` for decisions or invitation acceptance. `arena-live.js` consumes the same `boardPresentation`
-as the table; the separate `arena-build/live.js` bundle cannot import the lab sample. See
-[ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) and
-[the build instructions](../arena/README.md). This preview sends no decisions or `shown`; the existing
-host still marks a selected accepted seat as arrived on its authenticated reads.
+`/arena` is an opt-in live view with combat controls, linked from **Match → Open live arena preview**.
+It asks for a viewpoint before reading a private board and supports accepted saved or linked seats.
+Inspection sends no commands or `shown`. Opening combat controls acknowledges the visible question;
+spell and target choices require explicit confirmation. Action, hidden Intent and revealed Target use
+`slot.js` builders shared with `/play`; the host remains the authority for options and resolution.
+
+`arena-combat.js` owns drafts and request lifetimes, `arena-live.js` owns fenced polling/SSE, and the
+separate `arena-build/live.js` bundle cannot import the lab sample. Mutations, tempos, ties and invitation
+acceptance remain at `/play`. The existing host still marks an accepted seat as arrived on authenticated
+reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md),
+[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and
+[the build instructions](../arena/README.md).

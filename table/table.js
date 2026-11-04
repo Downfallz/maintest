@@ -18,7 +18,7 @@ import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
 import { seatsOf, versusLine } from './players.js';
-import { actionDecision, askedKey } from './slot.js';
+import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
 import { SPEEDS, TEMPO_RULE, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
@@ -3814,7 +3814,7 @@ function declareChosen(state, current) {
   const option = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature);
   if (!declarableSpells(option).includes(state.chosen)) return;
   if (view.askedAs === 'Action') return chooseForTheSlot(state, state.chosen);
-  return submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: state.chosen });
+  return submit(state, current, combatDecision(view, state.chosen));
 }
 
 // The spell of an action at the slot, or none to choose again: the page moves between the spell screen and the
@@ -3834,13 +3834,12 @@ function chooseForTheSlot(state, spell) {
 // The host's candidate set and bounds apply equally to the board shortcut and the sheet's confirmation.
 function canCastTargets(state, view) {
   const legal = view.options?.target?.legalTargets;
-  return Boolean(legal) && state.picked.length >= legal.minTargets && state.picked.length <= legal.maxTargets &&
-    state.picked.every(id => legal.candidates.includes(id));
+  return validTargets(legal, state.picked);
 }
 
 function castTargets(state, current) {
   if (!canInteract(state, current, 'Target') || !canCastTargets(state, current.view)) return;
-  const decision = current.view.askedAs === 'Action' ? actionDecision(current.view, state.picked) : { kind: 'Target', targets: [...state.picked] };
+  const decision = combatDecision(current.view, state.chosen, state.picked);
   return submit(state, current, decision);
 }
 
@@ -3884,8 +3883,8 @@ function targetButtons(state, current) {
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
-  if (legal.candidates.length < legal.minTargets) {
-    const nothing = current.view.askedAs === 'Action' ? actionDecision(current.view, []) : { kind: 'Target', targets: [] };
+  if (emptyCastAllowed(legal)) {
+    const nothing = combatDecision(current.view, state.chosen, []);
     return [context, button('No legal target — cast anyway', () => submit(state, current, nothing))];
   }
 

@@ -38,3 +38,30 @@ export function askedKey(seat, view) {
 export function actionDecision(view, targets) {
   return { kind: 'Action', creature: view.waitingCreature, spell: view.options?.target?.spell ?? null, targets: [...targets] };
 }
+
+// The host's target set and bounds, shared by both clients. Picking one creature twice is never a second
+// target. When a revealed spell has too few candidates, the table explicitly permits an empty cast to fizzle.
+export function validTargets(legal, targets) {
+  return Boolean(legal) && new Set(targets).size === targets.length &&
+    targets.length >= legal.minTargets && targets.length <= legal.maxTargets &&
+    targets.every(id => legal.candidates.includes(id));
+}
+
+export function emptyCastAllowed(legal) {
+  return Boolean(legal) && legal.candidates.length < legal.minTargets;
+}
+
+// A drawn combat question to its wire command. Choosing the spell screen of an Action is local; only its
+// target screen commits. Intent's unaffordable offerings are deliberate plans, offered by the host (ADR 0107).
+export function combatDecision(view, chosen, targets = []) {
+  if (!view || view.over || view.playedByBot) return null;
+  if (view.waitingFor === 'Intent' && view.askedAs !== 'Action') {
+    const option = view.options?.intent?.creatures?.find(one => one.creature === view.waitingCreature);
+    if (![...(option?.castableSpells ?? []), ...(option?.unaffordableSpells ?? [])].includes(chosen)) return null;
+    return { kind: 'Intent', creature: view.waitingCreature, spell: chosen };
+  }
+  if (view.waitingFor !== 'Target') return null;
+  const legal = view.options?.target?.legalTargets;
+  if (!validTargets(legal, targets) && !(targets.length === 0 && emptyCastAllowed(legal))) return null;
+  return view.askedAs === 'Action' ? actionDecision(view, targets) : { kind: 'Target', targets: [...targets] };
+}

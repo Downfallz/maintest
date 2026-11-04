@@ -31,7 +31,7 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
   function start(transport, catalogue) {
     stop();
     const connection = { abort: new AbortController(), pollTimer: null, streamTimer: null,
-      busy: false, owed: false, since: 0, catalogue: catalogue ?? null, retry: 1000, streams: 0 };
+      busy: false, owed: false, since: 0, catalogue: catalogue ?? null, retry: 1000, streams: 0, revision: 0, writing: false };
     active = connection;
     const current = () => active === connection;
     function refused(answer) {
@@ -43,9 +43,11 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
     }
     async function refresh() {
       if (!current()) return;
-      if (connection.busy) { connection.owed = true; return; }
+      if (connection.busy || connection.writing) { connection.owed = true; return; }
+      connection.owed = false;
       cancel(connection.pollTimer);
       connection.busy = true;
+      const revision = connection.revision;
       try {
         if (!connection.catalogue) {
           const catalogue = await transport.catalogue();
@@ -53,15 +55,16 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
           if (!catalogue.ok) throw new Error('Catalogue unavailable');
           connection.catalogue = catalogue.body;
         }
-        // Deliberately no `shown`: inspecting the arena never starts a decision clock.
+        // Ordinary reads never acknowledge a question. The combat controls do that only after being opened.
         const answer = await transport.seat(connection.since);
         if (!current() || refused(answer)) return;
+        if (revision !== connection.revision) { connection.owed = true; return; }
         if (!answer.ok || !answer.body?.board) throw new Error('Board unavailable');
         if (Number.isInteger(answer.body.feedNext)) connection.since = Math.max(connection.since, answer.body.feedNext);
         onView(answer.body, connection.catalogue);
         onState('live');
       } catch {
-        if (current()) onState('stale');
+        if (current() && revision === connection.revision) onState('stale');
       } finally {
         connection.busy = false;
         if (current()) {
@@ -90,10 +93,31 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       }
     }
     connection.refresh = refresh;
+    connection.shown = async asked => {
+      const answer = await transport.seat(connection.since, asked);
+      if (!current() || refused(answer)) return null;
+      return answer;
+    };
+    connection.submit = async decision => {
+      if (connection.writing) return null;
+      connection.writing = true;
+      connection.revision++;
+      cancel(connection.pollTimer);
+      try {
+        const answer = await transport.decide(decision);
+        return !current() || refused(answer) ? null : answer;
+      } finally {
+        connection.writing = false;
+        connection.revision++;
+        if (current()) void refresh();
+      }
+    };
     onView(null, null);
     onState('connecting');
     void refresh();
     void stream();
   }
-  return { start, stop, refresh: () => active?.refresh() };
+  return { start, stop, refresh: () => active?.refresh(),
+    shown: asked => active?.shown(asked) ?? Promise.resolve(null),
+    submit: decision => active?.submit(decision) ?? Promise.resolve(null) };
 }

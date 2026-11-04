@@ -1,25 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { fitsViewport } from './fit.js';
 
 // One Phaser page at a time: under the runner's software rendering a 1440x1000 WebGL canvas is the heaviest
 // thing this suite opens, and two of them side by side starved the worker until clicks never returned.
 test.describe.configure({ mode: 'default' });
 
-async function fits(page) {
-  const viewport = page.viewportSize();
-  const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
-  expect(dimensions.width).toBeLessThanOrEqual(viewport.width);
-  expect(dimensions.height).toBeLessThanOrEqual(viewport.height);
-  for (const node of await page.locator('.creature, #choose, #confirm, #cancel, #skip, #reset, #settings').all()) {
-    if (!await node.isVisible()) continue;
-    const box = await node.boundingBox();
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
-    expect(box.x).toBeGreaterThanOrEqual(-1);
-    expect(box.y).toBeGreaterThanOrEqual(-1);
-    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
-    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
-  }
-}
+const fits = page => fitsViewport(page, '.creature, #choose, #confirm, #cancel, #skip, #reset, #settings');
 // Fake timers, paused: from here on the page's clock moves only when the test runs it.
 async function pauseClock(page) {
   await page.clock.install({ time: '2026-11-03T12:00:00Z' });
@@ -74,9 +60,11 @@ test('targeting, cancellation and inspection work without leaving the game scree
   await expect(page.locator('.is-selected')).toHaveCount(0);
 });
 
-test('reduced motion reaches all fixed outcomes including defeat, then resets cleanly', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const [target, result] of [['b1', '14/24 HP'], ['b2', '5/24 HP'], ['b3', '0/24 HP']]) {
+// Each fixed outcome owns its page and deadline; three complete casts plus reset exceed one test's
+// budget on the software renderer. Every outcome still checks the resolved state and the reset.
+for (const [target, result] of [['b1', '14/24 HP'], ['b2', '5/24 HP'], ['b3', '0/24 HP']]) {
+  test(`reduced motion resolves ${target} to ${result}, then resets cleanly`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await choose(page, target);
     await page.locator('#confirm').click();
     await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
@@ -90,7 +78,21 @@ test('reduced motion reaches all fixed outcomes including defeat, then resets cl
     await page.locator('#reset').click();
     await expect(page.locator('.is-defeated')).toHaveCount(0);
     await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
-  }
+  });
+}
+
+// What a reset is for: the next cast on the same page, after the heaviest outcome, resolves as the first did.
+test('reduced motion casts again after a reset on the same page', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await choose(page, 'b3');
+  await page.locator('#confirm').click();
+  await expect(page.locator('[data-creature="b3"]')).toHaveClass(/is-defeated/);
+  await page.locator('#reset').click();
+  await choose(page, 'b1');
+  await page.locator('#confirm').click();
+  await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
+  await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('14/24 HP');
+  await expect(page.locator('.is-defeated')).toHaveCount(0);
 });
 
 test('keyboard casting and skip need no live API', async ({ page }) => {
