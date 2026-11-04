@@ -3,13 +3,16 @@ import { placements, strikeApproach } from '../../table/arena-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/arena-art.js';
 import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
+import { MutationCues } from './mutation-cues';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
-  home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  cues: MutationCues; home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
+  form: string;
 }
 
 const GOLD = 0xeac88e;
@@ -67,11 +70,11 @@ export class ArenaScene extends Phaser.Scene {
     this.reduced = reduced;
     this.rate = rate;
     if (!this.ready) return;
-    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy]));
+    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy, one.layers]));
     const rosterChanged = roster !== this.roster;
     if (rosterChanged) {
       this.clearMotion();
-      for (const figure of this.figures.values()) { figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
       this.roster = roster;
       this.makeFigures();
@@ -87,6 +90,7 @@ export class ArenaScene extends Phaser.Scene {
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(creature.isAlive ? 1 : .20);
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
+      this.followCues(figure);
     }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {
@@ -104,7 +108,8 @@ export class ArenaScene extends Phaser.Scene {
       const art = figureArt(creature.form, (key: string) => this.textures.exists(key));
       const image = this.add.image(0, 0, art.key).setFlipX(enemy);
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
-      this.figures.set(creature.id, { image, shadow, ring, art, enemy, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
+      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, form: creature.form, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
@@ -123,13 +128,20 @@ export class ArenaScene extends Phaser.Scene {
       const home = positions[index];
       figure.home = home;
       const geometry = figureGeometry(figure.art, home, figure.enemy);
-      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y);
+      // Figures of one row share a y: a step per figure keeps each one's accents under its neighbour's image.
+      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y + index * .001);
       // Reduced motion can enter impact directly with newly mutated historical figures.
       if (!inFlight || resetPositions) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
+    for (const figure of this.figures.values()) this.followCues(figure);
     this.onLayout(positions);
+  }
+
+  private followCues(figure: Figure) {
+    // Geometry-specific accents are suppressed if the requested sprite was unavailable.
+    figure.cues.follow(figure.image, figure.art.bounds, figure.art.ground, figure.art.form === figure.form);
   }
 
   private windup() {
@@ -230,7 +242,10 @@ export class ArenaScene extends Phaser.Scene {
     this.spellEffects.clear();
     for (const effect of this.effects) effect.destroy();
     this.effects = [];
-    for (const figure of this.figures.values()) figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);
+    for (const figure of this.figures.values()) {
+      figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);
+      this.followCues(figure);
+    }
   }
 
   update(time: number) {
@@ -239,6 +254,7 @@ export class ArenaScene extends Phaser.Scene {
     let index = 0;
     for (const figure of this.figures.values()) {
       if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
+      this.followCues(figure);
       index++;
     }
     const width = Math.max(1, this.scale.width);

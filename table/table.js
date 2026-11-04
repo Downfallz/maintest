@@ -17,8 +17,8 @@ import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
-import { seatsOf, versusLine } from './players.js';
-import { outcomeText } from './outcome.js';
+import { tableOf, versusLine } from './players.js';
+import { outcomeText, rematchLink } from './outcome.js';
 import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
@@ -271,7 +271,8 @@ async function showPlayers(state) {
   try {
     const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
     if (!response.ok) return;
-    const line = versusLine(seatsOf(await response.json(), tokens), state.seats.map(seat => seat.seat));
+    state.table = tableOf(await response.json(), tokens);
+    const line = versusLine(state.table?.seats ?? null, state.seats.map(seat => seat.seat));
     element('versus').textContent = line ?? '';
     element('versus').hidden = !line;
   } catch {
@@ -973,6 +974,15 @@ function matchResult(state, current) {
     stats.append(value);
   }
   result.append(stats);
+  // The same opponent again (ADR 0129, stage 4): the lobby's dialog, with them and the format chosen.
+  const again = state.practice || state.replaying || view.replay ? null : rematchLink(state.table, state.seats.map(seat => seat.seat));
+  if (again) {
+    const rematch = document.createElement('a');
+    rematch.className = 'button primary match-result-rematch';
+    rematch.href = again;
+    rematch.textContent = 'Rematch →';
+    result.append(rematch);
+  }
   return result;
 }
 

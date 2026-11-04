@@ -104,6 +104,7 @@ public sealed class ContentStore
         GameSchemaBuilder.Write(schema, outputDirectory);
         PackageIdentities.Publish(Root, outputDirectory, schema);
         SpellArt.Publish(Root, outputDirectory, schema);
+        MutationArt.Publish(Root, outputDirectory, schema);
         return (schema.ContentHash, notes);
     }
 

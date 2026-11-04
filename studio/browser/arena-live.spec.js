@@ -1,7 +1,16 @@
+import { creatureAppearance } from '../../table/arena-art.js';
+import { mountSpellScene, presentSpell } from './arena-spell-scene.js';
 import { test, expect } from '@playwright/test';
+import { readFileSync, readdirSync } from 'node:fs';
 import { returningArenaPlayer } from './arena-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningArenaPlayer);
+
+// The packages as the host serves them: the authored level and the mutation art the builder publishes.
+const mutationArt = JSON.parse(readFileSync(new URL('../../data/presentation/mutation-art.json', import.meta.url), 'utf8'));
+const tiersRoot = new URL('../../data/Tiers/', import.meta.url);
+const packages = new Map(readdirSync(tiersRoot).filter(path => path.endsWith('.json')).map(path => JSON.parse(readFileSync(new URL(path, tiersRoot), 'utf8')))
+  .map(tier => [tier.id, { id: tier.id, name: tier.name, level: tier.level, visual: mutationArt[tier.id] ?? null }]));
 test.describe.configure({ mode: 'default' });
 const creature = (id, extras = {}) => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['spell:host:v1'], conditions: [], ...extras });
@@ -21,7 +30,7 @@ async function mount(page, { size = 3, saved = true, search = '', resumeStatus =
     state.requests.push({ path: url.pathname, query: url.search, method: request.method(), token: request.headers()['x-seat-token'] });
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ status: state.resumeStatus, json: { tables: invitation ? [] : [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } });
     if (url.pathname === '/api/lobby/invitations') return route.fulfill({ json: { invitations: invitation ? [{ kind: 'invitation' }] : [] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'spell:host:v1', name: 'Host spell name' }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'spell:host:v1', name: 'Host spell name' }], packages: [...packages.values()] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' });
     if (/\/api\/seat\/player[12]$/.test(url.pathname)) return route.fulfill({ status: state.status, json: url.pathname.endsWith('player1') ? state.first : state.second });
     return route.fulfill({ status: 500, body: 'Unexpected request' });
@@ -159,7 +168,7 @@ test('the live dock and all six inspection targets fit short portrait and landsc
 });
 
 
-test('ART-3 follows mutations through polls and keeps mixed families neutral', async ({ page }, info) => {
+test('each creature shows the body its acquired packages give it, mixed builds included', async ({ page }, info) => {
   const state = await mount(page);
   state.first.board.allies[0].acquiredTiers = ['tier:brute:v1'];
   state.first.board.allies[1].acquiredTiers = ['tier:prowler:v1'];
@@ -167,7 +176,7 @@ test('ART-3 follows mutations through polls and keeps mixed families neutral', a
   state.first.board.enemies[1].acquiredTiers = ['tier:prowler:v1'];
   state.first.board.enemies[2].acquiredTiers = ['tier:occultist:v1', 'tier:brute:v1'];
   await choose(page);
-  for (const [id, form] of [[1, 'brute'], [2, 'predator'], [3, 'warped'], [4, 'base-creature'], [5, 'predator'], [6, 'base-creature']]) {
+  for (const [id, form] of [[1, 'brute'], [2, 'predator'], [3, 'warped'], [4, 'base-creature'], [5, 'predator'], [6, 'brute']]) {
     await expect(page.locator(`[data-creature="${id}"]`)).toHaveAttribute('data-form', form);
   }
   await expect(page.locator('#arena')).toHaveAttribute('data-asset-fallback', 'false');
@@ -176,10 +185,11 @@ test('ART-3 follows mutations through polls and keeps mixed families neutral', a
   await page.setViewportSize({ width: 844, height: 390 });
   await fits(page);
   await page.screenshot({ path: info.outputPath('art3-landscape.png') });
-  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1', 'tier:prowler:v1'];
-  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'base-creature', { timeout: 10000 });
+  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1', 'tier:prowler:v1', 'tier:plague_doctor:v1'];
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'predator', { timeout: 10000 });
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
+  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Predator body · ${packages.get('tier:plague_doctor:v1').name} (stage 2)`);
 });
 
 test('ART-3 missing individual sprite preserves inspection and healthy assets', async ({ page }) => {
@@ -194,4 +204,108 @@ test('ART-3 missing individual sprite preserves inspection and healthy assets', 
   expect(loaded.some(url => url.endsWith('/predator.webp'))).toBe(true);
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
+});
+
+const MOTIFS = { brute: ['fissures', 'plates', 'crown'], prowler: ['talons', 'fangs', 'glands'], occultist: ['shards', 'souls', 'astral'] };
+const mutated = (id, names, enemy = false) => ({ id: String(id), isAlive: true, enemy,
+  ...creatureAppearance({ acquiredTiers: names.map(name => `tier:${name}:v1`) }, packages) });
+const mutationFrame = creatures => ({ stage: 'decision', target: null, actor: null, targets: [], creatures });
+const drawnMutations = page => page.evaluate(() => window.artScene.children.list
+  .filter(child => child.name === 'mutation-cue').map(child => ({ ...child.data.getAll(),
+    x: child.x, y: child.y, scaleX: child.scaleX, scaleY: child.scaleY, alpha: child.alpha,
+    visible: child.visible, commands: child.commandBuffer.length })).sort((a, b) => Number(a.creature) - Number(b.creature)
+      || ['body', 'accent', 'capstone'].indexOf(a.slot) - ['body', 'accent', 'capstone'].indexOf(b.slot)));
+
+test('each branch draws its own motif in the body slot, denser and mirrored on the enemy side at stage three', async ({ page }, info) => {
+  test.setTimeout(60000);
+  await mountSpellScene(page);
+  const families = [
+    ['brute', ['berserker', 'ravager'], ['ironbound', 'dreadnought'], ['marauder', 'warmonger']],
+    ['prowler', ['assassin', 'deathstalker'], ['parasite', 'soulreaver'], ['plague_doctor', 'blightweaver']],
+    ['occultist', ['elementalist', 'harbinger'], ['necromancer', 'lich'], ['shaman', 'spiritcaller']],
+  ];
+  for (const [root, ...branches] of families) {
+    const creatures = branches.map(([second], i) => mutated(i + 1, [root, second]))
+      .concat(branches.map(([second, third], i) => mutated(i + 4, [root, second, third], true)));
+    await presentSpell(page, mutationFrame(creatures), 'decision', true);
+    await page.clock.runFor(40);
+    const cues = await drawnMutations(page);
+    expect(cues.map(cue => [cue.creature, cue.slot, cue.motif])).toEqual([1, 2, 3, 4, 5, 6].map(id => [String(id), 'body', MOTIFS[root][(id - 1) % 3]]));
+    expect(cues.every(cue => cue.visible && cue.commands > 0 && Number.isFinite(cue.x))).toBe(true);
+    expect(cues.slice(0, 3).every(cue => cue.stage === 2 && cue.scaleX > 0)).toBe(true);
+    expect(cues.slice(3).every(cue => cue.stage === 3 && cue.scaleX < 0)).toBe(true);
+    // A larger normalized accent and extra geometry distinguish the evolved form.
+    for (let i = 0; i < 3; i++) expect(cues[i + 3].commands).toBeGreaterThan(cues[i].commands);
+    await page.screenshot({ path: info.outputPath(`art5-${root}-stages.png`) });
+  }
+});
+
+const mixedPair = () => [
+  mutated(1, ['brute', 'ironbound', 'dreadnought', 'titan', 'prowler', 'plague_doctor']),
+  mutated(2, ['occultist', 'necromancer', 'lich', 'archmage'], true),
+];
+const strikeFrame = creatures => ({ ...mutationFrame(creatures), actor: '1', target: '2',
+  cue: { kind: 'strike', struck: ['2'], effects: [], recipients: ['2'], contact: ['2'], changes: [],
+    visual: { family: 'physical', motif: 'impact', delivery: 'melee' } } });
+async function mountedPair(page) {
+  await mountSpellScene(page); const frame = strikeFrame(mixedPair());
+  await presentSpell(page, frame, 'decision'); return frame;
+}
+test('a mixed build fills its three slots and a capstone stays on the creature that owns it', async ({ page }) => {
+  await mountedPair(page);
+  const cues = await drawnMutations(page);
+  expect(cues.map(cue => [cue.creature, cue.slot, cue.motif])).toEqual([['1', 'body', 'plates'], ['1', 'accent', 'glands'], ['1', 'capstone', 'reinforcement'], ['2', 'body', 'souls'], ['2', 'capstone', 'circuit']]);
+});
+test('the layers move with their figure during a lunge', async ({ page }) => {
+  const frame = await mountedPair(page); const initial = await drawnMutations(page);
+  await presentSpell(page, frame, 'windup'); await page.clock.runFor(110);
+  const moved = await drawnMutations(page);
+  expect(Math.abs(moved[0].x - initial[0].x) + Math.abs(moved[0].y - initial[0].y)).toBeGreaterThan(1);
+});
+test('a resize keeps every layer on its figure', async ({ page }) => {
+  await mountedPair(page);
+  await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(100);
+  expect(await drawnMutations(page)).toHaveLength(5);
+});
+test('a defeated creature fades its layers with its image', async ({ page }) => {
+  const frame = await mountedPair(page);
+  await presentSpell(page, { ...frame, creatures: frame.creatures.map(one => ({ ...one, isAlive: false })) }, 'decision', true);
+  expect((await drawnMutations(page)).every(cue => Math.abs(cue.alpha - .16) < .001)).toBe(true);
+});
+test('a frame whose creatures have no later packages destroys the layers of the frame before', async ({ page }) => {
+  await mountedPair(page);
+  await presentSpell(page, mutationFrame([mutated(1, ['brute'])]), 'decision', true);
+  expect(await drawnMutations(page)).toEqual([]);
+  await presentSpell(page, mutationFrame([]), 'decision', true);
+  expect(await drawnMutations(page)).toEqual([]);
+});
+test('a creature drawn with the base because its sprite is missing hides the accents shaped for its body', async ({ page }) => {
+  const frame = await mountedPair(page);
+  await page.evaluate(() => window.artScene.textures.remove('creature-brute'));
+  await presentSpell(page, { ...frame, creatures: frame.creatures.map(one => ({ ...one, id: `${one.id}0` })) }, 'decision', true);
+  const fallback = await drawnMutations(page);
+  expect(fallback.filter(cue => cue.creature === '10').every(cue => !cue.visible)).toBe(true);
+  expect(fallback.filter(cue => cue.creature === '20').every(cue => cue.visible)).toBe(true);
+});
+
+test('mixed builds keep their targets inside the viewport and say their appearance in package names', async ({ page }, info) => {
+  const state = await mount(page);
+  const builds = [
+    ['brute', 'ironbound', 'dreadnought', 'titan'],
+    ['prowler', 'plague_doctor', 'blightweaver', 'apex'],
+    ['occultist', 'necromancer', 'lich', 'archmage'],
+    ['brute', 'berserker', 'ravager', 'occultist', 'necromancer'],
+    ['prowler', 'parasite', 'soulreaver', 'occultist', 'shaman'],
+    ['occultist', 'elementalist', 'harbinger', 'brute', 'marauder'],
+  ];
+  [...state.first.board.allies, ...state.first.board.enemies].forEach((one, i) => { one.acquiredTiers = builds[i].map(name => `tier:${name}:v1`); });
+  await choose(page);
+  await fits(page);
+  await page.screenshot({ path: info.outputPath('art5-six-creatures.png') });
+  await page.locator('[data-creature="3"]').click();
+  await expect(page.locator('#inspect-appearance')).toHaveText(`Appearance: Warped body · ${packages.get('tier:lich:v1').name} (stage 3) · ${packages.get('tier:archmage:v1').name} (stage 4)`);
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  await page.setViewportSize({ width: 844, height: 390 });
+  await fits(page);
+  await page.screenshot({ path: info.outputPath('art5-landscape.png') });
 });

@@ -28,4 +28,7 @@ public sealed record PackageCard(
     /// before reading its spells. Presentation the host adds where it has them; none on a capstone.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
+
+    /// <summary>How the package shows on a creature, where the builder published the mutation art (ADR 0133); <c>null</c> for a package nobody drew.</summary>
+    public MutationVisual? Visual { get; init; }
 }
