@@ -78,6 +78,9 @@ internal sealed class AccountApi
     /// <summary>What sends a notice to those devices; none when the host has no push keys, and then no device is registered either.</summary>
     public AccountNotices? Notices { get; set; }
 
+    /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
+    public Func<AccountId, Task>? ForgetFriends { get; set; }
+
     /// <summary>How <c>/api/me</c> names the mode to a page.</summary>
     public static string Named(AccountsMode mode) => mode switch
     {
@@ -262,6 +265,11 @@ internal sealed class AccountApi
         if (Devices is { } devices)
         {
             await devices.ForgetAsync(who.Account.Id);
+        }
+
+        if (ForgetFriends is { } forget)
+        {
+            await forget(who.Account.Id);
         }
 
         await _registry.DeleteAsync(who.Account.Id);

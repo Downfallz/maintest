@@ -1,5 +1,6 @@
 import { mountAccount, nextPath } from './account.js';
 import { mountDevices } from './devices.js';
+import { mountFriends } from './friends.js';
 import { activateSeats, isOperator, operatorToken, savedSeats } from './session.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -236,6 +237,7 @@ if (typeof document !== 'undefined') {
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
   const devices = mountDevices(document);
+  const friends = mountFriends(document);
   const eyebrow = document.getElementById('hero-eyebrow');
   const next = nextPath(globalThis.location.search);
   void mountAccount(document, {
@@ -246,6 +248,7 @@ if (typeof document !== 'undefined') {
       document.getElementById('leaderboard-link').hidden = mode === 'off';
       lobby.setAccount(account, mode);
       devices.setAccount(account);
+      friends.setAccount(account);
     },
   });
 }

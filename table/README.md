@@ -497,7 +497,21 @@ to the seats; **Send a test** sends one notice through the push service to this 
 deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
 `POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
 The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
-game, a "your turn" over the lobby, neither over its own page.
+game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
+reads its lists again at once.
+
+## Friends
+
+Signed in, the lobby's **Friends** panel (ADR 0129, `docs/tabletop/friends-plan.md` stage 2) lists your friends, the
+players who asked to be your friend (*Accept*, *Decline*), and the ones you asked who have not answered (*Withdraw*),
+and asks a player by their exact player name, the one on their cards: there is no directory and no search. A
+friendship is mutual: a request until the other accepts, and asking somebody who already asked you accepts.
+Declining, withdrawing and removing a friend are silent to the other side; a declined player may ask again. A player
+keeps at most a hundred friends and a hundred pending requests. On a host with push keys, the other player's devices
+are told of a request (*MarkF wants to be your friend*) and of an acceptance; a tap opens the lobby. Friendships are
+kept beside the accounts (`friends/<accountId>.json`, both sides written) and go with the account. The routes, all
+signed in: `GET /api/friends`, `POST /api/friends/requests {"username":"..."}`, `POST /api/friends/requests/<id>/accept`,
+`DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>`. A friend is what the next stage invites to a table.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
