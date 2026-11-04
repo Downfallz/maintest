@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { actionCue } from '../../table/arena-playback.js';
+import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
 import { fitsViewport } from './fit.js';
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: health > 0, isStunned: false, isStunImmune: false, knownSpells: ['strike'], conditions: [] });
@@ -30,7 +33,7 @@ async function mount(page) {
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url()); state.requests.push({ path: url.pathname, query: url.search, method: request.method() });
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2 }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2, visual: { family: 'necromantic', motif: 'spirits', delivery: 'cast' } }], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }] } });
     if (url.pathname === '/api/seat/player1') return route.fulfill({ status: state.status, json: state.view });
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
@@ -160,14 +163,15 @@ test('confirmed results and commands fit short portrait and landscape', async ({
   expect(h.errors).toEqual([]);
 });
 
-// ART-4: actual Phaser vector rendering, with the same confirmed cue adapter the live queue uses.
-import { actionCue } from '../../table/arena-playback.js';
-import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
+// ART-4: actual Phaser vector rendering, with the same confirmed cue adapter the live queue uses, fed the
+// spell art the builder publishes on the cards and the harmful effects the catalogue names.
+const drawn = new Map(Object.entries(JSON.parse(readFileSync(new URL('../../data/presentation/spell-art.json', import.meta.url), 'utf8')))
+  .map(([id, visual]) => [id, { id, name: id, visual }]));
 const visualCue = (spell, outcomes, status = 'Resolved') => actionCue({ actor: { id: 1 },
   action: { spell: `spell:${spell}:v1`, targets: [4, 5, 6] }, status,
-  effects: outcomes.map(([id, tone, metadata]) => ({ target: { id }, tone, text: 'Confirmed', ...metadata })) });
+  effects: outcomes.map(([id, tone, metadata]) => ({ target: { id }, tone, text: 'Confirmed', ...metadata })) }, drawn, new Set(['Bleed']));
 
-test('ART-4 renders distinct signatures only on confirmed recipients and clears every cast', async ({ page }, info) => {
+test('each family draws its motif on the confirmed recipients only, and every cast is cleared', async ({ page }, info) => {
   test.setTimeout(90000); // Several rendered casts and captures per viewport, including software GPUs.
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await mountSpellScene(page);
@@ -200,28 +204,46 @@ test('ART-4 renders distinct signatures only on confirmed recipients and clears 
   expect(errors).toEqual([]);
 });
 
-test('ART-4 suppresses fizzle hits and reduced motion, and cancels projectiles on resize or skip', async ({ page }) => {
+const quills = () => spellFrame(visualCue('throwing_star', [[4, 'harm'], [5, 'harm']]));
+async function mounted(page) {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await mountSpellScene(page);
-  const frame = spellFrame(visualCue('throwing_star', [[4, 'harm'], [5, 'harm']]));
+  await mountSpellScene(page); return errors;
+}
+test('quills fly to each confirmed recipient and are gone once the action settles', async ({ page }) => {
+  const errors = await mounted(page); const frame = quills();
   await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
   expect((await renderedEffects(page)).map(effect => effect.creature)).toEqual(['4', '5']);
   await presentSpell(page, frame, 'decision'); await page.clock.runFor(700);
-  expect(await renderedEffects(page)).toEqual([]);
-  await presentSpell(page, frame, 'windup'); await page.setViewportSize({ width: 844, height: 390 });
-  await page.clock.runFor(700); expect(await renderedEffects(page)).toEqual([]);
-  await presentSpell(page, frame, 'impact', true); expect(await renderedEffects(page)).toEqual([]);
-  await presentSpell(page, frame, 'decision');
-  const fizzle = spellFrame(visualCue('throwing_star', [[4, 'harm']], 'Fizzled'));
-  await presentSpell(page, fizzle, 'windup'); expect(await renderedEffects(page)).toEqual([]);
+  expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
+});
+test('a resize during the windup cancels the quills in flight', async ({ page }) => {
+  const errors = await mounted(page); const frame = quills();
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
+  await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(700);
+  expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
+});
+test('reduced motion draws no vector at impact', async ({ page }) => {
+  const errors = await mounted(page); const frame = quills();
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact', true);
+  expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
+});
+test('a fizzle launches nothing and leaves only a broken cast mark at the caster', async ({ page }) => {
+  const errors = await mounted(page); const fizzle = spellFrame(visualCue('throwing_star', [[4, 'harm']], 'Fizzled'));
+  await presentSpell(page, fizzle, 'decision'); await presentSpell(page, fizzle, 'windup'); expect(await renderedEffects(page)).toEqual([]);
   await presentSpell(page, fizzle, 'impact');
   expect((await renderedEffects(page)).map(effect => [effect.creature, effect.motif])).toEqual([['1', 'fizzle']]);
-  await page.clock.runFor(900); expect(await renderedEffects(page)).toEqual([]);
-  // A caster may also be the beneficiary: blood cost must not hide its own ward.
+  await page.clock.runFor(900); expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
+});
+test('a caster that is its own beneficiary shows both the blood cost and the ward', async ({ page }) => {
+  const errors = await mounted(page);
   const selfWard = spellFrame(visualCue('bone_ward', [[1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'Bleed' }, onCaster: true }],
     [1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'DefenseBuff' }, onCaster: false }]]));
   await presentSpell(page, selfWard, 'decision'); await presentSpell(page, selfWard, 'impact');
-  expect((await renderedEffects(page)).map(effect => effect.motif).sort()).toEqual(['bones', 'wound']);
+  expect((await renderedEffects(page)).map(effect => effect.motif).sort()).toEqual(['bones', 'wound']); expect(errors).toEqual([]);
+});
+test('figures created by a mutation stand on their rings when reduced motion enters impact directly', async ({ page }) => {
+  const errors = await mounted(page); const frame = quills();
+  await presentSpell(page, frame, 'decision');
   const changed = { ...frame, creatures: frame.creatures.map(one => ({ ...one, form: 'base-creature' })) };
   await presentSpell(page, changed, 'impact', true);
   expect(await page.evaluate(() => [...window.artScene.figures.values()].every(figure =>
@@ -229,8 +251,7 @@ test('ART-4 suppresses fizzle hits and reduced motion, and cancels projectiles o
   expect(errors).toEqual([]);
 });
 
-
-test('ART-4 live playback separates necromantic recipients from the caster blood cost', async ({ page }, info) => {
+test('live playback shows the necromantic recipients apart from the caster blood cost', async ({ page }, info) => {
   const h = await mount(page);
   const shapes = ['tier:occultist:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:occultist:v1'];
   const start = before.map((one, index) => ({ ...one, acquiredTiers: [shapes[index]] }));

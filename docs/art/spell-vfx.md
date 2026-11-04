@@ -6,8 +6,9 @@ See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) f
 
 ## Coverage
 
-All 42 family spells and the two base actions have an exact ID entry in `table/arena-spell-art.js`.
-These are shared vector motifs, not new textures or full skeletal animations.
+All 42 family spells and the two base actions have an entry in `data/presentation/spell-art.json`, which the
+builder checks and publishes beside the schema and the host serves on each card as `visual`; the page names
+no spell. These are shared vector motifs, not new textures or full skeletal animations.
 
 | Vocabulary | Shape and delivery | Examples |
 | --- | --- | --- |
@@ -16,7 +17,7 @@ These are shared vector motifs, not new textures or full skeletal animations.
 | Elemental | Jagged caster-to-recipient arc, ember tongues, angular ice crystal | Shock, Emberstorm, Deep Freeze |
 | Necromantic | Blue-green dead spirits and ivory bone wards; a separate blood-cost wound | Infestation, Wraithguard, Bonewall |
 | Astral | Vertical vitality rings and contracting spatial aperture | Revitalize, Renewal Burst, Void Pulse |
-| Neutral | Restrained focus mark; broken cast ring on fizzle | Focus, unknown future IDs, fizzled casts |
+| Neutral | Plain mark; broken cast ring on fizzle | Focus, a card nobody drew, fizzled casts |
 
 Names in this table describe the approved direction; ART-4 does not deploy pending renames. In particular,
 `spell:tornado:v1`, `spell:extort:v1` and `spell:soul_devourer:v1` still use their current catalogue labels.
@@ -29,7 +30,7 @@ No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a 
 - Apply motifs only to confirmed outcome recipients, once per creature except a separate self-cost wound.
   A caster receiving its own Bonewall shows both the blood cost and the ward.
   Preserve the applied outcome kind, effect and caster flag: Bonewall, Wraithguard and Death Wail
-  pay with caster-side Bleed conditions, while Infestation uses immediate Damage. Empty outcomes never invent
+  pay with a caster-side lasting effect the catalogue calls harmful, while Infestation uses immediate Damage. Empty outcomes never invent
   recipients from the declaration. Fizzles never launch quills or hit a recipient.
 - Scale shapes to the visible creature and viewport; mirrored creatures use the same ground/body anchors.
   Shapes differ as well as colors. Warm gold remains reserved for the target/active marker.

@@ -1,0 +1,222 @@
+{
+  "spell:adrenaline_tonic:v1": {
+    "family": "biological",
+    "motif": "spores",
+    "delivery": "cast"
+  },
+  "spell:ambush:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:bone_ward:v1": {
+    "family": "necromantic",
+    "motif": "bones",
+    "delivery": "cast"
+  },
+  "spell:chain_slash:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:crazed_specter:v1": {
+    "family": "necromantic",
+    "motif": "spirits",
+    "delivery": "cast"
+  },
+  "spell:crushing_stomp:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:engulfing_flames:v1": {
+    "family": "elemental",
+    "motif": "fire",
+    "delivery": "cast"
+  },
+  "spell:enraged_charge:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:extort:v1": {
+    "family": "physical",
+    "motif": "bite",
+    "delivery": "melee"
+  },
+  "spell:frostbite:v1": {
+    "family": "elemental",
+    "motif": "ice",
+    "delivery": "cast"
+  },
+  "spell:full_plate:v1": {
+    "family": "physical",
+    "motif": "plates",
+    "delivery": "cast"
+  },
+  "spell:guard:v1": {
+    "family": "physical",
+    "motif": "plates",
+    "delivery": "cast"
+  },
+  "spell:hateful_sacrifice:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:healing_screech:v1": {
+    "family": "astral",
+    "motif": "vital",
+    "delivery": "cast"
+  },
+  "spell:heavy_strike:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:ice_spear:v1": {
+    "family": "elemental",
+    "motif": "ice",
+    "delivery": "cast"
+  },
+  "spell:infectious_blast:v1": {
+    "family": "biological",
+    "motif": "spores",
+    "delivery": "cast"
+  },
+  "spell:latch:v1": {
+    "family": "biological",
+    "motif": "bite",
+    "delivery": "melee"
+  },
+  "spell:lightning_bolt:v1": {
+    "family": "elemental",
+    "motif": "arc",
+    "delivery": "cast"
+  },
+  "spell:meteor:v1": {
+    "family": "elemental",
+    "motif": "fire",
+    "delivery": "cast"
+  },
+  "spell:momentum:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:mortal_wound:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:night_raid:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:noxious_cure:v1": {
+    "family": "biological",
+    "motif": "spores",
+    "delivery": "cast"
+  },
+  "spell:parasite_jab:v1": {
+    "family": "biological",
+    "motif": "bite",
+    "delivery": "melee"
+  },
+  "spell:poison_slash:v1": {
+    "family": "biological",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:protective_slam:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:psycho_rush:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:pummel:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:reckless_swing:v1": {
+    "family": "physical",
+    "motif": "slash",
+    "delivery": "melee"
+  },
+  "spell:rejuvenate:v1": {
+    "family": "astral",
+    "motif": "vital",
+    "delivery": "cast"
+  },
+  "spell:restorative_burst:v1": {
+    "family": "astral",
+    "motif": "vital",
+    "delivery": "cast"
+  },
+  "spell:restorative_gush:v1": {
+    "family": "physical",
+    "motif": "vital",
+    "delivery": "cast"
+  },
+  "spell:revenant_guards:v1": {
+    "family": "necromantic",
+    "motif": "spirits",
+    "delivery": "cast"
+  },
+  "spell:shield_bash:v1": {
+    "family": "physical",
+    "motif": "impact",
+    "delivery": "melee"
+  },
+  "spell:soothing_chant:v1": {
+    "family": "astral",
+    "motif": "vital",
+    "delivery": "cast"
+  },
+  "spell:soul_devourer:v1": {
+    "family": "biological",
+    "motif": "bite",
+    "delivery": "melee"
+  },
+  "spell:summon_minions:v1": {
+    "family": "necromantic",
+    "motif": "spirits",
+    "delivery": "cast"
+  },
+  "spell:throwing_star:v1": {
+    "family": "biological",
+    "motif": "quill",
+    "delivery": "projectile"
+  },
+  "spell:thundering_seal:v1": {
+    "family": "physical",
+    "motif": "roar",
+    "delivery": "cast"
+  },
+  "spell:tornado:v1": {
+    "family": "physical",
+    "motif": "wave",
+    "delivery": "cast"
+  },
+  "spell:toxic_waves:v1": {
+    "family": "astral",
+    "motif": "void",
+    "delivery": "cast"
+  },
+  "spell:tranquilizer_dart:v1": {
+    "family": "biological",
+    "motif": "quill",
+    "delivery": "projectile"
+  },
+  "spell:wait:v1": {
+    "family": "neutral",
+    "motif": "focus",
+    "delivery": "cast"
+  }
+}
