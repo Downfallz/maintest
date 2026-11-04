@@ -32,3 +32,9 @@ export function spellVisual(action) {
   const id = action.action?.spell;
   return Object.hasOwn(SPELL_ART, id) ? SPELL_ART[id] : fallback;
 }
+
+// ADR 0131: only confirmed caster-side outcomes select the wound motif, never authored costs.
+export function casterWound(effect, actorId) {
+  return effect.target.id === actorId && (effect.tone === 'harm'
+    || (effect.onCaster === true && effect.kind === 'ConditionOutcome' && effect.effect?.kind === 'Bleed'));
+}

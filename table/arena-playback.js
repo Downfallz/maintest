@@ -2,7 +2,7 @@ import { resolvedSince, lastResolvedText } from './feed.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './arena-live.js';
-import { spellVisual } from './arena-spell-art.js';
+import { spellVisual, casterWound } from './arena-spell-art.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './arena-timing.js';
 
 const resultText = action => [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
@@ -15,8 +15,7 @@ const framed = action => Array.isArray(action.frame?.before) && Array.isArray(ac
 export function actionCue(action) {
   const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone,
     kind: effect.kind, effect: effect.effect, onCaster: effect.onCaster === true,
-    wound: effect.target.id === action.actor?.id && (effect.tone === 'harm'
-      || (effect.onCaster === true && effect.kind === 'ConditionOutcome' && effect.effect?.kind === 'Bleed')) }));
+    wound: casterWound(effect, action.actor?.id) }));
   const struck = [...new Set(action.effects.filter(effect => effect.tone === 'harm').map(effect => String(effect.target.id)))];
   const changes = framed(action) ? combatChanges(
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];

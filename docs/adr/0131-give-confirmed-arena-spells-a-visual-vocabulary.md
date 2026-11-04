@@ -26,6 +26,11 @@ outcome kind, effect and caster metadata through the recap adapter: a caster-sid
 blood cost too, even though its generic outcome tone is `condition`. Never parse the display text to
 recognize it.
 
+Keep that condition-name recognition in `arena-spell-art.js`, alongside the spell vocabulary. The page's
+content-independence test permits only `Bleed` in that dedicated module; every other effect name and all
+generic playback/page modules remain subject to the sweep. This exception selects a visual motif from an
+applied outcome and carries no balance value or rule prediction.
+
 Draw bounded, short-lived Phaser vectors for physical impacts/plates, biological claws/quills/spores,
 elemental arcs/fire/ice, necromantic spirits/bones, and astral vitality/void. Only melee delivery moves the
 caster toward a confirmed recipient. Projectiles reach their confirmed recipients at the existing impact

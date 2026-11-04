@@ -42,6 +42,15 @@ test('empty outcomes do not fabricate recipients from declarations or the spell 
   const cue = actionCue(cast('spell:tornado:v1'));
   assert.deepEqual(cue.recipients, []); assert.deepEqual(cue.contact, []);
 });
+test('caster wounds use confirmed structured costs and never beneficiary conditions or display text', () => {
+  const condition = (target, kind, onCaster) => ({ target: { id: target }, kind: 'ConditionOutcome',
+    effect: { kind }, onCaster, tone: 'condition', text: 'Bleed 99 · caster' });
+  const cue = actionCue(cast('spell:bone_ward:v1', [
+    condition(1, 'Bleed', true), condition(1, 'DefenseBuff', true), condition(1, 'Bleed', false),
+    condition(2, 'Bleed', true), condition(1, 'Unknown', true), effect(1, 'harm'),
+  ]));
+  assert.deepEqual(cue.effects.map(effect => effect.wound), [true, false, false, false, false, true]);
+});
 test('the live queue carries the wire spell ID through renamed catalogue labels and anchors to a real recipient', () => {
   const before = [1, 2, 3].map(id => ({ id, health: 20, maxHealth: 20, energy: 5, isAlive: true }));
   const view = { board: { allies: before.slice(0, 1), enemies: before.slice(1), roundNumber: 2 }, feed: [] };
