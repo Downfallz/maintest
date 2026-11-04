@@ -15,8 +15,8 @@ permissions:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    # The three projects of every suite plus the real-host journeys took 12.6 minutes on the run that added the
-    # combat suite (#430); ten was the budget before it.
+    # The three projects of the four arena suites, the table suites and the real-host journeys took fifteen
+    # minutes on the run that added playback (#431); ten was the budget before the combat suite (#430).
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

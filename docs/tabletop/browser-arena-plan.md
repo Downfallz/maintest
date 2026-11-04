@@ -214,7 +214,8 @@ The per-viewpoint watermark consumes identities at receipt, preventing SSE/poll 
 Skip. Playback never sends commands or acknowledges a question. Skip and opening controls immediately draw
 the latest legal board. Resize, motion preference changes and connection interruption cancel effects;
 seat changes, access loss and hidden pages erase private historical content and fence callbacks. First reads
-are baselines. Legacy frames and catch-ups above twelve actions settle on the latest board with confirmed text.
+are baselines. Legacy frames, and one read bringing more than twelve actions, settle on the latest board with
+confirmed text; what is already queued plays on.
 Reduced motion presents applied frames without displacement or particles. An expandable result keeps the full
 outcome readable without growing the fixed shell. Upkeep choreography and complete-loop controls remain A7.
 

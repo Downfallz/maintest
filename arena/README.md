@@ -81,6 +81,6 @@ packaged bundle. Screenshots in the delivery plan come from the actual .NET host
 The lab remains one authored action. The live scene plays the host's confirmed before/after frames in
 sequence, including damage, recovery, energy, conditions, fizzles and defeat. Skip, opening combat controls,
 resize and connection interruption return immediately to the current snapshot. First loads and hidden-tab
-returns never replay history. Legacy events and catch-ups beyond twelve actions use confirmed text on the
-latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
+returns never replay history. Legacy events, and one read bringing more than twelve actions, use confirmed
+text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
 Android GPU/performance, screen readers, high zoom and a complete real match remain future acceptance.
