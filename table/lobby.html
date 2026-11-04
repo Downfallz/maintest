@@ -34,6 +34,10 @@
     </section>
     <div class="lobby-layout">
       <div class="lobby-games">
+        <section id="invitations" aria-labelledby="invitations-heading" class="lobby-section" hidden>
+          <div class="section-heading"><h2 id="invitations-heading">Invitations <span id="invitations-count" class="lobby-count"></span></h2><span class="muted">A friend kept a seat for you</span></div>
+          <div id="invitation-cards" class="lobby-grid"></div>
+        </section>
         <section aria-labelledby="mine-heading" class="lobby-section">
           <div class="section-heading"><h2 id="mine-heading">Your games <span id="mine-count" class="lobby-count"></span></h2><span id="mine-where" class="muted">Saved on this browser</span></div>
           <div id="my-tables" class="lobby-grid"><p class="empty-state">Looking for your saved seats…</p></div>
@@ -63,7 +67,8 @@
   </main>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
-      <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
+      <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
+      <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
       <label for="format">Creatures per side</label><select id="format" name="format"></select>
       <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
       <p id="create-problem" class="problem" role="alert" hidden></p>

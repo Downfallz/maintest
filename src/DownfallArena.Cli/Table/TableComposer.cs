@@ -522,7 +522,18 @@ internal sealed class TableComposer
         var taken = recorded is null ? false : recorded.Taken ?? false;
         var invitation = recorded is null ? Token() : recorded.Invitation;
         var account = AccountId.TryParse(recorded?.Account, out var owner) ? owner : (AccountId?)null;
-        return (seat, new TableSeat(slot, token ?? Token(), human) { Invitation = taken ? null : invitation, Taken = taken, Push = recorded?.Push, Account = account });
+        var invited = !taken && AccountId.TryParse(recorded?.InvitedAccount, out var friend) ? friend : (AccountId?)null;
+        var declinedBy = AccountId.TryParse(recorded?.DeclinedBy, out var decliner) ? decliner : (AccountId?)null;
+        return (seat, new TableSeat(slot, token ?? Token(), human)
+        {
+            Invitation = taken ? null : invitation,
+            Taken = taken,
+            Push = recorded?.Push,
+            Account = account,
+            InvitedAccount = invited,
+            InvitedAt = invited is null ? null : recorded?.InvitedAt,
+            DeclinedBy = declinedBy,
+        });
     }
 
     /// <summary>

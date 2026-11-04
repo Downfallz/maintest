@@ -10,6 +10,18 @@ test('a seat waiting for the other player is told who, with the code and the lin
   assert.match(room.detail, /at the same time/);
 });
 
+test('a seat kept for a friend waits for them to accept, with no code and no link to pass on', () => {
+  const room = waitingRoom({ waiting: { seats: [{ slot: 'player2', invited: true }] } }, 'https://table.example');
+
+  assert.equal(room.line, 'Waiting for your friend to accept…');
+  assert.deepEqual(room.seats, [{ slot: 'player2', name: 'Your friend', code: null, link: null }]);
+
+  const declined = waitingRoom({ waiting: { seats: [{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM', declined: true }] } }, 'https://table.example');
+  assert.equal(declined.line, 'Your friend declined the invitation.');
+  assert.match(declined.detail, /invite another friend/);
+  assert.equal(declined.seats[0].code, 'K7F2Q9XM', 'the seat is anybody\'s again, so its code shows');
+});
+
 test('a table waiting for both players names both, and a seat without a code shows none', () => {
   const room = waitingRoom({ waiting: { seats: [{ slot: 'player1' }, { slot: 'player2', code: 'ABCDEFGH', join: '/j/ABCDEFGH' }] } });
 

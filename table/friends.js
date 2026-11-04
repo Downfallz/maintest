@@ -25,12 +25,13 @@ export function askedText(answer) {
 /** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
 export const REFRESH_EVERY = 30000;
 
-export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis } = {}) {
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null } = {}) {
   const el = id => doc.getElementById(id);
   let account = null;
   let list = null;
   let drawn = '';
   let busy = false;
+  let outstanding = false;
   const problem = (text = '') => { el('friend-problem').textContent = text; el('friend-problem').hidden = !text; };
   const note = (text = '') => { el('friend-note').textContent = text; el('friend-note').hidden = !text; };
 
@@ -65,8 +66,16 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     return item;
   }
 
+  function inviteButton(link) {
+    const button = node('button', 'Invite', 'primary');
+    button.type = 'button';
+    button.disabled = outstanding;
+    button.title = outstanding ? 'You already have an invitation waiting. Cancel it first, or wait for the answer.' : `Keep a seat for ${link.username}`;
+    button.addEventListener('click', () => onInvite?.(link));
+    return button;
+  }
   function render() {
-    const key = JSON.stringify([account?.id ?? null, list]);
+    const key = JSON.stringify([account?.id ?? null, list, outstanding]);
     if (key === drawn) return;
     drawn = key;
     el('friends-panel').hidden = !account;
@@ -79,7 +88,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       action('Decline', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
     ])));
     el('friend-list').replaceChildren(...(sections.friends.items.length
-      ? sections.friends.items.map(link => row(link, [action('Remove', 'secondary', () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'))]))
+      ? sections.friends.items.map(link => row(link, [...(onInvite ? [inviteButton(link)] : []), action('Remove', 'secondary', () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'))]))
       : [node('li', sections.friends.empty, 'empty-state')]));
     el('friend-count').textContent = sections.friends.items.length || '';
     el('friend-outgoing').hidden = !sections.outgoing.shown;
@@ -123,6 +132,12 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   render();
   return {
     stop: () => win.clearInterval(interval),
+    /** Told by the lobby whether an invitation of this player's is waiting: one at a time, so Invite waits too. */
+    setOutstanding(next) {
+      if (Boolean(next) === outstanding) return;
+      outstanding = Boolean(next);
+      render();
+    },
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;

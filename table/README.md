@@ -511,7 +511,24 @@ keeps at most a hundred friends and a hundred pending requests. On a host with p
 are told of a request (*MarkF wants to be your friend*) and of an acceptance; a tap opens the lobby. Friendships are
 kept beside the accounts (`friends/<accountId>.json`, both sides written) and go with the account. The routes, all
 signed in: `GET /api/friends`, `POST /api/friends/requests {"username":"..."}`, `POST /api/friends/requests/<id>/accept`,
-`DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>`. A friend is what the next stage invites to a table.
+`DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>`.
+
+## Inviting a friend
+
+*Invite* beside a friend, or *A friend · seat kept for them* in the create dialog, opens a table whose second seat
+is **kept for that account** (ADR 0129, stage 3): it is not an open place, has no code and no link, and only that
+friend, signed in, accepts it from the **Invitations** section of their lobby (*Accept & play*, *Decline*). Their
+devices are told (*MarkF invites you to a 2v2 battle*; a tap opens the lobby), the inviter waits at the table
+(*Waiting for your friend to accept…*), and is told when the friend accepts (a tap opens the table; the first
+"your turn" that follows is the match starting, ADR 0092) or declines. One invitation of a player's waits at a
+time, for a day at most; removing the friend cancels it. The inviter's card says *Waiting for bastien…* with
+*Cancel invitation*, or *bastien declined* with the three ways out: *Invite another friend*, *Open the seat to
+everyone* (today's open place) and *Close the table*, which any player holding every taken seat of a table that has
+not begun may do. A rebuilt table (ADR 0091) still waits for the friend. Cards name an invited seat by the friend
+(`kind: "invited"`). The routes, all signed in: `POST /api/lobby/tables {"opponent":"friend","friend":"<accountId>"}`,
+`POST /api/lobby/tables/<id>/accept`, `/decline`, `DELETE /api/lobby/tables/<id>/invitation`,
+`POST /api/lobby/tables/<id>/invitation {"friend"}`, `POST /api/lobby/tables/<id>/open`, `DELETE /api/lobby/tables/<id>`;
+`GET /api/lobby/mine` adds `invitations` and each own table's `invited`.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
