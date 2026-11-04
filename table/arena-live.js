@@ -1,3 +1,4 @@
+import { creatureForm } from './arena-art.js';
 import { boardPresentation } from './presentation.js';
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
@@ -7,8 +8,7 @@ export function livePresentation(view) {
   const creatures = roster.map((one, index) => ({
     ...one, label: roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name,
     id: String(one.id), enemy: index >= board.allies.length,
-    // Provisional artwork denotes a position, never a class or an unlocked ability.
-    form: ['horns', 'wings', 'veil'][index % 3],
+    form: creatureForm(one),
   }));
   return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };

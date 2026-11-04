@@ -29,6 +29,7 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/main.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/types.ts`: presentation types only.
+- `table/arena-art.js`: audited sprite manifest, root-mutation mapping, neutral multiclass fallback and mirrored geometry.
 - `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
   and the cancellation generation.
 - `table/arena-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit
@@ -58,8 +59,8 @@ Invitation acceptance stays at `/play`.
 401/403 clears private content; a transient failure labels the last snapshot stale. A hidden page
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
 accepted seat as arrived, which may start a waiting match.
-The compiled bundle is about 1.2 MB uncompressed; the two art files total
-about 0.8 MB. Device performance and transfer compression remain to be measured before release.
+The compiled bundle is about 1.2 MB uncompressed. Four creature WebPs total 1,212,726 bytes,
+plus the eclipse background; the old three-frame sheet is no longer loaded. Device performance and transfer compression remain to be measured before release.
 
 ## Verify
 
@@ -82,7 +83,7 @@ The lab remains one authored action. The live scene plays the host's confirmed b
 sequence, including damage, recovery, energy, conditions, fizzles and defeat. Skip, opening combat controls,
 resize and connection interruption return immediately to the current snapshot. First loads and hidden-tab
 returns never replay history. Legacy events, and one read bringing more than twelve actions, use confirmed
-text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
+text on the latest board. Result details remain available in an accessible overlay. Both pages use four audited forms with uniform scaling and explicit ground anchors ([ART-3](../docs/art/runtime-sprites.md)). Real-device Safari,
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).

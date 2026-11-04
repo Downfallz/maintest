@@ -1,5 +1,8 @@
 # ART-2 — Creature source intake
 
+This page records the ART-2 checkpoint. [ART-3 runtime integration](runtime-sprites.md) now uses the
+audited WebPs with explicit anchors and fallbacks; the source register retains its historical intake status.
+
 This commit contains four WebP reference derivatives and the audit of the owner-supplied PNGs.
 The owner will add the original PNGs separately under `docs/art/sources/`; no PNG is included here.
 They implement the reference-intake slice of the [art direction](creature-art-direction.md),

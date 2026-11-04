@@ -49,6 +49,7 @@ function tagOf(one: Creature, selected: boolean, targetable: boolean) {
 
 function updateCreature(one: Creature) {
   const node = nodes.get(one.id)!;
+  node.dataset.form = one.form;
   const targetable = state.stage === 'targeting' && state.action.targets.includes(one.id);
   const selected = one.id === state.target;
   node.disabled = !ready || isLabPlaying(state);

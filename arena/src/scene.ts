@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { placements, strikeApproach } from '../../table/arena-layout.js';
+import { CREATURE_ART, figureArt, figureGeometry } from '../../table/arena-art.js';
 import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
 
@@ -7,7 +8,7 @@ const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage =
 
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
-  home: Placement;
+  home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
 }
 
 const GOLD = 0xeac88e;
@@ -39,18 +40,12 @@ export class ArenaScene extends Phaser.Scene {
 
   preload() {
     this.load.image('arena-floor', `${this.assetRoot}eclipse-arena.webp`);
-    this.load.image('creature-sheet', `${this.assetRoot}creatures.webp`);
+    for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
     this.load.on('loaderror', () => { this.assetFailed = true; });
   }
 
   create() {
-    if (this.textures.exists('arena-floor')) this.backdrop = this.add.image(0, 0, 'arena-floor').setOrigin(.5, 0).setDepth(-10);
-    if (this.textures.exists('creature-sheet')) {
-      const sheet = this.textures.get('creature-sheet');
-      const source = sheet.getSourceImage();
-      const width = Math.floor(source.width / 3);
-      for (const [index, form] of ['horns', 'wings', 'veil'].entries()) sheet.add(form, 0, width * index, 0, width, source.height);
-    }
+    if (this.textures.exists('arena-floor')) this.backdrop = this.add.image(0, 0, 'arena-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
@@ -103,13 +98,10 @@ export class ArenaScene extends Phaser.Scene {
       const enemy = creature.enemy;
       const shadow = this.add.ellipse(0, 0, 100, 20, 0x020608, .55);
       const ring = this.add.ellipse(0, 0, 110, 26).setStrokeStyle(1, GOLD, .2);
-      const image = this.textures.exists('creature-sheet')
-        ? this.add.image(0, 0, 'creature-sheet', creature.form)
-        : this.add.image(0, 0, 'missing-figure');
-      // The enemy team reuses the three forms, mirrored and tinted so the two sides still read apart.
-      image.setOrigin(.5, 1).setFlipX(enemy);
-      if (enemy) image.setTint(0xefbfb0);
-      this.figures.set(creature.id, { image, shadow, ring, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      const art = figureArt(creature.form, (key: string) => this.textures.exists(key));
+      const image = this.add.image(0, 0, art.key).setFlipX(enemy);
+      // Team identity remains in labels, formation and targeting; preserve the approved art palette.
+      this.figures.set(creature.id, { image, shadow, ring, art, enemy, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
@@ -127,7 +119,8 @@ export class ArenaScene extends Phaser.Scene {
       const figure = this.figures.get(creature.id)!;
       const home = positions[index];
       figure.home = home;
-      figure.image.setDisplaySize(home.size, home.size).setDepth(home.y);
+      const geometry = figureGeometry(figure.art, home, figure.enemy);
+      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y);
       if (!inFlight) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
@@ -183,7 +176,8 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private burst(target: Figure, color: number, sparks: boolean) {
-    const x = target.home.x; const y = target.home.y - target.home.size * .5;
+    const visibleHeight = (target.art.bounds[3] - target.art.bounds[1]) * target.image.scaleY;
+    const x = target.home.x; const y = target.home.y - visibleHeight * .5;
     const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
     this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 / this.rate });
