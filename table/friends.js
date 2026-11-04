@@ -90,11 +90,16 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
 
   async function refresh(quiet = false) {
     if (!account) { list = null; render(); return; }
+    // A list read for one account is drawn for that account only: a sign-out and a sign-in while it was in flight
+    // make it the previous player's, and it is dropped.
+    const forAccount = account.id;
     try {
-      list = await request('/api/friends');
+      const read = await request('/api/friends');
+      if (account?.id !== forAccount) return;
+      list = read;
       render();
     } catch (error) {
-      if (!quiet) problem(error.message || 'Could not load your friends. Try again.');
+      if (!quiet && account?.id === forAccount) problem(error.message || 'Could not load your friends. Try again.');
     }
   }
 

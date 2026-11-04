@@ -13,7 +13,11 @@ namespace DownfallArena.Application.Accounts.Friends;
 /// </summary>
 public sealed class Friends
 {
-    /// <summary>How many friends, and how many pending requests, one account keeps at most: a bound on a document, and on a lobby panel.</summary>
+    /// <summary>
+    /// How many friends one account keeps at most, and, separately, how many pending requests (incoming and
+    /// outgoing together): a bound on a document, and on a lobby panel. Checked for both accounts: a friendship
+    /// counts on both lists, so neither may be full.
+    /// </summary>
     public const int MostLinks = 100;
 
     private static readonly SemaphoreSlim Writes = new(1, 1);
@@ -58,6 +62,12 @@ public sealed class Friends
         await Writes.WaitAsync(cancellationToken);
         try
         {
+            // Checked again under the lock: an account deleted since the name was resolved is nobody to ask.
+            if (await _accounts.FindAsync(other, cancellationToken) is null)
+            {
+                return Result.Failure<FriendAsked>(FriendErrors.NoSuchPlayer);
+            }
+
             var mine = await _store.ListAsync(me, cancellationToken);
             var theirs = await _store.ListAsync(other, cancellationToken);
             if (mine.Has(other) || theirs.Has(me))
@@ -69,6 +79,11 @@ public sealed class Friends
 
             if (mine.AskedBy(other) || theirs.Asked(me))
             {
+                if (FriendsFull(mine, theirs))
+                {
+                    return Result.Failure<FriendAsked>(FriendErrors.TooMany);
+                }
+
                 await LinkAsync(me, mine, other, theirs, cancellationToken);
                 return Result.Success(new FriendAsked(other, Accepted: true));
             }
@@ -78,7 +93,7 @@ public sealed class Friends
                 return Result.Failure<FriendAsked>(FriendErrors.AlreadyAsked);
             }
 
-            if (mine.Friends.Count + mine.Outgoing.Count >= MostLinks || theirs.Friends.Count + theirs.Incoming.Count >= MostLinks)
+            if (Pending(mine) >= MostLinks || Pending(theirs) >= MostLinks)
             {
                 return Result.Failure<FriendAsked>(FriendErrors.TooMany);
             }
@@ -100,11 +115,21 @@ public sealed class Friends
         await Writes.WaitAsync(cancellationToken);
         try
         {
+            if (await _accounts.FindAsync(other, cancellationToken) is null)
+            {
+                return Result.Failure(FriendErrors.NoSuchPlayer);
+            }
+
             var mine = await _store.ListAsync(me, cancellationToken);
             var theirs = await _store.ListAsync(other, cancellationToken);
             if (!mine.AskedBy(other) && !theirs.Asked(me))
             {
                 return mine.Has(other) ? Result.Failure(FriendErrors.AlreadyFriends) : Result.Failure(FriendErrors.NoSuchRequest);
+            }
+
+            if (FriendsFull(mine, theirs))
+            {
+                return Result.Failure(FriendErrors.TooMany);
             }
 
             await LinkAsync(me, mine, other, theirs, cancellationToken);
@@ -162,6 +187,11 @@ public sealed class Friends
             Writes.Release();
         }
     }
+
+    private static int Pending(FriendList list) => list.Incoming.Count + list.Outgoing.Count;
+
+    /// <summary>Whether one more friendship would take either account past <see cref="MostLinks" /> friends.</summary>
+    private static bool FriendsFull(FriendList mine, FriendList theirs) => mine.Friends.Count >= MostLinks || theirs.Friends.Count >= MostLinks;
 
     private async Task LinkAsync(AccountId me, FriendList mine, AccountId other, FriendList theirs, CancellationToken cancellationToken)
     {
