@@ -70,6 +70,8 @@ docs/
                 plus the plan for the Automa, the opponent a person executes from printed components (automa.md), and
                 the free-activation playtest (free-activation-playtest.md, ADR 0110), and the plan for player accounts
                 with a Google sign-in and the home page (accounts-plan.md, ADR 0122).
+                The arena UX recovery plan (arena-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
+                reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.
