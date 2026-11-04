@@ -21,6 +21,7 @@ COPY arena/ ./
 # The bundle imports modules of the page itself (the state machine, the fixture, the layout, the terms); every
 # one of them, so a new import never has to be listed here. The test files are kept out by .dockerignore.
 COPY table/*.js /src/table/
+COPY table/arena-art/ /src/table/arena-art/
 RUN npm run build
 
 FROM ${SDK_IMAGE} AS build
