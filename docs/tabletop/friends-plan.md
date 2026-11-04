@@ -1,8 +1,9 @@
 # Plan: friends, and inviting one of them to a table
 
-Status: plan, proposed on 2026-11-04. Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat
-invitations of ADR 0116 and the push notices of ADR 0118. Nothing here is built; the ADR that accepts it is the
-first deliverable of stage 2, once the owner has answered the questions at the end.
+Status: plan, settled with the owner on 2026-11-04 (every recommendation under "Questions the owner settled"
+taken, and every notice of stage 4 wanted). Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat
+invitations of ADR 0116 and the push notices of ADR 0118. Nothing here is built; the ADR that records it is the
+first deliverable of stage 2.
 
 ## What the owner asked for
 
@@ -98,7 +99,7 @@ What reaches a device, each a one-line notice with a title, a body naming the ot
 **"The game has started" is not a separate notice.** ADR 0092 begins the match the moment both people are at
 their seats and asks both their first pick at once; the invited friend's page goes to the table as it accepts.
 So the inviter hears *accepted* and, seconds later, *Your turn*, which is the match starting. A third notice in
-between would say the same thing again. The owner can overrule this (question 5).
+between would say the same thing again (settled, question 5).
 
 The rules of ADR 0118 and 0120 keep applying: a notice is not shown when a window of this host is visible and
 focused on the page the notice opens; a device holding both seats of a table gets no notice about that table;
@@ -194,16 +195,18 @@ Not in this plan, each its own later decision: *your turn* to every device of an
 browser (the follow-up ADR 0118 already names; stage 1 is what it needs), presence (*online now*), a block list
 beyond declining, notification preferences, invitations to a group or a tournament, and chat.
 
-## Questions for the owner (with a recommendation each)
+## Questions the owner settled (2026-11-04: every recommendation taken)
 
-1. **Mutual friendship or one-sided list?** Recommended: mutual, a request the other accepts, because a friend
-   can wake your phone.
-2. **Add by exact name, or search players?** Recommended: exact name. Names are already public on cards; a
-   directory of every player is one more thing to explain in *What we keep*.
-3. **Open the table when inviting, or when the friend accepts?** Recommended: when inviting, as above; the cost is
-   one of sixteen tables for at most a day.
-4. **How long does an invitation wait?** Recommended: 24 hours, then it counts as declined.
-5. **A separate "the game has started" notice?** Recommended: no; *accepted* then the first *Your turn* is the
-   game starting. Easy to add if the two feel like one notice too few.
-6. **Who may close an unbegun table?** Recommended: whoever holds every taken seat of it. Today only the operator
-   can, and only from the admin panel.
+1. **Mutual friendship or one-sided list?** Mutual: a request the other accepts, because a friend can wake your
+   phone.
+2. **Add by exact name, or search players?** Exact name. Names are already public on cards; a directory of every
+   player is one more thing to explain in *What we keep*.
+3. **Open the table when inviting, or when the friend accepts?** When inviting, as above; the cost is one of
+   sixteen tables for at most a day.
+4. **How long does an invitation wait?** 24 hours, then it counts as declined.
+5. **A separate "the game has started" notice?** No: *accepted*, then the first *Your turn* is the game starting.
+6. **Who may close an unbegun table?** Whoever holds every taken seat of it. Today only the operator can, and only
+   from the admin panel.
+7. **Which other notices in the first version?** All four of stage 4: the end of a match, the opponent leaving the
+   table, a declined invitation, and *Rematch* on the outcome.
+8. **In what order?** Devices, friends, inviting, the rest: one pull request each, as the stages say.
