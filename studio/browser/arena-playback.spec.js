@@ -303,6 +303,7 @@ test('ART-6 speed uses the same impact boundary and changing it settles consumed
 });
 
 test('ART-6 live audio is gesture-only, once per confirmed impact, and silent after skip or disable', async ({ page }) => {
+  test.setTimeout(60000); // Four rendered casts plus controls on software GPUs; keep every audio assertion.
   await probeAudio(page);
   const h = await mount(page);
   await h.publish([entry(10)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
@@ -321,7 +322,8 @@ test('ART-6 live audio is gesture-only, once per confirmed impact, and silent af
   expect(await page.evaluate(() => window.audioProbe.starts)).toBe(1);
   await page.locator('#settings').click(); await page.locator('#sound').uncheck();
   await page.getByRole('button', { name: 'Close settings' }).click();
-  await h.publish([entry(13)]); await page.clock.runFor(1500);
+  await h.publish([entry(13)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(1600);
   expect(await page.evaluate(() => window.audioProbe.starts)).toBe(1);
   expect(h.errors).toEqual([]);
 });
