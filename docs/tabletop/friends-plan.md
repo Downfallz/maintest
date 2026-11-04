@@ -1,9 +1,9 @@
 # Plan: friends, and inviting one of them to a table
 
 Status: plan, settled with the owner on 2026-11-04 (every recommendation under "Questions the owner settled"
-taken, and every notice of stage 4 wanted). Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat
-invitations of ADR 0116 and the push notices of ADR 0118. Nothing here is built; the ADR that records it is the
-first deliverable of stage 2.
+taken, and every notice of stage 4 wanted) and recorded by [ADR 0129](../adr/0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md).
+Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat invitations of ADR 0116 and the push notices
+of ADR 0118. Stages 1 and 2 are built.
 
 ## What the owner asked for
 
@@ -117,9 +117,9 @@ a push service that says a subscription is gone makes the account forget that de
 | `table/` | `friends.js` (pure functions and the panel), the lobby's *Friends* and *Invitations* sections, the *A friend* choice in the create dialog, `sw.js` reading the notice's kind, the notices button on the lobby through `push.js`. |
 | Domain | Nothing. |
 
-Two documents per account rather than one record per pair: a friendship is written on both sides under the
-process lock `AccountRegistry` already uses for its writes (one host runs one replica, ADR 0080), and a reader
-that finds one side without the other repairs it on read. Friends and devices stay out of `IAccountStore`, whose
+Two documents per account rather than one record per pair: a friendship is written on both sides under a
+process lock, as `AccountRegistry` writes are (one host runs one replica, ADR 0080), and a change that stopped
+between its two writes is put right by the next change between the two accounts. Friends and devices stay out of `IAccountStore`, whose
 contract is the sign-in's and is tested as such.
 
 ## The routes
@@ -132,7 +132,7 @@ All signed in (`401 Account.SignInRequired` otherwise), all behind the same-orig
 | `GET /api/friends` | `{ friends: [{ id, username }], incoming: [{ id, username, since }], outgoing: [...] }`, names resolved at listing time as cards are. |
 | `POST /api/friends/requests` `{ username }` | Asks. `404 Friend.NoSuchPlayer`, `409 Friend.AlreadyFriends` / `Friend.AlreadyAsked`, `400 Friend.Self`. Accepts instead when the other already asked. Sends *wants to be your friend*. |
 | `POST /api/friends/requests/<accountId>/accept` | Sends *accepted your friend request*. |
-| `DELETE /api/friends/requests/<accountId>` | Declines an incoming request, or withdraws an outgoing one. Silent. |
+| `DELETE /api/friends/requests/<accountId>` | Declines an incoming request, or withdraws an outgoing one. Silent. Both are `Friends.UnlinkAsync`, as removing is. |
 | `DELETE /api/friends/<accountId>` | Removes a friend. Cancels an invitation between the two. Silent. |
 | `PUT /api/account/push` `{ endpoint, keys }` / `DELETE /api/account/push` `{ endpoint }` | This browser is, or is no longer, one of the account's devices. `410` for an endpoint a push service said was gone. `POST /api/account/push/test` `{ endpoint }` sends a test notice to this device. |
 | `POST /api/lobby/tables` `{ opponent: "friend", friend: "<accountId>", format }` | Opens the table with the second seat addressed to the friend. `403 Friend.NotFriends`; `409 Lobby.InvitationOutstanding` while another one of yours is pending. Sends *invites you*. |
@@ -177,10 +177,13 @@ Each stage is one pull request: built, tested, formatted, the node tests when a 
    oldest; the same endpoint registered twice is one device; a device the push service let go of is forgotten and
    its page answered `410` until it makes a new subscription; *Sign out everywhere* and deletion forget them all;
    the worker opens the lobby for a lobby notice and the game for a game notice.
-2. **Friends.** The ADR. `Friends` and `IFriendStore`, the stores, `FriendsApi`, the panel, the two friend
-   notices. Tests: a request made twice is one; asking back accepts; declining is silent; removing a friend is
-   silent; a hundred and first is refused; one side written and the other missing is repaired on read; a deleted
-   account leaves no request and no friendship behind, on either side.
+2. **Friends.** *Built*: ADR 0129. `FriendList`, `FriendLink`, `FriendErrors`, `Friends` and the port
+   `IFriendStore` in `Application/Accounts/Friends`, `FileFriendStore` and `BlobFriendStore`
+   (`friends/<accountId>.json`), `FriendsApi` and its routes, the lobby's *Friends* panel (`friends.js`), the two
+   friend notices, and the worker telling every open page a notice arrived so the lobby reads its lists again.
+   Tested: a request made twice is one; asking back accepts; declining, withdrawing and removing are silent and leave
+   neither side a link; a hundred and first is refused; one side written and the other missing is put right by the
+   next change between the two; a deleted account leaves no request and no friendship behind, on either side.
 3. **Invite a friend.** `InvitedAccount` and `DeclinedBy` on the seat and in `table.json`, the invitation routes,
    the one-at-a-time rule, expiry, the three ways out, closing an unbegun table, the cards, the three invitation
    notices. Tests: an invited seat never appears in `/api/lobby`'s tables nor opens to a join; only the invited

@@ -22,6 +22,9 @@ function pageOf(url) {
 async function onPush(notice) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const page = pageOf(notice.url ?? GAME);
+  // Every page is told something arrived, so a lobby in front of somebody reads its lists again now rather
+  // than at its next refresh; the notice itself is then shown or not.
+  for (const client of windows) client.postMessage?.({ kind: 'notice', url: notice.url ?? GAME });
   // A test notice is the one a player asked to see, over the game or not.
   if (!notice.test && windows.some(client => client.focused && client.visibilityState === 'visible' && pageOf(client.url) === page)) return;
   await self.registration.showNotification(notice.title ?? 'Your turn', {

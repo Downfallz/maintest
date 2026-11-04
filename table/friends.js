@@ -1,0 +1,140 @@
+// A player's friends (ADR 0129): the list, who asked, who was asked, and asking by exact name. The host owns
+// every rule; this page only checks a name's shape before asking, as the sign-in does, and draws what the host
+// says. The pure part is what the panel says; the mount does the asking.
+
+import { accountRequest, nameProblem } from './account.js';
+
+/** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
+export function friendSections(list) {
+  const friends = list?.friends ?? [];
+  const incoming = list?.incoming ?? [];
+  const outgoing = list?.outgoing ?? [];
+  return {
+    incoming: { items: incoming, title: incoming.length === 1 ? 'One player asked to be your friend' : `${incoming.length} players asked to be your friends`, shown: incoming.length > 0 },
+    friends: { items: friends, title: 'Friends', empty: 'No friends yet. Ask a player by the name on their cards.', shown: true },
+    outgoing: { items: outgoing, title: 'Waiting for an answer', shown: outgoing.length > 0 },
+  };
+}
+
+/** What asking a name came to, as the panel says it. */
+export function askedText(answer) {
+  if (!answer?.other) return '';
+  return answer.accepted ? `${answer.other.username} had already asked you: you are friends now.` : `Asked. ${answer.other.username} will see your request.`;
+}
+
+/** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
+export const REFRESH_EVERY = 30000;
+
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis } = {}) {
+  const el = id => doc.getElementById(id);
+  let account = null;
+  let list = null;
+  let drawn = '';
+  let busy = false;
+  const problem = (text = '') => { el('friend-problem').textContent = text; el('friend-problem').hidden = !text; };
+  const note = (text = '') => { el('friend-note').textContent = text; el('friend-note').hidden = !text; };
+
+  function node(tag, text, className) {
+    const result = doc.createElement(tag);
+    if (text) result.textContent = text;
+    if (className) result.className = className;
+    return result;
+  }
+
+  function action(label, className, act) {
+    const button = node('button', label, className);
+    button.type = 'button';
+    button.addEventListener('click', async () => {
+      if (busy) return;
+      busy = true;
+      button.disabled = true;
+      problem();
+      try { await act(); await refresh(true); }
+      catch (error) { problem(error.message || 'Could not reach the host. Try again.'); }
+      finally { busy = false; button.disabled = false; }
+    });
+    return button;
+  }
+
+  function row(link, actions) {
+    const item = node('li', '', 'friend-row');
+    item.append(node('span', link.username, 'friend-name'));
+    const buttons = node('span', '', 'friend-actions');
+    buttons.append(...actions);
+    item.append(buttons);
+    return item;
+  }
+
+  function render() {
+    const key = JSON.stringify([account?.id ?? null, list]);
+    if (key === drawn) return;
+    drawn = key;
+    el('friends-panel').hidden = !account;
+    if (!account || !list) return;
+    const sections = friendSections(list);
+    el('friend-incoming-title').textContent = sections.incoming.title;
+    el('friend-incoming').hidden = !sections.incoming.shown;
+    el('friend-incoming-list').replaceChildren(...sections.incoming.items.map(link => row(link, [
+      action('Accept', 'primary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}/accept`, {})),
+      action('Decline', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
+    ])));
+    el('friend-list').replaceChildren(...(sections.friends.items.length
+      ? sections.friends.items.map(link => row(link, [action('Remove', 'secondary', () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'))]))
+      : [node('li', sections.friends.empty, 'empty-state')]));
+    el('friend-count').textContent = sections.friends.items.length || '';
+    el('friend-outgoing').hidden = !sections.outgoing.shown;
+    el('friend-outgoing-list').replaceChildren(...sections.outgoing.items.map(link => row(link, [
+      action('Withdraw', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
+    ])));
+  }
+
+  async function refresh(quiet = false) {
+    if (!account) { list = null; render(); return; }
+    // A list read for one account is drawn for that account only: a sign-out and a sign-in while it was in flight
+    // make it the previous player's, and it is dropped.
+    const forAccount = account.id;
+    try {
+      const read = await request('/api/friends');
+      if (account?.id !== forAccount) return;
+      list = read;
+      render();
+    } catch (error) {
+      if (!quiet && account?.id === forAccount) problem(error.message || 'Could not load your friends. Try again.');
+    }
+  }
+
+  el('friend-ask').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy) return;
+    const value = el('friend-username').value;
+    const shape = nameProblem(value);
+    if (shape) { problem(shape); el('friend-username').focus(); return; }
+    busy = true;
+    el('friend-ask-submit').disabled = true;
+    problem();
+    note();
+    try {
+      const answer = await request('/api/friends/requests', { username: value.trim() });
+      note(askedText(answer));
+      el('friend-username').value = '';
+      await refresh(true);
+    } catch (error) {
+      problem(error.message || 'Could not ask. Try again.');
+    } finally { busy = false; el('friend-ask-submit').disabled = false; }
+  });
+
+  nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'notice') void refresh(true); });
+  const interval = win.setInterval(() => { if (!doc.hidden && account && !busy) void refresh(true); }, REFRESH_EVERY);
+  render();
+  return {
+    stop: () => win.clearInterval(interval),
+    /** Told by the sign-in whenever who is signed in changes. */
+    setAccount(next) {
+      if ((next?.id ?? null) === (account?.id ?? null)) return;
+      account = next;
+      problem();
+      note();
+      void refresh();
+    },
+  };
+}
