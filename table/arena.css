@@ -136,7 +136,8 @@
 .history-entry { border: 1px solid #42594f; border-left: 3px solid #8dab9d; background: #192b30; margin-bottom: 9px; border-radius: 5px; overflow-wrap: anywhere; }
 .history-entry summary { min-height: 44px; padding: 12px; cursor: pointer; font-size: 14px; }
 .history-entry summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -3px; }
-.history-entry summary strong { display: block; line-height: 1.5; margin-top: 4px; }
+.history-entry summary strong, .history-marker strong { display: block; line-height: 1.5; margin-top: 4px; }
+.history-marker { padding: 8px 12px; border-left-color: #52695e; background: transparent; font-size: 13px; }
 .history-meta { color: #b7c9be; font-size: 11px; }
 .history-status { display: inline-block; font-size: 11px; color: var(--gold); margin-top: 6px; border: 1px solid #8d7958; border-radius: 3px; padding: 2px 6px; }
 .history-effects { margin: 0; padding: 0 16px 12px 30px; font-size: 13px; line-height: 1.6; }

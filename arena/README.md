@@ -104,9 +104,11 @@ simultaneous choices and concession against the real .NET engine.
 The **History** button previews the latest public event and opens a chronological journal of the current
 and previous round (up to 200 events). Expand an attack to read its caster, spell, targets, critical/fizzle,
 applied effects, dropped targets and recorded before/after values. Upkeep ticks, public mutation reveals,
-phase changes, skipped turns and aftermath share the same list. Unknown event payloads and unrevealed
-choices are never rendered; a generic notice identifies unsupported event types. Missing action frames
-are labelled rather than inferred from the current board.
+intent reveals, the turn order with each slot's tempo, skipped turns, aftermath and the outcome share the
+same list; a round or phase beginning is a marker read in place. Creatures are named the way the scene names
+them (the id only tells namesakes apart) and the outcome is read for this seat, although the feed names slots
+the way the engine does. Unknown event payloads and unrevealed choices are never rendered; a generic notice
+identifies unsupported event types. Missing action frames are labelled rather than inferred from the current board.
 
 History is available from the header, planning/combat choices and action result. Opening it settles
 playback without sending a decision or acknowledging a question. Command drafts and focus return on close;
@@ -114,7 +116,7 @@ expanded entries and reading position survive polling. New events follow the bot
 is already there; otherwise **Latest** announces their count. First loads populate history without replaying
 animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
 
-This implements AU1 of the [UX parity plan (PR #438)](https://github.com/Downfallz/maintest/pull/438).
+This implements AU1 of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
 The ordinary round energy receipt and phase guidance belong to AU2–AU3; older-round loading, filtering and
 links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
 rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,

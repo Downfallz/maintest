@@ -1,7 +1,7 @@
-import { resolvedSince, roundUpkeep, turnoverSteps, turnoverText } from './feed.js';
+import { resolvedSince, roundUpkeep, turnoverSteps } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { outcomeText } from './outcome.js';
-import { stepLabel } from './terms.js';
+import { stepLabel, tempoLabel } from './terms.js';
 
 // This journal is public even though a seat feed also contains that seat's own hidden decisions.
 // Default deny mirrors SeatVisibility's public cases; unknown payloads are never copied to the UI.
@@ -13,13 +13,21 @@ const roundOf = entry => entry.event?.roundId ?? entry.round;
 const line = (text, tone = 'neutral') => ({ text, tone });
 const words = value => typeof value === 'string' ? value.replace(/([a-z])([A-Z])/g, '$1 $2') : '';
 const reason = value => value?.message ?? value?.code ?? 'Reason not recorded';
+// The feed writes a slot by its enum name (Player1); the page names seats in lower case (player1), the way
+// the seat view's own outcome does, and outcomeText says "you" only to the name that matches.
+const seatName = slot => typeof slot === 'string' ? slot.toLowerCase() : slot ?? null;
+const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === id)?.name ?? id ?? 'Unknown spell';
+const orderRows = (timeline, board) => (Array.isArray(timeline?.slots) ? timeline.slots : [])
+  .map((slot, index) => line(`${index + 1} · ${who(slot.creature, board)} · ${tempoLabel(slot.speed)}`));
 
+// Named the way the scene names it (arena-live.js): the id joins a name only when two creatures share it,
+// so a line in the journal reads the same as the figure it is about.
 function person(id, board) {
-  const ally = board?.allies?.find(one => one.id === id);
-  const enemy = board?.enemies?.find(one => one.id === id);
-  const one = ally ?? enemy;
-  const label = !one?.name || one.name === `Creature ${id}` ? `Creature ${id ?? '?'}` : `${one.name} · ${id}`;
-  return { label, side: ally ? 'Your team' : enemy ? 'Opponent' : 'Unknown team' };
+  const allies = board?.allies ?? [], roster = [...allies, ...(board?.enemies ?? [])];
+  const one = roster.find(creature => creature.id === id);
+  const shared = Boolean(one?.name) && roster.filter(other => other.name === one.name).length > 1;
+  const label = !one?.name ? `Creature ${id ?? '?'}` : shared ? `${one.name} · ${id}` : one.name;
+  return { label, side: allies.some(creature => creature.id === id) ? 'Your team' : one ? 'Opponent' : 'Unknown team' };
 }
 const who = (id, board) => { const one = person(id, board); return `${one.label} (${one.side})`; };
 
@@ -49,7 +57,8 @@ function combatRow(entry, board, catalogue) {
     details: [line(targets ? `Targets: ${targets}` : 'No targets'),
       ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : []),
       ...(effects.length ? effects : [line('No applied effects recorded.')]),
-      ...action.dropped.map(text => line(`Dropped target: ${text}`)), ...frameDetails(action.frame, board)] };
+      ...(resolution.droppedTargets ?? []).map(failure => line(`Dropped target: ${failure.target == null ? '' : `${who(failure.target, board)}: `}${reason(failure.error)}`)),
+      ...frameDetails(action.frame, board)] };
 }
 
 function eventRow(entry, board, catalogue) {
@@ -64,14 +73,23 @@ function eventRow(entry, board, catalogue) {
     }
     case 'ConditionsExpired':
     case 'StunImmunityGained': return { title: 'Aftermath · conditions', category: 'Aftermath',
-      details: turnoverSteps([entry], roundOf(entry), board).map(step => line(turnoverText(step))) };
+      details: turnoverSteps([entry], roundOf(entry), board).flatMap(step => [
+        ...step.ended.map(one => line(`${who(one.creature.id, board)} · ${one.conditions.map(condition => condition?.effect?.kind ?? 'Condition').join(' + ')} ends`, 'condition')),
+        ...step.immune.map(one => line(`${who(one.id, board)} · immune to stun`, 'condition'))]) };
     case 'PurchasesRevealed': return { title: 'Mutations revealed', category: 'Command', details: (event.choices ?? []).map(choice =>
       line(`${who(choice.creature, board)} · ${catalogue?.packages?.find(pack => pack.id === choice.tier)?.name ?? choice.tier ?? 'Mutation details unavailable'}`)) };
     case 'SlotSkipped': return { title: `${who(event.actor, board)} · Turn skipped`, category: 'Combat', details: [line(reason(event.reason))] };
-    case 'MatchEnded': return { title: 'Match complete', category: 'Result', details: [line(outcomeText({ outcome: event.outcome }, board?.slot?.toLowerCase()))] };
-    case 'ActionRevealed': return { title: 'Action revealed', category: 'Combat', details: [line('The action result follows when resolved.')] };
-    case 'TimelineBuilt': return { title: 'Tempos revealed · turn order set', category: 'Command', details: [] };
-    case 'TiesOrdered': return { title: 'Tied creatures ordered', category: 'Command', details: [] };
+    case 'MatchEnded': {
+      const outcome = event.outcome ? { ...event.outcome, winner: seatName(event.outcome.winner) } : event.outcome;
+      return { title: 'Match complete', category: 'Result', details: [line(outcomeText({ outcome }, seatName(board?.slot)))] };
+    }
+    case 'ActionRevealed': {
+      const action = event.action ?? {}, targets = (action.targets ?? []).map(id => who(id, board)).join(', ');
+      return { title: `${who(action.actor, board)} · reveals ${spellName(action.spell, catalogue)}`, category: 'Combat',
+        details: [line(targets ? `Targets: ${targets}` : 'No targets'), line('Its result follows as its own entry.')] };
+    }
+    case 'TimelineBuilt': return { title: 'Tempos revealed · turn order set', category: 'Command', details: orderRows(event.timeline, board) };
+    case 'TiesOrdered': return { title: 'Tied creatures ordered', category: 'Command', details: orderRows(event.timeline, board) };
     case 'RoundStarted': return { title: 'Round begins', category: 'Upkeep', details: [] };
     case 'RoundEnded': return { title: 'Round complete', category: 'Aftermath', details: [] };
     case 'SubPhaseEntered': return { title: stepLabel(event.subPhase) || 'Phase changed', category: 'Phase', details: [] };

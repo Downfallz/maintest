@@ -250,7 +250,7 @@ No implementation slice is completed by this document.
 
 | ID | Reviewable result | Main areas | Depends on |
 | --- | --- | --- | --- |
-| AU1 | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
+| AU1 (implemented) | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
 | AU2 | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
 | AU3a | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
@@ -283,6 +283,9 @@ A new page loads history without replaying it. Duplicate polls/SSE do not duplic
 show text. No unrevealed pick/tempo/intent appears. Opening/closing preserves command drafts and focus.
 Tests: pure normalization/deduplication/visibility tests and desktop/phone console journeys.
 Do not wait for filtering or a perfect replay UI to deliver this slice.
+
+Delivered: `table/arena-history.js` and `arena/src/history.ts`, described in
+[the arena README](../../arena/README.md#au1-recent-match-history).
 
 ### AU2 — Know what to do
 

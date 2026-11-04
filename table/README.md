@@ -545,8 +545,7 @@ Attacks expand into actual applied effects and recorded before/after changes; re
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
-round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).
-
+round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
 
 The arena's **Help** dialog explains the current objective and the round flow, including the configured
 spell declaration mode. First-use tips appear once per subject and can be muted; Help remains available.
