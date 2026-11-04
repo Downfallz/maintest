@@ -2,26 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { CREATURE_ART, MUTATION_ART, creatureAppearance, creatureForm, figureArt, figureGeometry } from './arena-art.js';
+import { CREATURE_ART, creatureAppearance, creatureForm, figureArt, figureGeometry } from './arena-art.js';
 import { placements } from './arena-layout.js';
 import { livePresentation } from './arena-live.js';
 import { presentedView } from './presentation.js';
 
 const brute = 'tier:brute:v1', predator = 'tier:prowler:v1', warped = 'tier:occultist:v1';
 
+// The packages as the host serves them: the authored level and the art the builder publishes beside the content.
+const art = JSON.parse(readFileSync(new URL('../data/presentation/mutation-art.json', import.meta.url), 'utf8'));
+const tiersRoot = new URL('../data/Tiers/', import.meta.url);
+const tiers = readdirSync(tiersRoot).filter(path => path.endsWith('.json')).map(path => JSON.parse(readFileSync(new URL(path, tiersRoot), 'utf8')));
+const packages = new Map(tiers.map(tier => [tier.id, { id: tier.id, name: tier.name, level: tier.level, visual: art[tier.id] ?? null }]));
+
 test('the acquired root, not name, seat or roster order, determines a single-family form', () => {
   for (const [root, form] of [[brute, 'brute'], [predator, 'predator'], [warped, 'warped']]) {
     const one = { id: 8, name: 'Misleading name', acquiredTiers: [root, 'tier:later:v1', root] };
-    assert.equal(creatureForm(one), form);
-    assert.equal(livePresentation({ board: { allies: [one] } }).creatures[0].form, form);
-    assert.equal(livePresentation({ board: { enemies: [one] } }).creatures[0].form, form);
+    assert.equal(creatureForm(one, packages), form);
+    assert.equal(livePresentation({ board: { allies: [one] } }, packages).creatures[0].form, form);
+    assert.equal(livePresentation({ board: { enemies: [one] } }, packages).creatures[0].form, form);
   }
 });
 
 test('unmutated, legacy, malformed and orphaned mutations use the neutral ancestor', () => {
   for (const acquiredTiers of [undefined, [], ['future'], ['tier:ravager:v1'], ['__proto__', 'toString']]) {
-    assert.equal(creatureForm({ acquiredTiers }), 'base-creature');
-    if (acquiredTiers) assert.equal(creatureForm({ acquiredTiers: [...acquiredTiers].reverse() }), 'base-creature');
+    assert.equal(creatureForm({ acquiredTiers }, packages), 'base-creature');
+    if (acquiredTiers) assert.equal(creatureForm({ acquiredTiers: [...acquiredTiers].reverse() }, packages), 'base-creature');
   }
 });
 
@@ -30,9 +36,9 @@ test('historical forms come from the displayed frame, never the latest mutations
   const view = { board: { allies: [one], enemies: [] } };
   const action = { actor: { id: 1 }, round: 1, frame: { before: [{ ...one, acquiredTiers: [] }], after: [{ ...one, acquiredTiers: [brute] }] } };
   for (const [stage, form] of [['before', 'base-creature'], ['after', 'brute']]) {
-    assert.equal(livePresentation(presentedView(view, { actions: [action], index: 0, stage })).creatures[0].form, form);
+    assert.equal(livePresentation(presentedView(view, { actions: [action], index: 0, stage }), packages).creatures[0].form, form);
   }
-  assert.equal(livePresentation(view).creatures[0].form, 'warped');
+  assert.equal(livePresentation(view, packages).creatures[0].form, 'warped');
 });
 
 test('a missing family image falls back to the ancestor, then the selectable vector', () => {
@@ -71,13 +77,18 @@ test('both facing directions keep silhouette and contact point inside shared hit
 });
 
 const id = name => `tier:${name}:v1`;
-const appearance = names => creatureAppearance({ acquiredTiers: names.map(id) });
+const appearance = names => creatureAppearance({ acquiredTiers: names.map(id) }, packages);
 
-test('the visual register covers the authored tiers with the correct stages', () => {
-  const root = new URL('../data/Tiers/', import.meta.url);
-  const tiers = readdirSync(root).filter(path => path.endsWith('.json')).map(path => JSON.parse(readFileSync(new URL(path, root))));
-  assert.deepEqual(Object.keys(MUTATION_ART).sort(), tiers.map(tier => tier.id).sort());
-  for (const tier of tiers) assert.equal(MUTATION_ART[tier.id].stage, tier.level);
+test('every authored package is drawn by the mutation art the builder publishes', () => {
+  assert.deepEqual(Object.keys(art).sort(), tiers.map(tier => tier.id).sort());
+});
+
+test('without the catalogue, or with packages nobody drew, every creature is its base', () => {
+  const undrawn = new Map(tiers.map(tier => [tier.id, { id: tier.id, level: tier.level, visual: null }]));
+  for (const bought of [undefined, new Map(), undrawn]) {
+    const one = creatureAppearance({ acquiredTiers: [brute, 'tier:ironbound:v1'] }, bought);
+    assert.equal(one.form, 'base-creature'); assert.deepEqual(one.layers, []);
+  }
 });
 
 test('multiclass body precedence uses stage, unique investment and a fixed tie order', () => {
@@ -112,14 +123,20 @@ test('same-family branches share the bounded accent slot and root-only mixes add
   assert.deepEqual(appearance(['brute', 'prowler', 'occultist']).layers, []);
 });
 
-test('capstones stay on their owner and an unknown or inherited passive cannot invent a layer', () => {
-  const own = { acquiredTiers: ['occultist', 'necromancer', 'lich', 'archmage'].map(id) };
-  const ally = { acquiredTiers: ['brute'].map(id), sharedTiers: [id('archmage')], upkeepEnergy: 3 };
-  const view = livePresentation({ board: { allies: [own, ally] } });
-  assert.ok(view.creatures[0].layers.some(cue => cue.motif === 'circuit'));
-  assert.equal(view.creatures[1].layers.length, 0);
-  assert.deepEqual(creatureAppearance({ acquiredTiers: 'invalid' }).layers, []);
-  assert.deepEqual(appearance(['brute', 'future']), appearance(['brute']));
+test('a capstone is drawn on its owner only, in the capstone slot', () => {
+  const owner = appearance(['occultist', 'necromancer', 'lich', 'archmage']);
+  assert.deepEqual(owner.layers.map(cue => [cue.slot, cue.motif]), [['body', 'souls'], ['capstone', 'circuit']]);
+  assert.deepEqual(appearance(['brute']).layers, []);
+});
+
+test('the appearance is said in the catalogue\'s package names, never the motif names', () => {
+  assert.equal(appearance(['occultist', 'necromancer', 'lich', 'archmage']).description, 'Warped body · Revenant (stage 3) · Archmage (stage 4)');
+  assert.equal(appearance([]).description, 'Unmutated');
+});
+
+test('malformed acquired tiers draw nothing', () => {
+  assert.deepEqual(creatureAppearance({ acquiredTiers: 'invalid' }, packages).layers, []);
+  assert.deepEqual(creatureAppearance({ acquiredTiers: [null, 7, {}] }, packages).layers, []);
 });
 
 test('historical layers use only the displayed snapshot without sorting or changing host data', () => {
@@ -128,7 +145,7 @@ test('historical layers use only the displayed snapshot without sorting or chang
   const view = { board: { allies: [latest], enemies: [] } };
   const original = structuredClone(view);
   const action = { actor: { id: 1 }, round: 1, frame: { before: [old], after: [latest] } };
-  assert.equal(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'before' })).creatures[0].layers[0].stage, 2);
-  assert.deepEqual(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'after' })).creatures[0].layers.map(cue => cue.stage), [3, 4]);
+  assert.equal(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'before' }), packages).creatures[0].layers[0].stage, 2);
+  assert.deepEqual(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'after' }), packages).creatures[0].layers.map(cue => cue.stage), [3, 4]);
   assert.deepEqual(view, original);
 });

@@ -5,8 +5,10 @@ are reviewable prototype choices, not new gameplay rules or final commissioned a
 
 ## Selection policy
 
-`creatureAppearance` in `table/arena-art.js` reads only the displayed creature's acquired tier IDs.
-The register covers the 24 current tiers; tests compare it with authored content. Unknown IDs are ignored,
+`creatureAppearance` in `table/arena-art.js` reads only the displayed creature's acquired tier IDs, and
+what each one shows comes with the catalogue's packages: the authored `level` and the `visual` (family and
+motif) the builder publishes from `data/presentation/mutation-art.json`, checked against the packages and
+the root each descends from. The page names no package. Unknown IDs and packages nobody drew are ignored,
 duplicates count once, and a recognized root is required before a family's later tiers can affect art.
 Legacy frames without acquired tiers retain the base Creature. No team passive, name, spell or purchase
 order infers a mutation. The engine stores acquired tiers as a set, so array order cannot mean chronology.

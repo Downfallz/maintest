@@ -11,6 +11,7 @@ try
     GameSchemaBuilder.Write(schema, outputDirectory);
     PackageIdentities.Publish(dataDirectory, outputDirectory, schema);
     SpellArt.Publish(dataDirectory, outputDirectory, schema);
+    MutationArt.Publish(dataDirectory, outputDirectory, schema);
 
     foreach (var note in notes)
     {

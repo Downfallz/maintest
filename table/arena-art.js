@@ -1,54 +1,42 @@
-// Presentation-only identities. Root mutation IDs stay stable when display names change.
-const roots = Object.freeze({ 'tier:brute:v1': 'brute', 'tier:prowler:v1': 'predator', 'tier:occultist:v1': 'warped' });
-
-// ART-5 POC: stage, unique investment, then explicit family order decide the body.
-// Purchase/list order, localized labels and shared team passives never choose cosmetics.
-const families = ['brute', 'predator', 'warped'];
-const branches = [
-  ['brute', 'fissures', 'berserker', 'ravager'],
-  ['brute', 'plates', 'ironbound', 'dreadnought'],
-  ['brute', 'crown', 'marauder', 'warmonger'],
-  ['predator', 'talons', 'assassin', 'deathstalker'],
-  ['predator', 'fangs', 'parasite', 'soulreaver'],
-  ['predator', 'glands', 'plague_doctor', 'blightweaver'],
-  ['warped', 'shards', 'elementalist', 'harbinger'],
-  ['warped', 'souls', 'necromancer', 'lich'],
-  ['warped', 'astral', 'shaman', 'spiritcaller'],
-];
-const entries = Object.entries(roots).map(([id, family]) => [id, { family, stage: 1, motif: null }]);
-for (const [family, motif, second, third] of branches) {
-  entries.push([`tier:${second}:v1`, { family, stage: 2, motif }], [`tier:${third}:v1`, { family, stage: 3, motif }]);
-}
-for (const [index, name] of ['titan', 'apex', 'archmage'].entries()) {
-  entries.push([`tier:${name}:v1`, { family: families[index], stage: 4, motif: ['reinforcement', 'precision', 'circuit'][index] }]);
-}
-export const MUTATION_ART = Object.freeze(Object.fromEntries(entries.map(([id, cue]) => [id, Object.freeze(cue)])));
+// The three bodies, in the order a tie between them is broken (ADR 0133). Which package belongs to which body,
+// and what it draws on it, comes with the catalogue's packages: level and visual, published beside the content.
+// The page names no package; a package nobody drew, and an older host that serves none, leave no trace.
+const FAMILIES = ['brute', 'predator', 'warped'];
+const BODIES = { brute: 'Brute', predator: 'Predator', warped: 'Warped' };
 const compare = (a, b) => b.stage - a.stage || a.id.localeCompare(b.id, 'en');
 
-export function creatureAppearance(creature) {
+function acquiredCues(creature, packages) {
   const acquired = Array.isArray(creature?.acquiredTiers) ? [...new Set(creature.acquiredTiers)] : [];
-  const cues = acquired.filter(id => Object.hasOwn(MUTATION_ART, id))
-    .map(id => ({ id, ...MUTATION_ART[id] }));
-  // Orphan/unknown later stages cannot invent a family root in a legacy recording.
-  const ranked = families.filter(family => cues.some(cue => cue.family === family && cue.stage === 1))
+  return acquired.map(id => ({ id, pack: packages?.get(id) }))
+    .filter(({ pack }) => FAMILIES.includes(pack?.visual?.family) && Number.isInteger(pack.level) && pack.level >= 1)
+    .map(({ id, pack }) => ({ id, name: pack.name ?? id, family: pack.visual.family, stage: pack.level, motif: pack.visual.motif ?? null }));
+}
+
+// ART-5 POC: the body is the family with the highest stage bought, then the most packages, then the fixed order.
+// Purchase order, localized labels and shared team passives never choose cosmetics.
+export function creatureAppearance(creature, packages) {
+  const cues = acquiredCues(creature, packages);
+  // An orphan later stage cannot invent a root in a legacy recording: a family needs its root to be a body.
+  const ranked = FAMILIES.filter(family => cues.some(cue => cue.family === family && cue.stage === 1))
     .map(family => ({ family, owned: cues.filter(cue => cue.family === family) }))
     .map(one => ({ ...one, stage: Math.max(...one.owned.map(cue => cue.stage)) }))
-    .sort((a, b) => b.stage - a.stage || b.owned.length - a.owned.length || families.indexOf(a.family) - families.indexOf(b.family));
+    .sort((a, b) => b.stage - a.stage || b.owned.length - a.owned.length || FAMILIES.indexOf(a.family) - FAMILIES.indexOf(b.family));
   const dominant = ranked[0];
-  if (!dominant) return { form: 'base-creature', layers: [], description: 'unmutated form' };
+  if (!dominant) return { form: 'base-creature', layers: [], description: 'Unmutated' };
   const eligible = ranked.flatMap(one => one.owned);
   const candidates = eligible.filter(cue => cue.stage === 2 || cue.stage === 3).sort(compare);
   const primary = candidates.find(cue => cue.family === dominant.family);
   const secondary = candidates.find(cue => cue.family !== dominant.family)
     ?? candidates.find(cue => cue.motif !== primary?.motif);
-  const capstone = eligible.filter(cue => cue.stage === 4).sort((a, b) =>
+  const capstone = eligible.filter(cue => cue.stage >= 4).sort((a, b) =>
     Number(b.family === dominant.family) - Number(a.family === dominant.family) || compare(a, b))[0];
   const layers = [[primary, 'body'], [secondary, 'accent'], [capstone, 'capstone']]
-    .filter(([cue]) => cue).map(([cue, slot]) => ({ ...cue, slot }));
+    .filter(([cue]) => cue?.motif).map(([cue, slot]) => ({ ...cue, slot }));
+  // Said in the catalogue's words, the package names a player bought, never the renderer's motif names.
   return { form: dominant.family, layers,
-    description: `${dominant.family} form${layers.map(cue => ` · ${cue.motif} stage ${cue.stage}`).join('')}` };
+    description: `${BODIES[dominant.family]} body${layers.map(cue => ` · ${cue.name} (stage ${cue.stage})`).join('')}` };
 }
-export function creatureForm(creature) { return creatureAppearance(creature).form; }
+export function creatureForm(creature, packages) { return creatureAppearance(creature, packages).form; }
 
 const sprite = (form, bounds, ground) => Object.freeze({
   form, key: `creature-${form}`, file: `${form}.webp`, width: 1536, height: 1024,

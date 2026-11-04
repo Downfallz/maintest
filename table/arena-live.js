@@ -2,13 +2,14 @@ import { creatureAppearance } from './arena-art.js';
 import { boardPresentation } from './presentation.js';
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
-export function livePresentation(view) {
+// The catalogue's packages say how an acquired tier shows on a creature; without them a creature is its base.
+export function livePresentation(view, packages = new Map()) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];
   const creatures = roster.map((one, index) => ({
     ...one, label: roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name,
     id: String(one.id), enemy: index >= board.allies.length,
-    ...creatureAppearance(one),
+    ...creatureAppearance(one, packages),
   }));
   return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };

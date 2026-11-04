@@ -43,6 +43,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<IGameResources>(_ => GameSchemaBuilder.Load(schemaPath));
         services.TryAddSingleton(_ => PackageIdentities.ReadNextTo(schemaPath));
         services.TryAddSingleton(_ => SpellArt.ReadNextTo(schemaPath));
+        services.TryAddSingleton(_ => MutationArt.ReadNextTo(schemaPath));
 
         return services;
     }

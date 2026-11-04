@@ -32,7 +32,8 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes.
 - `data/presentation/spell-art.json`: each spell's visual family, motif and delivery, published by the builder
   and served on the card; `table/arena-playback.js` reads it off the card, with neutral and fizzle fallbacks.
-- `table/arena-art.js`: audited sprite manifest, root-mutation mapping, neutral multiclass fallback and mirrored geometry.
+- `table/arena-art.js`: audited sprite manifest, the body and accents a creature's acquired packages give it (read off the
+  catalogue's packages, authored in `data/presentation/mutation-art.json`), and mirrored geometry.
 - `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
   and the cancellation generation.
 - `table/arena-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit

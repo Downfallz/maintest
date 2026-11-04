@@ -46,7 +46,7 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
 export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = clearTimeout, limit = 12 }) {
   let latest = null, queue = [], current = null, stage = 'decision', summary = '';
-  let seen = null, timer = null, generation = 0, reduced = false, catalogue = new Map(), harmful = new Set();
+  let seen = null, timer = null, generation = 0, reduced = false, catalogue = new Map(), harmful = new Set(), bought = new Map();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
   function later(callback, delay) {
@@ -73,11 +73,11 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     settle(queue.length ? resultText(queue.at(-1)) : summary);
   }
   function reset() {
-    cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; summary = ''; catalogue = new Map(); harmful = new Set(); emit();
+    cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
   }
-  function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]) } = {}) {
+  function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]), packages = new Map() } = {}) {
     if (!view) { reset(); return; }
-    latest = view; catalogue = cards; harmful = new Set(effects.filter(effect => effect.harmful).map(effect => effect.kind));
+    latest = view; catalogue = cards; harmful = new Set(effects.filter(effect => effect.harmful).map(effect => effect.kind)); bought = packages;
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
     const end = Math.max(-1, ...entries.map(entry => entry.sequence),
       Number.isInteger(view.feedNext) ? view.feedNext - 1 : -1);
@@ -99,7 +99,7 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
   function model() {
     const replay = current ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
     const display = current ? presentedView(latest, replay) : latest;
-    const board = livePresentation(display);
+    const board = livePresentation(display, bought);
     const cue = current ? actionCue(current, catalogue, harmful) : null;
     const frame = current ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;

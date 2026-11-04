@@ -53,7 +53,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   history.receive(next, catalogue);
   combat.receive(next); planning.receive(next); match.receive(next, catalogue);
   playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-    { effects: catalogue?.effects ?? [], animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+    { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog'].some(id => $<HTMLDialogElement>(id).open);
@@ -183,7 +183,6 @@ function render() {
       $('actor-layer').append(node); nodes.set(one.id, node);
     }
     node.dataset.form = one.form;
-    node.dataset.appearance = one.description;
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     const targetable = targeting && frame.targets.includes(one.id);
     if (targetable) node.classList.add('is-targetable');
@@ -201,7 +200,7 @@ function render() {
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. Appearance: ${one.description}. ${targeting ? 'Select target.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. ${targeting ? 'Select target.' : 'Inspect creature.'}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());
