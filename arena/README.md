@@ -131,3 +131,8 @@ AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional ar
 physical, biological, elemental, necromantic and astral shapes. It preserves queue timing and accessible
 outcomes; reduced motion bypasses all VFX. The browser playback suite also boots the production scene
 in an isolated test harness to verify actual vector objects and their cleanup.
+
+ART-5 adds [mutation cues](../docs/art/mutation-cues.md): one dominant body selected from the displayed
+acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cues.ts` follows the figure
+transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
+The live suite checks all nine branch pairs and lifecycle behavior with the production scene.

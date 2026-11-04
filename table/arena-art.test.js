@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { CREATURE_ART, creatureForm, figureArt, figureGeometry } from './arena-art.js';
+import { CREATURE_ART, MUTATION_ART, creatureAppearance, creatureForm, figureArt, figureGeometry } from './arena-art.js';
 import { placements } from './arena-layout.js';
 import { livePresentation } from './arena-live.js';
 import { presentedView } from './presentation.js';
@@ -18,8 +18,8 @@ test('the acquired root, not name, seat or roster order, determines a single-fam
   }
 });
 
-test('unmutated, legacy, unknown and mixed-family creatures use the neutral ancestor', () => {
-  for (const acquiredTiers of [undefined, [], ['future'], [brute, predator], [warped, brute], [predator, warped, brute]]) {
+test('unmutated, legacy, malformed and orphaned mutations use the neutral ancestor', () => {
+  for (const acquiredTiers of [undefined, [], ['future'], ['tier:ravager:v1'], ['__proto__', 'toString']]) {
     assert.equal(creatureForm({ acquiredTiers }), 'base-creature');
     if (acquiredTiers) assert.equal(creatureForm({ acquiredTiers: [...acquiredTiers].reverse() }), 'base-creature');
   }
@@ -68,4 +68,67 @@ test('both facing directions keep silhouette and contact point inside shared hit
       assert.ok(Number.isFinite(g.scale) && g.scale > 0);
     }
   }
+});
+
+const id = name => `tier:${name}:v1`;
+const appearance = names => creatureAppearance({ acquiredTiers: names.map(id) });
+
+test('the visual register covers the authored tiers with the correct stages', () => {
+  const root = new URL('../data/Tiers/', import.meta.url);
+  const tiers = readdirSync(root).filter(path => path.endsWith('.json')).map(path => JSON.parse(readFileSync(new URL(path, root))));
+  assert.deepEqual(Object.keys(MUTATION_ART).sort(), tiers.map(tier => tier.id).sort());
+  for (const tier of tiers) assert.equal(MUTATION_ART[tier.id].stage, tier.level);
+});
+
+test('multiclass body precedence uses stage, unique investment and a fixed tie order', () => {
+  for (const [names, form] of [
+    [['prowler', 'brute'], 'brute'], [['occultist', 'prowler'], 'predator'],
+    [['brute', 'ironbound', 'prowler', 'assassin', 'deathstalker'], 'predator'],
+    [['brute', 'ironbound', 'berserker', 'occultist', 'necromancer'], 'brute'],
+    [['brute', 'ironbound', 'dreadnought', 'occultist', 'necromancer', 'lich', 'archmage'], 'warped'],
+  ]) {
+    const expected = appearance(names);
+    assert.equal(expected.form, form);
+    assert.deepEqual(appearance([...names].reverse()), expected);
+    assert.deepEqual(appearance([...names, ...names]), expected);
+  }
+});
+
+test('layers have a fixed budget and stage three replaces its stage two motif', () => {
+  const result = appearance(['brute', 'berserker', 'ravager', 'ironbound', 'dreadnought',
+    'prowler', 'plague_doctor', 'blightweaver', 'occultist', 'necromancer', 'lich', 'titan', 'apex', 'archmage']);
+  assert.equal(result.form, 'brute');
+  assert.deepEqual(result.layers.map(cue => cue.slot), ['body', 'accent', 'capstone']);
+  assert.deepEqual(result.layers.map(cue => cue.motif), ['plates', 'glands', 'reinforcement']);
+  assert.deepEqual(result.layers.map(cue => cue.stage), [3, 3, 4]);
+  const two = appearance(['brute', 'ironbound']);
+  const three = appearance(['brute', 'ironbound', 'dreadnought']);
+  assert.equal(two.layers.length, 1); assert.equal(three.layers.length, 1);
+  assert.equal(two.layers[0].stage, 2); assert.equal(three.layers[0].stage, 3);
+});
+
+test('same-family branches share the bounded accent slot and root-only mixes add no anatomy', () => {
+  assert.deepEqual(appearance(['brute', 'berserker', 'ironbound']).layers.map(cue => cue.motif), ['fissures', 'plates']);
+  assert.deepEqual(appearance(['brute', 'prowler', 'occultist']).layers, []);
+});
+
+test('capstones stay on their owner and an unknown or inherited passive cannot invent a layer', () => {
+  const own = { acquiredTiers: ['occultist', 'necromancer', 'lich', 'archmage'].map(id) };
+  const ally = { acquiredTiers: ['brute'].map(id), sharedTiers: [id('archmage')], upkeepEnergy: 3 };
+  const view = livePresentation({ board: { allies: [own, ally] } });
+  assert.ok(view.creatures[0].layers.some(cue => cue.motif === 'circuit'));
+  assert.equal(view.creatures[1].layers.length, 0);
+  assert.deepEqual(creatureAppearance({ acquiredTiers: 'invalid' }).layers, []);
+  assert.deepEqual(appearance(['brute', 'future']), appearance(['brute']));
+});
+
+test('historical layers use only the displayed snapshot without sorting or changing host data', () => {
+  const old = { id: 1, acquiredTiers: ['brute', 'ironbound'].map(id) };
+  const latest = { ...old, acquiredTiers: ['brute', 'ironbound', 'dreadnought', 'titan'].map(id) };
+  const view = { board: { allies: [latest], enemies: [] } };
+  const original = structuredClone(view);
+  const action = { actor: { id: 1 }, round: 1, frame: { before: [old], after: [latest] } };
+  assert.equal(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'before' })).creatures[0].layers[0].stage, 2);
+  assert.deepEqual(livePresentation(presentedView(view, { actions: [action], index: 0, stage: 'after' })).creatures[0].layers.map(cue => cue.stage), [3, 4]);
+  assert.deepEqual(view, original);
 });

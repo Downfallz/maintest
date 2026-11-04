@@ -1,3 +1,5 @@
+import { creatureAppearance } from '../../table/arena-art.js';
+import { mountSpellScene, presentSpell } from './arena-spell-scene.js';
 import { test, expect } from '@playwright/test';
 import { fitsViewport } from './fit.js';
 test.describe.configure({ mode: 'default' });
@@ -157,7 +159,7 @@ test('the live dock and all six inspection targets fit short portrait and landsc
 });
 
 
-test('ART-3 follows mutations through polls and keeps mixed families neutral', async ({ page }, info) => {
+test('ART-5 follows mutations through polls and applies stable multiclass precedence', async ({ page }, info) => {
   const state = await mount(page);
   state.first.board.allies[0].acquiredTiers = ['tier:brute:v1'];
   state.first.board.allies[1].acquiredTiers = ['tier:prowler:v1'];
@@ -165,7 +167,7 @@ test('ART-3 follows mutations through polls and keeps mixed families neutral', a
   state.first.board.enemies[1].acquiredTiers = ['tier:prowler:v1'];
   state.first.board.enemies[2].acquiredTiers = ['tier:occultist:v1', 'tier:brute:v1'];
   await choose(page);
-  for (const [id, form] of [[1, 'brute'], [2, 'predator'], [3, 'warped'], [4, 'base-creature'], [5, 'predator'], [6, 'base-creature']]) {
+  for (const [id, form] of [[1, 'brute'], [2, 'predator'], [3, 'warped'], [4, 'base-creature'], [5, 'predator'], [6, 'brute']]) {
     await expect(page.locator(`[data-creature="${id}"]`)).toHaveAttribute('data-form', form);
   }
   await expect(page.locator('#arena')).toHaveAttribute('data-asset-fallback', 'false');
@@ -174,10 +176,11 @@ test('ART-3 follows mutations through polls and keeps mixed families neutral', a
   await page.setViewportSize({ width: 844, height: 390 });
   await fits(page);
   await page.screenshot({ path: info.outputPath('art3-landscape.png') });
-  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1', 'tier:prowler:v1'];
-  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'base-creature', { timeout: 10000 });
+  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1', 'tier:prowler:v1', 'tier:plague_doctor:v1'];
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'predator', { timeout: 10000 });
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
+  await expect(page.locator('#inspect-appearance')).toContainText('glands stage 2');
 });
 
 test('ART-3 missing individual sprite preserves inspection and healthy assets', async ({ page }) => {
@@ -192,4 +195,94 @@ test('ART-3 missing individual sprite preserves inspection and healthy assets', 
   expect(loaded.some(url => url.endsWith('/predator.webp'))).toBe(true);
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
+});
+
+const mutated = (id, names, enemy = false) => ({ id: String(id), isAlive: true, enemy,
+  ...creatureAppearance({ acquiredTiers: names.map(name => `tier:${name}:v1`) }) });
+const mutationFrame = creatures => ({ stage: 'decision', target: null, actor: null, targets: [], creatures });
+const drawnMutations = page => page.evaluate(() => window.artScene.children.list
+  .filter(child => child.name === 'mutation-cue').map(child => ({ ...child.data.getAll(),
+    x: child.x, y: child.y, scaleX: child.scaleX, scaleY: child.scaleY, alpha: child.alpha,
+    visible: child.visible, commands: child.commandBuffer.length })).sort((a, b) => Number(a.creature) - Number(b.creature)
+      || ['body', 'accent', 'capstone'].indexOf(a.slot) - ['body', 'accent', 'capstone'].indexOf(b.slot)));
+
+test('ART-5 renders all nine branch cues at stages two and three, with bounded mirrored layers', async ({ page }, info) => {
+  test.setTimeout(60000);
+  await mountSpellScene(page);
+  const families = [
+    ['brute', ['berserker', 'ravager'], ['ironbound', 'dreadnought'], ['marauder', 'warmonger']],
+    ['prowler', ['assassin', 'deathstalker'], ['parasite', 'soulreaver'], ['plague_doctor', 'blightweaver']],
+    ['occultist', ['elementalist', 'harbinger'], ['necromancer', 'lich'], ['shaman', 'spiritcaller']],
+  ];
+  for (const [root, ...branches] of families) {
+    const creatures = branches.map(([second], i) => mutated(i + 1, [root, second]))
+      .concat(branches.map(([second, third], i) => mutated(i + 4, [root, second, third], true)));
+    await presentSpell(page, mutationFrame(creatures), 'decision', true);
+    await page.clock.runFor(40);
+    const cues = await drawnMutations(page);
+    expect(cues).toHaveLength(6);
+    expect(cues.every(cue => cue.visible && cue.commands > 0 && Number.isFinite(cue.x))).toBe(true);
+    expect(cues.slice(0, 3).every(cue => cue.stage === 2 && cue.scaleX > 0)).toBe(true);
+    expect(cues.slice(3).every(cue => cue.stage === 3 && cue.scaleX < 0)).toBe(true);
+    // A larger normalized accent and extra geometry distinguish the evolved form.
+    for (let i = 0; i < 3; i++) expect(cues[i + 3].commands).toBeGreaterThan(cues[i].commands);
+    await page.screenshot({ path: info.outputPath(`art5-${root}-stages.png`) });
+  }
+});
+
+test('ART-5 layers follow motion, settle on resize, and clear across defeat, replay and missing art', async ({ page }) => {
+  await mountSpellScene(page);
+  const creatures = [
+    mutated(1, ['brute', 'ironbound', 'dreadnought', 'titan', 'prowler', 'plague_doctor']),
+    mutated(2, ['occultist', 'necromancer', 'lich', 'archmage'], true),
+  ];
+  const frame = { ...mutationFrame(creatures), actor: '1', target: '2',
+    cue: { kind: 'strike', struck: ['2'], effects: [], recipients: ['2'], contact: ['2'], changes: [],
+      visual: { family: 'physical', motif: 'impact', delivery: 'melee' } } };
+  await presentSpell(page, frame, 'decision');
+  const initial = await drawnMutations(page);
+  expect(initial).toHaveLength(5);
+  expect(initial.filter(cue => cue.slot === 'capstone').map(cue => cue.creature)).toEqual(['1', '2']);
+  await presentSpell(page, frame, 'windup');
+  await page.clock.runFor(110);
+  const moved = await drawnMutations(page);
+  expect(Math.abs(moved[0].x - initial[0].x) + Math.abs(moved[0].y - initial[0].y)).toBeGreaterThan(1);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.clock.runFor(100);
+  expect(await drawnMutations(page)).toHaveLength(5);
+  await presentSpell(page, { ...frame, creatures: creatures.map(one => ({ ...one, isAlive: false })) }, 'decision', true);
+  expect((await drawnMutations(page)).every(cue => Math.abs(cue.alpha - .16) < .001)).toBe(true);
+  // The displayed old frame has no later layers; replacing the roster destroys them.
+  await presentSpell(page, mutationFrame([mutated(1, ['brute'])]), 'decision', true);
+  expect(await drawnMutations(page)).toEqual([]);
+  await page.evaluate(() => window.artScene.textures.remove('creature-brute'));
+  await presentSpell(page, frame, 'decision', true);
+  const fallback = await drawnMutations(page);
+  expect(fallback.filter(cue => cue.creature === '1').every(cue => !cue.visible)).toBe(true);
+  expect(fallback.filter(cue => cue.creature === '2').every(cue => cue.visible)).toBe(true);
+  await presentSpell(page, mutationFrame([]), 'decision', true);
+  expect(await drawnMutations(page)).toEqual([]);
+});
+
+test('ART-5 live mixed builds preserve target bounds and expose appearance in inspection', async ({ page }, info) => {
+  const state = await mount(page);
+  const builds = [
+    ['brute', 'ironbound', 'dreadnought', 'titan'],
+    ['prowler', 'plague_doctor', 'blightweaver', 'apex'],
+    ['occultist', 'necromancer', 'lich', 'archmage'],
+    ['brute', 'berserker', 'ravager', 'occultist', 'necromancer'],
+    ['prowler', 'parasite', 'soulreaver', 'occultist', 'shaman'],
+    ['occultist', 'elementalist', 'harbinger', 'brute', 'marauder'],
+  ];
+  [...state.first.board.allies, ...state.first.board.enemies].forEach((one, i) => { one.acquiredTiers = builds[i].map(name => `tier:${name}:v1`); });
+  await choose(page);
+  await fits(page);
+  await page.screenshot({ path: info.outputPath('art5-six-creatures.png') });
+  await page.locator('[data-creature="3"]').click();
+  await expect(page.locator('#inspect-appearance')).toContainText('souls stage 3');
+  await expect(page.locator('#inspect-appearance')).toContainText('circuit stage 4');
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  await page.setViewportSize({ width: 844, height: 390 });
+  await fits(page);
+  await page.screenshot({ path: info.outputPath('art5-landscape.png') });
 });

@@ -21,7 +21,7 @@ import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, tempoLabel, stepLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
-interface Creature { form: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
+interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
@@ -104,6 +104,7 @@ function renderInspection() {
   if (!one) { $<HTMLDialogElement>('inspect-dialog').close(); return; }
   text('inspect-name', one.label);
   text('inspect-side', one.enemy ? 'OPPONENT' : 'YOUR TEAM');
+  text('inspect-appearance', `Appearance: ${one.description}`);
   text('inspect-stats', `${one.health}/${one.maxHealth} HP · ${one.energy} energy · ${one.totalDefense} defense · ${one.currentInitiative} initiative`);
   const cards = new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []);
   const effects = one.conditions.map(condition => {
@@ -182,6 +183,7 @@ function render() {
       $('actor-layer').append(node); nodes.set(one.id, node);
     }
     node.dataset.form = one.form;
+    node.dataset.appearance = one.description;
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     const targetable = targeting && frame.targets.includes(one.id);
     if (targetable) node.classList.add('is-targetable');
@@ -199,7 +201,7 @@ function render() {
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. ${targeting ? 'Select target.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. Appearance: ${one.description}. ${targeting ? 'Select target.' : 'Inspect creature.'}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());

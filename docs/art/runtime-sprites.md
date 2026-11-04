@@ -24,12 +24,12 @@ Faint fringe pixels can extend past the principal bounds; they do not define a n
 | Brute root only | Brute |
 | Predator root only (`tier:prowler:v1`) | Predator |
 | Warped root only (`tier:occultist:v1`) | Warped |
-| More than one recognized family | Base Creature pending ART-5 |
+| More than one recognized family | ART-5 ranks stage, unique investment, then fixed family order |
 
 Later stages within one family keep its form. Changes appear after the authoritative snapshot arrives.
 Historical action frames carry their own forms; old recordings without mutation fields use the base.
-The neutral mixed-family fallback is provisional, not a visual claim that the creature lost its mutations.
-Inspect the Mutation Tree for its actual build until ART-5 defines compositing/precedence.
+ART-5 supersedes the original neutral mixed-family fallback with [explicit precedence and bounded cues](mutation-cues.md).
+Inspect the Mutation Tree for the complete build; the bounded art layer does not depict every acquired branch.
 
 ## Contrast and acceptance
 
