@@ -11,6 +11,8 @@ const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage =
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
   cues: MutationCues; home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
+  form: string;
 }
 
 const GOLD = 0xeac88e;
@@ -107,7 +109,7 @@ export class ArenaScene extends Phaser.Scene {
       const image = this.add.image(0, 0, art.key).setFlipX(enemy);
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
       const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
-      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, form: creature.form, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
@@ -126,7 +128,8 @@ export class ArenaScene extends Phaser.Scene {
       const home = positions[index];
       figure.home = home;
       const geometry = figureGeometry(figure.art, home, figure.enemy);
-      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y);
+      // Figures of one row share a y: a step per figure keeps each one's accents under its neighbour's image.
+      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y + index * .001);
       // Reduced motion can enter impact directly with newly mutated historical figures.
       if (!inFlight || resetPositions) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
@@ -138,8 +141,7 @@ export class ArenaScene extends Phaser.Scene {
 
   private followCues(figure: Figure) {
     // Geometry-specific accents are suppressed if the requested sprite was unavailable.
-    figure.cues.follow(figure.image, figure.art.bounds, figure.art.ground,
-      figure.art.form === this.state.creatures.find(one => this.figures.get(one.id) === figure)?.form);
+    figure.cues.follow(figure.image, figure.art.bounds, figure.art.ground, figure.art.form === figure.form);
   }
 
   private windup() {
