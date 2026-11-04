@@ -111,8 +111,8 @@ a push service that says a subscription is gone makes the account forget that de
 | Layer | What |
 | --- | --- |
 | SharedKernel | Nothing: `AccountId` exists. |
-| Application | `Accounts/Friends/`: `Friendship`, `FriendRequest`, `FriendErrors` (`Friend.Self`, `Friend.NoSuchPlayer`, `Friend.AlreadyFriends`, `Friend.AlreadyAsked`, `Friend.NotFriends`, `Friend.TooMany`), the port `IFriendStore`, and `Friends`, the use cases (list, ask, accept, decline or withdraw, remove, forget an account). `Accounts/PushDevice` and the port `IAccountDevices` (list, add, remove, forget an account). Pure, tested with an in-memory store. |
-| Infrastructure | `FileFriendStore` / `BlobFriendStore` and `FileAccountDevices` / `BlobAccountDevices`, beside the account store, same container (`friends/<accountId>.json`, `devices/<accountId>.json`), same staged write. |
+| Application | `Accounts/Friends/`: `Friendship`, `FriendRequest`, `FriendErrors` (`Friend.Self`, `Friend.NoSuchPlayer`, `Friend.AlreadyFriends`, `Friend.AlreadyAsked`, `Friend.NotFriends`, `Friend.TooMany`), the port `IFriendStore`, and `Friends`, the use cases (list, ask, accept, decline or withdraw, remove, forget an account). `Accounts/PushDevice`, `AccountDevices` (the rules: five at most, one per endpoint) and the port `IDeviceStore` (list, save, forget an account). Pure, tested with an in-memory store. |
+| Infrastructure | `FileFriendStore` / `BlobFriendStore` and `FileDeviceStore` / `BlobDeviceStore`, beside the account store, same container (`friends/<accountId>.json`, `devices/<accountId>.json`), same staged write. |
 | Cli | `AccountNotices` (one notice to one account's devices through `IPushSender`, dedup by endpoint, dead endpoints forgotten), `FriendsApi`, the invitation routes in `LobbyApi`, `TableSeat.InvitedAccount` and `DeclinedBy`, `RecordedSeat.InvitedAccount`, `TableRegistry.InvitedBy(account)`. The host wires them when `--accounts` is on. |
 | `table/` | `friends.js` (pure functions and the panel), the lobby's *Friends* and *Invitations* sections, the *A friend* choice in the create dialog, `sw.js` reading the notice's kind, the notices button on the lobby through `push.js`. |
 | Domain | Nothing. |
@@ -134,7 +134,7 @@ All signed in (`401 Account.SignInRequired` otherwise), all behind the same-orig
 | `POST /api/friends/requests/<accountId>/accept` | Sends *accepted your friend request*. |
 | `DELETE /api/friends/requests/<accountId>` | Declines an incoming request, or withdraws an outgoing one. Silent. |
 | `DELETE /api/friends/<accountId>` | Removes a friend. Cancels an invitation between the two. Silent. |
-| `PUT /api/account/push` `{ endpoint, keys }` / `DELETE /api/account/push` | This browser is, or is no longer, one of the account's devices. `410` for an endpoint a push service said was gone. `POST /api/account/push/test` sends a test notice to this device. |
+| `PUT /api/account/push` `{ endpoint, keys }` / `DELETE /api/account/push` `{ endpoint }` | This browser is, or is no longer, one of the account's devices. `410` for an endpoint a push service said was gone. `POST /api/account/push/test` `{ endpoint }` sends a test notice to this device. |
 | `POST /api/lobby/tables` `{ opponent: "friend", friend: "<accountId>", format }` | Opens the table with the second seat addressed to the friend. `403 Friend.NotFriends`; `409 Lobby.InvitationOutstanding` while another one of yours is pending. Sends *invites you*. |
 | `GET /api/lobby/mine` | Adds `invitations: [{ table, from: { id, username }, sentAt }]`, the tables waiting for you; each of your own tables gains `invited: { id, username, sentAt, declined }` while a seat waits or was declined. |
 | `POST /api/lobby/tables/<id>/accept` | The invited account takes the seat: today's claim by account instead of by key. Answers the token, as claim does. Sends *accepted* to the inviter. |
@@ -168,12 +168,15 @@ refresh otherwise.
 Each stage is one pull request: built, tested, formatted, the node tests when a page changes, docs updated
 (`table/README.md`, `docs/tabletop/playtest-app.md`, `AGENTS.md`'s `table` line).
 
-1. **An account has devices.** `PushDevice`, `IAccountDevices`, its two stores, `AccountNotices`, the push
-   routes under `/api/account`, the lobby's *Notify me* and *Test*, `sw.js` opening the notice's own `url` and
-   staying quiet when a window is focused on it. No notice but the test one is sent yet. Tests: five devices and
-   the sixth replaces the oldest; the same endpoint registered twice is one device; a `410` forgets it; *Sign out
-   everywhere* and deletion forget them all; the worker opens the lobby for a lobby notice and the game for a
-   game notice.
+1. **An account has devices.** *Built*: `PushDevice`, `AccountDevices` and the port `IDeviceStore` in
+   `Application/Accounts`, `FileDeviceStore` and `BlobDeviceStore` (`devices/<accountId>.json`), `AccountNotices`
+   in the host, `PUT`/`DELETE /api/account/push` and `POST /api/account/push/test`, the lobby's *Notify me on this
+   device* and *Send a test* (`devices.js`), `sw.js` opening the notice's own `url` and staying quiet when a window
+   is focused on that page, and `IPushSender` taking a topic so a friend's notice never replaces a "your turn" on
+   the push service. No notice but the test one is sent yet. Tested: five devices and the sixth replaces the
+   oldest; the same endpoint registered twice is one device; a device the push service let go of is forgotten and
+   its page answered `410` until it makes a new subscription; *Sign out everywhere* and deletion forget them all;
+   the worker opens the lobby for a lobby notice and the game for a game notice.
 2. **Friends.** The ADR. `Friends` and `IFriendStore`, the stores, `FriendsApi`, the panel, the two friend
    notices. Tests: a request made twice is one; asking back accepts; declining is silent; removing a friend is
    silent; a hundred and first is refused; one side written and the other missing is repaired on read; a deleted

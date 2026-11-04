@@ -111,6 +111,30 @@ test('a tap with a page open elsewhere on the table brings it to the game', asyn
   assert.deepEqual(went, ['/play']);
 });
 
+test('a notice for the lobby is not shown over a lobby in front of somebody, and is shown over the game', async () => {
+  const notice = { title: 'A friend', body: 'bastien wants to be your friend', url: '/lobby#friends', tag: 'friend:acct' };
+  const atLobby = worker({ windows: [{ url: 'https://table.example/', focused: true, visibilityState: 'visible' }] });
+  await atLobby.fire('push', push(notice));
+  assert.equal(atLobby.shown.length, 0, 'the lobby at `/` is the lobby');
+
+  const atGame = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'visible' }] });
+  await atGame.fire('push', push(notice));
+  assert.equal(atGame.shown.length, 1);
+  assert.equal(atGame.shown[0].data.url, '/lobby#friends');
+});
+
+test('a tap on a lobby notice goes to the lobby page already open, not to a game page', async () => {
+  const went = [];
+  const game = { url: 'https://table.example/play', focused: false, focus: async () => { went.push('focus:play'); }, navigate: async url => { went.push(url); } };
+  const lobby = { url: 'https://table.example/', focused: false, focus: async () => { went.push('focus:lobby'); }, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [game, lobby] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/lobby#friends' }, close: () => {} } });
+
+  assert.deepEqual(went, ['focus:lobby', '/lobby#friends']);
+  assert.deepEqual(w.opened, []);
+});
+
 test('the worker caches nothing: it listens for no fetch', () => {
   assert.equal(worker().handlers.fetch, undefined);
 });

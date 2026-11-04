@@ -32,18 +32,17 @@ internal sealed class WebPushSender : IPushSender, IDisposable
         };
     }
 
-    public async Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
+    public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(to);
         ArgumentNullException.ThrowIfNull(payload);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
 
         var subscription = new Lib.Net.Http.WebPush.PushSubscription { Endpoint = to.Endpoint };
         subscription.SetKey(PushEncryptionKeyName.P256DH, to.P256dh);
         subscription.SetKey(PushEncryptionKeyName.Auth, to.Auth);
 
-        // One topic a seat: a second notice before the first was read replaces it on the service rather than
-        // queueing behind it, so a phone switched back on reads one "your turn", the latest.
-        var message = new PushMessage(payload) { Topic = "turn", Urgency = PushMessageUrgency.High };
+        var message = new PushMessage(payload) { Topic = topic, Urgency = PushMessageUrgency.High };
         try
         {
             await _client.RequestPushMessageDeliveryAsync(subscription, message, cancellationToken);

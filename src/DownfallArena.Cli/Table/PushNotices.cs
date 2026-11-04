@@ -22,6 +22,9 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromSeconds(2);
 
+    /// <summary>One topic a seat: a phone switched back on reads one "your turn", the latest (<see cref="IPushSender" />).</summary>
+    public const string Topic = "turn";
+
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     private readonly TimeSpan _grace = grace ?? Grace;
@@ -94,7 +97,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         var payload = JsonSerializer.Serialize(new { title = "Notifications work", body = "This phone is told when it is your turn.", url = $"/play?table={Uri.EscapeDataString(table.Id)}", tag = $"test:{seat.Name}", test = true }, Web);
         try
         {
-            if (await sender.SendAsync(subscription, payload))
+            if (await sender.SendAsync(subscription, payload, Topic))
             {
                 Console.WriteLine($"  Session {table.Id}: {seat.Name} sent a test notice.");
                 return new PushTest(true, "Sent. If nothing showed, check the phone's notification settings for this browser.");
@@ -166,7 +169,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id)))
+            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id), Topic))
             {
                 // Said, so a host's log shows what reached a phone and what did not.
                 Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");
