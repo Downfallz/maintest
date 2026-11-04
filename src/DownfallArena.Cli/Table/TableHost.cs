@@ -1,7 +1,9 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Learning;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -61,7 +63,13 @@ internal static class TableHost
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
             : null;
-        var composer = new TableComposer(services, rules, store) { Agents = agents, Push = push, Results = results };
+        var composer = new TableComposer(services, rules, store)
+        {
+            Agents = agents,
+            Push = push,
+            Results = results,
+            Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
+        };
         var stored = store is null ? null : new StoredSessions(store);
 
         // The operator's door: the platform's login where the host is behind one, a printed token everywhere

@@ -60,6 +60,14 @@ A starting host serves at once and rebuilds the tables an earlier host left open
 container's platform restarts a host whose port does not answer within a minute, and replaying many records takes
 longer. Until the rebuild is done, a seat whose table is not back yet, the lobby's seat routes and the join codes
 answer `503` with `Retry-After`, never `403`, so a page waits for its seat rather than forgetting it.
+
+A record whose replay is refused -- the content, the rules or the engine changed under it -- stays open for the
+operator to close or delete (ADR 0115), and its `table.json` notes the engine commit, content hash and rule set it
+was refused under (`refusedUnder`). A host on that same basis leaves it as it is instead of replaying it at every
+start; a host on another one tries it once more. A build with local changes or no commit marks nothing, so a fix in
+progress is always tried. A replay that stops short of the checkpoint at a person's question is refused at once:
+the ten seconds it may wait to catch up are for a bot still deciding, and nobody answers during a rebuild.
+
 ## Read-only presentation boundary
 
 `presentation.js` is the shared seam between a seat controller and a renderer (ADR 0123, arena step A3).

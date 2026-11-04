@@ -35,7 +35,7 @@ internal sealed class HostedTables : IDisposable
     /// <param name="store">The store a recording host writes to, made over <see cref="RunsDirectory" />.</param>
     /// <param name="rules">The rules every table is composed with, <see cref="Rules" /> unless given.</param>
     /// <param name="push">The notices the tables send (ADR 0118), or none, which is the ordinary host of these tests.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null)
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null)
     {
         _content.Write("presentation/package-tags.json", PackageTags);
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
@@ -44,7 +44,7 @@ internal sealed class HostedTables : IDisposable
             seed: 7,
             logMatchToConsole: false);
         var opened = store?.Invoke(RunsDirectory);
-        Composer = new TableComposer(_host.Services, rules ?? Rules, opened) { Push = push };
+        Composer = new TableComposer(_host.Services, rules ?? Rules, opened) { Push = push, Basis = basis };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 

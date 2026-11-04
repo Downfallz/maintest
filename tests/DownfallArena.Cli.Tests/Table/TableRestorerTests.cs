@@ -269,6 +269,84 @@ public sealed class TableRestorerTests : IDisposable
         (await _after.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open, "left as it was, not closed");
     }
 
+    /// <summary>
+    /// A record refused once under an engine, content and rules is refused again under the same ones, and only after
+    /// the time a replay takes: the refusal is written into the record, and a host on the same basis leaves it be.
+    /// </summary>
+    [Fact]
+    public async Task A_refused_replay_is_marked_and_a_host_on_the_same_basis_does_not_replay_it_again()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Diverged(table);
+        using var refusing = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("abc123"));
+        using var refused = new TableRegistry();
+        await TableRestorer.RestoreAsync(refusing.Stored!, refusing.Composer, refused, TimeProvider.System, TestContext.Current.CancellationToken);
+        using var again = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("abc123"));
+
+        var said = await TableRestorer.RestoreAsync(again.Stored!, again.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("refused before");
+        _later.All().ShouldBeEmpty();
+        var record = (await again.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        record.RefusedUnder.ShouldBe(Basis("abc123"));
+        record.Status.ShouldBe(TableRecord.Open, "kept for the operator, not closed");
+    }
+
+    /// <summary>Another engine, other content or other rules may replay what an earlier one could not, so it tries.</summary>
+    [Fact]
+    public async Task A_host_on_another_basis_tries_a_refused_record_again()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Diverged(table);
+        using var refusing = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("abc123"));
+        using var refused = new TableRegistry();
+        await TableRestorer.RestoreAsync(refusing.Stored!, refusing.Composer, refused, TimeProvider.System, TestContext.Current.CancellationToken);
+        using var newer = new HostedTables(_ => new FileArtifactStore(_runs), basis: Basis("def456"));
+
+        var said = await TableRestorer.RestoreAsync(newer.Stored!, newer.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldBeEmpty("replayed, and refused on the console again");
+        (await newer.Stored!.RecordAsync(table.Id, TestContext.Current.CancellationToken)).ShouldNotBeNull().RefusedUnder.ShouldBe(Basis("def456"));
+    }
+
+    /// <summary>
+    /// A replay that stops short of the checkpoint at a person's question is not going to catch up: nobody answers
+    /// during a rebuild. It is refused at once rather than after the whole wait a bot's late decision is given.
+    /// </summary>
+    [Fact]
+    public async Task A_replay_that_stops_short_at_a_persons_question_is_refused_without_the_whole_wait()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        await PlayUntil(table, table.Seats[0].Person!, PlayerOptionsKind.Intent);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        var store = new FileArtifactStore(_runs);
+        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
+        var kept = journal.Take(journal.FindLastIndex(entry => entry.Slot == "player1" && entry.Kind == "Speed")).ToList();
+        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
+        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, kept, TestContext.Current.CancellationToken);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        _later.All().ShouldBeEmpty("the rebuilt trace never reaches the checkpoint");
+        clock.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5), "the ten seconds are for a bot deciding, not for a person");
+    }
+
+    private static ReplayBasis Basis(string engine) => new(engine, "content", Application.Learning.RuleSetStamp.Of(HostedTables.Rules));
+
+    /// <summary>The record's second decision handed to the other seat: a line that no longer answers the question asked.</summary>
+    private async Task Diverged(PlayedTable table)
+    {
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        var store = new FileArtifactStore(_runs);
+        var journal = (await _before.Stored!.JournalAsync(table.Id, TestContext.Current.CancellationToken)).ToList();
+        journal[1] = journal[1] with { Slot = journal[1].Slot == "player1" ? "player2" : "player1" };
+        await store.Writer(table.Id).StartJsonLinesAsync(DecisionJournal.File, TestContext.Current.CancellationToken);
+        await store.Writer(table.Id).AppendJsonLinesAsync(DecisionJournal.File, journal, TestContext.Current.CancellationToken);
+    }
+
     /// <summary>The host's own table holds its place before the rebuild, so a store full of open tables cannot take it.</summary>
     [Fact]
     public async Task A_place_held_before_the_rebuild_is_not_taken_by_it()

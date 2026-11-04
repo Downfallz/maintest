@@ -48,6 +48,9 @@ internal sealed class PlaytestRun
     // last recorded decision, each as slow as it is. Long against a bot's decision, short against a host start.
     private static readonly TimeSpan CatchUpWait = TimeSpan.FromSeconds(10);
 
+    // How long a rebuilt trace stands still, with a person asked a question, before it is taken to have stopped.
+    private static readonly TimeSpan StandingStill = TimeSpan.FromMilliseconds(500);
+
     private readonly IArtifactWriter _writer;
     private readonly IArtifactReader _reader;
     private readonly RunRecorder _recorder;
@@ -227,7 +230,11 @@ internal sealed class PlaytestRun
     /// another match -- the same legal moves under another seed, or under content that changed -- and the
     /// boards the checkpoint holds are what says so. True when there is no checkpoint to hold it against.
     /// </summary>
-    public async Task<bool> AgreesWithCheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    /// <param name="stalled">
+    /// Whether the rebuilt match is waiting on somebody who is not coming: a person asked a question during the
+    /// replay. While it holds and the trace stops growing, the wait for the trace to catch up ends early.
+    /// </param>
+    public async Task<bool> AgreesWithCheckpointAsync(MatchId matchId, Func<bool>? stalled = null, CancellationToken cancellationToken = default)
     {
         var text = await _reader.ReadTextAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", cancellationToken);
         if (text is null)
@@ -244,8 +251,25 @@ internal sealed class PlaytestRun
         // The checkpoint can run past the last recorded decision: a bot that decided after it, and whose line the
         // earlier host did not live to write, is asked again here and decides live. That takes as long as the
         // bot takes, so the rebuilt trace is given the time to reach the checkpoint before it is held against it.
-        for (var waited = TimeSpan.Zero; _events.Length(matchId) < written.GetArrayLength() && _kept is null && waited < CatchUpWait; waited += GrowthStep)
+        // The time is the clock's, not a count of steps: a delay of a few milliseconds lasts longer than asked, and
+        // counted as asked a ten-second bound was close to twenty in the container.
+        // A person asked a question moves nothing until they answer, and nobody answers during a rebuild: once one
+        // is asked and the trace has stood still a moment, waiting longer only delays the host's start.
+        var started = _clock.GetTimestamp();
+        var length = _events.Length(matchId);
+        var still = started;
+        while (_events.Length(matchId) < written.GetArrayLength() && _kept is null && _clock.GetElapsedTime(started) < CatchUpWait)
         {
+            if (_events.Length(matchId) != length)
+            {
+                length = _events.Length(matchId);
+                still = _clock.GetTimestamp();
+            }
+            else if (stalled?.Invoke() == true && _clock.GetElapsedTime(still) >= StandingStill)
+            {
+                break;
+            }
+
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
 
@@ -318,6 +342,37 @@ internal sealed class PlaytestRun
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
         {
             Console.WriteLine($"  Session {SessionId} could not be marked {status}: {failure.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Marks the record as refused under this basis, so a host on the same basis leaves it as it is instead of
+    /// replaying it at every start. The status is untouched: a table that could not be rebuilt stays open for the
+    /// operator, who closes or deletes it (ADR 0115). A write that fails is a line on the console, and the next host
+    /// tries the replay again.
+    /// </summary>
+    public async Task MarkRefusedAsync(ReplayBasis basis, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(basis);
+        Task written;
+        lock (_recordGate)
+        {
+            if (_record is not { } record || record.RefusedUnder == basis)
+            {
+                return;
+            }
+
+            _record = record with { RefusedUnder = basis };
+            written = _recordWritten = WriteRecordAfterAsync(_recordWritten, _record, cancellationToken);
+        }
+
+        try
+        {
+            await written;
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  Session {SessionId} could not be marked as refused: {failure.Message}");
         }
     }
 
@@ -570,7 +625,8 @@ internal sealed class PlaytestRun
     {
         // Not past the closing either: once the trace is kept, the recorder forgets the match and its length
         // reads as nothing from then on.
-        for (var waited = TimeSpan.Zero; _events.Length(matchId) <= beyond && _kept is null && waited < GrowthWait; waited += GrowthStep)
+        var started = _clock.GetTimestamp();
+        while (_events.Length(matchId) <= beyond && _kept is null && _clock.GetElapsedTime(started) < GrowthWait)
         {
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }

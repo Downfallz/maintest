@@ -71,6 +71,12 @@ internal sealed class TableComposer
     public IMatchResults? Results { get; init; }
 
     /// <summary>
+    /// The basis this host replays recorded tables on (ADR 0091), or none when it cannot name one: a record its
+    /// replay refuses is marked with it, and one already marked with it is not replayed again.
+    /// </summary>
+    public ReplayBasis? Basis { get; init; }
+
+    /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
     /// <c>--rules</c> named, or either of them in the format <c>--format</c> named.
     /// </summary>
@@ -150,7 +156,7 @@ internal sealed class TableComposer
             // The last recorded decision is handed over before the command it causes is applied; the trace
             // growing past it is what says the board has caught up.
             await table.Run.WaitForTraceAsync(table.Session.MatchId, Math.Max(0, table.Run.TraceLength(table.Session.MatchId) - 1), cancellationToken);
-            if (await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, cancellationToken))
+            if (await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, () => table.Seats.Any(seat => seat.Person?.Waiting is not null), cancellationToken))
             {
                 // Kept: the dataset the replay re-recorded lands now. The rebuilt trace is the whole match
                 // again; the checkpoint the replay was held against is overwritten with it, as every decision
@@ -165,6 +171,11 @@ internal sealed class TableComposer
 
         reason ??= NotRebuiltBecause(replayed, table.Session.Outcome);
         Console.WriteLine($"  Session {record.Id} was not rebuilt: {reason}");
+        if (Basis is { } basis)
+        {
+            await table.Run.MarkRefusedAsync(basis, cancellationToken);
+        }
+
         table.Dispose();
         return null;
     }
