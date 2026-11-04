@@ -546,8 +546,15 @@ separate `arena-build/live.js` bundle cannot import the lab sample. `arena-playb
 combat frames and deduplicates them by sequence. Damage, conditions and defeats follow the host's before/after
 frames, including the last action before upkeep. Skip or opening combat controls settles to the current board;
 playback never acknowledges or sends a decision. First reads, legacy frames and long catch-ups settle immediately.
-[ADR 0127](../docs/adr/0127-play-confirmed-actions-in-the-live-arena.md) records that boundary. Mutations, tempos, ties and invitation
-acceptance remain at `/play`. The existing host still marks an accepted seat as arrived on authenticated
-reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md),
+[ADR 0127](../docs/adr/0127-play-confirmed-actions-in-the-live-arena.md) records that boundary. Mutations, tempos, ties and results are available in the arena
+([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)); invitation acceptance remains at `/play`.
+The existing host still marks an accepted seat as arrived on authenticated reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md),
 [ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and
 [the build instructions](../arena/README.md).
+
+The arena's **History** drawer retains public events from the current and previous round, capped at 200.
+Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
+command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
+an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
+`arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
+round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).
