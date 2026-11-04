@@ -5,9 +5,9 @@ const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, max
 const before = [1, 2, 3, 4, 5, 6].map(id => creature(id));
 const timeline = before.map(one => ({ creature: one.id, owner: one.id < 4 ? 'Player1' : 'Player2', speed: 'Standard' }));
 const legalTargets = { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 };
-function entry(sequence, { actor = 1, targets = [4], after = before.map(one => creature(one.id, one.id === 4 ? 13 : 20)), fizzled = false, legacy = false, outcomes } = {}) {
+function entry(sequence, { actor = 1, spell = 'strike', targets = [4], after = before.map(one => creature(one.id, one.id === 4 ? 13 : 20)), fizzled = false, legacy = false, outcomes } = {}) {
   return { sequence, event: { kind: 'CombatActionResolved', roundId: 2,
-    resolution: { action: { actor, spell: 'strike', targets }, isCritical: !fizzled, fizzled, fizzleReason: { message: 'Not enough energy' } },
+    resolution: { action: { actor, spell, targets }, isCritical: !fizzled, fizzled, fizzleReason: { message: 'Not enough energy' } },
     appliedOutcomes: outcomes ?? (fizzled ? [] : targets.map(target => ({ kind: 'DamageOutcome', target, amount: 7, critical: true }))),
     ...(legacy ? {} : { frame: { before, after, timeline, rollOffs: [] } }) } };
 }
@@ -30,7 +30,7 @@ async function mount(page) {
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url()); state.requests.push({ path: url.pathname, query: url.search, method: request.method() });
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2 }] } });
     if (url.pathname === '/api/seat/player1') return route.fulfill({ status: state.status, json: state.view });
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
@@ -157,5 +157,98 @@ test('confirmed results and commands fit short portrait and landscape', async ({
       });
     })).toEqual([]);
   }
+  expect(h.errors).toEqual([]);
+});
+
+// ART-4: actual Phaser vector rendering, with the same confirmed cue adapter the live queue uses.
+import { actionCue } from '../../table/arena-playback.js';
+import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
+const visualCue = (spell, outcomes, status = 'Resolved') => actionCue({ actor: { id: 1 },
+  action: { spell: `spell:${spell}:v1`, targets: [4, 5, 6] }, status,
+  effects: outcomes.map(([id, tone]) => ({ target: { id }, tone, text: 'Confirmed' })) });
+
+test('ART-4 renders distinct signatures only on confirmed recipients and clears every cast', async ({ page }, info) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await mountSpellScene(page);
+  for (const [spell, motif, outcomes] of [
+    ['pummel', 'impact', [[4, 'harm']]], ['tornado', 'wave', [[4, 'harm'], [5, 'harm']]],
+    ['throwing_star', 'quill', [[4, 'harm'], [5, 'harm']]], ['noxious_cure', 'spores', [[2, 'recovery'], [3, 'condition']]],
+    ['lightning_bolt', 'arc', [[4, 'harm']]], ['meteor', 'fire', [[4, 'harm'], [5, 'harm']]],
+    ['ice_spear', 'ice', [[4, 'condition']]], ['bone_ward', 'bones', [[1, 'harm'], [2, 'condition']]],
+    ['summon_minions', 'spirits', [[1, 'harm'], [4, 'condition'], [5, 'condition']]],
+    ['toxic_waves', 'void', [[4, 'harm'], [5, 'harm']]], ['rejuvenate', 'vital', [[2, 'recovery']]],
+  ]) {
+    const frame = spellFrame(visualCue(spell, outcomes));
+    await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
+    await page.clock.runFor(400);
+    if (frame.cue.visual.delivery !== 'melee') {
+      const position = await actorPosition(page);
+      expect(position.x).toBe(position.homeX); expect(position.y).toBe(position.homeY);
+    }
+    await presentSpell(page, frame, 'impact'); await page.clock.runFor(32);
+    const effects = await renderedEffects(page);
+    expect(effects.map(effect => effect.creature).sort()).toEqual(outcomes.map(([id]) => String(id)).sort());
+    expect(effects.filter(effect => effect.creature !== '1').every(effect => effect.motif === motif && effect.alpha > 0)).toBe(true);
+    if (outcomes.some(([id, tone]) => id === 1 && tone === 'harm')) expect(effects.find(effect => effect.creature === '1').motif).toBe('wound');
+    if (['summon_minions', 'bone_ward', 'throwing_star', 'lightning_bolt', 'noxious_cure', 'toxic_waves'].includes(spell)) {
+      await page.screenshot({ path: info.outputPath(`art4-${spell}.png`) });
+    }
+    await presentSpell(page, frame, 'decision');
+    expect(await renderedEffects(page)).toEqual([]);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('ART-4 suppresses fizzle hits and reduced motion, and cancels projectiles on resize or skip', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await mountSpellScene(page);
+  const frame = spellFrame(visualCue('throwing_star', [[4, 'harm'], [5, 'harm']]));
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
+  expect((await renderedEffects(page)).map(effect => effect.creature)).toEqual(['4', '5']);
+  await presentSpell(page, frame, 'decision'); await page.clock.runFor(700);
+  expect(await renderedEffects(page)).toEqual([]);
+  await presentSpell(page, frame, 'windup'); await page.setViewportSize({ width: 844, height: 390 });
+  await page.clock.runFor(700); expect(await renderedEffects(page)).toEqual([]);
+  await presentSpell(page, frame, 'impact', true); expect(await renderedEffects(page)).toEqual([]);
+  await presentSpell(page, frame, 'decision');
+  const fizzle = spellFrame(visualCue('throwing_star', [[4, 'harm']], 'Fizzled'));
+  await presentSpell(page, fizzle, 'windup'); expect(await renderedEffects(page)).toEqual([]);
+  await presentSpell(page, fizzle, 'impact');
+  expect((await renderedEffects(page)).map(effect => [effect.creature, effect.motif])).toEqual([['1', 'fizzle']]);
+  await page.clock.runFor(900); expect(await renderedEffects(page)).toEqual([]);
+  // A caster may also be the beneficiary: blood cost must not hide its own ward.
+  const selfWard = spellFrame(visualCue('bone_ward', [[1, 'harm'], [1, 'condition']]));
+  await presentSpell(page, selfWard, 'decision'); await presentSpell(page, selfWard, 'impact');
+  expect((await renderedEffects(page)).map(effect => effect.motif).sort()).toEqual(['bones', 'wound']);
+  const changed = { ...frame, creatures: frame.creatures.map(one => ({ ...one, form: 'base-creature' })) };
+  await presentSpell(page, changed, 'impact', true);
+  expect(await page.evaluate(() => [...window.artScene.figures.values()].every(figure =>
+    figure.image.x === figure.home.x && figure.image.y === figure.home.y))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+
+test('ART-4 live playback separates necromantic recipients from the caster blood cost', async ({ page }, info) => {
+  const h = await mount(page);
+  const shapes = ['tier:occultist:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:brute:v1', 'tier:prowler:v1', 'tier:occultist:v1'];
+  const start = before.map((one, index) => ({ ...one, acquiredTiers: [shapes[index]] }));
+  const after = start.map(one => ({ ...one, health: one.id === 1 ? 18 : 20,
+    conditions: [4, 5].includes(one.id) ? [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }] : [] }));
+  const action = entry(10, { spell: 'spell:summon_minions:v1', targets: [4, 5], after, outcomes: [
+    { kind: 'DamageOutcome', target: 1, amount: 2, onCaster: true },
+    { kind: 'ConditionOutcome', target: 4, effect: { kind: 'Bleed', amountPerRound: 2 } },
+    { kind: 'ConditionOutcome', target: 5, effect: { kind: 'Bleed', amountPerRound: 2 } },
+  ] });
+  action.event.frame.before = start;
+  await h.publish([action]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(460);
+  await expect(page.locator('[data-creature="1"] .creature-effect')).toContainText('Damage 2');
+  await expect(page.locator('[data-creature="4"] .creature-effect')).toContainText('Bleed 2');
+  await expect(page.locator('[data-creature="5"] .creature-effect')).toContainText('Bleed 2');
+  await expect(page.locator('[data-creature="6"] .creature-effect')).toBeEmpty();
+  await fits(page); await page.screenshot({ path: info.outputPath('art4-live-necromancy.png') });
+  await page.locator('#playback-skip').click();
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
 });

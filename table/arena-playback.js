@@ -2,6 +2,7 @@ import { resolvedSince, lastResolvedText } from './feed.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './arena-live.js';
+import { spellVisual } from './arena-spell-art.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './arena-timing.js';
 
 const resultText = action => [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
@@ -18,8 +19,11 @@ export function actionCue(action) {
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];
   let kind = struck.length ? 'strike' : 'pulse';
   if (action.status === 'Fizzled') kind = 'fizzle';
-  return { kind,
-    struck: action.status === 'Fizzled' ? [] : struck, effects, changes };
+  const fizzled = action.status === 'Fizzled';
+  const recipients = fizzled ? [] : [...new Set(effects.map(effect => effect.creature))];
+  return { kind, visual: spellVisual(action),
+    recipients, contact: recipients.filter(id => id !== String(action.actor?.id)),
+    struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes };
 }
 
 // One bounded queue per selected seat. Latest remains authoritative while historical frames are displayed.
@@ -83,7 +87,7 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     const board = livePresentation(display);
     const cue = current ? actionCue(current) : null;
     const frame = current ? { ...board.frame, stage, actor: String(current.actor.id),
-      target: cue.struck[0] ?? null, targets: [], cue } : board.frame;
+      target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
       stage, label: current ? `${current.spell} · ${current.status}` : '', remaining: queue.length + (current ? 1 : 0), cue };
   }
