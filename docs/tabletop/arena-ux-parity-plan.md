@@ -3,6 +3,7 @@
 Date: 2026-11-04
 Status: proposed implementation plan; this change contains documentation only.
 Audit baseline: main `c2a1112b1596d7894cd41628db196df86fb86c7d`, including A7 / PR #432.
+Baseline update: ART-2 / PR #436 merged as `c788cc2`; its WebP references are now on main.
 Companion: [browser arena delivery plan](browser-arena-plan.md).
 
 ## Executive decision
@@ -12,6 +13,8 @@ decision support. A player can issue a legal command without understanding why i
 what a mutation buys, what upkeep already did, or what just hit their creatures.
 
 Treat this as a dedicated UX workstream, **AU1–AU14**, separate from A1–A8 and ART-1–ART-6.
+These 14 work items produce **15 implementation PRs**: AU3 is split into the required AU3a event
+contract and AU3b receipt UI, in that order. The other IDs remain unchanged.
 Recover the classic behaviour and its regression fixes, then adapt it to an immersive, viewport-bound arena.
 Do not copy the scrolling page or import its monolithic entry point.
 
@@ -21,7 +24,7 @@ history, round pacing, progression, combat decisions and reference tools.
 
 | Maintainer's problem | Target experience | Delivery |
 | --- | --- | --- |
-| “The game starts; I did not know upkeep gave energy” | A start/round receipt explains the configured energy allowance, actual ongoing ticks and the next decision; it remains in the console | AU1–AU3 |
+| “The game starts; I did not know upkeep gave energy” | A start/round receipt explains recorded per-creature energy gains, ongoing ticks and the next decision; it remains in the console | AU1–AU3 |
 | “What should I do? What is a mutation?” | Persistent current objective plus a short first-use explanation, dismissible and available again from Help | AU2 |
 | “The webpage has three big choices, colours, tags and spell names” | Available mutations presented as comparable family-accented cards; the full tree is a separate reference | AU4, AU8 |
 | “Choose all tempos in creature tabs, then commit” | Editable drafts for every eligible creature; one Confirm tempos action | AU5 |
@@ -45,8 +48,10 @@ auto-opening recaps or second-tap submission that later work changed. Current co
 A8 PR [#437](https://github.com/Downfallz/maintest/pull/437), inspected at
 `29ab0ba21d34ecb35999c134dd17fcf4fd46feaf`, is still open at audit time. It owns opt-in lobby preference,
 sound/recovery, asset budgets and release checks. Do not report those as merged or redo them here.
-Refresh main and inspect A8 fixes before each implementation. ART-2 #436 is separate and is not a blocker
-for readable cards, guides or the console.
+Refresh main and inspect A8 fixes before each implementation. ART-2
+[#436](https://github.com/Downfallz/maintest/pull/436) has merged as `c788cc2`; its WebP references
+are on main. AU4/AU12 must use that asset baseline and subsequent approved art changes. Art production
+remains a separate workstream and does not block readable cards, guides or the console.
 
 ## Gap matrix
 
@@ -56,7 +61,7 @@ for readable cards, guides or the console.
 | --- | --- | --- | --- |
 | Phase and next action | `renderPhaseGuide`, Round guide, round cap, next evolution, decision/turn headings | Partial: round/phase, instruction and open-command button; no full phase guide | Explain current objective and upcoming step without exposing private choices; AU2 |
 | First-use explanation | Phase notices, replayable announcements, mute/keep-open; no need to invent an elaborate tutorial | Generic instructions; no equivalent notice/help system | Short contextual introduction to mutation, tempo and targeting; AU2 |
-| Opening energy | `upkeepEnergy` reads `catalogue.rules.energyPerRound`; waiting-room guard (#373) | `roundNotes` and `replayText` describe ongoing ticks only; ordinary round energy is not mentioned | Restore allowance context and record it at the correct moment; AU3 |
+| Opening energy | `upkeepEnergy` reads `catalogue.rules.energyPerRound`; waiting-room guard (#373) | `roundNotes` and `replayText` describe ongoing ticks only; ordinary round energy is not mentioned | Record actual gains at the grant boundary (AU3a), then render the receipt (AU3b) |
 | Upkeep details | Applied energy/heal/bleed ticks, condition chips, countdowns, per-kind steps (#250/#255) | Partial: textual upkeep/aftermath notes behind an icon, last two rounds | Readable receipt with affected creatures and discoverable details; AU3 |
 | Round turnover | Last cast → cleanup → upkeep → next question (#253/#410) | Combat queue handles casts; round notes are separate and passive | One presentation sequence including meaningful turnover, consistent historical context; AU7 |
 | Activity console | Activity feed, last-action line, structured round recap and announcements | Last-action result plus upkeep/aftermath review; no unified chronological journal | Docked/drawer console with structured records; AU1/AU6 |
@@ -114,9 +119,11 @@ Before `waiting` clears, including `waiting.seats: []`, say “Waiting for playe
 Once play starts, show a compact upkeep receipt followed by the mutation objective. On a mid-game reload,
 show “Round N · current state” and recovered history, without pretending the player watched a new round begin.
 
-The receipt must always mention base round energy, even when no ongoing effect ticked. The example
-“+2 energy” is not hardcoded: the catalogue's configured allowance supplies it.
-Distinguish that allowance from actual per-creature gains and from additional energy regeneration.
+The receipt must show recorded ordinary round-energy gains even when no ongoing effect ticked.
+The example “+2 energy” is not hardcoded or inferred from the catalogue: AU3a records the actual
+per-creature gain before AU3b presents it, including passive contributions and zero gains.
+Keep subsequent energy-regeneration ticks separate. Older recordings explicitly say when ordinary
+energy details were not recorded; current board totals cannot fill that historical gap.
 
 ### Mutation choice versus Mutation Tree
 
@@ -183,13 +190,16 @@ queue of old animations.
 
 | Source | What to reuse | What must not be inferred |
 | --- | --- | --- |
-| `table/feed.js` | `recapAction` through existing exports, `resolvedSince`, `roundRecap`, `roundUpkeep`, `turnoverSteps`, `matchReplay`, effect text | No parsing narration to recover event types; no arbitrary poll subtraction |
+| `table/feed.js` | Exported `resolvedSince`, `lastResolved`, `roundRecap`, `roundUpkeep`, `turnoverSteps`, `matchReplay`, effect text | No parsing narration to recover event types; no arbitrary poll subtraction |
 | `table/presentation.js`, `replay.js`, `arena-playback.js` | Latest seat vs presented frame, explicit action before/after, cancellation/watermarks | No historical board used for commands |
 | `table/mat.js`, `card.js`, `hand.js` | Prerequisites, ownership, tags, passive text, card fields, availability | No legality from family colour, spell ownership or asset names |
 | `table/guidance.js`, `slot.js` | Host guidance and adapted Action/Intent/Target options | No local combat simulation; no guarantees from previews |
 | `table/timeline.js`, `ties.js`, `terms.js` | Order, d20 details, grouped ties, player-facing labels | No client sorting or rule renaming |
 | Classic `table.js` | Extract narrow pure models for phase guidance, mutation faces and tempo drafts, with classic regression coverage | Do not start its poller or port its entire DOM/state machine |
 | `arena-live.js`, transport/session modules | One selected seat, SSE invalidation + authoritative reads, write fence, history reads | Never fetch another seat or an unrestricted trace to complete history |
+
+`recapAction` is private to `feed.js`. Reuse its normalized results through the exports above; this
+plan does not require exporting it or widening the module's public surface.
 
 Proposed new modules such as `table/arena-history.js` and `table/arena-guidance.js` are implementation
 names, not existing APIs. Keep normalization testable outside Phaser and DOM rendering in `arena/src`.
@@ -220,17 +230,21 @@ Do not persist tokens or private event payloads into a new local history store.
 per-creature receipt; the normal seat feed removes trace boards. Thus the existing “no ongoing ticks”
 line cannot explain all upkeep, and the catalogue allowance is not proof that every creature actually gained it.
 
-AU3 must ship the truthful baseline: “Round energy allowance: +N per living creature; current energy is
-shown on the board”, plus recorded applied ticks. It must not label that nominal allowance as an exact
-per-creature delta, ignore passive bonuses in an “exact” total, or fabricate capped gains.
-Exact base/passive gain receipts are a separately gated AU3b below, so AU3 need not wait for a wire change.
-A trace/event schema extension must be additive, documented and tested against older recordings.
-Do not silently rewrite existing events or change balance to produce better UI.
+Decide and implement the missing event contract first, in required PR **AU3a**, before the **AU3b**
+receipt UI. Capture the actual result at `UpkeepRules.EnergyGain`'s grant boundary and publish it
+through the existing seat-safe feed. The shared presentation model then consumes recorded facts once,
+without first shipping a nominal-allowance receipt that a later PR must replace.
+
+The persistent extension needs an ADR, additive serialization and compatibility tests for old recordings,
+event consumers and session rebuild/checkpoints. Older recordings retain an explicit “ordinary energy
+details were not recorded” fallback; that is compatibility handling, not the normal new-match experience.
+Do not infer historical gains from the catalogue or two polls, rewrite old events, or change balance.
 
 ## PR sequence
 
 IDs below are planning IDs, not GitHub PR numbers. Keep each slice independently reviewable, with its
-own user-visible behaviour, source-based checks, browser screenshots and regression cases.
+own reviewable result, source-based checks and regression cases. UI slices also require user-visible
+acceptance and browser screenshots; AU3a is validated as an event/compatibility change before AU3b uses it.
 Dependencies are functional dependencies; default delivery order is the table order.
 No implementation slice is completed by this document.
 
@@ -238,11 +252,12 @@ No implementation slice is completed by this document.
 | --- | --- | --- | --- |
 | AU1 | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
 | AU2 | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
-| AU3 | Opening/round upkeep receipt including energy allowance and actual ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2 |
+| AU3a | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
+| AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
 | AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
-| AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3 |
-| AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3, AU6 |
+| AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
+| AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
 | AU9 | Compact grouped spellbook with stable selection and full details | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
 | AU10 | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
@@ -251,12 +266,9 @@ No implementation slice is completed by this document.
 | AU13 | Result/replay and missing service-tool parity after A8 reconciliation | Match UI, seat discovery, existing push/notes/feedback/session helpers | AU6, AU12; reconcile #437 |
 | AU14 | End-to-end parity acceptance and device/accessibility polish | All changed journeys, acceptance record and screenshots | AU1–AU13 |
 
-AU3b is an optional additional PR **only for exact ordinary-energy receipts**, after AU3:
-record requested and applied base/passive energy at the actual engine grant boundary and expose it
-through the existing seat-safe feed. Audit event consumers, rebuild/checkpoint compatibility and legacy
-replays; write an ADR for the persistent contract. It changes observability, not the amount granted.
-Its acceptance includes capped gains, passive bonuses, dead creatures, both seats and old recordings.
-If omitted, keep AU3's clearly labelled allowance; do not claim exact-gain parity.
+AU3 means the combined upkeep milestone, completed only when **AU3a and AU3b** have landed.
+AU3a's event contract is a prerequisite, not an optional follow-up. AU1 and AU2 can proceed independently;
+the new receipt UI must wait for the recorded facts. No implementation or ADR is added by this plan.
 
 ### AU1 — A useful console immediately
 
@@ -285,19 +297,42 @@ next action. Waiting-room events do not trigger tips/receipts prematurely. Help 
 can be reopened, never obscures the sole confirmation, and does not mark a covered question shown.
 Test both declaration modes and “mute tips but keep history”.
 
-### AU3 — Make automatic upkeep visible
+### AU3a — Record ordinary energy before designing its receipt
 
-Deliver a compact first-round receipt after arrivals and a receipt on each observed round transition.
-Always include the rule allowance; show recorded ongoing energy, then healing, then damage,
-with current-condition duration information separately labelled.
-Link affected creatures to inspection; group rows rather than demanding a click for each creature.
-No-tick rounds still have a meaningful energy/context line. Console retains the receipt after dismissal.
+Write the persistent-contract ADR and add a public event at the ordinary energy-grant boundary.
+For each eligible living creature, record the configured base and passive request amounts, actual combined
+gain and before/after energy. Preserve the existing single combined `GainEnergy` call and its ordering.
+The current engine adds the requested amount for a living creature and has no gameplay energy cap;
+do not introduce one for the receipt. Read the grant's return value instead of recomputing it in the UI.
+Zero applied gains remain observable. Creatures already dead receive no grant; a creature killed later
+by ongoing damage still has its earlier energy receipt.
 
-Acceptance: allowance from non-default rules, no ongoing effects, healing before lethal bleed,
-capped zero healing, additional energy, passive-energy caveat, dead creature and expired condition.
-Do not infer a tick from two polls, repeat a receipt after reconnect, or attribute next-round facts to a
-previous-round attack. Share fact data with match replay; do not retain misleading “no ticks = no upkeep”.
-AU7 later adds paced transition choreography; this PR already explains the current round truthfully.
+Expose the event through the existing seat-safe feed. Update event classification, serialization and
+consumers exhaustively, including journal normalization and legacy readers; no unrestricted trace access.
+Audit session rebuild/checkpoints, recording compatibility and event-sequence consumers. Keep gameplay
+outcomes, decision order and randomness unchanged; update event-based fixtures only for the added record.
+The ADR defines the final event name/fields and compatibility policy before the UI depends on them.
+
+Acceptance: non-default rule allowance, passive bonus, zero gain, already-dead creature,
+energy gained before lethal ongoing damage, both seats, round-one arrivals, deterministic rebuild and
+older recordings without the event. Assert that the receipt equals the amount actually returned by the
+grant and that the before/after values agree. No expected total is reconstructed in the browser.
+
+### AU3b — Make automatic upkeep visible from recorded facts
+
+After AU3a, deliver a compact first-round receipt once arrivals clear and a receipt on each observed
+round transition. Show recorded ordinary gains, then ongoing energy, healing and damage in engine order.
+Show before/after energy and recorded base/passive context in the details; separate current-condition
+durations from historical facts. Link affected creatures to inspection and group rows rather than demanding
+a click for each creature. No-tick rounds still show their ordinary-energy receipt, including zero gains.
+The console retains the receipt after dismissal; replay and action details share its fact model.
+
+Acceptance: non-default rules, passive bonus, zero ordinary gain, no ongoing effects, healing
+before lethal bleed, capped zero healing, additional energy, dead creature and expired condition.
+Old recordings show missing-energy-detail text alongside the facts they do contain; they never receive
+an invented exact total or an ordinary-energy event synthesized from a nominal allowance.
+Do not repeat a receipt after reconnect or attribute next-round facts to a previous-round attack.
+Waiting-room events do not announce upkeep before arrivals clear. AU7 later adds paced choreography.
 
 ### AU4 — Compare mutations at a glance
 
