@@ -4,7 +4,8 @@ namespace DownfallArena.Cli.Table;
 /// Rebuilds every recorded open table when a host starts. A game that began does not expire during a pause.
 /// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
 /// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A replay
-/// that no longer fits the current engine or content is reported and preserved for the operator.
+/// that no longer fits the current engine or content is reported and preserved for the operator, and marked, so a
+/// host on the same engine, content and rules does not replay it again.
 /// </summary>
 internal static class TableRestorer
 {
@@ -24,6 +25,14 @@ internal static class TableRestorer
             // match twice, under the same id and the same tokens.
             if (registry.ById(id) is not null || await stored.RecordAsync(id, cancellationToken) is not { Status: TableRecord.Open } record)
             {
+                continue;
+            }
+
+            if (record.RefusedUnder is { } refused && refused == composer.Basis)
+            {
+                // Replayed and refused before under this very engine, content and rules: it would be refused again,
+                // and only after the time a replay takes. It stays open for the operator (ADR 0115).
+                said.Add($"Session {record.Id} left as it was: its replay was refused before, under this engine, content and rules.");
                 continue;
             }
 

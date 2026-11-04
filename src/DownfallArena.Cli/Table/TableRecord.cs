@@ -68,6 +68,13 @@ internal sealed record TableRecord
 
     public required string Status { get; init; }
 
+    /// <summary>
+    /// The basis a host refused to rebuild this table under, or none: the record stays open and kept for the operator
+    /// (ADR 0115), and a host with the same basis does not replay it again at every start. A host on another engine,
+    /// other content or other rules tries it once more.
+    /// </summary>
+    public ReplayBasis? RefusedUnder { get; init; }
+
     /// <summary>Only explicitly offered seats are public. Older, invitation-only tables offer none.</summary>
     public IReadOnlyList<string> OpenSeats { get; init; } = [];
 
