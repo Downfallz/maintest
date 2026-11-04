@@ -2,8 +2,8 @@
 
 Status: **design handoff, not implementation**. Reviewed with the game owner on 2026-11-03/04.
 This document records explicit decisions separately from visual proposals and outstanding questions.
-No gameplay changes are authorized by it. The live source of mechanics remains \`data/Tiers/\` and \`data/Spells/\`.
-The established naming history is \`docs/domain/package-renaming-plan.md\`; this document records the **later art-review decisions**.
+No gameplay changes are authorized by it. The live source of mechanics remains `data/Tiers/` and `data/Spells/`.
+The established naming history is `docs/domain/package-renaming-plan.md`; this document records the **later art-review decisions**.
 
 ## Executive decisions
 
@@ -16,11 +16,11 @@ The established naming history is \`docs/domain/package-renaming-plan.md\`; this
 7. A family owns a dominant silhouette, while Stage 2 and Stage 3 mutations add **visual cues**, Stage 3 usually amplifying the Stage 2 motif. This is **not** an approval to produce a unique full sprite for every package.
 8. Free multiclassing means cosmetic layers must compose or prioritize gracefully. No finalized precedence, layer model or image-count budget yet.
 9. Physical **Brute**, biologically **Predator**, occult/magical **Warped**. Within Warped: elemental **Stormborn**, authentic death magic/necromancy **Necrotic**, and astral/vital/void **Ethereal**. Do not reduce Necrotic/Revenant to infections, insects or biological parasites: that belongs to Predator.
-10. **Approved names to change in a later implementation:** \`spell:tornado:v1\` Whirlwind/Rafale → **Groundbreaker / Fracture**; \`spell:extort:v1\` Claim/Revendiquer → **Seize / Prise de force**; \`spell:soul_devourer:v1\` Soul Feast/Morsure d'âme → **Devour / Dévorer**. Keep IDs and filenames stable and synchronize authored display names, translations, balance metadata and UI in a separate PR. No spell mechanics change.
+10. **Approved names to change in a later implementation:** `spell:tornado:v1` Whirlwind/Rafale → **Groundbreaker / Fracture**; `spell:extort:v1` Claim/Revendiquer → **Seize / Prise de force**; `spell:soul_devourer:v1` Soul Feast/Morsure d'âme → **Devour / Dévorer**. Keep IDs and filenames stable and synchronize authored display names, translations, balance metadata and UI in a separate PR. No spell mechanics change.
 
 ## Provenance and asset status
 
-Existing production-prototype art in \`table/arena-art/\` and descriptions in \`arena/ART.md\` remain **provisional**; its winged predator and robed wraith predate this direction. The concept generations approved in conversation are **design references**, **not committed source assets**. In particular, recent four individual creature previews were generated with transparency requested, but the rendered backgrounds/alpha and Phaser-size readability were not validated. Recover/preserve the selected original outputs before any art integration PR. Never replace a reviewed source asset with an approximate regenerated image without visual approval.
+Existing production-prototype art in `table/arena-art/` and descriptions in `arena/ART.md` remain **provisional**; its winged predator and robed wraith predate this direction. The concept generations approved in conversation are **design references**, **not committed source assets**. In particular, recent four individual creature previews were generated with transparency requested, but the rendered backgrounds/alpha and Phaser-size readability were not validated. Recover/preserve the selected original outputs before any art integration PR. Never replace a reviewed source asset with an approximate regenerated image without visual approval.
 
 ## The visual language
 
