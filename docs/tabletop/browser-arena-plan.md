@@ -47,6 +47,8 @@ See [arena/README.md](../../arena/README.md) for packaging and the presentation 
 
 ## Art direction and review questions
 
+**Creature, mutation and spell visual direction:** [art direction bible](../art/creature-art-direction.md) supersedes the older provisional sprite descriptions below. Bright warm gold stays reserved for active/selected-target UI highlighting; creature amber/ochre is subtler, with silhouette and value contrast doing the identification.
+
 **Proposed direction:** a ruined ritual arena under an eclipse. Charcoal and desaturated green establish the
 world; warm gold identifies the active creature and selected target. Team colours supplement textual labels.
 Use the creatures' silhouettes as the dominant shapes, keep numbers and labels outside the artwork, and
