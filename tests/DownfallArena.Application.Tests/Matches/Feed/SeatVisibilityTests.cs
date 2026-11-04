@@ -31,7 +31,7 @@ public sealed class SeatVisibilityTests
             .Where(type => type is { IsAbstract: false, IsInterface: false } && typeof(IMatchEvent).IsAssignableFrom(type))
             .ToList();
 
-        events.Count.ShouldBe(20, "the domain has gained or lost an event; classify it in SeatVisibility");
+        events.Count.ShouldBe(21, "the domain has gained or lost an event; classify it in SeatVisibility");
         SeatVisibility.Classified.ShouldBe(events, ignoreOrder: true);
     }
 
@@ -85,7 +85,7 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>
-    /// The fifteen that are public, as instances rather than as type names: the arm has to be walked, not
+    /// The sixteen that are public, as instances rather than as type names: the arm has to be walked, not
     /// just listed, or a test could pass over a table that denies everything.
     /// </summary>
     private static IReadOnlyList<IMatchEvent> Public =>
@@ -101,6 +101,7 @@ public sealed class SeatVisibilityTests
         new ConditionsExpired(Match, Round, new Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>>()),
         new StunImmunityGained(Match, Round, [Creature]),
         new OngoingEffectsApplied(Match, Round, [], [], []),
+        new RoundEnergyGranted(Match, Round, []),
         new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
         new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),
         new PlayerJoined(Match, PlayerSlot.Player1, PlayerId.New()),
@@ -132,7 +133,7 @@ public sealed class SeatVisibilityTests
     /// <summary>
     /// The default of the switch, walked by an event the table has never heard of. This is the arm that makes
     /// the classification safe: an event nobody thought about is not served, and the test above is what makes
-    /// that silence loud. The stand-in lives here rather than in the domain, so the count above stays at 20.
+    /// that silence loud. The stand-in lives here rather than in the domain, so the count above stays at 21.
     /// </summary>
     [Fact]
     public void An_event_nobody_classified_is_shown_to_no_seat()

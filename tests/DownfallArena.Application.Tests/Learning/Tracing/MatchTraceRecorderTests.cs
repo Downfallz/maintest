@@ -56,6 +56,8 @@ public sealed class MatchTraceRecorderTests
 
         var trace = tracer.Complete(matchId, Stamp, 1);
 
+        trace.EventStreamVersion.ShouldBe(MatchTrace.CurrentEventStreamVersion);
+        trace.Entries.Count(entry => entry.Event is RoundEnergyGranted).ShouldBe(match.CurrentRound.ShouldNotBeNull().Number);
         trace.MatchId.ShouldBe(matchId);
         trace.Seed.ShouldBe(1);
         trace.Stamp.ShouldBe(Stamp);
@@ -71,6 +73,28 @@ public sealed class MatchTraceRecorderTests
     /// on the list at the same time. Handing out the list itself makes every poll a race the reader loses with
     /// an <see cref="InvalidOperationException" />; what it gets has to be a list that has stopped changing.
     /// </summary>
+    [Fact]
+    public async Task A_legacy_stream_omits_only_receipts_without_consuming_a_sequence()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var workflow = store.WorkflowWith(tracer);
+        var matchId = (await new CreateMatchHandler(workflow, TestContent.Resources, new TestRandomFactory()).HandleAsync(new CreateMatch(Rules, 1), TestContext.Current.CancellationToken)).Value;
+        tracer.UseLegacyEventStream(matchId);
+        var join = new JoinMatchHandler(workflow);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Alice, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Bob, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        var trace = tracer.Snapshot(matchId, Stamp, 1).ShouldNotBeNull();
+
+        trace.EventStreamVersion.ShouldBe(1);
+        trace.Entries.Select(entry => entry.Sequence).ShouldBe(Enumerable.Range(0, trace.Entries.Count));
+        trace.Entries.ShouldNotContain(entry => entry.Event is RoundEnergyGranted);
+        trace.Entries.ShouldContain(entry => entry.Event is OngoingEffectsApplied);
+        Should.Throw<InvalidOperationException>(() => tracer.UseLegacyEventStream(matchId));
+        tracer.Complete(matchId, Stamp, 1).EventStreamVersion.ShouldBe(1);
+    }
+
     [Fact]
     public async Task What_a_reader_walks_does_not_change_while_the_match_plays_on()
     {

@@ -7,7 +7,7 @@ import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundEnergyText, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
 import { bands, cursorOf, speedReveal } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -2646,6 +2646,7 @@ function roundJump(state, replay) {
 }
 
 function interludeHeading(action, round) {
+  if (action.ordinaryEnergy) return `Round ${round} · round energy`;
   return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
 }
 
@@ -2682,9 +2683,11 @@ function interludeRows(state, board, action) {
   const allies = new Set((board.allies ?? []).map(creature => creature.id));
   const ticks = action.ticks.map(tick => {
     const side = allies.has(tick.creature) ? 'ally' : 'enemy';
-    return row({ label: `Creature ${tick.creature}`, side }, `${tick.label} ${tick.sign}${tick.amount} ${tick.unit}`, tick.tone);
+    return row({ label: `Creature ${tick.creature}`, side }, action.ordinaryEnergy
+      ? roundEnergyText(tick) : `${tick.label} ${tick.sign}${tick.amount} ${tick.unit}`, tick.tone);
   });
-  return [row(null, upkeepEnergy(state), 'energy'), ...(ticks.length ? ticks : [row(null, 'No ongoing effect ticked.', 'neutral')])];
+  // Replay reads recorded facts only: the catalogue allowance is neither a receipt nor an ongoing tick.
+  return ticks.length ? ticks : [row(null, action.ordinaryEnergy ? 'No recorded grant details.' : 'No ongoing effect ticked.', 'neutral')];
 }
 
 function animatePlayback(state, held) {

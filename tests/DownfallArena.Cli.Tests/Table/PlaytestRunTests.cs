@@ -164,6 +164,28 @@ public sealed class PlaytestRunTests : IDisposable
         agrees.ShouldBe(false);
     }
 
+    [Theory]
+    [InlineData("gained")]
+    [InlineData("before")]
+    [InlineData("after")]
+    [InlineData("baseRequested")]
+    [InlineData("passiveRequested")]
+    public async Task A_changed_energy_receipt_refuses_a_checkpoint_even_when_its_boards_agree(string field)
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
+        var path = Path.Combine(run.Location, "traces", $"{session.MatchId}.json");
+        var trace = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
+        var receipt = trace["entries"]!.AsArray().First(entry => entry!["event"]!["kind"]!.GetValue<string>() == "RoundEnergyGranted")!["event"]!;
+        receipt["grants"]![0]![field] = receipt["grants"]![0]![field]!.GetValue<int>() + 1;
+        await File.WriteAllTextAsync(path, trace.ToJsonString(), TestContext.Current.CancellationToken);
+
+        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: () => true, TestContext.Current.CancellationToken);
+
+        agrees.ShouldBe(false);
+    }
+
     /// <summary>A checkpoint one entry longer than the match it holds: what an earlier host wrote past where this one stops.</summary>
     private static async Task CheckpointedPast(PlaytestRun run, TableSession session)
     {

@@ -376,7 +376,7 @@ public sealed class Match : AggregateRoot<MatchId>
         var creatures = Creatures;
         return round.SubPhase switch
         {
-            RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, RuleSet)),
+            RoundSubPhase.EnergyGain => Automatic(() => RaiseDomainEvent(new RoundEnergyGranted(Id, round.Id, UpkeepRules.EnergyGain(creatures, RuleSet)))),
             RoundSubPhase.OngoingEffects => ApplyOngoingEffects(round, creatures),
             RoundSubPhase.Evolution => EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance && Automatic(() => RevealPurchases(round)),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),

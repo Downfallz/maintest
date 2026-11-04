@@ -17,6 +17,8 @@ What it renders, by what you drop:
 | Two artifacts of the same kind, through the Compare selects | **Comparison**: the metrics side by side with deltas, and the run stamp diff (what moved: content, engine, rules, schema, agents, seeds). For two evaluations, also the spell-by-spell delta — the share of sides that declared a spell and won, and the casts, resolve rate and damage before and after, which are the columns a cost change actually moves. Keyed by spell name, so a spell cut as a new version lines up with the one it replaced. |
 
 Traces dropped alongside their run also feed the batch view (fizzle and crit rates) and appear on their own.
+`RoundEnergyGranted` narrates ordinary upkeep energy from its recorded gains and before/after values
+(ADR 0132); older traces without it remain readable, with no invented allowance or spell credit.
 
 Since [ADR 0027](../docs/adr/0027-a-condition-remembers-the-spell-that-applied-it.md) a trace says which cast
 each upkeep tick came from, so the page credits a bleed's damage to the spell and the creature behind it, not

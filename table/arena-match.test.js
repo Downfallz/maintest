@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { matchReplay } from './feed.js';
 import { createArenaMatch, roundNotes, replayText } from './arena-match.js';
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, isAlive: health > 0, conditions: [] });
 const before = [creature(1, 20), creature(4, 20)], after = [creature(1, 20), creature(4, 0)];
@@ -69,4 +70,13 @@ test('the last recorded step has no next and an unknown round is not jumped to',
 test('an upkeep without applied ticks says so instead of leaving an empty heading', () => {
   assert.equal(replayText({ interlude: 'upkeep', ticks: [] }), 'Upkeep · No ongoing ticks applied');
   assert.equal(replayText({ interlude: 'upkeep', ticks: [{ amount: 0 }] }), 'Upkeep · No ongoing ticks applied');
+});
+
+test('an ordinary zero-energy replay keeps its receipt instead of claiming no ongoing ticks', () => {
+  const event = { kind: 'RoundEnergyGranted', roundId: 1, grants: [
+    { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },
+  ] };
+  const [step] = matchReplay([{ sequence: 1, event }], board, []);
+  assert.equal(replayText(step), 'Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
+  assert.match(replayText({ ...step, ticks: [] }), /No recorded grant details/);
 });

@@ -35,6 +35,8 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
             ActionRevealed revealed => $"Creature {revealed.Action.Actor} reveals {revealed.Action.Spell.Value} on [{string.Join(", ", revealed.Action.Targets)}].",
             SlotSkipped skipped => $"Creature {skipped.Actor} is skipped ({skipped.Reason.Code}).",
             CombatActionResolved resolved => Describe(resolved),
+            RoundEnergyGranted energy => "Round energy: " + string.Join(", ", energy.Grants.Select(grant =>
+                $"creature {grant.Creature} gains {grant.Gained} ({grant.Before} -> {grant.After}; base {grant.BaseRequested}, passive {grant.PassiveRequested})")),
             OngoingEffectsApplied ongoing => Describe(ongoing),
             MatchEnded ended => ended.Outcome.IsDraw
                 ? $"Match ended in a draw after round {ended.RoundId.Number} ({ended.Outcome.Reason})."

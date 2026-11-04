@@ -9,6 +9,11 @@ namespace DownfallArena.Application.Learning.Tracing;
 /// </summary>
 public sealed record MatchTrace
 {
+    public const int CurrentEventStreamVersion = 2;
+
+    /// <summary>Version 1 omits ordinary energy receipts to preserve legacy table sequences (ADR 0132).</summary>
+    public int EventStreamVersion { get; init; } = CurrentEventStreamVersion;
+
     public required MatchId MatchId { get; init; }
 
     public int? Seed { get; init; }

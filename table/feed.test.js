@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, readingSteps, stepStart, turnoverSteps, turnoverText } from './feed.js';
+import { accumulate, roundEnergyGrants, roundEnergyText, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, readingSteps, stepStart, turnoverSteps, turnoverText } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -351,4 +351,30 @@ test('the cleanup events are kept with the round they ended', () => {
   const kept = retainRoundEvents([], turnover(2), 3);
   assert.deepEqual(kept.map(entry => entry.event.kind),
     ['CombatActionResolved', 'ConditionsExpired', 'StunImmunityGained', 'RoundEnded', 'OngoingEffectsApplied']);
+});
+
+const ordinary = { kind: 'RoundEnergyGranted', roundId: 2, grants: [
+  { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 3, before: 7, after: 10 },
+  { creature: 2, baseRequested: 0, passiveRequested: 0, gained: 0, before: 8, after: 8 },
+] };
+test('ordinary energy reads recorded actual gains and keeps zero grants, not the requested sum', () => {
+  const grants = roundEnergyGrants(ordinary);
+  assert.deepEqual(grants.map(grant => grant.amount), [3, 0]);
+  assert.equal(roundEnergyText(grants[0]), '+3 energy · 7 → 10 (base 4, passive 1)');
+  const text = feedLine({ sequence: 1, round: 3, event: ordinary }, cards);
+  assert.ok(text.startsWith('2 ·')); assert.ok(text.includes('+0 energy · 8 → 8'));
+});
+test('old recordings and missing ordinary-energy fields produce no fabricated allowance', () => {
+  for (const event of [null, { kind: 'OngoingEffectsApplied' }, { kind: 'RoundEnergyGranted' },
+    { kind: 'RoundEnergyGranted', grants: [{ creature: 1, gained: 2 }] }]) assert.deepEqual(roundEnergyGrants(event), []);
+});
+test('replay and round retention preserve the ordinary grant before the ongoing tick', () => {
+  const entries = [{ sequence: 3, round: 2, event: ordinary }, { sequence: 4, round: 2,
+    event: { kind: 'OngoingEffectsApplied', roundId: 2, bleedTicks: [{ creature: 1, damage: 9 }] } }];
+  assert.equal(retainRoundEvents([], entries, 2).length, 2);
+  const replay = matchReplay(entries, { allies: [], enemies: [] }, cards);
+  assert.deepEqual(replay.map(item => item.sequence), [3, 4]);
+  assert.deepEqual(replay[0].ticks.map(tick => tick.amount), [3, 0]);
+  assert.equal(replay[1].ticks[0].amount, 9);
+  assert.equal(replay[0].frame, undefined);
 });

@@ -17,7 +17,10 @@ public sealed class UpkeepRulesTests
         var creatures = Arena.FourCreatures();
         Arena.Find(creatures, Arena.Archer).TakeDamage(99);
 
-        UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 3, 2, 30, 2.0));
+        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 3, 2, 30, 2.0));
+
+        grants.Select(grant => grant.Creature).ShouldNotContain(Arena.Archer);
+        grants.ShouldAllBe(grant => grant.BaseRequested == 3 && grant.PassiveRequested == 0 && grant.Gained == 3 && grant.Before == 0 && grant.After == 3);
 
         Arena.Find(creatures, Arena.Knight).Energy.ShouldBe(Energy.Of(3));
         Arena.Find(creatures, Arena.Archer).Energy.ShouldBe(Energy.Of(0));
@@ -34,10 +37,47 @@ public sealed class UpkeepRulesTests
         knight.BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         knight.BuyTier(archmage).IsSuccess.ShouldBeTrue();
 
-        UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 2, 2, 30, 2.0));
+        knight.GainEnergy(7);
+        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 2, 2, 30, 2.0));
 
-        knight.Energy.ShouldBe(Energy.Of(3));
+        grants.Single(grant => grant.Creature == Arena.Knight).ShouldBe(new RoundEnergyGrant(Arena.Knight, 2, 1, 3, 7, 10));
+
+        knight.Energy.ShouldBe(Energy.Of(10));
         Arena.Find(creatures, Arena.Archer).Energy.ShouldBe(Energy.Of(2));
+    }
+
+    [Fact]
+    public void A_shared_passive_is_recorded_on_each_recipient_alongside_its_own_bonus()
+    {
+        var creatures = Arena.FourCreatures();
+        var shared = Tier.Create(TierId.Parse("tier:shared:v1"), "Shared", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 2), sharedWithTeam: true);
+        var own = Tier.Create(TierId.Parse("tier:own:v1"), "Own", 1, [], [], Initiative.Of(0), passive: Passive.Of(upkeepEnergy: 1));
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.BuyTier(own).IsSuccess.ShouldBeTrue();
+        knight.HoldShared(shared);
+        Arena.Find(creatures, Arena.Archer).HoldShared(shared);
+
+        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 4, 2, 30, 2.0));
+
+        grants.Single(grant => grant.Creature == Arena.Knight).ShouldBe(new RoundEnergyGrant(Arena.Knight, 4, 3, 7, 0, 7));
+        grants.Single(grant => grant.Creature == Arena.Archer).ShouldBe(new RoundEnergyGrant(Arena.Archer, 4, 2, 6, 0, 6));
+        grants.Single(grant => grant.Creature == Arena.Wraith).ShouldBe(new RoundEnergyGrant(Arena.Wraith, 4, 0, 4, 0, 4));
+    }
+
+    [Fact]
+    public void Zero_ordinary_gain_is_recorded_and_precedes_a_later_lethal_tick()
+    {
+        var creatures = Arena.FourCreatures();
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.GainEnergy(7);
+        knight.Apply(Bleed.Of(99, rounds: 1));
+
+        var grants = UpkeepRules.EnergyGain(creatures, RuleSet.Create(3, 0, 2, 30, 2.0));
+        UpkeepRules.OngoingEffects(creatures);
+
+        knight.IsDead.ShouldBeTrue();
+        grants.Single(grant => grant.Creature == Arena.Knight).ShouldBe(new RoundEnergyGrant(Arena.Knight, 0, 0, 0, 7, 7));
+        grants.Count.ShouldBe(4);
     }
 
     [Fact]

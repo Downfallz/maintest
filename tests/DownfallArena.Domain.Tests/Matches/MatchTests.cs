@@ -43,13 +43,36 @@ public sealed class MatchTests
             typeof(MatchStarted),
             typeof(RoundStarted),
             typeof(SubPhaseEntered),
+            typeof(RoundEnergyGranted),
             typeof(SubPhaseEntered),
             typeof(OngoingEffectsApplied),
             typeof(SubPhaseEntered),
         ]);
+        var grants = match.DomainEvents.OfType<RoundEnergyGranted>().Single();
+        grants.RoundId.ShouldBe(RoundId.First);
+        grants.Grants.Count.ShouldBe(4);
+        grants.Grants.ShouldAllBe(grant => grant.BaseRequested == 2 && grant.PassiveRequested == 0 && grant.Gained == 2 && grant.Before == 0 && grant.After == 2);
         match.DomainEvents.OfType<SubPhaseEntered>().Select(entered => entered.SubPhase)
             .ShouldBe([RoundSubPhase.EnergyGain, RoundSubPhase.OngoingEffects, RoundSubPhase.Evolution]);
         match.DomainEvents.OfType<MatchStarted>().Single().ShouldBe(new MatchStarted(match.Id, Table.Alice, Table.Bob, Arena.Resources.Version));
+    }
+
+    [Fact]
+    public void The_next_round_records_energy_before_ongoing_damage_kills_its_recipient()
+    {
+        var match = Table.Started();
+        var victim = Table.CreatureNumber(match, 1);
+        victim.Apply(DownfallArena.Domain.Resources.Effects.Bleed.Of(99, rounds: 2));
+
+        Table.PlayRound(match);
+
+        victim.IsDead.ShouldBeTrue();
+        var receipt = match.DomainEvents.OfType<RoundEnergyGranted>().Single(e => e.RoundId.Number == 2);
+        var grant = receipt.Grants.Single(g => g.Creature == victim.Id);
+        grant.Gained.ShouldBe(2);
+        grant.After.ShouldBe(grant.Before + grant.Gained);
+        var events = match.DomainEvents.ToList();
+        events.IndexOf(receipt).ShouldBeLessThan(events.FindIndex(e => e is OngoingEffectsApplied ticks && ticks.RoundId.Number == 2));
     }
 
     [Fact]

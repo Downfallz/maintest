@@ -170,3 +170,24 @@ test('upkeep ticks, reveals and phase markers read beside the attacks', async ({
   await expect(page.locator('#history-range')).toHaveText('Rounds 1–2 · 4 events');
   expect(h.state.errors).toEqual([]);
 });
+
+test('ordinary energy history keeps actual gains, zero gains and the order before ongoing ticks', async ({ page }) => {
+  const energy = { sequence: 7, event: { kind: 'RoundEnergyGranted', roundId: 2, grants: [
+    { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 3, before: 7, after: 10 },
+    { creature: 4, baseRequested: 0, passiveRequested: 0, gained: 0, before: 2, after: 2 },
+  ] } };
+  const h = await mount(page, [energy, { sequence: 8, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [{ creature: 1, damage: 7 }] } }]);
+  await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(2);
+  await rows(page).first().locator('summary').click();
+  await expect(rows(page).first()).toContainText('Upkeep · round energy');
+  await expect(rows(page).first().locator('[data-tone="energy"]')).toHaveCount(2);
+  await expect(rows(page).first()).toContainText('+3 energy · 7 → 10 (base 4, passive 1)');
+  await expect(rows(page).first()).toContainText('+0 energy · 2 → 2 (base 0, passive 0)');
+  await expect(rows(page).first()).toContainText('Creature 4 (Opponent)');
+  await rows(page).nth(1).locator('summary').click();
+  await expect(rows(page).nth(1)).toContainText('Upkeep · ongoing effects');
+  await expect(rows(page).nth(1).locator('[data-tone="harm"]')).toHaveText('Creature 1 (Your team) · Ongoing damage −7 HP');
+  await h.publish([energy]); await expect(rows(page)).toHaveCount(2);
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

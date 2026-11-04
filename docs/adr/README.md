@@ -137,5 +137,6 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
 | [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
 | [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
+| [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
 | [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
 | [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |

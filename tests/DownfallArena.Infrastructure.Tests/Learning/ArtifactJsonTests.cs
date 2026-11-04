@@ -19,6 +19,19 @@ public sealed class ArtifactJsonTests
     private static readonly MatchId Match = MatchId.From(Guid.Parse("00000000-0000-0000-0000-00000000abcd"));
 
     [Fact]
+    public void Ordinary_energy_serializes_actual_boundary_values_as_plain_numbers()
+    {
+        IDomainEvent receipt = new RoundEnergyGranted(Match, RoundId.First,
+            [new DownfallArena.Domain.Matches.Rules.Rounds.RoundEnergyGrant(CreatureId.From(3), 4, 1, 5, 7, 12)]);
+
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(receipt, ArtifactJson.LineOptions));
+
+        json.RootElement.GetProperty("kind").GetString().ShouldBe("RoundEnergyGranted");
+        json.RootElement.GetProperty("roundId").GetInt32().ShouldBe(1);
+        json.RootElement.GetProperty("grants")[0].GetRawText().ShouldBe("""{"creature":3,"baseRequested":4,"passiveRequested":1,"gained":5,"before":7,"after":12}""");
+    }
+
+    [Fact]
     public void Identifiers_stats_and_enums_are_plain_values()
     {
         var value = new
