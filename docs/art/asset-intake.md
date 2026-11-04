@@ -9,7 +9,9 @@ not the ART-3 runtime integration. The existing arena art remains in use.
 
 Identify these files by their visible anatomy, not by upload order or old concept-sheet numbers.
 The prior chat handoff's filename-to-form list was inconsistent with the actual images.
-This register corrects that transcription against the selected silhouettes in ART-1.
+The canonical form-to-source mapping is the `source` field in [`source-intake.json`](source-intake.json).
+The table below summarizes that register against the selected silhouettes in ART-1;
+the original filename is the basename of `source`.
 
 | Form | Original upload / expected source path | Visual identification |
 | --- | --- | --- |
@@ -107,11 +109,40 @@ for asset in json.loads((root / "source-intake.json").read_text())["assets"]:
     print(asset["form"], "verified")
 ```
 
-The WebP references can be regenerated after source upload with Pillow (encoder versions in the inventory):
+## Verify the committed WebP references
+
+This standalone check needs only the committed files and Python with Pillow; no PNG upload is required.
+The `referenceWebp.sha256` values identify the committed bytes. Re-encoding with another Pillow or
+libwebp version can produce different bytes, even when dimensions and alpha are unchanged.
+The recorded encoder versions and settings describe provenance, not a cross-version byte-reproducibility guarantee.
 
 ```python
+import hashlib
+import json
+from pathlib import Path
+from PIL import Image
+
+root = Path("docs/art")
 for asset in json.loads((root / "source-intake.json").read_text())["assets"]:
-    with Image.open(root / asset["source"]) as image:
-        image.save(root / asset["referenceWebp"]["path"], "WEBP",
-                   quality=90, alpha_quality=100, method=6)
+    reference = asset["referenceWebp"]
+    path = root / reference["path"]
+    content = path.read_bytes()
+    assert len(content) == reference["sizeBytes"], path
+    assert hashlib.sha256(content).hexdigest() == reference["sha256"], path
+    with Image.open(path) as image:
+        image.load()
+        assert image.format == "WEBP", path
+        assert image.mode == asset["mode"], path
+        assert image.size == (asset["width"], asset["height"]), path
+        alpha = image.getchannel("A")
+        counts = alpha.histogram()
+        measured = asset["alpha"]
+        assert alpha.getextrema() == (measured["min"], measured["max"]), path
+        assert counts[0] == measured["transparentPixels"], path
+        assert sum(counts[1:255]) == measured["partiallyTransparentPixels"], path
+        assert counts[255] == measured["opaquePixels"], path
+        for threshold, bounds in measured["boundsAtLeast"].items():
+            mask = alpha.point(lambda value: 255 if value >= int(threshold) else 0)
+            assert list(mask.getbbox()) == bounds, path
+    print(asset["form"], "WebP verified")
 ```

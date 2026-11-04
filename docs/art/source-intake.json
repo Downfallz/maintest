@@ -6,7 +6,6 @@
     {
       "form": "base-creature",
       "source": "sources/1000011763.png",
-      "originalFilename": "1000011763.png",
       "sha256": "baffb1f2d15f876780ab180c25ee674db38464b446b5a818fcbf1b5ac4730e97",
       "sizeBytes": 2125045,
       "width": 1536,
@@ -51,7 +50,6 @@
     {
       "form": "brute",
       "source": "sources/1000011765.png",
-      "originalFilename": "1000011765.png",
       "sha256": "3fa8cb6856e540dbff6fcf671bc407f69473cececbb69adb52bdee10f531d69c",
       "sizeBytes": 2602395,
       "width": 1536,
@@ -96,7 +94,6 @@
     {
       "form": "predator",
       "source": "sources/1000011762.png",
-      "originalFilename": "1000011762.png",
       "sha256": "5819e1765862beb39ad196d7606a51ca8ce9274722a70c2781a4cef125058ddc",
       "sizeBytes": 1938037,
       "width": 1536,
@@ -141,7 +138,6 @@
     {
       "form": "warped",
       "source": "sources/1000011764.png",
-      "originalFilename": "1000011764.png",
       "sha256": "ae87ef00b9f682415ff9c418cc334146ee0f5398c16bdcade164eadcebb39cd3",
       "sizeBytes": 2157283,
       "width": 1536,
