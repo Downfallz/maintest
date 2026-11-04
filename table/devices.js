@@ -25,12 +25,35 @@ export function needsFreshSubscription(error) {
   return error?.status === 410;
 }
 
+const OptOutKey = 'downfall.table.device-opt-out';
+
+/**
+ * Whether this browser was told to stop notifying this account: the opt-out is the browser's, kept beside the
+ * seats it saves, since the subscription itself stays for the seat pages and cannot carry it.
+ */
+export function optedOut(storage, accountId) {
+  try {
+    return Boolean(accountId) && storage?.getItem(OptOutKey) === accountId;
+  } catch {
+    return false;
+  }
+}
+
+export function rememberOptOut(storage, accountId, out) {
+  try {
+    if (out) storage?.setItem(OptOutKey, accountId);
+    else storage?.removeItem(OptOutKey);
+  } catch {
+    // A browser that keeps nothing asks again on its next visit.
+  }
+}
+
 /**
  * The panel: offered to a signed-in player on a host with push keys, in a browser that takes a push. The
  * subscription is the browser's one and only; stopping tells the host to forget this device and leaves the
  * subscription to the seats that use it.
  */
-export function mountDevices(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis } = {}) {
+export function mountDevices(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, storage = null } = {}) {
   const el = id => doc.getElementById(id);
   const state = {
     account: null,
@@ -68,8 +91,19 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     state.subscribed = Boolean(answer.notices);
   }
 
-  // What this browser already holds is told to the host on every visit: the host forgets a device whose push
-  // service let it go, and a page that stays quiet would leave the account believing it can be reached here.
+  // A subscription made with another key is nobody's to send to: let go of, so the next tap makes a fresh one.
+  async function current() {
+    const subscription = await held();
+    if (subscription && !sameKey(subscription, state.publicKey)) {
+      await subscription.unsubscribe();
+      return null;
+    }
+    return subscription;
+  }
+
+  // What this browser already holds is told to the host on every visit, unless the player stopped it here: the
+  // host forgets a device whose push service let it go, and a page that stays quiet would leave the account
+  // believing it can be reached here.
   async function sync() {
     state.subscribed = false;
     problem();
@@ -82,8 +116,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       if (!state.keyed || !state.supported) { render(); return; }
       await nav.serviceWorker.register('/sw.js');
       state.registration = await nav.serviceWorker.ready;
-      const subscription = await held();
-      if (subscription && sameKey(subscription, state.publicKey)) {
+      const subscription = await current();
+      if (subscription && !optedOut(storage, state.account.id)) {
         try { await register(subscription); }
         catch (error) {
           if (!needsFreshSubscription(error)) throw error;
@@ -107,11 +141,13 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       if (state.subscribed) {
         const subscription = await held();
         if (subscription) await request('/api/account/push', { endpoint: subscription.endpoint }, undefined, 'DELETE');
+        rememberOptOut(storage, state.account.id, true);
         state.subscribed = false;
       } else {
         state.permission = await win.Notification.requestPermission();
         if (state.permission === 'granted') {
-          const subscription = (await held()) ?? await state.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(state.publicKey) });
+          const subscription = (await current()) ?? await state.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(state.publicKey) });
+          rememberOptOut(storage, state.account.id, false);
           try { await register(subscription); }
           catch (error) {
             if (!needsFreshSubscription(error)) throw error;
