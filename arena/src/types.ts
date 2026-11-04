@@ -21,8 +21,7 @@ export const isEnemy = (state: LabState, id: string) => state.board.enemies.some
 // A render frame has presentation state only. The live adapter never imports the lab's sample or reducer.
 export interface SceneFrame {
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
-  cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string;
-    kind?: string; effect?: { kind?: string }; onCaster: boolean; wound: boolean }[];
+  cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];
     changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[] };
   creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean }[];

@@ -34,9 +34,7 @@ public sealed partial class TablePageContentTests
     {
         var text = File.ReadAllText(Path.Combine(Directory, file));
 
-        // ADR 0131 permits this one visual distinction in the dedicated art vocabulary. Gameplay and
-        // the generic playback adapter still carry no effect names; all other words remain swept.
-        foreach (var word in Content().Where(word => !IsVisualVocabulary(file, word)))
+        foreach (var word in Content())
         {
             // As a word, not as a substring: `maxHealth` is a stat a board reads off its snapshot and `Heal`
             // is an effect the page may not name, and a sweep that could not tell them apart would be one
@@ -45,18 +43,6 @@ public sealed partial class TablePageContentTests
                 .ShouldBeFalse($"{file} names {word}, so changing the content would need a change to the page");
         }
     }
-
-    private static bool IsVisualVocabulary(string file, string word) =>
-        file == "arena-spell-art.js" && word == nameof(Bleed);
-
-    [Theory]
-    [InlineData("arena-spell-art.js", "Bleed", true)]
-    [InlineData("arena-spell-art.js", "Heal", false)]
-    [InlineData("arena-playback.js", "Bleed", false)]
-    [InlineData("feed.js", "Bleed", false)]
-    public void The_visual_vocabulary_exception_is_limited_to_one_effect_in_its_adapter(
-        string file, string word, bool permitted) =>
-        IsVisualVocabulary(file, word).ShouldBe(permitted);
 
     [Fact]
     public void The_sweep_reads_a_word_and_not_a_fragment_of_one()

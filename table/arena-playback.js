@@ -2,7 +2,6 @@ import { resolvedSince, lastResolvedText } from './feed.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './arena-live.js';
-import { spellVisual, casterWound } from './arena-spell-art.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './arena-timing.js';
 
 const resultText = action => [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
@@ -11,11 +10,25 @@ const framed = action => Array.isArray(action.frame?.before) && Array.isArray(ac
   && action.frame.before.length > 0 && action.frame.before.length === action.frame.after.length
   && action.frame.before.every(one => action.frame.after.some(next => next.id === one.id));
 
+const NEUTRAL = Object.freeze({ family: 'neutral', motif: 'focus', delivery: 'cast' });
+const FIZZLE = Object.freeze({ family: 'neutral', motif: 'fizzle', delivery: 'cast' });
+
+// How a cast is drawn comes with its card, where the builder published the spell art (ADR 0131): the page
+// knows no spell by name. A card nobody drew, or an older host that serves none, gets the neutral mark.
+export function spellVisual(action, cards) {
+  if (action.status === 'Fizzled') return FIZZLE;
+  const visual = cards?.get(action.action?.spell)?.visual;
+  return visual && [visual.family, visual.motif, visual.delivery].every(word => typeof word === 'string') ? visual : NEUTRAL;
+}
+
+// A caster's own cost is a wound, never a hit by its spell: damage it took, or a lasting effect the catalogue
+// calls harmful landing on the caster itself. The effect's name is the catalogue's to give, not the page's.
+const isWound = (effect, action, harmful) => effect.target.id === action.actor?.id &&
+  (effect.tone === 'harm' || (effect.onCaster === true && effect.kind === 'ConditionOutcome' && harmful.has(effect.effect?.kind)));
+
 // A motif describes confirmed outcomes, never a spell's predicted damage or target legality.
-export function actionCue(action) {
-  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone,
-    kind: effect.kind, effect: effect.effect, onCaster: effect.onCaster === true,
-    wound: casterWound(effect, action.actor?.id) }));
+export function actionCue(action, cards = new Map(), harmful = new Set()) {
+  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone, wound: isWound(effect, action, harmful) }));
   const struck = [...new Set(action.effects.filter(effect => effect.tone === 'harm').map(effect => String(effect.target.id)))];
   const changes = framed(action) ? combatChanges(
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];
@@ -23,7 +36,7 @@ export function actionCue(action) {
   if (action.status === 'Fizzled') kind = 'fizzle';
   const fizzled = action.status === 'Fizzled';
   const recipients = fizzled ? [] : [...new Set(effects.map(effect => effect.creature))];
-  return { kind, visual: spellVisual(action),
+  return { kind, visual: spellVisual(action, cards),
     recipients, contact: recipients.filter(id => id !== String(action.actor?.id)),
     struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes };
 }
@@ -33,7 +46,7 @@ export function actionCue(action) {
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
 export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = clearTimeout, limit = 12 }) {
   let latest = null, queue = [], current = null, stage = 'decision', summary = '';
-  let seen = null, timer = null, generation = 0, reduced = false;
+  let seen = null, timer = null, generation = 0, reduced = false, catalogue = new Map(), harmful = new Set();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
   function later(callback, delay) {
@@ -60,11 +73,11 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     settle(queue.length ? resultText(queue.at(-1)) : summary);
   }
   function reset() {
-    cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; summary = ''; emit();
+    cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; summary = ''; catalogue = new Map(); harmful = new Set(); emit();
   }
-  function receive(view, cards, { animate = true } = {}) {
+  function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]) } = {}) {
     if (!view) { reset(); return; }
-    latest = view;
+    latest = view; catalogue = cards; harmful = new Set(effects.filter(effect => effect.harmful).map(effect => effect.kind));
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
     const end = Math.max(-1, ...entries.map(entry => entry.sequence),
       Number.isInteger(view.feedNext) ? view.feedNext - 1 : -1);
@@ -87,7 +100,7 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     const replay = current ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
     const display = current ? presentedView(latest, replay) : latest;
     const board = livePresentation(display);
-    const cue = current ? actionCue(current) : null;
+    const cue = current ? actionCue(current, catalogue, harmful) : null;
     const frame = current ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,

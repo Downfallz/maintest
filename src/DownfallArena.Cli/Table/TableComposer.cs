@@ -100,13 +100,19 @@ internal sealed class TableComposer
         _catalogues.GetOrAdd(rules, one => Tagged(CatalogueProjection.Build(_services.GetRequiredService<IGameResources>(), one)));
 
     /// <summary>
-    /// Each package with the words it is known by, where the builder published them next to the schema: presentation
-    /// the table shows on a package, kept out of the schema so the content hash does not move with them.
+    /// Each package with the words it is known by, and each card with how its cast is drawn, where the builder
+    /// published them next to the schema: presentation the table and the arena show, kept out of the schema so the
+    /// content hash does not move with them.
     /// </summary>
     private CatalogueView Tagged(CatalogueView catalogue)
     {
         var identities = _services.GetService<PackageIdentities>() ?? PackageIdentities.None;
-        return catalogue with { Packages = [.. catalogue.Packages.Select(package => package with { Tags = identities.Of(package.Id) })] };
+        var art = _services.GetService<SpellArt>() ?? SpellArt.None;
+        return catalogue with
+        {
+            Packages = [.. catalogue.Packages.Select(package => package with { Tags = identities.Of(package.Id) })],
+            Cards = [.. catalogue.Cards.Select(card => card with { Visual = art.Of(card.Id) })],
+        };
     }
 
     private DecisionGuideProjection Guide(RuleSet rules) =>

@@ -7,7 +7,7 @@ import type { SpellCatalogue } from './combat';
 
 export interface Package { id: string; name: string; level: number; initiativeBonus: number; spells: string[];
   prerequisites?: string[]; anyOf?: string[]; passiveLines?: string[]; tags?: string[] }
-export interface Catalogue extends SpellCatalogue { packages?: Package[] }
+export interface Catalogue extends SpellCatalogue { packages?: Package[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
 type Controller = ReturnType<typeof createArenaPlanning>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function button(label: string, action: () => void) {
