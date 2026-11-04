@@ -318,7 +318,9 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
         _registry.ById(keptForMark.Id).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
         keptForMark.Seats[1].InvitedAccount.ShouldBeNull();
-        (await MineAsync(bastien)).GetProperty("tables").EnumerateArray().Single(entry => entry.GetProperty("table").GetProperty("id").GetString() == keptForMark.Id).GetProperty("invited").ValueKind.ShouldBe(JsonValueKind.Null);
+        var bastiens = (await MineAsync(bastien)).GetProperty("tables").EnumerateArray().Single(entry => entry.GetProperty("table").GetProperty("id").GetString() == keptForMark.Id).GetProperty("invited");
+        bastiens.GetProperty("free").GetBoolean().ShouldBeTrue("kept for nobody now, with the ways out on the card");
+        bastiens.GetProperty("declined").GetBoolean().ShouldBeFalse();
     }
 
     [Fact]
