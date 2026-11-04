@@ -42,10 +42,28 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, HumanSeat? Perso
     public AccountId? Account { get; set; }
 
     /// <summary>
-    /// What a link or a code hands out for this seat: its invitation, or, for a seat recorded before invitations
-    /// existed, its token, as links did then. Nothing once the seat is taken, and nothing for a bot's.
+    /// The account this seat is kept for (ADR 0129), or none: the friend the table was opened for, until they
+    /// accept, decline, the inviter cancels, or the invitation runs out. While set, the seat is nobody else's to
+    /// take: not an open place, no code, no link. One of the seat's keys, so taking the seat clears it.
     /// </summary>
-    public string? Key => Person is null || Taken ? null : Invitation ?? Token;
+    public AccountId? InvitedAccount { get; set; }
+
+    /// <summary>When the invited account was asked, which is what the invitation's expiry is counted from.</summary>
+    public DateTimeOffset? InvitedAt { get; set; }
+
+    /// <summary>
+    /// The account that declined this seat's invitation, or none: what the inviter's card says while the seat
+    /// waits for the inviter to choose a way out (ADR 0129). Cleared by the next invitation, by opening the seat
+    /// to everyone, and when the seat is taken.
+    /// </summary>
+    public AccountId? DeclinedBy { get; set; }
+
+    /// <summary>
+    /// What a link or a code hands out for this seat: its invitation, or, for a seat recorded before invitations
+    /// existed, its token, as links did then. Nothing once the seat is taken, nothing for a bot's, and nothing
+    /// while the seat is kept for a friend (ADR 0129): that invitation is accepted signed in, never by a key.
+    /// </summary>
+    public string? Key => Person is null || Taken || InvitedAccount is not null ? null : Invitation ?? Token;
 
     /// <summary>The name a URL and a page use for a slot.</summary>
     public static string NameOf(PlayerSlot slot) => slot == PlayerSlot.Player1 ? "player1" : "player2";

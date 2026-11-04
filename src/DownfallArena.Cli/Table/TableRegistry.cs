@@ -207,7 +207,7 @@ internal sealed class TableRegistry : IDisposable
         ArgumentNullException.ThrowIfNull(seat);
         lock (_gate)
         {
-            return new SeatKeys(seat.Token, seat.Invitation, seat.Taken, Codes.Of(seat), seat.Push, seat.Account);
+            return new SeatKeys(seat.Token, seat.Invitation, seat.Taken, Codes.Of(seat), seat.Push, seat.Account, seat.InvitedAccount, seat.InvitedAt);
         }
     }
 
@@ -242,6 +242,8 @@ internal sealed class TableRegistry : IDisposable
             seat.Taken = keys.Taken;
             seat.Push = keys.Push;
             seat.Account = keys.Account;
+            seat.InvitedAccount = keys.InvitedAccount;
+            seat.InvitedAt = keys.InvitedAt;
             _byToken[keys.Token] = table;
             if (keys.Invitation is { } invitation)
             {
