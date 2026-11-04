@@ -30,6 +30,8 @@ test('the real host supplies the arena and external decisions update it without 
   await expect(arena.locator('#arena')).toHaveAttribute('data-ready', 'true');
   await arena.locator('#seat-choices button').filter({ hasText: 'Player 1' }).click();
   await expect(arena.locator('#loading')).toBeHidden();
+  await expect(arena.locator('#upkeep-dialog')).toBeVisible();
+  await arena.locator('#upkeep-close').click();
   for (const one of before.board.allies) {
     await expect(arena.locator(`[data-creature="${one.id}"]`)).toHaveClass(/ally/);
     await expect(arena.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);

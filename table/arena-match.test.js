@@ -69,7 +69,7 @@ test('the last recorded step has no next and an unknown round is not jumped to',
 
 test('an upkeep without applied ticks says so instead of leaving an empty heading', () => {
   assert.equal(replayText({ interlude: 'upkeep', ticks: [] }), 'Upkeep · No ongoing ticks applied');
-  assert.equal(replayText({ interlude: 'upkeep', ticks: [{ amount: 0 }] }), 'Upkeep · No ongoing ticks applied');
+  assert.match(replayText({ interlude: 'upkeep', ticks: [{ creature: 1, amount: 0, label: 'Healing over time', sign: '+', unit: 'HP' }] }), /Healing over time \+0 HP/);
 });
 
 test('an ordinary zero-energy replay keeps its receipt instead of claiming no ongoing ticks', () => {
