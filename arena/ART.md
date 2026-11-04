@@ -3,7 +3,8 @@
 Current runtime art: [ART-3 integration](../docs/art/runtime-sprites.md) uses the four audited ART-2
 references via `table/arena-art.js`, copied byte-for-byte under `table/arena-art/`. The scene loads
 `base-creature.webp`, `brute.webp`, `predator.webp` and `warped.webp`, plus the eclipse background.
-The original three-frame `creatures.webp` is retained below as historical provenance only.
+The original three-frame `creatures.webp` was removed from `table/arena-art/` with ART-3 and lives in git
+history (before #439); its brief is retained below as provenance only.
 
 ## Historical prototype art
 
@@ -16,7 +17,7 @@ Original PNGs were converted to WebP (quality 90, alpha quality 100); no other r
 | Asset | Use | Generation brief |
 | --- | --- | --- |
 | `table/arena-art/eclipse-arena.webp` | Cover-scaled battlefield | Wide 16:9 painted dark-fantasy ritual arena under a golden eclipse; ruined basalt architecture, teal mist, cracked stone foreground, low horizon, open floor for creatures; no characters, UI, lettering or logos. |
-| `table/arena-art/creatures.webp` | Three equal-column transparent sprite frames | Three isolated full-body creatures facing slightly right: massive horned armored brute, skeletal winged predator, robed antler wraith; matching dark-fantasy painted treatment, equal columns and aligned feet; transparent background, no floor, shadows, UI, lettering or logos. |
+| `creatures.webp` (removed; git history) | Three equal-column transparent sprite frames | Three isolated full-body creatures facing slightly right: massive horned armored brute, skeletal winged predator, robed antler wraith; matching dark-fantasy painted treatment, equal columns and aligned feet; transparent background, no floor, shadows, UI, lettering or logos. |
 
 The briefs above record art direction, rather than a guarantee of future reproducibility. The scene names
 the frames `horns`, `wings` and `veil`; it mirrors and tints the enemy team. Transparent padding is retained

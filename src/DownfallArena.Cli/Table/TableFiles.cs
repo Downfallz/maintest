@@ -90,7 +90,6 @@ internal sealed class TableFiles
             ["/arena-build/game.js.LEGAL.txt"] = (Path.Combine(tableDirectory, "arena-build", "game.js.LEGAL.txt"), StudioResponse.Plain),
             ["/arena-build/PHASER-LICENSE.txt"] = (Path.Combine(tableDirectory, "arena-build", "PHASER-LICENSE.txt"), StudioResponse.Plain),
             ["/arena-art/eclipse-arena.webp"] = (Path.Combine(tableDirectory, "arena-art", "eclipse-arena.webp"), Webp),
-            ["/arena-art/creatures.webp"] = (Path.Combine(tableDirectory, "arena-art", "creatures.webp"), Webp),
             ["/arena-art/base-creature.webp"] = (Path.Combine(tableDirectory, "arena-art", "base-creature.webp"), Webp),
             ["/arena-art/brute.webp"] = (Path.Combine(tableDirectory, "arena-art", "brute.webp"), Webp),
             ["/arena-art/predator.webp"] = (Path.Combine(tableDirectory, "arena-art", "predator.webp"), Webp),

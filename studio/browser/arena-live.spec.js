@@ -155,39 +155,42 @@ test('the live dock and all six inspection targets fit short portrait and landsc
     await fits(page);
   }
 });
-
-
-test('ART-3 follows mutations through polls and keeps mixed families neutral', async ({ page }, info) => {
-  const state = await mount(page);
+function mutated(state) {
   state.first.board.allies[0].acquiredTiers = ['tier:brute:v1'];
   state.first.board.allies[1].acquiredTiers = ['tier:prowler:v1'];
   state.first.board.allies[2].acquiredTiers = ['tier:occultist:v1'];
   state.first.board.enemies[1].acquiredTiers = ['tier:prowler:v1'];
   state.first.board.enemies[2].acquiredTiers = ['tier:occultist:v1', 'tier:brute:v1'];
-  await choose(page);
+}
+test('each creature shows its acquired root family and a mixed family stays neutral', async ({ page }, info) => {
+  const state = await mount(page); mutated(state); await choose(page);
   for (const [id, form] of [[1, 'brute'], [2, 'predator'], [3, 'warped'], [4, 'base-creature'], [5, 'predator'], [6, 'base-creature']]) {
     await expect(page.locator(`[data-creature="${id}"]`)).toHaveAttribute('data-form', form);
   }
   await expect(page.locator('#arena')).toHaveAttribute('data-asset-fallback', 'false');
-  await fits(page);
-  await page.screenshot({ path: info.outputPath('art3-six-creatures.png') });
-  await page.setViewportSize({ width: 844, height: 390 });
-  await fits(page);
-  await page.screenshot({ path: info.outputPath('art3-landscape.png') });
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-art', 'brute');
+  await fits(page); await page.screenshot({ path: info.outputPath('art3-six-creatures.png') });
+  await page.setViewportSize({ width: 844, height: 390 }); await fits(page); await page.screenshot({ path: info.outputPath('art3-landscape.png') });
+});
+test('a second family acquired on a later poll turns the figure neutral without losing inspection', async ({ page }) => {
+  const state = await mount(page); mutated(state); await choose(page);
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'brute');
   state.first.board.allies[0].acquiredTiers = ['tier:brute:v1', 'tier:prowler:v1'];
   await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'base-creature', { timeout: 10000 });
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
 });
-
-test('ART-3 missing individual sprite preserves inspection and healthy assets', async ({ page }) => {
+test('a missing family sprite falls back to the base and leaves the other art and inspection intact', async ({ page }) => {
   const loaded = [];
   page.on('response', response => { if (response.url().includes('/arena-art/') && response.ok()) loaded.push(response.url()); });
   await page.route('**/arena-art/brute.webp', route => route.abort());
   const state = await mount(page);
-  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1'];
+  state.first.board.allies[0].acquiredTiers = ['tier:brute:v1']; state.first.board.allies[1].acquiredTiers = ['tier:prowler:v1'];
   await choose(page);
   await expect(page.locator('#arena')).toHaveAttribute('data-asset-fallback', 'true');
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-form', 'brute');
+  await expect(page.locator('[data-creature="1"]')).toHaveAttribute('data-art', 'base-creature');
+  await expect(page.locator('[data-creature="2"]')).toHaveAttribute('data-art', 'predator');
   expect(loaded.some(url => url.endsWith('/base-creature.webp'))).toBe(true);
   expect(loaded.some(url => url.endsWith('/predator.webp'))).toBe(true);
   await page.locator('[data-creature="1"]').click();

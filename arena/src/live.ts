@@ -274,7 +274,10 @@ async function discover() {
   }
 }
 
-scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onLayout = positions => {
+  placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+  for (const one of creatures) nodes.get(one.id)!.dataset.art = scene.artOf(one.id);
+};
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   rendererFailed = true; ready = false; connection.stop(); playback.skip(); combat.reset(); planning.reset(); match.reset();

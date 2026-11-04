@@ -192,8 +192,7 @@ test('the hit targets stand over the figures the scene places', async ({ page })
   }
 });
 
-
-test('the command portrait uses current art and the retired sheet is never downloaded', async ({ page }) => {
+test('the command portrait shows the acting creature and the retired sheet is never downloaded', async ({ page }) => {
   const retired = [];
   page.on('request', request => { if (request.url().endsWith('/creatures.webp')) retired.push(request.url()); });
   await page.reload();

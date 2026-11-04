@@ -117,7 +117,6 @@ public sealed class TableFilesTests
     /// <summary>The scene's art is bytes, served as the image it is rather than decoded as text.</summary>
     [Theory]
     [InlineData("eclipse-arena")]
-    [InlineData("creatures")]
     [InlineData("base-creature")]
     [InlineData("brute")]
     [InlineData("predator")]

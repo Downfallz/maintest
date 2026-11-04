@@ -60,6 +60,9 @@ export class ArenaScene extends Phaser.Scene {
     this.onReady();
   }
 
+  // The form a figure actually draws, after the texture fallbacks; '' before its figure exists.
+  artOf(id: string) { return this.figures.get(id)?.art.form ?? ''; }
+
   present(state: SceneFrame, reduced: boolean, rate: number) {
     this.state = state;
     this.reduced = reduced;
