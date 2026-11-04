@@ -17,5 +17,5 @@ public static class FriendErrors
 
     public static readonly DomainError NotFriends = new("Friend.NotFriends", "Only a friend can be invited. Ask them to be your friend first.");
 
-    public static readonly DomainError TooMany = new("Friend.TooMany", $"A player keeps at most {Friends.MostLinks} friends and {Friends.MostLinks} pending requests.");
+    public static readonly DomainError TooMany = new("Friend.TooMany", $"A player keeps at most {Friends.MostLinks} friends and {Friends.MostLinks} pending requests, and one of you is at the limit.");
 }
