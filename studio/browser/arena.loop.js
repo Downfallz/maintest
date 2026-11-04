@@ -105,7 +105,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   page.on('response', async response => { if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && !response.url().includes('shown=')) { const value = await response.json().catch(() => null); if (value?.board) latest = value; } });
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
-    await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
+    await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
+    await expect(page.locator('#sound')).not.toBeChecked(); await page.locator('#sound').check();
+    await expect(page.locator('#sound-status')).toContainText('Sound on');
+    await page.screenshot({ path: info.outputPath('release-settings.jpg'), type: 'jpeg', quality: 85 });
+    await page.keyboard.press('Escape');
+    expect(writes).toEqual([]);
     let captured = false;
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);

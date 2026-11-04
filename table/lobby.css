@@ -96,3 +96,7 @@
   .dialog-actions { flex-wrap: wrap; } .dialog-actions button { flex: 1; }
 }
 
+
+.presentation-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
+.presentation-choice select { min-height: 44px; }
+.presentation-choice small { color: var(--muted); }

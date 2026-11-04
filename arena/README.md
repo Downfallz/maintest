@@ -40,7 +40,7 @@ the TypeScript imports them and owns Phaser and DOM integration.
 
 No rules, legality, damage or random resolution are reimplemented here. `/arena-lab` keeps its fixture
 and makes no API requests. `/arena` is the opt-in live entry point: choose an accepted seat, inspect its
-board, and answer combat questions. Return to `/play` for planning and the rest of the game loop. It shares [`table/presentation.js`](../table/presentation.js)
+board, and complete planning, combat, review and replay. `/play` remains the classic alternative. It shares [`table/presentation.js`](../table/presentation.js)
 with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) describes
 seat discovery, explicit viewpoints, read-only transport, arrival behavior and recovery.
 
@@ -59,7 +59,7 @@ Invitation acceptance stays at `/play`.
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
 accepted seat as arrived, which may start a waiting match.
 The compiled bundle is about 1.2 MB uncompressed; the two art files total
-about 0.8 MB. Device performance and transfer compression remain to be measured before release.
+about 0.8 MB. The build enforces raw/gzip bundle and initial-art budgets. Transfer compression and physical-device performance still require release measurement.
 
 ## Verify
 
@@ -96,3 +96,8 @@ finished recording using the same operator authorization as `/play?replay=...`.
 `node node_modules/playwright/cli.js test --config table.config.js arena.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
 simultaneous choices and concession against the real .NET engine.
+
+A8 adds a reversible lobby preference, explicit action-sound opt-in and release browser gates
+([ADR 0129](../docs/adr/0129-gate-the-arena-release-behind-a-reversible-preference.md)).
+See the [acceptance record](../docs/tabletop/arena-release-acceptance.md) for budgets, art coverage,
+repeatable browser measurements and the physical-device checks still pending.

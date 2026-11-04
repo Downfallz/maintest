@@ -1,3 +1,4 @@
+import { createArenaSound } from '../../table/arena-sound.js';
 import { createArenaPlayback } from '../../table/arena-playback.js';
 import { ArenaScene } from './scene';
 import type { SceneFrame } from './types';
@@ -43,6 +44,9 @@ let creatures: Creature[] = [];
 let frame: SceneFrame = { stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
 let discovering = 0;
 let rendererFailed = false;
+const sound = createArenaSound({ createContext: () => new AudioContext(),
+  onChange: (enabled: boolean) => { $<HTMLInputElement>('sound').checked = enabled;
+    text('sound-status', enabled ? 'Sound on for this visit.' : 'Sound off. Enable to hear confirmed actions.'); } });
 const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
@@ -65,7 +69,7 @@ const matchUI = matchControls(match, () => { playback.skip(); combat.close(); pl
 let wasTargeting = false;
 
 function status(state: string) {
-  if (state === 'stale') playback.skip();
+  if (state === 'stale') { sound.stop(); playback.skip(); }
   $('arena').dataset.connection = state;
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
@@ -226,6 +230,7 @@ function render() {
 
 function choose(choice: Choice) {
   if (rendererFailed) return;
+  sound.stop();
   discovering++;
   selected = choice;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
@@ -237,6 +242,7 @@ function choose(choice: Choice) {
 
 async function discover() {
   if (rendererFailed) return;
+  sound.stop();
   const ticket = ++discovering;
   connection.stop(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
@@ -273,24 +279,33 @@ async function discover() {
   }
 }
 
+scene.onImpact = () => { if (!document.hidden) sound.play(frame.cue?.kind); };
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
+  sound.disable();
   rendererFailed = true; ready = false; connection.stop(); playback.skip(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
+  if (selected) {
+    text('access-link', 'Continue at table');
+    $<HTMLAnchorElement>('access-link').href = seatPath('/play', selected, storage);
+  }
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
+$('sound').addEventListener('change', () => {
+  if ($<HTMLInputElement>('sound').checked) void sound.enable(); else sound.disable();
+});
 $('switch-seat').addEventListener('click', () => { void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
-function motionChanged() { playback.setReduced(reduced()); render(); }
+function motionChanged() { sound.stop(); playback.setReduced(reduced()); render(); }
 $('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
 playback.setReduced(reduced());
-$('playback-skip').addEventListener('click', () => playback.skip());
+$('playback-skip').addEventListener('click', () => { sound.stop(); playback.skip(); });
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
-scene.onResizeDuringPlayback = () => playback.skip();
+scene.onResizeDuringPlayback = () => { sound.stop(); playback.skip(); };
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { discovering++; connection.stop(); view = null; playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { sound.disable(); discovering++; connection.stop(); view = null; playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });
