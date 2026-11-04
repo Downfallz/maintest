@@ -1,3 +1,4 @@
+import { createArenaPlayback } from '../../table/arena-playback.js';
 import { ArenaScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets } from './targets';
@@ -6,7 +7,7 @@ import { combatControls, type SpellCatalogue } from './combat';
 import { createArenaCombat } from '../../table/arena-combat.js';
 import { httpTransport } from '../../table/transport.js';
 import { arenaSeats, seatPath } from '../../table/arena-seats.js';
-import { createLiveConnection, livePresentation } from '../../table/arena-live.js';
+import { createLiveConnection } from '../../table/arena-live.js';
 import { chipText, chipSource, laneOf } from '../../table/board.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
@@ -20,7 +21,7 @@ interface View { board: object; over: boolean; waiting: unknown; waitingFor: str
   outcome?: { winner?: string; reason?: string } }
 type Catalogue = SpellCatalogue;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const text = (id: string, value: string) => { $(id).textContent = value; };
+const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
 const scene = new ArenaScene(new URL('arena-art/', document.baseURI).href);
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const reduced = () => motion.matches || $<HTMLInputElement>('reduce-motion').checked;
@@ -42,14 +43,19 @@ const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
-  view = next; catalogue = content ?? catalogue; combat.receive(next);
+  view = next; catalogue = content ?? catalogue;
+  combat.receive(next);
+  playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
+    { animate: ready && !rendererFailed && !document.hidden && !combat.model().opened });
 } });
 const combat = createArenaCombat({ connection, onChange: () => render(),
-  visible: () => ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('inspect-dialog').open && !$<HTMLDialogElement>('settings-dialog').open });
-const controls = combatControls(combat, name);
+  visible: () => ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('inspect-dialog').open && !$<HTMLDialogElement>('settings-dialog').open && !$<HTMLDialogElement>('result-dialog').open });
+const playback = createArenaPlayback({ onChange: () => render() });
+const controls = combatControls(combat, name, () => playback.skip());
 let wasTargeting = false;
 
 function status(state: string) {
+  if (state === 'stale') playback.skip();
   $('arena').dataset.connection = state;
   const messages: Record<string, string> = { live: 'LIVE · READ ONLY', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
@@ -118,11 +124,22 @@ function instruction() {
 }
 
 function render() {
-  const board = livePresentation(view);
+  const playbackState = playback.model();
+  const board = playbackState.board;
   creatures = board.creatures;
   const action = combat.model();
   const targeting = action.opened && Boolean(action.target);
-  frame = board.frame as SceneFrame;
+  frame = playbackState.frame as SceneFrame;
+  $('arena').dataset.playback = playbackState.stage;
+  $('arena').dataset.sequence = String(playbackState.sequence ?? '');
+  $('playback-skip').hidden = !playbackState.active;
+  text('playback-skip', `Skip (${playbackState.remaining})`);
+  $('playback-result').hidden = !playbackState.summary;
+  text('result-text', playbackState.summary);
+  text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
+  $('playback-result').setAttribute('aria-label', `Action result: ${playbackState.summary}`);
+  text('result-label', playbackState.active ? 'Playing confirmed action' : 'Last action');
+  if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   controls.render(action, catalogue);
@@ -144,6 +161,12 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const condition = tagOf(one);
+    let effect = node.querySelector<HTMLElement>('.creature-effect');
+    if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
+    const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
+      ? playbackState.cue?.effects.filter((item: { creature: string }) => item.creature === one.id) ?? [] : [];
+    effect.textContent = effects.map((item: { text: string }) => item.text).join(' · ');
+    effect.hidden = effects.length === 0;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
@@ -163,9 +186,10 @@ function render() {
   $('timeline').hidden = board.timeline.length === 0;
   $('no-timeline').hidden = board.timeline.length > 0;
   text('no-timeline', view ? 'Activation order has not been set' : 'Waiting for a board');
-  text('actor-name', headline(board));
-  text('actor-meta', view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter');
-  text('instruction', instruction());
+  text('actor-name', playbackState.active ? name(frame.actor) : headline(board));
+  const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
+  text('actor-meta', playbackState.active ? playbackState.label : phase);
+  text('instruction', playbackState.active ? `Playing confirmed results. Skip${action.available ? ' or choose your next action' : ''} at any time.` : instruction());
   $('instruction').hidden = Boolean(action.error);
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
@@ -185,14 +209,14 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
-  combat.reset(choice.seat);
+  playback.reset(); combat.reset(choice.seat);
   connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
 }
 
 async function discover() {
   if (rendererFailed) return;
   const ticket = ++discovering;
-  connection.stop(); combat.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); playback.reset(); combat.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
   text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -222,16 +246,21 @@ async function discover() {
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
-  rendererFailed = true; ready = false; connection.stop(); combat.reset();
+  rendererFailed = true; ready = false; connection.stop(); playback.skip(); combat.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
 $('switch-seat').addEventListener('click', () => { void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
-$('reduce-motion').addEventListener('change', render); motion.addEventListener('change', render);
+function motionChanged() { playback.setReduced(reduced()); render(); }
+$('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
+playback.setReduced(reduced());
+$('playback-skip').addEventListener('click', () => playback.skip());
+$('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
+scene.onResizeDuringPlayback = () => playback.skip();
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { discovering++; connection.stop(); combat.reset(); view = null; render(); text('connection', 'Paused'); }
+function suspend() { discovering++; connection.stop(); view = null; playback.reset(); combat.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });

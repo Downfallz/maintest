@@ -203,6 +203,32 @@ Captured from the real host during A5 combat:
 
 [Targeting on phone](images/arena-combat/phone.jpg) · [Spell choices on phone](images/arena-combat/spells.jpg)
 
+### A6 delivery boundary
+
+Built on the merged A5 (#430), including its control/transport fixes. [ADR 0127](../adr/0127-play-confirmed-actions-in-the-live-arena.md)
+adds ordered playback of the public CombatActionResolved frames. Each action uses its own before/after board;
+multiple arrivals and the final cast before upkeep or match completion retain their order. Applied damage
+hits every affected target; recovery, energy and conditions pulse; fizzles do not hit; deaths use the frame.
+
+The per-viewpoint watermark consumes identities at receipt, preventing SSE/poll duplicates and replays after
+Skip. Playback never sends commands or acknowledges a question. Skip and opening controls immediately draw
+the latest legal board. Resize, motion preference changes and connection interruption cancel effects;
+seat changes, access loss and hidden pages erase private historical content and fence callbacks. First reads
+are baselines. Legacy frames, and one read bringing more than twelve actions, settle on the latest board with
+confirmed text; what is already queued plays on.
+Reduced motion presents applied frames without displacement or particles. An expandable result keeps the full
+outcome readable without growing the fixed shell. Upkeep choreography and complete-loop controls remain A7.
+
+Validation includes pure queue tests, mobile/desktop playback and lifecycle scenarios, the three existing
+arena browser suites, and both declaration modes against the real host. The real-host journeys compare
+every observed windup/impact stat with the exact event frame received from that host.
+
+Captured during a real-engine Strike on desktop and phone:
+
+![Confirmed combat on desktop](images/arena-playback/desktop.jpg)
+
+[Confirmed combat on phone](images/arena-playback/phone.jpg)
+
 ## Revised immersive prototype (A2)
 
 The maintainer authorized the **Phaser + TypeScript** spike. [ADR 0123](../adr/0123-prototype-the-arena-as-an-isolated-presentation.md)

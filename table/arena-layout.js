@@ -22,3 +22,14 @@ export function placements(width, height, allies = 3, enemies = 3) {
   const coords = [[.36, .90, 1], [.12, .78, .84], [.23, .47, .76], [.64, .90, 1], [.88, .78, .84], [.77, .47, .76]];
   return [...coords.slice(0, allies), ...coords.slice(3, 3 + enemies)].map(([x, y, scale]) => ({ x: width * x, y: floor * y, size: size * scale, hitWidth: Math.max(MIN_HIT, size * scale * .80) }));
 }
+
+// Approach along the line between the figures. Portrait opponents stand above each other: a fixed
+// horizontal lunge would send the leftmost attacker off-screen. Stop short on that same line instead.
+export function strikeApproach(actor, target) {
+  const x = target.x - actor.x, y = target.y - actor.y;
+  const distance = Math.hypot(x, y);
+  if (!distance) return { x: actor.x, y: actor.y, dx: 0, dy: 0 };
+  const dx = x / distance, dy = y / distance;
+  const gap = Math.min(target.size * .55, distance * .6);
+  return { x: target.x - dx * gap, y: target.y - dy * gap, dx, dy };
+}

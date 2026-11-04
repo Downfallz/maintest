@@ -1,7 +1,7 @@
 # Phaser arena presentations
 
 Two Phaser pages: a viewport-bound visual experiment at `/arena-lab`, isolated from the actual `/play` client,
-and `/arena`, the opt-in view and combat controls for one authenticated seat (ADRs 0125–0126).
+and `/arena`, the opt-in view and combat controls for one authenticated seat (ADRs 0125–0127).
 Pinned Phaser 4.2.1 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the choice; the [delivery plan](../docs/tabletop/browser-arena-plan.md) covers live integration.
 
@@ -46,6 +46,7 @@ seat discovery, explicit viewpoints, read-only transport, arrival behavior and r
 
 - `src/live.ts`: live DOM adapter and lifecycle; no lab imports.
 - `table/arena-live.js`: snapshot adapter and fenced polling/SSE connection.
+- `table/arena-playback.js`: bounded confirmed-action queue; pure historical frames, motifs and cancellation.
 - `table/arena-seats.js`: read-only capability discovery and return links.
 - `table/arena-layout.js`: shared geometry for 1v1, 2v2 and 3v3.
 
@@ -66,7 +67,7 @@ about 0.8 MB. Device performance and transfer compression remain to be measured 
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -77,5 +78,9 @@ no document scrolling, rotation, all three outcomes, cancellation/reset, keyboar
 2× settings, missing-art fallback and no API requests. Route tests verify WebP binary handling and the
 packaged bundle. Screenshots in the delivery plan come from the actual .NET host.
 
-This is one authored action, three reused static forms and illustrative UI text. Real-device Safari,
+The lab remains one authored action. The live scene plays the host's confirmed before/after frames in
+sequence, including damage, recovery, energy, conditions, fizzles and defeat. Skip, opening combat controls,
+resize and connection interruption return immediately to the current snapshot. First loads and hidden-tab
+returns never replay history. Legacy events, and one read bringing more than twelve actions, use confirmed
+text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
 Android GPU/performance, screen readers, high zoom and a complete real match remain future acceptance.
