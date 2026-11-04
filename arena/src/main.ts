@@ -3,6 +3,7 @@ import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState } fro
 import { creatureButton, placeHitTargets } from './targets';
 import { bootScene } from './boot';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/arena-lab-state.js';
+import { CREATURE_ART } from '../../table/arena-art.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -98,6 +99,8 @@ function render() {
   $('round-number').textContent = pad(state.board.roundNumber);
   $('round-phase').textContent = phaseLabel(state.board.phase).toUpperCase();
   $('actor-name').textContent = actor.name;
+  const art = CREATURE_ART.find(one => one.form === actor.form) ?? CREATURE_ART[0];
+  $('actor-portrait').style.backgroundImage = `url("${assetRoot}${art.file}")`;
   $('actor-meta').textContent = `${tempoLabel(state.board.timeline[0].speed)} · ${actor.energy} energy`;
   $('action-label').textContent = state.action.label;
   $('instruction').textContent = ready ? instruction() : 'Preparing the scene…';
