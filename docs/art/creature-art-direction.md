@@ -3,33 +3,35 @@
 Status: **design handoff, not implementation**. Reviewed with the game owner on 2026-11-03/04.
 This document records explicit decisions separately from visual proposals and outstanding questions.
 No gameplay changes are authorized by it. The live source of mechanics remains `data/Tiers/` and `data/Spells/`.
-The established naming history is `docs/domain/package-renaming-plan.md`; this document records the **later art-review decisions**.
+The canonical spell display-name register is [`docs/domain/package-renaming-plan.md`](../domain/package-renaming-plan.md), including the later art-review approvals; this document owns their visual presentation only.
 
 ## Executive decisions
 
-1. Every creature begins as the **same Stage 0 quadrupedal species**. A mage forces mutations in combat; the three Stage 1 families are divergent paths, not three unrelated species.
-2. **Stage 0**: approved concept-sheet option **#4** — lean long-bodied quadruped, elongated hooked bone-mask skull, dorsal ridges, angular legs, slate-gray flesh and restrained amber corruptions.
-3. **Brute**: approved non-humanoid concept **#1** — low, massive, organically armored quadruped with immense front paws. No human posture, equipment or manufactured plate.
-4. **Predator**: approved feral concept **#2** — fast, elongated, predatory **six-legged** beast; not an avian skeleton. Claws and spine quills.
-5. **Warped**: approved direction from the four-panel evolution study, **panel #4** — quadruped, asymmetric, bent anatomy, split bone-mask skull and occult membranes; not a robed humanoid. The earlier spectacular antlered/tendril Warped **#4** concept is inspiration for **Transcendent**, not Stage 1.
-6. Shared anatomy across all: distinctive bone-mask skull, hooked claws, bony dorsal protrusions. Palette: charcoal/slate blue, desaturated gray, bone ivory, ochre/yellow and restrained burnt-orange glow. Maintain strong subject-background value contrast in the eclipse arena.
-7. A family owns a dominant silhouette, while Stage 2 and Stage 3 mutations add **visual cues**, Stage 3 usually amplifying the Stage 2 motif. This is **not** an approval to produce a unique full sprite for every package.
+1. Every creature begins as the **same unmutated base Creature** (art shorthand: **Stage 0**, not a Tier level). A mage forces mutations in combat; the three Stage 1 families are divergent paths, not three unrelated species.
+2. **Base Creature (Stage 0 shorthand)**: selected *lean hooked-mask quadruped* concept (previously concept-sheet option #4) — lean long-bodied quadruped, elongated hooked bone-mask skull, dorsal ridges, angular legs, slate-gray flesh and restrained amber corruptions.
+3. **Brute**: selected *low armored quadruped with enormous forepaws* concept (previously non-humanoid concept #1) — low, massive, organically armored quadruped with immense front paws. No human posture, equipment or manufactured plate.
+4. **Predator**: selected *feral elongated six-legged stalker* concept (previously feral concept #2) — fast, elongated, predatory **six-legged** beast; not an avian skeleton. Claws and spine quills.
+5. **Warped**: selected *asymmetric split-mask occult quadruped* direction (previously evolution-study panel #4) — quadruped, asymmetric, bent anatomy, split bone-mask skull and occult membranes; not a robed humanoid. A separate earlier *antlered/tendril, spectacular ascendant Warped* study (also called #4 in the brainstorm) inspires **Transcendent**, not Stage 1. These are distinct images; neither has a verified repository asset or generation ID.
+6. Shared anatomy across all: distinctive bone-mask skull, hooked claws, bony dorsal protrusions. Palette: charcoal/slate blue, desaturated gray, bone ivory and limited ochre/burnt-orange accents. **Reserve bright warm gold for the UI's active/selected-target signal**: ambient creature amber must stay dimmer, smaller and visually distinct from the active/target outline. Maintain strong subject-background value contrast in the eclipse arena.
+7. A family owns a dominant silhouette, while Stage 2 and Stage 3 mutations add **visual cues**, Stage 3 usually amplifying the Stage 2 motif. Stage 4 Capstones add a restrained passive-themed accent, not a fourth full silhouette. This is **not** an approval to produce a unique full sprite for every package.
 8. Free multiclassing means cosmetic layers must compose or prioritize gracefully. No finalized precedence, layer model or image-count budget yet.
 9. Physical **Brute**, biologically **Predator**, occult/magical **Warped**. Within Warped: elemental **Stormborn**, authentic death magic/necromancy **Necrotic**, and astral/vital/void **Ethereal**. Do not reduce Necrotic/Revenant to infections, insects or biological parasites: that belongs to Predator.
-10. **Approved names to change in a later implementation:** `spell:tornado:v1` Whirlwind/Rafale → **Groundbreaker / Fracture**; `spell:extort:v1` Claim/Revendiquer → **Seize / Prise de force**; `spell:soul_devourer:v1` Soul Feast/Morsure d'âme → **Devour / Dévorer**. Keep IDs and filenames stable and synchronize authored display names, translations, balance metadata and UI in a separate PR. No spell mechanics change.
+10. **Approved names to change in a later implementation:** `spell:tornado:v1` Whirlwind/Rafale → **Groundbreaker / Fracture**; `spell:extort:v1` Claim/Revendiquer → **Seize / Prise de force**; `spell:soul_devourer:v1` Soul Feast/Morsure d'âme → **Devour / Dévorer**. Keep IDs and filenames stable; record these as **approved but not yet deployed** in the canonical naming plan, then synchronize authored English display names, balance metadata and UI in a separate PR. French names are documented proposals until a translation storage layer is chosen. No spell mechanics change.
 
 ## Provenance and asset status
 
-Existing production-prototype art in `table/arena-art/` and descriptions in `arena/ART.md` remain **provisional**; its winged predator and robed wraith predate this direction. The concept generations approved in conversation are **design references**, **not committed source assets**. In particular, recent four individual creature previews were generated with transparency requested, but the rendered backgrounds/alpha and Phaser-size readability were not validated. Recover/preserve the selected original outputs before any art integration PR. Never replace a reviewed source asset with an approximate regenerated image without visual approval.
+Existing production-prototype art in `table/arena-art/` and descriptions in `arena/ART.md` remain **provisional**; its winged predator and robed wraith predate this direction. The concept generations approved in conversation are **design references**, **not committed source assets**. In particular, recent four individual creature previews were generated with transparency requested, but the rendered backgrounds/alpha and Phaser-size readability were not validated. **Textual identification only until originals are recovered:** base = lean hooked-mask four-legged animal with ridged back; Brute = very low heavy organic shell and disproportionately broad front paws; Predator = forward-leaning six-limbed feral hunter with quills and no wings; Warped = lopsided occult quadruped with split bone-mask and membranous distortions; Transcendent inspiration = much more spectacular antler/tendril apparition. These descriptors identify intent, **not pixel-exact approval or substitute files**. Recover/preserve the selected original outputs before any art integration PR. Never replace a reviewed source asset with an approximate regenerated image without visual approval.
 
 ## The visual language
 
 | Form | Anatomy and behavior | Signature |
 | --- | --- | --- |
-| Stage 0 | Lean four-legged common ancestor, not specialized | Hooked pale skull, ridge spines, claws, subtle amber shoulder growth |
+| Base Creature (art shorthand Stage 0) | Lean four-legged common ancestor, not specialized | Hooked pale skull, ridge spines, claws, subtle amber shoulder growth |
 | Brute | Heavy, low quadruped, enormous front paws, organic shell | Impact, posture, resonance and mass |
-| Predator | Sinewy feral six-legged stalker, enlarged claws/jaws | Speed, hooks, quill launch, biological feeding and toxins |
+| Predator | Sinewy feral six-legged stalker; a dorsal ridge divides into an additional paired set of limbs as Predator mutations develop, retaining ancestral bone-mask and claws | Speed, hooks, quill launch, biological feeding and toxins |
 | Warped | Uncanny asymmetrical quadruped, fractured skull, occult membranes | Impossible energy, magic, death, astral phenomena |
+
+**Silhouette evolution:** the base Creature has four legs. Predator's additional limb pair grows from the dorsal/shoulder ridge during mutation, not from a separate species. In cross-family builds, retain the chosen dominant family's leg count and represent other-family traits as non-limb cues until ART-5 determines a compositing priority; never silently attach or remove legs mid-shot.
 
 Art and Phaser QA: validate silhouettes at actual rendered sprite sizes on desktop and both phone orientations, over the **actual eclipse background**. Make them separable by lightness, edge light, shape and ground shadow, not solely by team tint or colored glow. No essential target/hitbox affordance depends on image detail; reduced motion and missing-art fallback remain functional. All effect sequences represent **existing** domain resolutions, not new movement, ranges, summoned combat entities or damage logic.
 
@@ -58,9 +60,9 @@ These are approved **fictional staging directions**, not final VFX storyboards. 
 
 | Branch | Stage 2 cue | Stage 3 intensification |
 | --- | --- | --- |
-| Frenzied → Ravager | Bulging muscles, glowing fissures | Larger asymmetric forelimbs, torn tissue, enlarged claws and irregular dorsal spines |
+| Frenzied → Ravager | Bulging muscles, dim ember fissures (not UI gold) | Larger asymmetric forelimbs, torn tissue, enlarged claws and irregular dorsal spines |
 | Ironhide → Colossus | Thickened organic plates | Layered massive carapace, wider horns, pillar-like limbs |
-| Oppressor → Tyrant | More pronounced frontal horns | Natural bone crown and luminous resonance organs around skull/thorax |
+| Oppressor → Tyrant | More pronounced frontal horns | Natural bone crown and low-intensity resonance organs around skull/thorax (distinct from UI gold) |
 
 No visual cue changes hitbox size or tactical reach by itself.
 
@@ -122,7 +124,9 @@ Important mechanical representation: spectral guardians, bones and hungry spirit
 | --- | --- | --- |
 | Stormborn → Cataclysm | Elemental heat/cold contrast, steam and pale-blue crystallization; **exact always-on treatment to validate** | More intense elemental manifestations and shards |
 | Necrotic → Revenant | **Death magic, not biological infection**: blue-green ghostlight, runes, grave mist, floating bones or souls | Partly spectral body, stronger necromantic aura, levitating bones and dead spirits |
-| Ethereal → Transcendent | Translucent limbs, doubled silhouette, subtle astral membranes | Organic halo, impossible appendages and spatial distortion, inspired by the prior spectacular Warped #4 concept |
+| Ethereal → Transcendent | Translucent limbs, doubled silhouette, subtle astral membranes | Organic halo, impossible appendages and spatial distortion, inspired by the separate spectacular antler/tendril Warped study |
+
+**Stage 4 Capstone direction (proposed, not locked):** Titan/Brute receives heavy, compact bone reinforcement at impact points (Sunder); Apex/Predator gets restrained predatory precision accents around jaws/claws (direct-hit bonus); Archmage/Warped gets a sparse astral energy circuit/aura on the owning Creature (Shared energy passive). Archmage's allies may display a brief energy-transfer VFX, **not** all inherit an Archmage body mutation. Stage 4 remains legible on mixed builds without changing collision/target bounds. ART-5 must validate these cues and precedence.
 
 The **necromancy framing is user-corrected and accepted**. Fine colors, amount of floating ornamentation and the Stormborn/Ethereal overlay limits are not individually approved yet.
 
@@ -134,7 +138,7 @@ The **necromancy framing is user-corrected and accepted**. Fine colors, amount o
 - Source art should use confirmed transparent alpha, consistent feet/ground anchors, controlled transparent padding and orientation. Quality check on the actual eclipse background, at all target viewport sizes, including six creatures and mirrored enemies.
 - Effects must be triggered from authoritative combat action frames; animations may be skipped and reduced-motion paths must show the same result. Do not infer damage, targets, buffs or durations from a creature image.
 - Maintain independent palette constraints for friendly/enemy identifiers and accessibility; no state communicated by color alone.
-- Preserve provenance, source briefs and selected concept references. The approved preview images have not yet been imported into Git, and the exact selected generation outputs need collection/QA in ART-2.
+- Preserve provenance, source briefs and selected concept references. Old number-only references (#1/#2/#4) are ambiguous across separate image sheets; use the descriptive concept identities above until verified source filenames/IDs are available. The retired Bonewall→Ossify brainstorm was never approved as a renaming; it is included only to prevent reintroducing that rejected suggestion. The approved preview images have not yet been imported into Git, and the exact selected generation outputs need collection/QA in ART-2.
 
 ## Proposed follow-up slices (not implementation authorization)
 
