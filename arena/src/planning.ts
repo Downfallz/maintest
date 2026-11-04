@@ -29,7 +29,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const picker = el('planning-creatures');
     picker.replaceChildren(...allies.map((one: { id: number }) => {
       const node = button(name(one.id), () => { creature = one.id; rendered = ''; render(controller.model(), catalogue); });
-      node.setAttribute('aria-pressed', String(one.id === creature)); node.disabled = model.sending; return node;
+      node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); node.disabled = model.sending; return node;
     }));
     const cards = cardsById(catalogue), selected = allies.find((one: { id: number }) => one.id === creature);
     const packs = talentClasses(catalogue, cards, selected, offers, view.board.evolutionChoices);
@@ -80,35 +80,54 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const keep = button('Keep the dice order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
     el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
   }
+  const headings: Record<string, string> = { Evolution: 'Mutation Tree', Speed: 'Choose tempo', TieOrder: 'Order ties' };
+  function closeChoices() {
+    if (dialog.open) dialog.close();
+    rendered = ''; creature = null;
+    el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
+  }
+  // The same selection is drawn pressed wherever it sits: a mutation button, a tempo, pass or the dice order.
+  function isPressed(node: HTMLButtonElement, chosen: ReturnType<Controller['model']>['choice']) {
+    if (node.dataset.mutation) return chosen?.tier === node.dataset.mutation && chosen?.creature === creature;
+    if (node.dataset.speed) return chosen?.speed === node.dataset.speed;
+    if (node.id === 'planning-pass') return Boolean(chosen?.pass);
+    return node.id === 'planning-keep' && Boolean(chosen?.keep);
+  }
+  function selectionText(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
+    const chosen = model.choice;
+    if (chosen?.pass) return 'Pass this pick';
+    if (chosen?.tier) return catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier;
+    if (chosen?.speed) return `${name(model.latest.waitingCreature)} · ${tempoLabel(chosen.speed)}`;
+    if (chosen?.keep) return 'Dice order';
+    return model.latest?.waitingFor === 'TieOrder' ? 'Chosen order' : 'Select a choice';
+  }
+  // The choices are rebuilt when the question, the offer, the taps or the chosen creature change, and
+  // the focus of a player ordering ties is kept on the ties instead of falling off the removed button.
+  function rebuild(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
+    const kind = model.latest.waitingFor;
+    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature]);
+    if (key === rendered && catalogue === lastCatalogue) return;
+    const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
+    if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model); else ties(model);
+    rendered = key; lastCatalogue = catalogue;
+    if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
+  }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
-    const kind = model.latest?.waitingFor;
-    const label = kind === 'Evolution' ? 'Mutation Tree' : kind === 'Speed' ? 'Choose tempo' : 'Order ties';
+    const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
     el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = label;
     el<HTMLButtonElement>('planning-open').disabled = model.sending;
     el('planning-error').textContent = model.error; el('planning-error').hidden = !model.error || model.opened;
     el('planning-dialog-error').textContent = model.error;
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
-    if (!model.opened) { if (dialog.open) dialog.close(); rendered = ''; creature = null; el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren(); return; }
+    if (!model.opened) { closeChoices(); return; }
     el('planning-heading').textContent = label;
-    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature]);
-    if (key !== rendered || catalogue !== lastCatalogue) {
-      const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
-      if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model); else ties(model);
-      rendered = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature]); lastCatalogue = catalogue;
-      if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
-    }
+    rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
       node.disabled = !model.canEdit || node.dataset.offered === 'false';
-      const chosen = model.choice;
-      const pressed = node.dataset.mutation ? chosen?.tier === node.dataset.mutation && chosen?.creature === creature
-        : node.dataset.speed ? chosen?.speed === node.dataset.speed : node.id === 'planning-pass' ? chosen?.pass : node.id === 'planning-keep' && chosen?.keep;
-      node.setAttribute('aria-pressed', String(Boolean(pressed)));
+      node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
     }
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
-    const chosen = model.choice;
-    const selection = chosen?.pass ? 'Pass this pick' : chosen?.tier ? catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier
-      : chosen?.speed ? `${name(model.latest.waitingCreature)} · ${tempoLabel(chosen.speed)}` : chosen?.keep ? 'Dice order' : kind === 'TieOrder' ? 'Chosen order' : 'Select a choice';
-    el('planning-selection').textContent = selection;
+    el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
     el('planning-confirm').textContent = model.sending ? 'Sending…' : 'Confirm choice';
     if (!dialog.open) dialog.showModal();

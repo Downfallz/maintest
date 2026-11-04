@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaMatch, arenaOutcome, roundNotes, replayText } from './arena-match.js';
+import { createArenaMatch, roundNotes, replayText } from './arena-match.js';
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, isAlive: health > 0, conditions: [] });
 const before = [creature(1, 20), creature(4, 20)], after = [creature(1, 20), creature(4, 0)];
 const board = { roundNumber: 2, allies: after.slice(0, 1), enemies: after.slice(1), timeline: [] };
@@ -16,12 +16,6 @@ function harness(view = finished) {
   const control = createArenaMatch({ connection, onChange: () => {} }); control.reset('player1'); control.receive(view, { packages: [{ id: 'root', name: 'Root mutation' }] });
   return { control, connection, reads: () => reads, concessions: () => concessions };
 }
-test('outcomes name the host winner and distinguish elimination, cap, draw and concession', () => {
-  assert.match(arenaOutcome(finished, 'player1'), /^You win.*last team standing/);
-  assert.match(arenaOutcome({ outcome: { winner: null, reason: 'RoundCap' } }, 'player1'), /^Draw.*round cap/);
-  assert.match(arenaOutcome({ outcome: { winner: 'Player2', reason: 'Concession' } }, 'player1'), /Player 2 wins.*concession/);
-  assert.doesNotMatch(arenaOutcome({ ...finished, replay: true }, 'player1'), /You win/);
-});
 test('round review uses applied ticks and authoritative cleanup round ids', () => {
   const notes = roundNotes(feed, board).join('\n'); assert.match(notes, /Round 1.*Ongoing damage −2/); assert.match(notes, /Round 1.*Defense ends/); assert.match(notes, /Round 1.*Aftermath complete/);
 });
@@ -56,6 +50,20 @@ test('replay refusal is readable without changing result or opening controls', a
 test('concession submits once and leaves the board to the host response', async () => {
   const h = harness({ ...finished, over: false }); const first = h.control.concede(); await h.control.concede(); await first;
   assert.equal(h.concessions(), 1); assert.equal(h.control.model().over, false);
+});
+test('an accepted concession is not offered again while the result is still on its way', async () => {
+  const h = harness({ ...finished, over: false }); await h.control.concede();
+  assert.equal(h.control.model().canConcede, false); await h.control.concede(); assert.equal(h.concessions(), 1);
+});
+test('a lost concession answer is an error the player can retry', async () => {
+  const h = harness({ ...finished, over: false }); h.connection.concede = async () => null; await h.control.concede();
+  assert.match(h.control.model().error, /could not confirm/); assert.equal(h.control.model().canConcede, true);
+});
+test('the last recorded step has no next and an unknown round is not jumped to', async () => {
+  const h = harness(); await h.control.replay(); const last = h.control.model().count - 1;
+  h.control.jump(99); assert.equal(h.control.model().index, 0);
+  while (h.control.model().next) h.control.move(1);
+  assert.equal(h.control.model().index, last); h.control.move(1); assert.equal(h.control.model().index, last);
 });
 
 test('an upkeep without applied ticks says so instead of leaving an empty heading', () => {

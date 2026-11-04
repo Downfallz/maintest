@@ -60,17 +60,24 @@ const match = createArenaMatch({ connection, onChange: () => render() });
 const playback = createArenaPlayback({ onChange: () => render() });
 const controls = combatControls(combat, name, () => playback.skip());
 const planningUI = planningControls(planning, name, () => playback.skip());
-const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); });
+// The round review is read-only: it covers a draft without dropping it, the way the inspection does.
+const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
 let wasTargeting = false;
 
 function status(state: string) {
   if (state === 'stale') playback.skip();
   $('arena').dataset.connection = state;
-  const messages: Record<string, string> = { live: 'LIVE · READ ONLY', connecting: 'Connecting…',
+  const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
   text('connection', messages[state] ?? state);
   if (state === 'live') text('updated', `Updated ${new Date().toLocaleTimeString()}`);
-  if (state === 'signin' || state === 'revoked') {
+  if ((state === 'signin' || state === 'revoked') && replayOf(location.search)) {
+    // A recording is read with the operator token the admin panel holds; no account sign-in grants it.
+    text('load-title', 'This recording needs the operator');
+    text('load-detail', 'Open it from the admin panel, which holds the operator token.');
+    $<HTMLAnchorElement>('access-link').href = '/admin'; text('access-link', 'Open admin');
+    $('retry').hidden = false;
+  } else if (state === 'signin' || state === 'revoked') {
     selected = null;
     $('play-link').hidden = true;
     text('perspective', 'YOUR VIEWPOINT');
@@ -131,6 +138,12 @@ function instruction() {
   return 'Waiting for the host or the other team. Inspect creatures or review the round.';
 }
 
+function connectionText(replaying: boolean, combatOpened: boolean) {
+  if (replaying) return 'RECORDED REPLAY';
+  if (view?.over) return 'MATCH COMPLETE';
+  if (combatOpened) return 'LIVE · COMBAT';
+  return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
+}
 function render() {
   const playbackState = playback.model();
   const replay = match.model();
@@ -153,7 +166,7 @@ function render() {
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   controls.render(action, catalogue); planningUI.render(planning.model(), catalogue); matchUI.render();
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : 'Inspect creatures');
-  if ($('arena').dataset.connection === 'live') text('connection', replay.active ? 'RECORDED REPLAY' : view?.over ? 'MATCH COMPLETE' : action.opened ? 'LIVE · COMBAT' : planning.model().opened ? 'LIVE · COMMAND' : 'LIVE');
+  if ($('arena').dataset.connection === 'live') text('connection', connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
   for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
   for (const one of creatures) {

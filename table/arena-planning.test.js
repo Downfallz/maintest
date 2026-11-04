@@ -68,3 +68,12 @@ test('bot, finished and unasked seats have no planning controls', () => {
     const h = harness({ ...evolution(), ...extra }); h.control.open(); assert.equal(h.control.model().opened, false); assert.deepEqual(h.shown, []);
   }
 });
+test('keeping the dice order sets the taps aside so the rows show the order that is sent', () => {
+  const view = { ...evolution(), waitingFor: 'TieOrder', options: { tieOrder: { ties: [[1, 2], [3, 4]] } } };
+  const h = harness(view); h.control.open(); h.control.order(2); assert.deepEqual(h.control.model().tapped, [2]);
+  h.control.choose({ keep: true }); assert.deepEqual(h.control.model().tapped, []);
+  assert.deepEqual(planningDecision(view, h.control.model().choice, h.control.model().tapped), { kind: 'TieOrder', order: [1, 2, 3, 4] });
+});
+test('a hidden page opens no planning controls and acknowledges nothing', () => {
+  const h = harness(); h.hide(); h.control.open(); assert.equal(h.control.model().opened, false); assert.deepEqual(h.shown, []);
+});

@@ -3,11 +3,11 @@ import { createArenaMatch } from '../../table/arena-match.js';
 type Controller = ReturnType<typeof createArenaMatch>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
-export function matchControls(controller: Controller, beforeOpen: () => void) {
+export function matchControls(controller: Controller, beforeOpen: () => void, beforeReview: () => void) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
   let notesKey = '', roundsKey = '';
   el('match-open').addEventListener('click', () => { beforeOpen(); result.showModal(); });
-  el('round-review').addEventListener('click', () => { beforeOpen(); el<HTMLDialogElement>('round-dialog').showModal(); });
+  el('round-review').addEventListener('click', () => { beforeReview(); el<HTMLDialogElement>('round-dialog').showModal(); });
   el('match-replay').addEventListener('click', () => { result.close(); beforeOpen(); void controller.replay(); });
   el('replay-previous').addEventListener('click', () => controller.move(-1));
   el('replay-next').addEventListener('click', () => controller.move(1));

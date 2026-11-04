@@ -1,15 +1,7 @@
 import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText, roundUpkeep } from './feed.js';
 import { playbackBoard } from './replay.js';
 import { livePresentation } from './arena-live.js';
-import { seatLabel } from './invitation.js';
-
-export function arenaOutcome(view, seat) {
-  if (!view?.outcome) return 'The match is over.';
-  const { winner, reason } = view.outcome;
-  const because = { Elimination: 'the last team standing', RoundCap: 'health at the round cap', Concession: 'concession' }[reason] ?? reason;
-  const result = winner ? !view.replay && winner.toLowerCase() === seat?.toLowerCase() ? 'You win' : `${seatLabel(winner.toLowerCase())} wins` : 'Draw';
-  return [result, because].filter(Boolean).join(' · ') + '.';
-}
+import { outcomeText } from './outcome.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
@@ -30,17 +22,42 @@ export function replayText(action, catalogue) {
     return ticks.length ? turnoverText({ ...action, ticks }) : 'Upkeep · No ongoing ticks applied';
   }
   if (action.interlude === 'aftermath') return action.ended.length || action.immune.length ? turnoverText(action) : 'Aftermath · Round complete';
-  if (action.interlude === 'purchases') return `Mutations revealed · ${action.choices.map(choice => `${choice.creature.label}: ${catalogue?.packages?.find(pack => pack.id === choice.tier)?.name ?? choice.tier}`).join(' · ') || 'No mutations acquired'}`;
+  if (action.interlude === 'purchases') {
+    const purchases = action.choices.map(choice => purchaseText(choice, catalogue)).join(' · ');
+    return `Mutations revealed · ${purchases || 'No mutations acquired'}`;
+  }
   return [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
+}
+
+function purchaseText(choice, catalogue) {
+  const name = catalogue?.packages?.find(pack => pack.id === choice.tier)?.name ?? choice.tier;
+  return `${choice.creature.label}: ${name}`;
+}
+
+// A cast has a frame before and one after; an interlude has one reference frame, or none at all.
+function replayNote(action, stage) {
+  if (!action?.frame) return 'No battlefield was recorded for this event.';
+  if (action.interlude) return 'Reference: the battlefield at the start of this round’s combat, after upkeep and mutations.';
+  return `${stage === 'before' ? 'Before' : 'After'} the recorded action`;
+}
+
+// A frameless event shows an empty battlefield, never a guessed one, so the scene replaces nothing.
+function replayBoard(action, actions, index, stage, latest) {
+  if (!action) return null;
+  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null);
+  board.round = action.round;
+  if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
+  if (action.interlude === 'aftermath') board.phase = 'EndOfRound';
+  return board;
 }
 
 // Only two public rounds are retained during play. A finished match explicitly rereads this same seat's
 // full feed; no alternate seat, inferred action or private planning event is added to the replay.
 export function createArenaMatch({ connection, onChange }) {
   let latest = null, catalogue = null, seat = null, entries = [], actions = [], index = -1, stage = 'before';
-  let generation = 0, busy = false, error = '';
-  const emit = () => onChange();
-  function reset(nextSeat) { generation++; latest = null; catalogue = null; seat = nextSeat; entries = []; actions = []; index = -1; busy = false; error = ''; emit(); }
+  let generation = 0, busy = false, error = '', cached = null, conceded = false;
+  const emit = () => { cached = null; onChange(); };
+  function reset(nextSeat) { generation++; latest = null; catalogue = null; seat = nextSeat; entries = []; actions = []; index = -1; busy = false; error = ''; conceded = false; emit(); }
   function receive(view, cards) {
     latest = view; catalogue = cards;
     if (!view) { reset(seat); return; }
@@ -81,31 +98,33 @@ export function createArenaMatch({ connection, onChange }) {
   }
   function jump(round) { const next = actions.findIndex(action => action.round === round); if (next >= 0) { index = next; stage = 'before'; emit(); } }
   function closeReplay() { index = -1; actions = []; emit(); }
+  const canConcede = () => Boolean(latest && !latest.over && !latest.playedByBot && !latest.replay && !conceded);
+  // A concession the host accepted is final even when the refresh that shows the result is late or lost.
   async function concede() {
-    if (!latest || latest.over || latest.playedByBot || latest.replay || busy) return;
+    if (!canConcede() || busy) return;
     const context = generation; busy = true; error = ''; emit();
     try {
       const answer = await connection.concede();
-      if (context === generation && !answer?.ok) error = answer?.body?.message ?? 'The host could not confirm the concession. Check the refreshed board.';
+      if (context !== generation) return;
+      if (answer?.ok) conceded = true;
+      else error = answer?.body?.message ?? 'The host could not confirm the concession. Check the refreshed board.';
     } catch { if (context === generation) error = 'Connection lost. Check the refreshed result before trying again.'; }
     finally { if (context === generation) { busy = false; emit(); } }
   }
+  // Four readers ask for the model on every poll; the notes and the replay board are built once per change.
   function model() {
+    if (cached) return cached;
     const action = actions[index], active = Boolean(action);
-    const board = active ? livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null) : null;
-    if (board) {
-      board.round = action.round;
-      if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
-      if (action.interlude === 'aftermath') board.phase = 'EndOfRound';
-    }
-    return { active, board, stage, index, count: actions.length, round: action?.round,
-      rounds: [...new Set(actions.map(one => one.round))], summary: action ? replayText(action, catalogue) : '',
-      note: !action?.frame ? 'No battlefield was recorded for this event.' : action.interlude ? 'Reference: the battlefield at the start of this round’s combat, after upkeep and mutations.' : `${stage === 'before' ? 'Before' : 'After'} the recorded action`,
-      previous: active && (index > 0 || (!action.interlude && action.frame && stage === 'after')),
-      next: active && (index + 1 < actions.length || (!action.interlude && action.frame && stage === 'before')),
-      outcome: arenaOutcome(latest, seat), over: Boolean(latest?.over),
-      canConcede: Boolean(latest && !latest.over && !latest.playedByBot && !latest.replay), busy, error,
+    const twoFrames = active && !action.interlude && Boolean(action.frame);
+    cached = { active, board: replayBoard(action, actions, index, stage, latest), stage, index, count: actions.length, round: action?.round,
+      rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
+      note: replayNote(action, stage),
+      previous: active && (index > 0 || (twoFrames && stage === 'after')),
+      next: active && (index + 1 < actions.length || (twoFrames && stage === 'before')),
+      outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
+      canConcede: canConcede(), busy, error,
       notes: roundNotes(entries, latest?.board) };
+    return cached;
   }
   return { reset, receive, model, replay, move, jump, closeReplay, concede };
 }

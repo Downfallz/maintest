@@ -48,13 +48,13 @@
     <footer><span>LIVE PREVIEW · <b>PROVISIONAL ARTWORK</b></span><span id="updated">No board loaded</span></footer>
   </main>
   <dialog id="planning-dialog" aria-labelledby="planning-heading">
-    <p class="eyebrow">YOUR COMMAND</p><h2 id="planning-heading"></h2><p id="planning-help"></p>
+    <p class="eyebrow">YOUR COMMAND</p><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
     <div id="planning-creatures" aria-label="Choose a creature"></div><div id="planning-choices"></div>
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
   </dialog>
   <dialog id="round-dialog" aria-labelledby="round-title"><form method="dialog"><button class="close" aria-label="Close round review">×</button></form><p class="eyebrow">CONFIRMED ROUND EVENTS</p><h2 id="round-title">Upkeep &amp; aftermath</h2><p>Applied recovery, ongoing damage and cleanup from the last two rounds. The battlefield remains current.</p><ol id="round-notes"></ol></dialog>
   <dialog id="match-dialog" aria-labelledby="match-title"><form method="dialog"><button class="close" aria-label="Close match result">×</button></form><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="match-title">Match complete</h2><p id="match-outcome"></p><button class="primary" id="match-replay" type="button">Replay the match</button><a href="/">Back to tables</a></dialog>
-  <dialog id="concede-dialog" aria-labelledby="concede-title"><h2 id="concede-title">Concede this match?</h2><p>Your opponent wins immediately. This cannot be undone.</p><button id="concede-confirm" type="button">Concede match</button><form method="dialog"><button id="concede-cancel" type="submit">Keep playing</button></form><p id="concede-error"></p></dialog>
+  <dialog id="concede-dialog" aria-labelledby="concede-title"><h2 id="concede-title">Concede this match?</h2><p>Your opponent wins immediately. This cannot be undone.</p><button id="concede-confirm" type="button">Concede match</button><form method="dialog"><button id="concede-cancel" type="submit" autofocus>Keep playing</button></form><p id="concede-error"></p></dialog>
   <dialog id="result-dialog" aria-labelledby="result-title"><form method="dialog"><button class="close" aria-label="Close action result">×</button></form><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="result-title">Action result</h2><p id="result-text"></p></dialog>
   <dialog id="combat-dialog" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>

@@ -85,7 +85,6 @@ returns never replay history. Legacy events, and one read bringing more than twe
 text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
-
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
 `table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
 Mutation Tree with explicit confirmation. Tempo confirms one creature at a time, with simultaneous reveal

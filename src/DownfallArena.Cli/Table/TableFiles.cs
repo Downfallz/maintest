@@ -50,6 +50,7 @@ internal sealed class TableFiles
             ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
             ["/session.js"] = (Path.Combine(tableDirectory, "session.js"), JavaScript),
             ["/invitation.js"] = (Path.Combine(tableDirectory, "invitation.js"), JavaScript),
+            ["/outcome.js"] = (Path.Combine(tableDirectory, "outcome.js"), JavaScript),
             ["/push.js"] = (Path.Combine(tableDirectory, "push.js"), JavaScript),
 
             // The service worker, at the root so its scope is the whole table (ADR 0118), and what an installed

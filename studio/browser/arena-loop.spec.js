@@ -61,7 +61,7 @@ test('ties require a complete order within their group', async ({ page }) => {
 test('concession can be cancelled and displays the host result after confirmation', async ({ page }) => {
   const h = await mount(page); await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-cancel').click(); expect(h.concessions).toBe(0);
   await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toHaveText('Player 2 wins · concession.'); expect(h.concessions).toBe(1); expect(h.errors).toEqual([]);
+  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toHaveText('You conceded · Player 2 wins.'); expect(h.concessions).toBe(1); expect(h.errors).toEqual([]);
 });
 test('finished matches replay before and after frames, then return to result', async ({ page }, info) => {
   const h = await mount(page, { over: true }); await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Ongoing damage −2'); await page.keyboard.press('Escape');

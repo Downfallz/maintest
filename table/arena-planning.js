@@ -67,7 +67,8 @@ export function createArenaPlanning({ connection, onChange, visible = () => true
     clear(); opened = true; error = ''; emit(); if (visible()) void shown();
   }
   function close() { if (!sending) { clear(); error = ''; emit(); } }
-  function choose(value) { if (editable()) { choice = value; error = ''; emit(); } }
+  // Keeping the dice order sets the taps aside too: the rows show the order the command will send.
+  function choose(value) { if (editable()) { choice = value; if (value?.keep) tapped = []; error = ''; emit(); } }
   function order(id) {
     if (!editable()) return;
     choice = null; tapped = tap(latest?.options?.tieOrder?.ties, tapped, id); emit();

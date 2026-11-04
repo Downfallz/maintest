@@ -101,7 +101,8 @@
 #round-notes li { margin: 12px 0; }
 #match-dialog a { display: inline-block; padding: 14px; }
 #concede-dialog form { display: inline; }
-#replay-controls { grid-column: 1 / -1; background: #142126; padding: 12px 24px; overflow: auto; min-height: 0; border-top: 1px solid #607568; }
+#replay-controls { grid-column: 1 / -1; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: #142126; padding: 12px 24px; overflow: hidden; min-height: 0; border-top: 1px solid #607568; }
+#replay-controls > div:first-child { overflow: auto; }
 #arena[data-replay="true"] { grid-template-rows: 76px 70px minmax(0, 1fr) minmax(140px, 25vh) 26px; }
 #arena[data-replay="true"] .command-dock { display: none; }
 #replay-controls p { margin: 8px 0; }
@@ -117,15 +118,7 @@
 }
 @media (max-height: 520px) and (min-width: 620px) {
   #arena[data-replay="true"] { grid-template-rows: 50px 46px minmax(0, 1fr) 110px 18px; }
-  #replay-controls { display: flex; gap: 12px; padding: 8px 16px; }
-  #replay-controls > div { flex: 1; }
-}
-
-#planning-close { float: right; margin-left: 8px; }
-
-#replay-controls { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
-#replay-controls > div:first-child { overflow: auto; }
-@media (max-height: 520px) and (min-width: 620px) {
-  #replay-controls { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
+  #replay-controls { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 12px; padding: 8px 16px; }
   .replay-buttons { align-content: center; margin-top: 0; }
 }
+#planning-close { float: right; margin-left: 8px; }
