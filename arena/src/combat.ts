@@ -7,14 +7,14 @@ export interface SpellCatalogue { cards?: { id: string; name: string; cost?: num
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.
-export function combatControls(controller: Controller, name: (id: unknown) => string) {
+export function combatControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void = () => {}) {
   const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const dialog = el<HTMLDialogElement>('combat-dialog');
   let listKey = '';
   let listCatalogue: SpellCatalogue | null = null;
   let buttons = new Map<string, HTMLButtonElement>();
   const click = (id: string, action: () => void) => el(id).addEventListener('click', action);
-  click('combat-open', () => controller.open());
+  click('combat-open', () => { beforeOpen(); controller.open(); });
   click('combat-back', () => controller.back());
   click('combat-cancel', () => controller.close());
   click('combat-dialog-close', () => controller.close());

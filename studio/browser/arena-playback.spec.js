@@ -1,0 +1,144 @@
+import { test, expect } from '@playwright/test';
+import { fitsViewport } from './fit.js';
+const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 5, totalDefense: 2,
+  currentInitiative: 7, isAlive: health > 0, isStunned: false, isStunImmune: false, knownSpells: ['strike'], conditions: [] });
+const before = [1, 2, 3, 4, 5, 6].map(id => creature(id));
+const timeline = before.map(one => ({ creature: one.id, owner: one.id < 4 ? 'Player1' : 'Player2', speed: 'Standard' }));
+const legalTargets = { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 };
+function entry(sequence, { actor = 1, targets = [4], after = before.map(one => creature(one.id, one.id === 4 ? 13 : 20)), fizzled = false, legacy = false, outcomes } = {}) {
+  return { sequence, event: { kind: 'CombatActionResolved', roundId: 2,
+    resolution: { action: { actor, spell: 'strike', targets }, isCritical: !fizzled, fizzled, fizzleReason: { message: 'Not enough energy' } },
+    appliedOutcomes: outcomes ?? (fizzled ? [] : targets.map(target => ({ kind: 'DamageOutcome', target, amount: 7, critical: true }))),
+    ...(legacy ? {} : { frame: { before, after, timeline, rollOffs: [] } }) } };
+}
+async function mount(page) {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install();
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
+    const original = window.fetch;
+    window.fetch = (url, options) => {
+      if (String(url).endsWith('/events')) return Promise.resolve(new Response(new ReadableStream({ start(controller) {
+        window.notifyArena = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
+      } }), { headers: { 'Content-Type': 'text/event-stream' } }));
+      return original(url, options);
+    };
+  });
+  const state = { status: 200, requests: [], view: { board: { slot: 'Player1', roundNumber: 2, phase: 'Combat', subPhase: 'Activation',
+    activationCursor: 1, allies: before.slice(0, 3), enemies: before.slice(3), timeline }, waitingFor: 'Action', waitingAsked: 5,
+    waitingCreature: 2, options: { action: { creature: 2, spells: [{ spell: 'strike', legalTargets }] } }, feed: [], feedNext: 10 } };
+  await page.route('**/api/**', route => {
+    const request = route.request(), url = new URL(request.url()); state.requests.push({ path: url.pathname, query: url.search, method: request.method() });
+    if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }] } });
+    if (url.pathname === '/api/seat/player1') return route.fulfill({ status: state.status, json: state.view });
+    return route.fulfill({ status: 500, body: 'Unexpected request' });
+  });
+  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY');
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  const publish = async (entries, extra = {}) => {
+    state.view = { ...state.view, ...extra, feed: entries, feedNext: Math.max(state.view.feedNext, ...entries.map(one => one.sequence + 1)) };
+    await page.evaluate(() => window.notifyArena());
+  };
+  return { state, publish, errors };
+}
+const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
+test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
+  const h = await mount(page);
+  await h.publish([entry(12), entry(10), entry(10)]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
+  await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
+  await fits(page); await page.clock.runFor(440);
+  await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
+  await expect(page.locator('[data-creature="4"] .creature-effect')).toContainText('Damage 7!');
+  await page.screenshot({ path: info.outputPath('confirmed-impact.jpg'), type: 'jpeg', quality: 85 });
+  await h.publish([entry(10), entry(12)]); await page.clock.runFor(1100);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '12');
+  await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
+  await h.publish([entry(12)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
+  expect(h.errors).toEqual([]); expect(h.state.requests.some(one => one.query.includes('shown='))).toBe(false);
+});
+test('skip and opening combat controls settle to the latest board without waiting for animations', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10), entry(11)]);
+  await expect(page.locator('#playback-skip')).toBeVisible(); await page.locator('#playback-skip').click();
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
+  await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
+  await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.runFor(2500);
+  await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.requests.some(one => one.path.endsWith('/decision'))).toBe(false);
+});
+test('the final lethal action remains in its round before the next upkeep snapshot', async ({ page }) => {
+  const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 4 ? 0 : 20));
+  const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
+  await h.publish([entry(10, { after })], { board, waitingFor: 'Evolution' });
+  await expect(page.locator('#round-number')).toHaveText('02'); await page.clock.runFor(440);
+  await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
+  await page.clock.runFor(1200); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
+});
+test('multi-target impacts, conditions and an enemy actor render without lab assumptions', async ({ page }) => {
+  const h = await mount(page);
+  const after = before.map(one => ({ ...one, health: one.id < 3 ? 13 : 20,
+    isStunned: one.id === 2, conditions: one.id === 2 ? [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }] : [] }));
+  await h.publish([entry(10, { actor: 4, targets: [1, 2], after, outcomes: [
+    { kind: 'DamageOutcome', target: 1, amount: 7 }, { kind: 'DamageOutcome', target: 2, amount: 7 },
+    { kind: 'ConditionOutcome', target: 2, effect: { kind: 'Bleed', amountPerRound: 2 } }] })]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup'); await page.clock.runFor(440);
+  await expect(page.locator('[data-creature="1"] .creature-effect')).toContainText('Damage 7');
+  await expect(page.locator('[data-creature="2"] .creature-effect')).toContainText('Bleed 2');
+  await page.locator('[data-creature="2"]').click(); await expect(page.locator('#inspect-effects')).toContainText('Stunned');
+  expect(h.errors).toEqual([]);
+});
+for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real outcome readable without a fabricated strike`, async ({ page }) => {
+  const h = await mount(page);
+  await h.publish([entry(10, { fizzled: kind === 'fizzle', legacy: kind === 'legacy', targets: kind === 'support' ? [] : [4],
+    outcomes: kind === 'support' ? [{ kind: 'HealOutcome', target: 1, amount: 3 }, { kind: 'EnergyOutcome', target: 1, amount: 2 }] : undefined })]);
+  await expect(page.locator('#playback-result')).toBeVisible();
+  await page.clock.runFor(440); await page.locator('#playback-result').click();
+  await expect(page.locator('#result-text')).toContainText(kind === 'fizzle' ? 'fizzled: Not enough energy' : kind === 'support' ? 'Heal 3' : 'Damage 7');
+  if (kind === 'legacy') await expect(page.locator('#playback-skip')).toBeHidden();
+  expect(h.errors).toEqual([]);
+});
+test('reduced motion shows applied results immediately and resize cancels playback safely', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' }); const h = await mount(page); await h.publish([entry(10)]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
+  await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
+  await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(100);
+  await expect(page.locator('#playback-skip')).toBeHidden(); await fits(page); expect(h.errors).toEqual([]);
+});
+for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  if (reason === 'seat') await page.locator('#switch-seat').click();
+  if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyArena()); }
+  await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
+  await page.clock.runFor(3000); await expect(page.locator('#result-text')).toBeEmpty();
+  if (reason === 'hidden') {
+    h.state.view.feed = [entry(10), entry(11)]; h.state.view.feedNext = 12;
+    await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
+    await expect(page.locator('.creature')).toHaveCount(6); await expect(page.locator('#playback-skip')).toBeHidden();
+    await expect(page.locator('#result-text')).toBeEmpty();
+  }
+  expect(h.errors).toEqual([]);
+});
+
+
+test('transient connection loss settles playback and repeated events stay consumed on recovery', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  h.state.status = 503; await page.evaluate(() => window.notifyArena());
+  await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'stale');
+  await expect(page.locator('#playback-skip')).toBeHidden();
+  h.state.status = 200; await h.publish([entry(10)]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'live');
+  await expect(page.locator('#playback-skip')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+test('confirmed results and commands fit short portrait and landscape', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'The same viewport sweep runs once.');
+  const h = await mount(page);
+  for (const [index, size] of [{ width: 320, height: 568 }, { width: 844, height: 390 }].entries()) {
+    await page.setViewportSize(size); await page.clock.runFor(150);
+    await h.publish([entry(10 + index)]); await expect(page.locator('#playback-skip')).toBeVisible();
+    await fits(page); await page.locator('#playback-skip').click(); await fits(page);
+  }
+  expect(h.errors).toEqual([]);
+});

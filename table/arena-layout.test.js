@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isPortrait, placements } from './arena-layout.js';
+import { isPortrait, placements, strikeApproach } from './arena-layout.js';
 
 const sizes = { phone: [390, 760], phoneLandscape: [844, 300], narrow: [320, 480], desktop: [1440, 850], short: [720, 420] };
 
@@ -61,4 +61,19 @@ test('a smaller team keeps its side of the field in both orientations', () => {
       else assert.ok(placed[0].x < width / 2 && placed[count].x > width / 2, 'allies left, enemies right');
     }
   }
+});
+
+
+test('attacks approach horizontally on desktop and vertically on a phone without crossing the target', () => {
+  const actor = { x: 50, y: 400, size: 96 };
+  assert.deepEqual(strikeApproach(actor, { ...actor, y: 180 }), { x: 50, y: 232.8, dx: 0, dy: -1 });
+  assert.deepEqual(strikeApproach({ ...actor, y: 180 }, actor), { x: 50, y: 347.2, dx: 0, dy: 1 });
+  const left = strikeApproach({ x: 800, y: 400, size: 200 }, { x: 400, y: 400, size: 200 });
+  assert.equal(left.x, 510); assert.equal(left.dx, -1); assert.equal(left.dy, 0);
+});
+test('an overlapping or very close target never sends the attacker backwards past its origin', () => {
+  const one = { x: 10, y: 20, size: 200 };
+  assert.deepEqual(strikeApproach(one, one), { x: 10, y: 20, dx: 0, dy: 0 });
+  const close = strikeApproach(one, { ...one, x: 15 });
+  assert.ok(close.x > one.x && close.x < 15);
 });

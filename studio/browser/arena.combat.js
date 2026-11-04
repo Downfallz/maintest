@@ -25,7 +25,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect((await context.request.post(`${origin}/api/seat/player1/decision`, { headers, data: { ...data, asked: view.waitingAsked } })).status()).toBe(204);
       return true;
     };
-    const sent = [], shown = [], snapshots = [];
+    const sent = [], shown = [], snapshots = [], frames = new Map();
     await page.goto(`${origin}/arena`);
     page.on('request', request => {
       const url = new URL(request.url());
@@ -34,10 +34,22 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     });
     page.on('response', async response => {
       if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && response.ok()) {
-        const body = await response.json().catch(() => null); if (body?.board) snapshots.push(body.waitingAsked);
+        const body = await response.json().catch(() => null); if (body?.board) {
+          snapshots.push(body.waitingAsked);
+          for (const entry of body.feed ?? []) if (entry.event?.frame) frames.set(entry.sequence, entry.event.frame);
+        }
       }
     });
     await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+    await page.evaluate(() => {
+      window.arenaFrames = [];
+      new MutationObserver(() => {
+        const arena = document.getElementById('arena');
+        if (!['windup', 'impact'].includes(arena.dataset.playback)) return;
+        window.arenaFrames.push({ sequence: Number(arena.dataset.sequence), stage: arena.dataset.playback,
+          creatures: [...document.querySelectorAll('.creature')].map(node => ({ id: Number(node.dataset.creature), text: node.querySelector('.creature-stats').textContent })) });
+      }).observe(document.getElementById('arena'), { attributes: true, attributeFilter: ['data-playback', 'data-sequence'] });
+    });
     let casts = 0, intents = 0, captured = false;
     for (let step = 0; step < 40 && casts < 3; step++) {
       const view = await nextQuestion(); expect(view.over).toBe(false);
@@ -49,7 +61,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (view.waitingFor !== 'Target') {
         const options = view.waitingFor === 'Action' ? view.options.action.spells.map(one => one.spell)
           : view.options.intent.creatures.find(one => one.creature === view.waitingCreature).castableSpells;
-        spell = options[0]; expect(spell).toBeTruthy();
+        spell = options.find(id => id.includes('heavy_strike') || id.includes('heavy-strike')) ?? options[0]; expect(spell).toBeTruthy();
         if (!captured) await page.screenshot({ path: info.outputPath(`${declaration}-spells.jpg`), type: 'jpeg', quality: 85 });
         await page.locator(`[data-spell="${spell}"]`).click();
       }
@@ -67,9 +79,23 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect(last.command.kind).toBe(view.waitingFor);
       if (view.waitingFor === 'Intent') intents++; else { expect(last.command.targets).toEqual(targets); casts++; }
       await expect.poll(async () => (await read()).waitingAsked).not.toBe(view.waitingAsked);
+      if (view.waitingFor !== 'Intent' && casts === 1) {
+        await expect.poll(() => page.evaluate(() => window.arenaFrames.some(frame => frame.stage === 'impact')), { timeout: 10000 }).toBe(true);
+        await page.screenshot({ path: info.outputPath(`${declaration}-confirmed.jpg`), type: 'jpeg', quality: 85 });
+      }
     }
     expect(casts).toBe(3); expect(intents).toBe(declaration === 'hidden-intent' ? 3 : 0);
     expect(new Set(sent.map(one => one.command.asked)).size).toBe(sent.length);
+    const displayed = await page.evaluate(() => window.arenaFrames);
+    expect(displayed.some(frame => frame.stage === 'windup')).toBe(true);
+    expect(displayed.some(frame => frame.stage === 'impact')).toBe(true);
+    for (const shown of displayed) {
+      const frame = frames.get(shown.sequence); expect(frame).toBeTruthy();
+      for (const one of frame[shown.stage === 'windup' ? 'before' : 'after']) {
+        expect(shown.creatures.find(creature => creature.id === one.id)?.text).toContain(`${one.health}/${one.maxHealth} HP`);
+      }
+    }
+    if (await page.locator('#playback-skip').isVisible()) await page.locator('#playback-skip').click();
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {

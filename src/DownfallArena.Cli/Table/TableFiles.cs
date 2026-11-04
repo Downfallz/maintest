@@ -99,6 +99,7 @@ internal sealed class TableFiles
             ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),
             ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
             ["/arena-combat.js"] = (Path.Combine(tableDirectory, "arena-combat.js"), JavaScript),
+            ["/arena-playback.js"] = (Path.Combine(tableDirectory, "arena-playback.js"), JavaScript),
             ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),
             ["/arena-seats.js"] = (Path.Combine(tableDirectory, "arena-seats.js"), JavaScript),
             ["/arena-layout.js"] = (Path.Combine(tableDirectory, "arena-layout.js"), JavaScript),

@@ -520,7 +520,11 @@ spell and target choices require explicit confirmation. Action, hidden Intent an
 `slot.js` builders shared with `/play`; the host remains the authority for options and resolution.
 
 `arena-combat.js` owns drafts and request lifetimes, `arena-live.js` owns fenced polling/SSE, and the
-separate `arena-build/live.js` bundle cannot import the lab sample. Mutations, tempos, ties and invitation
+separate `arena-build/live.js` bundle cannot import the lab sample. `arena-playback.js` queues confirmed
+combat frames and deduplicates them by sequence. Damage, conditions and defeats follow the host's before/after
+frames, including the last action before upkeep. Skip or opening combat controls settles to the current board;
+playback never acknowledges or sends a decision. First reads, legacy frames and long catch-ups settle immediately.
+[ADR 0127](../docs/adr/0127-play-confirmed-actions-in-the-live-arena.md) records that boundary. Mutations, tempos, ties and invitation
 acceptance remain at `/play`. The existing host still marks an accepted seat as arrived on authenticated
 reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md),
 [ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and

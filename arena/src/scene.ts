@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { placements } from '../../table/arena-layout.js';
+import { placements, strikeApproach } from '../../table/arena-layout.js';
 import type { SceneFrame, Placement } from './types';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
@@ -134,31 +134,59 @@ export class ArenaScene extends Phaser.Scene {
     this.onLayout(positions);
   }
 
-  private actorAndTarget() {
-    return { actor: this.figures.get(this.state.actor!)!, target: this.figures.get(this.state.target!)! };
-  }
-
   private windup() {
     this.clearMotion();
-    const { actor, target } = this.actorAndTarget();
-    const destination = target.home.x - target.home.size * .55;
-    this.tweens.add({ targets: actor.image, x: actor.home.x - 14, angle: -7, duration: 120 / this.rate,
-      onComplete: () => this.tweens.add({ targets: actor.image, x: destination, y: target.home.y, angle: 9, duration: 300 / this.rate, ease: 'Cubic.In' }) });
+    const actor = this.figures.get(this.state.actor!);
+    const target = this.figures.get(this.state.target!);
+    if (!actor) return;
+    if (this.state.cue && this.state.cue.kind !== 'strike') {
+      this.tweens.add({ targets: actor.image, alpha: .5, yoyo: true, duration: 180 / this.rate });
+      return;
+    }
+    if (!target || actor === target) return;
+    const approach = strikeApproach(actor.home, target.home);
+    const direction = approach.dx < 0 ? -1 : 1;
+    this.tweens.add({ targets: actor.image, x: actor.home.x - approach.dx * 14, y: actor.home.y - approach.dy * 14, angle: -direction * 7, duration: 120 / this.rate,
+      onComplete: () => this.tweens.add({ targets: actor.image, x: approach.x, y: approach.y, angle: direction * 9, duration: 300 / this.rate, ease: 'Cubic.In' }) });
   }
 
   private impact() {
-    const { actor, target } = this.actorAndTarget();
-    this.tweens.killTweensOf(actor.image);
-    this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
-    this.tweens.add({ targets: target.image, x: target.home.x + 18, angle: 5, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
-    this.cameras.main.shake(160 / this.rate, .003);
+    const actor = this.figures.get(this.state.actor!);
+    if (actor) {
+      this.tweens.killTweensOf(actor.image);
+      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
+    }
+    const cue = this.state.cue;
+    const struck = cue ? cue.struck : this.state.target ? [this.state.target] : [];
+    for (const id of struck) {
+      const target = this.figures.get(id);
+      if (!target) continue;
+      const { dx, dy } = actor ? strikeApproach(actor.home, target.home) : { dx: 0, dy: 0 };
+      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+      this.burst(target, 0xffd995, true);
+    }
+    if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
+    if (cue) {
+      const tones: Record<string, number> = { recovery: 0x96dfa5, energy: 0x91caef, condition: 0xc3a0eb, neutral: 0xeac88e };
+      const pulsed = new Set<string>();
+      for (const effect of cue.effects) {
+        const target = this.figures.get(effect.creature);
+        if (!target || struck.includes(effect.creature) || pulsed.has(effect.creature)) continue;
+        pulsed.add(effect.creature); this.burst(target, tones[effect.tone] ?? GOLD, false);
+      }
+      if (cue.kind === 'fizzle' && actor) this.burst(actor, 0x9ba6ac, false);
+    }
+  }
+
+  private burst(target: Figure, color: number, sparks: boolean) {
     const x = target.home.x; const y = target.home.y - target.home.size * .5;
-    const ring = this.add.circle(x, y, 12).setStrokeStyle(4, 0xffd995).setDepth(2000);
+    const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
     this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 / this.rate });
+    if (!sparks) return;
     for (let i = 0; i < 14; i++) {
       const angle = i * Math.PI * 2 / 14;
-      const spark = this.add.rectangle(x, y, 4, 13, i % 2 ? 0xffd995 : 0xcd6d43).setRotation(angle).setDepth(2001);
+      const spark = this.add.rectangle(x, y, 4, 13, i % 2 ? color : 0xcd6d43).setRotation(angle).setDepth(2001);
       this.effects.push(spark);
       this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) / this.rate });
     }
