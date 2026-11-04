@@ -519,35 +519,43 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return refused;
             }
 
-            var previous = registry.KeysOf(seat);
-            var open = table.OpenSeats;
-            var declined = seat.DeclinedBy;
-            if (!registry.Rekey(table, seat, SeatKeys.Offered()))
-            {
-                return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
-            }
-
-            seat.DeclinedBy = null;
-            table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
-            try
-            {
-                await table.RecordAsync(registry.Codes);
-            }
-            catch
-            {
-                registry.Rekey(table, seat, previous);
-                table.OpenSeats = open;
-                seat.DeclinedBy = declined;
-                throw;
-            }
-
-            table.Api.Changes.Bump();
-            return Json(new { table = await DescribeAsync(table) });
+            return await OfferToEveryoneAsync(table, seat)
+                ? Json(new { table = await DescribeAsync(table) })
+                : Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
         }
         finally
         {
             Claims.Release();
         }
+    }
+
+    /// <summary>Under the claim gate: the seat kept for a friend, or for nobody, becomes an open place anybody may take. Saved before it counts.</summary>
+    private async Task<bool> OfferToEveryoneAsync(PlayedTable table, TableSeat seat)
+    {
+        var previous = registry.KeysOf(seat);
+        var open = table.OpenSeats;
+        var declined = seat.DeclinedBy;
+        if (!registry.Rekey(table, seat, SeatKeys.Offered()))
+        {
+            return false;
+        }
+
+        seat.DeclinedBy = null;
+        table.OpenSeats = [.. open.Append(seat.Name).Distinct(StringComparer.Ordinal)];
+        try
+        {
+            await table.RecordAsync(registry.Codes);
+        }
+        catch
+        {
+            registry.Rekey(table, seat, previous);
+            table.OpenSeats = open;
+            seat.DeclinedBy = declined;
+            throw;
+        }
+
+        table.Api.Changes.Bump();
+        return true;
     }
 
     /// <summary>
@@ -589,11 +597,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private async Task InviteNoticeAsync(AccountId friend, AccountId me, PlayedTable table) =>
         await NoticeAsync(friend, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
 
-    private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag)
+    private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag, string topic = "invitation")
     {
         if (Notices is { } notices)
         {
-            await notices.SendAsync(to, AccountNotices.Payload(title, body, url, tag), "invitation");
+            await notices.SendAsync(to, AccountNotices.Payload(title, body, url, tag), topic);
         }
     }
 
@@ -691,6 +699,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         var previous = registry.KeysOf(seat);
         var arrived = seat.Person!.HasArrived;
         var open = table.OpenSeats;
+        var leaver = seat.Account;
         if (!registry.Rekey(table, seat, SeatKeys.Offered()))
         {
             return false;
@@ -702,6 +711,16 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             await table.RecordAsync(registry.Codes);
             table.Api.Changes.Bump();
+            // The other player is told their opponent left (ADR 0129, stage 4), once the place is offered: a
+            // match waiting on a team nobody holds is the thing to know about.
+            if (table.Session.HasBegun)
+            {
+                foreach (var other in table.Seats.Where(other => other != seat && other.Account is { } held && held != leaver).Select(other => other.Account!.Value).Distinct())
+                {
+                    await NoticeAsync(other, $"{(leaver is { } who ? await NameAsync(who) : "A player")} left the table", "Their team is offered to another player. The match waits.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"match:{table.Id}", "match");
+                }
+            }
+
             return true;
         }
         catch
@@ -731,6 +750,21 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var offered = 0;
             foreach (var table in registry.All())
             {
+                // A seat kept for the account is kept for nobody now, and a seat the account kept for a friend is
+                // offered to everyone, as the account's own seat is about to be (ADR 0129): the friend was waiting on
+                // a player who is gone.
+                foreach (var kept in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken && !table.IsOver).ToArray())
+                {
+                    if (kept.InvitedAccount == account)
+                    {
+                        await LetGoAsync(table, kept, declinedBy: null);
+                    }
+                    else if (Inviter(table, account))
+                    {
+                        await OfferToEveryoneAsync(table, kept);
+                    }
+                }
+
                 foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
                 {
                     if (table.Run is not null && await VacateAsync(table, seat))
@@ -1040,8 +1074,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return new SeatSummary(seat.Name, "invited", await NameAsync(invited), turn);
         }
 
+        // The account's id travels with a person's seat, so the other player's page can offer a rematch (ADR 0129).
         var name = seat.Account is { } id && Accounts is { } accounts ? (await accounts.AccountAsync(id))?.Username.Value : null;
-        return new SeatSummary(seat.Name, "person", name ?? "Player", turn);
+        return new SeatSummary(seat.Name, "person", name ?? "Player", turn, seat.Account?.Value);
     }
 
     /// <summary>
@@ -1184,7 +1219,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private sealed record Opening(string? Opponent, string? Format, string? Friend);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
-    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn);
+    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
 

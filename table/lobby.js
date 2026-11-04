@@ -72,6 +72,19 @@ export function invitedState(invited) {
   return { tag: `Waiting for ${invited.username}…`, waiting: true, actions: ['cancel'] };
 }
 
+/**
+ * What a "Rematch" link asks of the lobby (ADR 0129, stage 4): the opponent to choose again, as `?rematch=` names
+ * it (a friend's account id, `bot`, or `hotseat`), and the format; null when the query asks for none.
+ */
+export function rematchRequest(search) {
+  const params = new URLSearchParams(search ?? '');
+  const again = params.get('rematch');
+  if (!again) return null;
+  const format = params.get('format') || null;
+  if (again === 'bot' || again === 'hotseat') return { opponent: again, friend: null, format };
+  return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format } : null;
+}
+
 /** The line an invitation card leads with: who asks, to what. */
 export function invitationLine(invitation) {
   const from = invitation?.from?.username ?? 'A player';
@@ -91,6 +104,7 @@ export function mountLobby(doc, location, storage) {
   let invitations = [];
   let friends = [];
   let reinviting = null;
+  let pendingRematch = rematchRequest(location.search);
   let onOutstanding = () => {};
   let showAll = false;
   let loading = false;
@@ -232,6 +246,7 @@ export function mountLobby(doc, location, storage) {
       mine = saved.tables;
       invitations = saved.invitations ?? [];
       render();
+      maybeRematch();
     } catch (error) {
       el('lobby-status').textContent = 'Connection interrupted. Your saved seats are kept; refresh to retry.';
       problem(error.message || 'Could not load the tables. Try again.');
@@ -271,22 +286,38 @@ export function mountLobby(doc, location, storage) {
     if (chosen && friends.some(friend => friend.id === chosen)) el('friend').value = chosen;
     el('opponent').querySelector('option[value="friend"]').hidden = mode === 'off';
   }
+  let wanted = null;
   function showOpponent() {
     const value = el('opponent').value;
-    el('create-help').textContent = value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
+    const missing = value === 'friend' && wanted && !friends.some(friend => friend.id === wanted);
+    el('create-help').textContent = missing
+      ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
+      : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
     el('friend-row').hidden = value !== 'friend';
   }
-  function openCreate({ friend = null, reinvite = null } = {}) {
+  function openCreate({ friend = null, reinvite = null, opponent = null, format = null } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;
     reinviting = reinvite;
+    wanted = friend;
     el('create-problem').hidden = true;
     el('create-title').textContent = reinvite ? 'Invite another friend' : 'Create a table';
     el('create-submit').textContent = reinvite ? 'Invite →' : 'Create & play →';
     el('opponent').disabled = Boolean(reinvite);
     el('format').disabled = Boolean(reinvite);
     if (friend || reinvite) el('opponent').value = 'friend';
+    else if (opponent) el('opponent').value = opponent;
+    if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
     void loadFriends(friend).then(() => { showOpponent(); dialog.showModal(); });
+  }
+  // Sent here by "Rematch" (ADR 0129): the dialog opens on the same opponent once the player is signed in and the
+  // tables are listed, and the address is cleaned so a reload does not ask again.
+  function maybeRematch() {
+    if (!pendingRematch || !listing || signInFirst()) return;
+    const again = pendingRematch;
+    pendingRematch = null;
+    globalThis.history?.replaceState?.(null, '', '/lobby');
+    openCreate(again);
   }
   el('new-table').addEventListener('click', () => openCreate());
   for (const id of ['create-close', 'create-cancel']) el(id).addEventListener('click', () => dialog.close());
