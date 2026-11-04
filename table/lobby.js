@@ -68,6 +68,7 @@ function cardAction(table, entry) {
  */
 export function invitedState(invited) {
   if (!invited) return null;
+  if (invited.free) return { tag: 'Seat kept for nobody', waiting: false, actions: ['reinvite', 'open', 'close'] };
   if (invited.declined) return { tag: `${invited.username} declined`, waiting: false, actions: ['reinvite', 'open', 'close'] };
   return { tag: `Waiting for ${invited.username}…`, waiting: true, actions: ['cancel'] };
 }

@@ -8,14 +8,14 @@ export function arenaFixture() {
   return {
     roundNumber: 5, phase: 'Combat', subPhase: 'Activation', activationCursor: 0, slot: 'Player1',
     allies: [
-      creature('a1', 'Brute', 'horns', 19, 4, 2),
-      creature('a2', 'Stalker', 'wings', 13, 3, 0, ['Marked · 1 round']),
-      creature('a3', 'Occultist', 'veil', 21, 5, 1),
+      creature('a1', 'Brute', 'brute', 19, 4, 2),
+      creature('a2', 'Stalker', 'predator', 13, 3, 0, ['Marked · 1 round']),
+      creature('a3', 'Occultist', 'warped', 21, 5, 1),
     ],
     enemies: [
-      creature('b1', 'Ironhide', 'horns', 18, 3, 3),
-      creature('b2', 'Predator', 'wings', 11, 4, 0),
-      creature('b3', 'Hollow', 'veil', 7, 2, 1, ['Marked · 2 rounds']),
+      creature('b1', 'Ironhide', 'brute', 18, 3, 3),
+      creature('b2', 'Predator', 'predator', 11, 4, 0),
+      creature('b3', 'Hollow', 'warped', 7, 2, 1, ['Marked · 2 rounds']),
     ],
     timeline: [
       { creature: 'a1', owner: 'Player1', speed: 'Quick' },

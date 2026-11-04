@@ -118,6 +118,10 @@ public sealed class TableFilesTests
     [Theory]
     [InlineData("eclipse-arena")]
     [InlineData("creatures")]
+    [InlineData("base-creature")]
+    [InlineData("brute")]
+    [InlineData("predator")]
+    [InlineData("warped")]
     public void The_arena_art_is_served_as_webp_bytes(string asset)
     {
         var image = Files.Get($"/arena-art/{asset}.webp");

@@ -85,6 +85,7 @@ test('an inviter\'s card says who it waits for, or who declined and the ways out
   assert.equal(invitedState(null), null);
   assert.deepEqual(invitedState({ username: 'bastien', declined: false }), { tag: 'Waiting for bastien…', waiting: true, actions: ['cancel'] });
   assert.deepEqual(invitedState({ username: 'bastien', declined: true }), { tag: 'bastien declined', waiting: false, actions: ['reinvite', 'open', 'close'] });
+  assert.deepEqual(invitedState({ free: true, declined: false }), { tag: 'Seat kept for nobody', waiting: false, actions: ['reinvite', 'open', 'close'] }, 'after a cancel the ways out stay');
 });
 
 test('an invitation card says who asks and to what', () => {

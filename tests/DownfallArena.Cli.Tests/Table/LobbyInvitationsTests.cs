@@ -176,7 +176,9 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await ActAsync("DELETE", table, "/invitation", bastien)).Status.ShouldBe(403, "only the inviter cancels");
         (await ActAsync("DELETE", table, "/invitation", mark)).Status.ShouldBe(200);
         table.Seats[1].InvitedAccount.ShouldBeNull();
-        (await MineAsync(mark)).GetProperty("tables")[0].GetProperty("invited").ValueKind.ShouldBe(JsonValueKind.Null);
+        var cancelled = (await MineAsync(mark)).GetProperty("tables")[0].GetProperty("invited");
+        cancelled.GetProperty("free").GetBoolean().ShouldBeTrue("the ways out stay on the card after a cancel");
+        cancelled.GetProperty("declined").GetBoolean().ShouldBeFalse();
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
         (await ActAsync("DELETE", table, "/invitation", mark)).Status.ShouldBe(409, "nothing waits any more");
 
@@ -207,9 +209,29 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         await _friends.UnlinkAsync(bastien.Account.Id, mark.Account.Id, Cancel);
 
-        (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
+        // Accepted off a card drawn before the removal, with no listing in between: refused all the same.
+        var accepted = await ActAsync("POST", table, "/accept", bastien);
+
+        accepted.Status.ShouldBe(404);
         table.Seats[1].InvitedAccount.ShouldBeNull();
-        (await ActAsync("POST", table, "/accept", bastien)).Status.ShouldBe(404);
+        table.Seats[1].Taken.ShouldBeFalse();
+        (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Two_tables_opened_for_friends_at_once_leave_one_invitation_waiting()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        var third = await PlayerAsync("third");
+        await BefriendAsync(mark, bastien);
+        await BefriendAsync(mark, third);
+
+        var answers = await Task.WhenAll(Enumerable.Range(0, 6).Select(index => OpenForAsync(mark, index % 2 == 0 ? bastien : third)));
+
+        answers.Count(answer => answer.Status == 201).ShouldBe(1);
+        answers.Count(answer => answer.Status == 409).ShouldBe(5);
+        _registry.All().Count.ShouldBe(1);
     }
 
     [Fact]
