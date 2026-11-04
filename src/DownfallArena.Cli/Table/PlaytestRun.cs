@@ -228,13 +228,15 @@ internal sealed class PlaytestRun
     /// Whether the match as rebuilt agrees with the trace the earlier host checkpointed: every entry it wrote
     /// is an entry of the rebuilt trace, in its place. A record can fit a match structurally and still be
     /// another match -- the same legal moves under another seed, or under content that changed -- and the
-    /// boards the checkpoint holds are what says so. True when there is no checkpoint to hold it against.
+    /// boards the checkpoint holds are what says so. True when there is no checkpoint to hold it against. Null
+    /// when it cannot say: the rebuilt trace was still short of the checkpoint when the wait for a bot to catch up
+    /// ran out, which a slow start explains as well as a record that no longer fits.
     /// </summary>
     /// <param name="stalled">
     /// Whether the rebuilt match is waiting on somebody who is not coming: a person asked a question during the
     /// replay. While it holds and the trace stops growing, the wait for the trace to catch up ends early.
     /// </param>
-    public async Task<bool> AgreesWithCheckpointAsync(MatchId matchId, Func<bool>? stalled = null, CancellationToken cancellationToken = default)
+    public async Task<bool?> AgreesWithCheckpointAsync(MatchId matchId, Func<bool>? stalled = null, CancellationToken cancellationToken = default)
     {
         var text = await _reader.ReadTextAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", cancellationToken);
         if (text is null)
@@ -258,6 +260,7 @@ internal sealed class PlaytestRun
         var started = _clock.GetTimestamp();
         var length = _events.Length(matchId);
         var still = started;
+        var stopped = false;
         while (_events.Length(matchId) < written.GetArrayLength() && _kept is null && _clock.GetElapsedTime(started) < CatchUpWait)
         {
             if (_events.Length(matchId) != length)
@@ -267,6 +270,7 @@ internal sealed class PlaytestRun
             }
             else if (stalled?.Invoke() == true && _clock.GetElapsedTime(still) >= StandingStill)
             {
+                stopped = true;
                 break;
             }
 
@@ -276,7 +280,9 @@ internal sealed class PlaytestRun
         var rebuilt = System.Text.Json.JsonSerializer.SerializeToElement(Trace(matchId), ArtifactJson.DocumentOptions);
         if (written.GetArrayLength() > rebuilt.GetArrayLength())
         {
-            return false;
+            // Short because the match stopped -- at a person's question, or closed -- is an answer; short because
+            // the time ran out with a bot still deciding is not.
+            return stopped || _kept is not null ? false : null;
         }
 
         // The boards and where they were, not the events: a player's id is drawn when the seat joins and is

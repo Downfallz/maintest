@@ -147,6 +147,7 @@ internal sealed class TableComposer
         var replayed = table.Run!.Journal.Exhausted;
         await Task.WhenAny(replayed, table.Session.Outcome, Task.Delay(ReplayWithin, cancellationToken));
         string? reason = null;
+        bool? agreed = null;
 
         // Read on its own rather than as the task that ended the wait: a record whose last line ends the
         // match -- the earlier host died after writing it and before marking the table finished -- completes
@@ -156,7 +157,8 @@ internal sealed class TableComposer
             // The last recorded decision is handed over before the command it causes is applied; the trace
             // growing past it is what says the board has caught up.
             await table.Run.WaitForTraceAsync(table.Session.MatchId, Math.Max(0, table.Run.TraceLength(table.Session.MatchId) - 1), cancellationToken);
-            if (await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, () => table.Seats.Any(seat => seat.Person?.Waiting is not null), cancellationToken))
+            agreed = await table.Run.AgreesWithCheckpointAsync(table.Session.MatchId, () => table.Seats.Any(seat => seat.Person?.Waiting is not null), cancellationToken);
+            if (agreed == true)
             {
                 // Kept: the dataset the replay re-recorded lands now. The rebuilt trace is the whole match
                 // again; the checkpoint the replay was held against is overwritten with it, as every decision
@@ -166,12 +168,19 @@ internal sealed class TableComposer
                 return table;
             }
 
-            reason = "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record";
+            reason = agreed is null
+                ? "the rebuilt match had not caught up with the trace that was checkpointed in time"
+                : "the rebuilt match does not agree with the trace that was checkpointed: the content, the rules or the engine changed under the record";
         }
 
         reason ??= NotRebuiltBecause(replayed, table.Session.Outcome);
         Console.WriteLine($"  Session {record.Id} was not rebuilt: {reason}");
-        if (Basis is { } basis)
+
+        // Only a refusal the record itself explains is marked: a line that does not answer, a match that ends before
+        // its record does, boards that differ. One that ran out of time may be a slow start, and the next host on
+        // the same basis tries it again.
+        var diverged = replayed.IsCompletedSuccessfully ? agreed is false : replayed.IsFaulted || table.Session.Outcome.IsCompleted;
+        if (diverged && Basis is { } basis)
         {
             await table.Run.MarkRefusedAsync(basis, cancellationToken);
         }
