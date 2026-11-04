@@ -419,6 +419,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                     slot = seat.Name,
                     code = CodeOf?.Invoke(seat),
                     join = CodeOf?.Invoke(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                    // Kept for a friend (ADR 0129): no code to read out, and the room says who it waits for instead.
+                    invited = seat.InvitedAccount is not null ? true : (bool?)null,
+                    declined = seat.DeclinedBy is not null ? true : (bool?)null,
                 }).ToArray(),
             };
 

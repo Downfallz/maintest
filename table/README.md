@@ -496,7 +496,46 @@ to the seats; **Send a test** sends one notice through the push service to this 
 deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
 `POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
 The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
-game, a "your turn" over the lobby, neither over its own page.
+game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
+reads its lists again at once.
+
+## Friends
+
+Signed in, the lobby's **Friends** panel (ADR 0129, `docs/tabletop/friends-plan.md` stage 2) lists your friends, the
+players who asked to be your friend (*Accept*, *Decline*), and the ones you asked who have not answered (*Withdraw*),
+and asks a player by their exact player name, the one on their cards: there is no directory and no search. A
+friendship is mutual: a request until the other accepts, and asking somebody who already asked you accepts.
+Declining, withdrawing and removing a friend are silent to the other side; a declined player may ask again. A player
+keeps at most a hundred friends and a hundred pending requests. On a host with push keys, the other player's devices
+are told of a request (*MarkF wants to be your friend*) and of an acceptance; a tap opens the lobby. Friendships are
+kept beside the accounts (`friends/<accountId>.json`, both sides written) and go with the account. The routes, all
+signed in: `GET /api/friends`, `POST /api/friends/requests {"username":"..."}`, `POST /api/friends/requests/<id>/accept`,
+`DELETE /api/friends/requests/<id>`, `DELETE /api/friends/<id>`.
+
+## Inviting a friend
+
+*Invite* beside a friend, or *A friend · seat kept for them* in the create dialog, opens a table whose second seat
+is **kept for that account** (ADR 0129, stage 3): it is not an open place, has no code and no link, and only that
+friend, signed in, accepts it from the **Invitations** section of their lobby (*Accept & play*, *Decline*). Their
+devices are told (*MarkF invites you to a 2v2 battle*; a tap opens the lobby), the inviter waits at the table
+(*Waiting for your friend to accept…*), and is told when the friend accepts (a tap opens the table; the first
+"your turn" that follows is the match starting, ADR 0092) or declines. One invitation of a player's waits at a
+time, for a day at most; removing the friend cancels it. The inviter's card says *Waiting for bastien…* with
+*Cancel invitation*, or *bastien declined* with the three ways out: *Invite another friend*, *Open the seat to
+everyone* (today's open place) and *Close the table*, which any player holding every taken seat of a table that has
+not begun may do. A rebuilt table (ADR 0091) still waits for the friend. Cards name an invited seat by the friend
+(`kind: "invited"`). The routes, all signed in: `POST /api/lobby/tables {"opponent":"friend","friend":"<accountId>"}`,
+`POST /api/lobby/tables/<id>/accept`, `/decline`, `DELETE /api/lobby/tables/<id>/invitation`,
+`POST /api/lobby/tables/<id>/invitation {"friend"}`, `POST /api/lobby/tables/<id>/open`, `DELETE /api/lobby/tables/<id>`;
+`GET /api/lobby/mine` adds `invitations` and each own table's `invited`.
+
+When a match ends, each seat's account is told how, against the other side by name (*Victory · You won against
+bastien*, *Defeat · bastien won*, *A draw*); a bot's seat is told nothing, and one account holding both seats of a
+shared device is told once, in the room's words. A player who leaves a begun match is announced to the other
+seat's account (*bastien left the table*). The outcome card offers **Rematch**, which opens the lobby's create
+dialog on the same opponent and format: the friend (or, if they are not a friend yet, a word to ask them first),
+the bot, or the shared device. Deleting an account also offers the seats it kept for friends to everyone, as ADR
+0122 offers its own, and frees the seats kept for it (stage 4 of the plan).
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file

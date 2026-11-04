@@ -9,15 +9,18 @@ const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');
 export function waitingRoom(view, origin = '') {
   const missing = view?.waiting?.seats;
   if (!Array.isArray(missing) || missing.length === 0) return null;
-  const names = missing.map(seat => nameOf(seat.slot));
+  const names = missing.map(seat => (seat.invited ? 'your friend' : nameOf(seat.slot)));
+  const declined = missing.some(seat => seat.declined);
   return {
-    line: `Waiting for ${names.join(' and ')} to join…`,
-    detail: 'The match begins the moment everyone is seated; you both choose your first mutation at the same time.',
+    line: declined ? 'Your friend declined the invitation.' : `Waiting for ${names.join(' and ')} to ${missing.some(seat => seat.invited) ? 'accept' : 'join'}…`,
+    detail: declined
+      ? 'From the lobby, invite another friend, open the seat to everyone, or close the table.'
+      : 'The match begins the moment everyone is seated; you both choose your first mutation at the same time.',
     seats: missing.map(seat => ({
       slot: seat.slot,
-      name: nameOf(seat.slot),
-      code: seat.code ?? null,
-      link: seat.join ? `${origin}${seat.join}` : null,
+      name: seat.invited ? 'Your friend' : nameOf(seat.slot),
+      code: seat.invited ? null : seat.code ?? null,
+      link: seat.invited || !seat.join ? null : `${origin}${seat.join}`,
     })),
   };
 }
