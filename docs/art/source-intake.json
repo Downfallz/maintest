@@ -39,7 +39,7 @@
           ]
         }
       },
-      "runtimeReady": false,
+      "runtimeReady": true,
       "referenceWebp": {
         "path": "references/base-creature.webp",
         "sha256": "e081f1db6505561d275d81c1c8809627dde2fb956496fe5eefc9888ec9778865",
@@ -83,7 +83,7 @@
           ]
         }
       },
-      "runtimeReady": false,
+      "runtimeReady": true,
       "referenceWebp": {
         "path": "references/brute.webp",
         "sha256": "2e0fb58a029be1cebe5b87df70568bd82c05bfe4a39ece2bceda474df167d196",
@@ -127,7 +127,7 @@
           ]
         }
       },
-      "runtimeReady": false,
+      "runtimeReady": true,
       "referenceWebp": {
         "path": "references/predator.webp",
         "sha256": "27d6329e80214e773f91ff2718e4e67d0cab04d7a2318ea962c037438475e423",
@@ -171,7 +171,7 @@
           ]
         }
       },
-      "runtimeReady": false,
+      "runtimeReady": true,
       "referenceWebp": {
         "path": "references/warped.webp",
         "sha256": "91be7f40e30c39ef781301372d3a35fd1c9c0134a758c4e6aebab76e0e799ac7",

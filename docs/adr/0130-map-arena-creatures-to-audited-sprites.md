@@ -32,15 +32,33 @@ Keep this entirely in presentation. No domain, catalogue IDs, legality or combat
   vector. Loading failure cannot prevent inspection or a legal action. Reduced motion and cancellation retain
   their existing paths.
 
-## Consequences and verification
+## Consequences
 
-The four runtime images add 1,212,726 bytes; the historical sheet remains available for provenance but the
-scene no longer downloads it. This first integration retains source-size textures to avoid another lossy
-encode. Size optimization and art retouching require separate measured work.
+- Good: the arena shows the approved art, and a creature's appearance follows its own acquired root in
+  every snapshot, historical frames included. Names, seat order, hidden drafts and known spells cannot
+  select an appearance.
+- Bad: the four runtime images add 1,212,726 bytes at source size, kept to avoid another lossy encode;
+  size optimization and retouching are separate measured work. A mixed-family build shows the neutral
+  base, which is a placeholder and not a claim about its mutations, until ART-5.
+- Neutral: the historical three-frame sheet leaves the tree and the image; its brief in `arena/ART.md` and
+  git history keep the provenance. The same scene serves the laboratory and the live view, and a figure
+  fitted by the tap width stands 39% (Predator on a desktop) to 81% (Warped on a phone) of its slot height.
 
-Node tests cover family selection, mixed/unknown/legacy snapshots, historical frames, texture fallbacks,
-source-byte identity and mirrored geometry. Host route tests cover all four WebPs. Browser tests exercise
-mutation refreshes, partial/total artwork failures, inspection, six creatures and viewport rotation, alongside
-the existing targeting, action playback, reduced motion and complete-loop suite.
+## Alternatives considered
 
-ART-4 spell effects and ART-5 anatomy overlays remain separate. No Stage 2/3 art cue is implied by this slice.
+- Keep assigning the sheet by roster position: it cannot show an unmutated ancestor and names a class the
+  creature may not have.
+- Pick a dominant family for mixed builds now: that is the ART-5 precedence question, and a wrong guess
+  would read as a claim about the creature's build.
+- Re-encode or crop the references to fit the placement slots: a second lossy pass and a geometry the
+  audit did not review; uniform scaling with reviewed anchors keeps the ART-2 bytes.
+- Tint the enemy team to tell the sides apart: it recolors approved art; labels, formation and rings
+  already carry team identity.
+
+## Follow-up
+
+- `TableFiles` routes the four WebPs and `arena-art.js`; `TableFilesTests` holds every served image and module.
+- Node tests cover family selection, mixed, unknown and legacy snapshots, historical frames, texture
+  fallbacks, source-byte identity against `docs/art/source-intake.json` and mirrored geometry. Browser tests
+  cover mutation refreshes, partial and total artwork failure, inspection, six creatures and viewport rotation.
+- ART-4 spell effects and ART-5 anatomy overlays remain separate; no Stage 2/3 art cue is implied here.
