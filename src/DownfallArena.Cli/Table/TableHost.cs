@@ -90,6 +90,14 @@ internal static class TableHost
         var accounts = options.Accounts == AccountsMode.Off
             ? null
             : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
+        if (accounts is not null)
+        {
+            // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
+            // sign a notice, something to send one with.
+            var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            accounts.Devices = devices;
+            accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
+        }
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
@@ -114,7 +122,9 @@ internal static class TableHost
             : $"  Accounts: {AccountApi.Named(accounts.Mode)}{(accounts.GoogleClientId is { } id ? $" (client {id})" : "")}, kept in '{AccountsLocation(options)}'.");
         Console.WriteLine(push is null
             ? $"  Notices: off. A phone is told \"your turn\" when the host has push keys: --push-keys <file>, or {PushKeys.Environment} (push-keys prints a pair)."
-            : "  Notices: on. A seat's page offers \"Notify me when it's my turn\".");
+            : accounts is null
+                ? "  Notices: on. A seat's page offers \"Notify me when it's my turn\"."
+                : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; the lobby offers \"Notify me on this device\" to a signed-in player.");
 
         // The place of the table the command line asks for is held first: the rebuild below fills the host up
         // to its bound, and a table composed into a full host would be recorded and announced with nothing

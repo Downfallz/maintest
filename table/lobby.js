@@ -1,4 +1,5 @@
 import { mountAccount, nextPath } from './account.js';
+import { mountDevices } from './devices.js';
 import { activateSeats, isOperator, operatorToken, savedSeats } from './session.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -234,6 +235,7 @@ if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
+  const devices = mountDevices(document, { storage });
   const eyebrow = document.getElementById('hero-eyebrow');
   const next = nextPath(globalThis.location.search);
   void mountAccount(document, {
@@ -243,6 +245,7 @@ if (typeof document !== 'undefined') {
       eyebrow.textContent = account ? `Welcome back, ${account.username}` : 'Gather your creatures';
       document.getElementById('leaderboard-link').hidden = mode === 'off';
       lobby.setAccount(account, mode);
+      devices.setAccount(account);
     },
   });
 }

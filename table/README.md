@@ -486,6 +486,18 @@ itself, through the worker and no push service, and one the host sends through t
 the service answered under the button. Both appearing is a phone that works; only the page's is a push that
 does not reach this browser; neither is a browser not showing notifications for this site.
 
+With accounts on as well (ADR 0122), a signed-in player's lobby offers **Notify me on this device**
+(`docs/tabletop/friends-plan.md`, stage 1): the browser's push subscription becomes one of the account's
+**devices**, kept beside the accounts (`devices/<accountId>.json`, five at most, the oldest replaced), where a
+notice that is not about a seat will reach the player: a friend's request, an invitation, the end of a match. A
+seat's "your turn" still goes to the seat's browser as above; the same subscription is registered for both, and
+the host tells each endpoint once. **Stop notifying this device** forgets the device and leaves the subscription
+to the seats; **Send a test** sends one notice through the push service to this device. *Sign out everywhere* and
+deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
+`POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
+The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
+game, a "your turn" over the lobby, neither over its own page.
+
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
 dotnet run --project src/DownfallArena.Cli -- table --push-keys push-keys.json --p2 greedy

@@ -75,6 +75,8 @@
 .lobby-page button.danger { color: var(--refused); border-color: #8a4b45; }
 .lobby-page button.danger:hover:not(:disabled) { border-color: var(--refused); }
 .privacy-panel p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
+.device-panel p:not(.eyebrow), .device-panel output { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; display: block; }
+.device-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; } .device-actions button { flex: 1; min-height: 44px; }
 .name-title { font: 400 28px Georgia, serif; margin: 8px 0 10px; }
 .name-check { margin: 10px 0 0; font-size: 13px; }
 .name-check.good { color: var(--ally); }

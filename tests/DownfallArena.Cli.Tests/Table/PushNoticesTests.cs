@@ -244,7 +244,7 @@ public sealed class PushNoticesTests : IDisposable
         /// <summary>Set, the send waits on it before answering: what a test needs to change the seat under a notice in flight.</summary>
         public TaskCompletionSource? Hold { get; set; }
 
-        public async Task<bool> SendAsync(PushSubscription to, string payload, CancellationToken cancellationToken = default)
+        public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             lock (Sent)
             {

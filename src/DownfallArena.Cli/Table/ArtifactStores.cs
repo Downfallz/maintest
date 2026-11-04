@@ -78,6 +78,23 @@ internal static class ArtifactStores
         return await BlobMatchResults.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>Where an account's devices are kept (friends plan, stage 1): beside the accounts, under <c>devices/</c>.</summary>
+    public static async Task<IDeviceStore> OpenDevicesAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileDeviceStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
+        }
+
+        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobDeviceStore.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>The recordings' container URL with its container swapped for the accounts' one.</summary>
     public static Uri AccountsUri(Uri recordings)
     {
