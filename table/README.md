@@ -55,7 +55,6 @@ when the host was started with `--declaration hidden-intent`, when its `--rules`
 player taps one of its castable cards, picks that spell's targets on the battlefield and confirms, and the
 action resolves. Until the targets are confirmed, **Choose another spell** goes back to the cards (`slot.js`).
 
-
 A starting host serves at once and rebuilds the tables an earlier host left open behind it (ADR 0091): the
 container's platform restarts a host whose port does not answer within a minute, and replaying many records takes
 longer. Until the rebuild is done, a seat whose table is not back yet, the lobby's seat routes and the join codes
@@ -545,4 +544,10 @@ Attacks expand into actual applied effects and recorded before/after changes; re
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
-round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).
+round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
+
+The arena's **Help** dialog explains the current objective and the round flow, including the configured
+spell declaration mode. First-use tips appear once per subject and can be muted; Help remains available.
+`arena-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
+It does not acknowledge questions or send commands, and opening it preserves pending choices.
+See [AU2 and its verification](../arena/README.md#au2-objectives-and-contextual-help).

@@ -72,7 +72,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -107,9 +107,11 @@ simultaneous choices and concession against the real .NET engine.
 The **History** button previews the latest public event and opens a chronological journal of the current
 and previous round (up to 200 events). Expand an attack to read its caster, spell, targets, critical/fizzle,
 applied effects, dropped targets and recorded before/after values. Upkeep ticks, public mutation reveals,
-phase changes, skipped turns and aftermath share the same list. Unknown event payloads and unrevealed
-choices are never rendered; a generic notice identifies unsupported event types. Missing action frames
-are labelled rather than inferred from the current board.
+intent reveals, the turn order with each slot's tempo, skipped turns, aftermath and the outcome share the
+same list; a round or phase beginning is a marker read in place. Creatures are named the way the scene names
+them (the id only tells namesakes apart) and the outcome is read for this seat, although the feed names slots
+the way the engine does. Unknown event payloads and unrevealed choices are never rendered; a generic notice
+identifies unsupported event types. Missing action frames are labelled rather than inferred from the current board.
 
 History is available from the header, planning/combat choices and action result. Opening it settles
 playback without sending a decision or acknowledging a question. Command drafts and focus return on close;
@@ -117,7 +119,7 @@ expanded entries and reading position survive polling. New events follow the bot
 is already there; otherwise **Latest** announces their count. First loads populate history without replaying
 animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
 
-This implements AU1 of the [UX parity plan (PR #438)](https://github.com/Downfallz/maintest/pull/438).
+This implements AU1 of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
 The ordinary round energy receipt and phase guidance belong to AU2–AU3; older-round loading, filtering and
 links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
 rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
@@ -132,3 +134,31 @@ AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional ar
 physical, biological, elemental, necromantic and astral shapes. It preserves queue timing and accessible
 outcomes; reduced motion bypasses all VFX. The browser playback suite also boots the production scene
 in an isolated test harness to verify actual vector objects and their cleanup.
+
+## AU2: objectives and contextual help
+
+The command bar names the current objective: shared mutation picks, the creature choosing its tempo,
+a tied group, an on-turn spell, a hidden intent, or targets for an already revealed spell. Waiting rooms,
+opponent turns, sent choices, lost connections and recorded playback have separate instructions.
+The **Help** button opens the current explanation and a four-phase round guide. The next mutation
+opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
+a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
+
+Each instructional subject opens automatically once, after playback and other dialogs have settled.
+**Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
+planning/combat choices and settings. Generic seen-subject/mute preferences use
+`downfall.arena.help.v1`; no seat, token, match, question or choice is persisted. Denied storage falls
+back to the current page's memory. Opening Help preserves drafts, restores focus on close and never
+acknowledges a question or sends a command. Access loss clears its text.
+
+`table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
+The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
+Ordinary upkeep-energy receipts remain AU3; mutation cards and batch tempos remain later UX slices.
+
+`arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
+waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
+`arena.loop.js` completes real-host matches in both modes with tips enabled. Other focused arena journeys
+set an explicit returning-player preference so they continue exercising their original controls.
+
+Real-host captures: [desktop help](../docs/tabletop/images/arena-guidance/desktop.jpg) ·
+[phone help](../docs/tabletop/images/arena-guidance/phone.jpg).

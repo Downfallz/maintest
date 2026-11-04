@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { startHost, stopHost } from './host.js';
+test.beforeEach(returningArenaPlayer);
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: arena combat commands resolve through the real engine`, async ({ page, context }, info) => {
   test.setTimeout(90000);
