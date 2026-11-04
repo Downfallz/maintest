@@ -127,8 +127,8 @@ Numbers below belong to this arena workstream, not the earlier UI-polish PR list
 | A3 — Presentation/controller boundary (implemented) | `table/presentation.js` extracts local question adaptation, historical display selection and team/timeline mapping; `/play` consumes it | Frozen-input tests cover seat/asking changes, historical resources, public event cutoffs, host order and missing frames; browser journeys exercise the existing renderer | A1; based on `69ce758d` including #420 fixes |
 | A4 — Real board, read-only (implemented) | Opt-in arena route over existing authenticated seat transport | Correct seat projection, account/invitation handling, dead/stunned/condition states, reconnect; no decisions emitted | A3 |
 | A5 — Real action and target controls (implemented) | Existing `slotView`/command builder + scene targets + catalogue-backed action list | At-activation and hidden-intent paths, friendly/self/multiple/no-target spells, unaffordable/unavailable cards, stale asking, server rejection, double-click prevention | A2, A4 |
-| A6 — Confirmed-action playback | Ordered frame queue, action motifs, existing `combat-fx` + `feed`/`replay` helpers | No duplicate effects from SSE/poll; multiple events in one response; final action before upkeep; skip/reconnect/hidden tab; legacy frame fallback | A4; integrate A5 |
-| A7 — Complete game loop | Mutation Tree, Tempo/ties, upkeep, aftermath, result and replay in the scene shell | Complete 3v3 match, simultaneous choices, eliminated creatures, round cap, concession, finished-session replay | A5, A6 |
+| A6 — Confirmed-action playback (implemented) | Ordered frame queue, action motifs, existing `combat-fx` + `feed`/`replay` helpers | No duplicate effects from SSE/poll; multiple events in one response; final action before upkeep; skip/reconnect/hidden tab; legacy frame fallback | A4; integrate A5 |
+| A7 — Complete game loop (implemented) | Mutation Tree, Tempo/ties, upkeep, aftermath, result and replay in the scene shell | Complete 3v3 match, simultaneous choices, eliminated creatures, round cap, concession, finished-session replay | A5, A6 |
 | A8 — Release candidate | Sound opt-in, art coverage, device performance, accessibility, rollout toggle | Full match on desktop + Android + iOS; compare with existing UI; retained fallback; recorded performance and asset budgets | A7 |
 
 A3/A4 can use the provisional art while A2 is reviewed. A5 must land with the current instant/state-only
@@ -230,6 +230,19 @@ Captured during a real-engine Strike on desktop and phone:
 ![Confirmed combat on desktop](images/arena-playback/desktop.jpg)
 
 [Confirmed combat on phone](images/arena-playback/phone.jpg)
+
+### A7 delivery boundary
+
+Built on the merged A6 (#431). [ADR 0128](../adr/0128-complete-the-game-loop-in-the-arena.md) completes the
+loop in the scene shell: Mutation Tree selection, per-creature Tempo confirmation, grouped tie ordering,
+upkeep and aftermath review, concession, the host's match result and a manual whole-match replay. Both combat
+declarations complete a 3v3 match through the arena controls, and two browser contexts verify simultaneous
+private choices before a concession. A finished session opens at `/arena?replay=<session>&seat=player1` under
+the existing operator access. The table remains the invitation and recovery route; A8 release acceptance is
+still pending.
+
+[Mutation Tree on phone](images/arena-loop/phone-mutations.jpg) ·
+[Recorded match on desktop](images/arena-loop/desktop-replay.jpg)
 
 ## Revised immersive prototype (A2)
 

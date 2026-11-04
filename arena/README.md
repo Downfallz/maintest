@@ -1,7 +1,7 @@
 # Phaser arena presentations
 
 Two Phaser pages: a viewport-bound visual experiment at `/arena-lab`, isolated from the actual `/play` client,
-and `/arena`, the opt-in view and combat controls for one authenticated seat (ADRs 0125–0127).
+and `/arena`, the opt-in complete game loop for one authenticated seat (ADRs 0125–0128).
 Pinned Phaser 4.2.1 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the choice; the [delivery plan](../docs/tabletop/browser-arena-plan.md) covers live integration.
 
@@ -67,7 +67,7 @@ about 0.8 MB. Device performance and transfer compression remain to be measured 
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -83,4 +83,16 @@ sequence, including damage, recovery, energy, conditions, fizzles and defeat. Sk
 resize and connection interruption return immediately to the current snapshot. First loads and hidden-tab
 returns never replay history. Legacy events, and one read bringing more than twelve actions, use confirmed
 text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
-Android GPU/performance, screen readers, high zoom and a complete real match remain future acceptance.
+Android GPU/performance, screen readers and high zoom remain future acceptance.
+
+A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
+`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
+Mutation Tree with explicit confirmation. Tempo confirms one creature at a time, with simultaneous reveal
+still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
+concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
+labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
+finished recording using the same operator authorization as `/play?replay=...`.
+
+`node node_modules/playwright/cli.js test --config table.config.js arena.loop.js` (from `studio/browser`)
+plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
+simultaneous choices and concession against the real .NET engine.

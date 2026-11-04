@@ -174,3 +174,24 @@ for (const status of [401, 403]) for (const source of ['shown', 'submit']) test(
   await h.connection[source](11);
   assert.deepEqual(h.views.at(-1), [null, null]); assert.equal(h.states.at(-1), status === 401 ? 'signin' : 'revoked'); assert.equal(h.jobs.size, 0);
 });
+
+test('concession shares the command write fence and refreshes the authoritative result', async () => {
+  const h = harness(), write = pending(); let concessions = 0, decisions = 0;
+  h.transport.concede = () => { concessions++; return write.promise; };
+  h.transport.decide = async () => { decisions++; return ok(null); };
+  h.connection.start(h.transport); await tick();
+  const first = h.connection.concede(); assert.equal(await h.connection.submit({ kind: 'Speed' }), null);
+  assert.equal(await h.connection.concede(), null); write.resolve(ok(null)); await first; await tick();
+  assert.equal(concessions, 1); assert.equal(decisions, 0); assert.equal(h.states.at(-1), 'live'); h.connection.stop();
+});
+test('finished history reads the selected seat from zero and a seat replacement fences the result', async () => {
+  const h = harness(), full = pending(), reads = [];
+  h.transport.seat = async since => { reads.push(since); return reads.length === 2 ? full.promise : ok({ board: {}, feedNext: 80 }); };
+  h.connection.start(h.transport); await tick(); const history = h.connection.history();
+  h.connection.start({ ...h.transport, seat: async () => ok({ board: {}, feedNext: 10 }) });
+  full.resolve(ok({ over: true, board: {}, feedNext: 90 })); assert.equal(await history, null); assert.deepEqual(reads, [0, 0]); h.connection.stop();
+});
+test('recorded transports need no live notification channel', async () => {
+  const h = harness(); delete h.transport.events; h.connection.start(h.transport); await tick();
+  assert.equal(h.states.at(-1), 'live'); assert.deepEqual([...h.jobs.values()].map(job => job.delay), [5000]); h.connection.stop();
+});

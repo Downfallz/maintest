@@ -36,7 +36,7 @@ table/                         Static HTML table: the page two people play a tab
                                presentation.js is the pure seat-to-presentation boundary shared with future live arena work.
                                `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-arena-plan.md, ADR 0123); `/arena` is the opt-in Phaser
-                               view and combat controls for one authenticated seat (ADRs 0125–0127).
+                               complete game loop for one authenticated seat (ADRs 0125–0128).
 arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
@@ -128,7 +128,7 @@ scripts/iterate.sh --explore 0.2 --clone-on-explore                  # fit the c
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
-`arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js` and `arena-playback.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
+`arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js` and `arena-loop.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

@@ -98,13 +98,17 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
       if (!current() || refused(answer)) return null;
       return answer;
     };
-    connection.submit = async decision => {
+    connection.history = async () => {
+      const answer = await transport.seat(0);
+      return !current() || refused(answer) ? null : answer;
+    };
+    const write = async operation => {
       if (connection.writing) return null;
       connection.writing = true;
       connection.revision++;
       cancel(connection.pollTimer);
       try {
-        const answer = await transport.decide(decision);
+        const answer = await operation();
         return !current() || refused(answer) ? null : answer;
       } finally {
         connection.writing = false;
@@ -112,12 +116,16 @@ export function createLiveConnection({ onState, onView, schedule = setTimeout, c
         if (current()) void refresh();
       }
     };
+    connection.submit = decision => write(() => transport.decide(decision));
+    connection.concede = () => write(() => transport.concede());
     onView(null, null);
     onState('connecting');
     void refresh();
-    void stream();
+    if (transport.events) void stream();
   }
   return { start, stop, refresh: () => active?.refresh(),
     shown: asked => active?.shown(asked) ?? Promise.resolve(null),
+    history: () => active?.history() ?? Promise.resolve(null),
+    concede: () => active?.concede() ?? Promise.resolve(null),
     submit: decision => active?.submit(decision) ?? Promise.resolve(null) };
 }

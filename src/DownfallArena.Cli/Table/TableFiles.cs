@@ -50,6 +50,7 @@ internal sealed class TableFiles
             ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
             ["/session.js"] = (Path.Combine(tableDirectory, "session.js"), JavaScript),
             ["/invitation.js"] = (Path.Combine(tableDirectory, "invitation.js"), JavaScript),
+            ["/outcome.js"] = (Path.Combine(tableDirectory, "outcome.js"), JavaScript),
             ["/push.js"] = (Path.Combine(tableDirectory, "push.js"), JavaScript),
 
             // The service worker, at the root so its scope is the whole table (ADR 0118), and what an installed
@@ -93,12 +94,14 @@ internal sealed class TableFiles
             ["/arena-lab-state.js"] = (Path.Combine(tableDirectory, "arena-lab-state.js"), JavaScript),
             ["/arena-lab-fixture.js"] = (Path.Combine(tableDirectory, "arena-lab-fixture.js"), JavaScript),
 
-            // The opt-in live renderer reads and answers combat for one seat (ADRs 0125–0126). Its modules bundle into
+            // The opt-in live renderer completes the game loop for one seat (ADRs 0125–0128). Its modules bundle into
             // live.js and the page loads none of them by name; they are served because every module beside the page
             // is (TableFilesTests), and the laboratory's browser test imports the layout to check its hit targets.
             ["/arena"] = (Path.Combine(tableDirectory, "arena.html"), StudioResponse.Html),
             ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
             ["/arena-combat.js"] = (Path.Combine(tableDirectory, "arena-combat.js"), JavaScript),
+            ["/arena-planning.js"] = (Path.Combine(tableDirectory, "arena-planning.js"), JavaScript),
+            ["/arena-match.js"] = (Path.Combine(tableDirectory, "arena-match.js"), JavaScript),
             ["/arena-playback.js"] = (Path.Combine(tableDirectory, "arena-playback.js"), JavaScript),
             ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),
             ["/arena-seats.js"] = (Path.Combine(tableDirectory, "arena-seats.js"), JavaScript),

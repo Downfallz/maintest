@@ -18,6 +18,7 @@ import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
 import { seatsOf, versusLine } from './players.js';
+import { outcomeText } from './outcome.js';
 import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
@@ -935,24 +936,6 @@ function canInteract(state, current, kind) {
     current.view.waitingFor === kind && current.seat === state.shown &&
     active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
     !needsPass(current, state.holder);
-}
-
-// How the match ended, for the seat reading it: who won and why, off the outcome the host serves. A page on
-// an older host that serves none says only that it is over.
-function outcomeText(view, seat) {
-  const outcome = view.outcome;
-  if (!outcome) return 'The match is over.';
-  const because = { Elimination: 'the last team standing', RoundCap: 'more health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason;
-  if (!outcome.winner) return `The match is a draw · ${because}.`;
-  const won = outcome.winner === seat;
-  const winner = nameOf(outcome.winner);
-  // A replay opened from the admin panel is nobody's seat: it names the winner rather than saying "you".
-  if (view.replay) return `${winner} wins · ${because}.`;
-  if (outcome.reason === 'Concession') {
-    const other = nameOf(seat === 'player1' ? 'player2' : 'player1');
-    return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
-  }
-  return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
 }
 
 // UX 18: a readable conclusion using only the authoritative outcome and

@@ -20,3 +20,20 @@ export async function fitsViewport(page, selector) {
     return wrong;
   }, { ...page.viewportSize(), selector }), { timeout: 15000 }).toEqual([]);
 }
+
+
+// Opening a replay resizes the battlefield without resizing the window. Its canvas and hit targets must
+// follow the mount, rather than cover the historical result controls with the previous canvas dimensions.
+export async function fitsBattlefield(page) {
+  await expect.poll(() => page.evaluate(() => {
+    const stage = document.getElementById('battle-zone').getBoundingClientRect();
+    const canvas = document.querySelector('#phaser-mount canvas').getBoundingClientRect();
+    const wrong = [];
+    if (Math.abs(canvas.height - stage.height) > 1 || Math.abs(canvas.width - stage.width) > 1) wrong.push('canvas');
+    for (const node of document.querySelectorAll('.creature')) {
+      const box = node.getBoundingClientRect();
+      if (box.top < stage.top - 1 || box.bottom > stage.bottom + 1 || box.left < stage.left - 1 || box.right > stage.right + 1) wrong.push(node.dataset.creature);
+    }
+    return wrong;
+  }), { timeout: 10000 }).toEqual([]);
+}

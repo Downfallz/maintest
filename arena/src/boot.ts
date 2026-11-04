@@ -11,7 +11,12 @@ export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLo
     audio: { noAudio: true }, scene, banner: false });
   const resize = new ResizeObserver(() => {
     const { width, height } = mount.getBoundingClientRect();
-    if (width > 0 && height > 0) game.scale.resize(width, height);
+    if (width > 0 && height > 0) {
+      // RESIZE refreshes from its cached parent bounds. A shell change (replay opening) can resize only
+      // the mount, without a window event to refresh that cache. Read it before resizing the canvas.
+      game.scale.getParentBounds();
+      game.scale.resize(width, height);
+    }
   });
   resize.observe(mount);
   game.events.once(Phaser.Core.Events.DESTROY, () => resize.disconnect());

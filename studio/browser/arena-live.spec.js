@@ -30,7 +30,7 @@ async function mount(page, { size = 3, saved = true, search = '', resumeStatus =
 }
 async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
-  await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY'); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#connection')).toHaveText('LIVE'); await expect(page.locator('#loading')).toBeHidden();
 }
 const fits = page => fitsViewport(page, '.creature, #switch-seat, #settings, #play-link');
 test('no seat is read before a viewpoint is chosen, and only the chosen one after', async ({ page }) => {
@@ -116,7 +116,7 @@ test('network failures mark the retained board stale and recover with a new snap
   const state = await mount(page); await choose(page); state.status = 503;
   await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'stale', { timeout: 10000 }); await expect(page.locator('.creature')).toHaveCount(6);
   state.status = 200; state.first.board.roundNumber = 5;
-  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY');
+  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText('LIVE');
 });
 test('an invitation is reviewed at the table and never claimed here', async ({ page }) => {
   const state = await mount(page, { saved: false, invitation: true, search: '?player1=invite' });
@@ -144,7 +144,7 @@ test('a hidden page clears inspection and reloads a fresh viewpoint on return', 
   await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
   state.first.board.allies[0].health = 10;
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY');
+  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText('LIVE');
 });
 
 test('the live dock and all six inspection targets fit short portrait and landscape', async ({ page }) => {
