@@ -2,6 +2,7 @@ import { resolvedSince, lastResolvedText } from './feed.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './arena-live.js';
+import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './arena-timing.js';
 
 const resultText = action => [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
 
@@ -38,12 +39,13 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     if (!current) { stage = 'decision'; emit(); return; }
     summary = resultText(current);
     stage = reduced ? 'impact' : 'windup'; emit();
-    if (reduced) later(finish, 650);
-    else later(() => { stage = 'impact'; emit(); later(finish, 850); }, 420);
+    if (reduced) later(finish, REDUCED_MS);
+    else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
   function finish() {
-    stage = 'resolved'; emit(); later(next, 250);
+    stage = 'resolved'; emit(); later(next, SETTLE_MS);
   }
+  // What the player reads after a skip is the last result they would have reached, not the one cut short.
   function skip() {
     if (queue.length) summary = resultText(queue.at(-1));
     cancelTimer(); queue = []; current = null; stage = 'decision'; emit();
@@ -62,10 +64,12 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     seen = Math.max(seen, end);
     const arriving = resolvedSince(unique, undefined, view.board, cards);
     if (!arriving.length) { emit(); return; }
-    // Legacy events have text but no trustworthy intermediate board. A long catch-up must not keep a
-    // decision behind old pictures either. Both settle on the latest snapshot with the last real result.
-    if (!animate || arriving.some(action => !framed(action)) || queue.length + arriving.length + (current ? 1 : 0) > limit) {
-      queue = []; summary = resultText(arriving.at(-1)); skip(); return;
+    // Legacy events have text but no trustworthy intermediate board. A long catch-up (one read bringing more
+    // than the limit, a reconnection's worth) must not keep a decision behind old pictures either. Both settle
+    // on the latest snapshot with the last real result. What is already queued or playing is never dropped
+    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog.
+    if (!animate || arriving.some(action => !framed(action)) || arriving.length > limit) {
+      summary = resultText(arriving.at(-1)); skip(); return;
     }
     queue.push(...arriving);
     if (!current) next(); else emit();

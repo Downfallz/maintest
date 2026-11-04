@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { placements, strikeApproach } from '../../table/arena-layout.js';
+import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
@@ -146,8 +147,8 @@ export class ArenaScene extends Phaser.Scene {
     if (!target || actor === target) return;
     const approach = strikeApproach(actor.home, target.home);
     const direction = approach.dx < 0 ? -1 : 1;
-    this.tweens.add({ targets: actor.image, x: actor.home.x - approach.dx * 14, y: actor.home.y - approach.dy * 14, angle: -direction * 7, duration: 120 / this.rate,
-      onComplete: () => this.tweens.add({ targets: actor.image, x: approach.x, y: approach.y, angle: direction * 9, duration: 300 / this.rate, ease: 'Cubic.In' }) });
+    this.tweens.add({ targets: actor.image, x: actor.home.x - approach.dx * 14, y: actor.home.y - approach.dy * 14, angle: -direction * 7, duration: DRAW_MS / this.rate,
+      onComplete: () => this.tweens.add({ targets: actor.image, x: approach.x, y: approach.y, angle: direction * 9, duration: STRIKE_MS / this.rate, ease: 'Cubic.In' }) });
   }
 
   private impact() {

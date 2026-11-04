@@ -189,7 +189,7 @@ function render() {
   text('actor-name', playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', playbackState.active ? 'Playing confirmed results. Skip or choose your next action at any time.' : instruction());
+  text('instruction', playbackState.active ? `Playing confirmed results. Skip${action.available ? ' or choose your next action' : ''} at any time.` : instruction());
   $('instruction').hidden = Boolean(action.error);
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {

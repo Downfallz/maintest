@@ -1,5 +1,6 @@
 import { arenaFixture, sampleAction, sampleFrame } from './arena-lab-fixture.js';
 import { combatChanges, combatSnapshot } from './combat-fx.js';
+import { WINDUP_MS } from './arena-timing.js';
 
 // The two stages during which a presentation is in flight: the only ones a skip can cut short.
 const PLAYING = Object.freeze(['windup', 'impact']);
@@ -50,7 +51,7 @@ export function labTransition(state, action) {
 }
 
 // The sample's pacing: the impact lands, then the frame settles. Halved at 2×; any other speed plays at 1×.
-const CUES = Object.freeze([[420, 'impact'], [1250, 'finish']]);
+const CUES = Object.freeze([[WINDUP_MS, 'impact'], [1250, 'finish']]);
 
 // Reset/skip/unmount invalidate pending work, even if an old callback has already been queued.
 //
