@@ -14,7 +14,8 @@ const sprite = (form, bounds, ground) => Object.freeze({
 });
 
 // The ART-2 reference bytes are reused intact. Bounds (alpha >= 128) fit the principal silhouette;
-// faint fringe pixels are retained. Ground is a reviewed centre/contact point in source pixels.
+// faint fringe pixels are retained. Ground is derived from those bounds: their horizontal centre and
+// their bottom row, in source pixels, where every one of these figures stands.
 export const CREATURE_ART = Object.freeze([
   sprite('base-creature', [139, 47, 1368, 999], [753.5, 999]),
   sprite('brute', [78, 12, 1454, 983], [766, 983]),
