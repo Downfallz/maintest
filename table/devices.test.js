@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deviceButton, needsFreshSubscription } from './devices.js';
+import { deviceButton, needsFreshSubscription, optedOut, rememberOptOut } from './devices.js';
+
+function storage() {
+  const values = new Map();
+  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
+}
 
 const base = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false };
 
@@ -24,6 +29,19 @@ test('the reasons a device cannot be told are the seat page\'s, said about the a
 
 test('a hotseat seat page\'s silence does not apply to an account: the panel never says both seats are here', () => {
   assert.equal(deviceButton({ ...base, hotseat: true }).label, 'Notify me on this device');
+});
+
+test('stopping the notices on this device is remembered for the account, until the player asks again', () => {
+  const kept = storage();
+  assert.equal(optedOut(kept, 'acct_mark'), false);
+  rememberOptOut(kept, 'acct_mark', true);
+  assert.equal(optedOut(kept, 'acct_mark'), true, 'the next visit does not register the device again');
+  assert.equal(optedOut(kept, 'acct_bastien'), false, 'another account on the same browser is asked as usual');
+  rememberOptOut(kept, 'acct_mark', false);
+  assert.equal(optedOut(kept, 'acct_mark'), false);
+  assert.equal(optedOut(null, 'acct_mark'), false, 'a browser that keeps nothing');
+  assert.equal(optedOut({ getItem() { throw new Error('blocked'); } }, 'acct_mark'), false);
+  assert.doesNotThrow(() => rememberOptOut({ setItem() { throw new Error('blocked'); } }, 'acct_mark', true));
 });
 
 test('only a 410 from the host means the browser must make a new subscription', () => {

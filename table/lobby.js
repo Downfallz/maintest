@@ -236,7 +236,7 @@ if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   const lobby = mountLobby(document, globalThis.location, storage);
-  const devices = mountDevices(document);
+  const devices = mountDevices(document, { storage });
   const friends = mountFriends(document);
   const eyebrow = document.getElementById('hero-eyebrow');
   const next = nextPath(globalThis.location.search);
