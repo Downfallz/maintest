@@ -23,7 +23,7 @@ test('first load retains every public action, independently of animation baselin
   history.receive(initial, catalogue); playback.receive(initial, new Map()); playback.skip();
   assert.equal(playback.model().active, false);
   assert.deepEqual(history.model().rows.map(row => row.sequence), [2, 5]);
-  assert.match(text(history.model().rows[0]), /First · 1 \(Your team\).*Strike.*No critical.*Other · 2 \(Opponent\).*Damage 7/);
+  assert.match(text(history.model().rows[0]), /First \(Your team\).*Strike.*No critical.*Other · 2 \(Opponent\).*Damage 7/);
 });
 test('duplicates and filtered sequence gaps neither duplicate entries nor lose later outcomes', () => {
   const history = createArenaHistory();
@@ -54,7 +54,7 @@ test('actual multi-target and caster effects retain durations, criticals, droppe
     frame: { before, after: [creature(1, 0), creature(2), creature(3)] }
   }), board, catalogue);
   assert.equal(row.status, 'Critical');
-  for (const expected of ['Opponent', 'Damage 20!', 'Energy 2 · caster', 'Bleed 2 / round · 3 rounds', 'Dropped target: Creature 3: No longer alive', 'HP 20 → 0', 'Defeated']) assert.ok(text(row).includes(expected), expected);
+  for (const expected of ['Opponent', 'Damage 20!', 'Energy 2 · caster', 'Bleed 2 / round · 3 rounds', 'Dropped target: Other · 3 (Opponent): No longer alive', 'HP 20 → 0', 'Defeated']) assert.ok(text(row).includes(expected), expected);
 });
 test('a fizzle reports its refusal without claiming a critical roll', () => {
   const row = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [] }, fizzled: true,
@@ -75,10 +75,12 @@ test('upkeep records actual ticks in engine order, including zero, without claim
   const empty = historyEntry(entry(2, 'OngoingEffectsApplied'), board, catalogue);
   assert.match(text(empty), /Ordinary round energy is separate/);
 });
-test('aftermath retains expired conditions and immunity facts', () => {
-  const gone = historyEntry(entry(1, 'ConditionsExpired', { expired: { 2: [{ effect: { kind: 'Bleed' } }] } }), board, catalogue);
+test('aftermath retains expired conditions and immunity facts, and an aftermath that changed nothing says nothing', () => {
+  const gone = historyEntry(entry(1, 'ConditionsExpired', { expired: { 2: [{ effect: { kind: 'Bleed' } }, { effect: { kind: 'Defense' } }], 3: [] } }), board, catalogue);
   const immune = historyEntry(entry(2, 'StunImmunityGained', { creatures: [1] }), board, catalogue);
-  assert.match(text(gone), /Bleed ends → Creature 2/); assert.match(text(immune), /Creature 1 immune to stun/);
+  assert.deepEqual(gone.details, [{ text: 'Other · 2 (Opponent) · Bleed + Defense ends', tone: 'condition' }]);
+  assert.deepEqual(immune.details, [{ text: 'First (Your team) · immune to stun', tone: 'condition' }]);
+  assert.deepEqual(historyEntry(entry(3, 'ConditionsExpired', { expired: {} }), board, catalogue).details, []);
 });
 test('round ownership uses the event round rather than the next snapshot, and retains two rounds', () => {
   const history = createArenaHistory();
@@ -110,9 +112,44 @@ test('invalid sequences are rejected and missing catalogue data remains readable
   assert.equal(historyEntry(cast(-1), board, catalogue), null);
   assert.match(text(historyEntry(cast(2), {}, null)), /Creature 1 \(Unknown team\) · hit/);
 });
-test('skipped turns and final outcomes survive without a combat result', () => {
-  assert.match(text(historyEntry(entry(1, 'SlotSkipped', { actor: 1, reason: { message: 'Unable to act' } }), board, catalogue)), /Turn skipped.*Unable to act/);
-  assert.match(text(historyEntry(entry(2, 'MatchEnded', { outcome: { winner: 'player1', reason: 'Elimination' } }), board, catalogue)), /You win/);
+test('a skipped turn names who lost it and why', () => {
+  assert.match(text(historyEntry(entry(1, 'SlotSkipped', { actor: 1, reason: { message: 'Unable to act' } }), board, catalogue)), /First \(Your team\) · Turn skipped.*Unable to act/);
+});
+test('the outcome is read for this seat although the feed names slots the way the engine does', () => {
+  const ended = winner => entry(2, 'MatchEnded', { outcome: { winner, reason: 'Elimination' } });
+  assert.match(text(historyEntry(ended('Player1'), board, catalogue)), /You win · the last team standing/);
+  assert.match(text(historyEntry(ended('Player2'), board, catalogue)), /Player 2 wins · the last team standing/);
+  assert.match(text(historyEntry(ended(null), board, catalogue)), /draw/);
+  assert.match(text(historyEntry(ended('Player1'), { ...board, slot: 'Player2' }, catalogue)), /Player 1 wins/);
+});
+test('creatures are named the way the scene names them: the id only tells namesakes apart', () => {
+  const row = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [2, 3] } } }), board, catalogue);
+  assert.match(text(row), /First \(Your team\) · Strike.*Targets: Other · 2 \(Opponent\), Other · 3 \(Opponent\)/);
+  assert.match(text(historyEntry(cast(1), { allies: [{ id: 1 }], enemies: [{ id: 2, name: '' }] }, catalogue)), /Creature 1 \(Your team\).*Creature 2 \(Opponent\)/);
+});
+test('a reveal names the caster, the spell and the targets it was declared on', () => {
+  const row = historyEntry(entry(1, 'ActionRevealed', { action: { actor: 2, spell: 'hit', targets: [1] } }), board, catalogue);
+  assert.equal(row.title, 'Other · 2 (Opponent) · reveals Strike');
+  assert.match(text(row), /Targets: First \(Your team\).*result follows/);
+  assert.match(text(historyEntry(entry(2, 'ActionRevealed', { action: { actor: 1, spell: 'unknown', targets: [] } }), board, catalogue)), /reveals unknown.*No targets/);
+});
+test('a built or reordered timeline lists every slot in order with its tempo', () => {
+  const timeline = { slots: [{ owner: 'Player2', creature: 2, speed: 'Quick' }, { owner: 'Player1', creature: 1, speed: 'Standard' }], rollOffs: [] };
+  const built = historyEntry(entry(1, 'TimelineBuilt', { timeline }), board, catalogue);
+  assert.deepEqual(built.details.map(one => one.text), ['1 · Other · 2 (Opponent) · Instinct', '2 · First (Your team) · Precision']);
+  assert.deepEqual(historyEntry(entry(2, 'TiesOrdered', { timeline }), board, catalogue).details.length, 2);
+  assert.deepEqual(historyEntry(entry(3, 'TimelineBuilt', {}), board, catalogue).details, []);
+});
+test('round and phase markers carry no detail and use the player\'s words', () => {
+  const tempo = historyEntry(entry(1, 'SubPhaseEntered', { subPhase: 'Speed' }), board, catalogue);
+  assert.equal(tempo.title, 'Tempo'); assert.deepEqual(tempo.details, []); assert.equal(tempo.summary, 'Tempo');
+  assert.equal(historyEntry(entry(2, 'SubPhaseEntered', {}), board, catalogue).title, 'Phase changed');
+  assert.equal(historyEntry(entry(3, 'RoundStarted', {}, 3), board, catalogue).round, 3);
+});
+test('a finished match is never a waiting room, whatever the view still says about arrivals', () => {
+  const history = createArenaHistory();
+  history.receive(view([cast(1)], { waiting: { seats: [] }, over: true }), catalogue);
+  assert.equal(history.model().waiting, false); assert.equal(history.model().rows.length, 1);
 });
 test('normalization never mutates a frozen response or retains its raw frame', () => {
   const input = cast(1); const frozen = value => { if (value && typeof value === 'object') { Object.values(value).forEach(frozen); Object.freeze(value); } }; frozen(input);

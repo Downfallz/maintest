@@ -3,6 +3,7 @@ import { placements, strikeApproach } from '../../table/arena-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/arena-art.js';
 import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
+import { SpellEffects, type EffectAnchor } from './spell-effects';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
@@ -24,6 +25,7 @@ export class ArenaScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
+  private spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
   private rate = 1;
@@ -66,7 +68,8 @@ export class ArenaScene extends Phaser.Scene {
     this.rate = rate;
     if (!this.ready) return;
     const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy]));
-    if (roster !== this.roster) {
+    const rosterChanged = roster !== this.roster;
+    if (rosterChanged) {
       this.clearMotion();
       for (const figure of this.figures.values()) { figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
@@ -75,7 +78,7 @@ export class ArenaScene extends Phaser.Scene {
     }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
-    this.arrange();
+    this.arrange(rosterChanged);
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
@@ -105,7 +108,7 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  private arrange() {
+  private arrange(resetPositions = false) {
     const { width, height } = this.scale;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
@@ -121,7 +124,8 @@ export class ArenaScene extends Phaser.Scene {
       figure.home = home;
       const geometry = figureGeometry(figure.art, home, figure.enemy);
       figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y);
-      if (!inFlight) figure.image.setPosition(home.x, home.y).setAngle(0);
+      // Reduced motion can enter impact directly with newly mutated historical figures.
+      if (!inFlight || resetPositions) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
@@ -133,9 +137,13 @@ export class ArenaScene extends Phaser.Scene {
     const actor = this.figures.get(this.state.actor!);
     const target = this.figures.get(this.state.target!);
     if (!actor) return;
-    if (this.state.cue && this.state.cue.kind !== 'strike') {
-      this.tweens.add({ targets: actor.image, alpha: .5, yoyo: true, duration: 180 / this.rate });
-      return;
+    const cue = this.state.cue;
+    if (cue) {
+      this.spellEffects.windup(cue.visual, this.anchor(actor), cue.contact.flatMap(id => {
+        const figure = this.figures.get(id);
+        return figure ? [{ id, anchor: this.anchor(figure) }] : [];
+      }), this.rate);
+      if (cue.visual.delivery !== 'melee') return;
     }
     if (!target || actor === target) return;
     const approach = strikeApproach(actor.home, target.home);
@@ -151,8 +159,9 @@ export class ArenaScene extends Phaser.Scene {
       this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
     }
     const cue = this.state.cue;
+    if (cue) { this.spellImpact(cue, actor); return; }
     const fallback = this.state.target ? [this.state.target] : [];
-    const struck = cue?.struck ?? fallback;
+    const struck = fallback;
     for (const id of struck) {
       const target = this.figures.get(id);
       if (!target) continue;
@@ -161,18 +170,43 @@ export class ArenaScene extends Phaser.Scene {
       this.burst(target, 0xffd995, true);
     }
     if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
-    if (cue) this.pulseEffects(cue, actor);
   }
 
-  private pulseEffects(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
-    const tones: Record<string, number> = { recovery: 0x96dfa5, energy: 0x91caef, condition: 0xc3a0eb, neutral: 0xeac88e };
-    const pulsed = new Set<string>();
-    for (const effect of cue.effects) {
-      const target = this.figures.get(effect.creature);
-      if (!target || cue.struck.includes(effect.creature) || pulsed.has(effect.creature)) continue;
-      pulsed.add(effect.creature); this.burst(target, tones[effect.tone] ?? GOLD, false);
+  private anchor(figure: Figure): EffectAnchor {
+    const height = (figure.art.bounds[3] - figure.art.bounds[1]) * figure.image.scaleY;
+    return { x: figure.home.x, y: figure.home.y - height * .5,
+      radius: Math.max(16, Math.min(58, figure.home.hitWidth * .3, height * .35)) };
+  }
+
+  private spellImpact(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
+    this.spellEffects.clear();
+    if (cue.kind === 'fizzle') {
+      if (actor) this.spellEffects.impact(cue.visual, this.anchor(actor), this.state.actor!, this.rate);
+      return;
     }
-    if (cue.kind === 'fizzle' && actor) this.burst(actor, 0x9ba6ac, false);
+    for (const id of cue.recipients) {
+      const target = this.figures.get(id);
+      if (!target) continue;
+      const self = id === this.state.actor;
+      // A blood ritual's self-cost is a wound, never a lunge, lightning bolt or summoned spirit at its caster.
+      const effects = cue.effects.filter(effect => effect.creature === id);
+      if (self && effects.some(effect => effect.wound)) {
+        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.anchor(target), id, this.rate);
+        if (effects.every(effect => effect.wound)) continue;
+      }
+      const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
+      const visual = self && cue.visual.delivery === 'melee'
+        ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
+      this.spellEffects.impact(visual, this.anchor(target), id, this.rate, actor ? this.anchor(actor) : undefined);
+      if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
+        const { dx, dy } = strikeApproach(actor.home, target.home);
+        this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,
+          angle: dx * 4, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+      }
+    }
+    if (cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
+      this.cameras.main.shake(120 / this.rate, .0015);
+    }
   }
 
   private burst(target: Figure, color: number, sparks: boolean) {
@@ -193,6 +227,7 @@ export class ArenaScene extends Phaser.Scene {
   private clearMotion() {
     this.tweens.killAll();
     this.cameras.main.resetFX();
+    this.spellEffects.clear();
     for (const effect of this.effects) effect.destroy();
     this.effects = [];
     for (const figure of this.figures.values()) figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);

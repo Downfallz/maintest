@@ -1124,3 +1124,29 @@ for (const width of [740, 844]) {
     await page.screenshot({ path: info.outputPath('landscape-target.png'), animations: 'disabled' });
   });
 }
+
+test('classic replay separates recorded ordinary energy from ongoing ticks without a nominal allowance', async ({ page }) => {
+  const feed = [
+    { sequence: 1, round: 1, event: { kind: 'RoundEnergyGranted', roundId: 1, grants: [
+      { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 3, before: 7, after: 10 },
+      { creature: 2, baseRequested: 0, passiveRequested: 0, gained: 0, before: 2, after: 2 },
+    ] } },
+    { sequence: 2, round: 1, event: { kind: 'OngoingEffectsApplied', roundId: 1, bleedTicks: [{ creature: 2, damage: 2 }] } },
+    { sequence: 3, round: 2, event: { kind: 'OngoingEffectsApplied', roundId: 2 } },
+  ];
+  const over = { ...view, over: true, waitingFor: null, waitingCreature: null, options: {}, outcome: { winner: 'player1', reason: 'RoundCap' }, feed, feedNext: 4 };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: over }));
+  await expect(page.locator('#asking')).toHaveText(/You win/);
+  await page.getByRole('button', { name: 'Replay the match action by action' }).click();
+  const rows = page.locator('#playback-action .recap-action');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('+3 energy · 7 → 10 (base 4, passive 1)');
+  await expect(rows.nth(1)).toContainText('+0 energy · 2 → 2 (base 0, passive 0)');
+  await page.locator('[data-focus="playback-next"]').click();
+  await expect(rows).toHaveCount(1); await expect(rows).toContainText('Ongoing damage −2 HP');
+  await expect(page.locator('#playback-action')).not.toContainText('energy');
+  await page.locator('[data-focus="playback-next"]').click();
+  await expect(rows).toHaveCount(1); await expect(rows).toContainText('No ongoing effect ticked.');
+  await expect(page.locator('#playback-action')).not.toContainText('energy');
+  await expectNoSidewaysScroll(page);
+});

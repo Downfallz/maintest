@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createArenaPlayback, actionCue } from './arena-playback.js';
 const creature = (id, health = 20) => ({ id, health, maxHealth: 20, energy: 5, totalDefense: 2, isAlive: health > 0, name: `Creature ${id}` });
 const before = [creature(1), creature(2), creature(3)];
@@ -142,4 +143,66 @@ test('dropped target explanations remain available with the full result', () => 
   const h = harness(); h.receive([]); h.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2, 3] },
     droppedTargets: [{ target: 3, error: { message: 'Target is dead' } }] } })]);
   assert.match(h.queue.model().summary, /Dropped: Creature 3: Target is dead/);
+});
+
+// ART-4 (ADR 0131): how a cast is drawn comes with its card; the page names no spell and no effect.
+const art = JSON.parse(readFileSync(new URL('../data/presentation/spell-art.json', import.meta.url), 'utf8'));
+const drawn = new Map(Object.entries(art).map(([id, visual]) => [id, { name: 'Renamed or translated', visual }]));
+const cast = (spell, effects = [], extra = {}) => ({ actor: { id: 1 }, action: { spell, targets: [2, 3] }, status: 'Resolved', effects, ...extra });
+const outcome = (id, tone, extra = {}) => ({ target: { id }, tone, text: 'Confirmed result', ...extra });
+
+test('every authored spell is drawn by the spell art the builder publishes', () => {
+  const root = new URL('../data/Spells/', import.meta.url);
+  const spells = readdirSync(root, { recursive: true }).filter(path => path.endsWith('.json'))
+    .map(path => JSON.parse(readFileSync(new URL(path, root), 'utf8')).id);
+  assert.deepEqual(Object.keys(art).sort(), spells.sort());
+});
+test('the card decides how a cast is drawn, whatever its label says', () => {
+  for (const [id, family, motif] of [['tornado', 'physical', 'wave'], ['soul_devourer', 'biological', 'bite'], ['summon_minions', 'necromantic', 'spirits'], ['toxic_waves', 'astral', 'void']]) {
+    const visual = actionCue(cast(`spell:${id}:v1`), drawn).visual;
+    assert.equal(visual.family, family); assert.equal(visual.motif, motif);
+  }
+});
+test('a card nobody drew, an unknown spell and an older host without art all get the neutral mark', () => {
+  const older = new Map([['spell:tornado:v1', { name: 'Tornado' }]]);
+  for (const [spell, cards] of [['spell:tornado:v1', older], ['spell:lightning_bolt:v2', drawn], [undefined, drawn], ['toString', drawn], ['spell:tornado:v1', undefined]]) {
+    assert.deepEqual(actionCue(cast(spell), cards).visual, { family: 'neutral', motif: 'focus', delivery: 'cast' });
+  }
+});
+test('recipients come only from applied outcomes, deduplicated, and the caster is no contact target', () => {
+  const cue = actionCue(cast('spell:summon_minions:v1', [outcome(1, 'harm'), outcome(2, 'condition'), outcome(2, 'harm')]), drawn);
+  assert.deepEqual(cue.recipients, ['1', '2']); assert.deepEqual(cue.contact, ['2']); assert.equal(cue.visual.delivery, 'cast');
+});
+test('a fizzle draws only its broken cast and touches nobody, whatever a malformed record lists', () => {
+  const cue = actionCue(cast('spell:throwing_star:v1', [outcome(2, 'harm')], { status: 'Fizzled' }), drawn);
+  assert.equal(cue.visual.motif, 'fizzle'); assert.deepEqual(cue.effects, []); assert.deepEqual(cue.recipients, []); assert.deepEqual(cue.struck, []);
+});
+test('empty outcomes fabricate no recipient from the declaration', () => {
+  const cue = actionCue(cast('spell:tornado:v1'), drawn); assert.deepEqual(cue.recipients, []); assert.deepEqual(cue.contact, []);
+});
+test('damage the caster took is a wound, and so is a harmful lasting effect it put on itself', () => {
+  const harmful = new Set(['Bleed']);
+  const bleed = outcome(1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'Bleed' }, onCaster: true });
+  const ward = outcome(1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'DefenseBuff' }, onCaster: false });
+  const cue = actionCue(cast('spell:bone_ward:v1', [outcome(1, 'harm'), bleed, ward, outcome(2, 'condition')]), drawn, harmful);
+  assert.deepEqual(cue.effects.map(effect => effect.wound), [true, true, false, false]);
+  assert.deepEqual(cue.contact, ['2']); assert.ok(!cue.struck.includes('2'));
+});
+test('without the catalogue naming the harmful effects, only damage on the caster is a wound', () => {
+  const bleed = outcome(1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'Bleed' }, onCaster: true });
+  assert.deepEqual(actionCue(cast('spell:bone_ward:v1', [bleed]), drawn).effects.map(effect => effect.wound), [false]);
+});
+test('the live queue carries the card\'s visual and the harmful effects it was given through to the cue', () => {
+  const start = [1, 2, 3].map(id => ({ id, health: 20, maxHealth: 20, energy: 5, isAlive: true }));
+  const seat = { board: { allies: start.slice(0, 1), enemies: start.slice(1), roundNumber: 2 }, feed: [] };
+  const queue = createArenaPlayback({ onChange() {}, schedule() {} });
+  const options = { effects: [{ kind: 'Bleed', glyph: '', harmful: true }, { kind: 'DefenseBuff', glyph: '', harmful: false }] };
+  queue.receive(seat, drawn, options);
+  queue.receive({ ...seat, feed: [{ sequence: 1, event: { kind: 'CombatActionResolved', roundId: 2,
+    resolution: { action: { actor: 1, spell: 'spell:bone_ward:v1', targets: [2, 3] } },
+    appliedOutcomes: [{ kind: 'ConditionOutcome', target: 1, effect: { kind: 'Bleed', amountPerRound: 2 }, onCaster: true }, { kind: 'ConditionOutcome', target: 2, effect: { kind: 'DefenseBuff', amount: 2 } }],
+    frame: { before: start, after: start } } }] }, drawn, options);
+  assert.match(queue.model().label, /Renamed or translated/);
+  assert.equal(queue.model().cue.visual.motif, 'bones'); assert.equal(queue.model().frame.target, '2');
+  assert.deepEqual(queue.model().cue.effects.map(effect => effect.wound), [true, false]);
 });

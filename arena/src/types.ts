@@ -13,13 +13,15 @@ export interface LabState {
   changes: { creature: string; health?: number; energy?: number; defeated?: boolean }[];
 }
 export interface Placement { x: number; y: number; size: number; hitWidth: number; }
+export interface SpellVisual { family: string; motif: string; delivery: string; }
 export const creaturesOf = (state: LabState) => [...state.board.allies, ...state.board.enemies];
 export const isEnemy = (state: LabState, id: string) => state.board.enemies.some(one => one.id === id);
 
 // A render frame has presentation state only. The live adapter never imports the lab's sample or reducer.
 export interface SceneFrame {
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
-  cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string }[];
+  cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
+    visual: SpellVisual; recipients: string[]; contact: string[];
     changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[] };
   creatures: { id: string; form: string; isAlive: boolean; enemy: boolean }[];
 }

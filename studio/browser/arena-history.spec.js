@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
 const roster = [1, 2, 3, 4, 5, 6].map(id => creature(id));
@@ -131,6 +133,44 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('actions arriving while the journal is open settle on the board and stay readable', async ({ page }) => {
+  const h = await mount(page); await page.locator('#history-open').click();
+  await h.publish([entry(11), entry(12)]); await expect(rows(page)).toHaveCount(3);
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
+  await expect(page.locator('#playback-skip')).toBeHidden();
+  await page.locator('#history-close').click();
+  await expect(page.locator('#playback-result')).toBeVisible();
+  await expect(page.locator('#result-text')).toContainText('Creature 4 (opponent) · Strike → Creature 1');
+  expect(h.state.errors).toEqual([]);
+});
+test('the action result opens the journal over itself and takes the focus back', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(11)]);
+  await page.locator('#playback-skip').click(); await page.locator('#playback-result').click();
+  await expect(page.locator('#result-dialog')).toBeVisible();
+  await page.locator('#result-dialog [data-history-open]').click(); await expect(rows(page)).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#result-dialog [data-history-open]')).toBeFocused();
+  await expect(page.locator('#result-dialog')).toBeVisible(); await expect(page.locator('#history-dialog')).toBeHidden();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('upkeep ticks, reveals and phase markers read beside the attacks', async ({ page }) => {
+  const h = await mount(page, [
+    { sequence: 8, event: { kind: 'RoundStarted', roundId: 2 } },
+    { sequence: 9, event: { kind: 'OngoingEffectsApplied', roundId: 2, energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [{ creature: 1, damage: 2 }] } },
+    { sequence: 10, event: { kind: 'ActionRevealed', roundId: 2, action: { actor: 4, spell: 'strike', targets: [1] } } },
+    entry(11)]);
+  await page.locator('#history-open').click();
+  await expect(page.locator('#history-list [data-sequence]')).toHaveCount(4);
+  await expect(page.locator('#history-list [data-sequence="8"]')).toHaveClass(/history-marker/);
+  await expect(page.locator('#history-list [data-sequence="8"] summary')).toHaveCount(0);
+  await expect(page.locator('#history-list [data-sequence="8"]')).toContainText('Round begins');
+  const upkeep = page.locator('#history-list [data-sequence="9"]'); await upkeep.locator('summary').click();
+  await expect(upkeep.locator('[data-tone="harm"]')).toHaveText('Creature 1 (Your team) · Ongoing damage −2 HP');
+  await expect(page.locator('#history-list [data-sequence="10"] summary')).toContainText('Creature 4 (Opponent) · reveals Strike');
+  await expect(page.locator('#history-range')).toHaveText('Rounds 1–2 · 4 events');
+  expect(h.state.errors).toEqual([]);
+});
+
 
 
 test('ordinary energy history keeps actual gains, zero gains and the order before ongoing ticks', async ({ page }) => {

@@ -7,7 +7,7 @@ import type { SpellCatalogue } from './combat';
 
 export interface Package { id: string; name: string; level: number; initiativeBonus: number; spells: string[];
   prerequisites?: string[]; anyOf?: string[]; passiveLines?: string[]; tags?: string[] }
-export interface Catalogue extends SpellCatalogue { packages?: Package[] }
+export interface Catalogue extends SpellCatalogue { packages?: Package[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
 type Controller = ReturnType<typeof createArenaPlanning>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function button(label: string, action: () => void) {
@@ -59,7 +59,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     for (const id of offers?.creatures?.find((one: { creature: number }) => one.creature === creature)?.availableTiers ?? []) {
       if (!byId.has(id)) { const node = button(id, () => controller.choose({ creature, tier: id })); node.dataset.mutation = id; node.dataset.offered = 'true'; el('planning-choices').append(node); }
     }
-    const pass = button('Pass this pick', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
+    const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
     el('planning-help').textContent = `${offers?.remainingPicks ?? 0} shared team picks left. At most one mutation per creature this opportunity. Picks reveal together. Explore branches, then select and confirm.`;
   }
   function tempos(model: ReturnType<Controller['model']>) {
@@ -96,7 +96,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   }
   function selectionText(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const chosen = model.choice;
-    if (chosen?.pass) return 'Pass this pick';
+    if (chosen?.pass) return 'Pass remaining picks';
     if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
     if (chosen?.speed) return `${name(model.latest.waitingCreature)} · ${tempoLabel(chosen.speed)}`;
     if (chosen?.keep) return 'Dice order';

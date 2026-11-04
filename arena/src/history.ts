@@ -9,7 +9,7 @@ function textNode(tag: string, text: string, className = '') {
 
 export function historyControls(beforeOpen: () => void, onVisibility: () => void) {
   const dialog = el<HTMLDialogElement>('history-dialog'), list = el('history-list');
-  const entries = new Map<number, HTMLDetailsElement>();
+  const entries = new Map<number, HTMLElement>();
   let opener: HTMLElement | null = null, active = false, key = '', lastSequence: number | null = null, unread = 0;
   const launchers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-history-open]'));
   const close = () => dialog.close();
@@ -22,7 +22,6 @@ export function historyControls(beforeOpen: () => void, onVisibility: () => void
   }
   launchers.forEach(button => button.addEventListener('click', open));
   el('history-close').addEventListener('click', close);
-  dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   dialog.addEventListener('close', () => {
     onVisibility();
     if (active && opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length) opener.focus({ preventScroll: true });
@@ -30,16 +29,20 @@ export function historyControls(beforeOpen: () => void, onVisibility: () => void
   });
   el('history-new').addEventListener('click', () => { list.scrollTop = list.scrollHeight; unread = 0; el('history-new').hidden = true; });
 
+  // A row with nothing under its title is a marker (a round or a phase beginning): it is read in place rather
+  // than offering a disclosure that opens on nothing.
   function entryNode(row: Row) {
-    const node = document.createElement('details'); node.className = 'history-entry'; node.dataset.sequence = String(row.sequence);
+    const heading = [textNode('span', `Round ${row.round || '—'} · ${row.category}`, 'history-meta'), textNode('strong', row.title)];
+    const node = document.createElement(row.details.length ? 'details' : 'div');
+    node.className = row.details.length ? 'history-entry' : 'history-entry history-marker';
+    node.dataset.sequence = String(row.sequence);
+    if (!row.details.length) { node.append(...heading); return node; }
     const summary = document.createElement('summary');
-    summary.append(textNode('span', `Round ${row.round || '—'} · ${row.category}`, 'history-meta'),
-      textNode('strong', row.title), ...(row.status ? [textNode('span', row.status, 'history-status')] : []));
+    summary.append(...heading, ...(row.status ? [textNode('span', row.status, 'history-status')] : []));
     const details = document.createElement('ul'); details.className = 'history-effects';
     for (const effect of row.details) {
       const item = textNode('li', effect.text); item.dataset.tone = effect.tone; details.append(item);
     }
-    if (!row.details.length) details.append(textNode('li', row.summary));
     node.append(summary, details); return node;
   }
 

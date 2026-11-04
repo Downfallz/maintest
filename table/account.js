@@ -39,6 +39,7 @@ export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bi
   if (!response.ok) {
     const error = new Error(result.message || `The host answered ${response.status}. Try again.`);
     error.code = result.error;
+    error.status = response.status;
     throw error;
   }
   return result;

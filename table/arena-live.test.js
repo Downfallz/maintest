@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLiveConnection, livePresentation } from './arena-live.js';
+import { createLiveConnection, creatureLabel, livePresentation } from './arena-live.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const pending = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -105,6 +105,11 @@ test('identical host names remain distinguishable without replacing their names 
   const result = livePresentation({ board: { allies: [{ id: 1, name: 'Main' }], enemies: [{ id: 4, name: 'Main' }] } });
   assert.deepEqual(result.creatures.map(one => one.label), ['Main · 1', 'Main · 4']);
   assert.deepEqual(result.creatures.map(one => one.name), ['Main', 'Main']);
+});
+test('one label names a creature on every surface: the name alone, the id beside a namesake, the id for an unknown', () => {
+  const board = { allies: [{ id: 1, name: 'Main' }, { id: 2, name: 'Scout' }], enemies: [{ id: 4, name: 'Main' }, { id: 5, name: '' }] };
+  assert.deepEqual([1, 2, 4, 5, 9].map(id => creatureLabel(board, id)), ['Main · 1', 'Scout', 'Main · 4', 'Creature 5', 'Creature 9']);
+  assert.equal(creatureLabel(null, 3), 'Creature 3'); assert.equal(creatureLabel(board, undefined), 'Creature ?');
 });
 
 test('the first stream\'s ready owes no second poll; a reconnect\'s ready refreshes', async () => {
