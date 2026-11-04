@@ -17,6 +17,7 @@ export function roundNotes(entries, board) {
 }
 
 export function replayText(action, catalogue) {
+  if (action.ordinaryEnergy) return turnoverText(action);
   if (action.interlude === 'upkeep') {
     const ticks = action.ticks.filter(tick => tick.amount > 0);
     return ticks.length ? turnoverText({ ...action, ticks }) : 'Upkeep · No ongoing ticks applied';

@@ -31,6 +31,8 @@ public sealed class WaitingRoomTests : IDisposable
         var room = await Seat(table, 0);
 
         table.Session.HasBegun.ShouldBeFalse("one person is still to come");
+        // Joining builds round one before arrivals; the waiting-room UI defers presenting this public receipt.
+        room.GetProperty("feed").EnumerateArray().ShouldContain(entry => entry.GetProperty("event").GetProperty("kind").GetString() == "RoundEnergyGranted");
         first.Waiting.ShouldBeNull("nobody is asked anything before the table is full");
         room.GetProperty("waitingFor").ValueKind.ShouldBe(JsonValueKind.Null);
         var missing = room.GetProperty("waiting").GetProperty("seats").EnumerateArray().ToList();
@@ -44,7 +46,14 @@ public sealed class WaitingRoomTests : IDisposable
         table.Session.HasBegun.ShouldBeTrue();
         (await Asked(first)).Kind.ShouldBe(PlayerOptionsKind.Evolution);
         (await Asked(second)).Kind.ShouldBe(PlayerOptionsKind.Evolution);
-        (await Seat(table, 0)).GetProperty("waiting").ValueKind.ShouldBe(JsonValueKind.Null, "the room is gone once the match has begun");
+        var firstView = await Seat(table, 0);
+        var secondView = await Seat(table, 1);
+        firstView.GetProperty("waiting").ValueKind.ShouldBe(JsonValueKind.Null, "the room is gone once the match has begun");
+        var receipt = firstView.GetProperty("feed").EnumerateArray().Single(entry => entry.GetProperty("event").GetProperty("kind").GetString() == "RoundEnergyGranted");
+        var other = secondView.GetProperty("feed").EnumerateArray().Single(entry => entry.GetProperty("event").GetProperty("kind").GetString() == "RoundEnergyGranted");
+        receipt.GetRawText().ShouldBe(other.GetRawText());
+        receipt.GetProperty("event").GetProperty("roundId").GetInt32().ShouldBe(1);
+        receipt.GetProperty("event").GetProperty("grants").GetArrayLength().ShouldBe(4);
     }
 
     /// <summary>Both are asked at once: neither pick waits for the other's, which is what picking face down means (ADR 0089).</summary>

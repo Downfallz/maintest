@@ -25,6 +25,9 @@ internal sealed record TableRecord
     /// <summary>Closed by the operator, or let go of: not to be rebuilt, whatever its decisions say.</summary>
     public const string Closed = "closed";
 
+    /// <summary>Missing on legacy tables; their trace indices must remain unchanged across restarts (ADR 0132).</summary>
+    public int EventStreamVersion { get; init; } = 1;
+
     public required string Id { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }
@@ -85,6 +88,7 @@ internal sealed record TableRecord
         ArgumentNullException.ThrowIfNull(codes);
         return new TableRecord
         {
+            EventStreamVersion = table.EventStreamVersion,
             Id = table.Id,
             CreatedAt = table.CreatedAt,
             Seed = request.Seed ?? throw new InvalidOperationException("A composed table has a seed."),

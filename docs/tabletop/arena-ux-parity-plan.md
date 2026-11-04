@@ -222,12 +222,12 @@ Transient errors and help notices can have separate labels and must not imperson
 Clear all seat-bound text, filters with creature identities, drafts and cached frames on viewpoint/access changes.
 Do not persist tokens or private event payloads into a new local history store.
 
-### Important evidence gap: ordinary upkeep energy
+### Original evidence gap: ordinary upkeep energy (addressed by AU3a)
 
 `OngoingEffectsApplied` contains ongoing energy-regeneration, healing and bleed ticks.
 `RoundStarted` contains the round identity, not ordinary energy gains.
-`UpkeepRules.EnergyGain` grants the rule allowance plus passive upkeep energy but currently returns no
-per-creature receipt; the normal seat feed removes trace boards. Thus the existing “no ongoing ticks”
+At the original audit, `UpkeepRules.EnergyGain` granted the rule allowance plus passive upkeep energy
+without a per-creature receipt; the normal seat feed removes trace boards. Thus the existing “no ongoing ticks”
 line cannot explain all upkeep, and the catalogue allowance is not proof that every creature actually gained it.
 
 Decide and implement the missing event contract first, in required PR **AU3a**, before the **AU3b**
@@ -298,6 +298,11 @@ can be reopened, never obscures the sole confirmation, and does not mark a cover
 Test both declaration modes and “mute tips but keep history”.
 
 ### AU3a — Record ordinary energy before designing its receipt
+
+Implementation: `RoundEnergyGranted`, public journal/replay readers and versioned recording compatibility
+are specified in [ADR 0132](../adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
+New matches record actual grants; legacy resumed matches retain their original event sequences for life.
+The automatic receipt remains AU3b.
 
 Write the persistent-contract ADR and add a public event at the ordinary energy-grant boundary.
 For each eligible living creature, record the configured base and passive request amounts, actual combined

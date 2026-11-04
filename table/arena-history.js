@@ -1,11 +1,11 @@
-import { resolvedSince, roundUpkeep, turnoverSteps, turnoverText } from './feed.js';
+import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps, turnoverText } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { outcomeText } from './outcome.js';
 import { stepLabel } from './terms.js';
 
 // This journal is public even though a seat feed also contains that seat's own hidden decisions.
 // Default deny mirrors SeatVisibility's public cases; unknown payloads are never copied to the UI.
-const PUBLIC = new Set(['CombatActionResolved', 'ActionRevealed', 'SlotSkipped', 'OngoingEffectsApplied',
+const PUBLIC = new Set(['CombatActionResolved', 'ActionRevealed', 'SlotSkipped', 'RoundEnergyGranted', 'OngoingEffectsApplied',
   'ConditionsExpired', 'StunImmunityGained', 'PurchasesRevealed', 'TimelineBuilt', 'TiesOrdered',
   'RoundStarted', 'RoundEnded', 'SubPhaseEntered', 'MatchStarted', 'MatchEnded', 'PlayerJoined']);
 const PRIVATE = new Set(['IntentSubmitted', 'SpeedChoiceSubmitted', 'EvolutionChoiceSubmitted', 'EvolutionPassed', 'TieOrderSubmitted']);
@@ -56,6 +56,8 @@ function eventRow(entry, board, catalogue) {
   const event = entry.event;
   switch (event.kind) {
     case 'CombatActionResolved': return combatRow(entry, board, catalogue);
+    case 'RoundEnergyGranted': return { title: 'Upkeep · round energy', category: 'Upkeep', details: roundEnergyGrants(event).map(grant =>
+      line(`${who(grant.creature, board)} · ${roundEnergyText(grant)}`, 'energy')) };
     case 'OngoingEffectsApplied': {
       const rows = roundUpkeep([entry], roundOf(entry))?.rows ?? [];
       return { title: 'Upkeep · ongoing effects', category: 'Upkeep', details: rows.length

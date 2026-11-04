@@ -93,6 +93,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Place | An Activation slot a side holds in a tie once the Roll-off is done: it keeps its side, and which of that side's tied Creatures fills it is the Tie order's (ADR 0063). | decided |
 | Tie order | A Planning decision in which a Player orders their own tied Creatures among the Places their side holds in a tie, after the Roll-off and before any Intent (ADR 0063). | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, then Activation. | decided |
+| Round energy grant | The recorded ordinary Energy given to a living Creature at EnergyGain: base/passive requests, actual combined gain, and Energy before/after. Separate from ongoing energy regeneration; zero gains remain facts (ADR 0132). | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |

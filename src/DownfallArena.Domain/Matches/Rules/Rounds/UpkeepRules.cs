@@ -10,15 +10,21 @@ namespace DownfallArena.Domain.Matches.Rules.Rounds;
 public static class UpkeepRules
 {
     /// <summary>EnergyGain sub-phase: every living creature gains the rule set's energy per round, and what its packages add to it (ADR 0101).</summary>
-    public static void EnergyGain(IReadOnlyList<Creature> creatures, RuleSet rules)
+    public static IReadOnlyList<RoundEnergyGrant> EnergyGain(IReadOnlyList<Creature> creatures, RuleSet rules)
     {
         ArgumentNullException.ThrowIfNull(creatures);
         ArgumentNullException.ThrowIfNull(rules);
 
+        var grants = new List<RoundEnergyGrant>();
         foreach (var creature in creatures.Where(creature => creature.IsAlive))
         {
-            creature.GainEnergy(rules.EnergyPerRound + creature.Passive.UpkeepEnergy);
+            var before = creature.Energy.Value;
+            var passive = creature.Passive.UpkeepEnergy;
+            var gained = creature.GainEnergy(rules.EnergyPerRound + passive);
+            grants.Add(new RoundEnergyGrant(creature.Id, rules.EnergyPerRound, passive, gained, before, creature.Energy.Value));
         }
+
+        return grants;
     }
 
     /// <summary>

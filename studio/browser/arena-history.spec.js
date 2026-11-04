@@ -131,3 +131,21 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+
+
+test('ordinary energy history keeps actual gains, zero gains and the order before ongoing ticks', async ({ page }) => {
+  const energy = { sequence: 7, event: { kind: 'RoundEnergyGranted', roundId: 2, grants: [
+    { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 3, before: 7, after: 10 },
+    { creature: 4, baseRequested: 0, passiveRequested: 0, gained: 0, before: 2, after: 2 },
+  ] } };
+  const h = await mount(page, [energy, { sequence: 8, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    ticks: { bleedTicks: [{ creature: 1, damage: 7 }], regenerationTicks: [], energyRegenerationTicks: [] } } }]);
+  await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(2);
+  await rows(page).first().locator('summary').click();
+  await expect(rows(page).first()).toContainText('Upkeep · round energy');
+  await expect(rows(page).first()).toContainText('+3 energy · 7 → 10 (base 4, passive 1)');
+  await expect(rows(page).first()).toContainText('+0 energy · 2 → 2 (base 0, passive 0)');
+  await expect(rows(page).first()).toContainText('Creature 4 (Opponent)');
+  await h.publish([energy]); await expect(rows(page)).toHaveCount(2);
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

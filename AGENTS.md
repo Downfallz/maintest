@@ -72,6 +72,8 @@ docs/
                 with a Google sign-in and the home page (accounts-plan.md, ADR 0122).
                 The arena UX recovery plan (arena-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
+                ADR 0132 versions event streams: new tables record ordinary energy; resumed legacy tables
+                omit that event before sequencing for their remaining lifetime, preserving feed/checkpoint indices.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.

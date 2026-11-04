@@ -544,5 +544,6 @@ The arena's **History** drawer retains public events from the current and previo
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
-`arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
+`arena/src/history.ts` renders stable accessible details. AU3a adds recorded ordinary-energy gains,
+including zero and before/after values, to new matches. Automatic upkeep receipts, filters and earlier
 round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).

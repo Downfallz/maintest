@@ -8,7 +8,7 @@ namespace DownfallArena.Application.Matches.Feed;
 /// </summary>
 /// <remarks>
 /// The raw stream is not safe to hand to a player. The trace keeps every event with <em>both</em> boards on
-/// purpose (<c>MatchTraceRecorder</c>, <c>docs/learning/artifacts.md</c>), and five of the twenty events are
+/// purpose (<c>MatchTraceRecorder</c>, <c>docs/learning/artifacts.md</c>), and five events are
 /// the game's hidden information: the intents, speed choices and evolution picks that
 /// <see cref="Matches.Projections.PlayerBoardStateProjection" /> already filters out of a board, a tie order,
 /// and a pass. A feed that leaked any of them would produce a playtest that looks perfectly normal and is
@@ -37,6 +37,7 @@ public static class SeatVisibility
         typeof(ConditionsExpired),
         typeof(StunImmunityGained),
         typeof(OngoingEffectsApplied),
+        typeof(RoundEnergyGranted),
         typeof(TimelineBuilt),
         typeof(TieOrderSubmitted),
         typeof(TiesOrdered),
@@ -73,6 +74,8 @@ public static class SeatVisibility
             ConditionsExpired => true,
             StunImmunityGained => true,
             OngoingEffectsApplied => true,
+            // Ordinary energy is automatic and public, including passive bonuses already revealed.
+            RoundEnergyGranted => true,
 
             // The timeline is public the moment it is built -- it is served on every board -- and the round's
             // position is what the round track shows.

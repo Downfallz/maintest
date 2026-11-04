@@ -43,6 +43,70 @@ public sealed class TableRestorerTests : IDisposable
     }
 
     [Fact]
+    public async Task A_legacy_table_rebuild_preserves_every_existing_sequence_and_stays_legacy_when_recorded_again()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        var person = table.Seats[0].Person!;
+        await PlayUntil(table, person, PlayerOptionsKind.Intent);
+        await table.Run!.CheckpointAsync(table.Session.MatchId, TestContext.Current.CancellationToken);
+        var path = Path.Combine(table.Run.Location, "traces", $"{table.Session.MatchId}.json");
+        var trace = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
+        trace.AsObject().Remove("eventStreamVersion");
+        var entries = trace["entries"]!.AsArray();
+        var legacy = entries.Where(entry => entry!["event"]!["kind"]!.GetValue<string>() != "RoundEnergyGranted").Select(entry => entry!.DeepClone()).ToArray();
+        entries.Clear();
+        for (var i = 0; i < legacy.Length; i++)
+        {
+            legacy[i]["sequence"] = i;
+            entries.Add(legacy[i]);
+        }
+
+        await File.WriteAllTextAsync(path, trace.ToJsonString(), TestContext.Current.CancellationToken);
+        var recordPath = Path.Combine(table.Run.Location, TableRecord.File);
+        var record = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(recordPath, TestContext.Current.CancellationToken))!;
+        record.AsObject().Remove("eventStreamVersion");
+        await File.WriteAllTextAsync(recordPath, record.ToJsonString(), TestContext.Current.CancellationToken);
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("rebuilt from");
+        var rebuilt = _later.ById(table.Id).ShouldNotBeNull();
+        rebuilt.EventStreamVersion.ShouldBe(1);
+        var waiting = await Waiting(rebuilt.Seats[0].Person!);
+        waiting.Kind.ShouldBe(person.Waiting!.Kind);
+        waiting.Creature.ShouldBe(person.Waiting.Creature);
+        var feed = rebuilt.Run!.Entries(rebuilt.Session.MatchId, 0);
+        feed.Select(entry => entry.Sequence).ShouldBe(Enumerable.Range(0, legacy.Length));
+        feed.ShouldNotContain(entry => entry.Event is DownfallArena.Domain.Matches.Events.RoundEnergyGranted);
+        (await Board(rebuilt.Session, PlayerSlot.Player1)).ShouldBe(await Board(table.Session, PlayerSlot.Player1));
+        var rewritten = TableRecord.Of(rebuilt, rebuilt.Request!, _later.Codes);
+        rewritten.EventStreamVersion.ShouldBe(1);
+        await rebuilt.Run.RecordAsync(rewritten, TestContext.Current.CancellationToken);
+        using var savedRecord = JsonDocument.Parse(await File.ReadAllTextAsync(recordPath, TestContext.Current.CancellationToken));
+        savedRecord.RootElement.GetProperty("eventStreamVersion").GetInt32().ShouldBe(1);
+        await rebuilt.Run.CheckpointAsync(rebuilt.Session.MatchId, TestContext.Current.CancellationToken);
+        using var saved = JsonDocument.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+        saved.RootElement.GetProperty("eventStreamVersion").GetInt32().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task An_unknown_event_stream_version_is_preserved_and_refused_before_rebuilding()
+    {
+        var table = await Opened(HostedTables.OnePerson);
+        var path = Path.Combine(table.Run!.Location, TableRecord.File);
+        var record = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
+        record["eventStreamVersion"] = 999;
+        var written = record.ToJsonString();
+        await File.WriteAllTextAsync(path, written, TestContext.Current.CancellationToken);
+
+        var said = await TableRestorer.RestoreAsync(_after.Stored!, _after.Composer, _later, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        said.ShouldHaveSingleItem().ShouldContain("Unsupported table event stream version 999");
+        _later.ById(table.Id).ShouldBeNull();
+        (await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken)).ShouldBe(written);
+    }
+
+    [Fact]
     public async Task A_table_a_person_was_playing_is_rebuilt_at_the_same_question_with_the_same_links_and_codes()
     {
         var table = await Opened(HostedTables.OnePerson);

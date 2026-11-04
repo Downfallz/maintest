@@ -427,6 +427,8 @@
       MatchStarted: (event) => `Match started (content ${shortId(event.contentHash)})`,
       RoundStarted: (event) => `Round ${event.roundId}`,
       SubPhaseEntered: (event) => stepLabel(event.subPhase),
+      RoundEnergyGranted: (event, names) => (event.grants || []).map(grant =>
+        `${names[grant.creature] || `Creature ${grant.creature}`} gains ${grant.gained} energy (${grant.before} → ${grant.after}; base ${grant.baseRequested}, passive ${grant.passiveRequested})`).join(', '),
       OngoingEffectsApplied: (event, names) => {
         // EnergyRegenerations, then healing, then the bleeds (ADR 0019, ADR 0020). A trace recorded before either
         // effect existed has no regenerationTicks or energyRegenerationTicks, and reads as bleeds only.

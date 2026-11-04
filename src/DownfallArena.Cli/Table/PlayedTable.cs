@@ -1,3 +1,4 @@
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Domain.Matches;
 
@@ -46,6 +47,8 @@ internal sealed class PlayedTable : IDisposable
 
     /// <summary>The session id: the run's name in its store, and what a page, a code and a pilot token all name.</summary>
     public string Id { get; }
+
+    public int EventStreamVersion { get; init; } = MatchTrace.CurrentEventStreamVersion;
 
     public TableSession Session { get; }
 
