@@ -157,7 +157,8 @@ export class ArenaScene extends Phaser.Scene {
       this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
     }
     const cue = this.state.cue;
-    const struck = cue ? cue.struck : this.state.target ? [this.state.target] : [];
+    const fallback = this.state.target ? [this.state.target] : [];
+    const struck = cue?.struck ?? fallback;
     for (const id of struck) {
       const target = this.figures.get(id);
       if (!target) continue;
@@ -166,16 +167,18 @@ export class ArenaScene extends Phaser.Scene {
       this.burst(target, 0xffd995, true);
     }
     if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
-    if (cue) {
-      const tones: Record<string, number> = { recovery: 0x96dfa5, energy: 0x91caef, condition: 0xc3a0eb, neutral: 0xeac88e };
-      const pulsed = new Set<string>();
-      for (const effect of cue.effects) {
-        const target = this.figures.get(effect.creature);
-        if (!target || struck.includes(effect.creature) || pulsed.has(effect.creature)) continue;
-        pulsed.add(effect.creature); this.burst(target, tones[effect.tone] ?? GOLD, false);
-      }
-      if (cue.kind === 'fizzle' && actor) this.burst(actor, 0x9ba6ac, false);
+    if (cue) this.pulseEffects(cue, actor);
+  }
+
+  private pulseEffects(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
+    const tones: Record<string, number> = { recovery: 0x96dfa5, energy: 0x91caef, condition: 0xc3a0eb, neutral: 0xeac88e };
+    const pulsed = new Set<string>();
+    for (const effect of cue.effects) {
+      const target = this.figures.get(effect.creature);
+      if (!target || cue.struck.includes(effect.creature) || pulsed.has(effect.creature)) continue;
+      pulsed.add(effect.creature); this.burst(target, tones[effect.tone] ?? GOLD, false);
     }
+    if (cue.kind === 'fizzle' && actor) this.burst(actor, 0x9ba6ac, false);
   }
 
   private burst(target: Figure, color: number, sparks: boolean) {

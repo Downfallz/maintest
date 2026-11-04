@@ -15,7 +15,9 @@ export function actionCue(action) {
   const struck = [...new Set(action.effects.filter(effect => effect.tone === 'harm').map(effect => String(effect.target.id)))];
   const changes = framed(action) ? combatChanges(
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];
-  return { kind: action.status === 'Fizzled' ? 'fizzle' : struck.length ? 'strike' : 'pulse',
+  let kind = struck.length ? 'strike' : 'pulse';
+  if (action.status === 'Fizzled') kind = 'fizzle';
+  return { kind,
     struck: action.status === 'Fizzled' ? [] : struck, effects, changes };
 }
 

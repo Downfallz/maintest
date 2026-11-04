@@ -187,7 +187,8 @@ function render() {
   $('no-timeline').hidden = board.timeline.length > 0;
   text('no-timeline', view ? 'Activation order has not been set' : 'Waiting for a board');
   text('actor-name', playbackState.active ? name(frame.actor) : headline(board));
-  text('actor-meta', playbackState.active ? playbackState.label : view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter');
+  const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
+  text('actor-meta', playbackState.active ? playbackState.label : phase);
   text('instruction', playbackState.active ? 'Playing confirmed results. Skip or choose your next action at any time.' : instruction());
   $('instruction').hidden = Boolean(action.error);
   $('loading').hidden = Boolean(view && ready && !rendererFailed);

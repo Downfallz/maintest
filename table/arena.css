@@ -64,7 +64,7 @@
 /* Result details stay in an overlay, so multi-target outcomes cannot grow the fixed dock. */
 #playback-result { min-height: 44px; font-size: 11px; padding: 6px 10px; margin-top: 4px; }
 #playback-skip { min-height: 44px; padding: 8px; font-size: 11px; white-space: nowrap; }
-#result-text { line-height: 1.7; overflow-wrap: anywhere; font-size: 14px; }
+#result-text { display: block; line-height: 1.7; overflow-wrap: anywhere; font-size: 14px; }
 .creature-effect { position: absolute; left: 0; right: 0; bottom: 100%; color: #fff0ce; background: #102129ed; border: 1px solid #bca77570; border-radius: 4px; padding: 4px; font-size: 10px; line-height: 1.4; max-height: 44px; overflow: hidden; pointer-events: none; }
 @media (max-width: 619px) {
   #arena:has(#playback-skip:not([hidden])) .arena-actions { flex-wrap: wrap; }
