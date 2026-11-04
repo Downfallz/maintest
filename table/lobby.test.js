@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, invitationLine, invitedState, lobbyRequest, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -99,4 +99,12 @@ test('a rematch link names the opponent to choose again, or nothing', () => {
   assert.deepEqual(rematchRequest('?rematch=hotseat&format=1v1'), { opponent: 'hotseat', friend: null, format: '1v1' });
   assert.equal(rematchRequest('?rematch=../admin'), null);
   assert.equal(rematchRequest(''), null);
+});
+
+test('the create dialog starts on the friend asked for, and on nobody when they are not a friend', () => {
+  const friends = [{ id: 'acct_mark', username: 'MarkF' }, { id: 'acct_bastien', username: 'bastien' }];
+  assert.deepEqual(friendChoice(friends, 'acct_bastien'), { value: 'acct_bastien', missing: false });
+  assert.deepEqual(friendChoice(friends, 'acct_stranger'), { value: '', missing: true }, 'a rematch against a non-friend picks nobody by default');
+  assert.deepEqual(friendChoice(friends, null), { value: '', missing: false });
+  assert.deepEqual(friendChoice([], 'acct_mark'), { value: '', missing: true });
 });

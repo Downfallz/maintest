@@ -86,6 +86,16 @@ export function rematchRequest(search) {
   return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format } : null;
 }
 
+/**
+ * Which friend the create dialog starts on (ADR 0129): the one asked for when they are in the list, nobody when
+ * they are not or none was asked for, so a rematch against a player who is not a friend never sends an
+ * invitation to whoever happens to be first in the list.
+ */
+export function friendChoice(friends, wanted) {
+  const found = wanted && (friends ?? []).some(friend => friend.id === wanted);
+  return { value: found ? wanted : '', missing: Boolean(wanted) && !found };
+}
+
 /** The line an invitation card leads with: who asks, to what. */
 export function invitationLine(invitation) {
   const from = invitation?.from?.username ?? 'A player';
@@ -283,19 +293,24 @@ export function mountLobby(doc, location, storage) {
     else {
       try { friends = (await lobbyRequest('/api/friends')).friends ?? []; } catch { friends = []; }
     }
-    el('friend').replaceChildren(...friends.map(friend => { const option = node('option', friend.username); option.value = friend.id; return option; }));
-    if (chosen && friends.some(friend => friend.id === chosen)) el('friend').value = chosen;
+    const placeholder = node('option', 'Choose a friend…');
+    placeholder.value = '';
+    el('friend').replaceChildren(placeholder, ...friends.map(friend => { const option = node('option', friend.username); option.value = friend.id; return option; }));
+    el('friend').value = friendChoice(friends, chosen).value;
     el('opponent').querySelector('option[value="friend"]').hidden = mode === 'off';
   }
   let wanted = null;
   function showOpponent() {
     const value = el('opponent').value;
-    const missing = value === 'friend' && wanted && !friends.some(friend => friend.id === wanted);
+    const missing = value === 'friend' && friendChoice(friends, wanted).missing;
     el('create-help').textContent = missing
       ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
       : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
     el('friend-row').hidden = value !== 'friend';
+    // No friend chosen, nothing to send: a seat is kept for the friend the player picked, never for a default.
+    el('create-submit').disabled = value === 'friend' && !el('friend').value;
   }
+  el('friend').addEventListener('change', showOpponent);
   function openCreate({ friend = null, reinvite = null, opponent = null, format = null } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;
@@ -336,6 +351,10 @@ export function mountLobby(doc, location, storage) {
     el('create-submit').disabled = true;
     el('create-problem').hidden = true;
     try {
+      if (el('opponent').value === 'friend' && !el('friend').value) {
+        throw new Error('Choose a friend to keep the seat for.');
+      }
+
       if (reinviting) {
         await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
         dialog.close();
@@ -344,7 +363,7 @@ export function mountLobby(doc, location, storage) {
         enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined }));
       }
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
-    finally { busy = false; el('create-submit').disabled = false; }
+    finally { busy = false; showOpponent(); }
   });
   void lobbyRequest('/api/me', undefined, operatorToken(storage)).then(body => {
     if (isOperator({ ok: true, body })) el('admin-link').hidden = false;

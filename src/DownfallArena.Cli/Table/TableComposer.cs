@@ -388,9 +388,12 @@ internal sealed class TableComposer
                 await results.RecordAsync(result);
             }
 
-            await NotifyFinishedAsync(table, session.Outcome.Result.Value, owners);
             await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
+
+            // Told after the files are written, and on its own: a device store or an account that cannot be read is
+            // a notice that did not arrive, never a recording left unfinished.
+            await NotifyFinishedAsync(table, session.Outcome.Result.Value, owners);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
@@ -418,6 +421,18 @@ internal sealed class TableComposer
             return;
         }
 
+        try
+        {
+            await NotifyEachAsync(table, outcome, owners, notices);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or Azure.RequestFailedException or HttpRequestException)
+        {
+            Console.WriteLine($"  Session {table.Id}: the players could not be told how the match ended: {failure.Message}");
+        }
+    }
+
+    private async Task NotifyEachAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners, AccountNotices notices)
+    {
         var url = $"/play?table={Uri.EscapeDataString(table.Id)}";
         var tag = $"match:{table.Id}";
         var held = owners.Where(owner => owner is not null).Select(owner => owner!.Value).Distinct().ToArray();

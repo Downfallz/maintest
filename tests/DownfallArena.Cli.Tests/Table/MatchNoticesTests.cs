@@ -126,6 +126,25 @@ public sealed class MatchNoticesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_notice_that_cannot_be_sent_does_not_keep_the_recording_from_finishing()
+    {
+        using var registry = new TableRegistry();
+        var composer = Composer();
+        composer.NameOf = _ => throw new IOException("The account store went away.");
+        var table = await composer.ComposeAsync(TwoPeople, Cancel);
+        table.Seats[0].Account = await PlayerAsync("MarkF");
+        table.Seats[1].Account = await PlayerAsync("bastien");
+        registry.TryAdd(table).ShouldBeTrue();
+        await table.RecordAsync(registry.Codes, Cancel);
+
+        await FinishedAsync(table);
+
+        (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished, "the files are written before anybody is told");
+        _sender.Sent.ShouldBeEmpty("the names could not be read, so no notice went out, and nothing else broke");
+        registry.Remove(table.Id);
+    }
+
+    [Fact]
     public async Task A_finished_table_nobody_with_an_account_played_tells_nobody()
     {
         var table = await Composer().ComposeAsync(OnePerson, Cancel);
