@@ -28,7 +28,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (!allies.some((one: { id: number }) => one.id === creature)) creature = offers?.creatures?.[0]?.creature ?? allies[0]?.id;
     const picker = el('planning-creatures');
     picker.replaceChildren(...allies.map((one: { id: number }) => {
-      const node = button(name(one.id), () => { creature = one.id; rendered = ''; render(controller.model(), catalogue); });
+      // A mutation is picked for the creature whose tree is shown: switching creatures drops the selection.
+      const node = button(name(one.id), () => { if (one.id !== creature) controller.choose(null); creature = one.id; rendered = ''; render(controller.model(), catalogue); });
       node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); node.disabled = model.sending; return node;
     }));
     const cards = cardsById(catalogue), selected = allies.find((one: { id: number }) => one.id === creature);
@@ -96,7 +97,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   function selectionText(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const chosen = model.choice;
     if (chosen?.pass) return 'Pass this pick';
-    if (chosen?.tier) return catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier;
+    if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
     if (chosen?.speed) return `${name(model.latest.waitingCreature)} · ${tempoLabel(chosen.speed)}`;
     if (chosen?.keep) return 'Dice order';
     return model.latest?.waitingFor === 'TieOrder' ? 'Chosen order' : 'Select a choice';

@@ -47,6 +47,15 @@ test('Mutation Tree shows prerequisites and only confirms an offered purchase', 
   await page.locator('#planning-confirm').click(); await expect.poll(() => h.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root', asked: 11 }]);
   await expect(page.locator('#planning-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
+test('switching creatures drops a mutation picked for the previous one', async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Warden'); await expect(page.locator('#planning-confirm')).toBeEnabled();
+  await page.locator('#planning-creatures [data-creature="2"]').click();
+  await expect(page.locator('#planning-selection')).toHaveText('Select a choice'); await expect(page.locator('#planning-confirm')).toBeDisabled();
+  await page.locator('#planning-creatures [data-creature="1"]').click(); await expect(page.locator('#planning-confirm')).toBeDisabled();
+  await page.locator('[data-mutation="root"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root', asked: 11 }]); expect(h.errors).toEqual([]);
+});
 test('tempo needs explicit confirmation and a refusal stays visible', async ({ page }) => {
   const h = await mount(page, { kind: 'Speed' }); h.status = 409; await page.locator('#planning-open').click();
   await expect(page.locator('#planning-help')).toContainText('only Precision can crit'); await page.locator('[data-speed="Quick"]').click(); await page.locator('[data-speed="Standard"]').click(); expect(h.writes).toEqual([]);
