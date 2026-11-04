@@ -262,6 +262,10 @@ internal sealed class AccountApi
             await release(who.Account.Id);
         }
 
+        // The account goes first, so a request that resolved its name a moment ago finds nobody once it reaches the
+        // friendship lock; what the account was still on is cleaned up after, under that same lock.
+        await _registry.DeleteAsync(who.Account.Id);
+        _cache.TryRemove(who.Account.Id, out _);
         if (Devices is { } devices)
         {
             await devices.ForgetAsync(who.Account.Id);
@@ -272,8 +276,6 @@ internal sealed class AccountApi
             await forget(who.Account.Id);
         }
 
-        await _registry.DeleteAsync(who.Account.Id);
-        _cache.TryRemove(who.Account.Id, out _);
         return Answer(new { deleted = true }, AccountSessions.ClearCookie(request.Secure));
     }
 

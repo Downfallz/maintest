@@ -139,6 +139,34 @@ public sealed class FriendsTests
     }
 
     [Fact]
+    public async Task An_account_with_a_hundred_friends_can_still_ask_but_a_hundred_and_first_friendship_is_refused_on_either_side()
+    {
+        for (var index = 0; index < Friends.MostLinks; index++)
+        {
+            var friend = Register($"friend-{index}");
+            (await _friends.AskAsync(_mark, $"friend-{index}", Cancel)).IsSuccess.ShouldBeTrue();
+            (await _friends.AcceptAsync(friend, _mark, Cancel)).IsSuccess.ShouldBeTrue();
+        }
+
+        (await _friends.AskAsync(_mark, "bastien", Cancel)).IsSuccess.ShouldBeTrue("a request is not a friendship: the pending limit is its own");
+        (await _friends.AcceptAsync(_bastien, _mark, Cancel)).Error.ShouldBe(FriendErrors.TooMany, "Mark has no room for a friend, so Bastien cannot accept");
+        (await _friends.AskAsync(_bastien, "markf", Cancel)).Error.ShouldBe(FriendErrors.TooMany, "nor accept by asking back");
+        (await _friends.AreFriendsAsync(_mark, _bastien, Cancel)).ShouldBeFalse();
+        (await _friends.ListAsync(_bastien, Cancel)).Incoming.ShouldHaveSingleItem("the request stays, for when Mark has room");
+    }
+
+    [Fact]
+    public async Task Asking_for_or_accepting_an_account_that_is_gone_is_refused()
+    {
+        await _friends.AskAsync(_bastien, "markf", Cancel);
+        _accounts.Accounts.Remove(_bastien);
+
+        (await _friends.AcceptAsync(_mark, _bastien, Cancel)).Error.ShouldBe(FriendErrors.NoSuchPlayer);
+        (await _friends.AskAsync(_mark, "bastien", Cancel)).Error.ShouldBe(FriendErrors.NoSuchPlayer, "the name is still held, the account is not");
+        (await _friends.AreFriendsAsync(_mark, _bastien, Cancel)).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_list_written_on_one_side_only_is_put_right_by_the_next_change_between_the_two()
     {
         await _friends.AskAsync(_mark, "bastien", Cancel);
