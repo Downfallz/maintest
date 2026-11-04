@@ -102,6 +102,7 @@ internal sealed class TableFiles
             ["/arena.css"] = (Path.Combine(tableDirectory, "arena.css"), Css),
             ["/arena-combat.js"] = (Path.Combine(tableDirectory, "arena-combat.js"), JavaScript),
             ["/arena-planning.js"] = (Path.Combine(tableDirectory, "arena-planning.js"), JavaScript),
+            ["/arena-sound.js"] = (Path.Combine(tableDirectory, "arena-sound.js"), JavaScript),
             ["/arena-match.js"] = (Path.Combine(tableDirectory, "arena-match.js"), JavaScript),
             ["/arena-playback.js"] = (Path.Combine(tableDirectory, "arena-playback.js"), JavaScript),
             ["/arena-live.js"] = (Path.Combine(tableDirectory, "arena-live.js"), JavaScript),
