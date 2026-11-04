@@ -7,6 +7,13 @@ commands fit the viewport in portrait and landscape. The earlier scrolling DOM s
 Initial audit: `748557b4` on `main` (player accounts stage 3). A3 refreshes that baseline to `69ce758d`
 (#420 merged, on top of player accounts stage 4, #417). Re-check `main` before each integration PR.
 
+
+**UX parity follow-up (2026-11-04):** A7 completes the commands, but the classic table still supplies richer
+phase guidance, upkeep explanation, mutation choices, team tempo drafts and readable round history.
+The [arena UX parity audit and PR plan](arena-ux-parity-plan.md) defines AU1–AU14 to recover those behaviours,
+with source/PR evidence and acceptance criteria. It is separate from A8 release readiness and the art workstream;
+its implementation is not included in this documentation change.
+
 ## Decision summary
 
 Build a creature-centred presentation over the existing .NET game. Keep the turn-based 3v3 rules,
