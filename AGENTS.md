@@ -57,7 +57,7 @@ tests/
   DownfallArena.Cli.Tests           Host tests: the console commands and the studio's HTTP host.
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
-  art/          Creature art direction, spell visuals and sprite-pipeline follow-ups (creature-art-direction.md).
+  art/          Creature art direction, spell visuals, WebP references and PNG source intake and sprite-pipeline follow-ups.
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, the spell catalogue, a planned change with
