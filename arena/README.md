@@ -29,6 +29,9 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/main.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/types.ts`: presentation types only.
+- `src/spell-effects.ts`: bounded, cancellable vector motifs for confirmed spell outcomes.
+- `data/presentation/spell-art.json`: each spell's visual family, motif and delivery, published by the builder
+  and served on the card; `table/arena-playback.js` reads it off the card, with neutral and fizzle fallbacks.
 - `table/arena-art.js`: audited sprite manifest, root-mutation mapping, neutral multiclass fallback and mirrored geometry.
 - `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
   and the cancellation generation.
@@ -126,6 +129,11 @@ journeys compare journal action identities against actual seat responses in both
 AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional artwork):
 [desktop history](../docs/tabletop/images/arena-history/desktop.jpg) ·
 [phone history](../docs/tabletop/images/arena-history/phone.jpg).
+
+[ART-4](../docs/art/spell-vfx.md) supplies 44 spell profiles for confirmed-action playback, with distinct
+physical, biological, elemental, necromantic and astral shapes. It preserves queue timing and accessible
+outcomes; reduced motion bypasses all VFX. The browser playback suite also boots the production scene
+in an isolated test harness to verify actual vector objects and their cleanup.
 
 ## AU2: objectives and contextual help
 

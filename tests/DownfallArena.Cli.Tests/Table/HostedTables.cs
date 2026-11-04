@@ -27,6 +27,9 @@ internal sealed class HostedTables : IDisposable
     /// <summary>The words the content's one package is known by, published beside its schema as a build does.</summary>
     public const string PackageTags = """{ "tier:guard:v1": ["Defense", "Sustain"] }""";
 
+    /// <summary>How the content's one taught spell is drawn, published beside its schema as a build does (ADR 0131).</summary>
+    public const string SpellArt = """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast" } }""";
+
     public HostedTables(bool recording = false, RuleSet? rules = null)
         : this(recording ? directory => new FileArtifactStore(directory) : null, rules)
     {
@@ -38,6 +41,7 @@ internal sealed class HostedTables : IDisposable
     public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null)
     {
         _content.Write("presentation/package-tags.json", PackageTags);
+        _content.Write("presentation/spell-art.json", SpellArt);
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },

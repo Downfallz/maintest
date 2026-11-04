@@ -58,7 +58,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
     history.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
   } finally { receiving = false; }
   render();
 } });
