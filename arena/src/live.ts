@@ -19,7 +19,7 @@ import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, tempoLabel, stepLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
-interface Creature { id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
+interface Creature { form: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
@@ -176,6 +176,7 @@ function render() {
       node.addEventListener('click', () => { if (controls.target(one.id)) return; inspected = one.id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal(); });
       $('actor-layer').append(node); nodes.set(one.id, node);
     }
+    node.dataset.form = one.form;
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     const targetable = targeting && frame.targets.includes(one.id);
     if (targetable) node.classList.add('is-targetable');
