@@ -6,12 +6,29 @@ const ICON = '/icon-192.png';
 
 const GAME = '/play';
 
+const ARENA = '/arena';
+
 const LOBBY = '/lobby';
 
-// The page a URL is on, with the lobby's two addresses read as one: `/` without a query is the lobby.
+// The page a URL is on, with the lobby's two addresses read as one (`/` without a query is the lobby) and the
+// arena read as the game: a seat played there is the same seat, asked the same thing (ADR 0126), so an arena
+// in front of somebody is the "your turn" as much as the table page is. The arena lab is a study, not a seat.
 function pageOf(url) {
   const path = new URL(url, 'https://downfall.invalid').pathname;
-  return path === '/' ? LOBBY : path;
+  if (path === '/') return LOBBY;
+  return path === ARENA ? GAME : path;
+}
+
+const isArena = client => new URL(client.url).pathname === ARENA;
+
+// Whether an arena page is at the table a "your turn" came from. The arena names its table in its address
+// (`?table=`) when it was chosen from the lobby's list; opened from a seat's own link it names the seat's token
+// instead, which the worker cannot read a table off, and the one table a device usually holds is taken to be
+// it. Only two tables both named, and named differently, is another table.
+function sameTable(client, url) {
+  const asked = new URL(url, 'https://downfall.invalid').searchParams.get('table');
+  const held = new URL(client.url).searchParams.get('table');
+  return !asked || !held || asked === held;
 }
 
 // A notice is shown unless the page it opens is in front of somebody: a game page focused on the question is
@@ -40,14 +57,20 @@ async function onPush(notice) {
 // A tap goes where the notice says: the game at the table it came from, or the lobby for a friend or an
 // invitation. The page already open there when there is one, another page of the table sent there otherwise,
 // unless it is one this worker does not control, which cannot be steered; a new window when there is none.
+// An arena page is the view of the game its player chose: for a "your turn" at its table it is brought to the
+// front and left in the arena, never sent to the table page, and for anything else it is left alone.
 async function onTap(url) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const at = client => { const here = new URL(client.url); return `${here.pathname}${here.search}`; };
   const page = pageOf(url);
-  const open = windows.find(client => at(client) === url) ?? windows.find(client => pageOf(client.url) === page) ?? windows[0];
+  const played = page === GAME ? windows.find(client => isArena(client) && sameTable(client, url)) : undefined;
+  const open = windows.find(client => at(client) === url)
+    ?? windows.find(client => !isArena(client) && pageOf(client.url) === page)
+    ?? played
+    ?? windows.find(client => !isArena(client));
   if (open) {
     await open.focus();
-    if (at(open) === url) return;
+    if (at(open) === url || isArena(open)) return;
     try {
       if (open.navigate) {
         await open.navigate(url);

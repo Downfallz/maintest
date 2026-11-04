@@ -471,7 +471,10 @@ ladder is recomputed from the results every half minute at most.
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
 when the match asks that seat something and nobody is looking at the page, screen off or browser closed
-included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page hidden
+included, and a tap on the notice opens the game. A page in front of somebody gets no notice, the arena (`/arena`)
+included: the host still sends one when the arena's controls were not opened within the grace (ADR 0126), and the
+worker keeps it quiet while the arena is visible and focused, so an installed app being played is not told what it
+shows; a tap on a notice brings an arena already open at that table to the front and leaves it there. A page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
 first. Every seat page makes the offer once, in a bar at the bottom of the screen, and its answer is remembered
