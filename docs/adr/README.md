@@ -133,3 +133,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0125](0125-read-one-authenticated-seat-in-the-live-arena.md) | Read one authenticated seat in the live arena | Accepted for the opt-in read-only integration |
 | [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
 | [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
+| [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |

@@ -1,12 +1,12 @@
-# 0128 — Complete the game loop in the arena
+# 0128. Complete the game loop in the arena
 
-## Status
-
-Accepted. Implements A7 of the [browser arena plan](../tabletop/browser-arena-plan.md).
+Date: 2026-11-04
+Status: Accepted for the opt-in arena
 
 ## Context
 
-A6 presents confirmed combat but still sends players to `/play` for planning and a match's conclusion.
+This is A7 of the [browser arena plan](../tabletop/browser-arena-plan.md). A6 presents confirmed combat but
+still sends players to `/play` for planning and a match's conclusion.
 The arena needs to complete a match without acquiring a second set of game rules or confusing a historical
 frame with a question that can be answered now. Simultaneous choices and recorded sessions also require
 keeping the selected seat's private information separate from public history.
@@ -39,6 +39,15 @@ Keep `/arena` opt-in and keep the existing host contracts. No engine rule change
   existing event filter can omit detailed condition cleanup; a recorded RoundEnded still gives an aftermath
   boundary. The UI never reconstructs omitted events. Session IDs and seat perspectives are explicit.
 
+## Consequences
+
+The complete command/combat/result loop is available in the arena, with the table still a recovery route.
+The Mutation Tree is scrollable inside its overlay; its close and confirmation controls remain reachable on
+short screens. The Phaser mount refreshes its cached parent bounds when replay changes the shell height,
+so the canvas and creature hit targets stay inside the battlefield without a window resize. The scene
+remains provisional art. Invitation acceptance stays on the table, and recorded session access keeps the
+existing operator gate.
+
 ## Alternatives considered
 
 - Embedding `/play` would complete navigation but leave A7 outside the scene shell.
@@ -46,21 +55,18 @@ Keep `/arena` opt-in and keep the existing host contracts. No engine rule change
 - Replaying the last two retained rounds as a whole match would silently omit earlier actions.
 - Drawing final stats behind an event with no historical frame would misrepresent the recording.
 
-## Consequences
+## Follow-up
 
-The complete command/combat/result loop is available in the arena, with the table still a recovery route.
-The Mutation Tree is scrollable inside its overlay; its close and confirmation controls remain reachable on
-short screens. The Phaser mount refreshes its cached parent bounds when replay changes the shell height,
-so the canvas and creature hit targets stay inside the battlefield without a window resize. The scene remains provisional art. Invitation acceptance stays on the table, and recorded
-session access keeps the existing operator gate. A8 still owns release polish, real-device performance,
-screen-reader testing, high zoom and rollout.
-
-## Validation
-
-Pure tests cover host offers, tempo values, group ordering, duplicate confirmations, acknowledgement races,
-seat changes, hidden/offline states, refusals, history boundaries, missing frames and concession fencing.
-The browser suites cover planning, tie selection, concession, round review, recorded perspectives and short
-portrait/landscape bounds. `arena.loop.js` completes 3v3 games in both declarations through visible arena
-controls: at-activation uses the normal twelve-round rules and verifies later mutations and eliminations;
-hidden-intent exercises a short round cap. Both read the real recorded session. The suite also checks simultaneous private
-choices on two independent browser contexts. Existing A4–A6 browser suites remain required.
+- `TableFiles` routes `arena-planning.js` and `arena-match.js` with the other bundled modules; `TableFilesTests`
+  holds every module beside the page.
+- AGENTS.md and arena/README.md name `arena-loop.spec.js` among the suites a change under `arena/` or
+  `table/arena-*` runs; the browser job's budget is thirty minutes, since the complete-match journeys cut
+  the twenty-minute one off (its mocked suites alone took fourteen).
+- Validation: pure tests cover host offers, tempo values, group ordering, duplicate confirmations,
+  acknowledgement races, seat changes, hidden and offline states, refusals, history boundaries, missing frames
+  and concession fencing. The browser suites cover planning, tie selection, concession, round review, recorded
+  perspectives and short portrait and landscape bounds. `arena.loop.js` completes 3v3 games in both
+  declarations through visible arena controls: at-activation uses the normal twelve-round rules and verifies
+  later mutations and eliminations; hidden-intent exercises a short round cap. Both read the real recorded
+  session. The suite also checks simultaneous private choices on two independent browser contexts.
+- A8 still owns release polish, real-device performance, screen-reader testing, high zoom and rollout.
