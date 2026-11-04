@@ -293,3 +293,16 @@ history, not in the tree: nothing refers to them any more.
 | ![Targeting](images/arena-lab/phaser-targeting.png) | ![Resolution](images/arena-lab/phaser-resolution.png) |
 
 [Phone portrait](images/arena-lab/phaser-portrait.png) · [Phone landscape](images/arena-lab/phaser-landscape.png)
+
+
+## A7 — Complete game loop
+
+Implemented in [ADR 0128](../adr/0128-complete-the-game-loop-in-the-arena.md): the scene shell now includes
+Mutation Tree selection, per-creature Tempo confirmation, grouped tie ordering, upkeep/aftermath review,
+concession, the authoritative match result and manual replay. Both combat declarations complete a 3v3 match
+through the arena controls. Two browser contexts verify simultaneous private choices before concession.
+A finished session can be opened at `/arena?replay=<session>&seat=player1` with the existing operator access.
+The table remains the invitation/recovery route; A8 release acceptance is still pending.
+
+[Mutation Tree on phone](images/arena-loop/phone-mutations.jpg) ·
+[Recorded match on desktop](images/arena-loop/desktop-replay.jpg)

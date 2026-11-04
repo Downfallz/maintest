@@ -26,7 +26,7 @@
   #loading .loading-mark { display: none; }
   /* An 86px dock: the result button sits beside the instruction, not under it. */
   .live-status { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; }
-  #connection, #combat-error { grid-column: 1 / -1; }
+  #connection, #combat-error, #planning-error, #match-error { grid-column: 1 / -1; }
   #playback-result { margin: 0; }
 }
 .arena-actions { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -38,7 +38,7 @@
 .combat-buttons { display: flex; gap: 5px; }
 .combat-buttons button { font-size: 12px; padding: 8px; }
 #combat-confirm { flex: 1; }
-#combat-error, #combat-dialog-error { color: #ffbca9; font-size: 11px; margin: 5px 0 0; max-height: 48px; overflow: auto; }
+#combat-error, #combat-dialog-error, #planning-error, #planning-dialog-error, #match-error { color: #ffbca9; font-size: 11px; margin: 5px 0 0; max-height: 48px; overflow: auto; }
 #arena[data-combat="targets"] #play-link { display: none; }
 #arena[data-combat="targets"] .creature.is-targetable { cursor: pointer; }
 #arena .creature[aria-pressed="true"] .caption { background: #5a48297d; border-bottom: 1px solid var(--gold); }
@@ -63,7 +63,7 @@
   #combat-title { font-size: 17px; }
   #combat-open { font-size: 12px; padding: 8px; }
   .arena-actions .table-return { padding: 6px; }
-  #arena .command-dock { grid-template-rows: minmax(0,1fr) auto; }
+  #arena .command-dock { grid-template-rows: minmax(48px,1fr) auto; }
 }
 /* Result details stay in an overlay, so multi-target outcomes cannot grow the fixed dock. */
 #playback-result { min-height: 44px; font-size: 11px; padding: 6px 10px; margin-top: 4px; }
@@ -82,3 +82,50 @@
 }
 
 .playback-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+#planning-open, #match-open { flex: 1; }
+#planning-dialog { width: min(880px, calc(100vw - 24px)); }
+#planning-creatures, .replay-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+#planning-creatures { position: sticky; top: -24px; padding: 12px 0; background: #142126; z-index: 2; }
+#planning-choices button { margin: 4px; min-height: 44px; }
+#planning-dialog button[aria-pressed="true"] { border-color: #d6eb9a; background: #3a4933; }
+.mutation-branch { margin: 10px 0; border-left: 2px solid #527069; padding-left: 12px; }
+.mutation-branch > summary { padding: 12px 4px; cursor: pointer; min-height: 44px; }
+.mutation-branch .mutation-branch { margin-left: 8px; }
+.mutation-face { padding: 0 8px 10px; font-size: 14px; color: #c5d2cc; }
+.mutation-face p { margin: 8px 0; }
+.mutation-face summary { padding: 12px 0; min-height: 44px; cursor: pointer; }
+.planning-footer { position: sticky; bottom: -24px; padding: 12px 0; background: #142126; border-top: 1px solid #65766a; }
+.planning-footer p { margin: 6px 0; }
+#round-notes { padding-left: 22px; line-height: 1.6; }
+#round-notes li { margin: 12px 0; }
+#match-dialog a { display: inline-block; padding: 14px; }
+#concede-dialog form { display: inline; }
+#replay-controls { grid-column: 1 / -1; background: #142126; padding: 12px 24px; overflow: auto; min-height: 0; border-top: 1px solid #607568; }
+#arena[data-replay="true"] { grid-template-rows: 76px 70px minmax(0, 1fr) minmax(140px, 25vh) 26px; }
+#arena[data-replay="true"] .command-dock { display: none; }
+#replay-controls p { margin: 8px 0; }
+.replay-buttons { margin-top: 10px; }
+#replay-round { min-height: 44px; background: #142126; color: #e3ead9; border: 1px solid #65766a; border-radius: 8px; padding: 6px; }
+@media (max-width: 619px) {
+  #planning-dialog { padding: 18px 14px; }
+  #planning-creatures { top: -18px; }
+  .planning-footer { bottom: -18px; }
+  .mutation-branch { padding-left: 6px; }
+  #arena[data-replay="true"] { grid-template-rows: 60px 52px minmax(0, 1fr) minmax(150px, 30vh) 20px; }
+  #replay-controls { padding: 10px 14px; }
+}
+@media (max-height: 520px) and (min-width: 620px) {
+  #arena[data-replay="true"] { grid-template-rows: 50px 46px minmax(0, 1fr) 110px 18px; }
+  #replay-controls { display: flex; gap: 12px; padding: 8px 16px; }
+  #replay-controls > div { flex: 1; }
+}
+
+#planning-close { float: right; margin-left: 8px; }
+
+#replay-controls { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
+#replay-controls > div:first-child { overflow: auto; }
+@media (max-height: 520px) and (min-width: 620px) {
+  #replay-controls { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); }
+  .replay-buttons { align-content: center; margin-top: 0; }
+}

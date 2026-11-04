@@ -35,7 +35,7 @@ async function mount(page) {
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE · READ ONLY');
+  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   const publish = async (entries, extra = {}) => {
     state.view = { ...state.view, ...extra, feed: entries, feedNext: Math.max(state.view.feedNext, ...entries.map(one => one.sequence + 1)) };
@@ -106,7 +106,7 @@ test('the dock\'s instruction is back once the last action has settled', async (
   await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
-  await expect(page.locator('#instruction')).toContainText('Choose a spell or target');
+  await expect(page.locator('#instruction')).toContainText('Choose a spell, then targets');
 });
 test('reduced motion shows applied results immediately and resize cancels playback safely', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); const h = await mount(page); await h.publish([entry(10)]);
