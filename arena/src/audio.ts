@@ -15,8 +15,8 @@ export class ArenaAudio {
   private context: AudioContext | null = null;
   private enabled = false;
   private generation = 0;
-  private voices = new Set<{ oscillator: OscillatorNode; gain: GainNode }>();
-  constructor(private createContext = () => new AudioContext()) {}
+  private readonly voices = new Set<{ oscillator: OscillatorNode; gain: GainNode }>();
+  constructor(private readonly createContext = () => new AudioContext()) {}
 
   async enable(value: boolean) {
     this.enabled = false;

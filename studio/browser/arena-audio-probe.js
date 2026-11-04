@@ -17,7 +17,7 @@ export async function probeAudio(page) {
       createOscillator() {
         const node = super.createOscillator(), start = node.start.bind(node), stop = node.stop.bind(node);
         node.start = (...args) => { window.audioProbe.starts++; start(...args); };
-        node.stop = (...args) => { if (!args.length) window.audioProbe.stops++; stop(...args); };
+        node.stop = (...args) => { if (!args.length) { window.audioProbe.stops++; } stop(...args); };
         return node;
       }
     };
