@@ -134,4 +134,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
 | [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
 | [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
+| [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
 | [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |

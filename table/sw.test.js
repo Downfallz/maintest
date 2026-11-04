@@ -135,6 +135,17 @@ test('a tap on a lobby notice goes to the lobby page already open, not to a game
   assert.deepEqual(w.opened, []);
 });
 
+test('every page is told a notice arrived, shown or not', async () => {
+  const told = [];
+  const lobby = { url: 'https://table.example/', focused: true, visibilityState: 'visible', postMessage: message => told.push(message) };
+  const w = worker({ windows: [lobby] });
+
+  await w.fire('push', push({ title: 'A friend', url: '/lobby#friends' }));
+
+  assert.deepEqual(JSON.parse(JSON.stringify(told)), [{ kind: 'notice', url: '/lobby#friends' }]);
+  assert.equal(w.shown.length, 0, 'the lobby in front of somebody is the notice');
+});
+
 test('the worker caches nothing: it listens for no fetch', () => {
   assert.equal(worker().handlers.fetch, undefined);
 });

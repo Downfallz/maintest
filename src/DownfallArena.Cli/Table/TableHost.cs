@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Friends;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
@@ -87,9 +89,11 @@ internal static class TableHost
 
         using var google = options.Accounts == AccountsMode.Google ? new HttpClient() : null;
         using var signingKeys = google is null ? null : new GoogleSigningKeys(google, clock);
-        var accounts = options.Accounts == AccountsMode.Off
-            ? null
+        var opened = options.Accounts == AccountsMode.Off
+            ? ((AccountApi Api, IAccountStore Store)?)null
             : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
+        var accounts = opened?.Api;
+        FriendsApi? friends = null;
         if (accounts is not null)
         {
             // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
@@ -97,13 +101,17 @@ internal static class TableHost
             var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
             accounts.Devices = devices;
             accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
+            // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
+            var friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
+            friends = new FriendsApi(friendships, accounts, accounts.Notices);
+            accounts.ForgetFriends = id => friendships.ForgetAsync(id);
         }
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null
             : new LeaderboardApi(results, accounts, clock, spec => LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec));
-        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard);
+        using var server = new TableServer(options.Bind, options.Port, registry, new TableFiles(TableDirectory), admin, clock, stored, accounts, leaderboard, friends);
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -257,11 +265,11 @@ internal static class TableHost
             : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(record).TrimEnd(Path.DirectorySeparatorChar)) ?? record, ArtifactStores.AccountsContainer);
     }
 
-    private static async Task<AccountApi> OpenAccountsAsync(CliOptions options, string? googleClientId, GoogleSigningKeys? keys, TimeProvider clock, CancellationToken cancellationToken)
+    private static async Task<(AccountApi Api, IAccountStore Store)> OpenAccountsAsync(CliOptions options, string? googleClientId, GoogleSigningKeys? keys, TimeProvider clock, CancellationToken cancellationToken)
     {
         var store = await ArtifactStores.OpenAccountsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken);
         var sessions = new AccountSessions(await store.SessionKeyAsync(cancellationToken), clock);
         var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
-        return new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId);
+        return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId), store);
     }
 }
