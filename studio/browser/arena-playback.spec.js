@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
+test.beforeEach(returningArenaPlayer);
 import { fitsViewport } from './fit.js';
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: health > 0, isStunned: false, isStunImmune: false, knownSpells: ['strike'], conditions: [] });
@@ -106,7 +108,7 @@ test('the dock\'s instruction is back once the last action has settled', async (
   await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
-  await expect(page.locator('#instruction')).toContainText('Choose a spell, then targets');
+  await expect(page.locator('#instruction')).toContainText('choose a spell, then targets');
 });
 test('reduced motion shows applied results immediately and resize cancels playback safely', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); const h = await mount(page); await h.publish([entry(10)]);

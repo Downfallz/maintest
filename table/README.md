@@ -546,3 +546,10 @@ command drafts and never sends a decision or `shown`. It is separate from animat
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. Ordinary round-energy receipts, filters and earlier
 round loading remain later slices of the [UX plan](https://github.com/Downfallz/maintest/pull/438).
+
+
+The arena's **Help** dialog explains the current objective and the round flow, including the configured
+spell declaration mode. First-use tips appear once per subject and can be muted; Help remains available.
+`arena-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
+It does not acknowledge questions or send commands, and opening it preserves pending choices.
+See [AU2 and its verification](../arena/README.md#au2-objectives-and-contextual-help).

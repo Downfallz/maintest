@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
+test.beforeEach(returningArenaPlayer);
 import { startHost, stopHost } from './host.js';
 
 // The live arena reads the same authenticated projection as a real table host.

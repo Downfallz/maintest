@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
+test.beforeEach(returningArenaPlayer);
 import { fitsViewport } from './fit.js';
 test.describe.configure({ mode: 'default' });
 const creature = (id, extras = {}) => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,

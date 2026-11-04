@@ -69,7 +69,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -124,3 +124,31 @@ journeys compare journal action identities against actual seat responses in both
 AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional artwork):
 [desktop history](../docs/tabletop/images/arena-history/desktop.jpg) ·
 [phone history](../docs/tabletop/images/arena-history/phone.jpg).
+
+
+## AU2: objectives and contextual help
+
+The command bar names the current objective: shared mutation picks, the creature choosing its tempo,
+a tied group, an on-turn spell, a hidden intent, or targets for an already revealed spell. Waiting rooms,
+opponent turns, sent choices, lost connections and recorded playback have separate instructions.
+The **Help** button opens the current explanation and a four-phase round guide. The next mutation
+opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode.
+
+Each instructional subject opens automatically once, after playback and other dialogs have settled.
+**Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
+planning/combat choices and settings. Generic seen-subject/mute preferences use
+`downfall.arena.help.v1`; no seat, token, match, question or choice is persisted. Denied storage falls
+back to the current page's memory. Opening Help preserves drafts, restores focus on close and never
+acknowledges a question or sends a command. Access loss clears its text.
+
+`table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
+The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
+Ordinary upkeep-energy receipts remain AU3; mutation cards and batch tempos remain later UX slices.
+
+`arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
+waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
+`arena.loop.js` completes real-host matches in both modes with tips enabled. Other focused arena journeys
+set an explicit returning-player preference so they continue exercising their original controls.
+
+Real-host captures: [desktop help](../docs/tabletop/images/arena-guidance/desktop.jpg) ·
+[phone help](../docs/tabletop/images/arena-guidance/phone.jpg).

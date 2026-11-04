@@ -1,6 +1,8 @@
 import { createArenaPlayback } from '../../table/arena-playback.js';
 import { createArenaHistory } from '../../table/arena-history.js';
 import { historyControls } from './history';
+import { arenaGuidance } from '../../table/arena-guidance.js';
+import { guidanceControls } from './guidance';
 import { ArenaScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets } from './targets';
@@ -37,6 +39,7 @@ const request = (path: RequestInfo | URL, options?: RequestInit) =>
 let storage: Storage | null = null;
 try { storage = localStorage; } catch { /* A linked seat still works when storage is unavailable. */ }
 let ready = false;
+let receiving = false;
 let selected: Choice | null = null;
 let view: View | null = null;
 let catalogue: Catalogue | null = null;
@@ -49,14 +52,18 @@ const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
-  view = next; catalogue = content ?? catalogue;
-  history.receive(next, catalogue);
-  combat.receive(next); planning.receive(next); match.receive(next, catalogue);
-  playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-    { animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+  receiving = true;
+  try {
+    view = next; catalogue = content ?? catalogue;
+    history.receive(next, catalogue);
+    combat.receive(next); planning.receive(next); match.receive(next, catalogue);
+    playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
+      { animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+  } finally { receiving = false; }
+  render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog'].some(id => $<HTMLDialogElement>(id).open);
 const history = createArenaHistory();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
@@ -67,6 +74,7 @@ const planningUI = planningControls(planning, name, () => playback.skip());
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
 const historyUI = historyControls(() => playback.skip(), () => render());
+const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
 let wasTargeting = false;
 
 function status(state: string) {
@@ -133,15 +141,6 @@ function headline(board: { turn: { slot: { creature: unknown } } | null; phase: 
   return phaseLabel(board.phase) || 'Waiting room';
 }
 
-function instruction() {
-  if (!view) return 'Choose a viewpoint to play.';
-  if (view.over) return match.model().outcome;
-  if (combat.model().accepted || planning.model().accepted) return 'Sent. Waiting for the host and the other team.';
-  if (combat.model().target) return 'Select figures, then confirm. Tap again to deselect.';
-  if (combat.model().available) return 'Choose a spell, then targets. Confirm to cast.';
-  if (planning.model().available) return 'Open your command, choose, then confirm. Both teams plan privately.';
-  return 'Waiting for the host or the other team. Inspect creatures or review the round.';
-}
 
 function connectionText(replaying: boolean, combatOpened: boolean) {
   if (replaying) return 'RECORDED REPLAY';
@@ -150,12 +149,16 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
 function render() {
+  if (receiving) return;
   const playbackState = playback.model();
   const replay = match.model();
   const board = replay.active ? replay.board! : playbackState.board;
   creatures = board.creatures;
   const action = combat.model();
   const targeting = action.opened && Boolean(action.target);
+  const guide = arenaGuidance(rendererFailed ? null : view, catalogue, {
+    accepted: action.accepted || planning.model().accepted, targeting,
+    historical: playbackState.active || replay.active, online: $('arena').dataset.connection === 'live' });
   frame = (replay.active ? board.frame : playbackState.frame) as SceneFrame;
   $('arena').dataset.playback = playbackState.stage;
   $('arena').dataset.sequence = String(playbackState.sequence ?? '');
@@ -217,7 +220,7 @@ function render() {
   text('actor-name', playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', playbackState.active ? `Playing confirmed results. Skip${action.available ? ' or choose your next action' : ''} at any time.` : instruction());
+  text('instruction', playbackState.active ? `Playing confirmed results. Skip${action.available ? ' or choose your next action' : ''} at any time.` : guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
@@ -228,6 +231,9 @@ function render() {
   scene.present(frame, reduced(), 1);
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
+  helpUI.render(guide, ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
+    !playbackState.active && !replay.active && !action.opened && !action.sending &&
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]'));
 }
 
 function choose(choice: Choice) {
