@@ -294,6 +294,9 @@ function recapAction(entry, board, cards) {
       target: recapCreature(outcome.target, board),
       text: recapEffectText(outcome),
       tone: outcomeTone(outcome.kind),
+      kind: outcome.kind,
+      effect: outcome.effect,
+      onCaster: outcome.onCaster === true,
     })),
     dropped: (resolution.droppedTargets ?? []).map(failure =>
       `${failure.target == null ? '' : `${recapCreature(failure.target, board).label}: `}${errorText(failure.error)}`),

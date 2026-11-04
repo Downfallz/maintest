@@ -146,7 +146,7 @@ The **necromancy framing is user-corrected and accepted**. Fine colors, amount o
 
 1. **ART-2 — Reference asset intake (PNG upload pending)**: [WebP references, corrected identification, transparency/dimension audit, visual review and provenance](asset-intake.md). Runtime integration is recorded separately in ART-3.
 2. **ART-3 — Sprite manifest + arena contrast (implemented)**: [asset mapping/fallback, placements, sprite anchoring and viewport QA](runtime-sprites.md).
-3. **ART-4 — Spell visual vocabulary**: physical impact, biological toxin, elemental, necromantic, astral VFX; no domain changes.
+3. **ART-4 — Spell visual vocabulary (implemented)**: [confirmed physical, biological, elemental, necromantic and astral VFX](spell-vfx.md); no domain changes.
 4. **ART-5 — Mutation cues / multiclass POC**: precedence/layer budget/visibility and deterministic fallbacks, with test cases for cross-family builds.
 5. **ART-6 — Polish**: timings, reduced motion, audio and screenshots.
 

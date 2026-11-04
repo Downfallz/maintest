@@ -18,6 +18,7 @@ namespace DownfallArena.Application.Catalogue;
 /// crits has no face to roll.
 /// </param>
 /// <param name="Tree">The talent tree the spell is authored under, which is where the packages are derived from.</param>
+/// <param name="Visual">How a confirmed cast is drawn, where the builder published the spell art (ADR 0131); <c>null</c> for a spell nobody drew.</param>
 /// <remarks>
 /// <para>
 /// What it takes to acquire the spell is deliberately absent. A card used to carry the depth of its talent
@@ -40,4 +41,5 @@ public sealed record CardFace(
     int? CriticalThreshold,
     string? Tree,
     IReadOnlyList<CardCue>? Cues = null,
-    string? CriticalNote = null);
+    string? CriticalNote = null,
+    SpellVisual? Visual = null);
