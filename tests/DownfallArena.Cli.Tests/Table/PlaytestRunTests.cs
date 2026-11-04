@@ -136,6 +136,51 @@ public sealed class PlaytestRunTests : IDisposable
     }
 
     /// <summary>
+    /// A rebuilt trace still short of its checkpoint when the wait runs out says nothing either way: a bot slow to
+    /// decide on a busy start explains it as well as a record that no longer fits, and the next host tries again.
+    /// </summary>
+    [Fact]
+    public async Task A_trace_that_has_not_caught_up_when_the_wait_runs_out_neither_agrees_nor_disagrees()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        await CheckpointedPast(run, session);
+
+        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: null, TestContext.Current.CancellationToken);
+
+        agrees.ShouldBeNull();
+    }
+
+    /// <summary>A trace standing still at a person's question has stopped, and short of its checkpoint it disagrees.</summary>
+    [Fact]
+    public async Task A_trace_stopped_at_a_persons_question_short_of_its_checkpoint_disagrees()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        await CheckpointedPast(run, session);
+
+        var agrees = await run.AgreesWithCheckpointAsync(session.MatchId, stalled: () => true, TestContext.Current.CancellationToken);
+
+        agrees.ShouldBe(false);
+    }
+
+    /// <summary>A checkpoint one entry longer than the match it holds: what an earlier host wrote past where this one stops.</summary>
+    private static async Task CheckpointedPast(PlaytestRun run, TableSession session)
+    {
+        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
+        var path = Path.Combine(run.Location, "traces", $"{session.MatchId}.json");
+        for (var attempt = 0; attempt < 300 && !File.Exists(path); attempt++)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        var trace = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken))!;
+        var entries = trace["entries"]!.AsArray();
+        entries.Add(entries[^1]!.DeepClone());
+        await File.WriteAllTextAsync(path, trace.ToJsonString(), TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
     /// Closing a session makes the recorder forget the match, and the host goes on serving because two people
     /// are still reading the end of what they played. The feed would go empty at that moment and never
     /// recover, taking the deciding blow and the outcome off both screens, so the entries survive the closing.
