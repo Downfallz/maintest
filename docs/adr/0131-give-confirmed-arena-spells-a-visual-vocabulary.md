@@ -21,7 +21,10 @@ The existing applied-outcome adapter remains authoritative for recipients and te
 recipients, exclude the caster from contact/lunge selection, and never derive destinations from declared
 or dropped targets. An applied zero-damage outcome still records contact; the number displayed remains
 zero. Preserve multiple recipients, even on a single-target-looking motif. Blood costs get a wound at the
-caster, separately from any ward or recovery it receives in the same resolution.
+caster, separately from any ward or recovery it receives in the same resolution. Preserve structured
+outcome kind, effect and caster metadata through the recap adapter: a caster-side Bleed condition is a
+blood cost too, even though its generic outcome tone is `condition`. Never parse the display text to
+recognize it.
 
 Draw bounded, short-lived Phaser vectors for physical impacts/plates, biological claws/quills/spores,
 elemental arcs/fire/ice, necromantic spirits/bones, and astral vitality/void. Only melee delivery moves the

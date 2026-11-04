@@ -26,7 +26,9 @@ No biological motif is assigned to the Necrotic/Revenant branch. No spirit is a 
 - Use the existing 420 ms windup, 850 ms impact frame and 250 ms settlement. Quills travel during the
   final 300 ms of windup. Local impact vectors fade over 600 ms, inside the impact frame.
 - Apply motifs only to confirmed outcome recipients, once per creature except a separate self-cost wound.
-  A caster receiving its own Bonewall shows both the blood cost and the ward. Empty outcomes never invent
+  A caster receiving its own Bonewall shows both the blood cost and the ward.
+  Preserve the applied outcome kind, effect and caster flag: Bonewall, Wraithguard and Death Wail
+  pay with caster-side Bleed conditions, while Infestation uses immediate Damage. Empty outcomes never invent
   recipients from the declaration. Fizzles never launch quills or hit a recipient.
 - Scale shapes to the visible creature and viewport; mirrored creatures use the same ground/body anchors.
   Shapes differ as well as colors. Warm gold remains reserved for the target/active marker.

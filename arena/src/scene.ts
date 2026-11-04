@@ -170,7 +170,6 @@ export class ArenaScene extends Phaser.Scene {
       this.burst(target, 0xffd995, true);
     }
     if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
-
   }
 
   private anchor(figure: Figure): EffectAnchor {
@@ -190,11 +189,12 @@ export class ArenaScene extends Phaser.Scene {
       if (!target) continue;
       const self = id === this.state.actor;
       // A blood ritual's self-cost is a wound, never a lunge, lightning bolt or summoned spirit at its caster.
-      const tones = cue.effects.filter(effect => effect.creature === id).map(effect => effect.tone);
-      if (self && tones.includes('harm')) {
+      const effects = cue.effects.filter(effect => effect.creature === id);
+      if (self && effects.some(effect => effect.wound)) {
         this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.anchor(target), id, this.rate);
-        if (tones.every(tone => tone === 'harm')) continue;
+        if (effects.every(effect => effect.wound)) continue;
       }
+      const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
       this.spellEffects.impact(visual, this.anchor(target), id, this.rate, actor ? this.anchor(actor) : undefined);

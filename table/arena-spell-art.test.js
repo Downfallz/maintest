@@ -56,3 +56,26 @@ test('the live queue carries the wire spell ID through renamed catalogue labels 
   assert.equal(queue.model().cue.visual.motif, 'bones'); assert.equal(queue.model().frame.target, '2');
   assert.deepEqual(queue.model().cue.recipients, ['1', '2']);
 });
+
+for (const name of ['bone_ward', 'revenant_guards', 'crazed_specter']) test(`${name} keeps an applied caster bleed separate from a beneficiary condition`, () => {
+  const authored = JSON.parse(readFileSync(new URL(`../data/Spells/sorcerer/necromancer/${name}.v1.json`, import.meta.url), 'utf8'));
+  const bleed = authored.casterEffects.find(effect => effect.kind === 'Bleed');
+  const applied = authored.effects.map(effect => effect.kind === 'Damage'
+    ? { kind: 'DamageOutcome', target: 2, amount: effect.amount, onCaster: false }
+    : { kind: 'ConditionOutcome', target: 2, effect, onCaster: false });
+  const before = [1, 2].map(id => ({ id, health: 20, maxHealth: 20, energy: 5, isAlive: true }));
+  const queue = createArenaPlayback({ onChange() {}, schedule() {} });
+  const view = { board: { allies: before, enemies: [], roundNumber: 2 }, feed: [] };
+  queue.receive(view, new Map());
+  queue.receive({ ...view, feed: [{ sequence: 1, event: { kind: 'CombatActionResolved', roundId: 2,
+    resolution: { action: { actor: 1, spell: authored.id, targets: [2] } }, frame: { before, after: before },
+    appliedOutcomes: [
+      { kind: 'ConditionOutcome', target: 1, effect: bleed, onCaster: true },
+      ...applied,
+    ] } }] }, new Map());
+  const effects = queue.model().cue.effects;
+  assert.deepEqual(effects.map(effect => effect.wound), [true, ...applied.map(() => false)]);
+  assert.deepEqual(effects[0].effect, bleed); assert.equal(effects[0].kind, 'ConditionOutcome');
+  assert.equal(effects[0].onCaster, true); assert.ok(!queue.model().cue.struck.includes('1'));
+  assert.deepEqual(queue.model().cue.contact, ['2']);
+});

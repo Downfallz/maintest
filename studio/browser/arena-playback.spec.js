@@ -165,16 +165,17 @@ import { actionCue } from '../../table/arena-playback.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
 const visualCue = (spell, outcomes, status = 'Resolved') => actionCue({ actor: { id: 1 },
   action: { spell: `spell:${spell}:v1`, targets: [4, 5, 6] }, status,
-  effects: outcomes.map(([id, tone]) => ({ target: { id }, tone, text: 'Confirmed' })) });
+  effects: outcomes.map(([id, tone, metadata]) => ({ target: { id }, tone, text: 'Confirmed', ...metadata })) });
 
 test('ART-4 renders distinct signatures only on confirmed recipients and clears every cast', async ({ page }, info) => {
+  test.setTimeout(90000); // Several rendered casts and captures per viewport, including software GPUs.
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await mountSpellScene(page);
   for (const [spell, motif, outcomes] of [
     ['pummel', 'impact', [[4, 'harm']]], ['tornado', 'wave', [[4, 'harm'], [5, 'harm']]],
     ['throwing_star', 'quill', [[4, 'harm'], [5, 'harm']]], ['noxious_cure', 'spores', [[2, 'recovery'], [3, 'condition']]],
     ['lightning_bolt', 'arc', [[4, 'harm']]], ['meteor', 'fire', [[4, 'harm'], [5, 'harm']]],
-    ['ice_spear', 'ice', [[4, 'condition']]], ['bone_ward', 'bones', [[1, 'harm'], [2, 'condition']]],
+    ['ice_spear', 'ice', [[4, 'condition']]], ['bone_ward', 'bones', [[1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'Bleed' }, onCaster: true }], [2, 'condition']]],
     ['summon_minions', 'spirits', [[1, 'harm'], [4, 'condition'], [5, 'condition']]],
     ['toxic_waves', 'void', [[4, 'harm'], [5, 'harm']]], ['rejuvenate', 'vital', [[2, 'recovery']]],
   ]) {
@@ -189,7 +190,7 @@ test('ART-4 renders distinct signatures only on confirmed recipients and clears 
     const effects = await renderedEffects(page);
     expect(effects.map(effect => effect.creature).sort()).toEqual(outcomes.map(([id]) => String(id)).sort());
     expect(effects.filter(effect => effect.creature !== '1').every(effect => effect.motif === motif && effect.alpha > 0)).toBe(true);
-    if (outcomes.some(([id, tone]) => id === 1 && tone === 'harm')) expect(effects.find(effect => effect.creature === '1').motif).toBe('wound');
+    if (frame.cue.effects.some(effect => effect.wound)) expect(effects.find(effect => effect.creature === '1').motif).toBe('wound');
     if (['summon_minions', 'bone_ward', 'throwing_star', 'lightning_bolt', 'noxious_cure', 'toxic_waves'].includes(spell)) {
       await page.screenshot({ path: info.outputPath(`art4-${spell}.png`) });
     }
@@ -217,7 +218,8 @@ test('ART-4 suppresses fizzle hits and reduced motion, and cancels projectiles o
   expect((await renderedEffects(page)).map(effect => [effect.creature, effect.motif])).toEqual([['1', 'fizzle']]);
   await page.clock.runFor(900); expect(await renderedEffects(page)).toEqual([]);
   // A caster may also be the beneficiary: blood cost must not hide its own ward.
-  const selfWard = spellFrame(visualCue('bone_ward', [[1, 'harm'], [1, 'condition']]));
+  const selfWard = spellFrame(visualCue('bone_ward', [[1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'Bleed' }, onCaster: true }],
+    [1, 'condition', { kind: 'ConditionOutcome', effect: { kind: 'DefenseBuff' }, onCaster: false }]]));
   await presentSpell(page, selfWard, 'decision'); await presentSpell(page, selfWard, 'impact');
   expect((await renderedEffects(page)).map(effect => effect.motif).sort()).toEqual(['bones', 'wound']);
   const changed = { ...frame, creatures: frame.creatures.map(one => ({ ...one, form: 'base-creature' })) };
