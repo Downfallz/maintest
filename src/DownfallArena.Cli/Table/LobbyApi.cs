@@ -158,16 +158,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
 
         // A table for a friend (ADR 0129): the second seat is kept for that account, and one such seat at a time.
-        AccountId? friend = null;
-        if (opponent == "friend")
-        {
-            if (await FriendRefusalAsync(account, opening?.Friend) is { } refused)
-            {
-                return refused;
-            }
-
-            friend = AccountId.Parse(opening!.Friend!);
-        }
+        // Checked under the claim gate below: two requests of one account must not both pass the one-at-a-time rule.
+        var friend = opponent == "friend" ? opening?.Friend : null;
 
         var format = composer.Rules.Format;
         if (opening?.Format is { } named && (!MatchFormat.TryParse(named, out format) || !MatchFormat.Offered.Contains(format)))
@@ -178,6 +170,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         await Claims.WaitAsync();
         try
         {
+            if (opponent == "friend" && await FriendRefusalAsync(account, friend) is { } refused)
+            {
+                return refused;
+            }
+
             using var reservation = registry.Reserve();
             if (reservation is null)
             {
@@ -208,9 +205,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 registry.Rekey(table, seat, SeatKeys.TakenBy(seat.Token, account));
             }
 
-            if (friend is { } kept)
+            if (friend is not null)
             {
-                registry.Rekey(table, table.Seats[1], SeatKeys.KeptFor(kept, clock.GetUtcNow()));
+                registry.Rekey(table, table.Seats[1], SeatKeys.KeptFor(AccountId.Parse(friend), clock.GetUtcNow()));
             }
 
             try
@@ -224,9 +221,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(503, $"The table could not be saved, so it was not opened: {failure.Message}");
             }
 
-            if (friend is { } invited)
+            if (friend is not null)
             {
-                await InviteNoticeAsync(invited, account!.Value, table);
+                await InviteNoticeAsync(AccountId.Parse(friend), account!.Value, table);
             }
 
             return Json(new
@@ -244,7 +241,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>
     /// Why a seat cannot be kept for that friend, or null: this host has no friends, the id is not one, they are
     /// not a friend, or the asker already has an invitation waiting (ADR 0129). Expired invitations are let go of
-    /// first, so one nobody answered a day ago does not stand in the way.
+    /// first, so one nobody answered a day ago does not stand in the way. Under the claim gate, as its callers are.
     /// </summary>
     private async Task<StudioResponse?> FriendRefusalAsync(AccountId? account, string? friendId)
     {
@@ -352,6 +349,14 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "Lobby.InvitationExpired", "This invitation ran out: it waited a day. Ask your friend for a new one.");
             }
 
+            // Removing a friend cancels the invitation between the two, even on a card drawn before the removal.
+            var inviterSeat = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null);
+            if (Friends is { } friends && inviterSeat?.Account is { } host && !await friends.AreFriendsAsync(host, me))
+            {
+                await LetGoAsync(table, seat, declinedBy: null);
+                return Problem(404, "Lobby.NotInvited", "This invitation is no longer open: you are no longer friends.");
+            }
+
             if (!await TakeAsync(table, [seat], me))
             {
                 return Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
@@ -359,7 +364,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             seat.DeclinedBy = null;
             table.Touch(clock.GetUtcNow());
-            if (table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account is { } inviter)
+            if (inviterSeat?.Account is { } inviter)
             {
                 await NoticeAsync(inviter, $"{player.Account.Username.Value} accepted", "Take your seat: the battle begins when you are both there.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"invite:{table.Id}");
             }
@@ -500,7 +505,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             table.Api.Changes.Bump();
             await InviteNoticeAsync(friend, me, table);
-            return Json(new { invited = await InvitedOfAsync(seat) });
+            return Json(new { invited = await InvitedOfAsync(table, seat) });
         }
         finally
         {
@@ -597,17 +602,26 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    /// <summary>What a card says of a seat kept for a friend, or declined by one: who, since when, and whether they said no.</summary>
-    private async Task<object?> InvitedOfAsync(TableSeat seat)
+    /// <summary>
+    /// What a card says of the seat nobody has taken at the inviter's table: kept for a friend (who, since when),
+    /// declined by one, or kept for nobody after a cancel, an unfriending or an expiry, which still needs a way
+    /// out. Null for an open place and for a seat somebody holds.
+    /// </summary>
+    private async Task<object?> InvitedOfAsync(PlayedTable table, TableSeat seat)
     {
         if (seat.InvitedAccount is { } friend)
         {
-            return new { id = friend.Value, username = await NameAsync(friend), sentAt = seat.InvitedAt, declined = false };
+            return new { id = friend.Value, username = await NameAsync(friend), sentAt = seat.InvitedAt, declined = false, free = false };
         }
 
         if (seat.DeclinedBy is { } decliner)
         {
-            return new { id = decliner.Value, username = await NameAsync(decliner), sentAt = (DateTimeOffset?)null, declined = true };
+            return new { id = decliner.Value, username = await NameAsync(decliner), sentAt = (DateTimeOffset?)null, declined = true, free = false };
+        }
+
+        if (seat.Person is not null && !seat.Taken && !table.OpenSeats.Contains(seat.Name) && !table.Session.HasBegun)
+        {
+            return new { id = (string?)null, username = (string?)null, sentAt = (DateTimeOffset?)null, declined = false, free = true };
         }
 
         return null;
@@ -1093,7 +1107,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 table = await DescribeAsync(table),
                 seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
-                invited = table.IsOver ? null : await InvitedOfAsync(table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
+                invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
             }));
 
         // The tables waiting for this account (ADR 0129): each with who asked, and since when.
