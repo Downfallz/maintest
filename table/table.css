@@ -1412,6 +1412,7 @@ body:has(#table) { padding-bottom: 24px; }
 .match-finished .decision-heading { opacity: .7; }
 .match-result { --result-accent: #e7c37b; margin: 4px 0 20px; padding: 22px; border: 1px solid var(--result-accent); border-radius: 12px; background: linear-gradient(135deg, #e7c37b14, #14211f 75%); }
 .match-result.defeat { --result-accent: #e3a29a; }
+.match-result-rematch { display: block; margin-top: 16px; text-align: center; text-decoration: none; }
 .match-result:is(.draw, .unknown) { --result-accent: #b0bbb2; }
 .match-result-eyebrow { display: block; font-size: 10px; letter-spacing: 2px; font-weight: 700; color: var(--result-accent); }
 .match-result-title { display: block; margin: 9px 0 5px; color: var(--result-accent); font: 650 clamp(28px, 5vw, 44px) Georgia, serif; letter-spacing: 1px; }

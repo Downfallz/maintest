@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, invitationLine, invitedState, lobbyRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -91,4 +91,20 @@ test('an inviter\'s card says who it waits for, or who declined and the ways out
 test('an invitation card says who asks and to what', () => {
   assert.equal(invitationLine({ from: { username: 'MarkF' }, table: { format: '2v2' } }), 'MarkF invites you to a 2v2 battle');
   assert.equal(invitationLine({ table: { format: '2v2' } }), 'A player invites you to a 2v2 battle');
+});
+
+test('a rematch link names the opponent to choose again, or nothing', () => {
+  assert.deepEqual(rematchRequest('?rematch=acct_abcdefghijklmnop&format=2v2'), { opponent: 'friend', friend: 'acct_abcdefghijklmnop', format: '2v2' });
+  assert.deepEqual(rematchRequest('?rematch=bot'), { opponent: 'bot', friend: null, format: null });
+  assert.deepEqual(rematchRequest('?rematch=hotseat&format=1v1'), { opponent: 'hotseat', friend: null, format: '1v1' });
+  assert.equal(rematchRequest('?rematch=../admin'), null);
+  assert.equal(rematchRequest(''), null);
+});
+
+test('the create dialog starts on the friend asked for, and on nobody when they are not a friend', () => {
+  const friends = [{ id: 'acct_mark', username: 'MarkF' }, { id: 'acct_bastien', username: 'bastien' }];
+  assert.deepEqual(friendChoice(friends, 'acct_bastien'), { value: 'acct_bastien', missing: false });
+  assert.deepEqual(friendChoice(friends, 'acct_stranger'), { value: '', missing: true }, 'a rematch against a non-friend picks nobody by default');
+  assert.deepEqual(friendChoice(friends, null), { value: '', missing: false });
+  assert.deepEqual(friendChoice([], 'acct_mark'), { value: '', missing: true });
 });

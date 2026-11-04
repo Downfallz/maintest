@@ -529,6 +529,14 @@ not begun may do. A rebuilt table (ADR 0091) still waits for the friend. Cards n
 `POST /api/lobby/tables/<id>/invitation {"friend"}`, `POST /api/lobby/tables/<id>/open`, `DELETE /api/lobby/tables/<id>`;
 `GET /api/lobby/mine` adds `invitations` and each own table's `invited`.
 
+When a match ends, each seat's account is told how, against the other side by name (*Victory · You won against
+bastien*, *Defeat · bastien won*, *A draw*); a bot's seat is told nothing, and one account holding both seats of a
+shared device is told once, in the room's words. A player who leaves a begun match is announced to the other
+seat's account (*bastien left the table*). The outcome card offers **Rematch**, which opens the lobby's create
+dialog on the same opponent and format: the friend (or, if they are not a friend yet, a word to ask them first),
+the bot, or the shared device. Deleting an account also offers the seats it kept for friends to everyone, as ADR
+0122 offers its own, and frees the seats kept for it (stage 4 of the plan).
+
 ```bash
 dotnet run --project src/DownfallArena.Cli -- push-keys > push-keys.json        # once; keep the file
 dotnet run --project src/DownfallArena.Cli -- table --push-keys push-keys.json --p2 greedy

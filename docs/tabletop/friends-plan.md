@@ -3,7 +3,7 @@
 Status: plan, settled with the owner on 2026-11-04 (every recommendation under "Questions the owner settled"
 taken, and every notice of stage 4 wanted) and recorded by [ADR 0129](../adr/0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md).
 Builds on [accounts-plan.md](accounts-plan.md) (ADR 0122), the seat invitations of ADR 0116 and the push notices
-of ADR 0118. Stages 1 to 3 are built.
+of ADR 0118. Every stage is built.
 
 ## What the owner asked for
 
@@ -194,10 +194,15 @@ Each stage is one pull request: built, tested, formatted, the node tests when a 
    invited account accepts, once, and the inviter is told; a second invitation while one waits is `409`; cancel,
    decline and expiry each leave the inviter's table with no seat kept and the card saying who declined; removing
    the friend cancels it; a restart rebuilds a waiting invitation; a begun table is not closed from the lobby.
-4. **What else would be missed.** *Left the table* and the end-of-match notices to each seat's account,
-   *Rematch* on the outcome, and the account deletion cleaning up everything stage 2 and 3 added. Tests: a
-   shared-device table sends nothing to its one account about itself (ADR 0120); a bot's seat is told nothing;
-   a match whose two seats are one account gets one notice.
+4. **What else would be missed.** *Built*: the end of a match to each seat's account (*Victory · You won against
+   bastien*, *Defeat · bastien won*, *A draw*), the opponent leaving a begun match (*bastien left the table*),
+   *Rematch* on the outcome card (the lobby's dialog with the same opponent and format, a friend, the bot or the
+   shared device), and the account deletion freeing the seats kept for it and the seats it kept for friends (offered
+   to everyone, as ADR 0122 offers its own), on top of its devices and friendships. Tested: each player is told against the other by name; a bot's seat is told nothing
+   and the person is told against the bot by its name; one account holding both seats (a shared device) is told
+   once, in the room's words; a finished table nobody with an account played tells nobody; leaving a begun match
+   tells the other seat's account; a deleted account's seats kept for friends are offered to everyone and the seats
+   kept for it are let go.
 
 Not in this plan, each its own later decision: *your turn* to every device of an account instead of the seat's
 browser (the follow-up ADR 0118 already names; stage 1 is what it needs), presence (*online now*), a block list
