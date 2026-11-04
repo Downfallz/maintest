@@ -275,6 +275,55 @@ public sealed class LobbyInvitationsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_player_who_leaves_a_begun_match_is_announced_to_the_other_seat_s_account()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        var accepted = Read(await ActAsync("POST", table, "/accept", bastien));
+        var token = accepted.GetProperty("seats")[0].GetProperty("token").GetString();
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+        _sender.Sent.Clear();
+
+        var left = await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/leave", "{}", token, bastien);
+
+        left.Status.ShouldBe(200);
+        _sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/MarkF");
+        var notice = JsonDocument.Parse(_sender.Sent[0].Payload).RootElement;
+        notice.GetProperty("title").GetString().ShouldBe("bastien left the table");
+        notice.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");
+        _sender.Sent[0].Topic.ShouldBe("match");
+    }
+
+    [Fact]
+    public async Task A_deleted_account_frees_the_seats_it_kept_for_friends_and_the_seats_kept_for_it()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var opened = await InvitedTableAsync(mark, bastien);
+        var keptForMark = await InvitedTableAsync(bastien, mark);
+        var lobby = await LobbyAsync();
+
+        await lobby.ReleaseAsync(mark.Account.Id);
+
+        opened.Seats[1].InvitedAccount.ShouldBeNull("the friend was waiting on a player who is gone");
+        opened.OpenSeats.ShouldBe(["player2", "player1"], "both places are anybody's now, as ADR 0122 offers a deleted account's seats");
+        (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
+        _registry.ById(keptForMark.Id).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
+        keptForMark.Seats[1].InvitedAccount.ShouldBeNull();
+        var bastiens = (await MineAsync(bastien)).GetProperty("tables").EnumerateArray().Single(entry => entry.GetProperty("table").GetProperty("id").GetString() == keptForMark.Id).GetProperty("invited");
+        bastiens.GetProperty("free").GetBoolean().ShouldBeTrue("kept for nobody now, with the ways out on the card");
+        bastiens.GetProperty("declined").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_host_starting_over_the_store_rebuilds_the_table_still_waiting_for_the_friend()
     {
         var mark = await PlayerAsync("MarkF");

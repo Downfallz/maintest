@@ -111,6 +111,9 @@ internal static class TableHost
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
         admin.Lobby.Friends = friendships;
         admin.Lobby.Notices = accounts?.Notices;
+        // How a match ended, to each seat's account (stage 4), named as the cards name them.
+        composer.Notices = accounts?.Notices;
+        composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null
