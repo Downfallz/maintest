@@ -163,7 +163,6 @@ set an explicit returning-player preference so they continue exercising their or
 Real-host captures: [desktop help](../docs/tabletop/images/arena-guidance/desktop.jpg) ·
 [phone help](../docs/tabletop/images/arena-guidance/phone.jpg).
 
-
 ## AU3a: recorded ordinary energy
 
 New matches include **Upkeep · round energy** in History, with each recipient's actual gain, before/after

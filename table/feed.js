@@ -1,4 +1,12 @@
-// Public event facts, formatted without reconstructing gains from rule defaults or current boards.
+// What has happened, one line an entry.
+//
+// Every event is its kind and nothing more: the kinds are the engine's own words, off the wire, and the page
+// has never heard of any of them. Two events are the exception, and they are the exception on purpose. A
+// resolution is the entry whose fields a player has to read -- above all whether the cast crit, which stage 4
+// owes the screen (app-roadmap.md, "The critical, on screen"): the boards' own totals cannot tell, because
+// Defense, caps and overkill all move the number a critical produced. A round's energy receipt (ADR 0132) is
+// the other: what each creature actually gained is a recorded fact, never the rule's allowance or a difference
+// between two boards. So those two are formatted, and everything else is named.
 
 import { stepLabel } from './terms.js';
 

@@ -252,7 +252,7 @@ No implementation slice is completed by this document.
 | --- | --- | --- | --- |
 | AU1 (implemented) | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
 | AU2 (implemented) | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
-| AU3a | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
+| AU3a (implemented) | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
 | AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |

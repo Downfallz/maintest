@@ -157,7 +157,6 @@ test('normalization never mutates a frozen response or retains its raw frame', (
   assert.doesNotMatch(JSON.stringify(history.model()), /"frame"|"resolution"|"knownSpells"/);
 });
 
-
 test('round-energy facts remain public history after a recipient dies and survive duplicate reads', () => {
   const history = createArenaHistory();
   const receipt = { sequence: 5, round: 2, event: { kind: 'RoundEnergyGranted', roundId: 2, grants: [

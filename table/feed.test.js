@@ -353,7 +353,6 @@ test('the cleanup events are kept with the round they ended', () => {
     ['CombatActionResolved', 'ConditionsExpired', 'StunImmunityGained', 'RoundEnded', 'OngoingEffectsApplied']);
 });
 
-
 const ordinary = { kind: 'RoundEnergyGranted', roundId: 2, grants: [
   { creature: 1, baseRequested: 4, passiveRequested: 1, gained: 3, before: 7, after: 10 },
   { creature: 2, baseRequested: 0, passiveRequested: 0, gained: 0, before: 8, after: 8 },

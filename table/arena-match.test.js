@@ -72,7 +72,6 @@ test('an upkeep without applied ticks says so instead of leaving an empty headin
   assert.equal(replayText({ interlude: 'upkeep', ticks: [{ amount: 0 }] }), 'Upkeep · No ongoing ticks applied');
 });
 
-
 test('an ordinary zero-energy replay keeps its receipt instead of claiming no ongoing ticks', () => {
   const event = { kind: 'RoundEnergyGranted', roundId: 1, grants: [
     { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },

@@ -2636,6 +2636,7 @@ function roundJump(state, replay) {
 }
 
 function interludeHeading(action, round) {
+  if (action.ordinaryEnergy) return `Round ${round} · round energy`;
   return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
 }
 
