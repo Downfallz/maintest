@@ -206,3 +206,25 @@ test('the live queue carries the card\'s visual and the harmful effects it was g
   assert.equal(queue.model().cue.visual.motif, 'bones'); assert.equal(queue.model().frame.target, '2');
   assert.deepEqual(queue.model().cue.effects.map(effect => effect.wound), [true, false]);
 });
+
+test('playback speed scales every full-motion phase, while reduced receipts keep reading time', () => {
+  for (const rate of [1, 1.5, 2]) {
+    const h = harness(); h.queue.setRate(rate); h.receive([]); h.receive([event(10)]);
+    assert.equal([...h.timers.values()][0].ms, 420 / rate);
+    h.tick(); assert.equal([...h.timers.values()][0].ms, 850 / rate);
+    h.tick(); assert.equal([...h.timers.values()][0].ms, 250 / rate);
+    h.drain(); h.queue.setReduced(true); h.receive([event(11)]);
+    assert.equal(h.queue.model().stage, 'impact');
+    assert.equal([...h.timers.values()][0].ms, 650);
+  }
+});
+test('speed changes settle the whole queue and fence callbacks without replaying consumed events', () => {
+  const h = harness(); h.receive([]); h.receive([event(10), event(11)]);
+  const stale = [...h.timers.values()][0].fn;
+  h.queue.setRate(2); stale();
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().remaining, 0);
+  h.receive([event(10), event(11)]); assert.equal(h.queue.model().active, false);
+  h.receive([event(12)]); assert.equal([...h.timers.values()][0].ms, 210);
+  h.queue.setRate(2); assert.equal(h.queue.model().active, true);
+  h.queue.setRate(Infinity); assert.equal(h.queue.model().rate, 1); assert.equal(h.queue.model().active, false);
+});

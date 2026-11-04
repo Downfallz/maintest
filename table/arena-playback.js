@@ -2,7 +2,7 @@ import { resolvedSince, lastResolvedText } from './feed.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './arena-live.js';
-import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './arena-timing.js';
+import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './arena-timing.js';
 
 const resultText = action => [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
 
@@ -46,19 +46,19 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
 export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = clearTimeout, limit = 12 }) {
   let latest = null, queue = [], current = null, stage = 'decision', summary = '';
-  let seen = null, timer = null, generation = 0, reduced = false, catalogue = new Map(), harmful = new Set(), bought = new Map();
+  let seen = null, timer = null, generation = 0, reduced = false, rate = 1, catalogue = new Map(), harmful = new Set(), bought = new Map();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
   function later(callback, delay) {
     const ticket = generation;
-    timer = schedule(() => { if (ticket === generation) { timer = null; callback(); } }, delay);
+    timer = schedule(() => { if (ticket === generation) { timer = null; callback(); } }, delay / rate);
   }
   function next() {
     current = queue.shift() ?? null;
     if (!current) { stage = 'decision'; emit(); return; }
     summary = resultText(current);
     stage = reduced ? 'impact' : 'windup'; emit();
-    if (reduced) later(finish, REDUCED_MS);
+    if (reduced) later(finish, REDUCED_MS * rate);
     else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
   function finish() {
@@ -104,7 +104,7 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     const frame = current ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
-      stage, label: current ? `${current.spell} · ${current.status}` : '', remaining: queue.length + (current ? 1 : 0), cue };
+      stage, rate, label: current ? `${current.spell} · ${current.status}` : '', remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;
@@ -112,5 +112,11 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     // Changing a motion preference mid-tween settles immediately and invalidates its timers.
     if (current) skip();
   }
-  return { receive, model, skip, reset, setReduced };
+  function setRate(value) {
+    const nextRate = playbackRate(value);
+    if (nextRate === rate) return;
+    rate = nextRate;
+    if (current) skip(); else emit();
+  }
+  return { receive, model, skip, reset, setReduced, setRate };
 }

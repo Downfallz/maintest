@@ -13,3 +13,9 @@ export const SETTLE_MS = 250;
 
 // With less motion there is no lunge: the frame after the action is shown at once, for this long.
 export const REDUCED_MS = 650;
+
+// Choreography stays within the impact receipt; renderer and queue use the same playback rate.
+export const RETURN_MS = 360;
+export const RETURN_DELAY_MS = 60;
+export const VFX_MS = 600;
+export const playbackRate = value => [1, 1.5, 2].includes(value) ? value : 1;

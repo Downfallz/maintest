@@ -168,3 +168,8 @@ ART-5 adds [mutation cues](../docs/art/mutation-cues.md): one dominant body sele
 acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cues.ts` follows the figure
 transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
 The live suite checks all nine branch pairs and lifecycle behavior with the production scene.
+
+ART-6 adds [playback polish](../docs/art/arena-polish.md): shared timings, live 1×/1.5×/2× playback and
+opt-in synthesized sound. `audio.ts` owns one short voice, cancels pending resumes, and is shared with the
+lab. Reduced motion keeps a 650 ms readable result at every speed. The playback suite exercises the
+production audio owner and instrumented browser audio alongside the renderer.

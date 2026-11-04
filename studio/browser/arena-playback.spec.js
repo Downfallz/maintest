@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { audioModule, probeAudio } from './arena-audio-probe.js';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/arena-playback.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
@@ -277,4 +278,89 @@ test('live playback shows the necromantic recipients apart from the caster blood
   await page.locator('#playback-skip').click();
   await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
+});
+
+test('ART-6 speed uses the same impact boundary and changing it settles consumed actions', async ({ page }, info) => {
+  const h = await mount(page);
+  await page.locator('#settings').click(); await page.selectOption('#playback-speed', '2');
+  await page.screenshot({ path: info.outputPath('art6-presentation.png') });
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(10)]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(190);
+  await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
+  await page.clock.runFor(35);
+  await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
+  await page.locator('#settings').click(); await page.selectOption('#playback-speed', '1.5');
+  await expect(page.locator('#playback-skip')).toBeHidden();
+  await page.locator('#reduce-motion').check();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeHidden();
+  await h.publish([entry(11)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
+  await page.clock.runFor(500); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
+  await page.clock.runFor(180); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'resolved');
+  expect(h.errors).toEqual([]);
+});
+
+test('ART-6 live audio is gesture-only, once per confirmed impact, and silent after skip or disable', async ({ page }) => {
+  await probeAudio(page);
+  const h = await mount(page);
+  await h.publish([entry(10)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(1600);
+  expect(await page.evaluate(() => window.audioProbe)).toEqual({ contexts: 0, starts: 0, stops: 0 });
+  await page.locator('#settings').click(); await page.locator('#sound').check();
+  await expect(page.locator('#sound')).toBeChecked();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(11)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.locator('#playback-skip').click(); await page.clock.runFor(600);
+  expect(await page.evaluate(() => window.audioProbe.starts)).toBe(0);
+  await h.publish([entry(12)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(440);
+  expect(await page.evaluate(() => window.audioProbe.starts)).toBe(1);
+  await h.publish([entry(12)]); await page.clock.runFor(1500);
+  expect(await page.evaluate(() => window.audioProbe.starts)).toBe(1);
+  await page.locator('#settings').click(); await page.locator('#sound').uncheck();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(13)]); await page.clock.runFor(1500);
+  expect(await page.evaluate(() => window.audioProbe.starts)).toBe(1);
+  expect(h.errors).toEqual([]);
+});
+
+test('ART-6 audio owner fences pending resumes, releases voices and tolerates unavailable audio', async ({ page }) => {
+  await page.goto('/table/arena.html'); await audioModule(page);
+  const result = await page.evaluate(async () => {
+    let resume, releases = 0, starts = 0, stops = 0;
+    const envelope = { setValueAtTime() {}, exponentialRampToValueAtTime() {} };
+    const context = { state: 'running', currentTime: 0, destination: {}, resume: () => new Promise(resolve => { resume = resolve; }),
+      createOscillator: () => ({ frequency: envelope, connect() {}, disconnect() { releases++; },
+        start() { starts++; }, stop() { stops++; }, onended: null }),
+      createGain: () => ({ gain: envelope, connect() {}, disconnect() { releases++; } }) };
+    const owner = new window.TestArenaAudio(() => context);
+    const pending = owner.enable(true); owner.stop(); resume(); const cancelled = await pending;
+    owner.play(); const silent = starts === 0;
+    context.resume = async () => {};
+    await owner.enable(true);
+    owner.play({ family: 'necromantic', motif: 'spirits', delivery: 'cast' }); owner.play(); owner.stop();
+    const bounded = starts === 2 && releases === 4 && stops === 4;
+    await owner.enable(false); owner.play();
+    const unavailable = new window.TestArenaAudio(() => { throw new Error('unavailable'); });
+    return { cancelled, silent, bounded, disabled: starts === 2, unavailable: await unavailable.enable(true) };
+  });
+  expect(result).toEqual({ cancelled: false, silent: true, bounded: true, disabled: true, unavailable: false });
+});
+
+test('ART-6 choreography stays anchored, clears on skip and retains a still reduced-motion frame', async ({ page }, info) => {
+  await mountSpellScene(page);
+  const cue = { kind: 'pulse', struck: [], effects: [{ creature: '2', tone: 'condition', text: 'Confirmed ward', wound: false }],
+    visual: { family: 'necromantic', motif: 'bones', delivery: 'cast' }, recipients: ['2'], contact: ['2'], changes: [] };
+  const frame = spellFrame(cue);
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact');
+  const initial = await page.evaluate(() => window.artScene.children.list.filter(one => one.name === 'spell-vfx').map(one => ({ y: one.y, scale: one.scaleX })));
+  await page.clock.runFor(120);
+  const settled = await page.evaluate(() => window.artScene.children.list.filter(one => one.name === 'spell-vfx').map(one => ({ y: one.y, scale: one.scaleX })));
+  expect(settled[0].y).toBeLessThan(initial[0].y);
+  expect(settled[0].scale).toBeGreaterThan(initial[0].scale);
+  await page.screenshot({ path: info.outputPath('art6-ward.png') });
+  await presentSpell(page, frame, 'decision'); expect(await renderedEffects(page)).toEqual([]);
+  await presentSpell(page, frame, 'impact', true); expect(await renderedEffects(page)).toEqual([]);
 });
