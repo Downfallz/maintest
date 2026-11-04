@@ -23,7 +23,7 @@ import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, tempoLabel, stepLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
-interface Creature { form: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
+interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
@@ -58,7 +58,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
     history.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
   } finally { receiving = false; }
   render();
 } });
@@ -112,6 +112,7 @@ function renderInspection() {
   if (!one) { $<HTMLDialogElement>('inspect-dialog').close(); return; }
   text('inspect-name', one.label);
   text('inspect-side', one.enemy ? 'OPPONENT' : 'YOUR TEAM');
+  text('inspect-appearance', `Appearance: ${one.description}`);
   text('inspect-stats', `${one.health}/${one.maxHealth} HP · ${one.energy} energy · ${one.totalDefense} defense · ${one.currentInitiative} initiative`);
   const cards = new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []);
   const effects = one.conditions.map(condition => {

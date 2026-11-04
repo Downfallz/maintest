@@ -1,3 +1,4 @@
+export interface MutationLayer { id: string; family: string; stage: number; motif: string; slot: string; }
 export interface Creature {
   id: string; name: string; form: string; health: number; maxHealth: number;
   energy: number; totalDefense: number; conditions: string[]; isAlive: boolean;
@@ -23,7 +24,7 @@ export interface SceneFrame {
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];
     changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[] };
-  creatures: { id: string; form: string; isAlive: boolean; enemy: boolean }[];
+  creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean }[];
 }
 export const labSceneFrame = (state: LabState): SceneFrame => ({
   stage: state.stage, target: state.target, actor: state.action.actor, targets: state.action.targets,

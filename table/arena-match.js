@@ -42,9 +42,10 @@ function replayNote(action, stage) {
 }
 
 // A frameless event shows an empty battlefield, never a guessed one, so the scene replaces nothing.
-function replayBoard(action, actions, index, stage, latest) {
+const packagesOf = catalogue => new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
+function replayBoard(action, actions, index, stage, latest, catalogue) {
   if (!action) return null;
-  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null);
+  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue));
   board.round = action.round;
   if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
   if (action.interlude === 'aftermath') board.phase = 'EndOfRound';
@@ -116,7 +117,7 @@ export function createArenaMatch({ connection, onChange }) {
     if (cached) return cached;
     const action = actions[index], active = Boolean(action);
     const twoFrames = active && !action.interlude && Boolean(action.frame);
-    cached = { active, board: replayBoard(action, actions, index, stage, latest), stage, index, count: actions.length, round: action?.round,
+    cached = { active, board: replayBoard(action, actions, index, stage, latest, catalogue), stage, index, count: actions.length, round: action?.round,
       rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),

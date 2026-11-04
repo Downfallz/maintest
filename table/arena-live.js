@@ -1,4 +1,4 @@
-import { creatureForm } from './arena-art.js';
+import { creatureAppearance } from './arena-art.js';
 import { boardPresentation } from './presentation.js';
 
 // How every surface of the arena names a creature off a seat's board (the scene, the journal, the guide):
@@ -12,13 +12,14 @@ export function creatureLabel(board, id) {
 }
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
-export function livePresentation(view) {
+// The catalogue's packages say how an acquired tier shows on a creature; without them a creature is its base.
+export function livePresentation(view, packages = new Map()) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];
   const creatures = roster.map((one, index) => ({
     ...one, label: creatureLabel(board, one.id),
     id: String(one.id), enemy: index >= board.allies.length,
-    form: creatureForm(one),
+    ...creatureAppearance(one, packages),
   }));
   return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };
