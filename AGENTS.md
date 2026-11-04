@@ -70,6 +70,8 @@ docs/
                 plus the plan for the Automa, the opponent a person executes from printed components (automa.md), and
                 the free-activation playtest (free-activation-playtest.md, ADR 0110), and the plan for player accounts
                 with a Google sign-in and the home page (accounts-plan.md, ADR 0122).
+                The arena UX recovery plan (arena-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
+                reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.
@@ -129,7 +131,8 @@ scripts/iterate.sh --explore 0.2 --clone-on-explore                  # fit the c
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
-`arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js` and `arena-loop.spec.js` (arena/README.md). CI runs exactly these, then sends the build and the coverage
+`arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js`, `arena-loop.spec.js`
+and `arena-history.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 
