@@ -219,7 +219,14 @@ Reduced motion presents applied frames without displacement or particles. An exp
 outcome readable without growing the fixed shell. Upkeep choreography and complete-loop controls remain A7.
 
 Validation includes pure queue tests, mobile/desktop playback and lifecycle scenarios, the three existing
-arena browser suites, and both declaration modes against the real host.
+arena browser suites, and both declaration modes against the real host. The real-host journeys compare
+every observed windup/impact stat with the exact event frame received from that host.
+
+Captured during a real-engine Strike on desktop and phone:
+
+![Confirmed combat on desktop](images/arena-playback/desktop.jpg)
+
+[Confirmed combat on phone](images/arena-playback/phone.jpg)
 
 ## Revised immersive prototype (A2)
 
