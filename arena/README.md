@@ -29,6 +29,7 @@ No CDN, remote fonts or browser package downloads are needed at runtime.
 - `src/main.ts`: accessible DOM controller, input, dialogs, lifecycle and optional synthesized sound.
 - `src/scene.ts`: Phaser scene, local assets, creature figures, cancellable tweens and camera effects.
 - `src/types.ts`: presentation types only.
+- `table/arena-art.js`: audited sprite manifest, root-mutation mapping, neutral multiclass fallback and mirrored geometry.
 - `table/arena-lab-state.js`: the deterministic sample state machine, which carries the one action it offers,
   and the cancellation generation.
 - `table/arena-layout.js`: the portrait/landscape geometry, shared by the Phaser figures and the HTML hit
@@ -47,6 +48,7 @@ seat discovery, explicit viewpoints, read-only transport, arrival behavior and r
 - `src/live.ts`: live DOM adapter and lifecycle; no lab imports.
 - `table/arena-live.js`: snapshot adapter and fenced polling/SSE connection.
 - `table/arena-playback.js`: bounded confirmed-action queue; pure historical frames, motifs and cancellation.
+- `table/arena-history.js`: public recent-event journal, independent of playback; `src/history.ts` renders its accessible drawer.
 - `table/arena-seats.js`: read-only capability discovery and return links.
 - `table/arena-layout.js`: shared geometry for 1v1, 2v2 and 3v3.
 
@@ -58,8 +60,8 @@ Invitation acceptance stays at `/play`.
 401/403 clears private content; a transient failure labels the last snapshot stale. A hidden page
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
 accepted seat as arrived, which may start a waiting match.
-The compiled bundle is about 1.2 MB uncompressed; the two art files total
-about 0.8 MB. Device performance and transfer compression remain to be measured before release.
+The compiled bundle is about 1.2 MB uncompressed. Four creature WebPs total 1,212,726 bytes,
+plus the eclipse background; the old three-frame sheet is no longer loaded. Device performance and transfer compression remain to be measured before release.
 
 ## Verify
 
@@ -67,7 +69,7 @@ about 0.8 MB. Device performance and transfer compression remain to be measured 
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -82,7 +84,7 @@ The lab remains one authored action. The live scene plays the host's confirmed b
 sequence, including damage, recovery, energy, conditions, fizzles and defeat. Skip, opening combat controls,
 resize and connection interruption return immediately to the current snapshot. First loads and hidden-tab
 returns never replay history. Legacy events, and one read bringing more than twelve actions, use confirmed
-text on the latest board. Result details remain available in an accessible overlay. Both pages reuse three static forms. Real-device Safari,
+text on the latest board. Result details remain available in an accessible overlay. Both pages use four audited forms with uniform scaling and explicit ground anchors ([ART-3](../docs/art/runtime-sprites.md)). Real-device Safari,
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
@@ -96,3 +98,29 @@ finished recording using the same operator authorization as `/play?replay=...`.
 `node node_modules/playwright/cli.js test --config table.config.js arena.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
 simultaneous choices and concession against the real .NET engine.
+
+## AU1: recent match history
+
+The **History** button previews the latest public event and opens a chronological journal of the current
+and previous round (up to 200 events). Expand an attack to read its caster, spell, targets, critical/fizzle,
+applied effects, dropped targets and recorded before/after values. Upkeep ticks, public mutation reveals,
+phase changes, skipped turns and aftermath share the same list. Unknown event payloads and unrevealed
+choices are never rendered; a generic notice identifies unsupported event types. Missing action frames
+are labelled rather than inferred from the current board.
+
+History is available from the header, planning/combat choices and action result. Opening it settles
+playback without sending a decision or acknowledging a question. Command drafts and focus return on close;
+expanded entries and reading position survive polling. New events follow the bottom only when the reader
+is already there; otherwise **Latest** announces their count. First loads populate history without replaying
+animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
+
+This implements AU1 of the [UX parity plan (PR #438)](https://github.com/Downfallz/maintest/pull/438).
+The ordinary round energy receipt and phase guidance belong to AU2–AU3; older-round loading, filtering and
+links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
+rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
+read-only access, deduplication, scroll retention and clearing on access loss. The real-host complete-match
+journeys compare journal action identities against actual seat responses in both declaration modes.
+
+AU1 captures from the real .NET host (seed 7, 3v3, at-activation; provisional artwork):
+[desktop history](../docs/tabletop/images/arena-history/desktop.jpg) ·
+[phone history](../docs/tabletop/images/arena-history/phone.jpg).

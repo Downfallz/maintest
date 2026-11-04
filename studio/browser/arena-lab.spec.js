@@ -191,3 +191,13 @@ test('the hit targets stand over the figures the scene places', async ({ page })
     expect(Math.abs(box.y - (stage.y + Math.max(0, y - size)))).toBeLessThanOrEqual(2);
   }
 });
+
+
+test('the command portrait uses current art and the retired sheet is never downloaded', async ({ page }) => {
+  const retired = [];
+  page.on('request', request => { if (request.url().endsWith('/creatures.webp')) retired.push(request.url()); });
+  await page.reload();
+  await expect(page.locator('#lab')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#actor-portrait')).toHaveCSS('background-image', /brute\.webp/);
+  expect(retired).toEqual([]);
+});

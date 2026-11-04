@@ -60,9 +60,18 @@ function expectWritesFenced(writes) {
   for (const write of writes) expect(write.seen).toContain(write.command.asked);
   expect(new Set(writes.map(one => one.command.asked)).size).toBe(writes.length);
 }
-async function reviewAndReplay(page, latest, info) {
+async function reviewAndReplay(page, latest, info, actions) {
   // The last actions play out under reduced motion; clicking Skip would race a button about to go.
   await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+  await page.locator('#history-open').click();
+  const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
+  expect(recent.length).toBeGreaterThan(1);
+  for (const entry of recent) await expect(page.locator(`#history-list [data-sequence="${entry.sequence}"]`)).toHaveCount(1);
+  const last = recent.at(-1), detail = page.locator(`#history-list [data-sequence="${last.sequence}"]`);
+  await detail.locator('summary').click(); await expect(detail).toContainText(/Targets:|No targets/);
+  await fitsViewport(page, '#history-close');
+  await page.screenshot({ path: info.outputPath('history-real-host.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#history-close').click();
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing'); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
@@ -95,14 +104,20 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   const directory = await mkdtemp(pathJoin(tmpdir(), 'arena-loop-'));
   const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: declaration === 'at-activation' ? 12 : 2, combatDeclaration: declaration }));
   const hostInfo = await startHost(declaration, ['--rules', rules, '--record', pathJoin(directory, 'sessions')]);
-  const errors = [], writes = [], shown = []; let latest;
+  const errors = [], writes = [], shown = [], actions = new Map(); let latest;
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
     const url = new URL(request.url());
     if (url.searchParams.has('shown')) shown.push(Number(url.searchParams.get('shown')));
     if (url.pathname.endsWith('/decision')) writes.push({ command: request.postDataJSON(), seen: [...shown] });
   });
-  page.on('response', async response => { if (/\/api\/seat\/player1(?:\?|$)/.test(response.url()) && !response.url().includes('shown=')) { const value = await response.json().catch(() => null); if (value?.board) latest = value; } });
+  page.on('response', async response => {
+    if (!/\/api\/seat\/player1(?:\?|$)/.test(response.url()) || response.url().includes('shown=')) return;
+    const value = await response.json().catch(() => null);
+    if (!value?.board) return;
+    latest = value;
+    for (const entry of value.feed ?? []) if (entry.event.kind === 'CombatActionResolved') actions.set(entry.sequence, entry);
+  });
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
     await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
@@ -122,7 +137,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       expect([...latest.board.allies, ...latest.board.enemies].some(one => !one.isAlive)).toBe(true);
       expect(writes.filter(one => one.command.kind === 'Evolution' && one.command.tier).length).toBeGreaterThan(2);
     }
-    await reviewAndReplay(page, latest, info);
+    await reviewAndReplay(page, latest, info, actions);
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
     expect(writes.filter(one => one.command.kind === 'Speed').length).toBeGreaterThanOrEqual(3);
