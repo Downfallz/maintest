@@ -63,7 +63,6 @@ test('a smaller team keeps its side of the field in both orientations', () => {
   }
 });
 
-
 test('attacks approach horizontally on desktop and vertically on a phone without crossing the target', () => {
   const actor = { x: 50, y: 400, size: 96 };
   assert.deepEqual(strikeApproach(actor, { ...actor, y: 180 }), { x: 50, y: 232.8, dx: 0, dy: -1 });

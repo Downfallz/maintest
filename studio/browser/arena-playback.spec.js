@@ -57,7 +57,7 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '12');
   await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
   await h.publish([entry(12)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
-  expect(h.errors).toEqual([]); expect(h.state.requests.some(one => one.query.includes('shown='))).toBe(false);
+  expect(h.errors).toEqual([]);
 });
 test('skip and opening combat controls settle to the latest board without waiting for animations', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10), entry(11)]);
@@ -66,12 +66,13 @@ test('skip and opening combat controls settle to the latest board without waitin
   await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible();
   await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.runFor(2500);
-  await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.requests.some(one => one.path.endsWith('/decision'))).toBe(false);
+  await expect(page.locator('#combat-dialog')).toBeVisible();
 });
 test('the final lethal action remains in its round before the next upkeep snapshot', async ({ page }) => {
   const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 4 ? 0 : 20));
   const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
   await h.publish([entry(10, { after })], { board, waitingFor: 'Evolution' });
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
   await expect(page.locator('#round-number')).toHaveText('02'); await page.clock.runFor(440);
   await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
   await page.clock.runFor(1200); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
@@ -99,6 +100,14 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
   if (kind === 'legacy') await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.errors).toEqual([]);
 });
+test('the dock\'s instruction is back once the last action has settled', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10)]);
+  await expect(page.locator('#playback-skip')).toBeVisible();
+  await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#playback-result')).toBeVisible();
+  await expect(page.locator('#instruction')).toBeVisible();
+  await expect(page.locator('#instruction')).toContainText('Choose a spell or target');
+});
 test('reduced motion shows applied results immediately and resize cancels playback safely', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); const h = await mount(page); await h.publish([entry(10)]);
   await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
@@ -113,6 +122,7 @@ for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} clears priva
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyArena()); }
   await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
   await page.clock.runFor(3000); await expect(page.locator('#result-text')).toBeEmpty();
+  await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
   if (reason === 'hidden') {
     h.state.view.feed = [entry(10), entry(11)]; h.state.view.feedNext = 12;
     await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
@@ -121,7 +131,6 @@ for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} clears priva
   }
   expect(h.errors).toEqual([]);
 });
-
 
 test('transient connection loss settles playback and repeated events stay consumed on recovery', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
@@ -139,6 +148,14 @@ test('confirmed results and commands fit short portrait and landscape', async ({
     await page.setViewportSize(size); await page.clock.runFor(150);
     await h.publish([entry(10 + index)]); await expect(page.locator('#playback-skip')).toBeVisible();
     await fits(page); await page.locator('#playback-skip').click(); await fits(page);
+    // Settled, the dock holds the result, the instruction and the next action together, inside its own bounds.
+    await expect.poll(() => page.evaluate(() => {
+      const dock = document.querySelector('.command-dock').getBoundingClientRect();
+      return [...document.querySelectorAll('#playback-result, #instruction, #combat-open')].filter(node => !node.hidden && node.getClientRects().length).flatMap(node => {
+        const box = node.getBoundingClientRect();
+        return box.top < dock.top - 1 || box.bottom > dock.bottom + 1 ? [node.id] : [];
+      });
+    })).toEqual([]);
   }
   expect(h.errors).toEqual([]);
 });

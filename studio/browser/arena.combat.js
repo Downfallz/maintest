@@ -61,7 +61,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (view.waitingFor !== 'Target') {
         const options = view.waitingFor === 'Action' ? view.options.action.spells.map(one => one.spell)
           : view.options.intent.creatures.find(one => one.creature === view.waitingCreature).castableSpells;
-        spell = options.find(id => id.includes('heavy_strike') || id.includes('heavy-strike')) ?? options[0]; expect(spell).toBeTruthy();
+        // A damaging cast where the host offers one, so the confirmed capture shows a strike landing.
+        spell = options.find(id => id.includes('heavy_strike')) ?? options[0]; expect(spell).toBeTruthy();
         if (!captured) await page.screenshot({ path: info.outputPath(`${declaration}-spells.jpg`), type: 'jpeg', quality: 85 });
         await page.locator(`[data-spell="${spell}"]`).click();
       }
@@ -92,10 +93,11 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     for (const shown of displayed) {
       const frame = frames.get(shown.sequence); expect(frame).toBeTruthy();
       for (const one of frame[shown.stage === 'windup' ? 'before' : 'after']) {
-        expect(shown.creatures.find(creature => creature.id === one.id)?.text).toContain(`${one.health}/${one.maxHealth} HP`);
+        expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
     }
     if (await page.locator('#playback-skip').isVisible()) await page.locator('#playback-skip').click();
+    await expect(page.locator('#playback-skip')).toBeHidden();
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {

@@ -25,13 +25,24 @@ test('first snapshot is a baseline, including historical results', () => {
   h.receive([event(2), event(8)]); assert.equal(h.queue.model().active, false);
   h.receive([event(9)]); assert.equal(h.queue.model().sequence, 9);
 });
-test('unordered batched actions play once in sequence using their own boundary frames', () => {
+test('a poll\'s actions play in sequence order, once each, however the host listed them', () => {
   const h = harness(); h.receive([]); h.receive([event(6), event(4), event(4)]);
-  assert.equal(h.queue.model().sequence, 4); assert.equal(h.queue.model().board.creatures[1].health, 20);
+  assert.equal(h.queue.model().sequence, 4); assert.equal(h.queue.model().remaining, 2);
+  h.drain(); assert.equal(h.queue.model().active, false);
+});
+test('windup shows the frame before the action and impact the frame after it', () => {
+  const h = harness(); h.receive([]); h.receive([event(4)]);
+  assert.equal(h.queue.model().stage, 'windup'); assert.equal(h.queue.model().board.creatures[1].health, 20);
   h.tick(); assert.equal(h.queue.model().stage, 'impact'); assert.equal(h.queue.model().board.creatures[1].health, 13);
+});
+test('a later poll repeating consumed sequences queues nothing again', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(6)]); h.tick();
   h.receive([event(4), event(6)]); assert.equal(h.queue.model().remaining, 2);
-  h.tick(); h.tick(); assert.equal(h.queue.model().sequence, 6); h.drain();
-  assert.equal(h.queue.model().active, false); assert.match(h.queue.model().summary, /Strike.*critical.*Damage 7/);
+  h.drain(); assert.equal(h.queue.model().active, false);
+});
+test('the summary after the queue drains is the last action\'s full result', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(6)]); h.drain();
+  assert.match(h.queue.model().summary, /Strike.*critical.*Damage 7/);
 });
 test('arrivals during playback join behind the current action without restarting its windup', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]); h.tick(); h.receive([event(5)]);
@@ -49,12 +60,14 @@ test('last action retains its round and death before the host moves to upkeep', 
 test('skip invalidates callbacks and consumes pending identities without replaying them', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]);
   const stale = [...h.timers.values()][0].fn; h.queue.skip(); stale();
+  assert.equal(h.queue.model().stage, 'decision');
   h.receive([event(4), event(5)]); assert.equal(h.queue.model().active, false); assert.equal(h.timers.size, 0);
   h.receive([event(6)]); assert.equal(h.queue.model().sequence, 6);
 });
 test('reset clears private summaries, frames and callbacks and resumes with a new baseline', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]); const stale = [...h.timers.values()][0].fn;
   h.queue.reset(); stale(); assert.equal(h.queue.model().summary, ''); assert.equal(h.queue.model().board.creatures.length, 0);
+  assert.equal(h.queue.model().stage, 'decision');
   h.receive([event(4), event(5)]); assert.equal(h.queue.model().active, false);
 });
 test('legacy events keep the confirmed text on the latest board with no inferred attack', () => {
@@ -62,9 +75,28 @@ test('legacy events keep the confirmed text on the latest board with no inferred
   assert.equal(h.queue.model().active, false); assert.match(h.queue.model().summary, /Strike/);
   assert.equal(h.queue.model().board.creatures[1].health, 13); assert.equal(h.timers.size, 0);
 });
-test('large catch-ups settle immediately instead of holding the next question behind stale frames', () => {
+test('a read bringing twelve actions plays them all', () => {
+  const h = harness(); h.receive([]); h.receive(Array.from({ length: 12 }, (_, i) => event(i)));
+  assert.equal(h.queue.model().active, true); assert.equal(h.queue.model().remaining, 12);
+});
+test('a read bringing more than twelve settles at once instead of holding the next question behind stale frames', () => {
   const h = harness(); h.receive([]); h.receive(Array.from({ length: 13 }, (_, i) => event(i)));
   assert.equal(h.queue.model().active, false); assert.equal(h.timers.size, 0);
+});
+test('what is already queued and playing is not dropped for arrivals at the game\'s pace', () => {
+  const h = harness(); h.receive([]); h.receive(Array.from({ length: 12 }, (_, i) => event(i)));
+  h.receive([event(12)]);
+  assert.equal(h.queue.model().sequence, 0); assert.equal(h.queue.model().remaining, 13);
+});
+test('a read mixing a legacy event with framed ones settles them all on the latest board', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(5, { frame: undefined }), event(6)]);
+  assert.equal(h.queue.model().active, false); assert.equal(h.timers.size, 0);
+  assert.match(h.queue.model().summary, /Strike/);
+});
+test('an arrival under an open draft settles the action in flight too', () => {
+  const h = harness(); h.receive([]); h.receive([event(4)]); h.tick();
+  h.receive([event(5)], {}, { animate: false });
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().stage, 'decision'); assert.equal(h.timers.size, 0);
 });
 test('a current legal draft receives results immediately without historical playback', () => {
   const h = harness(); h.receive([]); h.receive([event(4)], {}, { animate: false });
@@ -94,7 +126,6 @@ test('fizzle text and dropped targets are preserved and never produce a strike',
   assert.equal(h.queue.model().cue.kind, 'fizzle'); assert.deepEqual(h.queue.model().cue.struck, []);
   assert.match(h.queue.model().summary, /fizzled: Not enough energy/);
 });
-
 
 test('skip reports the last queued result rather than the first action it interrupted', () => {
   const h = harness(); h.receive([]);
