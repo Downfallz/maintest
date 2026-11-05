@@ -51,7 +51,8 @@ test('first receipt waits for arrivals and completion, retaining earlier delta-f
 });
 test('reconnect, visibility restoration and reload do not announce a receipt twice', () => {
   const saved = storage(); const control = createArenaUpkeep(saved); control.reset('a:player1');
-  control.receive(view()); control.presented(); control.clear(); control.receive(view()); assert.equal(control.model().pending, false);
+  // suspend() clears and choose() resets: the mark is what keeps the round from being announced again.
+  control.receive(view()); control.presented(); control.clear(); control.reset('a:player1'); control.receive(view()); assert.equal(control.model().pending, false);
   const reloaded = createArenaUpkeep(saved); reloaded.reset('a:player1'); reloaded.receive(view()); assert.equal(reloaded.model().pending, false);
   reloaded.receive(view(2)); assert.equal(reloaded.model().pending, true); reloaded.presented();
   reloaded.reset('b:player1'); reloaded.receive(view()); assert.equal(reloaded.model().pending, true);
@@ -61,7 +62,9 @@ test('joining mid-match offers no backlog, but the next observed round does', ()
   const control = createArenaUpkeep(); control.reset('a:player1'); control.receive(view(4));
   assert.equal(control.model().pending, false); control.receive(view(4)); assert.equal(control.model().pending, false);
   control.receive(view(5)); assert.equal(control.model().pending, true); assert.equal(control.model().receipt.round, 5);
-  control.receive(view(6)); assert.equal(control.model().receipt.round, 6);
+  control.receive(view(6)); assert.equal(control.model().receipt.round, 6); assert.equal(control.model().pending, true);
+  control.presented(); control.receive(view(6)); assert.equal(control.model().pending, false);
+  control.reset('a:player1'); control.receive(view(6)); assert.equal(control.model().pending, false);
 });
 test('replays and unavailable seats expose no automatic receipt or retained facts', () => {
   const control = createArenaUpkeep(); control.reset('a:player1'); control.receive(view(1, undefined, { replay: true }));
@@ -72,7 +75,7 @@ test('replays and unavailable seats expose no automatic receipt or retained fact
 test('blocked and corrupt storage retain the in-memory once-only presentation', () => {
   for (const saved of [{ getItem: () => '{', setItem() { throw new Error('blocked'); } }, { getItem() { throw new Error('blocked'); } }]) {
     const control = createArenaUpkeep(saved); control.reset('a:player1'); control.receive(view()); control.presented();
-    control.receive(view()); assert.equal(control.model().pending, false);
+    control.clear(); control.reset('a:player1'); control.receive(view()); assert.equal(control.model().pending, false);
   }
 });
 

@@ -78,6 +78,20 @@ test('inspection is current while receipt and journal retain historical zero hea
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('+5 energy');
   await expect(page.locator('#round-notes')).toContainText('Healing over time +0'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {
+  const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
+  const warden = conditions => ({ ...creature(1, 13), conditions });
+  await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Bleed', amountPerRound: 7 }, remainingRounds: 1 }]), ...roster.slice(1, 3)] } });
+  const inspect = page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first();
+  await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText('Bleed 7 · 1 rounds'); await page.keyboard.press('Escape');
+  // The bleed has run out; a defense with its own countdown is what the creature carries now.
+  await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Defense', amount: 2 }, remainingRounds: 2 }]), ...roster.slice(1, 3)] } });
+  await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText('Defense 2 · 2 rounds');
+  await expect(page.locator('#inspect-effects')).not.toContainText('Bleed'); await page.keyboard.press('Escape');
+  await expect(page.locator('#upkeep-body section').nth(1).locator('li').nth(2)).toContainText('Ongoing damage −7');
+  await expect(page.locator('#upkeep-body')).not.toContainText('Defense');
+  expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
 test('closing attack playback finishes before the next-round receipt and phase tip', async ({ page }) => {
   const h = await mount(page, { round: 2, feed: [], tips: true });
   await page.locator('#help-close').click();
