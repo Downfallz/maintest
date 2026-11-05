@@ -93,6 +93,11 @@ public sealed class TableFilesTests
         Text(page).ShouldContain("src=\"arena-build/live.js\"");
         Text(page).ShouldContain("href=\"arena.css\"");
         Files.Get("/arena.css").ContentType.ShouldContain("text/css");
+        Files.Get("/arena-services.js").ContentType.ShouldContain("text/javascript");
+        Files.Get("/arena-inspection.js").ContentType.ShouldContain("text/javascript");
+        Text(page).ShouldContain("id=\"inspect-body\"");
+        Files.Get("/arena-order.js").ContentType.ShouldContain("text/javascript");
+        Text(page).ShouldContain("id=\"order-dialog\"");
         Files.Get("/arena-build/live.js").ContentType.ShouldContain("text/javascript");
     }
 
@@ -119,6 +124,10 @@ public sealed class TableFilesTests
     [Theory]
     [InlineData("eclipse-arena")]
     [InlineData("creatures")]
+    [InlineData("base-creature")]
+    [InlineData("brute")]
+    [InlineData("predator")]
+    [InlineData("warped")]
     public void The_arena_art_is_served_as_webp_bytes(string asset)
     {
         var image = Files.Get($"/arena-art/{asset}.webp");

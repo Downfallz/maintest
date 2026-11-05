@@ -103,6 +103,8 @@ public sealed class ContentStore
         var schema = GameSchemaBuilder.Build(Root, notes);
         GameSchemaBuilder.Write(schema, outputDirectory);
         PackageIdentities.Publish(Root, outputDirectory, schema);
+        SpellArt.Publish(Root, outputDirectory, schema);
+        MutationArt.Publish(Root, outputDirectory, schema);
         return (schema.ContentHash, notes);
     }
 

@@ -22,8 +22,13 @@ export function versusLine(seats, held) {
   return `${me ? `You: ${me}` : 'You'} · against ${theirs.map(sideName).join(' and ')}`;
 }
 
+/** The table these tokens belong to, as the host's resume describes it, or null. */
+export function tableOf(answer, tokens) {
+  const entry = (answer?.tables ?? []).find(table => (table.seats ?? []).some(seat => tokens.includes(seat.token)));
+  return entry?.table ?? null;
+}
+
 /** The seats of the table these tokens belong to, as the host's resume describes them, or null. */
 export function seatsOf(answer, tokens) {
-  const entry = (answer?.tables ?? []).find(table => (table.seats ?? []).some(seat => tokens.includes(seat.token)));
-  return entry?.table?.seats ?? null;
+  return tableOf(answer, tokens)?.seats ?? null;
 }

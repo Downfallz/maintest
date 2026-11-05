@@ -412,7 +412,8 @@ public sealed class AdminApiTests : IDisposable
         replay.GetProperty("catalogue").GetProperty("cards").GetArrayLength().ShouldBeGreaterThan(0);
         var kinds = replay.GetProperty("feed").EnumerateArray().Select(entry => entry.GetProperty("event").GetProperty("kind").GetString()).ToHashSet();
         kinds.ShouldContain("CombatActionResolved");
-        kinds.ShouldBeSubsetOf(["OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"]);
+        kinds.ShouldContain("RoundEnergyGranted");
+        kinds.ShouldBeSubsetOf(["RoundEnergyGranted", "OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"]);
         var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null))).RootElement.GetProperty("sessions")[0];
         listed.GetProperty("replay").GetString().ShouldBe($"/play?replay={played}");
     }

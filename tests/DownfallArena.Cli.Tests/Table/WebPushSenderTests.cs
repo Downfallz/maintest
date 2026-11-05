@@ -15,7 +15,7 @@ public sealed class WebPushSenderTests
         using var service = new PushService(201);
         using var sender = new WebPushSender(keys, service.Client);
 
-        (await sender.SendAsync(service.Subscription(), """{"title":"Your turn"}""", TestContext.Current.CancellationToken)).ShouldBeTrue();
+        (await sender.SendAsync(service.Subscription(), """{"title":"Your turn"}""", "turn", TestContext.Current.CancellationToken)).ShouldBeTrue();
 
         var request = service.Received.ShouldHaveSingleItem();
         request.Headers["Authorization"].ShouldNotBeNull().ShouldStartWith("vapid t=");
@@ -37,7 +37,7 @@ public sealed class WebPushSenderTests
         var point = browser.PublicKey.ExportSubjectPublicKeyInfo()[^65..];
         var subscription = new PushSubscription($"{service.Url}push/one", Base64Url.EncodeToString(point), Base64Url.EncodeToString(auth));
 
-        await sender.SendAsync(subscription, """{"title":"Your turn"}""", TestContext.Current.CancellationToken);
+        await sender.SendAsync(subscription, """{"title":"Your turn"}""", "turn", TestContext.Current.CancellationToken);
 
         var body = service.Received.ShouldHaveSingleItem().Bytes;
         // RFC 8188 header: salt, record size, the sender's public key; then one record (RFC 8291).
@@ -64,7 +64,7 @@ public sealed class WebPushSenderTests
         using var service = new PushService(status);
         using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
 
-        (await sender.SendAsync(service.Subscription(), "{}", TestContext.Current.CancellationToken)).ShouldBeFalse();
+        (await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken)).ShouldBeFalse();
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class WebPushSenderTests
         using var service = new PushService(503);
         using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
 
-        var failure = await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", TestContext.Current.CancellationToken));
+        var failure = await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
 
         failure.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }

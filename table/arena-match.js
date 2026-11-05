@@ -1,14 +1,16 @@
-import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText, roundUpkeep } from './feed.js';
+import { upkeepReceipt, missingRoundEnergy } from './arena-upkeep.js';
+import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText } from './feed.js';
 import { playbackBoard } from './replay.js';
 import { livePresentation } from './arena-live.js';
-import { outcomeText } from './outcome.js';
+import { outcomeText, matchResultSummary } from './outcome.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
   return rounds.flatMap(round => {
-    const upkeep = roundUpkeep(entries, round);
-    const ticks = upkeep?.rows.filter(tick => tick.amount > 0) ?? [];
-    const rows = upkeep ? [`Round ${round} · ${ticks.length ? turnoverText({ interlude: 'upkeep', ticks }) : 'Upkeep · No ongoing ticks applied'}`] : [];
+    const upkeep = upkeepReceipt(entries, round, board);
+    const facts = upkeep ? [upkeep.energyNote, ...upkeep.energy.map(row => `${row.label}: ${row.text}`),
+      ...upkeep.ongoing.map(row => `${row.label}: ${row.text}`), ...(upkeep.ongoing.length ? [] : [upkeep.ongoingNote])].filter(Boolean) : [];
+    const rows = upkeep ? [`Round ${round} · Upkeep · ${facts.join('; ')}`] : [];
     const aftermath = turnoverSteps(entries, round, board).filter(step => step.interlude === 'aftermath');
     rows.push(...aftermath.map(step => `Round ${round} · ${turnoverText(step)}`));
     if (entries.some(entry => entry.event?.kind === 'RoundEnded' && (entry.event.roundId ?? entry.round) === round)) rows.push(`Round ${round} · Aftermath complete`);
@@ -17,9 +19,11 @@ export function roundNotes(entries, board) {
 }
 
 export function replayText(action, catalogue) {
+  if (action.final) return action.summary;
+  if (action.ordinaryEnergy) return turnoverText(action);
   if (action.interlude === 'upkeep') {
-    const ticks = action.ticks.filter(tick => tick.amount > 0);
-    return ticks.length ? turnoverText({ ...action, ticks }) : 'Upkeep · No ongoing ticks applied';
+    const detail = action.ticks.length ? turnoverText(action) : 'Upkeep · No ongoing ticks applied';
+    return action.missingOrdinaryEnergy ? `${missingRoundEnergy} ${detail}` : detail;
   }
   if (action.interlude === 'aftermath') return action.ended.length || action.immune.length ? turnoverText(action) : 'Aftermath · Round complete';
   if (action.interlude === 'purchases') {
@@ -36,15 +40,18 @@ function purchaseText(choice, catalogue) {
 
 // A cast has a frame before and one after; an interlude has one reference frame, or none at all.
 function replayNote(action, stage) {
+  if (action?.final) return 'Final public battlefield confirmed by the host.';
   if (!action?.frame) return 'No battlefield was recorded for this event.';
   if (action.interlude) return 'Reference: the battlefield at the start of this round’s combat, after upkeep and mutations.';
   return `${stage === 'before' ? 'Before' : 'After'} the recorded action`;
 }
 
 // A frameless event shows an empty battlefield, never a guessed one, so the scene replaces nothing.
-function replayBoard(action, actions, index, stage, latest) {
+const packagesOf = catalogue => new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
+function replayBoard(action, actions, index, stage, latest, catalogue) {
   if (!action) return null;
-  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null);
+  if (action.final) return livePresentation({ board: action.board }, packagesOf(catalogue));
+  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue));
   board.round = action.round;
   if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
   if (action.interlude === 'aftermath') board.phase = 'EndOfRound';
@@ -80,6 +87,9 @@ export function createArenaMatch({ connection, onChange }) {
         return cleanup.length || !ended ? cleanup : [{ sequence: ended.sequence, round, interlude: 'aftermath', ended: [], immune: [] }];
       });
       actions = [...casts, ...aftermath].sort((a, b) => a.sequence - b.sequence);
+      if (actions.length) actions.push({ final: true, interlude: 'result', board: view.board,
+        round: view.board?.roundNumber, sequence: feed.reduce((last, one) => Math.max(last, one.sequence ?? 0), 0) + 1,
+        summary: outcomeText(view, seat) });
       index = actions.length ? 0 : -1; stage = 'before';
       if (!actions.length) error = 'Nothing was recorded to replay in this match.';
     } catch { if (context === generation) error = 'Could not load the replay. Try again.'; }
@@ -116,12 +126,12 @@ export function createArenaMatch({ connection, onChange }) {
     if (cached) return cached;
     const action = actions[index], active = Boolean(action);
     const twoFrames = active && !action.interlude && Boolean(action.frame);
-    cached = { active, board: replayBoard(action, actions, index, stage, latest), stage, index, count: actions.length, round: action?.round,
+    cached = { active, sequence: action?.sequence, board: replayBoard(action, actions, index, stage, latest, catalogue), stage, index, count: actions.length, round: action?.round,
       rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),
       next: active && (index + 1 < actions.length || (twoFrames && stage === 'before')),
-      outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
+      result: matchResultSummary(latest, seat), outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
       canConcede: canConcede(), busy, error,
       notes: roundNotes(entries, latest?.board) };
     return cached;

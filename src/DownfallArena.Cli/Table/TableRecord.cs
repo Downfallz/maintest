@@ -25,6 +25,9 @@ internal sealed record TableRecord
     /// <summary>Closed by the operator, or let go of: not to be rebuilt, whatever its decisions say.</summary>
     public const string Closed = "closed";
 
+    /// <summary>Missing on legacy tables; their trace indices must remain unchanged across restarts (ADR 0132).</summary>
+    public int EventStreamVersion { get; init; } = 1;
+
     public required string Id { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }
@@ -85,6 +88,7 @@ internal sealed record TableRecord
         ArgumentNullException.ThrowIfNull(codes);
         return new TableRecord
         {
+            EventStreamVersion = table.EventStreamVersion,
             Id = table.Id,
             CreatedAt = table.CreatedAt,
             Seed = request.Seed ?? throw new InvalidOperationException("A composed table has a seed."),
@@ -95,7 +99,7 @@ internal sealed record TableRecord
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
             Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
-            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value))],
+            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value, seat.InvitedAccount?.Value, seat.InvitedAt, seat.DeclinedBy?.Value))],
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,
@@ -120,6 +124,7 @@ internal sealed record TableRecord
 /// a record written before invitations existed, whose links carried the seat's token itself. <paramref name="Push" />
 /// is where the browser holding the seat asked its notices to be sent (ADR 0118), kept so the next host sends
 /// there too. <paramref name="Account" /> is the account the seat belongs to (ADR 0122), so a rebuilt table is still
-/// theirs.
+/// theirs. <paramref name="InvitedAccount" /> and <paramref name="InvitedAt" /> are the friend the seat is kept for
+/// and since when (ADR 0129), so a rebuilt table still waits for them; <paramref name="DeclinedBy" /> is who declined it.
 /// </summary>
-internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null, string? Account = null);
+internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null, string? Account = null, string? InvitedAccount = null, DateTimeOffset? InvitedAt = null, string? DeclinedBy = null);

@@ -59,7 +59,7 @@ public sealed partial class TablePageContentTests
     /// <summary>
     /// An id, matched by its shape rather than by its prefix: <c>creature:</c> is also how a decision names the
     /// creature it is about, and a page is allowed to post one of those. What it may not carry is
-    /// <c>spell:pummel:v1</c> — a card the page knows by name.
+    /// <c>spell:pummel:v1</c> — a card the page knows by name — nor <c>tier:brute:v1</c>, a package it knows by name.
     /// </summary>
     [Theory]
     [MemberData(nameof(Shipped))]
@@ -76,10 +76,11 @@ public sealed partial class TablePageContentTests
         VersionedId().IsMatch("spell:pummel:v1").ShouldBeTrue();
         VersionedId().IsMatch("creature:revenant-guard:v1").ShouldBeTrue();
         VersionedId().IsMatch("talent-tree:base:v1").ShouldBeTrue();
+        VersionedId().IsMatch("tier:brute:v1").ShouldBeTrue();
         VersionedId().IsMatch("{ kind: 'Intent', creature: view.waitingCreature }").ShouldBeFalse();
     }
 
-    [GeneratedRegex(@"\b(spell|creature|talent-tree):[a-z0-9][a-z0-9-]*", RegexOptions.None, matchTimeoutMilliseconds: 5000)]
+    [GeneratedRegex(@"\b(spell|creature|talent-tree|tier):[a-z0-9][a-z0-9-]*", RegexOptions.None, matchTimeoutMilliseconds: 5000)]
     private static partial Regex VersionedId();
 
     [Fact]

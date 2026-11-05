@@ -1,17 +1,19 @@
 // What has happened, one line an entry.
 //
 // Every event is its kind and nothing more: the kinds are the engine's own words, off the wire, and the page
-// has never heard of any of them. One event is the exception, and it is the exception on purpose. A resolution
-// is the only entry whose fields a player has to read -- above all whether the cast crit, which stage 4 owes
-// the screen (app-roadmap.md, "The critical, on screen"): the boards' own totals cannot tell, because Defense,
-// caps and overkill all move the number a critical produced. So a resolution is formatted, and everything else
-// is named.
+// has never heard of any of them. Two events are the exception, and they are the exception on purpose. A
+// resolution is the entry whose fields a player has to read -- above all whether the cast crit, which stage 4
+// owes the screen (app-roadmap.md, "The critical, on screen"): the boards' own totals cannot tell, because
+// Defense, caps and overkill all move the number a critical produced. A round's energy receipt (ADR 0132) is
+// the other: what each creature actually gained is a recorded fact, never the rule's allowance or a difference
+// between two boards. So those two are formatted, and everything else is named.
 
 import { stepLabel } from './terms.js';
 
 export function feedLine(entry, cards) {
-  const head = `${entry?.round ?? '—'} · ${stepLabel(entry?.subPhase)} · ${entry?.event?.kind ?? ''}`;
-  const detail = entry?.event?.kind === 'CombatActionResolved' ? resolutionText(entry.event, cards) : '';
+  const head = `${entry?.event?.roundId ?? entry?.round ?? '—'} · ${stepLabel(entry?.subPhase)} · ${entry?.event?.kind ?? ''}`;
+  const detail = entry?.event?.kind === 'CombatActionResolved' ? resolutionText(entry.event, cards)
+    : entry?.event?.kind === 'RoundEnergyGranted' ? roundEnergyGrants(entry.event).map(grant => `Creature ${grant.creature} · ${roundEnergyText(grant)}`).join('; ') : '';
   return detail === '' ? head : `${head} — ${detail}`;
 }
 
@@ -77,7 +79,7 @@ export function accumulate(kept, arriving, limit) {
 // Kept separately from the short activity log, per seat, before that log is trimmed. Only public combat
 // and upkeep events enter the references. A first poll can contain a whole match; keep two rounds.
 export function retainRoundEvents(kept, arriving, currentRound) {
-  const relevant = entry => ['CombatActionResolved', 'RoundEnded', 'ConditionsExpired', 'StunImmunityGained', 'OngoingEffectsApplied']
+  const relevant = entry => ['CombatActionResolved', 'RoundEnded', 'ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied']
     .includes(entry?.event?.kind);
   const events = accumulate(kept, (arriving ?? []).filter(relevant));
   const latest = Math.max(Number.isInteger(currentRound) ? currentRound : 0, ...events.map(eventRound));
@@ -91,6 +93,20 @@ function eventRound(entry) {
   return entry?.event?.roundId ?? entry?.round ?? 0;
 }
 
+// Ordinary energy has its own boundary record (ADR 0132). Absence means unknown, never a nominal gain.
+export function roundEnergyGrants(event) {
+  if (event?.kind !== 'RoundEnergyGranted' || !Array.isArray(event.grants)) return [];
+  return event.grants.filter(grant => Number.isInteger(grant?.creature) &&
+    ['gained', 'before', 'after', 'baseRequested', 'passiveRequested'].every(key => Number.isInteger(grant[key]) && grant[key] >= 0))
+    .map(grant => ({ creature: grant.creature, amount: grant.gained, before: grant.before, after: grant.after,
+      baseRequested: grant.baseRequested, passiveRequested: grant.passiveRequested,
+      tone: 'energy', label: 'Round energy', unit: 'energy', sign: '+' }));
+}
+
+export function roundEnergyText(grant) {
+  return `+${grant.amount} energy · ${grant.before} → ${grant.after} (base ${grant.baseRequested}, passive ${grant.passiveRequested})`;
+}
+
 // Actual applied ticks, in the host's upkeep order. Never subtract board snapshots: one poll may also
 // contain combat, and a capped recovery or lethal tick must show what happened, not the nominal effect.
 export function roundUpkeep(entries, round) {
@@ -100,12 +116,17 @@ export function roundUpkeep(entries, round) {
   return { round, rows: upkeepTicks(entry.event) };
 }
 
-function upkeepTicks(event) {
+export function upkeepTicks(event) {
   return [
     ...(event.energyRegenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.gained, tone: 'energy', label: 'Energy from effects', unit: 'energy', sign: '+' })),
     ...(event.regenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.healed, tone: 'recovery', label: 'Healing over time', unit: 'HP', sign: '+' })),
     ...(event.bleedTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.damage, tone: 'harm', label: 'Ongoing damage', unit: 'HP', sign: '−' })),
   ];
+}
+
+// Shared receipt wording: zero is a recorded result too, including capped healing.
+export function upkeepText(row) {
+  return Number.isInteger(row.before) ? roundEnergyText(row) : `${row.label} ${row.sign}${row.amount} ${row.unit}`;
 }
 
 // A whole match to replay, in the order it happened: each round's upkeep, the packages its Evolution revealed,
@@ -115,7 +136,9 @@ export function matchReplay(entries, board, cards) {
   const casts = resolvedSince(entries, undefined, board, cards);
   const between = (entries ?? []).flatMap(entry => {
     const kind = entry?.event?.kind;
-    if (kind === 'OngoingEffectsApplied') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ticks: upkeepTicks(entry.event) }];
+    if (kind === 'RoundEnergyGranted') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ordinaryEnergy: true, ticks: roundEnergyGrants(entry.event) }];
+    if (kind === 'OngoingEffectsApplied') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ticks: upkeepTicks(entry.event),
+      missingOrdinaryEnergy: !entries.some(one => one.event?.kind === 'RoundEnergyGranted' && eventRound(one) === eventRound(entry)) }];
     if (kind === 'PurchasesRevealed') {
       const choices = (entry.event.choices ?? []).map(choice => ({ creature: recapCreature(choice.creature, board), tier: choice.tier }));
       return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'purchases', choices }];
@@ -225,6 +248,9 @@ export function turnoverSteps(entries, round, board) {
 
 // A turnover step as one line, for the round bar.
 export function turnoverText(step) {
+  if (step.ordinaryEnergy) return `Upkeep · round energy · ${step.ticks.length
+    ? step.ticks.map(grant => `Creature ${grant.creature}: ${roundEnergyText(grant)}`).join('; ')
+    : 'No recorded grant details'}`;
   if (step.interlude === 'upkeep') {
     const ticks = step.ticks.map(tick => `${tick.label} ${tick.sign}${tick.amount} ${tick.unit} → Creature ${tick.creature}`);
     return `Upkeep · ${ticks.join(', ')}`;
@@ -294,6 +320,9 @@ function recapAction(entry, board, cards) {
       target: recapCreature(outcome.target, board),
       text: recapEffectText(outcome),
       tone: outcomeTone(outcome.kind),
+      kind: outcome.kind,
+      effect: outcome.effect,
+      onCaster: outcome.onCaster === true,
     })),
     dropped: (resolution.droppedTargets ?? []).map(failure =>
       `${failure.target == null ? '' : `${recapCreature(failure.target, board).label}: `}${errorText(failure.error)}`),

@@ -213,6 +213,104 @@ public sealed class AccountApiTests : IDisposable
         Json(await api.HandleAsync("GET", "/api/account/names/MarkF", "", Nobody)).GetProperty("available").GetBoolean().ShouldBeTrue();
     }
 
+    private const string Subscription = """{"endpoint":"https://push.example/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+
+    /// <summary>An API whose host keeps devices and has push keys: the lobby's "Notify me on this device" reaches it.</summary>
+    private async Task<(AccountApi Api, AccountDevices Devices, DeviceSender Sender)> NotifyingAsync()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var devices = new AccountDevices(new FileDeviceStore(_root), _clock);
+        var sender = new DeviceSender();
+        api.Devices = devices;
+        api.Notices = new AccountNotices(sender, devices);
+        return (api, devices, sender);
+    }
+
+    private static async Task<SharedKernel.Identifiers.AccountId> IdOf(AccountApi api, string? session) =>
+        (await api.WhoAsync(Signed(session), TestContext.Current.CancellationToken)).ShouldNotBeNull().Account.Id;
+
+    [Fact]
+    public async Task A_signed_in_browser_registers_itself_as_a_device_and_can_be_tested()
+    {
+        var (api, devices, sender) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var registered = await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        var tested = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+
+        registered.Status.ShouldBe(200);
+        Json(registered).GetProperty("notices").GetBoolean().ShouldBeTrue();
+        Json(registered).GetProperty("devices").GetInt32().ShouldBe(1);
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone");
+        tested.Status.ShouldBe(200);
+        Json(tested).GetProperty("sent").GetBoolean().ShouldBeTrue();
+        sender.Sent.ShouldHaveSingleItem().ShouldBe("https://push.example/phone");
+    }
+
+    [Fact]
+    public async Task A_device_needs_a_session_a_real_subscription_and_a_host_that_sends_notices()
+    {
+        var (api, _, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var silent = await ApiAsync(AccountsMode.Development);
+
+        (await api.HandleAsync("PUT", "/api/account/push", Subscription, Nobody)).Status.ShouldBe(401);
+        (await api.HandleAsync("PUT", "/api/account/push", """{"endpoint":"http://push.example/plain"}""", Signed(session))).Status.ShouldBe(400);
+        (await silent.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session))).Status.ShouldBe(404);
+        (await silent.HandleAsync("POST", "/api/account/push/test", "{}", Signed(session))).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task A_browser_that_asks_to_be_forgotten_is_and_the_account_s_other_devices_stay()
+    {
+        var (api, devices, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("/phone", "/laptop", StringComparison.Ordinal), Signed(session));
+
+        var forgotten = await api.HandleAsync("DELETE", "/api/account/push", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+
+        forgotten.Status.ShouldBe(200);
+        Json(forgotten).GetProperty("notices").GetBoolean().ShouldBeFalse();
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/laptop");
+    }
+
+    [Fact]
+    public async Task A_subscription_its_push_service_let_go_of_is_answered_gone_until_the_browser_makes_a_new_one()
+    {
+        var (api, devices, sender) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        sender.Gone = true;
+
+        var test = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+        var again = await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        var fresh = await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("/phone", "/phone-2", StringComparison.Ordinal), Signed(session));
+
+        test.Status.ShouldBe(502);
+        again.Status.ShouldBe(410);
+        Json(again).GetProperty("error").GetString().ShouldBe("Account.DeviceGone");
+        fresh.Status.ShouldBe(200);
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone-2");
+    }
+
+    [Fact]
+    public async Task Signing_out_everywhere_and_deleting_the_account_forget_its_devices()
+    {
+        var (api, devices, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+
+        await api.HandleAsync("POST", "/api/account/signout", """{"everywhere":true}""", Signed(session));
+        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).ShouldBeEmpty("signed out everywhere");
+
+        session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).ShouldBeEmpty("deleted");
+    }
+
     [Fact]
     public async Task A_typed_name_signs_in_as_the_same_account_each_time()
     {
@@ -251,6 +349,25 @@ public sealed class AccountApiTests : IDisposable
     {
         public Task<ExternalIdentity?> VerifyAsync(string token, CancellationToken cancellationToken = default) =>
             Task.FromResult(token == GoodToken ? Mark : (ExternalIdentity?)null);
+    }
+
+    /// <summary>A push service as far as these tests need one: it takes every notice, or says every subscription is gone.</summary>
+    private sealed class DeviceSender : IPushSender
+    {
+        public List<string> Sent { get; } = [];
+
+        public bool Gone { get; set; }
+
+        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        {
+            if (Gone)
+            {
+                return Task.FromResult(false);
+            }
+
+            Sent.Add(to.Endpoint);
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider

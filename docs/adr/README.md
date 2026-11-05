@@ -134,4 +134,11 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
 | [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
 | [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
-| [0129](0129-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |
+| [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
+| [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
+| [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
+| [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
+| [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
+| [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |
+| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena |
+| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |

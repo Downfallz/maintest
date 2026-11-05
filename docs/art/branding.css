@@ -1,0 +1,46 @@
+/* Official UI palette. See docs/art/branding.md. */
+:root {
+  color-scheme: dark;
+  --brand-slate: #0b1519;
+  --brand-panel: #132228;
+  --brand-raised: #1c2a2d;
+  --brand-line: #52636b;
+  --brand-ivory: #ece9dc;
+  --brand-muted: #adb8bd;
+  --brand-gold: #e7c183;
+  --brand-gold-bright: #ffe2a6;
+  --brand-ember: #d39c85;
+  --brand-wash: #352e25;
+  --brand-on-accent: #0b1519;
+  --ink: var(--brand-ivory);
+  --muted: var(--brand-muted);
+  --paper: var(--brand-slate);
+  --paper-glass: rgb(11 21 25 / 94%);
+  --panel: var(--brand-panel);
+  --card: var(--brand-panel);
+  --raised: var(--brand-raised);
+  --sunken: var(--brand-raised);
+  --line: var(--brand-line);
+  --gold: var(--brand-gold);
+  --accent: var(--brand-gold);
+  --accent-ink: var(--brand-on-accent);
+  --accent-wash: var(--brand-wash);
+  --accent-strong: var(--brand-gold-bright);
+  /* Semantic colours are independent of the brand accents. */
+  --ally: #96ccb0;
+  --enemy: #e3a29a;
+  --refused: #ffb3a7;
+  --ok: #96ccb0;
+  --ok-wash: #20382d;
+  --warn: #e7c183;
+  --warn-wash: #352e25;
+  --bad: #ffb3a7;
+  --bad-wash: #392622;
+  --health: #96ccb0;
+  --health-low: #ffb3a7;
+  --player1: #8bc6ed;
+  --player2: #e3a29a;
+  --chart-above: #8bc6ed;
+  --chip-bg: #29303f;
+  --chip-ink: #d4c5ef;
+}

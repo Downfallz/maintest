@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { startHost, stopHost } from './host.js';
+test.beforeEach(returningArenaPlayer);
 
 // The live arena reads the same authenticated projection as a real table host.
 
@@ -26,8 +28,10 @@ test('the real host supplies the arena and external decisions update it without 
   arena.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) requests.push({ method: request.method(), url: request.url() }); });
   await arena.goto(`${origin}/arena`);
   await expect(arena.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await arena.locator('#seat-choices button').filter({ hasText: 'Player 1' }).click();
+  await expect(arena.locator('#seat-choices')).toBeEmpty();
   await expect(arena.locator('#loading')).toBeHidden();
+  await expect(arena.locator('#upkeep-dialog')).toBeVisible();
+  await arena.locator('#upkeep-close').click();
   for (const one of before.board.allies) {
     await expect(arena.locator(`[data-creature="${one.id}"]`)).toHaveClass(/ally/);
     await expect(arena.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);

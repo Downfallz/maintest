@@ -1,14 +1,25 @@
+import { creatureAppearance } from './arena-art.js';
 import { boardPresentation } from './presentation.js';
 
+// How every surface of the arena names a creature off a seat's board (the scene, the journal, the guide):
+// its name, and its id beside it only when another creature on the board shares that name. A creature the
+// board does not know, or one the host left unnamed, is named by its id alone.
+export function creatureLabel(board, id) {
+  const roster = [...(board?.allies ?? []), ...(board?.enemies ?? [])];
+  const one = roster.find(creature => creature.id === id);
+  if (!one?.name) return `Creature ${id ?? '?'}`;
+  return roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${id}` : one.name;
+}
+
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
-export function livePresentation(view) {
+// The catalogue's packages say how an acquired tier shows on a creature; without them a creature is its base.
+export function livePresentation(view, packages = new Map()) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];
   const creatures = roster.map((one, index) => ({
-    ...one, label: roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name,
+    ...one, label: creatureLabel(board, one.id),
     id: String(one.id), enemy: index >= board.allies.length,
-    // Provisional artwork denotes a position, never a class or an unlocked ability.
-    form: ['horns', 'wings', 'veil'][index % 3],
+    ...creatureAppearance(one, packages),
   }));
   return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };

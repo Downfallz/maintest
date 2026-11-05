@@ -3,11 +3,11 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, TAG } from './push.js';
-import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
+import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, showOwnNotice, TAG } from './push.js';
+import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundEnergyText, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
 import { bands, cursorOf, speedReveal } from './timeline.js';
 import { classColour, talentClasses, packageForest, passiveOf, requirementLine, tagsOf, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -17,8 +17,8 @@ import { combatChanges, combatSnapshot, createCombatTransitionTracker } from './
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { waitingRoom } from './waiting.js';
 import { signInPath } from './account.js';
-import { seatsOf, versusLine } from './players.js';
-import { outcomeText } from './outcome.js';
+import { tableOf, versusLine } from './players.js';
+import { outcomeText, rematchLink } from './outcome.js';
 import { askedKey, validTargets, emptyCastAllowed, combatDecision } from './slot.js';
 import { activeTurn, boardPresentation, decisionView, presentedView } from './presentation.js';
 import { practice, storage } from './startup.js';
@@ -271,7 +271,8 @@ async function showPlayers(state) {
   try {
     const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
     if (!response.ok) return;
-    const line = versusLine(seatsOf(await response.json(), tokens), state.seats.map(seat => seat.seat));
+    state.table = tableOf(await response.json(), tokens);
+    const line = versusLine(state.table?.seats ?? null, state.seats.map(seat => seat.seat));
     element('versus').textContent = line ?? '';
     element('versus').hidden = !line;
   } catch {
@@ -973,6 +974,15 @@ function matchResult(state, current) {
     stats.append(value);
   }
   result.append(stats);
+  // The same opponent again (ADR 0129, stage 4): the lobby's dialog, with them and the format chosen.
+  const again = state.practice || state.replaying || view.replay ? null : rematchLink(state.table, state.seats.map(seat => seat.seat));
+  if (again) {
+    const rematch = document.createElement('a');
+    rematch.className = 'button primary match-result-rematch';
+    rematch.href = again;
+    rematch.textContent = 'Rematch →';
+    result.append(rematch);
+  }
   return result;
 }
 
@@ -1191,26 +1201,7 @@ async function testNotices(state) {
 // A notice the page shows itself, through the worker and no push service: whether this browser shows any for
 // this site at all. The worker is brought up to date first: a push lands on the worker that is active, and an
 // old one would read the test by yesterday's rule. Null when shown, else why not.
-async function showOwn(state) {
-  const registration = state.push?.registration;
-  if (!registration?.showNotification) return 'no worker';
-  try {
-    await registration.update?.();
-  } catch {
-    // An update that cannot be fetched leaves the worker there is, which still shows.
-  }
-  const permission = globalThis.Notification?.permission;
-  if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
-  try {
-    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
-  } catch (error) {
-    return error?.message || String(error);
-  }
-  // Taken is not shown: a browser lists the notices it is showing, and one it took and lists no more it dropped
-  // on the way, which is the browser's or the system's doing, not the page's.
-  const listed = await registration.getNotifications?.({ tag: 'test:page' }) ?? null;
-  return listed !== null && listed.length === 0 ? 'the browser took it and then listed no such notice: it dropped it' : null;
-}
+const showOwn = state => showOwnNotice(state.push?.registration);
 
 // The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.
 async function toggleNotices(state) {
@@ -1675,8 +1666,7 @@ function speedSpell(state, spell, creature, current) {
   }
   const body = document.createElement('div');
   body.className = 'speed-spell-details';
-  const lines = [...cardDetails(card).map(row => row.text), card?.criticalNote, guide?.unavailableReason].filter(Boolean);
-  for (const text of lines) {
+  for (const text of referenceLines(card, guide)) {
     const line = document.createElement('p');
     line.textContent = text;
     body.append(line);
@@ -2636,6 +2626,7 @@ function roundJump(state, replay) {
 }
 
 function interludeHeading(action, round) {
+  if (action.ordinaryEnergy) return `Round ${round} · round energy`;
   return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
 }
 
@@ -2672,9 +2663,11 @@ function interludeRows(state, board, action) {
   const allies = new Set((board.allies ?? []).map(creature => creature.id));
   const ticks = action.ticks.map(tick => {
     const side = allies.has(tick.creature) ? 'ally' : 'enemy';
-    return row({ label: `Creature ${tick.creature}`, side }, `${tick.label} ${tick.sign}${tick.amount} ${tick.unit}`, tick.tone);
+    return row({ label: `Creature ${tick.creature}`, side }, action.ordinaryEnergy
+      ? roundEnergyText(tick) : `${tick.label} ${tick.sign}${tick.amount} ${tick.unit}`, tick.tone);
   });
-  return [row(null, upkeepEnergy(state), 'energy'), ...(ticks.length ? ticks : [row(null, 'No ongoing effect ticked.', 'neutral')])];
+  // Replay reads recorded facts only: the catalogue allowance is neither a receipt nor an ongoing tick.
+  return ticks.length ? ticks : [row(null, action.ordinaryEnergy ? 'No recorded grant details.' : 'No ongoing effect ticked.', 'neutral')];
 }
 
 function animatePlayback(state, held) {

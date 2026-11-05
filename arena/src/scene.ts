@@ -1,13 +1,18 @@
 import Phaser from 'phaser';
 import { placements, strikeApproach } from '../../table/arena-layout.js';
-import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
+import { CREATURE_ART, figureArt, figureGeometry } from '../../table/arena-art.js';
+import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
+import { MutationCues } from './mutation-cues';
+import { SpellEffects, type EffectAnchor } from './spell-effects';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
 interface Figure {
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
-  home: Placement;
+  cues: MutationCues; home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
+  form: string;
 }
 
 const GOLD = 0xeac88e;
@@ -23,6 +28,7 @@ export class ArenaScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
+  private spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
   private rate = 1;
@@ -33,24 +39,19 @@ export class ArenaScene extends Phaser.Scene {
   onReady: () => void = () => {};
   onResizeDuringPlayback: () => void = () => {};
   onImpact: () => void = () => {};
+  onCancel: () => void = () => {};
   assetFailed = false;
 
   constructor(private assetRoot: string) { super('arena'); }
 
   preload() {
     this.load.image('arena-floor', `${this.assetRoot}eclipse-arena.webp`);
-    this.load.image('creature-sheet', `${this.assetRoot}creatures.webp`);
+    for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
     this.load.on('loaderror', () => { this.assetFailed = true; });
   }
 
   create() {
-    if (this.textures.exists('arena-floor')) this.backdrop = this.add.image(0, 0, 'arena-floor').setOrigin(.5, 0).setDepth(-10);
-    if (this.textures.exists('creature-sheet')) {
-      const sheet = this.textures.get('creature-sheet');
-      const source = sheet.getSourceImage();
-      const width = Math.floor(source.width / 3);
-      for (const [index, form] of ['horns', 'wings', 'veil'].entries()) sheet.add(form, 0, width * index, 0, width, source.height);
-    }
+    if (this.textures.exists('arena-floor')) this.backdrop = this.add.image(0, 0, 'arena-floor').setOrigin(.5, 0).setTint(0xb5bbc2).setDepth(-10);
     // A local vector fallback keeps the scene selectable if an image fails to load.
     const fallback = this.add.graphics();
     fallback.fillStyle(0x71867e).fillTriangle(40, 0, 0, 90, 80, 90);
@@ -68,19 +69,20 @@ export class ArenaScene extends Phaser.Scene {
   present(state: SceneFrame, reduced: boolean, rate: number) {
     this.state = state;
     this.reduced = reduced;
-    this.rate = rate;
+    this.rate = playbackRate(rate);
     if (!this.ready) return;
-    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy]));
-    if (roster !== this.roster) {
+    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy, one.layers]));
+    const rosterChanged = roster !== this.roster;
+    if (rosterChanged) {
       this.clearMotion();
-      for (const figure of this.figures.values()) { figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
       this.roster = roster;
       this.makeFigures();
     }
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
-    this.arrange();
+    this.arrange(rosterChanged);
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
@@ -89,6 +91,7 @@ export class ArenaScene extends Phaser.Scene {
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(creature.isAlive ? 1 : .20);
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
+      this.followCues(figure);
     }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {
@@ -103,17 +106,15 @@ export class ArenaScene extends Phaser.Scene {
       const enemy = creature.enemy;
       const shadow = this.add.ellipse(0, 0, 100, 20, 0x020608, .55);
       const ring = this.add.ellipse(0, 0, 110, 26).setStrokeStyle(1, GOLD, .2);
-      const image = this.textures.exists('creature-sheet')
-        ? this.add.image(0, 0, 'creature-sheet', creature.form)
-        : this.add.image(0, 0, 'missing-figure');
-      // The enemy team reuses the three forms, mirrored and tinted so the two sides still read apart.
-      image.setOrigin(.5, 1).setFlipX(enemy);
-      if (enemy) image.setTint(0xefbfb0);
-      this.figures.set(creature.id, { image, shadow, ring, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      const art = figureArt(creature.form, (key: string) => this.textures.exists(key));
+      const image = this.add.image(0, 0, art.key).setFlipX(enemy);
+      // Team identity remains in labels, formation and targeting; preserve the approved art palette.
+      const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
+      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, form: creature.form, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
   }
 
-  private arrange() {
+  private arrange(resetPositions = false) {
     const { width, height } = this.scale;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
@@ -127,12 +128,21 @@ export class ArenaScene extends Phaser.Scene {
       const figure = this.figures.get(creature.id)!;
       const home = positions[index];
       figure.home = home;
-      figure.image.setDisplaySize(home.size, home.size).setDepth(home.y);
-      if (!inFlight) figure.image.setPosition(home.x, home.y).setAngle(0);
+      const geometry = figureGeometry(figure.art, home, figure.enemy);
+      // Figures of one row share a y: a step per figure keeps each one's accents under its neighbour's image.
+      figure.image.setOrigin(geometry.originX, geometry.originY).setScale(geometry.scale).setDepth(home.y + index * .001);
+      // Reduced motion can enter impact directly with newly mutated historical figures.
+      if (!inFlight || resetPositions) figure.image.setPosition(home.x, home.y).setAngle(0);
       figure.shadow.setPosition(home.x, home.y - 2).setDisplaySize(home.size * .75, Math.max(12, home.size * .10)).setDepth(home.y - 1);
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
+    for (const figure of this.figures.values()) this.followCues(figure);
     this.onLayout(positions);
+  }
+
+  private followCues(figure: Figure) {
+    // Geometry-specific accents are suppressed if the requested sprite was unavailable.
+    figure.cues.follow(figure.image, figure.art.bounds, figure.art.ground, figure.art.form === figure.form);
   }
 
   private windup() {
@@ -140,9 +150,13 @@ export class ArenaScene extends Phaser.Scene {
     const actor = this.figures.get(this.state.actor!);
     const target = this.figures.get(this.state.target!);
     if (!actor) return;
-    if (this.state.cue && this.state.cue.kind !== 'strike') {
-      this.tweens.add({ targets: actor.image, alpha: .5, yoyo: true, duration: 180 / this.rate });
-      return;
+    const cue = this.state.cue;
+    if (cue) {
+      this.spellEffects.windup(cue.visual, this.anchor(actor), cue.contact.flatMap(id => {
+        const figure = this.figures.get(id);
+        return figure ? [{ id, anchor: this.anchor(figure) }] : [];
+      }), this.rate);
+      if (cue.visual.delivery !== 'melee') return;
     }
     if (!target || actor === target) return;
     const approach = strikeApproach(actor.home, target.home);
@@ -155,11 +169,12 @@ export class ArenaScene extends Phaser.Scene {
     const actor = this.figures.get(this.state.actor!);
     if (actor) {
       this.tweens.killTweensOf(actor.image);
-      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
+      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: RETURN_MS / this.rate, delay: RETURN_DELAY_MS / this.rate, ease: 'Cubic.Out' });
     }
     const cue = this.state.cue;
+    if (cue) { this.spellImpact(cue, actor); return; }
     const fallback = this.state.target ? [this.state.target] : [];
-    const struck = cue?.struck ?? fallback;
+    const struck = fallback;
     for (const id of struck) {
       const target = this.figures.get(id);
       if (!target) continue;
@@ -168,22 +183,48 @@ export class ArenaScene extends Phaser.Scene {
       this.burst(target, 0xffd995, true);
     }
     if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
-    if (cue) this.pulseEffects(cue, actor);
   }
 
-  private pulseEffects(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
-    const tones: Record<string, number> = { recovery: 0x96dfa5, energy: 0x91caef, condition: 0xc3a0eb, neutral: 0xeac88e };
-    const pulsed = new Set<string>();
-    for (const effect of cue.effects) {
-      const target = this.figures.get(effect.creature);
-      if (!target || cue.struck.includes(effect.creature) || pulsed.has(effect.creature)) continue;
-      pulsed.add(effect.creature); this.burst(target, tones[effect.tone] ?? GOLD, false);
+  private anchor(figure: Figure): EffectAnchor {
+    const height = (figure.art.bounds[3] - figure.art.bounds[1]) * figure.image.scaleY;
+    return { x: figure.home.x, y: figure.home.y - height * .5,
+      radius: Math.max(16, Math.min(58, figure.home.hitWidth * .3, height * .35)) };
+  }
+
+  private spellImpact(cue: NonNullable<SceneFrame['cue']>, actor?: Figure) {
+    this.spellEffects.clear();
+    if (cue.kind === 'fizzle') {
+      if (actor) this.spellEffects.impact(cue.visual, this.anchor(actor), this.state.actor!, this.rate);
+      return;
     }
-    if (cue.kind === 'fizzle' && actor) this.burst(actor, 0x9ba6ac, false);
+    for (const id of cue.recipients) {
+      const target = this.figures.get(id);
+      if (!target) continue;
+      const self = id === this.state.actor;
+      // A blood ritual's self-cost is a wound, never a lunge, lightning bolt or summoned spirit at its caster.
+      const effects = cue.effects.filter(effect => effect.creature === id);
+      if (self && effects.some(effect => effect.wound)) {
+        this.spellEffects.impact({ family: 'physical', motif: 'wound', delivery: 'cast' }, this.anchor(target), id, this.rate);
+        if (effects.every(effect => effect.wound)) continue;
+      }
+      const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
+      const visual = self && cue.visual.delivery === 'melee'
+        ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
+      this.spellEffects.impact(visual, this.anchor(target), id, this.rate, actor ? this.anchor(actor) : undefined);
+      if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
+        const { dx, dy } = strikeApproach(actor.home, target.home);
+        this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,
+          angle: dx * 4, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+      }
+    }
+    if (cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
+      this.cameras.main.shake(120 / this.rate, .0015);
+    }
   }
 
   private burst(target: Figure, color: number, sparks: boolean) {
-    const x = target.home.x; const y = target.home.y - target.home.size * .5;
+    const visibleHeight = (target.art.bounds[3] - target.art.bounds[1]) * target.image.scaleY;
+    const x = target.home.x; const y = target.home.y - visibleHeight * .5;
     const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
     this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 / this.rate });
@@ -197,11 +238,16 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private clearMotion() {
+    this.onCancel();
     this.tweens.killAll();
     this.cameras.main.resetFX();
+    this.spellEffects.clear();
     for (const effect of this.effects) effect.destroy();
     this.effects = [];
-    for (const figure of this.figures.values()) figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);
+    for (const figure of this.figures.values()) {
+      figure.image.setPosition(figure.home.x, figure.home.y).setAngle(0);
+      this.followCues(figure);
+    }
   }
 
   update(time: number) {
@@ -210,6 +256,7 @@ export class ArenaScene extends Phaser.Scene {
     let index = 0;
     for (const figure of this.figures.values()) {
       if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
+      this.followCues(figure);
       index++;
     }
     const width = Math.max(1, this.scale.width);

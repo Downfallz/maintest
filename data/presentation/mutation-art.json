@@ -1,0 +1,95 @@
+{
+  "tier:apex:v1": {
+    "family": "predator",
+    "motif": "precision"
+  },
+  "tier:archmage:v1": {
+    "family": "warped",
+    "motif": "circuit"
+  },
+  "tier:assassin:v1": {
+    "family": "predator",
+    "motif": "talons"
+  },
+  "tier:berserker:v1": {
+    "family": "brute",
+    "motif": "fissures"
+  },
+  "tier:blightweaver:v1": {
+    "family": "predator",
+    "motif": "glands"
+  },
+  "tier:brute:v1": {
+    "family": "brute"
+  },
+  "tier:deathstalker:v1": {
+    "family": "predator",
+    "motif": "talons"
+  },
+  "tier:dreadnought:v1": {
+    "family": "brute",
+    "motif": "plates"
+  },
+  "tier:elementalist:v1": {
+    "family": "warped",
+    "motif": "shards"
+  },
+  "tier:harbinger:v1": {
+    "family": "warped",
+    "motif": "shards"
+  },
+  "tier:ironbound:v1": {
+    "family": "brute",
+    "motif": "plates"
+  },
+  "tier:lich:v1": {
+    "family": "warped",
+    "motif": "souls"
+  },
+  "tier:marauder:v1": {
+    "family": "brute",
+    "motif": "crown"
+  },
+  "tier:necromancer:v1": {
+    "family": "warped",
+    "motif": "souls"
+  },
+  "tier:occultist:v1": {
+    "family": "warped"
+  },
+  "tier:parasite:v1": {
+    "family": "predator",
+    "motif": "fangs"
+  },
+  "tier:plague_doctor:v1": {
+    "family": "predator",
+    "motif": "glands"
+  },
+  "tier:prowler:v1": {
+    "family": "predator"
+  },
+  "tier:ravager:v1": {
+    "family": "brute",
+    "motif": "fissures"
+  },
+  "tier:shaman:v1": {
+    "family": "warped",
+    "motif": "astral"
+  },
+  "tier:soulreaver:v1": {
+    "family": "predator",
+    "motif": "fangs"
+  },
+  "tier:spiritcaller:v1": {
+    "family": "warped",
+    "motif": "astral"
+  },
+  "tier:titan:v1": {
+    "family": "brute",
+    "motif": "reinforcement"
+  },
+  "tier:warmonger:v1": {
+    "family": "brute",
+    "motif": "crown"
+  }
+}

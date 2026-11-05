@@ -1,0 +1,34 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+const root = new URL('../', import.meta.url);
+const read = path => readFileSync(new URL(path, root), 'utf8');
+test('every independently shipped shell carries the current brand palette', () => {
+  execFileSync(process.execPath, [new URL('scripts/sync-branding.mjs', root).pathname, '--check']);
+});
+const tokens = Object.fromEntries([...read('docs/art/branding.css').matchAll(/(--[\w-]+): (#[\da-f]{6});/g)].map(match => [match[1], match[2]]));
+const luminance = hex => hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255)
+  .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+  .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05);
+test('brand text, links and action labels remain readable on their intended surfaces', () => {
+  for (const background of ['--brand-slate', '--brand-panel', '--brand-raised', '--brand-wash']) {
+    for (const foreground of ['--brand-ivory', '--brand-muted', '--brand-gold', '--brand-ember']) {
+      assert.ok(contrast(tokens[foreground], tokens[background]) >= 4.5, `${foreground} on ${background}`);
+    }
+  }
+  for (const background of ['--brand-gold', '--brand-gold-bright', '--brand-ember']) {
+    assert.ok(contrast(tokens['--brand-on-accent'], tokens[background]) >= 7, background);
+  }
+});
+test('installed app and browser chrome use the same slate as the page', () => {
+  const manifest = JSON.parse(read('table/manifest.webmanifest'));
+  assert.equal(manifest.background_color, tokens['--brand-slate']);
+  assert.equal(manifest.theme_color, tokens['--brand-slate']);
+  for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'arena', 'arena-lab']) {
+    assert.ok(read(`table/${page}.html`).includes(`name="theme-color" content="${tokens['--brand-slate']}"`));
+  }
+  assert.ok(read('studio/index.html').includes(`name="theme-color" content="${tokens['--brand-slate']}"`));
+});

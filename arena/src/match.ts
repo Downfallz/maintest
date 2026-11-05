@@ -5,13 +5,13 @@ const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElem
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
 export function matchControls(controller: Controller, beforeOpen: () => void, beforeReview: () => void) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
-  let notesKey = '', roundsKey = '';
+  let notesKey = '', roundsKey = '', resultKey = '';
   el('match-open').addEventListener('click', () => { beforeOpen(); result.showModal(); });
   el('round-review').addEventListener('click', () => { beforeReview(); el<HTMLDialogElement>('round-dialog').showModal(); });
-  el('match-replay').addEventListener('click', () => { result.close(); beforeOpen(); void controller.replay(); });
+  el('match-replay').addEventListener('click', async () => { beforeOpen(); await controller.replay(); if (controller.model().active) { result.close(); el('replay-next').focus(); } });
   el('replay-previous').addEventListener('click', () => controller.move(-1));
   el('replay-next').addEventListener('click', () => controller.move(1));
-  el('replay-close').addEventListener('click', () => controller.closeReplay());
+  el('replay-close').addEventListener('click', () => { controller.closeReplay(); result.showModal(); });
   el('replay-round').addEventListener('change', () => controller.jump(Number(el<HTMLSelectElement>('replay-round').value)));
   el('concede-open').addEventListener('click', () => { el<HTMLDialogElement>('settings-dialog').close(); beforeOpen(); concede.showModal(); });
   el('concede-confirm').addEventListener('click', () => { void controller.concede(); });
@@ -25,6 +25,18 @@ export function matchControls(controller: Controller, beforeOpen: () => void, be
     el<HTMLButtonElement>('concede-cancel').disabled = model.busy;
     if (!model.canConcede) concede.close();
     el<HTMLButtonElement>('match-replay').disabled = model.busy;
+    if (!model.over) result.close();
+    text('match-title', model.result?.title ?? 'Match complete');
+    result.dataset.tone = model.result?.tone ?? 'unknown';
+    text('match-replay-error', model.error);
+    const resultData = JSON.stringify(model.result);
+    if (resultData !== resultKey) {
+      resultKey = resultData;
+      el('match-stats').replaceChildren(...(model.result?.teams ?? []).map((team: { label: string; text: string }) => {
+        const section = document.createElement('section'), label = document.createElement('h3'), stats = document.createElement('strong');
+        label.textContent = team.label; stats.textContent = team.text; section.append(label, stats); return section;
+      }));
+    }
     text('match-outcome', model.outcome); text('concede-error', model.error); text('match-error', model.error);
     el('match-error').hidden = !model.error; el('replay-controls').hidden = !model.active;
     el('arena').dataset.replay = String(model.active);

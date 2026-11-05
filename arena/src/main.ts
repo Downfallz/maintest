@@ -1,8 +1,10 @@
+import { ArenaAudio, soundControl } from './audio';
 import { ArenaScene } from './scene';
 import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState } from './types';
 import { creatureButton, placeHitTargets } from './targets';
 import { bootScene } from './boot';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/arena-lab-state.js';
+import { CREATURE_ART } from '../../table/arena-art.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -12,8 +14,7 @@ const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const playback = createLabPlayback();
 let state = initialLabState() as LabState;
 let ready = false;
-let audio: AudioContext | null = null;
-let soundEnabled = false;
+const audio = new ArenaAudio();
 const nodes = new Map<string, HTMLButtonElement>();
 const assetRoot = new URL('arena-art/', document.baseURI).href;
 const scene = new ArenaScene(assetRoot);
@@ -49,6 +50,7 @@ function tagOf(one: Creature, selected: boolean, targetable: boolean) {
 
 function updateCreature(one: Creature) {
   const node = nodes.get(one.id)!;
+  node.dataset.form = one.form;
   const targetable = state.stage === 'targeting' && state.action.targets.includes(one.id);
   const selected = one.id === state.target;
   node.disabled = !ready || isLabPlaying(state);
@@ -97,6 +99,8 @@ function render() {
   $('round-number').textContent = pad(state.board.roundNumber);
   $('round-phase').textContent = phaseLabel(state.board.phase).toUpperCase();
   $('actor-name').textContent = actor.name;
+  const art = CREATURE_ART.find(one => one.form === actor.form) ?? CREATURE_ART[0];
+  $('actor-portrait').style.backgroundImage = `url("${assetRoot}${art.file}")`;
   $('actor-meta').textContent = `${tempoLabel(state.board.timeline[0].speed)} · ${actor.energy} energy`;
   $('action-label').textContent = state.action.label;
   $('instruction').textContent = ready ? instruction() : 'Preparing the scene…';
@@ -138,32 +142,6 @@ function fail(message: string) {
   render();
 }
 
-async function enableSound() {
-  soundEnabled = $<HTMLInputElement>('sound').checked;
-  if (!soundEnabled) return;
-  try {
-    audio ??= new AudioContext();
-    await audio.resume();
-  } catch {
-    soundEnabled = false;
-    $<HTMLInputElement>('sound').checked = false;
-  }
-}
-
-function impactSound() {
-  if (!soundEnabled || audio?.state !== 'running') return;
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(150, audio.currentTime);
-  oscillator.frequency.exponentialRampToValueAtTime(42, audio.currentTime + .18);
-  gain.gain.setValueAtTime(.13, audio.currentTime);
-  gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .22);
-  oscillator.connect(gain); gain.connect(audio.destination);
-  oscillator.start(); oscillator.stop(audio.currentTime + .23);
-  oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
-}
-
 creaturesOf(state).forEach(makeCreature);
 for (const [index, slot] of state.board.timeline.entries()) {
   const item = document.createElement('li');
@@ -203,7 +181,7 @@ button('reset').addEventListener('click', reset);
 button('reload').addEventListener('click', () => location.reload());
 button('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
 button('inspect').addEventListener('click', () => $<HTMLDialogElement>('inspect-dialog').showModal());
-$<HTMLInputElement>('sound').addEventListener('change', enableSound);
+soundControl(audio, $<HTMLInputElement>('sound'));
 // A presentation setting that changes mid-cast settles the cast on its final frame rather than replaying
 // it under the new setting: the outcome is the same either way, and the player asked for less, not more.
 function settingChanged() { if (isLabPlaying(state)) skip(false); else render(); }
@@ -225,10 +203,11 @@ document.addEventListener('keydown', event => {
   }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && isLabPlaying(state)) skip(false); });
-window.addEventListener('pagehide', () => { playback.cancel(); if (isLabPlaying(state)) dispatch({ type: 'skip' }); });
+window.addEventListener('pagehide', () => { audio.stop(); playback.cancel(); if (isLabPlaying(state)) dispatch({ type: 'skip' }); });
 
 scene.onLayout = positions => placeHitTargets(creaturesOf(state).map(one => nodes.get(one.id)!), positions);
-scene.onImpact = impactSound;
+scene.onImpact = () => audio.play({ family: 'physical', motif: 'impact', delivery: 'melee' });
+scene.onCancel = () => audio.silence();
 scene.onResizeDuringPlayback = () => skip(false);
 scene.onReady = () => {
   ready = true; lab.dataset.ready = 'true'; lab.dataset.renderer = 'phaser';

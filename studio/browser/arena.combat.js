@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
 import { startHost, stopHost } from './host.js';
+test.beforeEach(returningArenaPlayer);
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: arena combat commands resolve through the real engine`, async ({ page, context }, info) => {
   test.setTimeout(90000);
@@ -40,7 +42,10 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         }
       }
     });
-    await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+    await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
+    await expect(page.locator('#upkeep-dialog')).toBeVisible();
+    expect(shown).toEqual([]); expect(sent).toEqual([]);
+    await page.locator('#upkeep-close').click();
     await page.evaluate(() => {
       window.arenaFrames = [];
       new MutationObserver(() => {
@@ -50,12 +55,20 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
           creatures: [...document.querySelectorAll('.creature')].map(node => ({ id: Number(node.dataset.creature), text: node.querySelector('.creature-stats').textContent })) });
       }).observe(document.getElementById('arena'), { attributes: true, attributeFilter: ['data-playback', 'data-sequence'] });
     });
-    let casts = 0, intents = 0, captured = false;
+    let casts = 0, intents = 0, captured = false; const orderRounds = new Set();
     for (let step = 0; step < 40 && casts < 3; step++) {
       const view = await nextQuestion(); expect(view.over).toBe(false);
       if (await planning(view)) continue;
       expect(['Action', 'Intent', 'Target']).toContain(view.waitingFor);
       await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
+      // A round's public order is revealed once, before its first combat question, and covers the board
+      // until it is read (AU11). Reading it writes nothing.
+      if (!orderRounds.has(view.board.roundNumber)) {
+        const beforeShown = shown.length, beforeSent = sent.length;
+        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
+        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
+        expect(shown.length).toBe(beforeShown); expect(sent.length).toBe(beforeSent);
+      }
       await page.locator('#combat-open').click();
       let spell = null;
       if (view.waitingFor !== 'Target') {
@@ -73,6 +86,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         for (const id of targets) await page.locator(`[data-creature="${id}"]`).click();
         if (!captured) { await page.screenshot({ path: info.outputPath(`${declaration}-targets.jpg`), type: 'jpeg', quality: 85 }); captured = true; }
       }
+      const selectedSpell = spell ?? view.options.target?.spell;
+      const guide = view.guidance?.find(one => one.spell === selectedSpell);
+      const estimate = page.locator(view.waitingFor === 'Intent' ? '#intent-preview' : '#combat-preview');
+      await expect(estimate).toContainText('Estimate');
+      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} after cost`);
+      else await expect(estimate).toContainText('Preview unavailable for this question');
       const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator(view.waitingFor === 'Intent' ? '#combat-declare' : '#combat-confirm').click();
       expect((await response).status()).toBe(204);
@@ -96,8 +115,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
     }
-    if (await page.locator('#playback-skip').isVisible()) await page.locator('#playback-skip').click();
-    await expect(page.locator('#playback-skip')).toBeHidden();
+    // The last playback can finish and open upkeep between isVisible() and click(). Observe its
+    // completion instead of racing a transient Skip button underneath the next round's receipt.
+    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {

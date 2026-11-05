@@ -106,7 +106,9 @@ listed in [spells.md](spells.md).
 
 1. **Start of round**
    1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes), and
-      the energy its packages' Passives give at upkeep (ADR 0101).
+      the energy its packages' Passives give at upkeep (ADR 0101). `RoundEnergyGranted` records each living
+      recipient's actual combined gain, base/passive requests and before/after Energy, including zero.
+      It does not change that single grant or introduce an energy cap (ADR 0132).
    2. `OngoingEffects`: energy regeneration Conditions give their Energy, regeneration Conditions heal, then
       bleed Conditions deal their damage, which ignores Defense. Healing goes before the Bleeds (ADR 0019), so
       a Regeneration can carry a Creature through a Bleed that would otherwise have killed it. Energy goes

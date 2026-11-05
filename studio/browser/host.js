@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { expect } from '@playwright/test';
+import { hostLinks } from './host-log.js';
 
 const root = resolve('../..');
 
@@ -15,9 +16,8 @@ export async function startHost(declaration, args = [], { twoPeople = false } = 
       ...(twoPeople || args.includes('--p2') ? [] : ['--p2', 'greedy']), ...(args.includes('--record') ? [] : ['--no-record']), '--seed', '7', '--port', String(port), ...args], { cwd: root });
   let log = ''; host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });
   try {
-    await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
-    return { host, join: /joins at (\S+)/.exec(log)[1], joins: [...log.matchAll(/joins at (\S+)/g)].map(match => match[1]),
-      admin: /Admin: (\S+)/.exec(log)?.[1], session: /Session (\S+)/.exec(log)?.[1] };
+    await expect.poll(() => Boolean(hostLinks(log)), { timeout: 20000, message: 'Table host prints complete seat, session and admin links' }).toBe(true);
+    return { host, ...hostLinks(log) };
   } catch (error) { host.kill('SIGINT'); throw error; }
 }
 

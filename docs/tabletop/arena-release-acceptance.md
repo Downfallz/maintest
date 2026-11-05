@@ -1,18 +1,24 @@
 # Arena release candidate — A8 acceptance record
 
-Candidate based on `c2a1112b` (merged A7 #432). Date: 2026-11-04.
-The arena remains a preview. The lobby defaults to Table; players may explicitly select Arena for this
-browser. The Table link remains available in the arena, including renderer recovery.
+Candidate first prepared on `c2a1112b` (merged A7 #432) on 2026-11-04, and reconciled on 2026-11-05 with
+main `53af584a`, after AU1–AU14 (#440–#464) and ART-2–ART-6 (#436–#450). The arena remains a preview.
+The lobby defaults to Table; players may explicitly select Arena for this browser. The Table link remains
+available in the arena, including renderer recovery.
+
+The reconciliation drops A8's own synthesized sound: ART-6's opt-in playback sound
+([ADR 0134](../adr/0134-polish-confirmed-playback-with-opt-in-sound.md)) covers it, and a second engine
+would put two sound switches in one settings dialog. The rest of A8 stands, as
+[ADR 0136](../adr/0136-gate-the-arena-release-behind-a-reversible-preference.md) records.
 
 ## Repeatable gates
 
 - `npm --prefix arena run build`: strict TypeScript, isolated bundle graph, asset budgets.
 - `node --test studio/*.test.js table/*.test.js`: all pure presentation/transport tests.
-- The five arena suites plus `arena-release.spec.js`: existing interactions, lifecycle, missing art and
-  reduced motion, with added keyboard/focus, sound, rollout and recovery checks.
+- The arena suites listed in AGENTS.md, `arena-release.spec.js` among them: interactions, lifecycle,
+  missing art, reduced motion, keyboard/focus, rollout and recovery.
 - `cd studio/browser && node node_modules/playwright/cli.js test --config arena.release.config.js`:
   complete normal 3v3 games, short round-cap games, recorded replay and two independent seats in desktop
-  Chromium, Android touch emulation and iOS WebKit. Install `chromium webkit` first.
+  Chromium, Android touch emulation and iOS WebKit, with sound enabled. Install `chromium webkit` first.
 - CI artifact `arena-release`: screenshots, failure traces and `release-metrics.json` per profile.
 
 The frame sample measures 89 requestAnimationFrame intervals on the loaded board. It is a diagnostic,
@@ -22,32 +28,33 @@ browser's text-only zoom or assistive technology.
 
 ## Asset budgets and coverage
 
-| Resource | Measured bytes at implementation | Enforced limit |
+| Resource | Measured bytes on main `53af584a` | Enforced limit |
 | --- | ---: | ---: |
-| Both initial WebP images | 802,728 | 2,097,152 |
-| Live JavaScript | 1,451,907 | 1,638,400 |
-| Live JavaScript, gzip estimate | 395,277 | 524,288 |
+| Art a visit loads (background and four creature bodies) | 1,528,370 | 2,097,152 |
+| Live JavaScript | 1,556,221 | 1,638,400 |
+| Live JavaScript, gzip estimate | 430,283 | 524,288 |
 
-The backdrop is 1672×941 and the sheet 2172×724 pixels: roughly 12 MiB total at four bytes per pixel before GPU copies and other surfaces. The download budget does not bound GPU memory.
-
-Rerun the build for the exact final bundle size. No remote fonts or audio downloads are needed.
+The retired three-form sheet (`creatures.webp`, 487,084 bytes) is still served but no longer loaded, so the
+budget does not count it. The live bundle uses 95% of its raw budget: the next large arena feature is
+expected to cross it, and raising it is a decision to record here with the measurement that motivated it.
+The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
 
 | Surface | Current coverage | Release limitation |
 | --- | --- | --- |
 | Arena backdrop | One local WebP, 315,644 bytes | Provisional environment |
-| Six creature slots | Three local forms, reused/mirrored; 487,084-byte sheet | Positional forms, not mutation-specific identity; ART-2 owns replacement |
+| Six creature slots | Four audited bodies chosen by acquired mutations (ADR 0130), bounded mutation cues (ADR 0133) | Final art review still open |
 | Missing art | Vector figure with DOM name, stats and legal hit target | Graphical detail is lost, legal input remains |
-| Damage/heal/energy/condition/fizzle | Confirmed frame effects, text, optional synthesized cue | No final authored spell audio/art |
+| Confirmed spells | Visual vocabulary (ADR 0131), text, opt-in playback sound (ADR 0134) | No authored audio files |
 
 ## Comparison with the table
 
 Both views use the same host questions, options, catalogue and command endpoints. The arena completes
-mutations, tempos, ties, actions, upkeep/aftermath review, concession and replay. It adds a viewport-bound
-scene and explicit sound opt-in. The table retains account/invitation recovery, notification settings and
-its richer reference surfaces. Choosing Arena does not transfer a seat, accept an invitation, acknowledge
-a question or submit a decision; those actions keep their existing explicit boundaries.
+mutations, tempos, ties, actions, upkeep/aftermath, history, inspection, results, notes, notices and
+replay; [the AU14 record](arena-ux-acceptance.md) lists the parity evidence feature by feature. Choosing
+Arena does not transfer a seat, accept an invitation, acknowledge a question or submit a decision; those
+actions keep their existing explicit boundaries. Invitations and account recovery stay at the table.
 
-## Local automated evidence
+## Local automated evidence at first preparation (2026-11-04, on A7)
 
 On 2026-11-04, the six arena browser suites passed 225 cases with six pre-existing duplicate-viewport
 skips. All 836 JavaScript tests and 11 direct host route tests passed; the .NET solution built with zero

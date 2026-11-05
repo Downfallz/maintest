@@ -1,5 +1,6 @@
 import { askedKey, combatDecision, emptyCastAllowed } from './slot.js';
 import { decisionView } from './presentation.js';
+import { creatureLabel } from './arena-live.js';
 import { declarableSpells } from './hand.js';
 
 export function combatQuestion(view) {
@@ -21,9 +22,18 @@ export function createArenaCombat({ connection, onChange, visible = () => true }
   function model() {
     const view = drawn();
     const target = opened && view?.waitingFor === 'Target' ? view.options?.target : null;
+    const actor = latest?.board?.allies?.find(one => one.id === latest?.waitingCreature);
+    const timeline = latest?.board?.timeline ?? [];
+    const position = timeline.findIndex(one => one.creature === latest?.waitingCreature);
+    const slot = position >= 0 ? timeline[position] : null;
+    // The host's guide numbers the turn; a board without one counts the creature's place in the timeline.
+    const turn = (latest?.guidance ?? []).find(one => Number.isInteger(one.turn))?.turn ?? (position >= 0 ? position + 1 : null);
     return { available: available(), opened, chosen, picked: [...picked], sending, error,
       waitingFor: latest?.waitingFor, actor: latest?.waitingCreature,
-      question: key, spells: offeredForLatest(), known: latest?.board?.allies?.find(one => one.id === latest?.waitingCreature)?.knownSpells ?? [], short: options()?.unaffordableSpells ?? [],
+      reference: { energy: actor?.energy, round: latest?.board?.roundNumber, phase: latest?.board?.phase,
+        tempo: slot?.speed, turn, guidance: latest?.guidance ?? [],
+        creatures: [...(latest?.board?.allies ?? []), ...(latest?.board?.enemies ?? [])].map(one => ({ id: one.id, name: creatureLabel(latest.board, one.id) })) },
+      question: key, spells: offeredForLatest(), known: actor?.knownSpells ?? [], short: options()?.unaffordableSpells ?? [],
       target, canEdit: editable(), canSubmit: editable() && combatDecision(view, chosen, picked) !== null,
       emptyCast: emptyCastAllowed(target?.legalTargets),
       accepted: answered === key, online };

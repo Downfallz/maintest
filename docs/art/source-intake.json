@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "scope": "ART-2 source provenance; not a runtime sprite manifest",
+  "boundsConvention": "[left, top, right exclusive, bottom exclusive], source pixels; not feet anchors",
+  "assets": [
+    {
+      "form": "base-creature",
+      "source": "sources/1000011763.png",
+      "sha256": "baffb1f2d15f876780ab180c25ee674db38464b446b5a818fcbf1b5ac4730e97",
+      "sizeBytes": 2125045,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "facing": "right",
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "transparentPixels": 1068776,
+        "partiallyTransparentPixels": 504088,
+        "opaquePixels": 0,
+        "boundsAtLeast": {
+          "1": [
+            0,
+            15,
+            1516,
+            1024
+          ],
+          "128": [
+            139,
+            47,
+            1368,
+            999
+          ],
+          "250": [
+            140,
+            48,
+            1367,
+            994
+          ]
+        }
+      },
+      "runtimeReady": false,
+      "referenceWebp": {
+        "path": "references/base-creature.webp",
+        "sha256": "e081f1db6505561d275d81c1c8809627dde2fb956496fe5eefc9888ec9778865",
+        "sizeBytes": 267050,
+        "alphaPreservedExactly": true
+      }
+    },
+    {
+      "form": "brute",
+      "source": "sources/1000011765.png",
+      "sha256": "3fa8cb6856e540dbff6fcf671bc407f69473cececbb69adb52bdee10f531d69c",
+      "sizeBytes": 2602395,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "facing": "right",
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "transparentPixels": 703101,
+        "partiallyTransparentPixels": 869763,
+        "opaquePixels": 0,
+        "boundsAtLeast": {
+          "1": [
+            0,
+            0,
+            1498,
+            1005
+          ],
+          "128": [
+            78,
+            12,
+            1454,
+            983
+          ],
+          "250": [
+            79,
+            15,
+            1453,
+            980
+          ]
+        }
+      },
+      "runtimeReady": false,
+      "referenceWebp": {
+        "path": "references/brute.webp",
+        "sha256": "2e0fb58a029be1cebe5b87df70568bd82c05bfe4a39ece2bceda474df167d196",
+        "sizeBytes": 380686,
+        "alphaPreservedExactly": true
+      }
+    },
+    {
+      "form": "predator",
+      "source": "sources/1000011762.png",
+      "sha256": "5819e1765862beb39ad196d7606a51ca8ce9274722a70c2781a4cef125058ddc",
+      "sizeBytes": 1938037,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "facing": "right",
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "transparentPixels": 1107276,
+        "partiallyTransparentPixels": 465588,
+        "opaquePixels": 0,
+        "boundsAtLeast": {
+          "1": [
+            0,
+            9,
+            1535,
+            1024
+          ],
+          "128": [
+            61,
+            158,
+            1477,
+            865
+          ],
+          "250": [
+            64,
+            160,
+            1475,
+            856
+          ]
+        }
+      },
+      "runtimeReady": false,
+      "referenceWebp": {
+        "path": "references/predator.webp",
+        "sha256": "27d6329e80214e773f91ff2718e4e67d0cab04d7a2318ea962c037438475e423",
+        "sizeBytes": 252540,
+        "alphaPreservedExactly": true
+      }
+    },
+    {
+      "form": "warped",
+      "source": "sources/1000011764.png",
+      "sha256": "ae87ef00b9f682415ff9c418cc334146ee0f5398c16bdcade164eadcebb39cd3",
+      "sizeBytes": 2157283,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "facing": "right",
+      "alpha": {
+        "min": 0,
+        "max": 254,
+        "transparentPixels": 997266,
+        "partiallyTransparentPixels": 575598,
+        "opaquePixels": 0,
+        "boundsAtLeast": {
+          "1": [
+            0,
+            9,
+            1528,
+            1024
+          ],
+          "128": [
+            183,
+            24,
+            1371,
+            1000
+          ],
+          "250": [
+            185,
+            27,
+            1367,
+            988
+          ]
+        }
+      },
+      "runtimeReady": false,
+      "referenceWebp": {
+        "path": "references/warped.webp",
+        "sha256": "91be7f40e30c39ef781301372d3a35fd1c9c0134a758c4e6aebab76e0e799ac7",
+        "sizeBytes": 312450,
+        "alphaPreservedExactly": true
+      }
+    }
+  ],
+  "sourceDelivery": "Original PNG files will be added separately by the owner under docs/art/sources/.",
+  "webpEncoding": {
+    "encoder": "Pillow",
+    "pillowVersion": "12.3.0",
+    "libwebpVersion": "1.6.0",
+    "quality": 90,
+    "alphaQuality": 100,
+    "method": 6,
+    "resized": false,
+    "cropped": false
+  }
+}

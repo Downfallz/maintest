@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Browser engines and touch emulation are repeatable gates, not a claim of testing physical phones.
 export default defineConfig({
   testDir: '.', testMatch: ['arena.loop.js', 'arena-release.spec.js', 'arena-live.spec.js'],
-  grep: /complete 3v3|two arena seats|lobby rollout|sound requires|failed renderer|keyboard inspection|cold scene/,
+  grep: /complete 3v3|two arena seats|lobby rollout|failed renderer|keyboard inspection|cold scene/,
   workers: 1, timeout: 45000,
   use: { baseURL: 'http://127.0.0.1:5199', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [

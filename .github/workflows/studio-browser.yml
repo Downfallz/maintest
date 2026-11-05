@@ -17,8 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     # The three projects of the five arena suites and the table suites took fourteen minutes on the run that
     # added the complete loop (#432), and its real-host journeys, two of them a whole 3v3 match driven
-    # through the arena, were cut off at the twenty-minute budget that held since playback (#431).
-    timeout-minutes: 30
+    # through the arena, were cut off at the twenty-minute budget that held since playback (#431). With the
+    # growth (AU8) and order (AU11) suites the mobile and desktop journeys alone took seventeen to twenty-five
+    # minutes depending on the runner, and the real-engine journeys after them were cut off at thirty (#458).
+    # AU13 brought the whole job to thirty-eight to forty minutes, and AU14's keyboard journeys and longer
+    # complete matches add about five more: forty-five would cut them off on a slow runner (#464).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

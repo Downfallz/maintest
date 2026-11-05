@@ -33,10 +33,11 @@
     const PLAYER2 = 'Player2';
 
     // The colours viewer.css gives the two players, so a chart and the page around it name a side alike.
-    const PLAYER1_COLOUR = '#2563eb';
-    const PLAYER2_COLOUR = '#dc2626';
-    const ACCENT = '#2563eb';
-    const WARN = '#d97706';
+    const palette = getComputedStyle(document.documentElement);
+    const PLAYER1_COLOUR = palette.getPropertyValue('--player1').trim();
+    const PLAYER2_COLOUR = palette.getPropertyValue('--player2').trim();
+    const ACCENT = palette.getPropertyValue('--chart-above').trim();
+    const WARN = palette.getPropertyValue('--warn').trim();
     const RESOLVED = 'CombatActionResolved';
     const state = { artifacts: [], selected: null, charts: [] };
 
@@ -206,6 +207,9 @@
         canvas.replaceWith(el('p', { class: 'muted' }, 'Charts need the Chart.js CDN; open the page online once, or read the tables.'));
         return;
       }
+      // Canvas labels and grid lines must stay legible on the shared dark panels.
+      Chart.defaults.color = palette.getPropertyValue('--muted').trim();
+      Chart.defaults.borderColor = palette.getPropertyValue('--line').trim();
       state.charts.push(new Chart(canvas, config));
     }
 
@@ -339,14 +343,14 @@
       const healthBins = Array.from({ length: 10 }, (_, i) => Math.ceil(((i + 1) * maxHealth) / 10));
       const spells = Object.keys(summary.usage).sort();
       requestAnimationFrame(() => {
-        chart(roundsCanvas, { type: 'bar', data: { labels: roundBins, datasets: [{ label: 'matches', data: histogram(rounds, roundBins), backgroundColor: '#2563eb' }] }, options: { plugins: { legend: { display: false } } } });
+        chart(roundsCanvas, { type: 'bar', data: { labels: roundBins, datasets: [{ label: 'matches', data: histogram(rounds, roundBins), backgroundColor: ACCENT }] }, options: { plugins: { legend: { display: false } } } });
         chart(healthCanvas, { type: 'bar', data: { labels: healthBins.map(bin => `<= ${bin}`), datasets: [
-          { label: PLAYER1, data: histogram(summary.results.map(result => result.player1Health), healthBins), backgroundColor: '#2563eb' },
-          { label: PLAYER2, data: histogram(summary.results.map(result => result.player2Health), healthBins), backgroundColor: '#dc2626' },
+          { label: PLAYER1, data: histogram(summary.results.map(result => result.player1Health), healthBins), backgroundColor: PLAYER1_COLOUR },
+          { label: PLAYER2, data: histogram(summary.results.map(result => result.player2Health), healthBins), backgroundColor: PLAYER2_COLOUR },
         ] } });
         chart(usageCanvas, { type: 'bar', data: { labels: spells.map(spellName), datasets: [
-          { label: PLAYER1, data: spells.map(spell => summary.usage[spell][PLAYER1]), backgroundColor: '#2563eb' },
-          { label: PLAYER2, data: spells.map(spell => summary.usage[spell][PLAYER2]), backgroundColor: '#dc2626' },
+          { label: PLAYER1, data: spells.map(spell => summary.usage[spell][PLAYER1]), backgroundColor: PLAYER1_COLOUR },
+          { label: PLAYER2, data: spells.map(spell => summary.usage[spell][PLAYER2]), backgroundColor: PLAYER2_COLOUR },
         ] } });
       });
       return charts;
@@ -427,6 +431,8 @@
       MatchStarted: (event) => `Match started (content ${shortId(event.contentHash)})`,
       RoundStarted: (event) => `Round ${event.roundId}`,
       SubPhaseEntered: (event) => stepLabel(event.subPhase),
+      RoundEnergyGranted: (event, names) => (event.grants || []).map(grant =>
+        `${names[grant.creature] || `Creature ${grant.creature}`} gains ${grant.gained} energy (${grant.before} → ${grant.after}; base ${grant.baseRequested}, passive ${grant.passiveRequested})`).join(', '),
       OngoingEffectsApplied: (event, names) => {
         // EnergyRegenerations, then healing, then the bleeds (ADR 0019, ADR 0020). A trace recorded before either
         // effect existed has no regenerationTicks or energyRegenerationTicks, and reads as bleeds only.
@@ -1136,10 +1142,10 @@
       const winCanvas = evaluated ? el('canvas') : el('p', { class: 'muted' }, 'No evaluation win rate in this run: the learner was not evaluated against the engine.');
       const pointRadius = rows.map(row => (row === best ? 6 : 2));
       requestAnimationFrame(() => {
-        chart(lossCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [{ label: 'loss', data: rows.map(row => row.loss), borderColor: '#dc2626', pointRadius }] } });
+        chart(lossCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [{ label: 'loss', data: rows.map(row => row.loss), borderColor: palette.getPropertyValue('--bad').trim(), pointRadius }] } });
         if (!evaluated) return;
         chart(winCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [
-          { label: 'win rate', data: rows.map(row => row.winRate), borderColor: '#2563eb', pointRadius },
+          { label: 'win rate', data: rows.map(row => row.winRate), borderColor: ACCENT, pointRadius },
           { label: 'low', data: rows.map(row => row.winRateLow ?? null), borderColor: 'rgba(37,99,235,0.2)', pointRadius: 0 },
           { label: 'high', data: rows.map(row => row.winRateHigh ?? null), borderColor: 'rgba(37,99,235,0.2)', pointRadius: 0, fill: '-1', backgroundColor: 'rgba(37,99,235,0.1)' },
         ] } });
@@ -1405,7 +1411,7 @@
       const canvas = el('canvas');
       requestAnimationFrame(() => {
         chart(canvas, { type: 'bar', data: { labels: rows.map(row => row.name), datasets: [
-          { label: 'win rate of A', data: rows.map(row => row.winRateA), backgroundColor: '#2563eb' },
+          { label: 'win rate of A', data: rows.map(row => row.winRateA), backgroundColor: ACCENT },
           { label: 'player 1 share', data: rows.map(row => row.player1WinShare), backgroundColor: 'rgba(37,99,235,0.3)' },
         ] }, options: { scales: { y: { min: 0, max: 1 } } } });
       });
