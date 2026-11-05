@@ -397,8 +397,9 @@
 #arena[data-combat="targets"] .arena-actions { grid-column: 2; grid-row: 1; }
 #arena[data-combat="targets"] .creature[data-target-state="legal"] .caption { border: 1px dashed #e5d4a8; border-radius: 4px; }
 #arena[data-combat="targets"] .creature[data-target-state="selected"] .caption { border: 2px solid #f8df94; border-radius: 4px; }
-#arena[data-combat="targets"] .creature[data-target-state="unavailable"] .caption { opacity: .65; }
-#arena[data-combat="targets"] .creature-tag { font-size: 10px; white-space: nowrap; }
+#arena[data-combat="targets"] .creature:disabled { opacity: 1; }
+#arena[data-combat="targets"] .creature[data-target-state="unavailable"] .caption { background: #101d22e6; border: 1px solid #69716a; border-radius: 4px; }
+#arena[data-combat="targets"] .creature-tag { font-size: 10px; white-space: nowrap; background: #101d22e6; padding: 2px 4px; border-radius: 3px; }
 #arena[data-combat="targets"] .creature[data-target-state="unavailable"] .creature-tag { color: #c5cbc4; }
 @media (max-width: 619px) {
   #arena[data-combat="targets"] { grid-template-rows: 56px 46px minmax(0,1fr) 210px 20px; }

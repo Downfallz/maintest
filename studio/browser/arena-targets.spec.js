@@ -51,6 +51,8 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await expect(preview(page)).toContainText('2 energy → 1 after cost');
   await expect(preview(page)).not.toContainText('Damage 3');
   await expect(target(page, 1)).toHaveAttribute('data-target-state', 'unavailable');
+  await expect(target(page, 1)).toHaveCSS('opacity', '1');
+  await expect(target(page, 1).locator('.caption')).toHaveCSS('opacity', '1');
   await expect(target(page, 4)).toContainText('+ Select target');
   const box = await page.locator('#combat-confirm').boundingBox();
   await target(page, 4).click();
