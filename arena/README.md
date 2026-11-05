@@ -477,7 +477,8 @@ entries keep their identifiers and explicitly unavailable detail. Aggregate pass
 **Read action in History** opens the exact last public cast made by that creature, including fizzles and
 recorded Before/After boundaries. The journal retains at most one additional normalized cast per current
 roster creature beyond its existing 200-row live/reading windows; rollover therefore keeps the link.
-Historical references filter casts by the displayed sequence and never show a future action. An unavailable
+Historical references label their latest loaded cast and filter by the displayed sequence; they never
+claim a complete search across unloaded history or show a future action. An unavailable
 historical cast stays unlinked. Private submissions cannot populate this cache, and losing the seat clears it.
 
 `table/arena-inspection.js` owns the pure reference, `arena/src/inspection.ts` owns stable disclosures and

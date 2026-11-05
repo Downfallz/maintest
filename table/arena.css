@@ -560,3 +560,7 @@
 @media (min-width: 620px) and (min-height: 521px) {
   #arena .creature-tag { bottom: 80px; }
 }
+@media (max-width: 619px) and (max-height: 620px) {
+  /* Keep the 44px result button inside the short portrait dock. */
+  #arena .command-dock { row-gap: 3px; }
+}

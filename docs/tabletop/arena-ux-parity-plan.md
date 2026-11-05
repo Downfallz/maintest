@@ -502,12 +502,22 @@ new/permanent/expiring conditions, stun immunity, missing art and a defeated cre
 No private plans inferred from artwork or public spellbooks. A historical action's inspector uses its
 recorded frame or clearly states unavailable detail; it never silently substitutes live state.
 
-Implementation: `table/arena-inspection.js`, `arena/src/inspection.ts` and the journal's bounded last-cast
+Implemented in [PR #461](https://github.com/Downfallz/maintest/pull/461): `table/arena-inspection.js`, `arena/src/inspection.ts` and the journal's bounded last-cast
 references. See [AU12 behavior and validation](../../arena/README.md#au12-public-creature-inspection).
 The current Mutation Tree is hidden in historical inspection; recorded ownership and missing-field labels
 remain explicit. Desktop captions expose defense/initiative and conditions where space permits. The journal
 keeps one extra sanitized last cast per roster creature; it neither retains unrestricted traces nor changes
 its 200-row page cap. Physical-device validation remains part of AU14.
+
+Validation (2026-11-05): all sixteen required arena suites were exercised across desktop, 390px phone and
+320px phone: **684 passing cases, 21 existing viewport skips**, including successful targeted reruns after
+reference-selector and short-screen fixes. **Eight real-host journeys pass**: complete games and recorded
+replay in both declarations, two-seat privacy, and both-team public inspection after a purchase, on phone
+and desktop. **1,099 JavaScript tests** and **2,276 .NET tests** pass (26 existing storage-emulator skips).
+Bundle/build and changed-file whitespace checks pass; full format passed in CI on the implementation commit
+(the local MSBuild/named-pipe restriction prevents that full check). Local browser verification used Chromium
+headless shell 142; CI uses the pinned Playwright browser. Captures above are labelled fixture/real host.
+
 
 ### AU13 — Finish the surrounding play experience
 

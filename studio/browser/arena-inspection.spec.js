@@ -133,6 +133,7 @@ test('Step inspection uses recorded knowledge and never offers the current mutat
   await expect(page.locator('#inspect-stats')).toContainText('5 energy'); await expect(page.locator('#inspect-dialog')).not.toContainText('FUTURE');
   await expect(page.locator('#inspect-mutations')).toHaveText('Mutation ownership not recorded.');
   await expect(page.locator('#inspect-growth')).toBeHidden();
+  await expect(page.locator('#inspect-action-heading')).toHaveText('Latest loaded action at this point');
   expect(h.errors).toEqual([]);
 });
 

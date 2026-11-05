@@ -23,6 +23,7 @@ export function inspectionControls() {
     text('inspect-appearance', model.description ? `Appearance: ${model.description}` : 'Artwork unavailable · identity comes from the recorded creature');
     el('inspect-growth').dataset.growthCreature = model.id;
     el('inspect-growth').hidden = historical;
+    text('inspect-action-heading', historical ? 'Latest loaded action at this point' : 'Last public action');
     text('inspect-last-action', lastAction || (historical ? 'See History for actions recorded at this point.' : 'No public cast received for this creature yet.'));
     el('inspect-history').hidden = !lastAction;
     const nextMutations = JSON.stringify([model.mutations, model.mutationsRecorded]);
