@@ -95,18 +95,20 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
     drafts.set(focus, value.speed); error = '';
     focus = roster().missing.find(id => !drafts.has(id)) ?? focus; emit();
   }
+  function reconcilePending(missing, accepted) {
+    if (!pending) return true;
+    if (!pending.succeeded || key === pending.key) return false;
+    const receipt = accepted.find(one => one.creature === pending.creature);
+    if (receipt?.speed !== pending.speed || !sameIds(missing, pending.missing.filter(id => id !== pending.creature))) {
+      interrupt('The choices changed elsewhere. Review the remaining tempos.'); return false;
+    }
+    pending = null; return true;
+  }
   async function pump() {
     if (!batch || working) return;
     if (!online || !visible() || !opened) { interrupt('Sending paused. Review the remaining tempos and confirm to continue.'); return; }
     const { missing, accepted } = roster();
-    if (pending) {
-      if (!pending.succeeded || key === pending.key) return;
-      const receipt = accepted.find(one => one.creature === pending.creature);
-      if (receipt?.speed !== pending.speed || !sameIds(missing, pending.missing.filter(id => id !== pending.creature))) {
-        interrupt('The choices changed elsewhere. Review the remaining tempos.'); return;
-      }
-      pending = null;
-    }
+    if (!reconcilePending(missing, accepted)) return;
     const speed = batch.get(latest.waitingCreature);
     if (!missing.includes(latest.waitingCreature) || !SPEEDS.includes(speed)) {
       interrupt('The available creatures changed. Review the remaining tempos.'); return;

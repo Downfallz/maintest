@@ -90,7 +90,11 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     return node.id === 'planning-keep' && Boolean(chosen?.keep);
   }
   function selectionText(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
-    if (model.tempo) return model.tempo.needsRefresh ? 'Refreshing accepted choices…' : `${model.tempo.chosen}/${model.tempo.total} remaining tempos ready${model.tempo.accepted.length ? ` · ${model.tempo.accepted.length} already accepted` : ''}`;
+    if (model.tempo) {
+      if (model.tempo.needsRefresh) return 'Refreshing accepted choices…';
+      const accepted = model.tempo.accepted.length ? ` · ${model.tempo.accepted.length} already accepted` : '';
+      return `${model.tempo.chosen}/${model.tempo.total} remaining tempos ready${accepted}`;
+    }
     const chosen = model.choice;
     if (chosen?.pass) return 'Pass remaining picks';
     if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
@@ -137,7 +141,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
-    el('planning-confirm').textContent = model.sending ? 'Sending…' : model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
+    const confirmation = model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
+    el('planning-confirm').textContent = model.sending ? 'Sending…' : confirmation;
     if (!dialog.open) dialog.showModal();
   }
   return { render };
