@@ -14,8 +14,8 @@ async function mount(page, kind = 'Intent') {
       action: { actor: 1, spells: ids.filter(id => id !== 'spell-1').map(spell => ({ spell, legalTargets: legal })) } },
     guidance: [{ spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
   const cards = ids.slice(0, -1).map((id, index) => ({ id, name: index === 0 ? 'Focus' : `The exceptionally long ${['bone strike', 'protective ward', 'ritual of recovery'][index % 3]} ${index}`,
-    type: ['Offense', 'Defense', 'Support'][index % 3], creatureClass: ['Brute', 'Predator', 'Warped'][index % 3],
-    cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', targeting: 'One creature in the host offer',
+    type: ['Offensive', 'Defensive', 'Passive'][index % 3], creatureClass: ['Brawler', 'Scoundrel', 'Sorcerer'][index % 3],
+    cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', criticalThreshold: index % 2 ? 17 : null, targeting: 'One creature in the host offer',
     effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.' }));
   page.on('pageerror', error => state.errors.push(error.message));
   await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' })));
@@ -36,10 +36,18 @@ async function mount(page, kind = 'Intent') {
   await page.locator('#seat-choices button').click(); await page.locator('#combat-open').click(); return state;
 }
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
-test('a late multiclass spellbook groups served types and exposes truthful compact stats and full details', async ({ page }, info) => {
+const scrollOf = page => page.locator('#combat-browser').evaluate(node => node.scrollTop);
+// Every viewport here fits a dozen compact cards, so the browser is scrolled for real before anything is kept.
+async function browseTo(page, id) {
+  await page.locator('#combat-details-mode').click();
+  const node = spell(page, id); await node.scrollIntoViewIfNeeded(); await node.focus();
+  expect(await scrollOf(page)).toBeGreaterThan(0); return node;
+}
+test('the spellbook groups the served types and shows truthful compact stats and full details', async ({ page }, info) => {
   const h = await mount(page);
   await expect(page.locator('.combat-spell-group')).toHaveCount(4);
-  await expect(page.locator('#combat-context')).toContainText('Round 9 · Combat · Precision · 3 energy');
+  await expect(page.locator('#combat-context')).toContainText('Round 9 · Combat · Turn 1 · Precision · 3 energy');
+  await expect(spell(page, 'spell-3').locator('.spell-critical')).toHaveText('20% crit · Precision only · d20 17+ · catalogue');
   await expect(spell(page, 'spell-0')).toContainText('0 energy');
   await expect(spell(page, 'spell-0').locator('.spell-critical')).toBeEmpty();
   await expect(spell(page, 'spell-2')).toContainText('35% crit · current');
@@ -54,13 +62,12 @@ test('a late multiclass spellbook groups served types and exposes truthful compa
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('selection and same-question polls preserve card geometry, keyboard focus, scroll and confirmation position', async ({ page }) => {
-  const h = await mount(page), node = spell(page, 'spell-12');
-  await node.scrollIntoViewIfNeeded(); await node.focus();
+  const h = await mount(page), node = await browseTo(page, 'spell-17');
   const before = await node.boundingBox(), footer = await page.locator('#combat-declare').boundingBox();
   await node.click();
   await expect(node).toHaveAttribute('aria-pressed', 'true');
   expect(await node.boundingBox()).toEqual(before); expect(await page.locator('#combat-declare').boundingBox()).toEqual(footer);
-  const scroll = await page.locator('#combat-browser').evaluate(node => node.scrollTop), reads = h.reads;
+  const scroll = await scrollOf(page), reads = h.reads;
   h.view.board.allies[0].energy = 4;
   await expect.poll(() => h.reads).toBeGreaterThan(reads);
   await expect(page.locator('#combat-context')).toContainText('4 energy');
@@ -75,7 +82,7 @@ test('an offered energy plan and repeated taps never declare without the explici
   await expect.poll(() => h.writes).toEqual([{ kind: 'Intent', creature: 1, spell: 'spell-2', asked: 21 }]); expect(h.errors).toEqual([]);
 });
 test('a changed creature clears reference position, details mode and the previous draft', async ({ page }) => {
-  const h = await mount(page); await page.locator('#combat-details-mode').click(); await spell(page, 'spell-15').click();
+  const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
   h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2;
   await expect(page.locator('#combat-dialog')).toBeHidden({ timeout: 10000 }); await page.locator('#combat-open').click();
   await expect(page.locator('#combat-heading')).toContainText('Creature 2');
@@ -83,23 +90,35 @@ test('a changed creature clears reference position, details mode and the previou
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
   await expect(page.locator('#combat-declare')).toBeDisabled(); expect(h.writes).toEqual([]);
 });
-test('unknown catalogue spells remain selectable and returning from targets preserves browsing', async ({ page }) => {
+test('returning from targets keeps the place, the details mode and the chosen card in focus', async ({ page }) => {
   const h = await mount(page, 'Action'); await page.locator('#combat-details-mode').click();
   const node = spell(page, 'unknown-spell'); await node.scrollIntoViewIfNeeded();
-  const scroll = await page.locator('#combat-browser').evaluate(node => node.scrollTop);
+  const scroll = await scrollOf(page); expect(scroll).toBeGreaterThan(0);
   await node.dblclick(); await expect(page.locator('#combat-targets')).toBeVisible(); expect(h.writes).toEqual([]);
   await page.locator('#combat-back').click(); await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(scroll);
+  expect(await scrollOf(page)).toBe(scroll); await expect(node).toBeFocused();
   expect(h.errors).toEqual([]);
 });
 test('changed offers update availability without resetting deliberate browsing, and access loss erases it', async ({ page }) => {
-  const h = await mount(page), node = spell(page, 'spell-12'); await node.scrollIntoViewIfNeeded(); await node.focus();
-  const scroll = await page.locator('#combat-browser').evaluate(node => node.scrollTop);
+  const h = await mount(page), node = await browseTo(page, 'spell-17'); const scroll = await scrollOf(page);
   h.view.options.intent.creatures[0].castableSpells = h.view.options.intent.creatures[0].castableSpells.filter(id => id !== 'spell-0');
   await expect(spell(page, 'spell-0')).toBeDisabled({ timeout: 10000 }); await expect(node).toBeFocused();
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(scroll);
   h.seatStatus = 403; await expect(page.locator('#combat-dialog')).toBeHidden({ timeout: 10000 });
   await expect(page.locator('#combat-context')).toBeEmpty(); await expect(page.locator('#combat-spells')).toBeEmpty(); expect(h.writes).toEqual([]);
+});
+test('a poll that adds an offered spell rebuilds the list without moving the focused card or the scroll', async ({ page }) => {
+  const h = await mount(page), node = await browseTo(page, 'spell-17');
+  const scroll = await scrollOf(page), box = await node.boundingBox();
+  h.view.options.intent.creatures[0].castableSpells = [...h.view.options.intent.creatures[0].castableSpells, 'host-only-spell'];
+  await expect(spell(page, 'host-only-spell')).toBeVisible({ timeout: 10000 });
+  await expect(node).toBeFocused(); expect(await scrollOf(page)).toBe(scroll); expect(await node.boundingBox()).toEqual(box);
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('the details toggle keeps its label and says whether full details are on', async ({ page }) => {
+  await mount(page); const toggle = page.locator('#combat-details-mode');
+  await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click(); await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 });
 test('short landscape, small portrait and enlarged text keep the browser scrollable and footer reachable', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Own viewport matrix');
@@ -114,7 +133,6 @@ test('short landscape, small portrait and enlarged text keep the browser scrolla
   await page.addStyleTag({ content: '#combat-dialog { font-size: 200%; } #combat-dialog * { font-size: inherit !important; }' });
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
 });
-
 test('keyboard paging keeps unavailable spell references reachable without selecting or sending', async ({ page }) => {
   const h = await mount(page);
   h.view.options.intent.creatures[0].castableSpells = [];

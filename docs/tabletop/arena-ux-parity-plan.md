@@ -259,7 +259,7 @@ No implementation slice is completed by this document.
 | AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
-| AU9 | Compact grouped spellbook with stable selection and full details | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
+| AU9 | Compact grouped spellbook with stable selection and full details (implemented) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
 | AU10 | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
 | AU11 | Readable initiative/ties and reveal summary | `timeline.js`, `ties.js`, planning + scene overlays | AU5, AU1 |
 | AU12 | Creature inspector with public mutations, spell details and effect sources | `live.ts`, inspection surface, cards/conditions | AU8–AU11 |
