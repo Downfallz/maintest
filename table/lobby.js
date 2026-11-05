@@ -109,6 +109,84 @@ function statusText(state) {
   return `${state.tables.length} ${tables} ongoing · updates automatically`;
 }
 
+// A disclosure on phones, a normal navigation bar on desktop. Feature panels keep the
+// existing account/friends/device controllers and let native dialogs handle modality.
+export function mountHomeNavigation(doc, win = globalThis) {
+  const el = id => doc.getElementById(id);
+  const toggle = el('home-menu-toggle'), menu = el('home-navigation');
+  const narrow = win.matchMedia('(max-width: 1100px)');
+  const panels = [...doc.querySelectorAll('.home-dialog')];
+  const openers = new Map();
+  let identity;
+  function closeMenu(focus = false) {
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open navigation');
+    if (focus && narrow.matches) toggle.focus();
+  }
+  toggle.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    el('account-menu').open = false;
+  });
+  narrow.addEventListener('change', () => {
+    const focusWasInMenu = menu.contains(doc.activeElement);
+    closeMenu(focusWasInMenu);
+  });
+  function closePanels(restore = true) {
+    for (const panel of panels) if (panel.open) {
+      if (!restore) openers.delete(panel);
+      panel.close();
+    }
+  }
+  for (const button of doc.querySelectorAll('[data-home-dialog]')) button.addEventListener('click', () => {
+    const panel = el(button.dataset.homeDialog);
+    closePanels(false);
+    openers.set(panel, button);
+    closeMenu();
+    el('account-menu').open = false;
+    panel.showModal();
+  });
+  for (const panel of panels) {
+    panel.querySelector('[data-home-close]').addEventListener('click', () => panel.close());
+    panel.addEventListener('close', () => {
+      const opener = openers.get(panel);
+      openers.delete(panel);
+      const target = narrow.matches ? toggle : opener;
+      if (opener && target?.getClientRects().length) target.focus();
+    });
+  }
+  menu.addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
+  doc.addEventListener('click', event => {
+    if (!menu.contains(event.target) && !toggle.contains(event.target)) closeMenu();
+    if (!el('account').contains(event.target)) el('account-menu').open = false;
+  });
+  doc.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (toggle.getAttribute('aria-expanded') === 'true') { closeMenu(true); event.preventDefault(); }
+    if (el('account-menu').open) { el('account-menu').open = false; el('account-menu').querySelector('summary').focus(); }
+  });
+  return {
+    closePanels,
+    setAccount(account, mode) {
+      const playable = Boolean(account) || mode === 'off';
+      doc.body.dataset.home = account ? 'member' : mode === 'off' ? 'local' : 'guest';
+      el('welcome-intro').hidden = playable;
+      el('home-games').hidden = !playable;
+      el('friends-open').hidden = !account;
+      el('notifications-open').hidden = !account;
+      el('leaderboard-link').hidden = mode === 'off';
+      el('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'The arena awaits';
+      if (identity !== (account?.id ?? null)) { closePanels(false); closeMenu(); identity = account?.id ?? null; }
+    },
+    requests(count) {
+      el('friend-requests-badge').textContent = count ? String(count) : '';
+      el('friend-requests-badge').hidden = !count;
+      el('friends-open').setAttribute('aria-label', count ? `Friends · ${count} pending request${count === 1 ? '' : 's'}` : 'Friends');
+    },
+  };
+}
+
 export function mountLobby(doc, location, storage) {
   const el = id => doc.getElementById(id);
   let presentation = preferredPresentation(storage);
@@ -129,7 +207,9 @@ export function mountLobby(doc, location, storage) {
   let drawn = '';
   let busy = false;
   let account = null;
-  let mode = 'off';
+  let mode = 'loading';
+  let revision = 0;
+  let refreshAgain = false;
   let adopted = false;
   const signInFirst = () => mode !== 'off' && account === null;
   const problem = (text = '') => { el('lobby-problem').textContent = text; el('lobby-problem').hidden = !text; };
@@ -145,7 +225,7 @@ export function mountLobby(doc, location, storage) {
     location.assign(`${presentationPath(presentation)}?${new URLSearchParams(entry.seats.map(item => [item.seat, item.token]))}`);
   }
   function askSignIn() {
-    problem('Sign in to play: continue with Google above, then choose your player name.');
+    problem('Sign in to play, then choose your player name.');
     el('sign-in-panel')?.scrollIntoView?.({ block: 'center' });
   }
   async function act(button, action) {
@@ -243,7 +323,6 @@ export function mountLobby(doc, location, storage) {
     el('tables-count').textContent = available.length;
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
     el('my-tables').replaceChildren(...(mine.length ? mine.map(entry => card(entry.table, entry)) : [node('p', none, 'empty-state')]));
-    el('mine-where').textContent = account ? 'On every device you sign in on' : 'Saved on this browser';
     el('open-tables').replaceChildren(...(available.length ? available.map(table => card(table)) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
     el('new-table').disabled = !listing.recording;
     el('lobby-status').textContent = statusText(listing);
@@ -254,33 +333,38 @@ export function mountLobby(doc, location, storage) {
     }
   }
   async function refresh() {
-    if (loading) return;
+    if (loading) { refreshAgain = true; return; }
     loading = true;
-    el('refresh').disabled = true;
+    const reading = revision;
     try {
       const tokens = savedSeats(storage).map(item => item.token);
       const [publicTables, saved] = await Promise.all([lobbyRequest('/api/lobby'), yours(tokens)]);
+      if (reading !== revision) return;
       listing = publicTables;
       mine = saved.tables;
       invitations = saved.invitations ?? [];
       render();
+      el('lobby-status').textContent = statusText(listing);
       maybeRematch();
     } catch (error) {
-      el('lobby-status').textContent = 'Connection interrupted. Your saved seats are kept; refresh to retry.';
-      problem(error.message || 'Could not load the tables. Try again.');
-    } finally { loading = false; el('refresh').disabled = false; }
+      if (reading === revision) el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+    } finally {
+      loading = false;
+      if (refreshAgain) { refreshAgain = false; void refresh(); }
+    }
   }
   // Signed in, a player's games are the host's list, the same on every device; the seats this browser saved before
   // signing in are handed to the account once. Signed out where players sign in, there is nothing to resume yet.
   async function yours(tokens) {
     if (account) {
       if (adopted) return lobbyRequest('/api/lobby/mine');
-      adopted = true;
-      return lobbyRequest('/api/lobby/adopt', { tokens });
+      const owner = account.id;
+      const saved = await lobbyRequest('/api/lobby/adopt', { tokens });
+      if (account?.id === owner) adopted = true;
+      return saved;
     }
     return signInFirst() ? { tables: [] } : lobbyRequest('/api/lobby/resume', { tokens });
   }
-  el('refresh').addEventListener('click', () => { problem(); void refresh(); });
   for (const [id, all] of [['filter-open', false], ['filter-all', true]]) el(id).addEventListener('click', () => {
     showAll = all;
     el('filter-open').setAttribute('aria-pressed', String(!all));
@@ -291,8 +375,9 @@ export function mountLobby(doc, location, storage) {
     event.preventDefault();
     const path = codePath(el('code').value);
     if (path) location.assign(path);
-    else { problem('Enter the eight-character seat code from your invitation.'); el('code').focus(); }
+    else { el('join-problem').textContent = 'Enter the eight-character code from your invitation.'; el('join-problem').hidden = false; el('code').focus(); }
   });
+  el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
   const dialog = el('create-dialog');
   // The friends a seat can be kept for (ADR 0129), read when the dialog opens: the list is short and changes rarely.
   async function loadFriends(chosen) {
@@ -331,7 +416,12 @@ export function mountLobby(doc, location, storage) {
     if (friend || reinvite) el('opponent').value = 'friend';
     else if (opponent) el('opponent').value = opponent;
     if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
-    void loadFriends(friend).then(() => { showOpponent(); dialog.showModal(); });
+    const opening = revision;
+    void loadFriends(friend).then(() => {
+      if (opening !== revision || signInFirst()) return;
+      showOpponent();
+      if (!dialog.open) dialog.showModal();
+    });
   }
   // Sent here by "Rematch" (ADR 0129): the dialog opens on the same opponent once the player is signed in and the
   // tables are listed, and the address is cleaned so a reload does not ask again.
@@ -348,7 +438,7 @@ export function mountLobby(doc, location, storage) {
     person: 'You take the first seat. Another player can join from this lobby or with your invitation.',
     friend: 'The second seat is kept for your friend: nobody else can take it. They are told on their phone, and you wait at the table. One invitation at a time.',
     bot: 'The strongest bot the game has plays the other side. Your game is saved so you can come back later.',
-    hotseat: 'Both players use this device. Pass it between turns; both seats are saved here.',
+    hotseat: 'Both players use this device. Pass it between turns.',
   };
   el('opponent').addEventListener('change', showOpponent);
   el('create-table').addEventListener('submit', async event => {
@@ -376,9 +466,12 @@ export function mountLobby(doc, location, storage) {
     if (isOperator({ ok: true, body })) el('admin-link').hidden = false;
   }).catch(() => {});
   void refresh();
+  const resume = () => { if (!doc.hidden && !dialog.open && !busy) void refresh(); };
+  doc.addEventListener('visibilitychange', resume);
+  globalThis.addEventListener?.('online', resume);
   const interval = globalThis.setInterval(() => { if (!doc.hidden && !dialog.open && !busy) void refresh(); }, 10000);
   return {
-    stop: () => globalThis.clearInterval(interval),
+    stop: () => { globalThis.clearInterval(interval); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
     /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
     invite: friend => openCreate({ friend: friend?.id ?? null }),
     /** Told whenever whether an invitation of this player's is waiting changes, so the Friends panel can say so. */
@@ -388,8 +481,13 @@ export function mountLobby(doc, location, storage) {
       const changed = (next?.id ?? null) !== (account?.id ?? null) || nextMode !== mode;
       account = next;
       mode = nextMode;
-      if (!next) adopted = false;
-      if (changed) { problem(); void refresh(); }
+      if (changed) {
+        revision += 1; adopted = false; mine = []; invitations = [];
+        if (dialog.open) dialog.close();
+        problem();
+        if (listing) render();
+        void refresh();
+      }
     },
   };
 }
@@ -397,18 +495,20 @@ export function mountLobby(doc, location, storage) {
 if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
+  const navigation = mountHomeNavigation(document);
   const lobby = mountLobby(document, globalThis.location, storage);
   const devices = mountDevices(document, { storage });
-  const friends = mountFriends(document, { onInvite: friend => lobby.invite(friend) });
+  const friends = mountFriends(document, {
+    onInvite: friend => { navigation.closePanels(false); lobby.invite(friend); },
+    onRequests: count => navigation.requests(count),
+  });
   lobby.onOutstanding(outstanding => friends.setOutstanding(outstanding));
-  const eyebrow = document.getElementById('hero-eyebrow');
   const next = nextPath(globalThis.location.search);
   void mountAccount(document, {
     onChange: (account, mode) => {
       // Sent here to sign in on the way to a seat or an invitation: once signed in, back to it.
       if (account && next) { globalThis.location.assign(next); return; }
-      eyebrow.textContent = account ? `Welcome back, ${account.username}` : 'Gather your creatures';
-      document.getElementById('leaderboard-link').hidden = mode === 'off';
+      navigation.setAccount(account, mode);
       lobby.setAccount(account, mode);
       devices.setAccount(account);
       friends.setAccount(account);

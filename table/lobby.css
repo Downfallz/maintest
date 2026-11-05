@@ -55,9 +55,6 @@
 .code-row { display: flex; gap: 8px; }
 .code-row input { text-transform: uppercase; letter-spacing: 1px; }
 .code-row button { white-space: nowrap; }
-.reconnect-mark { color: var(--gold); font-size: 30px; }
-.reconnect-panel p { color: var(--muted); font-size: 13px; line-height: 1.75; margin-bottom: 16px; }
-.reconnect-panel summary { cursor: pointer; font-size: 12px; color: var(--gold); min-height: 44px; padding: 12px 0; }
 .lobby-page dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
 .lobby-page dialog::backdrop { background: #030a10c9; backdrop-filter: blur(5px); }
 .dialog-heading { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
@@ -116,3 +113,111 @@
 .presentation-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
 .presentation-choice select { min-height: 44px; }
 .presentation-choice small { color: var(--muted); }
+
+/* Home: a restrained header, a game-focused dashboard and a separate first-visit welcome. */
+.home-page { padding-top: 0; }
+.home-header { position: relative; min-height: 100px; gap: 24px; z-index: 35; }
+.home-header .brand { flex: none; }
+.home-header .brand .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
+.home-header h1 { font-size: 23px; white-space: nowrap; }
+.home-header .home-navigation { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+.home-navigation > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 11px; font-size: 12px; font-weight: 600; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.home-navigation > :is(a, button):hover, .home-navigation > [aria-current="page"] { color: var(--gold); background: var(--accent-wash); }
+.home-menu-toggle { display: none; }
+.home-header .account { flex: none; }
+.home-header #account-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.home-header .account-chip { font-size: 12px; }
+.nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 10px; }
+.home-page .lobby-hero { padding: 44px 0 30px; }
+.home-page .lobby-hero h2 { font-size: clamp(34px, 4vw, 50px); }
+.home-page .lobby-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+.home-page .lobby-status { min-height: 20px; margin-bottom: 30px; font-size: 11px; }
+.home-page .lobby-section { margin-bottom: 36px; }
+.home-page .game-card { background: var(--panel); }
+.home-page .game-id { display: none; }
+.home-page .lobby-games { padding-bottom: 10px; }
+.welcome-intro { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; padding: 60px 0 30px; }
+.intro-copy { align-self: center; padding: 12px 0; }
+.intro-copy > .eyebrow { color: var(--brand-ember); }
+.intro-copy h2 { font: 400 clamp(36px, 4.3vw, 60px)/1.08 Georgia, serif; letter-spacing: -1.5px; margin: 18px 0 24px; }
+.intro-description { max-width: 46ch; font-size: 16px; line-height: 1.75; color: var(--muted); }
+.intro-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; margin-top: 28px; }
+.intro-actions a { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 48px; color: var(--gold); text-decoration: none; font-size: 13px; }
+.intro-actions .primary { border: 1px solid var(--gold); border-radius: 8px; }
+.intro-caption { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 20px; }
+.intro-art { position: relative; isolation: isolate; min-height: 410px; border: 1px solid var(--line); border-radius: 120px 16px 16px 16px; overflow: hidden; background: linear-gradient(0deg, var(--paper), transparent 60%), url('arena-art/eclipse-arena.webp') center/cover; }
+.intro-art::after { content: ''; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
+.intro-beast { position: absolute; width: 53%; height: 73%; object-fit: contain; bottom: 7%; filter: drop-shadow(0 12px 18px #0009); }
+.intro-brute { left: -4%; z-index: 1; }.intro-predator { left: 23%; bottom: 4%; z-index: 2; }.intro-warped { right: -3%; }
+.intro-art-caption { position: absolute; z-index: 3; bottom: 24px; left: 0; right: 0; text-align: center; color: var(--gold); font: italic 16px Georgia, serif; letter-spacing: .6px; }
+.how-it-plays { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 0; margin: 40px 0 0; border-top: 1px solid var(--line); list-style: none; scroll-margin-top: 24px; }
+.how-it-plays li { display: flex; gap: 16px; }
+.step-number { color: var(--brand-ember); font: 22px Georgia, serif; padding-top: 2px; }
+.how-it-plays h3 { font: 400 21px Georgia, serif; margin: 0 0 10px; }
+.how-it-plays p { font-size: 13px; line-height: 1.75; color: var(--muted); }
+.home-page .sign-in-panel { scroll-margin-top: 24px; padding: 28px 32px; margin: 18px 0 40px; background: var(--panel); border-top: 2px solid var(--gold); }
+.home-page .sign-in-panel > div { flex: 1 1 260px; }
+.home-page .sign-in-actions { min-width: 0; }
+.home-page .sign-in-panel h2 { font-size: 28px; }
+.home-footer { max-width: 1280px; margin: 32px auto 0; padding: 24px 0 0; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.home-footer span:first-child { color: var(--gold); letter-spacing: .8px; }
+.home-page .home-dialog { width: min(640px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
+.home-page #friends-dialog { width: min(720px, calc(100vw - 24px)); }
+.home-dialog[open] { display: flex; flex-direction: column; }
+.home-dialog > .dialog-heading { flex: none; margin: 0; padding: 20px 24px; border-bottom: 1px solid var(--line); background: var(--raised); }
+.home-dialog .dialog-heading h2 { margin: 5px 0 0; font-size: 28px; }
+.home-dialog .dialog-heading > button { flex: none; width: 44px; height: 44px; padding: 0; text-align: center; font-size: 24px; }
+.home-dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.home-dialog .lobby-panel { padding: 0; margin: 0; border: 0; background: transparent; }
+.home-dialog h3 { margin: 0 0 16px; font-size: 16px; }
+.home-dialog .friend-subheading { font-size: 11px; line-height: 1.6; margin: 0 0 6px; }
+.home-dialog .friend-row { align-items: flex-start; gap: 10px; }
+.home-dialog .friend-name { min-width: 0; overflow-wrap: anywhere; align-self: center; }
+.home-dialog .friend-actions { flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
+.home-dialog .friend-actions button { min-height: 44px; }
+.home-dialog .friend-actions .primary { padding: 8px 12px; }
+.home-dialog :is(.privacy-panel, .device-panel) h2 { margin-top: 0; }
+.home-dialog .privacy-panel p { font-size: 14px; line-height: 1.75; margin: 12px 0; }
+.home-page #join-problem { margin-bottom: 0; }
+@media (max-width: 1100px) {
+  .home-header { gap: 14px; }
+  .home-menu-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; background: transparent; min-height: 44px; }
+  .home-menu-toggle > span:first-child { font-size: 18px; }
+  .home-header .home-navigation { display: none; position: absolute; top: calc(100% - 1px); right: 0; width: min(360px, 100%); padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 12px 12px; box-shadow: 0 20px 40px #0008; margin: 0; max-height: min(70dvh, 460px); overflow-y: auto; }
+  .home-menu-toggle[aria-expanded="true"] + .home-navigation { display: grid; gap: 4px; }
+  .home-navigation > :is(a, button) { justify-content: flex-start; padding: 12px; font-size: 14px; min-height: 48px; }
+  .welcome-intro { column-gap: 24px; padding-top: 40px; }
+  .intro-art { min-height: 380px; }
+  .how-it-plays { gap: 22px; }
+}
+@media (max-width: 700px) {
+  .home-header { min-height: 84px; gap: 8px; }
+  .home-header .brand { gap: 8px; }
+  .home-header h1 { font-size: 19px; }
+  .home-header .brand .eyebrow { font-size: 6px; letter-spacing: 1.2px; }
+  .home-header .brand-mark { width: 31px; height: 38px; font-size: 24px; }
+  .home-menu-toggle { padding: 8px; }
+  .home-menu-toggle > span:last-child, .home-header #account-name { display: none; }
+  .home-header .account-chip { padding: 4px; min-width: 44px; min-height: 44px; justify-content: center; }
+  .home-header .account-menu { position: fixed; top: 78px; right: 18px; max-width: calc(100vw - 36px); }
+  .welcome-intro { grid-template-columns: 1fr; padding-top: 24px; gap: 24px; }
+  .intro-copy { padding: 0; }
+  .intro-copy h2 { font-size: clamp(34px, 8.8vw, 48px); letter-spacing: -1px; margin: 14px 0 18px; }
+  .intro-description { font-size: 15px; line-height: 1.65; }
+  .intro-actions { gap: 12px 20px; margin-top: 22px; }
+  .intro-caption { margin-top: 16px; }
+  .intro-art { min-height: 250px; border-radius: 60px 12px 12px 12px; }
+  .intro-art-caption { bottom: 16px; font-size: 14px; }
+  .how-it-plays { grid-template-columns: 1fr; gap: 24px; margin: 4px 0 0; padding-top: 28px; }
+  .how-it-plays p { max-width: 42ch; }
+  .home-page .sign-in-panel { margin-top: 4px; padding: 22px; }
+  .home-page .lobby-hero { padding: 28px 0 22px; }
+  .home-page .hero-detail { font-size: 14px; }
+  .home-dialog > .dialog-heading { padding: 16px; }
+  .home-dialog-body { padding: 18px; }
+  .home-dialog .friend-subheading { font-size: 11px; line-height: 1.6; margin: 0 0 6px; }
+.home-dialog .friend-row { flex-wrap: wrap; }
+  .home-dialog .friend-actions { margin-left: auto; }
+  .home-footer { margin-top: 16px; font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .home-page { scroll-behavior: auto; } }
