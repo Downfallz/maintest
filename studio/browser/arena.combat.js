@@ -101,8 +101,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
     }
-    if (await page.locator('#playback-skip').isVisible()) await page.locator('#playback-skip').click();
-    await expect(page.locator('#playback-skip')).toBeHidden();
+    // The last playback can finish and open upkeep between isVisible() and click(). Observe its
+    // completion instead of racing a transient Skip button underneath the next round's receipt.
+    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {
