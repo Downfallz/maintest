@@ -366,6 +366,15 @@ test('switching seats cuts the tone that was playing', async ({ page }) => {
   await page.locator('#switch-seat').click();
   expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
 });
+test('a seat revoked while sound is being turned on leaves it off', async ({ page }) => {
+  await probeAudio(page, { holdResume: true }); const h = await mount(page);
+  await page.locator('#settings').click(); await page.locator('#sound').check();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  h.state.status = 403; await page.evaluate(() => window.notifyArena());
+  await expect(page.locator('.creature')).toHaveCount(0);
+  await page.evaluate(() => window.releaseAudio());
+  await expect(page.locator('#sound')).not.toBeChecked(); expect(h.errors).toEqual([]);
+});
 test('turning sound off keeps the next impact silent', async ({ page }) => {
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await page.locator('#settings').click(); await page.locator('#sound').uncheck();

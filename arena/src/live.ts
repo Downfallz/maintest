@@ -89,7 +89,9 @@ let wasTargeting = false;
 
 function status(state: string) {
   $('arena').dataset.connection = state;
-  if (state === 'stale') { audio.stop(); playback.skip(); }
+  // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
+  if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
+  if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
   text('connection', messages[state] ?? state);

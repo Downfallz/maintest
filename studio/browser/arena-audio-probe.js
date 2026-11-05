@@ -8,12 +8,17 @@ export async function audioModule(page) {
     resolveDir: fileURLToPath(new URL('../../arena/', import.meta.url)), loader: 'ts' }, bundle: true, write: false, format: 'iife' });
   await page.addScriptTag({ content: (await bundle).outputFiles[0].text });
 }
-export async function probeAudio(page) {
-  await page.addInitScript(() => {
+// holdResume keeps the context's resume pending until the test calls window.releaseAudio().
+export async function probeAudio(page, { holdResume = false } = {}) {
+  await page.addInitScript(hold => {
     window.audioProbe = { contexts: 0, starts: 0, stops: 0 };
     const Original = window.AudioContext;
     window.AudioContext = class extends Original {
       constructor(...args) { super(...args); window.audioProbe.contexts++; }
+      resume() {
+        if (!hold) return super.resume();
+        return new Promise(done => { window.releaseAudio = () => super.resume().then(done); });
+      }
       createOscillator() {
         const node = super.createOscillator(), start = node.start.bind(node), stop = node.stop.bind(node);
         node.start = (...args) => { window.audioProbe.starts++; start(...args); };
@@ -23,5 +28,5 @@ export async function probeAudio(page) {
         return node;
       }
     };
-  });
+  }, holdResume);
 }
