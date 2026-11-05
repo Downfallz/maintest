@@ -207,7 +207,7 @@ window.addEventListener('pagehide', () => { audio.stop(); playback.cancel(); if 
 
 scene.onLayout = positions => placeHitTargets(creaturesOf(state).map(one => nodes.get(one.id)!), positions);
 scene.onImpact = () => audio.play({ family: 'physical', motif: 'impact', delivery: 'melee' });
-scene.onCancel = () => audio.stop();
+scene.onCancel = () => audio.silence();
 scene.onResizeDuringPlayback = () => skip(false);
 scene.onReady = () => {
   ready = true; lab.dataset.ready = 'true'; lab.dataset.renderer = 'phaser';

@@ -231,6 +231,7 @@ function render() {
     for (const id of ['inspect-name', 'inspect-side', 'inspect-stats', 'inspect-effects', 'inspect-spells']) $(id).replaceChildren();
     text('updated', 'No board loaded');
   } else renderInspection();
+  $('arena').dataset.rate = String(playbackState.rate);
   scene.present(frame, reduced(), playbackState.rate);
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
@@ -300,7 +301,7 @@ function failRenderer() {
 }
 $('switch-seat').addEventListener('click', () => { void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
-scene.onCancel = () => audio.stop();
+scene.onCancel = () => audio.silence();
 scene.onImpact = () => {
   if (playback.model().active && !document.hidden && !match.model().active) audio.play(frame.cue?.visual);
 };

@@ -32,8 +32,14 @@ export class ArenaAudio {
     } catch { return false; }
   }
 
+  // A privacy or lifecycle change: release the voices and fence a pending resume, so it cannot turn sound back on.
   stop() {
     this.generation++;
+    this.silence();
+  }
+
+  // A cancelled or replaced animation: release the voices only. A resume the player just asked for still lands.
+  silence() {
     for (const voice of this.voices) {
       voice.oscillator.onended = null;
       try { voice.oscillator.stop(); } catch { /* Already ended. */ }
@@ -44,8 +50,11 @@ export class ArenaAudio {
 
   play(visual?: SpellVisual) {
     const context = this.context;
-    if (!this.enabled || context?.state !== 'running') return;
-    this.stop();
+    if (!this.enabled || !context) return;
+    // A backgrounded tab or a phone call suspends the context under an opted-in player: ask for it back, and
+    // let this one impact pass silently rather than play late.
+    if (context.state !== 'running') { context.resume().catch(() => {}); return; }
+    this.silence();
     const family = visual?.motif === 'fizzle' ? 'neutral' : visual?.family ?? 'neutral';
     const tone = Object.hasOwn(TONES, family) ? TONES[family] : TONES.neutral;
     const oscillator = context.createOscillator(), gain = context.createGain();
@@ -67,9 +76,10 @@ export class ArenaAudio {
 export function soundControl(audio: ArenaAudio, input: HTMLInputElement) {
   let revision = 0;
   input.checked = false;
-  input.addEventListener('change', async () => {
+  async function toggle() {
     const ticket = ++revision;
     const enabled = await audio.enable(input.checked);
     if (ticket === revision) { input.checked = enabled; }
-  });
+  }
+  input.addEventListener('change', () => { void toggle(); });
 }
