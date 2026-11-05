@@ -34,8 +34,10 @@ async function mount(page) {
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  // Freeze before connecting: pausing a running poll can strand its owed zero-delay read, so the
+  // next SSE notification never reaches the view until a test happens to advance the clock.
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
+  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
   const publish = async (entries, extra = {}) => {
     state.view = { ...state.view, ...extra, feed: entries, feedNext: Math.max(state.view.feedNext, ...entries.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
