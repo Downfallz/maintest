@@ -116,12 +116,17 @@ export function roundUpkeep(entries, round) {
   return { round, rows: upkeepTicks(entry.event) };
 }
 
-function upkeepTicks(event) {
+export function upkeepTicks(event) {
   return [
     ...(event.energyRegenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.gained, tone: 'energy', label: 'Energy from effects', unit: 'energy', sign: '+' })),
     ...(event.regenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.healed, tone: 'recovery', label: 'Healing over time', unit: 'HP', sign: '+' })),
     ...(event.bleedTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.damage, tone: 'harm', label: 'Ongoing damage', unit: 'HP', sign: '−' })),
   ];
+}
+
+// Shared receipt wording: zero is a recorded result too, including capped healing.
+export function upkeepText(row) {
+  return Number.isInteger(row.before) ? roundEnergyText(row) : `${row.label} ${row.sign}${row.amount} ${row.unit}`;
 }
 
 // A whole match to replay, in the order it happened: each round's upkeep, the packages its Evolution revealed,
@@ -132,7 +137,8 @@ export function matchReplay(entries, board, cards) {
   const between = (entries ?? []).flatMap(entry => {
     const kind = entry?.event?.kind;
     if (kind === 'RoundEnergyGranted') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ordinaryEnergy: true, ticks: roundEnergyGrants(entry.event) }];
-    if (kind === 'OngoingEffectsApplied') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ticks: upkeepTicks(entry.event) }];
+    if (kind === 'OngoingEffectsApplied') return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'upkeep', ticks: upkeepTicks(entry.event),
+      missingOrdinaryEnergy: !entries.some(one => one.event?.kind === 'RoundEnergyGranted' && eventRound(one) === eventRound(entry)) }];
     if (kind === 'PurchasesRevealed') {
       const choices = (entry.event.choices ?? []).map(choice => ({ creature: recapCreature(choice.creature, board), tier: choice.tier }));
       return [{ sequence: entry.sequence, round: eventRound(entry), interlude: 'purchases', choices }];

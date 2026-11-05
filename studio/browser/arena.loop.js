@@ -122,6 +122,15 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   });
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
+    await expect(page.locator('#upkeep-dialog')).toBeVisible();
+    await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
+    await expect(page.locator('#upkeep-body .upkeep-rows li')).toHaveCount(6);
+    await expect(page.locator('#upkeep-body')).toContainText('+2 energy');
+    expect(shown).toEqual([]); expect(writes).toEqual([]);
+    await fitsViewport(page, '#upkeep-close');
+    await page.screenshot({ path: info.outputPath('upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
+    await page.locator('#upkeep-close').click();
+    let upkeepRound = 1;
     await expect(page.locator('#help-dialog')).toBeVisible();
     await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
     await expect(page.locator('#help-objective')).toContainText('team picks');
@@ -135,6 +144,11 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
+      if (view.board.roundNumber > upkeepRound) {
+        await expect(page.locator('#upkeep-dialog')).toBeVisible({ timeout: 20000 });
+        await expect(page.locator('#upkeep-title')).toHaveText(`Round ${view.board.roundNumber} · Upkeep`);
+        await page.locator('#upkeep-close').click(); upkeepRound = view.board.roundNumber;
+      }
       if (!taught.has(view.waitingFor)) {
         await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#help-objective')).not.toBeEmpty();
@@ -177,6 +191,10 @@ test('two arena seats plan simultaneously without revealing the other team choic
     const read = async (surface, seat, token) => (await surface.request.get(`${origin}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } })).json();
     let first, second;
     await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }).toEqual(['Evolution', 'Evolution']);
+    for (const surface of [page, other]) {
+      await expect(surface.locator('#upkeep-dialog')).toBeVisible();
+      await surface.locator('#upkeep-close').click();
+    }
     await answer(page, first);
     // Nothing of a private pick reaches the other seat: not its board, its offer, its feed or its question.
     const concealed = await read(other, 'player2', secondTokens.player2);
