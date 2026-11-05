@@ -92,6 +92,8 @@ public sealed class TableFilesTests
         Text(page).ShouldContain("src=\"arena-build/live.js\"");
         Text(page).ShouldContain("href=\"arena.css\"");
         Files.Get("/arena.css").ContentType.ShouldContain("text/css");
+        Files.Get("/arena-order.js").ContentType.ShouldContain("text/javascript");
+        Text(page).ShouldContain("id=\"order-dialog\"");
         Files.Get("/arena-build/live.js").ContentType.ShouldContain("text/javascript");
     }
 

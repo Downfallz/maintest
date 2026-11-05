@@ -1,3 +1,5 @@
+import { arenaOrder, createArenaOrderReveal } from '../../table/arena-order.js';
+import { orderControls } from './order';
 import { createArenaGrowth } from '../../table/arena-growth.js';
 import { growthControls } from './growth';
 import { createArenaUpkeep } from '../../table/arena-upkeep.js';
@@ -25,7 +27,7 @@ import { createLiveConnection } from '../../table/arena-live.js';
 import { chipText, chipSource, laneOf } from '../../table/board.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
-import { phaseLabel, tempoLabel, stepLabel } from '../../table/terms.js';
+import { phaseLabel, stepLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
@@ -61,7 +63,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   receiving = true;
   try {
     view = next; catalogue = content ?? catalogue;
-    history.receive(next, catalogue); upkeep.receive(next); growth.receive(next, catalogue);
+    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
       { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active });
@@ -69,11 +71,12 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createArenaUpkeep(tabStorage);
 const history = createArenaHistory({ load: () => connection.history(), onChange: () => render() });
+const orderReveal = createArenaOrderReveal();
 const growth = createArenaGrowth();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
@@ -87,6 +90,9 @@ const historyUI = historyControls(history, () => playback.skip(), () => render()
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
 const upkeepUI = upkeepControls(upkeep, id => {
+  inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
+}, () => render());
+const orderUI = orderControls(orderReveal, () => playback.skip(), id => {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
 }, () => render());
 let wasTargeting = false;
@@ -252,16 +258,8 @@ function render() {
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
-  $('timeline').replaceChildren(...board.timeline.map((slot: { creature: unknown; owner: string; position: number; speed: string }, index: number) => {
-    const item = document.createElement('li'); item.textContent = `${slot.position} ${name(slot.creature)}`;
-    const enemy = creatures.find(one => one.id === String(slot.creature))?.enemy;
-    if (enemy) item.className = 'enemy';
-    if (index === board.cursor) item.setAttribute('aria-current', 'step');
-    const side = document.createElement('span'); side.className = 'timeline-side'; side.textContent = `${enemy ? 'Foe' : 'You'} · ${tempoLabel(slot.speed)}`; item.append(side); return item;
-  }));
-  $('timeline').hidden = board.timeline.length === 0;
-  $('no-timeline').hidden = board.timeline.length > 0;
-  text('no-timeline', view ? 'Activation order has not been set' : 'Waiting for a board');
+  const order = arenaOrder(view?.waiting && !view.over ? null : board);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
@@ -279,9 +277,10 @@ function render() {
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
-    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]');
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening();
   upkeepUI.render(canAuto());
-  helpUI.render(guide, canAuto() && !upkeep.model().pending);
+  orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
+  helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
 }
 
 function choose(choice: Choice) {
@@ -292,7 +291,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
-  upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
+  upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
 }
 
@@ -300,7 +299,7 @@ async function discover() {
   audio.stop();
   if (rendererFailed) return;
   const ticket = ++discovering;
-  connection.stop(); upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
   text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -339,7 +338,7 @@ scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();
-  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
+  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
@@ -369,7 +368,7 @@ scene.onResizeDuringPlayback = () => playback.skip();
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it.
 window.addEventListener('resize', () => { if (playback.model().active) playback.skip(); });
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });

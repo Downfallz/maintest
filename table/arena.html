@@ -18,7 +18,7 @@
       <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div>
       <div class="tools"><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="round-review" type="button" hidden aria-label="Review upkeep and aftermath">↺</button><button id="switch-seat" type="button" title="Choose viewpoint" aria-label="Choose viewpoint">⇄</button><button id="settings" type="button" aria-label="Open settings">☷</button></div>
     </header>
-    <nav class="timeline-wrap" aria-label="Activation order"><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>Help</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
+    <nav class="timeline-wrap" aria-label="Activation order"><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>Help</button><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
       <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
@@ -50,6 +50,11 @@
     <output id="playback-announcement" class="playback-announcement" aria-live="polite"></output>
     <footer><span>LIVE PREVIEW · <b>PROVISIONAL ARTWORK</b></span><span id="updated">No board loaded</span></footer>
   </main>
+  <dialog id="order-dialog" aria-labelledby="order-title">
+    <header class="order-header"><h2 id="order-title">Turn order</h2><p id="order-summary"></p></header>
+    <div id="order-body"><p id="order-context"></p><details id="order-rules"><summary>How the order is decided</summary><p id="order-explanation"></p><p id="order-roll-note"></p></details><ol id="order-list"></ol></div>
+    <footer class="order-footer"><button id="order-close" type="button">Continue</button><button type="button" data-history-open>History</button><small>Read-only · follows the displayed battlefield</small></footer>
+  </dialog>
   <dialog id="upkeep-dialog" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
     <header class="upkeep-header"><div><p class="eyebrow">THE ROUND HAS BEGUN</p><h2 id="upkeep-title"></h2></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
     <div class="upkeep-scroll"><p id="upkeep-intro">Energy and ongoing effects were applied automatically. Here is what happened.</p><div id="upkeep-body"></div></div>
@@ -76,7 +81,7 @@
     <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
   <dialog id="planning-dialog" aria-labelledby="planning-heading">
-    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
+    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
     <div id="planning-creatures" aria-label="Choose a creature"></div></div><div id="planning-choices"></div>
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
   </dialog>

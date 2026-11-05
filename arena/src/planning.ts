@@ -2,6 +2,7 @@ import { createArenaPlanning } from '../../table/arena-planning.js';
 import { mutationChoices } from '../../table/arena-mutations.js';
 import { mutationCards } from './mutations';
 import { tempoControls } from './tempo';
+import { arenaTieGroups } from '../../table/arena-order.js';
 import { untapped, orderOf } from '../../table/ties.js';
 import type { SpellCatalogue } from './combat';
 
@@ -39,16 +40,32 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
     el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
   }
+  type Assignment = { id: number; position: number | null };
+  type Fixed = { position: number; label: string; roll: string };
+  const assignmentText = (one: Assignment) => `${one.position == null ? 'Position unknown' : '#' + one.position} → ${name(one.id)}`;
+  const fixedText = (one: Fixed) => (one.roll ? `#${one.position} ${one.label} (${one.roll})` : `#${one.position} ${one.label}`);
+  // The opponent orders its own creatures within its places too: with two or more, only the places are certain.
+  function opponentPlacesText(detail: { fixed: Fixed[]; opponentOrderOpen: boolean }) {
+    if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
+    return `Opponent places stay fixed: ${detail.fixed.map(fixedText).join(' · ')}`;
+  }
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
-    el('planning-help').textContent = 'The dice gave your team its places. Choose who acts first within each tie, then confirm. The last creature takes the remaining place.';
+    el('planning-help').textContent = 'Your team keeps its allocated places. Choose which creature takes each place within a tie, then confirm. Opponent positions stay fixed; both teams reveal together.';
     const groups = model.latest.options.tieOrder?.ties ?? [];
+    const context = arenaTieGroups(model.latest, model.tapped);
     const rows = untapped(groups, model.tapped).map((left: number[], index: number) => {
       const row = document.createElement('section'); row.append(line(`Tie ${index + 1}: ${orderOf([groups[index]], model.tapped).map(name).join(' → ')}`));
+      row.className = 'tie-group';
+      const detail = context[index];
+      row.append(line(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.'),
+        line(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.'),
+        line(detail.assignments.map(assignmentText).join(' · ')));
+      if (detail.fixed.length) row.append(line(opponentPlacesText(detail)));
       if (left.length > 1) for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); row.append(node); }
       return row;
     });
-    const keep = button('Keep the dice order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
+    const keep = button('Keep current order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
     el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
   }
   const headings: Record<string, string> = { Evolution: 'Choose mutation', Speed: 'Team tempos', TieOrder: 'Order ties' };
@@ -73,7 +90,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const chosen = model.choice;
     if (chosen?.pass) return 'Pass remaining picks';
     if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
-    if (chosen?.keep) return 'Dice order';
+    if (chosen?.keep) return 'Current order';
     return model.latest?.waitingFor === 'TieOrder' ? 'Chosen order' : 'Select a choice';
   }
   // The choices are rebuilt when the question, the offer, the taps or the chosen creature change, and
@@ -112,6 +129,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
+    el('planning-order').hidden = !model.opened || model.latest?.waitingFor !== 'TieOrder';
     el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = label;
     el<HTMLButtonElement>('planning-open').disabled = model.sending;
     el('planning-error').textContent = model.error; el('planning-error').hidden = !model.error || model.opened;
