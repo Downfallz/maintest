@@ -18,7 +18,14 @@ async function mount(page, kind = 'Intent') {
     cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', criticalThreshold: index % 2 ? 17 : null, targeting: 'One creature in the host offer',
     effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.' }));
   page.on('pageerror', error => state.errors.push(error.message));
-  await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' })));
+  // The host's change notice, so a test refreshes the seat now instead of waiting out the 5 s poll.
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
+    const original = window.fetch;
+    window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      window.notifyArena = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
+    } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
+  });
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
@@ -36,6 +43,7 @@ async function mount(page, kind = 'Intent') {
   await page.locator('#seat-choices button').click(); await page.locator('#combat-open').click(); return state;
 }
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
+const notify = page => page.evaluate(() => window.notifyArena());
 const scrollOf = page => page.locator('#combat-browser').evaluate(node => node.scrollTop);
 // Every viewport here fits a dozen compact cards, so the browser is scrolled for real before anything is kept.
 async function browseTo(page, id) {
@@ -68,7 +76,7 @@ test('selection and same-question polls preserve card geometry, keyboard focus, 
   await expect(node).toHaveAttribute('aria-pressed', 'true');
   expect(await node.boundingBox()).toEqual(before); expect(await page.locator('#combat-declare').boundingBox()).toEqual(footer);
   const scroll = await scrollOf(page), reads = h.reads;
-  h.view.board.allies[0].energy = 4;
+  h.view.board.allies[0].energy = 4; await notify(page);
   await expect.poll(() => h.reads).toBeGreaterThan(reads);
   await expect(page.locator('#combat-context')).toContainText('4 energy');
   await expect(node).toBeFocused(); expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(scroll);
@@ -83,8 +91,8 @@ test('an offered energy plan and repeated taps never declare without the explici
 });
 test('a changed creature clears reference position, details mode and the previous draft', async ({ page }) => {
   const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
-  h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2;
-  await expect(page.locator('#combat-dialog')).toBeHidden({ timeout: 10000 }); await page.locator('#combat-open').click();
+  h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2; await notify(page);
+  await expect(page.locator('#combat-dialog')).toBeHidden(); await page.locator('#combat-open').click();
   await expect(page.locator('#combat-heading')).toContainText('Creature 2');
   await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
@@ -102,16 +110,16 @@ test('returning from targets keeps the place, the details mode and the chosen ca
 test('changed offers update availability without resetting deliberate browsing, and access loss erases it', async ({ page }) => {
   const h = await mount(page), node = await browseTo(page, 'spell-17'); const scroll = await scrollOf(page);
   h.view.options.intent.creatures[0].castableSpells = h.view.options.intent.creatures[0].castableSpells.filter(id => id !== 'spell-0');
-  await expect(spell(page, 'spell-0')).toBeDisabled({ timeout: 10000 }); await expect(node).toBeFocused();
+  await notify(page); await expect(spell(page, 'spell-0')).toBeDisabled(); await expect(node).toBeFocused();
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(scroll);
-  h.seatStatus = 403; await expect(page.locator('#combat-dialog')).toBeHidden({ timeout: 10000 });
+  h.seatStatus = 403; await notify(page); await expect(page.locator('#combat-dialog')).toBeHidden();
   await expect(page.locator('#combat-context')).toBeEmpty(); await expect(page.locator('#combat-spells')).toBeEmpty(); expect(h.writes).toEqual([]);
 });
 test('a poll that adds an offered spell rebuilds the list without moving the focused card or the scroll', async ({ page }) => {
   const h = await mount(page), node = await browseTo(page, 'spell-17');
   const scroll = await scrollOf(page), box = await node.boundingBox();
   h.view.options.intent.creatures[0].castableSpells = [...h.view.options.intent.creatures[0].castableSpells, 'host-only-spell'];
-  await expect(spell(page, 'host-only-spell')).toBeVisible({ timeout: 10000 });
+  await notify(page); await expect(spell(page, 'host-only-spell')).toBeVisible();
   await expect(node).toBeFocused(); expect(await scrollOf(page)).toBe(scroll); expect(await node.boundingBox()).toEqual(box);
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
@@ -137,7 +145,7 @@ test('keyboard paging keeps unavailable spell references reachable without selec
   const h = await mount(page);
   h.view.options.intent.creatures[0].castableSpells = [];
   h.view.options.intent.creatures[0].unaffordableSpells = [];
-  await expect(spell(page, 'spell-0')).toBeDisabled({ timeout: 10000 });
+  await notify(page); await expect(spell(page, 'spell-0')).toBeDisabled();
   await page.locator('#combat-browser').focus(); await page.keyboard.press('Home');
   await expect.poll(() => page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
   await page.keyboard.press('PageDown');
