@@ -1,5 +1,5 @@
 import { cardsById, cardLines } from './card.js';
-import { talentClasses, talentPalette, classColour, passiveOf, tagsOf, requirementLine } from './mat.js';
+import { talentClasses, talentPalette, classColour, familyRoot, passiveOf, tagsOf, requirementLine } from './mat.js';
 import { creatureLabel } from './arena-live.js';
 
 // The host's offers are the only source of selectable ids; catalogue ancestry is explanatory, not legality.
@@ -16,15 +16,11 @@ export function mutationChoices(view, catalogue, selectedId) {
   const creature = allies.find(one => one.id === selected?.id);
   const packages = talentClasses(catalogue, cards, creature, offer, picks);
   const byId = new Map(packages.map(pack => [pack.id, pack]));
-  function family(pack) {
-    const parent = [...(pack.prerequisites ?? []), ...(pack.anyOf ?? [])].map(id => byId.get(id)).find(one => one && one.level < pack.level);
-    return parent ? family(parent) : pack;
-  }
   function face(id) {
     const pack = byId.get(id);
     if (!pack) return { id, name: id, family: 'Mutation', colour: '#aabdb1', stage: null, initiative: null,
       tags: [], spells: [], passives: [], requirement: '', missing: true };
-    const root = family(pack);
+    const root = familyRoot(pack, byId);
     return { id, name: pack.name, family: root.name, colour: classColour(root.id, palette), stage: pack.level,
       initiative: Number.isInteger(pack.initiativeBonus) ? pack.initiativeBonus : null, tags: tagsOf(pack),
       spells: (pack.spells ?? []).map(spell => {
@@ -33,8 +29,7 @@ export function mutationChoices(view, catalogue, selectedId) {
           preview: card?.effects?.[0] ?? card?.targeting ?? '', lines: cardLines(card), missing: !card };
       }), passives: passiveOf(pack), requirement: requirementLine(pack, id => byId.get(id)?.name ?? id), missing: false };
   }
+  // Already capped by the host at the creatures it can offer a pick to (EvolutionRules.RemainingPicksOf).
   const remaining = Number.isInteger(offer?.remainingPicks) ? offer.remainingPicks : null;
-  const eligible = roster.filter(one => one.ids.length).length;
-  return { selected: selected?.id ?? null, roster, packages, faces: (selected?.ids ?? []).map(face),
-    remaining, effective: remaining === null ? null : Math.min(remaining, eligible), eligible };
+  return { selected: selected?.id ?? null, roster, packages, faces: (selected?.ids ?? []).map(face), remaining };
 }

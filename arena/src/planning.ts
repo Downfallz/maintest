@@ -35,8 +35,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     }));
     el('planning-choices').replaceChildren(...mutationCards(choices, catalogue, tier => controller.choose({ creature, tier })));
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
-    const budget = choices.effective == null ? 'Team pick count unavailable.' : `${choices.effective} team pick${choices.effective === 1 ? '' : 's'} available` +
-      (choices.remaining !== choices.effective ? ` (${choices.remaining} unused; ${choices.eligible} eligible creature${choices.eligible === 1 ? '' : 's'})` : '');
+    const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
     el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
   }
 
@@ -89,9 +88,12 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       kind === 'Evolution' ? model.latest.board.allies.map((one: { id: number; isAlive?: boolean; acquiredTiers?: string[] }) => [one.id, one.isAlive, one.acquiredTiers]) : null, model.tapped, creature]);
     if (key === rendered && catalogue === lastCatalogue) return;
     const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
+    // A creature tab rebuilds the tabs it sits in; a keyboard player keeps their place on the one they chose.
+    const wasPicking = kind === 'Evolution' && el('planning-creatures').contains(document.activeElement);
     if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model); else ties(model);
     rendered = key; lastCatalogue = catalogue;
     if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
+    if (wasPicking) el('planning-creatures').querySelector<HTMLButtonElement>(`[data-creature="${creature}"]`)?.focus({ preventScroll: true });
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
@@ -113,7 +115,9 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
     el('planning-confirm').textContent = model.sending ? 'Sending…' : model.choice?.tier ? 'Acquire · 1 pick' : model.choice?.pass ? 'Pass all remaining picks' : 'Confirm choice';
-    el('planning-confirm').setAttribute('aria-label', model.choice?.tier ? `Acquire ${selectionText(model, catalogue)} · use 1 team pick` : el('planning-confirm').textContent!);
+    // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
+    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `Acquire · 1 pick: ${selectionText(model, catalogue)}`);
+    else el('planning-confirm').removeAttribute('aria-label');
     if (!dialog.open) dialog.showModal();
   }
   return { render };

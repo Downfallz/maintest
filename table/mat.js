@@ -104,7 +104,7 @@ export function tagsOf(pack) {
 
 // The family a package belongs to, by its first parent of a lower level, up to the package that opens it.
 // A capstone teaches no spell to take a class colour from, so it wears its family's.
-function familyRoot(pack, byId, seen = new Set()) {
+export function familyRoot(pack, byId, seen = new Set()) {
   if (seen.has(pack.id)) return pack;
   seen.add(pack.id);
   const parent = parentsOf(pack).map(id => byId.get(id)).find(one => one && one.level < pack.level);

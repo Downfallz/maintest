@@ -90,7 +90,7 @@ function objective(view, topic) {
     case 'mutation': {
       const offer = view.options?.evolution;
       if (offer?.remainingPicks === 0) return 'No team picks remain. Review your command.';
-      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Mutation Tree to pass.';
+      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Choose mutation to pass.';
       const budget = Number.isInteger(offer?.remainingPicks) ? ` · ${count(offer.remainingPicks, 'team pick')} left` : '';
       return `Acquire a mutation${budget}.`;
     }

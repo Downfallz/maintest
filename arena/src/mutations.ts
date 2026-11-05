@@ -10,13 +10,15 @@ const text = (tag: string, value: string, className = '') => {
 };
 export function mutationCards(model: Choices, catalogue: Catalogue | null, choose: (id: string) => void) {
   const grid = document.createElement('div'); grid.className = 'mutation-cards';
-  for (const face of model.faces) {
+  model.faces.forEach((face: Choices['faces'][number], index: number) => {
+    const id = (part: string) => `mutation-card-${index}-${part}`;
     const card = document.createElement('article'); card.className = 'mutation-card'; card.style.setProperty('--mutation-colour', face.colour);
     const select = document.createElement('button'); select.type = 'button'; select.className = 'mutation-select';
     select.dataset.mutation = face.id; select.dataset.offered = 'true';
     select.addEventListener('click', () => choose(face.id));
-    select.append(text('span', `${face.family} · ${face.stage == null ? 'Stage unavailable' : stageLabel(face.stage)}`, 'mutation-family'),
-      text('strong', face.name, 'mutation-name'), text('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
+    const family = text('span', `${face.family} · ${face.stage == null ? 'Stage unavailable' : stageLabel(face.stage)}`, 'mutation-family');
+    const name = text('strong', face.name, 'mutation-name'); name.id = id('name'); family.id = id('family');
+    select.append(family, name, text('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
     if (face.tags.length) {
       const tags = text('span', '', 'mutation-tags'); tags.append(...face.tags.map((tag: string) => text('span', tag))); select.append(tags);
     }
@@ -26,6 +28,11 @@ export function mutationCards(model: Choices, catalogue: Catalogue | null, choos
     }
     for (const passive of face.passives) select.append(text('span', passive, 'mutation-passive'));
     if (face.missing) select.append(text('span', 'Catalogue details unavailable. This mutation is offered by the host.', 'mutation-passive'));
+    // The whole card would otherwise be the button's name, and it would change on selection: aria-pressed says that.
+    const described = Array.from(select.children).filter(node => node !== family && node !== name);
+    described.forEach((node, part) => { node.id = id(`about-${part}`); });
+    select.setAttribute('aria-labelledby', `${name.id} ${family.id}`);
+    select.setAttribute('aria-describedby', described.map(node => node.id).join(' '));
     select.append(text('span', 'Select mutation', 'mutation-select-label')); card.append(select);
     const details = document.createElement('details'); details.className = 'mutation-details';
     details.append(text('summary', `Details · ${face.name}`));
@@ -37,7 +44,7 @@ export function mutationCards(model: Choices, catalogue: Catalogue | null, choos
     if (face.passives.length) details.append(text('h4', 'Passive · while held'), ...face.passives.map((line: string) => text('p', line)));
     if (!face.spells.length && !face.missing) details.append(text('p', 'This mutation adds no spells.'));
     card.append(details); grid.append(card);
-  }
+  });
   if (!model.faces.length) grid.append(text('p', 'No mutation offered for this creature. Choose another creature or pass all remaining picks.', 'mutation-empty'));
   const tree = document.createElement('details'); tree.id = 'mutation-tree';
   tree.append(text('summary', 'Explore Mutation Tree · reference'), text('p', 'Acquired and picked mutations are marked below. Select an offered card above to spend a pick.'));

@@ -64,7 +64,9 @@ test('three offered families compare by tags, spells and initiative; details do 
   }
   await page.screenshot({ path: info.outputPath('mutation-cards.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('[data-mutation="root1"]').click(); await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
-  await expect(page.locator('#planning-confirm')).toHaveAccessibleName('Acquire Creature 1 · Predator · use 1 team pick');
+  await expect(page.locator('#planning-confirm')).toHaveAccessibleName('Acquire · 1 pick: Creature 1 · Predator');
+  await expect(page.locator('[data-mutation="root1"]')).toHaveAccessibleName('Predator Predator · Stage 1');
+  await expect(page.locator('[data-mutation="root1"]')).toHaveAccessibleDescription(/\+1 initiative.*Devour/);
   expect(h.state.writes).toEqual([]); await page.locator('#planning-confirm').dblclick();
   await expect.poll(() => h.state.writes.length).toBe(1);
   expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 1, tier: 'root1', asked: 11 }); expect(h.state.errors).toEqual([]);
@@ -80,6 +82,25 @@ test('polls and selection preserve detail nodes, focus and deliberate scroll', a
   await h.publish(); await expect(page.locator('[data-mutation="root2"]')).toHaveAttribute('aria-pressed', 'true');
   expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
+test('a keyboard switch of creature keeps focus on the tab that was chosen', async ({ page }) => {
+  const h = await mount(page); const tab = page.locator('#planning-creatures [data-creature="2"]');
+  await tab.focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('#planning-creatures [data-creature="2"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#planning-creatures [data-creature="2"]')).toBeFocused();
+  await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Enter');
+  await expect(page.locator('#planning-creatures [data-creature="1"]')).toBeFocused(); expect(h.state.errors).toEqual([]);
+});
+test('phone cards stack in one scrolling column while the tabs and the confirmation stay in view', async ({ page }, info) => {
+  test.skip(info.project.name === 'desktop', 'The phone projects own this layout.');
+  const h = await mount(page); const choices = page.locator('#planning-choices');
+  const boxes = await page.locator('.mutation-card').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(box => ({ x: Math.round(box.x), y: box.y })));
+  expect(new Set(boxes.map(one => one.x)).size).toBe(1);
+  expect(boxes.every((one, i) => i === 0 || one.y > boxes[i - 1].y)).toBe(true);
+  expect(await choices.evaluate(node => [getComputedStyle(node).overflowY, node.scrollHeight > node.clientHeight])).toEqual(['auto', true]);
+  await choices.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(page.locator('#planning-creatures')).toBeInViewport(); await expect(page.locator('#planning-confirm')).toBeInViewport();
+  await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.state.errors).toEqual([]);
+});
 test('switching recipients clears the old pick and confirmation names the new creature', async ({ page }) => {
   const h = await mount(page); await page.locator('[data-mutation="root0"]').click();
   await page.locator('#planning-creatures [data-creature="2"]').click(); await expect(page.locator('#planning-confirm')).toBeDisabled();
@@ -87,9 +108,10 @@ test('switching recipients clears the old pick and confirmation names the new cr
   await page.locator('#planning-confirm').click(); await expect.poll(() => h.state.writes.length).toBe(1);
   expect(h.state.writes[0].creature).toBe(2); expect(h.state.errors).toEqual([]);
 });
-test('dead and already-picked creatures explain the capped budget and empty offers; pass uses whole-team semantics', async ({ page }) => {
-  const h = await mount(page, { allies: [roster[0], { ...roster[1], isAlive: false }, roster[2]], picks: [{ creature: 3, tier: 'root0' }], remaining: 3 });
-  await expect(page.locator('#planning-help')).toContainText('1 team pick available (3 unused; 1 eligible creature)');
+test('dead and already-picked creatures explain their state and empty offers; pass uses whole-team semantics', async ({ page }) => {
+  // As the host sends it: the picks left are already capped at the one creature it can still offer a pick to.
+  const h = await mount(page, { allies: [roster[0], { ...roster[1], isAlive: false }, roster[2]], picks: [{ creature: 3, tier: 'root0' }], remaining: 1 });
+  await expect(page.locator('#planning-help')).toContainText('1 team pick available. One mutation per creature');
   await expect(page.locator('#planning-creatures')).toContainText('Defeated'); await expect(page.locator('#planning-creatures')).toContainText('Picked · hidden until reveal');
   await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('.mutation-card')).toHaveCount(0);
   await expect(page.locator('.mutation-empty')).toContainText('Choose another creature');
