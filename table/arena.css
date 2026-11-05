@@ -232,6 +232,7 @@
 @media (max-height: 520px) {
   .upkeep-header { padding-top: 8px; padding-bottom: 8px; }
   .upkeep-footer { padding-top: 6px; padding-bottom: 6px; }
+}
 
 /* Compare offered mutations without navigating the reference tree. Header and confirmation stay put. */
 #planning-dialog { padding: 0; width: min(1120px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
