@@ -22,6 +22,7 @@ export async function mountSpellScene(page) {
   await page.goto('/art4-scene.html');
   await page.addScriptTag({ content: (await bundle).outputFiles[0].text });
   await expect.poll(() => page.evaluate(() => Boolean(window.artReady))).toBe(true);
+  // The browser's simulated clock can lead the runner's wall clock under load.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
 }
 
