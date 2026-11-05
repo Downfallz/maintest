@@ -5,11 +5,22 @@ import { effectText, chance, groupTargetLines } from './guidance.js';
 export function arenaTargetState(model, id) {
   if (!model.opened || !model.target) return null;
   const legal = model.target.legalTargets, picked = model.picked.map(String);
-  if (model.emptyCast) return { state: 'unavailable', label: '— Too few targets', selectable: false };
-  if (picked.includes(String(id))) return { state: 'selected', label: '✓ Selected', selectable: true };
-  if (!legal.candidates.some(one => String(one) === String(id))) return { state: 'unavailable', label: '— Unavailable', selectable: false };
-  if (legal.maxTargets > 1 && picked.length >= legal.maxTargets) return { state: 'unavailable', label: '— Selection full', selectable: false };
-  return { state: 'legal', label: picked.length && legal.maxTargets === 1 ? '+ Change target' : '+ Select target', selectable: true };
+  const of = (state, mark, text, selectable) => ({ state, mark, text, label: `${mark} ${text}`, selectable });
+  if (model.emptyCast) return of('unavailable', '—', 'Too few targets', false);
+  if (picked.includes(String(id))) return of('selected', '✓', 'Selected', true);
+  if (!legal.candidates.some(one => String(one) === String(id))) return of('unavailable', '—', 'Unavailable', false);
+  if (legal.maxTargets > 1 && picked.length >= legal.maxTargets) return of('unavailable', '—', 'Selection full', false);
+  return of('legal', '+', picked.length && legal.maxTargets === 1 ? 'Change target' : 'Select target', true);
+}
+
+// What a creature's tag says while targets are chosen. A stun is the one condition only the tag shows, and
+// it decides a target as much as legality does, so it keeps the tag behind the state's mark; the border
+// and the spoken label still carry the state in full.
+export function arenaTargetTag(state, creature) {
+  if (!state) return null;
+  const status = !creature.isAlive ? 'Defeated' : creature.isStunned ? 'Stunned' : '';
+  return { tag: status && status !== 'Defeated' ? `${state.mark} ${status}` : state.label,
+    spoken: [status, state.text].filter(Boolean).join('. ') };
 }
 
 function criticalChance(guide, tempo) {
@@ -55,6 +66,6 @@ export function arenaTargetPreview(model) {
   const rows = model.target && !model.emptyCast ? rowsFor(guide, model.picked, model.target.legalTargets, names, critical) : [];
   let caster = '';
   if (!model.emptyCast && guide.casterEffects?.length) caster = `On caster, once: ${guide.casterEffects.map(effectText).join(', ')}`;
-  else if (model.target?.legalTargets.maxTargets === 0) caster = 'Caster preview unavailable.';
+  else if (model.target?.legalTargets.maxTargets === 0) caster = Array.isArray(guide.casterEffects) ? 'No effect on caster.' : 'Caster preview unavailable.';
   return { ...base, cost, rows, caster, critical: Number.isFinite(critical) ? `${chance(critical)} critical at this tempo` : 'Critical chance unavailable for this tempo' };
 }

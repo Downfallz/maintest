@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { arenaTargetPreview as preview, arenaTargetState as state } from './arena-targets.js';
+import { arenaTargetPreview as preview, arenaTargetState as state, arenaTargetTag as tag } from './arena-targets.js';
 const legal = { candidates: [1, 2, 4, 5], minTargets: 1, maxTargets: 2 };
 const damage = amount => ({ kind: 'DamageOutcome', amount });
 function model() {
@@ -48,10 +48,14 @@ test('a host refusal hides hypothetical effects without changing the offer', () 
   const p = preview(m); assert.equal(p.reason, 'Cannot cast while stunned'); assert.deepEqual(p.rows, []); assert.equal(p.caster, '');
   assert.equal(state(m, 4).selectable, true);
 });
-test('a targetless cast shows supplied caster effects and honestly falls back when absent', () => {
+test('a targetless cast shows the caster effects the host supplies', () => {
   const m = model(); m.target.legalTargets = { candidates: [], minTargets: 0, maxTargets: 0 }; m.picked = [];
   assert.match(preview(m).note, /No targets required/); assert.match(preview(m).caster, /Heal 4/);
-  m.reference.guidance[0].casterEffects = []; assert.equal(preview(m).caster, 'Caster preview unavailable.');
+});
+test('a targetless cast tells an explicit empty caster outcome from a missing one', () => {
+  const m = model(); m.target.legalTargets = { candidates: [], minTargets: 0, maxTargets: 0 }; m.picked = [];
+  m.reference.guidance[0].casterEffects = []; assert.equal(preview(m).caster, 'No effect on caster.');
+  delete m.reference.guidance[0].casterEffects; assert.equal(preview(m).caster, 'Caster preview unavailable.');
 });
 test('an empty cast cannot advertise effects on any target or caster', () => {
   const m = model(); m.emptyCast = true;
@@ -70,3 +74,17 @@ test('a single-target selection allows a direct replacement', () => {
 test('closing the asking removes every preview and target state', () => {
   const m = model(); m.opened = false; assert.equal(preview(m), null); assert.equal(state(m, 4), null);
 });
+test('a stunned target keeps its stun on the tag behind the selection mark', () => {
+  const m = model(), stunned = { isAlive: true, isStunned: true };
+  assert.deepEqual(tag(state(m, 2), stunned), { tag: '+ Stunned', spoken: 'Stunned. Select target' });
+  assert.deepEqual(tag(state(m, 4), stunned), { tag: '✓ Stunned', spoken: 'Stunned. Selected' });
+});
+test('an unstunned target reads its selection state and speaks it without the mark', () => {
+  const m = model(), ready = { isAlive: true, isStunned: false };
+  assert.deepEqual(tag(state(m, 2), ready), { tag: '+ Select target', spoken: 'Select target' });
+  assert.deepEqual(tag(state(m, 99), ready), { tag: '— Unavailable', spoken: 'Unavailable' });
+});
+test('a defeated creature reads unavailable on its tag and says it is defeated', () => {
+  const m = model(); assert.deepEqual(tag(state(m, 99), { isAlive: false, isStunned: true }), { tag: '— Unavailable', spoken: 'Defeated. Unavailable' });
+});
+test('no target state means no target tag', () => { assert.equal(tag(null, { isAlive: true }), null); });

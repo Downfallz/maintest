@@ -67,6 +67,16 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await page.locator('#combat-confirm').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'Action', creature: 1, spell: 'spell-0', targets: [4, 5], asked: 21 }]);
 });
+test('a stunned legal target keeps its stun visible and spoken while targets are chosen', async ({ page }) => {
+  const h = await mount(page); h.view.board.enemies[1].isStunned = true; await notify(page);
+  await expect(target(page, 5)).toContainText('STUNNED'); await choose(page);
+  await expect(target(page, 5).locator('.creature-tag')).toHaveText('+ Stunned');
+  await expect(target(page, 5)).toHaveAttribute('aria-label', /Stunned\. Select target\. Target selection\./);
+  await expect(target(page, 4).locator('.creature-tag')).toHaveText('+ Select target');
+  await target(page, 5).click(); await expect(target(page, 5).locator('.creature-tag')).toHaveText('✓ Stunned');
+  await expect(target(page, 5)).toHaveAttribute('data-target-state', 'selected');
+  await fitsBattlefield(page); expect(h.writes).toEqual([]);
+});
 test('same-question changes replace cost, remove dead targets and erase missing guidance', async ({ page }) => {
   const h = await mount(page); await choose(page); await target(page, 4).click();
   h.view.guidance[0].energyAfterCost = 0; h.view.options.action.spells[0].legalTargets = { candidates: [5, 6], minTargets: 1, maxTargets: 2 };

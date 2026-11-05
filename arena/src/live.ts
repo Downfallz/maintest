@@ -1,4 +1,4 @@
-import { arenaTargetState } from '../../table/arena-targets.js';
+import { arenaTargetState, arenaTargetTag } from '../../table/arena-targets.js';
 import { arenaOrder, createArenaOrderReveal } from '../../table/arena-order.js';
 import { orderControls } from './order';
 import { createArenaGrowth } from '../../table/arena-growth.js';
@@ -219,7 +219,8 @@ function render() {
     node.disabled = !ready || (targeting && (!targetable || !action.canEdit));
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
-    const condition = targetState?.label ?? tagOf(one);
+    const targetTag = arenaTargetTag(targetState, one);
+    const condition = targetTag?.tag ?? tagOf(one);
     let effect = node.querySelector<HTMLElement>('.creature-effect');
     if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
     const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
@@ -230,7 +231,7 @@ function render() {
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetTag?.spoken ?? condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());

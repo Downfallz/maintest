@@ -370,11 +370,14 @@ cost, plain/critical outcomes and caster effects. Selected legal targets with eq
 caster effects appear once. Zero critical chance at the selected tempo suppresses impossible critical rows.
 Hidden intentions show the cost and explain that targeting happens at resolution; they never bind targets.
 
-Missing guidance, missing target outcomes and targetless caster previews have explicit unavailable messages.
+Missing guidance, missing target outcomes and targetless caster previews have explicit unavailable messages;
+a host's explicit empty caster outcome reads "No effect on caster" instead.
 A host refusal replaces hypothetical effects with its reason. Empty casts advertise no effects. Predictions
 are labelled estimates before caps/stacking; recorded History remains authoritative for actual outcomes.
 The preview does not veto or extend the host's offered commands. Legal, selected, unavailable and full
-multi-target states have text/shape cues as well as colour, without automatic submission.
+multi-target states have text/shape cues as well as colour, without automatic submission. A stun shows
+only on the tag, so a stunned creature keeps "Stunned" behind its state's mark (`+ Stunned`); its spoken
+label carries both the condition and the state, without the marks.
 
 `table/arena-targets.js` derives presentation from the combat controller; `src/target-preview.ts` updates
 text without moving confirmation or stealing focus/scroll. New questions, page hiding and access loss clear
