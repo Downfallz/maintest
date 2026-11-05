@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine, loadCards, loadCatalogue } from './card.js';
+import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine, hasCritical, loadCards, loadCatalogue, referenceLines } from './card.js';
 
 // A card as the host serves one. Every value here is arbitrary on purpose: the test holds that each one comes
 // out of the renderer, which is what "the page carries no content" means on this side of the wire.
@@ -114,4 +114,12 @@ test('visual stat groups omit zero and preserve non-d20 chances without inventin
   assert.deepEqual(cardDetails({}), []);
   assert.equal(cardDetails(card).find(row => row.role === 'target').text, card.targeting);
   assert.deepEqual(cardDetails(card).filter(row => row.role === 'effect').map(row => row.text), card.effects);
+});
+test('a spell reference prints the card rows, the critical note and the host reason, nothing for a chance of zero', () => {
+  const guide = { unavailableReason: 'Not enough energy' };
+  assert.deepEqual(referenceLines({ ...card, criticalNote: 'Crits double the damage' }, guide),
+    [...cardLines(card).filter(line => !line.startsWith('Crit')), 'Crits double the damage', 'Not enough energy']);
+  assert.deepEqual(referenceLines(undefined, null), []);
+  assert.equal(hasCritical({ critical: '0%' }), false);
+  assert.equal(hasCritical(card), true);
 });

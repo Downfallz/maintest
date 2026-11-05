@@ -40,10 +40,11 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false } 
   if (!replay) await page.locator('#seat-choices button').click();
   await expect(page.locator('#loading')).toBeHidden(); return state;
 }
-test('Mutation Tree shows prerequisites and only confirms an offered purchase', async ({ page }, info) => {
+test('offered cards keep the full tree as a read-only reference and confirm only a legal purchase', async ({ page }, info) => {
   const h = await mount(page); expect(h.shown).toEqual([]); await page.locator('#planning-open').click();
   await expect.poll(() => h.shown).toEqual([11]); await expect(page.locator('#planning-choices')).toContainText('Host passive');
-  await page.getByText('Guardian · Stage 2', { exact: false }).click(); await expect(page.locator('[data-mutation="future"]')).toBeDisabled();
+  await page.locator('#mutation-tree > summary').click();
+  await page.getByText('Guardian · Stage 2', { exact: false }).click(); await expect(page.locator('[data-mutation="future"]')).toHaveCount(0);
   await expect(page.locator('#planning-choices')).toContainText('Requires: Warden'); await page.locator('[data-mutation="root"]').click(); expect(h.writes).toEqual([]);
   await fitsViewport(page, '#planning-confirm, #planning-close'); await page.screenshot({ path: info.outputPath('mutation-tree.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#planning-confirm').click(); await expect.poll(() => h.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root', asked: 11 }]);
@@ -60,8 +61,10 @@ test('switching creatures drops a mutation picked for the previous one', async (
 });
 test('tempo needs explicit confirmation and a refusal stays visible', async ({ page }) => {
   const h = await mount(page, { kind: 'Speed' }); h.status = 409; await page.locator('#planning-open').click();
-  await expect(page.locator('#planning-help')).toContainText('only Precision can crit'); await page.locator('[data-speed="Quick"]').click(); await page.locator('[data-speed="Standard"]').click(); expect(h.writes).toEqual([]);
-  await page.locator('#planning-confirm').click(); await expect(page.locator('#planning-error')).toHaveText('The offered pick has changed.');
+  await expect(page.locator('#planning-help')).toContainText('only Precision can crit');
+  for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
+  expect(h.writes).toEqual([]);
+  await page.locator('#planning-confirm').click(); await expect(page.locator('#planning-dialog-error')).toHaveText('The offered pick has changed.');
   expect(h.writes).toEqual([{ kind: 'Speed', creature: 1, speed: 'Standard', asked: 11 }]); expect(h.errors).toEqual([]);
 });
 test('ties require a complete order within their group', async ({ page }) => {

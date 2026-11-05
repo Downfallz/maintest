@@ -14,7 +14,7 @@ test('mutation guidance uses the team offer and explains the actual pass semanti
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
   const depleted = arenaGuidance(view('Evolution', { options: { evolution: { remainingPicks: 0 } } }), catalogue);
   assert.equal(depleted.topic, null); assert.match(depleted.objective, /No team picks remain/);
-  assert.match(arenaGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered/);
+  assert.match(arenaGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered\. Open Choose mutation to pass/);
 });
 test('the next mutation comes from the board on an even round, not a client schedule', () => {
   const input = view(null); input.board.roundNumber = 2; input.board.nextEvolutionRound = 6;
@@ -44,7 +44,7 @@ test('without any rules the mode is explicitly unknown, while a spell question c
   assert.doesNotMatch(text(arenaGuidance(view('Action'), null)), /declare hidden spells/);
 });
 test('the objective names the creature the way the scene does', () => {
-  assert.equal(arenaGuidance(view('Speed'), catalogue).objective, 'First: choose a tempo, then confirm.');
+  assert.equal(arenaGuidance(view('Speed'), catalogue).objective, 'Draft every eligible creature’s tempo, then confirm the team.');
   assert.equal(arenaGuidance(view('Speed'), catalogue).context, 'Command · First');
   const twins = view('Action'); twins.board.allies = [{ id: 1, name: 'Twin' }, { id: 2, name: 'Twin' }];
   assert.match(arenaGuidance(twins, catalogue).objective, /^Twin · 1: choose a spell/);

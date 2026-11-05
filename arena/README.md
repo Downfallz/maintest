@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -92,9 +92,10 @@ text on the latest board. Result details remain available in an accessible overl
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
-`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
-Mutation Tree with explicit confirmation. Tempo confirms one creature at a time, with simultaneous reveal
-still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
+`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
+cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
+`table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
 finished recording using the same operator authorization as `/play?replay=...`.
@@ -154,7 +155,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-The AU3b receipt precedes first-use tips. Mutation cards and batch tempos remain later UX slices.
+The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
 
 `arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -168,6 +169,11 @@ ART-5 adds [mutation cues](../docs/art/mutation-cues.md): one dominant body sele
 acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cues.ts` follows the figure
 transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
 The live suite checks all nine branch pairs and lifecycle behavior with the production scene.
+
+ART-6 adds [playback polish](../docs/art/arena-polish.md): shared timings, live 1×/1.5×/2× playback and
+opt-in synthesized sound. `audio.ts` owns one short voice, cancels pending resumes, and is shared with the
+lab. Reduced motion keeps a 650 ms readable result at every speed. The playback suite exercises the
+production audio owner and instrumented browser audio alongside the renderer.
 
 ## AU3a: recorded ordinary energy
 
@@ -211,6 +217,50 @@ before answering and still verify that presentation sends no command or acknowle
 
 Captures: [real-host opening receipt, desktop](../docs/tabletop/images/arena-upkeep/desktop.jpg) ·
 [phone receipt with non-default/passive/zero fixture values](../docs/tabletop/images/arena-upkeep/phone-fixture.jpg).
+
+## AU4: compare offered mutations
+
+`Choose mutation` opens the host's available cards for the selected creature, with three columns on
+desktop and stacked cards on phones. Cards show family colour and name, stage, authored tags,
+initiative gain and spell names/previews. Each separate Details disclosure includes spell cost,
+targeting, effects and caster/critical text. Passive-only and shared capstones retain the catalogue's
+passive lines without invented tags or spells. Later offers may contain any number of upgrades and
+multiclass roots; missing catalogue records remain selectable by host id with explicit unknown details.
+
+Creature tabs and the confirmation footer stay visible while cards scroll. The budget is capped by
+the number of creatures with host offers; defeated and already-picked creatures explain their state.
+Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
+one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
+The full Mutation Tree is a separate, read-only disclosure during Evolution; its persistent access
+outside this phase remains AU8. Same-question polls preserve disclosures, focus and scroll.
+
+`table/arena-mutations.js` projects this model using the existing card and mutation helpers;
+`src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
+host legality checks and duplicate/stale-command protection. `arena-mutations.spec.js` covers
+comparison, late offers, recipient changes, passive capstones, missing content, effective budgets,
+poll stability, pending acknowledgement and small/landscape layouts. `arena.loop.js` exercises the
+chooser in complete real-host matches, including two-seat private choices.
+
+Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
+[phone](../docs/tabletop/images/arena-mutations/phone.jpg).
+
+## AU5: team tempo drafts
+
+**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
+return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
+critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
+The footer stays reachable while the choices and references scroll.
+
+`table/arena-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
+acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its
+write. A refusal, uncertainty or interruption stops automatic progress; accepted choices remain visible and
+continuation requires another explicit confirmation after a fresh seat read. Hidden pages, seat changes and
+reloads discard local drafts. No opponent choices or public history are altered before the host reveal.
+
+`arena-tempo.test.js` exercises protocol interleavings; `arena-tempo.spec.js` covers actual controls,
+references, errors, keyboard navigation, mobile layout and screenshots. `arena.loop.js` verifies full games
+in both declarations and opponent privacy across a partial batch, reload and completion on the real host.
+See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation.md).
 
 ## AU9: compact grouped spellbook
 

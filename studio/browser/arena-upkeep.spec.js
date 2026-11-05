@@ -103,7 +103,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#playback-skip').click(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await close(page);
-  await expect(page.locator('#help-title')).toHaveText('Choose how this creature acts');
+  await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await page.locator('#help-close').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-text')).not.toContainText('base 3'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });

@@ -55,10 +55,10 @@ const tips = {
   mutation: { title: 'What is a mutation?', lines: [
     'A mutation develops your creature: new spells or a passive, plus initiative. Its card explains what the creature gains.',
     'Picks are shared across your team. Each creature can acquire at most one mutation this opportunity. Both teams choose privately, then reveal together.',
-    'Open Mutation Tree, select a creature and an offered mutation, then Confirm choice. Pass remaining picks gives up all your unused picks for this round.',
+    'Open Choose mutation, select a creature and an offered card, then confirm the named mutation and recipient. Pass remaining picks gives up all your unused picks for this round.',
   ] },
-  tempo: { title: 'Choose how this creature acts', lines: [TEMPO_RULE,
-    'Open Choose tempo, select a tempo for the named creature, then Confirm choice. Repeat for each creature you are asked about. All tempos reveal together.',
+  tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
+    'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',
     'Check the creature’s spells and energy when deciding. Choosing a tempo does not choose a spell.',
   ] },
   ties: { title: 'Order your tied creatures', lines: [
@@ -90,11 +90,11 @@ function objective(view, topic) {
     case 'mutation': {
       const offer = view.options?.evolution;
       if (offer?.remainingPicks === 0) return 'No team picks remain. Review your command.';
-      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Mutation Tree to pass.';
+      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Choose mutation to pass.';
       const budget = Number.isInteger(offer?.remainingPicks) ? ` · ${count(offer.remainingPicks, 'team pick')} left` : '';
       return `Acquire a mutation${budget}.`;
     }
-    case 'tempo': return `${actor}: choose a tempo, then confirm.`;
+    case 'tempo': return 'Draft every eligible creature’s tempo, then confirm the team.';
     case 'ties': return 'Order your tied creatures, then confirm.';
     case 'action': return `${actor}: choose a spell, then targets. Confirm to cast.`;
     case 'intent': return `${actor}: declare a spell. Choose targets later.`;
