@@ -210,7 +210,9 @@ function render() {
   $('arena').dataset.sequence = String(playbackState.sequence ?? '');
   $('playback-skip').hidden = !playbackState.active;
   text('playback-skip', `Skip to present (${playbackState.remaining})`);
-  $('playback-pacing').hidden = !view || replay.active;
+  // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
+  // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.
+  $('playback-pacing').hidden = !view || replay.active || targeting;
   $<HTMLSelectElement>('playback-mode').value = playbackState.mode;
   $<HTMLSelectElement>('playback-preference').value = playbackState.mode;
   $('playback-next').hidden = !playbackState.active || playbackState.mode !== 'step';

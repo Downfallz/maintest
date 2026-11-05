@@ -54,6 +54,7 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await expect(target(page, 1)).toHaveCSS('opacity', '1');
   await expect(target(page, 1).locator('.caption')).toHaveCSS('opacity', '1');
   await expect(target(page, 4)).toContainText('+ Select target');
+  await expect(page.locator('#playback-pacing')).toBeHidden();
   const box = await page.locator('#combat-confirm').boundingBox();
   await target(page, 4).click();
   await expect(preview(page)).toContainText('Plain: Damage 3'); await expect(preview(page)).toContainText('Critical: Damage 6');
@@ -66,6 +67,7 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   await page.locator('#combat-confirm').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'Action', creature: 1, spell: 'spell-0', targets: [4, 5], asked: 21 }]);
+  await expect(page.locator('#playback-pacing')).toBeVisible();
 });
 test('a stunned legal target keeps its stun visible and spoken while targets are chosen', async ({ page }) => {
   const h = await mount(page); h.view.board.enemies[1].isStunned = true; await notify(page);

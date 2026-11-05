@@ -418,7 +418,9 @@ are labelled estimates before caps/stacking; recorded History remains authoritat
 The preview does not veto or extend the host's offered commands. Legal, selected, unavailable and full
 multi-target states have text/shape cues as well as colour, without automatic submission. A stun shows
 only on the tag, so a stunned creature keeps "Stunned" behind its state's mark (`+ Stunned`); its spoken
-label carries both the condition and the state, without the marks.
+label carries both the condition and the state, without the marks. AU7's pacing row hides while targets are
+chosen: opening the choice settled playback and the host is waiting for this seat, so its height goes to the
+estimate; the pacing preference stays in Settings.
 
 `table/arena-targets.js` derives presentation from the combat controller; `src/target-preview.ts` updates
 text without moving confirmation or stealing focus/scroll. New questions, page hiding and access loss clear

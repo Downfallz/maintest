@@ -18,9 +18,9 @@ export function arenaTargetState(model, id) {
 // and the spoken label still carry the state in full.
 export function arenaTargetTag(state, creature) {
   if (!state) return null;
-  const status = !creature.isAlive ? 'Defeated' : creature.isStunned ? 'Stunned' : '';
-  return { tag: status && status !== 'Defeated' ? `${state.mark} ${status}` : state.label,
-    spoken: [status, state.text].filter(Boolean).join('. ') };
+  if (!creature.isAlive) return { tag: state.label, spoken: `Defeated. ${state.text}` };
+  if (creature.isStunned) return { tag: `${state.mark} Stunned`, spoken: `Stunned. ${state.text}` };
+  return { tag: state.label, spoken: state.text };
 }
 
 function criticalChance(guide, tempo) {
