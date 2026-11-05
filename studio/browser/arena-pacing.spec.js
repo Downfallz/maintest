@@ -1,0 +1,97 @@
+import { test, expect } from '@playwright/test';
+import { mount, entry, before } from './arena-playback-fixture.js';
+import { returningArenaPlayer } from './arena-help-fixture.js';
+import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
+// Full-size software-rendered frames plus paused-clock playback can exceed 30 s on a busy runner.
+test.setTimeout(60000);
+const cleanup = { sequence: 11, event: { kind: 'ConditionsExpired', roundId: 2, expired: { 1: [{ effect: { kind: 'DefenseBuff', amount: 2 } }] } } };
+const energy = { sequence: 12, event: { kind: 'RoundEnergyGranted', roundId: 3, grants: before.map(one => ({
+  creature: one.id, gained: 2, before: 5, after: 7, baseRequested: 2, passiveRequested: 0 })) } };
+const ongoing = { sequence: 13, event: { kind: 'OngoingEffectsApplied', roundId: 3, bleedTicks: [{ creature: 4, damage: 2 }] } };
+const nextRound = h => ({ ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', timeline: [],
+  allies: before.slice(0, 3).map(one => ({ ...one, energy: 7, knownSpells: ['strike', 'future'] })) });
+const step = async page => { await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); };
+const fits = page => fitsViewport(page, '#playback-mode, #playback-next, #playback-skip, #combat-open, #planning-open, #settings, #playback-result');
+
+test('Step reads the closing attack, aftermath and upkeep before showing the next live objective', async ({ page }, info) => {
+  const h = await mount(page); await step(page);
+  await h.publish([entry(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,
+    options: { evolution: { remaining: 2, choices: [] } } });
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
+  await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#round-phase')).toHaveText('COMBAT');
+  await page.clock.runFor(1700);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
+  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('5 EN');
+  await expect(page.locator('#planning-help')).toBeEmpty();
+  await page.locator('[data-creature="1"]').click();
+  await expect(page.locator('#inspect-spells')).not.toContainText('future');
+  await page.getByRole('button', { name: 'Close inspection' }).click(); await fits(page);
+  await page.locator('#playback-next').click();
+  await expect(page.locator('#round-phase')).toHaveText('AFTERMATH');
+  await expect(page.locator('#playback-receipt')).toContainText('DefenseBuff ends');
+  await expect(page.locator('.creature')).toHaveCount(0);
+  await page.locator('#playback-next').click();
+  await expect(page.locator('#round-number')).toHaveText('03'); await expect(page.locator('#round-phase')).toHaveText('UPKEEP');
+  await expect(page.locator('#playback-receipt')).toContainText('+2 energy');
+  await expect(page.locator('#playback-receipt')).toContainText('Ongoing damage −2 HP');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.clock.fastForward(5000); await expect(page.locator('#playback-receipt')).toBeVisible(); await fits(page);
+  await page.screenshot({ path: info.outputPath('paced-upkeep.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#playback-next').click();
+  await expect(page.locator('#round-phase')).toHaveText('COMMAND'); await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('7 EN');
+  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+test('Auto continues held results and skip restores the live command without acknowledging it', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
+  await page.clock.runFor(1700); await page.selectOption('#playback-mode', 'auto'); await page.clock.runFor(300);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '11');
+  await page.locator('#playback-skip').click(); await expect(page.locator('#playback-next')).toBeHidden();
+  await expect(page.locator('#combat-open')).toBeEnabled();
+  await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toBeHidden();
+  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+test('opening the next choice explicitly skips unread receipts without a second upkeep modal', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
+  await expect(page.locator('#playback-next')).toBeVisible(); await page.locator('#combat-open').click();
+  await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#combat-context')).toContainText('7 energy');
+  await page.getByRole('button', { name: 'Close spell choices' }).click();
+  await expect(page.locator('#upkeep-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+
+test('rotation and reduced motion invalidate Step callbacks and keep the current board', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), cleanup, energy, ongoing]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
+  await page.clock.runFor(1700); await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.fastForward(5000); await fits(page);
+  await h.publish([entry(14)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(page.locator('#playback-skip')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+
+test('seat revocation clears a held receipt and cannot resurrect it', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([energy, ongoing]);
+  await expect(page.locator('#playback-receipt')).toBeVisible(); h.state.status = 403;
+  await page.evaluate(() => window.notifyArena()); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#receipt-sections')).toBeEmpty(); await page.clock.fastForward(8000);
+  await expect(page.locator('#playback-receipt')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+
+test('the last result after lethal upkeep is read even when there is no next command', async ({ page }) => {
+  const h = await mount(page); await step(page);
+  await h.publish([energy, ongoing, { sequence: 14, event: { kind: 'MatchEnded', roundId: 3, outcome: { winner: 'Player1', reason: 'Elimination' } } }],
+    { board: nextRound(h), waitingFor: null, over: true, outcome: { winner: 'player1', reason: 'Elimination' } });
+  await expect(page.locator('#playback-receipt')).toContainText('Ongoing damage');
+  await page.locator('#playback-next').click(); await expect(page.locator('#receipt-title')).toHaveText('Match complete');
+  await expect(page.locator('#round-phase')).toHaveText('MATCH COMPLETE');
+  await page.locator('#playback-next').click(); await expect(page.locator('#match-open')).toBeVisible(); expect(h.errors).toEqual([]);
+});

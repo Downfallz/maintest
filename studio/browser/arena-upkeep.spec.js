@@ -37,7 +37,7 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
   await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
-  state.writes.length = 0; await page.clock.pauseAt(new Date(Date.now() + 1000));
+  state.writes.length = 0; await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
@@ -101,11 +101,13 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#playback-skip').click(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
-  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await close(page);
+  await page.locator('#playback-mode').selectOption('step'); await page.clock.runFor(1700);
+  await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.locator('#playback-next').click();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await page.locator('#help-close').click(); await page.locator('#playback-result').click();
-  await expect(page.locator('#result-text')).not.toContainText('base 3'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('polls, hidden-tab reconnection and reload do not repeat the same receipt', async ({ page }) => {
   const h = await mount(page); await close(page); await h.publish([]);
@@ -117,7 +119,8 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
-  await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Upkeep'); await expect(page.locator('#upkeep-dialog')).toBeVisible();
+  await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
   expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('a legacy receipt states missing ordinary energy alongside actual effects', async ({ page }) => {
@@ -172,7 +175,8 @@ test('connection loss settles an animation without opening the queued receipt of
   await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'stale');
   await expect(page.locator('#playback-skip')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
-  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
+  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('+5 energy');
   expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 

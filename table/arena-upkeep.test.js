@@ -86,3 +86,10 @@ test('opening an already finished match presents its result, not its old opening
   control.reset('b:player1'); control.receive(view()); control.presented();
   control.receive(view(2, undefined, { over: true })); assert.equal(control.model().pending, true);
 });
+test('paced upkeep handled ahead of its board cannot reopen or move the tab marker backwards', () => {
+  const saved = storage(); const controller = createArenaUpkeep(saved); controller.reset('table:player1');
+  controller.receive(view(2)); controller.presented(3); controller.presented(2);
+  controller.receive(view(3)); assert.equal(controller.model().pending, false);
+  const restored = createArenaUpkeep(saved); restored.reset('table:player1'); restored.receive(view(3));
+  assert.equal(restored.model().pending, false); restored.receive(view(4)); assert.equal(restored.model().pending, true);
+});
