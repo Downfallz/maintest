@@ -41,10 +41,12 @@ async function mount(page, feed = [entry(10)]) {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  // Freeze before connecting: advancing an active poll can leave a zero-delay owed refresh
+  // suspended just as the fixture publishes its first notification.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
