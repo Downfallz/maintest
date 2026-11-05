@@ -20,7 +20,8 @@ export function mutationReference(view, catalogue, selectedId) {
   return { available: Boolean(board && !view.waiting), selected: creature?.id ?? null,
     roster: roster.map(one => ({ id: one.id, name: creatureLabel(board, one.id), enemy: one.enemy, alive: one.isAlive !== false })),
     packages, families: [...families.values()],
-    next: Number.isInteger(board?.nextEvolutionRound) ? board.nextEvolutionRound : null };
+    current: board?.roundNumber ?? null, over: Boolean(view?.over),
+    next: !view?.over && Number.isInteger(board?.nextEvolutionRound) && board.nextEvolutionRound >= (board.roundNumber ?? 0) ? board.nextEvolutionRound : null };
 }
 
 // The initial read is a baseline, including on reload/return from a hidden tab. Only a new public reveal

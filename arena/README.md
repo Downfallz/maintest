@@ -251,7 +251,8 @@ selects its creature; the reference can switch between both rosters. It reuses A
 prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
 current host Evolution offer marks a mutation Available; the next opportunity is the host's
-`nextEvolutionRound`, never a client schedule. Unknown content and schedule remain explicit.
+`nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
+not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit.
 
 The standalone reference shows current **public** ownership. Pending own picks remain Picked only
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or

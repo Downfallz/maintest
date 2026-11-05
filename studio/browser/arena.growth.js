@@ -26,7 +26,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();
     await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
     const initial = await read();
-    await expect(page.locator('#growth-next')).toHaveText(`Next mutation opportunity · Round ${initial.board.nextEvolutionRound}`);
+    await expect(page.locator('#growth-next')).toHaveText(`Mutation opportunity this round · Round ${initial.board.nextEvolutionRound}`);
     await expect(page.locator('#growth-tree > details')).toHaveCount(3);
     expect(shown).toEqual([]); expect(writes).toEqual([]);
     await fitsViewport(page, '#growth-close, #growth-creature');

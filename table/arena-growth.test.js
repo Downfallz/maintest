@@ -79,3 +79,11 @@ test('passive-only or unknown mutations have no invented spell unlocks and null 
   assert.equal(growth.receipt().rows[1].mutation, 'unknown');
   growth.receive(null); assert.equal(growth.receipt(), null); assert.deepEqual(growth.highlights(action(), true), []);
 });
+
+test('the host opportunity is inclusive of this round, never an invented future date or post-match offer', () => {
+  const v = view(); v.board.nextEvolutionRound = 3;
+  assert.equal(mutationReference(v, catalogue).next, 3); assert.equal(mutationReference(v, catalogue).current, 3);
+  v.board.nextEvolutionRound = 2; assert.equal(mutationReference(v, catalogue).next, null);
+  v.board.nextEvolutionRound = 7; v.over = true;
+  assert.equal(mutationReference(v, catalogue).over, true); assert.equal(mutationReference(v, catalogue).next, null);
+});

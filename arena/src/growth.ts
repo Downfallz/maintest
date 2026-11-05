@@ -28,7 +28,9 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     }));
     select.value = String(selected);
     el('growth-progress').textContent = model.families.length ? `${model.families.length > 1 ? 'Multiclass · ' : ''}${model.families.map(one => `${one.name} · Stage ${one.stage}`).join(' / ')}` : 'No revealed mutations yet';
-    el('growth-next').textContent = model.next == null ? 'Next mutation opportunity unavailable' : `Next mutation opportunity · Round ${model.next}`;
+    el('growth-next').textContent = model.over ? 'Match complete · no further mutation opportunities'
+      : model.next == null ? 'Next mutation opportunity unavailable'
+        : model.next === model.current ? `Mutation opportunity this round · Round ${model.next}` : `Next mutation opportunity · Round ${model.next}`;
     el('growth-tree').replaceChildren(...mutationBranches(model.packages, catalogue));
     if (!model.packages.length) el('growth-tree').append(text('p', 'Mutation catalogue unavailable.'));
     for (const node of el('growth-tree').querySelectorAll<HTMLDetailsElement>('details[data-path]')) {
