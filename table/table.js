@@ -3,7 +3,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, TAG } from './push.js';
+import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, showOwnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -1201,26 +1201,7 @@ async function testNotices(state) {
 // A notice the page shows itself, through the worker and no push service: whether this browser shows any for
 // this site at all. The worker is brought up to date first: a push lands on the worker that is active, and an
 // old one would read the test by yesterday's rule. Null when shown, else why not.
-async function showOwn(state) {
-  const registration = state.push?.registration;
-  if (!registration?.showNotification) return 'no worker';
-  try {
-    await registration.update?.();
-  } catch {
-    // An update that cannot be fetched leaves the worker there is, which still shows.
-  }
-  const permission = globalThis.Notification?.permission;
-  if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
-  try {
-    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
-  } catch (error) {
-    return error?.message || String(error);
-  }
-  // Taken is not shown: a browser lists the notices it is showing, and one it took and lists no more it dropped
-  // on the way, which is the browser's or the system's doing, not the page's.
-  const listed = await registration.getNotifications?.({ tag: 'test:page' }) ?? null;
-  return listed !== null && listed.length === 0 ? 'the browser took it and then listed no such notice: it dropped it' : null;
-}
+const showOwn = state => showOwnNotice(state.push?.registration);
 
 // The one tap: leave to notify, a subscription, and the host told where to send; or the reverse.
 async function toggleNotices(state) {

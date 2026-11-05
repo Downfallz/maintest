@@ -37,7 +37,7 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]) } = {})
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); return state;
 }
 async function bolt(page) { await page.locator('#combat-open').click(); await page.locator('[data-spell="bolt"]').click(); }
 

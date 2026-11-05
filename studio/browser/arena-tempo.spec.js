@@ -35,7 +35,7 @@ async function mount(page, ids = [1, 2, 3]) {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await page.locator('#planning-open').click();
+  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#planning-open').click();
   return state;
 }
 async function fill(page, count) { for (let i = 0; i < count; i++) await page.locator('[data-speed="Standard"]').click(); }

@@ -38,10 +38,10 @@ async function mount(page, input = initial()) {
     if (url.pathname.endsWith('/decision')) { h.writes.push(route.request().postDataJSON()); return route.fulfill({ status: 204 }); }
     return route.fulfill({ status: 500 });
   });
-  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
-  // Freeze relative to the browser clock, not the wall time spent compiling/loading the page.
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#loading')).toBeHidden();
+  // Freeze relative to the browser clock, not the wall time spent compiling/loading the page.
   h.publish = async () => { await page.evaluate(() => window.notifyArena()); await page.clock.runFor(50); };
   h.reference = async () => { await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click(); };
   return h;
@@ -119,7 +119,7 @@ test('public unlock receipt and new spell badge appear once; reload is a silent 
   await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
   spellChoice(h, 22); await h.publish(); await page.locator('#combat-open').click();
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New');
-  await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+  await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#growth-receipt')).toBeHidden(); await page.locator('#combat-open').click();
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

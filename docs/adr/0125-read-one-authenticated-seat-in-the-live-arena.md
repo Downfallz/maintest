@@ -69,3 +69,17 @@ no command or acknowledgement while another client advances the game.
 - `/play` links to the preview from the Match menu, carrying the seats when the browser keeps none in storage.
 - `arena/build.mjs` refuses a live bundle that reaches the laboratory's fixture or reducer.
 - A5 adds commands through the same transport; A6 adds confirmed-action playback over the same snapshots.
+
+## AU13 extension — one accepted seat and surrounding tools (2026-11-05)
+
+Discovery now resumes a single unambiguous accepted seat directly. A device holding two seats of that
+table still chooses its viewpoint explicitly, including when a link narrows the choices. The viewpoint
+switch button always clears the private surface and asks again. Invitation acceptance and account ownership
+remain the lobby's authority. Discovery returns the full verified capability list separately from selectable
+choices, so notification suppression can register an existing endpoint for both held seats without reading
+the other seat's board. No notification subscription or permission prompt is created automatically.
+
+The result card uses the host outcome and final public snapshot; full replay appends that final snapshot only
+after actual recorded steps. Empty feeds remain explicitly unreplayable. Notes reuse the existing note route
+only for recorded seats, with end comments after the host ends the match. Result history, notes, notification
+responses and drafts clear on seat/access changes. The operator-only recording route remains unchanged.

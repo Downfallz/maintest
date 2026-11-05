@@ -80,3 +80,10 @@ test('an ordinary zero-energy replay keeps its receipt instead of claiming no on
   assert.equal(replayText(step), 'Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
   assert.match(replayText({ ...step, ticks: [] }), /No recorded grant details/);
 });
+
+test('full replay ends on the authoritative final battlefield and returns to its result', async () => {
+  const h = harness(); await h.control.replay(); while (h.control.model().next) h.control.move(1);
+  assert.match(h.control.model().summary, /You win/); assert.match(h.control.model().note, /Final public battlefield/);
+  assert.equal(h.control.model().board.creatures[1].health, 0); assert.equal(h.control.model().result.title, 'Victory');
+  h.control.move(-1); assert.equal(h.control.model().board.creatures.length, 0);
+});

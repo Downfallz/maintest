@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningArenaPlayer } from './arena-help-fixture.js';
 import { startHost, stopHost } from './host.js';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fitsViewport, fitsBattlefield } from './fit.js';
@@ -11,7 +11,7 @@ async function enter(page, join) {
   await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
   await page.goto(`${new URL(join).origin}/arena`); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden(); return tokens;
+  await expect(page.locator('#loading')).toBeHidden(); return tokens;
 }
 const decisionWritten = page => page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
 async function confirm(page, selector) {
@@ -94,7 +94,17 @@ async function reviewAndReplay(page, latest, info, actions) {
   }
   await page.locator('#history-close').click();
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing'); await page.locator('#match-replay').click();
+  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
+  let title = 'Draw';
+  if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';
+  await expect(page.locator('#match-title')).toHaveText(title);
+  await Promise.all([latest.board.allies, latest.board.enemies].map(team => expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`)));
+  await page.screenshot({ path: info.outputPath('final-result-real-host.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#match-notes').click();
+  await page.getByRole('button', { name: 'I had to look this up', exact: true }).click(); await expect(page.locator('#noted')).toHaveText('Noted: you looked a rule up.');
+  await page.locator('#end-comment').fill('AU13 real-host final comment'); await page.locator('#comment-save').click();
+  await expect(page.locator('#noted')).toHaveText('Comment saved with the session.'); await page.keyboard.press('Escape');
+  await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
   for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();
   await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2 · Turn order');
@@ -104,7 +114,7 @@ async function reviewAndReplay(page, latest, info, actions) {
   await fitsBattlefield(page); await fitsViewport(page, '.creature, #replay-next, #replay-previous, #replay-close');
   await page.screenshot({ path: info.outputPath('replay.jpg'), type: 'jpeg', quality: 85 });
   // Every recorded step of the last round is reachable, and an elimination is seen on one of its frames: the
-  // round's aftermath comes last and shows the reference frame from before the kill.
+  // final step uses the finished host snapshot, after every cast and cleanup.
   const rounds = await page.locator('#replay-round option').allTextContents(); expect(rounds).toContain(`Round ${latest.board.roundNumber}`);
   await page.locator('#replay-round').selectOption(String(latest.board.roundNumber));
   let defeated = await page.locator('.creature.is-defeated').count();
@@ -113,6 +123,9 @@ async function reviewAndReplay(page, latest, info, actions) {
   }
   await expect(page.locator('#replay-position')).toHaveText(/ (\d+) of \1$/);
   if (latest.outcome.reason === 'Elimination') expect(defeated).toBeGreaterThan(0);
+  await expect(page.locator('#replay-note')).toHaveText('Final public battlefield confirmed by the host.');
+  await Promise.all([...latest.board.allies, ...latest.board.enemies].map(one => expect(page.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`)));
+  await page.locator('#replay-close').click(); await expect(page.locator('#match-dialog')).toBeVisible();
 }
 // The recorded session endpoint is the same operator-only endpoint used by the table's replay.
 async function expectRecordedPerspective(page, context, origin, hostInfo) {
@@ -213,6 +226,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     expect(taught.has(declaration === 'at-activation' ? 'Action' : 'Intent')).toBe(true);
     if (declaration === 'hidden-intent') expect(taught.has('Target')).toBe(true);
     await reviewAndReplay(page, latest, info, actions);
+    const savedNotes = await readFile(pathJoin(directory, 'sessions', hostInfo.session, 'notes.jsonl'), 'utf8');
+    expect(savedNotes).toContain('AU13 real-host final comment');
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
     expect(writes.filter(one => one.command.kind === 'Speed').length).toBeGreaterThanOrEqual(3);
@@ -268,7 +283,7 @@ test('two arena seats plan simultaneously without revealing the other team choic
       waitingAsked: value.waitingAsked, waitingFor: value.waitingFor, waitingCreature: value.waitingCreature });
     expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
     await page.unroute('**/decision');
-    await page.reload(); await page.locator('#seat-choices button').click(); await page.locator('#planning-open').click();
+    await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await page.locator('#planning-open').click();
     await expect(page.locator('[data-tempo-tab]')).toHaveCount(2); await expect(page.locator('#planning-confirm')).toBeDisabled();
     expect(tempos).toHaveLength(2);
     await page.locator('[data-speed="Standard"]').click(); await page.locator('[data-speed="Quick"]').click();

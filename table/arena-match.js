@@ -2,7 +2,7 @@ import { upkeepReceipt, missingRoundEnergy } from './arena-upkeep.js';
 import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText } from './feed.js';
 import { playbackBoard } from './replay.js';
 import { livePresentation } from './arena-live.js';
-import { outcomeText } from './outcome.js';
+import { outcomeText, matchResultSummary } from './outcome.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
@@ -19,6 +19,7 @@ export function roundNotes(entries, board) {
 }
 
 export function replayText(action, catalogue) {
+  if (action.final) return action.summary;
   if (action.ordinaryEnergy) return turnoverText(action);
   if (action.interlude === 'upkeep') {
     const detail = action.ticks.length ? turnoverText(action) : 'Upkeep · No ongoing ticks applied';
@@ -39,6 +40,7 @@ function purchaseText(choice, catalogue) {
 
 // A cast has a frame before and one after; an interlude has one reference frame, or none at all.
 function replayNote(action, stage) {
+  if (action?.final) return 'Final public battlefield confirmed by the host.';
   if (!action?.frame) return 'No battlefield was recorded for this event.';
   if (action.interlude) return 'Reference: the battlefield at the start of this round’s combat, after upkeep and mutations.';
   return `${stage === 'before' ? 'Before' : 'After'} the recorded action`;
@@ -48,6 +50,7 @@ function replayNote(action, stage) {
 const packagesOf = catalogue => new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
 function replayBoard(action, actions, index, stage, latest, catalogue) {
   if (!action) return null;
+  if (action.final) return livePresentation({ board: action.board }, packagesOf(catalogue));
   const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue));
   board.round = action.round;
   if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
@@ -84,6 +87,9 @@ export function createArenaMatch({ connection, onChange }) {
         return cleanup.length || !ended ? cleanup : [{ sequence: ended.sequence, round, interlude: 'aftermath', ended: [], immune: [] }];
       });
       actions = [...casts, ...aftermath].sort((a, b) => a.sequence - b.sequence);
+      if (actions.length) actions.push({ final: true, interlude: 'result', board: view.board,
+        round: view.board?.roundNumber, sequence: feed.reduce((last, one) => Math.max(last, one.sequence ?? 0), 0) + 1,
+        summary: outcomeText(view, seat) });
       index = actions.length ? 0 : -1; stage = 'before';
       if (!actions.length) error = 'Nothing was recorded to replay in this match.';
     } catch { if (context === generation) error = 'Could not load the replay. Try again.'; }
@@ -125,7 +131,7 @@ export function createArenaMatch({ connection, onChange }) {
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),
       next: active && (index + 1 < actions.length || (twoFrames && stage === 'before')),
-      outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
+      result: matchResultSummary(latest, seat), outcome: outcomeText(latest, seat), over: Boolean(latest?.over),
       canConcede: canConcede(), busy, error,
       notes: roundNotes(entries, latest?.board) };
     return cached;

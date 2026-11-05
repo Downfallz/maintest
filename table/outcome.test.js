@@ -6,7 +6,7 @@ test('a host that serves no outcome only says the match is over', () => {
   assert.equal(outcomeText({ over: true }, 'player1'), 'The match is over.');
 });
 test('a draw names the reason without a winner', () => {
-  assert.equal(outcomeText({ outcome: { winner: null, reason: 'RoundCap' } }, 'player1'), 'The match is a draw · more health at the round cap.');
+  assert.equal(outcomeText({ outcome: { winner: null, reason: 'RoundCap' } }, 'player1'), 'The match is a draw · equal health at the round cap.');
 });
 test('a concession is said from the seat reading it', () => {
   assert.equal(outcomeText({ outcome: { winner: 'player2', reason: 'Concession' } }, 'player1'), 'You conceded · Player 2 wins.');
@@ -28,4 +28,16 @@ test('a rematch goes to the lobby with the same opponent and format chosen, when
   assert.equal(rematchLink({ seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'person', name: 'Player' }] }, ['player1']), null, 'an opponent without an account cannot be asked again');
   assert.equal(rematchLink(null, ['player1']), null);
   assert.equal(rematchLink(friend, []), null);
+});
+
+test('the final card trusts the host outcome even when the losing team has more health', async () => {
+  const { matchResultSummary } = await import('./outcome.js');
+  const view = { over: true, outcome: { winner: 'player2', reason: 'Concession' }, board: {
+    allies: [{ health: 30, isAlive: true }], enemies: [{ health: 2, isAlive: true }, { health: 0, isAlive: false }] } };
+  assert.equal(matchResultSummary(view, 'player1').title, 'Defeat');
+  assert.deepEqual(matchResultSummary(view, 'player1').teams.map(one => one.text), ['1/1 standing · 30 HP', '1/2 standing · 2 HP']);
+  assert.equal(matchResultSummary({ ...view, outcome: { winner: null, reason: 'RoundCap' } }, 'player1').title, 'Draw');
+  assert.equal(matchResultSummary({ ...view, outcome: null }, 'player1').title, 'Match complete');
+  assert.equal(matchResultSummary({ ...view, over: false }, 'player1'), null);
+  assert.match(matchResultSummary({ over: true }, 'player1').teams[0].text, /unavailable/);
 });

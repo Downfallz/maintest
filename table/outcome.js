@@ -23,7 +23,7 @@ export function rematchLink(table, held) {
 export function outcomeText(view, seat) {
   const outcome = view?.outcome;
   if (!outcome) return 'The match is over.';
-  const because = { Elimination: 'the last team standing', RoundCap: 'more health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason;
+  const because = { Elimination: outcome.winner ? 'the last team standing' : 'neither team survived', RoundCap: outcome.winner ? 'more health at the round cap' : 'equal health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason ?? 'reason not recorded';
   if (!outcome.winner) return `The match is a draw · ${because}.`;
   const won = outcome.winner === seat;
   const winner = seatLabel(outcome.winner);
@@ -34,4 +34,31 @@ export function outcomeText(view, seat) {
     return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
   }
   return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
+}
+
+function resultHeading(view, seat) {
+  const outcome = view.outcome;
+  if (!outcome) return { title: 'Match complete', tone: 'unknown' };
+  if (!outcome.winner) return { title: 'Draw', tone: 'draw' };
+  const won = outcome.winner === seat;
+  const title = won ? 'Victory' : 'Defeat';
+  return { title: view.replay ? `${seatLabel(outcome.winner)} wins` : title, tone: won ? 'victory' : 'defeat' };
+}
+
+function teamResult(label, creatures) {
+  const complete = Array.isArray(creatures) && creatures.length > 0;
+  const alive = complete && creatures.every(one => typeof one.isAlive === 'boolean')
+    ? `${creatures.filter(one => one.isAlive).length}/${creatures.length} standing` : 'Survivors unavailable';
+  const health = complete && creatures.every(one => Number.isFinite(one.health))
+    ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
+  return { label, text: `${alive} · ${health}` };
+}
+
+// A result never elects its own winner from health. Missing legacy fields stay unavailable.
+export function matchResultSummary(view, seat) {
+  if (!view?.over) return null;
+  const other = seat === 'player1' ? 'player2' : 'player1';
+  const teams = [teamResult(view.replay ? seatLabel(seat) : 'Your team', view.board?.allies),
+    teamResult(view.replay ? seatLabel(other) : 'Opponent', view.board?.enemies)];
+  return { ...resultHeading(view, seat), reason: outcomeText(view, seat), teams, round: view.board?.roundNumber };
 }

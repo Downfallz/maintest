@@ -37,7 +37,7 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false } 
   });
   await page.goto(`/table/arena.html${replay ? '?replay=finished&seat=player2' : ''}`);
   await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  if (!replay) await page.locator('#seat-choices button').click();
+  await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#loading')).toBeHidden(); return state;
 }
 test('offered cards keep the full tree as a read-only reference and confirm only a legal purchase', async ({ page }, info) => {

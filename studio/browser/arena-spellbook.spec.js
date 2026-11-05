@@ -40,7 +40,7 @@ async function mount(page, kind = 'Intent') {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await page.locator('#combat-open').click(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#combat-open').click(); return state;
 }
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
 const notify = page => page.evaluate(() => window.notifyArena());

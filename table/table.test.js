@@ -759,8 +759,8 @@ test('the end screen names the winner and the reason for every way a match ends'
   assert.equal(said({ winner: 'player1', reason: 'Elimination' }), 'You win · the last team standing.');
   assert.equal(said({ winner: 'player2', reason: 'RoundCap' }), 'Player 2 wins · more health at the round cap.');
   assert.equal(said({ winner: 'player1', reason: 'Concession' }), 'Player 2 conceded · you win.');
-  assert.equal(said({ winner: null, reason: 'Elimination' }), 'The match is a draw · the last team standing.');
-  assert.equal(p.nodes.phase.textContent, 'The match is a draw · the last team standing.');
+  assert.equal(said({ winner: null, reason: 'Elimination' }), 'The match is a draw · neither team survived.');
+  assert.equal(p.nodes.phase.textContent, 'The match is a draw · neither team survived.');
 });
 
 test("a bot's seat, a finished match and practice offer no concession", () => {

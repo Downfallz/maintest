@@ -1,3 +1,5 @@
+import { createArenaServices } from '../../table/arena-services.js';
+import { serviceControls } from './services';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/arena-inspection.js';
 import { inspectionControls } from './inspection';
 import { arenaTargetState, arenaTargetTag } from '../../table/arena-targets.js';
@@ -57,6 +59,7 @@ let inspected: string | null = null;
 let creatures: Creature[] = [];
 let frame: SceneFrame = { stage: 'decision', target: null, actor: null, targets: [], creatures: [] };
 let discovering = 0;
+let heldSeats: Choice[] = [];
 let rendererFailed = false;
 const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
@@ -65,6 +68,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   receiving = true;
   try {
     view = next; catalogue = content ?? catalogue;
+    if (next) services.receive(next);
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
@@ -73,7 +77,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createArenaUpkeep(tabStorage);
@@ -90,6 +94,8 @@ const controls = combatControls(combat, name, passOver);
 const planningUI = planningControls(planning, name, passOver);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, () => playback.skip());
+const services = createArenaServices({ onChange: () => servicesUI.render() });
+const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
@@ -106,6 +112,8 @@ function status(state: string) {
   $('arena').dataset.connection = state;
   // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
   if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
+  if (['signin', 'revoked'].includes(state)) services.reset();
+  services.setOnline(state === 'live');
   if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
@@ -244,7 +252,7 @@ function render() {
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   growthUI.render(view, catalogue, visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened);
-  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); historyUI.render(history.model());
+  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : 'Inspect creatures');
   if ($('arena').dataset.connection === 'live') text('connection', playbackState.active ? 'READING CONFIRMED EVENTS' : connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
@@ -321,14 +329,16 @@ function choose(choice: Choice) {
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
-  connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
+  const transport = httpTransport(choice.seat, choice.token, request);
+  connection.start(transport, catalogue);
+  services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
 }
 
-async function discover() {
+async function discover(autoResume = true) {
   audio.stop();
   if (rendererFailed) return;
   const ticket = ++discovering;
-  connection.stop(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
   text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -344,6 +354,8 @@ async function discover() {
   try {
     const result = await arenaSeats(location.search, storage, request);
     if (ticket !== discovering) return;
+    heldSeats = result.held;
+    if (autoResume && result.choices.length === 1 && !result.invitations.length && result.held.filter((one: Choice) => one.table.id === result.choices[0].table.id).length === 1) { choose(result.choices[0]); return; }
     text('load-detail', result.choices.length ? 'Only the selected seat will be loaded. Choose who is holding this device.' : 'No accepted seat was found for this link or browser.');
     for (const choice of result.choices as Choice[]) {
       const button = document.createElement('button'); button.type = 'button';
@@ -367,11 +379,11 @@ scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();
-  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
+  rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
-$('switch-seat').addEventListener('click', () => { void discover(); });
+$('switch-seat').addEventListener('click', () => { void discover(false); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 scene.onCancel = () => audio.silence();
 scene.onImpact = () => {

@@ -50,9 +50,9 @@ async function mount(page, options = {}) {
     if (url.pathname.endsWith('/decision')) h.writes.push(route.request().postDataJSON());
     return route.fulfill({ status: 500 });
   });
-  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
+  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#loading')).toBeHidden();
   h.publish = async () => { await page.evaluate(() => window.notifyArena()); };
   return h;
 }

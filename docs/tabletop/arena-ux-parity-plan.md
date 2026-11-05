@@ -521,6 +521,10 @@ headless shell 142; CI uses the pinned Playwright browser. Captures above are la
 
 ### AU13 — Finish the surrounding play experience
 
+Implemented: host-derived result card and final replay frame, recorded-seat notes, explicit notification
+controls and haptic opt-in, single-seat resume with two-seat privacy. Existing A8 sound, recovery,
+presentation preference and budgets remain in place. See `arena/README.md` for verification.
+
 Recover a clear Victory/Defeat/Draw panel with authoritative reason, final survivors/HP, console and replay.
 Preserve concession confirmation, accepted-concession fencing, empty/legacy replay handling and the current
 recorded-session permission boundary. Do not add unrestricted player access to operator-only recordings.

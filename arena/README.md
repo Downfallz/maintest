@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js arena-inspection.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js arena-inspection.spec.js arena-services.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -497,3 +497,35 @@ Captures in `docs/tabletop/images/arena-inspection/` identify fixture versus rea
 
 Captures: [desktop reference (recorded-event fixture)](../docs/tabletop/images/arena-inspection/desktop-fixture.jpg) ·
 [phone reference (real host, public opening mutation)](../docs/tabletop/images/arena-inspection/phone-real-host.jpg).
+
+
+## AU13 — Result, recorded notes, optional notices and resume
+
+The Match result card says Victory, Defeat or Draw from the host's outcome, its reason and each side's
+final survivors and HP. Unknown legacy fields stay unavailable; health never determines the winner in the
+client. Console opens the shared History. Match replay now reaches the host's final public snapshot after
+all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
+legacy frameless events remain text-only. Recorded-session replay still requires the operator token.
+
+Settings offers selection vibration through the existing feedback helper, independently of the arena's
+session-only sound opt-in. Notification controls use the seat transport, `push.js` status/key helpers and
+the same two-notice diagnostic as classic. Permission, subscription and test require a click. An existing
+subscription is rebound to every held seat of the selected table so the host's shared-device suppression
+still applies; no other seat's board is fetched. Unsupported/denied browsers explain the limitation.
+Late service replies cannot repaint or submit additional requests for a replaced seat.
+
+Playtest notes use `notes.js` and the authenticated `/api/notes` route: Lookup/Misplay during recorded play,
+with a comment box after the match. Unrecorded sessions and operator replay show no note controls. Double
+clicks are fenced; failures are visible; an unsaved draft clears when the seat is suspended or revoked.
+
+One verified accepted seat resumes directly. Two held seats still require viewpoint selection; explicitly
+switching viewpoints always clears the board and asks. Linked invitations still go to classic acceptance,
+and account sign-in, revocation, recovery, rollout preference and asset budgets retain the A8 boundaries.
+
+`arena-services.spec.js` covers result variants, empty replay, seat selection/privacy, recording-only notes,
+notification availability/opt-in/testing, haptics, access loss and short viewports. Controller tests cover
+late service replies and shared-device endpoint rebinding. The real-host complete-match journeys compare
+the final scorecard and replay frame to the engine, save notes to `notes.jsonl`, and exercise operator replay.
+
+Captures: [desktop result (browser fixture)](../docs/tabletop/images/arena-services/desktop-fixture.jpg) ·
+[phone result (real engine, at-activation)](../docs/tabletop/images/arena-services/phone-real-host.jpg).
