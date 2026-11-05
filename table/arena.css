@@ -378,3 +378,39 @@
   #planning-creatures { padding: 4px 0; }
   .planning-footer { padding-top: 6px; padding-bottom: 6px; }
 }
+
+/* AU10: the estimate scrolls beside a fixed confirmation. Choosing another target cannot move Cast. */
+.target-preview { font-size: 12px; line-height: 1.45; overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 6px 10px; border-left: 2px solid #c9b57e; background: #0d1b20; overflow-wrap: anywhere; }
+.target-preview p { margin: 3px 0; }
+.target-cost { color: #f0dca9; }
+.target-reason { color: #ffc2ad; }
+.target-preview small { display: block; margin-top: 5px; color: #b5c6bd; font-size: 11px; }
+.target-estimate { margin-top: 7px; border-top: 1px solid #50665b; padding-top: 4px; }
+.target-estimate > strong { color: #e1e8da; }
+.target-caster { color: #bddfb8; }
+#intent-preview { height: 104px; margin-bottom: 6px; }
+#arena[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr) minmax(280px,1fr); grid-template-rows: minmax(0,1fr); gap: 16px; }
+#arena[data-combat="targets"] .actor-summary { display: none; }
+#arena[data-combat="targets"] .live-status { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+#arena[data-combat="targets"] .live-status > :is(#connection, #instruction, #playback-result) { display: none; }
+#combat-preview { flex: 1; }
+#arena[data-combat="targets"] .arena-actions { grid-column: 2; grid-row: 1; }
+#arena[data-combat="targets"] .creature[data-target-state="legal"] .caption { border: 1px dashed #e5d4a8; border-radius: 4px; }
+#arena[data-combat="targets"] .creature[data-target-state="selected"] .caption { border: 2px solid #f8df94; border-radius: 4px; }
+#arena[data-combat="targets"] .creature[data-target-state="unavailable"] .caption { opacity: .65; }
+#arena[data-combat="targets"] .creature-tag { font-size: 10px; white-space: nowrap; }
+#arena[data-combat="targets"] .creature[data-target-state="unavailable"] .creature-tag { color: #c5cbc4; }
+@media (max-width: 619px) {
+  #arena[data-combat="targets"] { grid-template-rows: 56px 46px minmax(0,1fr) 210px 20px; }
+  #arena[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) 90px; gap: 6px; padding: 8px 12px; }
+  #arena[data-combat="targets"] .arena-actions { grid-column: 1; grid-row: 2; }
+  #combat-selection { margin: 4px 0; }
+  #arena[data-combat="targets"] .creature-tag { font-size: 8px; }
+}
+@media (max-height: 650px) and (max-width: 619px) {
+  #arena[data-combat="targets"] { grid-template-rows: 48px 44px minmax(0,1fr) 200px 16px; }
+}
+@media (max-height: 520px) and (min-width: 620px) {
+  #arena[data-combat="targets"] { grid-template-rows: 46px 44px minmax(0,1fr) 108px 16px; }
+  #arena[data-combat="targets"] .command-dock { padding-top: 6px; padding-bottom: 6px; }
+}

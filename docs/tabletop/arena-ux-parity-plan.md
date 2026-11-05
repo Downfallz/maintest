@@ -71,7 +71,7 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Tempo consequences | Short rule and compact cost/critical spell reference | AU5 implemented: per-creature energy, cost/critical reference and labelled catalogue fallback | Instinct/Precision tradeoff and expandable spell details; AU5 |
 | Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Partial: order, sides, tempo and current marker; rendered strip omits initiative/roll details | Inspectable order and tie explanation, completed/upcoming states; AU11 |
 | Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Compact type groups, family accents, explicit full-details mode and stable reference browsing implemented (AU9) | Selected-target preview remains AU10 |
-| Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Legal targets, selected count and confirmation exist; guidance is not rendered | Compact confirmation summary and current-board estimates; AU10 |
+| Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | AU10 implemented: current-question costs, selected-target estimates, caster effects and explicit fallback | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
 | Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Stats, condition source/duration and known spell names exist; no full spell faces or mutation ownership display | Rich reference anchored to the inspected creature; AU12 |
 | Match conclusion | Victory/Defeat/Draw, reason, survivors/HP, full replay (#407/#377) | Correct outcome/concession/replay exist, relatively plain result panel | Recover useful final summary and console/replay entry points; AU13 |
@@ -260,7 +260,7 @@ No implementation slice is completed by this document.
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
 | AU9 | Compact grouped spellbook with stable selection and full details (implemented) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
-| AU10 | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
+| AU10 (implemented) | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
 | AU11 | Readable initiative/ties and reveal summary | `timeline.js`, `ties.js`, planning + scene overlays | AU5, AU1 |
 | AU12 | Creature inspector with public mutations, spell details and effect sources | `live.ts`, inspection surface, cards/conditions | AU8–AU11 |
 | AU13 | Result/replay and missing service-tool parity after A8 reconciliation | Match UI, seat discovery, existing push/notes/feedback/session helpers | AU6, AU12; reconcile #437 |
@@ -457,6 +457,13 @@ Acceptance: enemy, ally, self, multi-target and no-target spells; too few target
 stun/refusal; resource change; unseen opponent choices and at-activation versus hidden-intent.
 Legal/selected/unavailable targets are distinguishable by text/shape as well as colour, with at least
 44px touch controls and adequate separation. Selection never auto-submits.
+
+Implemented by `table/arena-targets.js` and `arena/src/target-preview.ts` through the existing combat
+controller. Cost and effects come only from this asking's guidance. The fixed confirmation remains outside
+the scrollable estimate; selected targets group equal effects and caster effects appear once. Text/shape
+cues distinguish target states. Missing outcomes and targetless caster guidance stay explicitly unavailable;
+no catalogue calculation fills gaps. Hidden plans retain the existing intent protocol. Unit, responsive
+browser and real-engine combat tests cover the presentation and command boundary.
 
 ### AU11 — Explain the order and the dice
 

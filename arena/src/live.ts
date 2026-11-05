@@ -1,3 +1,4 @@
+import { arenaTargetState } from '../../table/arena-targets.js';
 import { createArenaUpkeep } from '../../table/arena-upkeep.js';
 import { upkeepControls } from './upkeep';
 import { createArenaPlayback } from '../../table/arena-playback.js';
@@ -199,12 +200,14 @@ function render() {
     }
     node.dataset.form = one.form;
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
-    const targetable = targeting && frame.targets.includes(one.id);
+    const targetState = arenaTargetState(action, one.id);
+    const targetable = Boolean(targetState?.selectable);
+    if (targetState) node.dataset.targetState = targetState.state; else delete node.dataset.targetState;
     if (targetable) node.classList.add('is-targetable');
     node.disabled = !ready || (targeting && (!targetable || !action.canEdit));
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
-    const condition = tagOf(one);
+    const condition = targetState?.label ?? tagOf(one);
     let effect = node.querySelector<HTMLElement>('.creature-effect');
     if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
     const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
@@ -215,7 +218,7 @@ function render() {
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. ${targeting ? 'Select target.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());
