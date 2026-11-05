@@ -64,7 +64,7 @@ Invitation acceptance stays at `/play`.
 401/403 clears private content; a transient failure labels the last snapshot stale. A hidden page
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
 accepted seat as arrived, which may start a waiting match.
-The compiled bundle is about 1.2 MB uncompressed. Four creature WebPs total 1,212,726 bytes,
+The live bundle measured 1,556,136 bytes uncompressed in AU14 (425,910 with local gzip). Four creature WebPs total 1,212,726 bytes,
 plus the eclipse background; the old three-frame sheet is no longer loaded. Device performance and transfer compression remain to be measured before release.
 
 ## Verify
@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js arena-inspection.spec.js arena-services.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js arena-inspection.spec.js arena-services.spec.js arena-parity.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -516,11 +516,13 @@ Late service replies cannot repaint or submit additional requests for a replaced
 
 Playtest notes use `notes.js` and the authenticated `/api/notes` route: Lookup/Misplay during recorded play,
 with a comment box after the match. Unrecorded sessions and operator replay show no note controls. Double
-clicks are fenced; failures are visible; an unsaved draft clears when the seat is suspended or revoked.
+clicks are fenced; failures are visible. An unsaved comment survives same-seat suspension/reconnection;
+it clears for another table/seat, revoked access or a loaded unrecorded view.
 
 One verified accepted seat resumes directly. Two held seats still require viewpoint selection; explicitly
 switching viewpoints always clears the board and asks. Linked invitations still go to classic acceptance,
-and account sign-in, revocation, recovery, rollout preference and asset budgets retain the A8 boundaries.
+and existing account sign-in and revocation remain authoritative. A8 #437 is still open: its rollout
+preference, refined renderer recovery and asset-budget enforcement are not yet on main.
 
 `arena-services.spec.js` covers result variants, empty replay, seat selection/privacy, recording-only notes,
 notification availability/opt-in/testing, haptics, access loss and short viewports. Controller tests cover
@@ -529,3 +531,17 @@ the final scorecard and replay frame to the engine, save notes to `notes.jsonl`,
 
 Captures: [desktop result (browser fixture)](../docs/tabletop/images/arena-services/desktop-fixture.jpg) ·
 [phone result (real engine, at-activation)](../docs/tabletop/images/arena-services/phone-real-host.jpg).
+
+
+## AU14 acceptance
+
+[The acceptance record](../docs/tabletop/arena-ux-acceptance.md) reconciles the merged UX and art slices,
+links every gap to regression evidence, and supplies current real-host desktop/phone captures.
+`arena-parity.spec.js` adds a Tab/Enter/Home/Escape journey through opening energy, mutation comparison,
+editable team tempos, targeting and recorded damage. It also checks primary controls and scrolling
+references at 320×568, 844×390 and 720×500. The last size is a 200% desktop reflow proxy, not native zoom.
+`arena.loop.js` captures edited tempos and later spellbooks during the existing complete actual-host games.
+
+A8 #437 remains open: its release-profile checks, rollout preference and enforced byte budgets must be
+rebased and validated separately. Physical devices, native zoom, screen readers and a first-time human
+playtest are explicit open gates; automated evidence does not certify them or switch the default client.

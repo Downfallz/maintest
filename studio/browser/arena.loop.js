@@ -41,7 +41,15 @@ async function answerPlanning(page, view, capture) {
   else if (view.waitingFor === 'Speed') {
     const count = await page.locator('[data-tempo-tab]').count();
     for (let index = 0; index < count; index++) await page.locator('[data-speed="Standard"]').click();
-    if (capture) await capture('team-tempos');
+    if (capture) {
+      await page.locator('[data-tempo-tab]').first().click();
+      await page.locator('[data-speed="Quick"]').click();
+      await expect(page.locator('[data-tempo-tab]').first()).toContainText('Instinct');
+      await page.locator('[data-tempo-tab]').first().click();
+      await page.locator('[data-speed="Standard"]').click();
+      await expect(page.locator('#planning-confirm')).toHaveText(`Confirm tempos · ${count}/${count}`);
+      await capture('team-tempos');
+    }
   }
   else await page.locator('#planning-keep').click();
   await confirm(page, '#planning-confirm');
@@ -51,9 +59,10 @@ function castable(view) {
   if (view.waitingFor === 'Action') return view.options.action.spells.map(one => one.spell);
   return view.options.intent.creatures.find(one => one.creature === view.waitingCreature).castableSpells;
 }
-async function answerCombat(page, view) {
+async function answerCombat(page, view, capture) {
   const kind = view.waitingFor;
   await page.locator('#combat-open').click(); let spell;
+  if (capture && kind !== 'Target') await capture('late-spellbook');
   if (kind !== 'Target') { spell = castable(view).find(id => id.includes('heavy_strike')) ?? castable(view)[0]; await page.locator(`[data-spell="${spell}"]`).click(); }
   if (kind !== 'Intent') {
     const legal = (kind === 'Target' ? view.options.target : view.options.action.spells.find(one => one.spell === spell)).legalTargets;
@@ -61,7 +70,35 @@ async function answerCombat(page, view) {
   }
   await confirm(page, kind === 'Intent' ? '#combat-declare' : '#combat-confirm');
 }
-const answer = (page, view, capture) => ['Evolution', 'Speed', 'TieOrder'].includes(view.waitingFor) ? answerPlanning(page, view, capture) : answerCombat(page, view);
+// Auto settles events received under a command dialog; their upkeep remains readable in the
+// standalone notice. A round can reach the page in either shape, depending on response timing.
+// The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
+async function readTurnover(page, round, info) {
+  const paced = page.locator('#playback-receipt'), notice = page.locator('#upkeep-dialog');
+  await expect(paced.or(notice).filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+  if (await notice.isVisible()) {
+    await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
+    await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
+    await expect(page.locator('#upkeep-body')).toContainText('energy');
+    await fitsViewport(page, '#upkeep-close');
+    await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
+    await page.locator('#upkeep-close').click();
+  } else {
+    await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
+    await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
+    await expect(page.locator('#receipt-sections')).toContainText('energy');
+    await expect(page.locator('.creature')).toHaveCount(0);
+    await expect(notice).toBeHidden();
+    await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
+    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+  }
+}
+function captureSubject(view) {
+  if (view.waitingFor === 'Evolution') return 'mutation-cards';
+  if (view.waitingFor === 'Speed') return 'team-tempos';
+  return 'late-spellbook';
+}
+const answer = (page, view, capture) => ['Evolution', 'Speed', 'TieOrder'].includes(view.waitingFor) ? answerPlanning(page, view, capture) : answerCombat(page, view, capture);
 // Every write names an asking this page had already acknowledged, and no asking is answered twice.
 function expectWritesFenced(writes) {
   for (const write of writes) expect(write.seen).toContain(write.command.asked);
@@ -74,7 +111,7 @@ async function reviewAndReplay(page, latest, info, actions) {
   const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
   expect(recent.length).toBeGreaterThan(1);
   for (const entry of recent) await expect(page.locator(`#history-list [data-sequence="${entry.sequence}"]`)).toHaveCount(1);
-  const last = recent.at(-1), detail = page.locator(`#history-list [data-sequence="${last.sequence}"]`);
+  const last = recent.findLast(entry => entry.event.appliedOutcomes?.some(one => one.kind === 'DamageOutcome' && one.amount > 0)) ?? recent.at(-1), detail = page.locator(`#history-list [data-sequence="${last.sequence}"]`);
   await detail.locator('summary').click(); await expect(detail).toContainText(/Targets:|No targets/);
   await fitsViewport(page, '#history-close');
   await detail.getByRole('button', { name: 'Inspect event' }).click();
@@ -163,7 +200,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
     await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
     await expect(page.locator('#upkeep-body .upkeep-rows li')).toHaveCount(6);
-    await expect(page.locator('#upkeep-body')).toContainText('+2 energy');
+    await expect(page.locator('#upkeep-body')).toContainText('+2 energy · 0 → 2');
     expect(shown).toEqual([]); expect(writes).toEqual([]);
     await fitsViewport(page, '#upkeep-close');
     await page.screenshot({ path: info.outputPath('upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
@@ -178,19 +215,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.locator('#help-close').click();
     const taught = new Set(['Evolution']);
     await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
-    let captured = false; const orderRounds = new Set();
+    const captured = new Set(), orderRounds = new Set(); let spellbookRound = 0;
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
       if (view.board.roundNumber > upkeepRound) {
-        await expect(page.locator('#playback-receipt')).toBeVisible({ timeout: 20000 });
-        await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
-        await expect(page.locator('#round-number')).toHaveText(String(view.board.roundNumber).padStart(2, '0'));
-        await expect(page.locator('#receipt-sections')).toContainText('energy');
-        await expect(page.locator('.creature')).toHaveCount(0);
-        await expect(page.locator('#upkeep-dialog')).toBeHidden();
-        await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
-        await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+        await readTurnover(page, view.board.roundNumber, info);
         upkeepRound = view.board.roundNumber;
       }
       if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
@@ -210,8 +240,14 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await expect(page.locator('#help-objective')).not.toBeEmpty();
         await page.locator('#help-close').click(); taught.add(view.waitingFor);
       }
-      await answer(page, view, !captured && view.waitingFor === 'Evolution' ? async name => {
-        await fitsViewport(page, '#planning-confirm, #planning-close'); await page.screenshot({ path: info.outputPath(`${name}.jpg`), type: 'jpeg', quality: 85 }); captured = true;
+      const subject = captureSubject(view);
+      const captureNow = subject === 'late-spellbook'
+        ? view.board.roundNumber >= 3 && view.board.roundNumber > spellbookRound
+        : !captured.has(subject);
+      await answer(page, view, captureNow ? async name => {
+        await fitsViewport(page, '#planning-confirm, #planning-close, #combat-dialog-close');
+        await page.screenshot({ path: info.outputPath(`${name}.jpg`), type: 'jpeg', quality: 85 }); captured.add(name);
+        if (name === 'late-spellbook') spellbookRound = view.board.roundNumber;
       } : null);
       await expect.poll(() => latest?.waitingAsked, { timeout: 10000 }).not.toBe(view.waitingAsked);
     }
@@ -219,6 +255,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     if (declaration === 'hidden-intent') { expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2); }
     else {
       expect(latest.board.roundNumber).toBeGreaterThan(2);
+      expect([...captured]).toEqual(expect.arrayContaining(['mutation-cards', 'team-tempos', 'late-spellbook']));
       expect([...latest.board.allies, ...latest.board.enemies].some(one => !one.isAlive)).toBe(true);
       expect(writes.filter(one => one.command.kind === 'Evolution' && one.command.tier).length).toBeGreaterThan(2);
     }
