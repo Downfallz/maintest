@@ -596,7 +596,11 @@ command drafts and never sends a decision or `shown`. It is separate from animat
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. AU3a adds recorded ordinary-energy gains,
 including zero and before/after values, to new matches. Classic replay also separates recorded ordinary
-energy from ongoing ticks; neither step adds a nominal catalogue allowance. Automatic upkeep receipts, filters and earlier
+energy from ongoing ticks; neither step adds a nominal catalogue allowance. AU3b presents a grouped receipt
+once arrivals clear and at observed round transitions, after playback and before tips. `arena-upkeep.js`
+shares recorded facts with round review and replay, retains zero gains/heals, and labels absent ordinary
+energy as unknown. Inspection shows current durations separately. A bounded tab-local round marker prevents
+repeat announcements after reconnect/reload, without persisting event facts. Filters and earlier
 round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
 
 The arena's **Help** dialog explains the current objective and the round flow, including the configured

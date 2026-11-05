@@ -1,4 +1,5 @@
-import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText, roundUpkeep } from './feed.js';
+import { upkeepReceipt, missingRoundEnergy } from './arena-upkeep.js';
+import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText } from './feed.js';
 import { playbackBoard } from './replay.js';
 import { livePresentation } from './arena-live.js';
 import { outcomeText } from './outcome.js';
@@ -6,9 +7,10 @@ import { outcomeText } from './outcome.js';
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
   return rounds.flatMap(round => {
-    const upkeep = roundUpkeep(entries, round);
-    const ticks = upkeep?.rows.filter(tick => tick.amount > 0) ?? [];
-    const rows = upkeep ? [`Round ${round} · ${ticks.length ? turnoverText({ interlude: 'upkeep', ticks }) : 'Upkeep · No ongoing ticks applied'}`] : [];
+    const upkeep = upkeepReceipt(entries, round, board);
+    const facts = upkeep ? [upkeep.energyNote, ...upkeep.energy.map(row => `${row.label}: ${row.text}`),
+      ...upkeep.ongoing.map(row => `${row.label}: ${row.text}`), ...(upkeep.ongoing.length ? [] : [upkeep.ongoingNote])].filter(Boolean) : [];
+    const rows = upkeep ? [`Round ${round} · Upkeep · ${facts.join('; ')}`] : [];
     const aftermath = turnoverSteps(entries, round, board).filter(step => step.interlude === 'aftermath');
     rows.push(...aftermath.map(step => `Round ${round} · ${turnoverText(step)}`));
     if (entries.some(entry => entry.event?.kind === 'RoundEnded' && (entry.event.roundId ?? entry.round) === round)) rows.push(`Round ${round} · Aftermath complete`);
@@ -19,8 +21,8 @@ export function roundNotes(entries, board) {
 export function replayText(action, catalogue) {
   if (action.ordinaryEnergy) return turnoverText(action);
   if (action.interlude === 'upkeep') {
-    const ticks = action.ticks.filter(tick => tick.amount > 0);
-    return ticks.length ? turnoverText({ ...action, ticks }) : 'Upkeep · No ongoing ticks applied';
+    const detail = action.ticks.length ? turnoverText(action) : 'Upkeep · No ongoing ticks applied';
+    return action.missingOrdinaryEnergy ? `${missingRoundEnergy} ${detail}` : detail;
   }
   if (action.interlude === 'aftermath') return action.ended.length || action.immune.length ? turnoverText(action) : 'Aftermath · Round complete';
   if (action.interlude === 'purchases') {
