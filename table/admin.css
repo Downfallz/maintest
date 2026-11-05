@@ -6,7 +6,7 @@
 .table-card h2 { font-size: 15px; overflow-wrap: anywhere; }
 .table-card dl { grid-template-columns: auto 1fr; }
 .table-card .code { font-size: 20px; letter-spacing: 3px; color: var(--gold); }
-.table-card a, .session-list a { color: var(--ally); }
+.table-card a, .session-list a { color: var(--gold); }
 .table-card .close, .secondary, .danger { margin-top: 12px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; }
 .danger { border-color: var(--refused); color: var(--refused); }
 button:disabled { opacity: 0.5; }

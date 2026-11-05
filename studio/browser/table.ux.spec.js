@@ -114,7 +114,7 @@ test('interaction transitions use the motion tokens, and reduced motion makes ev
 // selected node of the mutation tree keeps its family's colour -- and a pointer that can hover lifts a button.
 test('pressed buttons are marked without overriding a component\'s own selected colour', async ({ page }) => {
   await expect(page.locator('#tab-board')).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.locator('#tab-board').evaluate(node => getComputedStyle(node).borderBottomColor)).toBe('rgb(231, 195, 123)');
+  expect(await page.locator('#tab-board').evaluate(node => getComputedStyle(node).borderBottomColor)).toBe('rgb(231, 193, 131)');
 
   await page.locator('#hand-talents').click();
   const node = page.locator('#mat .tree-node').first();
@@ -309,7 +309,7 @@ test('spell rows stay put between the tap that chooses and the tap that declares
     expect(Math.abs((await page.locator('#decision').boundingBox()).height - headerBefore.height)).toBeLessThan(2);
   }
   // Marked where it is (UX 03): a gold ring and glow, no lift.
-  expect(await pummel.evaluate(node => getComputedStyle(node).boxShadow)).toContain('rgb(231, 195, 123)');
+  expect(await pummel.evaluate(node => getComputedStyle(node).boxShadow)).toContain('rgb(231, 193, 131)');
   expect(await pummel.evaluate(node => getComputedStyle(node).transform)).toBe('none');
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
   await pummel.click();

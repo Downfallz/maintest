@@ -2,7 +2,7 @@
    shell its tokens, header, cards and tables; this file is written for a phone first and widens from there:
    below 900px the list and the panels are sheets over one column, and the actions sit in a bar along the
    bottom where a thumb is; from 900px the list is a sidebar, the panels are cards, and the actions sit by the
-   title. Everything is drawn from the tokens below, so the dark scheme at the end only moves those. */
+   title. Colour tokens come from the shared branding block in viewer.css. */
 
 
 
@@ -633,43 +633,10 @@ details[open] summary { margin-bottom: 6px; }
   .fields { gap: 16px 28px; }
 }
 
-/* ---------- the same page after dark ---------- */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --ink: #e7ebf2;
-    --muted: #9ea9b9;
-    --line: #2a3140;
-    --paper: #0f1218;
-    --paper-glass: rgb(15 18 24 / 84%);
-    --card: #161a22;
-    --sunken: #1f2430;
-    --accent: #7aa7ff;
-    --accent-ink: #0b1220;
-    --accent-wash: #1c2740;
-    --accent-strong: #99bbff;
-    --ok: #4ade80;
-    --ok-wash: #122619;
-    --warn: #fbbf24;
-    --warn-wash: #2b2211;
-    --bad: #f87171;
-    --bad-wash: #2b1719;
-    --health-low: #f87171;
-    --chip-bg: #263054;
-    --chip-ink: #c7d2fe;
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
-    --shadow-2: 0 4px 14px rgb(0 0 0 / 50%);
-    --shadow-sheet: 0 -12px 40px rgb(0 0 0 / 60%);
-    --shadow-bar: 0 -1px 0 var(--line), 0 -6px 20px rgb(0 0 0 / 35%);
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%239ea9b9' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  }
-  .scrim { background: rgb(0 0 0 / 55%); }
-}
+.scrim { background: rgb(0 0 0 / 55%); }
 
 /* The field guide: consultation first, the authoring tools one deliberate step away. */
 :root {
-  --health-low: #b91c1c;
   --shadow-1: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 5%);
   --shadow-2: 0 4px 12px rgb(16 24 40 / 10%), 0 1px 3px rgb(16 24 40 / 6%);
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%235b6776' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -678,25 +645,6 @@ details[open] summary { margin-bottom: 6px; }
   font-size: 15px;
   -webkit-text-size-adjust: 100%;
   color-scheme: dark;
-  --ink: #edf2ed;
-  --muted: #a1b1aa;
-  --line: #2c3a36;
-  --paper: #101719;
-  --paper-glass: rgb(16 23 25 / 94%);
-  --card: #192323;
-  --sunken: #22302d;
-  --accent: #c3f185;
-  --accent-ink: #182216;
-  --accent-wash: #293923;
-  --accent-strong: #d8ffa8;
-  --ok: #b9e985;
-  --ok-wash: #253322;
-  --warn: #f5c97e;
-  --warn-wash: #342d20;
-  --bad: #ffa797;
-  --bad-wash: #392622;
-  --chip-bg: #26382e;
-  --chip-ink: #d3eeae;
   --radius: 18px;
   --radius-sm: 12px;
   --bar: 68px;
@@ -764,13 +712,13 @@ header {
   border: 0;
   min-inline-size: 0;
   box-shadow: var(--shadow-bar);
-  background: #152020;
+  background: var(--panel);
   padding: 6px 8px calc(6px + var(--safe));
   gap: 4px;
   height: calc(var(--bar) + var(--safe));
 }
 .toolbar .tool { border-radius: 12px; font-size: 11px; min-height: 48px; }
-.toolbar .tool[aria-pressed="true"], .toolbar .tool[aria-expanded="true"] { color: var(--accent); background: #263323; box-shadow: none; }
+.toolbar .tool[aria-pressed="true"], .toolbar .tool[aria-expanded="true"] { color: var(--accent); background: var(--accent-wash); box-shadow: none; }
 #browse { display: flex; }
 main {
   display: block;
@@ -792,11 +740,11 @@ main {
 .codex h3 { font-size: 19px; margin: 0; }
 .eyebrow { color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: .17em; text-transform: uppercase; margin: 0 0 12px; }
 .codex-copy { color: var(--muted); font-size: 15px; line-height: 1.65; max-width: 55ch; margin: 0; }
-.codex-hero { position: relative; overflow: hidden; border: 1px solid #374534; background: radial-gradient(ellipse at 110% -50%, #57703b 0, #29392c 42%, #1b2926 76%); border-radius: 24px; padding: 24px 20px 20px; }
-.codex-hero::after { content: '◈'; position: absolute; right: -42px; top: -46px; font-size: 210px; color: #c3f185; opacity: .07; pointer-events: none; }
+.codex-hero { position: relative; overflow: hidden; border: 1px solid var(--line); background: radial-gradient(ellipse at 110% -50%, var(--accent-wash) 0, var(--raised) 42%, var(--panel) 76%); border-radius: 24px; padding: 24px 20px 20px; }
+.codex-hero::after { content: '◈'; position: absolute; right: -42px; top: -46px; font-size: 210px; color: var(--gold); opacity: .07; pointer-events: none; }
 .codex-hero h2 { max-width: 10ch; font-size: clamp(36px, 7vw, 76px); line-height: .99; letter-spacing: -.065em; margin: 18px 0; }
 .codex-hero .codex-copy { max-width: 33ch; }
-.hero-stats { display: flex; gap: 32px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #3b4939; }
+.hero-stats { display: flex; gap: 32px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
 .codex-stat { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .codex-stat strong { font-size: 24px; font-weight: 650; letter-spacing: -.04em; line-height: 1.1; overflow-wrap: anywhere; }
 .codex-stat span { color: var(--muted); font-size: 12px; }
@@ -820,13 +768,13 @@ main {
 .tier-number { font-size: 11px; color: var(--family, var(--accent)); border: 1px solid var(--line); width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; }
 .package-grid, .spell-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .package-tile, .spell-tile { position: relative; display: flex; flex-direction: column; width: 100%; text-align: left; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 19px; cursor: pointer; min-width: 0; transition: border-color 150ms, background 150ms, transform 150ms; }
-.package-tile:hover, .spell-tile:hover { background: #202e2b; border-color: var(--family, var(--accent)); }
+.package-tile:hover, .spell-tile:hover { background: var(--raised); border-color: var(--family, var(--accent)); }
 .package-tile:active, .spell-tile:active { transform: scale(.985); }
 .package-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .tier-label { color: var(--family, var(--accent)); font-size: 9px; letter-spacing: .15em; font-weight: 750; }
 .initiative-bonus { color: var(--muted); font-size: 11px; }
 .package-name { font-size: 21px; letter-spacing: -.02em; margin: 14px 0 8px; padding-right: 20px; }
-.package-spells { font-size: 13px; line-height: 1.55; color: #d4ddd6; }
+.package-spells { font-size: 13px; line-height: 1.55; color: var(--ink); }
 .package-parent { color: var(--muted); font-size: 11px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
 .tile-arrow { position: absolute; right: 19px; top: 47px; color: var(--family, var(--accent)); font-size: 21px; }
 .spell-tile-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
@@ -839,7 +787,7 @@ main {
 .value-reading { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .value-reading summary { cursor: pointer; font-weight: 650; font-variant-numeric: tabular-nums; }
 .value-reading p { margin: 10px 0 0; font-size: 13px; line-height: 1.55; }
-.spell-summary { font-size: 13px; line-height: 1.6; color: #cedbd3; margin-bottom: 20px; }
+.spell-summary { font-size: 13px; line-height: 1.6; color: var(--ink); margin-bottom: 20px; }
 .spell-meta { margin-top: auto; color: var(--muted); font-size: 11px; }
 .library-controls { position: sticky; top: 76px; z-index: 2; background: var(--paper-glass); padding: 12px 0; backdrop-filter: blur(14px); }
 .codex-search { width: 100%; padding: 15px 16px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 14px; font: inherit; font-size: 16px; }
@@ -862,7 +810,7 @@ main {
 .reader-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 18px; padding: 24px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
 .reader-stats .codex-stat strong { font-size: 22px; }
 .reader-links { display: flex; flex-wrap: wrap; gap: 10px; }
-.codex-link { color: var(--accent); background: var(--accent-wash); border: 1px solid #455138; padding: 12px 18px; min-height: 44px; border-radius: 12px; cursor: pointer; }
+.codex-link { color: var(--accent); background: var(--accent-wash); border: 1px solid var(--line); padding: 12px 18px; min-height: 44px; border-radius: 12px; cursor: pointer; }
 .missing-reference { color: var(--warn); }
 .effect-row { display: flex; gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; background: var(--card); }
 .effect-symbol { color: var(--accent); }
@@ -936,7 +884,7 @@ main {
   height: 44px;
 }
 .tools-grid { display: grid; gap: 10px; padding-bottom: 20px; }
-.tool-card { text-align: left; padding: 20px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: 14px; background: #202d2a; color: var(--ink); cursor: pointer; }
+.tool-card { text-align: left; padding: 20px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); color: var(--ink); cursor: pointer; }
 .tool-card:hover { border-color: var(--accent); }
 .tool-card strong { font-weight: 550; font-size: 16px; }
 .tool-card span { font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -1050,3 +998,6 @@ main {
   .strategy-effects { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .strategy-results { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
+
+/* The guide shares the arena's copper detail and eclipse-gold actions. */
+.codex-hero > .eyebrow { color: var(--brand-ember); }

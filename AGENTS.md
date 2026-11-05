@@ -57,7 +57,8 @@ tests/
   DownfallArena.Cli.Tests           Host tests: the console commands and the studio's HTTP host.
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
-  art/          Creature art direction (creature-art-direction.md), the ART-2 reference intake
+  art/          Official UI palette (branding.md, branding.css; regenerate with `node scripts/sync-branding.mjs`),
+                creature art direction (creature-art-direction.md), the ART-2 reference intake
                 (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md), playback polish (arena-polish.md) and pipeline follow-ups.
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
