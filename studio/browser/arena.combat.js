@@ -86,6 +86,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         for (const id of targets) await page.locator(`[data-creature="${id}"]`).click();
         if (!captured) { await page.screenshot({ path: info.outputPath(`${declaration}-targets.jpg`), type: 'jpeg', quality: 85 }); captured = true; }
       }
+      const selectedSpell = spell ?? view.options.target?.spell;
+      const guide = view.guidance?.find(one => one.spell === selectedSpell);
+      const estimate = page.locator(view.waitingFor === 'Intent' ? '#intent-preview' : '#combat-preview');
+      await expect(estimate).toContainText('Estimate');
+      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} after cost`);
+      else await expect(estimate).toContainText('Preview unavailable for this question');
       const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator(view.waitingFor === 'Intent' ? '#combat-declare' : '#combat-confirm').click();
       expect((await response).status()).toBe(204);

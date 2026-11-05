@@ -1,3 +1,5 @@
+import { arenaTargetPreview } from '../../table/arena-targets.js';
+import { targetPreviewControls } from './target-preview';
 import { createArenaCombat } from '../../table/arena-combat.js';
 import { cardTitle, cardsById } from '../../table/card.js';
 import { phaseLabel, tempoLabel } from '../../table/terms.js';
@@ -13,6 +15,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
   const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const dialog = el<HTMLDialogElement>('combat-dialog');
   const spellbook = spellbookControls(controller);
+  const targetPreview = targetPreviewControls('combat-preview'), intentPreview = targetPreviewControls('intent-preview');
   const click = (id: string, action: () => void) => el(id).addEventListener('click', action);
   click('combat-open', () => { beforeOpen(); controller.open(); });
   click('combat-back', () => controller.back());
@@ -34,6 +37,9 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     el<HTMLButtonElement>('combat-open').disabled = model.sending || !model.online;
     el('combat-open').textContent = model.waitingFor === 'Target' ? 'Choose targets' : 'Choose spell';
     el('combat-targets').hidden = !targeting;
+    const preview = arenaTargetPreview(model);
+    targetPreview.render(targeting ? preview : null);
+    intentPreview.render(choosing && model.waitingFor === 'Intent' ? preview : null);
     el('combat-error').textContent = model.error; el('combat-error').hidden = !model.error || choosing;
     el('combat-dialog-error').textContent = model.error; el('combat-dialog-error').hidden = !model.error;
     el<HTMLButtonElement>('combat-dialog-close').disabled = model.sending;

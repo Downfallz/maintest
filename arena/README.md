@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -326,7 +326,7 @@ the reference and its local state. Nothing is persisted. Group/type fallback nev
 `arena-spellbook.spec.js` covers a late multiclass hand, long names, zero cost/no critical, unavailable and
 unknown cards, energy plans, full details, stable geometry/focus/scroll through polls, changed creatures,
 explicit confirmation, access loss and short portrait/landscape layouts. Existing combat and real-host
-journeys continue exercising the same decision protocol. AU10 owns selected-target previews.
+journeys continue exercising the same decision protocol. AU10 adds selected-target previews below.
 
 
 ## AU7: pace results and round turnover
@@ -401,6 +401,32 @@ Enemy reveals contribute to the public receipt but never to the player's badges.
 lifetime. `arena-growth.spec.js` tests privacy, draft preservation, in-flight acknowledgement fences,
 reload/access loss, keyboard and responsive layouts. `arena.growth.js` buys a real host offer and
 checks its public tree, exact catalogue spell names and read-only access on desktop and phone.
+
+
+## AU10: current-question target estimates
+
+The target dock keeps the creature/spell, legal count, change/cancel controls and explicit confirmation
+fixed beside a keyboard-scrollable estimate. Only this asking's host guidance supplies cost, energy after
+cost, plain/critical outcomes and caster effects. Selected legal targets with equal outcomes group together;
+caster effects appear once. Zero critical chance at the selected tempo suppresses impossible critical rows.
+Hidden intentions show the cost and explain that targeting happens at resolution; they never bind targets.
+
+Missing guidance, missing target outcomes and targetless caster previews have explicit unavailable messages;
+a host's explicit empty caster outcome reads "No effect on caster" instead.
+A host refusal replaces hypothetical effects with its reason. Empty casts advertise no effects. Predictions
+are labelled estimates before caps/stacking; recorded History remains authoritative for actual outcomes.
+The preview does not veto or extend the host's offered commands. Legal, selected, unavailable and full
+multi-target states have text/shape cues as well as colour, without automatic submission. A stun shows
+only on the tag, so a stunned creature keeps "Stunned" behind its state's mark (`+ Stunned`); its spoken
+label carries both the condition and the state, without the marks. AU7's pacing row hides while targets are
+chosen: opening the choice settled playback and the host is waiting for this seat, so its height goes to the
+estimate; the pacing preference stays in Settings.
+
+`table/arena-targets.js` derives presentation from the combat controller; `src/target-preview.ts` updates
+text without moving confirmation or stealing focus/scroll. New questions, page hiding and access loss clear
+it. Tests cover host costs, zero critical, self/ally/enemy/multiple/no targets, missing data and refusal,
+resource/target changes, privacy cleanup, explicit writes and short portrait/landscape with enlarged text.
+Real-engine combat journeys verify the displayed cost against the seat response in both declaration modes.
 
 ## AU11: turn order and recorded dice
 

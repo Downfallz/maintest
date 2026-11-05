@@ -1,5 +1,6 @@
 import { askedKey, combatDecision, emptyCastAllowed } from './slot.js';
 import { decisionView } from './presentation.js';
+import { creatureLabel } from './arena-live.js';
 import { declarableSpells } from './hand.js';
 
 export function combatQuestion(view) {
@@ -30,7 +31,8 @@ export function createArenaCombat({ connection, onChange, visible = () => true }
     return { available: available(), opened, chosen, picked: [...picked], sending, error,
       waitingFor: latest?.waitingFor, actor: latest?.waitingCreature,
       reference: { energy: actor?.energy, round: latest?.board?.roundNumber, phase: latest?.board?.phase,
-        tempo: slot?.speed, turn, guidance: latest?.guidance ?? [] },
+        tempo: slot?.speed, turn, guidance: latest?.guidance ?? [],
+        creatures: [...(latest?.board?.allies ?? []), ...(latest?.board?.enemies ?? [])].map(one => ({ id: one.id, name: creatureLabel(latest.board, one.id) })) },
       question: key, spells: offeredForLatest(), known: actor?.knownSpells ?? [], short: options()?.unaffordableSpells ?? [],
       target, canEdit: editable(), canSubmit: editable() && combatDecision(view, chosen, picked) !== null,
       emptyCast: emptyCastAllowed(target?.legalTargets),
