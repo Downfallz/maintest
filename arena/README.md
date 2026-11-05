@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-growth.spec.js arena-targets.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -381,3 +381,34 @@ text without moving confirmation or stealing focus/scroll. New questions, page h
 it. Tests cover host costs, zero critical, self/ally/enemy/multiple/no targets, missing data and refusal,
 resource/target changes, privacy cleanup, explicit writes and short portrait/landscape with enlarged text.
 Real-engine combat journeys verify the displayed cost against the seat response in both declaration modes.
+
+## AU11: turn order and recorded dice
+
+**Order** opens a read-only reference from the compact activation strip; **Inspect turn order** is also
+available above a tie draft. It shows every host position, tempo band, initiative and recorded d20 chain,
+with explicit team labels and Completed / Now / Upcoming states. Defeated and stunned creatures stay in
+their slots with their status. Creature links open the existing inspection. The strip and reference use
+the presented board, so recorded replay retains its own round, order, rolls and cursor. Opening the
+reference during live action playback explicitly settles that queue, like History. Missing initiatives
+or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
+
+A newly observed public TimelineBuilt event queues one reveal summary. It waits for both teams' tie
+ordering, action playback and open dialogs/drafts to finish, then appears before the next first-use tip.
+Reading Order manually consumes that pending reveal. Initial load, reload/reconnect and recorded sessions
+are baselines, not a new announcement; duplicate events do not repeat it. Advancing beyond the round or
+losing the seat clears it. No reveal preference or private data is persisted. The History entries for
+TimelineBuilt and TiesOrdered retain their respective exact positions, initiatives and rolls, so the
+initial order cannot be mistaken for the final same-team choices.
+
+Tie groups explain their fixed team positions, the chosen occupant of each, and intervening opponent
+positions. Only offered group members can move; the existing planning controller still owns confirmation,
+acknowledgement and write fencing. A same-team tie with no recorded dice does not claim to have rolled.
+Open references retain the draft and focus and never acknowledge a covered question.
+
+`table/arena-order.js` holds the pure projections and reveal watermark; `src/order.ts` renders stable
+native controls. `arena-order.spec.js` covers private/unrevealed choices, interleaved and multiple ties,
+repeat reveals, cursor/condition updates, focus/scroll, lost access and small/landscape/enlarged text.
+Full real-host journeys check order/rolls against seat responses in both declarations and inspect a past
+round during match replay. Captures in `docs/tabletop/images/arena-order/` identify their data source.
+
+Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/arena-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/arena-order/phone-fixture.jpg).
