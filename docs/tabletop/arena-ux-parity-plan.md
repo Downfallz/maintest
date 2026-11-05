@@ -67,10 +67,10 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Activity console | Activity feed, last-action line, structured round recap and announcements | Last-action result plus upkeep/aftermath review; no unified chronological journal | Docked/drawer console with structured records; AU1/AU6 |
 | Mutation chooser | `evolutionButtons` / `packageCard`: offered cards, family colour, tags, spells, prerequisites, budget | Full nested `details` forest; data exists but useful choices compete with future nodes | Available-now cards first, reference tree second; AU4 |
 | Mutation reference | Inspectable tree outside purchase questions, ownership, paths, passives, shared picks | Tree mounted through Evolution planning controls; no equivalent persistent reference entry | Always-reachable read-only tree and unlock receipt; AU8 |
-| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | Explicitly one host-asked creature at a time; three buttons/confirm cycles for three creatures | Recover batch UX using existing sequential host protocol; AU5 |
-| Tempo consequences | Short rule and compact cost/critical spell reference | Rule sentence but no creature spell reference in tempo choices | Reference and clear Instinct/Precision tradeoff; AU5 |
+| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | AU5 implemented: editable team tabs, one frozen batch, explicit continuation after interruption | Sequential host protocol retained; AU5 |
+| Tempo consequences | Short rule and compact cost/critical spell reference | AU5 implemented: per-creature energy, cost/critical reference and labelled catalogue fallback | Instinct/Precision tradeoff and expandable spell details; AU5 |
 | Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Partial: order, sides, tempo and current marker; rendered strip omits initiative/roll details | Inspectable order and tie explanation, completed/upcoming states; AU11 |
-| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Catalogue cards and unavailable states exist; verbose list, one column on phone | Grouped compact spellbook with progressive detail; AU9 |
+| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Compact type groups, family accents, explicit full-details mode and stable reference browsing implemented (AU9) | Selected-target preview remains AU10 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Legal targets, selected count and confirmation exist; guidance is not rendered | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
 | Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Stats, condition source/duration and known spell names exist; no full spell faces or mutation ownership display | Rich reference anchored to the inspected creature; AU12 |
@@ -255,11 +255,11 @@ No implementation slice is completed by this document.
 | AU3a (implemented) | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b (implemented) | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 (implemented) | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
-| AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
-| AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
+| AU5 (implemented) | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
+| AU6 (implemented) | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering and recorded action boundaries | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 (implemented) | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
-| AU9 | Compact grouped spellbook with stable selection and full details | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
+| AU9 | Compact grouped spellbook with stable selection and full details (implemented) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
 | AU10 | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
 | AU11 | Readable initiative/ties and reveal summary | `timeline.js`, `ties.js`, planning + scene overlays | AU5, AU1 |
 | AU12 | Creature inspector with public mutations, spell details and effect sources | `live.ts`, inspection surface, cards/conditions | AU8–AU11 |
@@ -380,6 +380,11 @@ a lost response after acceptance; external answer; hidden tab mid-batch; seat/ro
 Compare the opposite seat's entire board, options, feed and asking before/after private choices.
 No “atomic” claim: interrupted batches reconcile, then require explicit user continuation.
 
+Implemented by `table/arena-tempo.js` and `arena/src/tempo.ts`, through the existing planning facade.
+[ADR 0135](../adr/0135-draft-team-tempos-before-sequential-confirmation.md) replaces the one-creature UI
+without changing the host protocol. Local drafts are never persisted; reload reconstructs accepted choices
+only. Focused controller/browser tests and real-host private-seat journeys cover the acceptance cases above.
+
 ### AU6 — Read the round and earlier attacks
 
 Add round/creature/team/event-kind filters, unread count, stable scroll, “Latest” and “Load earlier rounds”.
@@ -392,6 +397,11 @@ Acceptance: round rollover while reading; reload and earlier history; old read a
 filtered-empty state versus unavailable history; access loss clears details; a live question remains unacknowledged
 while covered by history. End-of-match journal includes the final attack.
 Keep DOM/memory bounded and measure a long session. Do not fetch another seat or an unrestricted trace.
+
+Delivered in `table/arena-history.js` and `arena/src/history.ts`: typed filters, explicit earlier-page
+reads through the selected seat's existing `history()`, structured action facts, Previous/Next and
+recorded Before/After inspection inside the journal. The arena underneath remains live; historical
+snapshots never supply commands. See [AU6 behavior, limits and captures](../../arena/README.md#au6-filter-and-inspect-match-history).
 
 ### AU7 — Let the player follow what happened
 
@@ -432,6 +442,12 @@ Show zero energy cost; omit meaningless zero critical badges.
 Acceptance: late multiclass spellbook, long names, expensive/unoffered cards, no critical, free spell,
 hidden-intent energy warning and unknown catalogue entry. Changing creature starts at its own reference
 position; a same-question poll preserves deliberate browsing. No second tap submits a spell accidentally.
+
+Implemented by `table/arena-spellbook.js` and `arena/src/spellbook.ts` through the existing combat
+controller. Served types/palette remain presentation-only; current host offers alone control eligibility.
+The reference preserves its DOM, focus and scroll through same-question reads and field-target round trips;
+a new question clears it. Full details exposes long names and complete card text, including unavailable
+cards. The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
 
 ### AU10 — Understand targets and cost before confirming
 

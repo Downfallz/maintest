@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js arena-growth.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-growth.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -93,8 +93,9 @@ Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
 `table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
-cards with explicit confirmation and a separate reference tree (AU4). Tempo confirms one creature at a time, with simultaneous reveal
-still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
+cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
+`table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
 finished recording using the same operator authorization as `/play?replay=...`.
@@ -121,8 +122,8 @@ is already there; otherwise **Latest** announces their count. First loads popula
 animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
 
 This implements AU1 of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
-Automatic upkeep is presented by AU3b below; older-round loading, filtering and
-links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
+Automatic upkeep is presented by AU3b below; AU6 adds older-round loading, filtering and
+recorded-event inspection below. The existing upkeep review remains available. This slice adds no domain
 rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
 read-only access, deduplication, scroll retention and clearing on access loss. The real-host complete-match
 journeys compare journal action identities against actual seat responses in both declaration modes.
@@ -154,7 +155,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below; batch tempos remain AU5.
+The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
 
 `arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -217,6 +218,48 @@ before answering and still verify that presentation sends no command or acknowle
 Captures: [real-host opening receipt, desktop](../docs/tabletop/images/arena-upkeep/desktop.jpg) ·
 [phone receipt with non-default/passive/zero fixture values](../docs/tabletop/images/arena-upkeep/phone-fixture.jpg).
 
+## AU6: filter and inspect match history
+
+History filters by loaded round, involved creature (caster or recipient), team and event kind, using
+public event fields rather than parsed narration. A filtered-empty result is distinct from no events,
+a failed history request or the beginning of available history. The header counts unread public events;
+Latest clears filters and returns to the recent window. Reading history never acknowledges a covered
+live question or submits a decision.
+
+**Inspect event** opens a separate read-only pane: caster/spell, targets/result, applied effects,
+dropped targets and recorded changes. Previous/Next follows the filtered events; Before/After displays
+sanitized creature stats and condition durations from that event's exact boundary snapshots. Missing
+snapshots are explicitly unavailable, even when current creature stats exist. The live battlefield
+underneath continues to update; the inspection stays on its selected event until the player navigates
+or returns to Latest. Closing returns focus and preserves the command draft. This is manual journal
+inspection; AU7 still owns playback pacing.
+
+**Load earlier rounds** explicitly calls the existing selected-seat `history()` read from zero. Its
+response only replaces the reading page: it cannot rewind the live cursor, board, options or playback.
+Requests are single-flight and generation-fenced after close, Latest, viewpoint/access loss and hiding.
+403/401 still clear the whole seat through the connection. No other seat or unrestricted trace is read.
+Unknown and unrevealed planning payloads are excluded before normalization; nothing is persisted.
+
+The live cache holds at most 200 events from the current/previous round; an open reading page holds at
+most another 200. A selected event is pinned within that page's cap across rollover. Polls preserve
+existing DOM nodes, disclosures, focus and scroll; older-page loading never auto-reads incoming events.
+At most 200 list rows and one inspection are rendered. Very large rounds may span multiple pages;
+filters describe the loaded page, not a whole-match server search.
+
+Long-session measurement on this workspace: **10,000 action events / 100 rounds / six creatures**,
+115 ms initial normalization, 64 ms earlier-page normalization. The serialized view model was
+1,130,268 bytes (including repeated references serialized as `rows` and `all`; this is not a heap
+measurement). Cache caps remain 200 + 200 regardless of session length. The existing full-history
+response was **19,268,091 bytes** in this synthetic case: the UI cache is bounded, but transfer and JSON
+parsing still scale with the entire feed. Pagination on the same seat-filtered endpoint is the measured
+follow-up for sessions of this size; it must retain the examined-entry cursor semantics and privacy fence.
+
+Validation includes late older reads after newer live events, reload, failed loading/retry, exhausted and
+filtered-empty states, stale response cancellation, pinned exact values after rollover, loss of access,
+200-row rendering, both declarations' final attacks, and the existing command/receipt/playback journeys.
+Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/images/arena-history-review/desktop.jpg) ·
+[phone, final attack from the real host](../docs/tabletop/images/arena-history-review/phone.jpg).
+
 ## AU4: compare offered mutations
 
 `Choose mutation` opens the host's available cards for the selected creature, with three columns on
@@ -243,6 +286,47 @@ chooser in complete real-host matches, including two-seat private choices.
 Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
 [phone](../docs/tabletop/images/arena-mutations/phone.jpg).
 
+## AU5: team tempo drafts
+
+**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
+return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
+critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
+The footer stays reachable while the choices and references scroll.
+
+`table/arena-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
+acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its
+write. A refusal, uncertainty or interruption stops automatic progress; accepted choices remain visible and
+continuation requires another explicit confirmation after a fresh seat read. Hidden pages, seat changes and
+reloads discard local drafts. No opponent choices or public history are altered before the host reveal.
+
+`arena-tempo.test.js` exercises protocol interleavings; `arena-tempo.spec.js` covers actual controls,
+references, errors, keyboard navigation, mobile layout and screenshots. `arena.loop.js` verifies full games
+in both declarations and opponent privacy across a partial batch, reload and completion on the real host.
+See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation.md).
+
+## AU9: compact grouped spellbook
+
+Combat choices group the current creature's known/offered spells by the served card type, with family
+accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
+and availability. Current question guidance supplies current chances and unavailable reasons when present;
+catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
+its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
+
+**Full details** switches the whole reference to complete names, targeting, target/caster effects and critical
+notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
+footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
+confirmation. Double-tapping a card never submits a spell.
+
+`table/arena-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
+update existing nodes, preserving focus, scroll, details mode and card positions. The same asking retains
+browsing when returning from field targets. A new asking, creature, seat, hidden page or access loss clears
+the reference and its local state. Nothing is persisted. Group/type fallback never guesses from effect prose.
+
+`arena-spellbook.spec.js` covers a late multiclass hand, long names, zero cost/no critical, unavailable and
+unknown cards, energy plans, full details, stable geometry/focus/scroll through polls, changed creatures,
+explicit confirmation, access loss and short portrait/landscape layouts. Existing combat and real-host
+journeys continue exercising the same decision protocol. AU10 owns selected-target previews.
 
 ## AU8: growth reference and new abilities
 

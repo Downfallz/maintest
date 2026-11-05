@@ -4,7 +4,7 @@ import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, invitationPlan, invitationText, spentLink } from './invitation.js';
 import { keyBytes, noticeButton, offerShown, pushSupported, sameKey, testReading, TAG } from './push.js';
-import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
+import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
 import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, matchReplay, readingSteps, resolvedSince, retainRoundEvents, roundEnergyText, roundRecap, roundUpkeep, stepStart, turnoverText } from './feed.js';
@@ -1685,8 +1685,7 @@ function speedSpell(state, spell, creature, current) {
   }
   const body = document.createElement('div');
   body.className = 'speed-spell-details';
-  const lines = [...cardDetails(card).map(row => row.text), card?.criticalNote, guide?.unavailableReason].filter(Boolean);
-  for (const text of lines) {
+  for (const text of referenceLines(card, guide)) {
     const line = document.createElement('p');
     line.textContent = text;
     body.append(line);

@@ -1,18 +1,18 @@
 import { createArenaCombat } from '../../table/arena-combat.js';
-import { cardCost, cardLines, cardTitle, cardsById } from '../../table/card.js';
+import { cardTitle, cardsById } from '../../table/card.js';
+import { phaseLabel, tempoLabel } from '../../table/terms.js';
+import { spellbookControls } from './spellbook';
 
 type Controller = ReturnType<typeof createArenaCombat>;
 type Model = ReturnType<Controller['model']>;
-export interface SpellCatalogue { cards?: { id: string; name: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string }[] }
+export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string }[] }
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.
 export function combatControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void = () => {}) {
   const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const dialog = el<HTMLDialogElement>('combat-dialog');
-  let listKey = '';
-  let listCatalogue: SpellCatalogue | null = null;
-  let buttons = new Map<string, HTMLButtonElement>();
+  const spellbook = spellbookControls(controller);
   const click = (id: string, action: () => void) => el(id).addEventListener('click', action);
   click('combat-open', () => { beforeOpen(); controller.open(); });
   click('combat-back', () => controller.back());
@@ -40,34 +40,16 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     el<HTMLButtonElement>('combat-cancel').disabled = model.sending;
     if (choosing) {
       el('combat-heading').textContent = `${name(model.actor)} · choose a spell`;
+      const context = model.reference;
+      el('combat-context').textContent = [context.round == null ? null : `Round ${context.round}`, phaseLabel(context.phase),
+        context.turn == null ? null : `Turn ${context.turn}`, context.tempo ? tempoLabel(context.tempo) : null,
+        context.energy == null ? 'Energy unavailable' : `${context.energy} energy`].filter(Boolean).join(' · ');
       el('combat-help').textContent = model.waitingFor === 'Action' ? 'Choose a spell, then select its targets on the field. Confirm to cast.' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
-      const ids: string[] = [...new Set<string>([...model.spells, ...model.known])];
-      // The catalogue cannot change while the host runs: its identity is enough, serialising it on every poll is not.
-      const nextKey = JSON.stringify([model.question, ids]);
-      if (nextKey !== listKey || catalogue !== listCatalogue) {
-        listKey = nextKey; listCatalogue = catalogue; buttons = new Map();
-        el('combat-spells').replaceChildren(...ids.map(id => {
-          const card = cards.get(id);
-          const node = document.createElement('button'); node.type = 'button'; node.className = 'combat-spell'; node.dataset.spell = id;
-          const heading = document.createElement('strong'); heading.textContent = cardTitle(card) || id;
-          const cost = document.createElement('span'); cost.className = 'spell-cost'; cost.textContent = cardCost(card) ? `${cardCost(card)} energy` : '';
-          const detail = document.createElement('span'); detail.className = 'spell-detail'; detail.textContent = cardLines(card).join(' · ');
-          const availability = document.createElement('span'); availability.className = 'spell-availability';
-          node.append(heading, cost, detail, availability);
-          node.addEventListener('click', () => controller.choose(id)); buttons.set(id, node); return node;
-        }));
-      }
-      for (const [id, node] of buttons) {
-        const offered = model.spells.includes(id);
-        node.disabled = !offered || !model.canEdit;
-        node.setAttribute('aria-pressed', String(id === model.chosen));
-        node.classList.toggle('spell-new', newSpells.includes(id));
-        node.querySelector('.spell-availability')!.textContent = `${newSpells.includes(id) ? 'New · ' : ''}${model.short.includes(id) ? 'Plan · not enough energy yet · may fizzle' : offered ? 'Available' : 'Not offered this turn'}`;
-      }
+      spellbook.render(model, catalogue, newSpells);
       const confirm = el<HTMLButtonElement>('combat-declare');
       confirm.hidden = model.waitingFor !== 'Intent'; confirm.disabled = !model.canSubmit;
       confirm.textContent = model.sending ? 'Sending…' : model.chosen ? `Declare ${cardTitle(cards.get(model.chosen)) || model.chosen}${model.short.includes(model.chosen) ? ' · may fizzle' : ''}` : 'Select a spell';
-      if (!dialog.open) dialog.showModal();
+      if (!dialog.open) { dialog.showModal(); spellbook.opened(); }
     } else if (dialog.open) dialog.close();
     if (targeting) {
       const legal = model.target.legalTargets;
@@ -78,8 +60,8 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
       const back = el<HTMLButtonElement>('combat-back'); back.hidden = model.waitingFor !== 'Action'; back.disabled = !model.canEdit;
     }
     if (!model.opened) {
-      listKey = ''; buttons.clear(); el('combat-spells').replaceChildren();
-      for (const id of ['combat-heading', 'combat-help', 'combat-title', 'combat-selection']) el(id).textContent = '';
+      spellbook.clear();
+      for (const id of ['combat-heading', 'combat-context', 'combat-help', 'combat-title', 'combat-selection']) el(id).textContent = '';
       el('combat-declare').textContent = 'Declare spell';
     }
   }

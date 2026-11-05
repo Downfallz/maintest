@@ -73,7 +73,7 @@ const visible = () => ready && !rendererFailed && !document.hidden &&
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createArenaUpkeep(tabStorage);
-const history = createArenaHistory();
+const history = createArenaHistory({ load: () => connection.history(), onChange: () => render() });
 const growth = createArenaGrowth();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
@@ -83,7 +83,7 @@ const controls = combatControls(combat, name, () => playback.skip());
 const planningUI = planningControls(planning, name, () => playback.skip());
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
-const historyUI = historyControls(() => playback.skip(), () => render());
+const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
 const upkeepUI = upkeepControls(upkeep, id => {

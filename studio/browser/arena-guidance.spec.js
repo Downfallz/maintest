@@ -83,7 +83,7 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
   await h.publish([entry(1)], { waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await page.locator('#playback-skip').click(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
-  await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how this creature acts');
+  await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('manual Help preserves a mutation draft and fences a delayed acknowledgement', async ({ page }) => {
@@ -158,7 +158,7 @@ test('an unseen tip waits until the player closes another dialog', async ({ page
   await h.publish([], { waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#help-dialog')).toBeHidden(); await expect(page.locator('#history-dialog')).toBeVisible();
   await page.locator('#history-close').click(); await expect(page.locator('#help-dialog')).toBeVisible();
-  await expect(page.locator('#help-title')).toHaveText('Choose how this creature acts');
+  await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 

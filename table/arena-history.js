@@ -1,3 +1,4 @@
+import { chipText, laneOf } from './board.js';
 import { missingRoundEnergy } from './arena-upkeep.js';
 import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps, upkeepText } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
@@ -53,6 +54,13 @@ function combatRow(entry, board, catalogue) {
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
   return { title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
     summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
+    sections: [
+      { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
+      { title: 'Targets and result', items: [line(targets || 'No targets'), line(status), ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : [])] },
+      { title: 'Applied effects', items: effects.length ? effects : [line('No applied effects recorded.')] },
+      { title: 'Dropped targets', items: (resolution.droppedTargets ?? []).map(failure => line(`${who(failure.target, board)} · ${reason(failure.error)}`)) },
+      { title: 'Recorded changes', items: frameDetails(action.frame, board) },
+    ],
     details: [line(targets ? `Targets: ${targets}` : 'No targets'),
       ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : []),
       ...(effects.length ? effects : [line('No applied effects recorded.')]),
@@ -100,43 +108,144 @@ function eventRow(entry, board, catalogue) {
   }
 }
 
-// Called only after the public allowlist. Normalized rows retain neither raw events nor frame snapshots.
+// Called only after the public allowlist. Keep public text and sanitized boundary values, never raw events.
 export function historyEntry(entry, board, catalogue) {
   if (!PUBLIC.has(entry?.event?.kind) || !Number.isInteger(entry?.sequence) || entry.sequence < 0) return null;
   const row = eventRow(entry, board, catalogue);
-  return { ...row, sequence: entry.sequence, round: roundOf(entry) ?? 0, summary: row.summary ?? row.title };
+  return { ...row, sections: row.sections ?? [{ title: 'Recorded facts', items: row.details }], kind: entry.event.kind, participants: participants(entry.event, board),
+    states: recordedStates(entry.event, board), sequence: entry.sequence, round: roundOf(entry) ?? 0, summary: row.summary ?? row.title };
 }
 
-// One instance per selected viewpoint. No animation watermark, requests, writes, or local storage.
-// Two rounds and at most 200 rows bound the first slice; earlier-round loading belongs to AU6.
-export function createArenaHistory({ limit = 200 } = {}) {
-  let ordinaryRounds = new Set();
-  let rows = new Map(), current = 0, available = false, waiting = false, omitted = false, unsupported = false;
-  function reset() { ordinaryRounds.clear(); rows = new Map(); current = 0; available = false; waiting = false; omitted = false; unsupported = false; }
-  function receive(view, catalogue) {
-    if (!view?.board) { reset(); return; }
-    available = true; waiting = Boolean(view.waiting && !view.over);
-    current = Math.max(current, view.board.roundNumber ?? 0);
-    for (const entry of view.feed ?? []) if (entry.event?.kind === 'RoundEnergyGranted') ordinaryRounds.add(roundOf(entry));
-    ordinaryRounds = new Set([...ordinaryRounds].filter(round => round >= current - 1));
-    for (const entry of view.feed ?? []) {
-      if (!PUBLIC.has(entry?.event?.kind)) {
-        if (entry?.event?.kind && !PRIVATE.has(entry.event.kind)) unsupported = true;
-        continue;
-      }
-      if (rows.has(entry.sequence)) continue;
-      const row = historyEntry(entry, view.board, catalogue);
-      if (row) {
-        if (entry.event.kind === 'OngoingEffectsApplied' && !ordinaryRounds.has(row.round)) row.details.unshift(line(missingRoundEnergy));
-        rows.set(row.sequence, row);
-      }
-    }
-    const ordered = [...rows.values()].sort((left, right) => left.sequence - right.sequence);
-    const recent = ordered.filter(row => row.round >= current - 1 && row.round <= current);
-    if (recent.length < ordered.length || recent.length > limit) omitted = true;
-    rows = new Map(recent.slice(-limit).map(row => [row.sequence, row]));
+// Public typed identifiers only: filters never recover identity by parsing narration.
+function participants(event, board) {
+  const action = event.resolution?.action ?? event.action;
+  const ids = [action?.actor, ...(action?.targets ?? []), event.actor,
+    ...(event.appliedOutcomes ?? []).map(one => one.target),
+    ...(event.resolution?.droppedTargets ?? []).map(one => one.target),
+    ...(event.grants ?? []).map(one => one.creature), ...(event.choices ?? []).map(one => one.creature),
+    ...(event.timeline?.slots ?? []).map(one => one.creature), ...(event.creatures ?? []),
+    ...Object.keys(event.expired ?? {}).map(Number),
+    ...['energyRegenerationTicks', 'regenerationTicks', 'bleedTicks'].flatMap(key => (event[key] ?? []).map(one => one.creature))];
+  return [...new Set(ids.filter(id => id != null))].map(id => ({ id: String(id), ...person(id, board) }));
+}
+
+// Keep only recorded public stats, not raw boards, spellbooks, intents or legal options.
+function recordedStates(event, board) {
+  if (!Array.isArray(event.frame?.before) || !Array.isArray(event.frame?.after)) return null;
+  const snapshot = one => ({ id: String(one.id), ...person(one.id, board),
+    health: one.health, maxHealth: one.maxHealth, energy: one.energy, defense: one.totalDefense,
+    initiative: one.currentInitiative, defeated: one.isAlive === false,
+    conditions: (one.conditions ?? []).map(condition => {
+      const lane = laneOf(condition);
+      return `${chipText(condition)} · ${lane === null ? 'permanent' : lane === 'new' ? 'first countdown pending' : `${lane} rounds`}`;
+    }) });
+  return { before: event.frame.before.map(snapshot), after: event.frame.after.map(snapshot) };
+}
+
+// The kind filter speaks the player's words (docs/domain/player-terminology.md), never the engine's event names.
+export const KIND_LABELS = Object.freeze({
+  CombatActionResolved: 'Spells cast', ActionRevealed: 'Spells revealed', SlotSkipped: 'Turns skipped',
+  RoundEnergyGranted: 'Round energy', OngoingEffectsApplied: 'Ongoing effects', ConditionsExpired: 'Conditions ended',
+  StunImmunityGained: 'Immunities gained', PurchasesRevealed: 'Mutations revealed', TimelineBuilt: 'Tempos revealed',
+  TiesOrdered: 'Tie order', RoundStarted: 'Rounds begun', RoundEnded: 'Rounds complete', SubPhaseEntered: 'Steps begun',
+  MatchStarted: 'Match start', MatchEnded: 'Match result', PlayerJoined: 'Players joined',
+});
+
+export function filterHistory(rows, filters) {
+  return rows.filter(row => (!filters.round || String(row.round) === filters.round) &&
+    (!filters.kind || row.kind === filters.kind) &&
+    (!filters.creature || row.participants.some(one => one.id === filters.creature)) &&
+    (!filters.team || row.participants.some(one => one.side === filters.team)));
+}
+const noFilters = () => ({ round: '', kind: '', creature: '', team: '' });
+const ordered = rows => [...rows.values()].sort((a, b) => a.sequence - b.sequence);
+
+// A live two-round window and one explicit reading page, each capped. Historical reads never enter
+// the live connection or playback; a generation fences responses after close, viewpoint/access changes.
+export function createArenaHistory({ limit = 200, load = async () => null, onChange = () => {} } = {}) {
+  let rows = new Map(), page = null, current = 0, available = false, waiting = false, omitted = false, unsupported = false;
+  let ordinaryRounds = new Set(), board = null, catalogue = null, generation = 0, loading = false, error = '', oldest = false;
+  let filters = noFilters(), selected = null, stage = 'after', unread = 0, high = -1, browsing = false;
+  function reset() {
+    generation++; rows.clear(); page = null; current = 0; available = false; waiting = false; omitted = false; unsupported = false;
+    ordinaryRounds.clear(); board = null; catalogue = null; loading = false; error = ''; oldest = false;
+    filters = noFilters(); selected = null; stage = 'after'; unread = 0; high = -1; browsing = false;
   }
-  const model = () => ({ available, waiting, current, omitted, unsupported,
-    rows: waiting ? [] : [...rows.values()] });
-  return { receive, reset, model };
+  function normalize(entries, source, content, ordinary = new Set(entries.filter(entry => entry.event?.kind === 'RoundEnergyGranted').map(roundOf))) {
+    return entries.map(entry => {
+      const row = historyEntry(entry, source, content);
+      if (row?.kind === 'OngoingEffectsApplied' && !ordinary.has(row.round) && !ordinaryRounds.has(row.round)) row.details.unshift(line(missingRoundEnergy));
+      return row;
+    }).filter(Boolean);
+  }
+  function receive(view, content) {
+    if (!view?.board) { reset(); return; }
+    available = true; waiting = Boolean(view.waiting && !view.over); board = view.board; catalogue = content;
+    // The host reads the board before the feed, so a response can hold next-round events on this round's board.
+    // The window follows the newest round either names; the delta cursor never serves those events again.
+    const rounds = (view.feed ?? []).filter(entry => PUBLIC.has(entry.event?.kind)).map(roundOf).filter(Number.isInteger);
+    current = Math.max(current, board.roundNumber ?? 0, ...rounds);
+    for (const entry of view.feed ?? []) {
+      if (entry.event?.kind === 'RoundEnergyGranted') ordinaryRounds.add(roundOf(entry));
+      if (entry.event?.kind && !PUBLIC.has(entry.event.kind) && !PRIVATE.has(entry.event.kind)) unsupported = true;
+    }
+    const publicEntries = (view.feed ?? []).filter(entry => PUBLIC.has(entry.event?.kind) && Number.isInteger(entry.sequence) && entry.sequence >= 0);
+    if (high >= 0) unread += new Set(publicEntries.filter(entry => entry.sequence > high).map(entry => entry.sequence)).size;
+    const recentEntries = publicEntries.filter(entry => roundOf(entry) >= current - 1 && roundOf(entry) <= current);
+    omitted ||= recentEntries.length < publicEntries.length || recentEntries.length > limit;
+    const additions = normalize(recentEntries.sort((a, b) => a.sequence - b.sequence).slice(-limit), board, catalogue);
+    for (const row of additions) {
+      if (!rows.has(row.sequence)) rows.set(row.sequence, row);
+      if (page && !browsing && !page.has(row.sequence)) page.set(row.sequence, row);
+    }
+    for (const entry of publicEntries) high = Math.max(high, entry.sequence);
+    const all = ordered(rows), recent = all.filter(row => row.round >= current - 1 && row.round <= current);
+    omitted ||= recent.length < all.length || recent.length > limit;
+    rows = new Map(recent.slice(-limit).map(row => [row.sequence, row]));
+    if (page) {
+      const pinned = page.get(selected), kept = ordered(page).slice(-limit);
+      if (pinned && !kept.includes(pinned)) kept[0] = pinned;
+      page = new Map(kept.map(row => [row.sequence, row]));
+    }
+    ordinaryRounds = new Set([...ordinaryRounds].filter(round => round >= current - 1));
+  }
+  const readingRows = () => waiting ? [] : ordered(page ?? rows);
+  function model() {
+    const all = readingRows(), filtered = filterHistory(all, filters), index = filtered.findIndex(row => row.sequence === selected);
+    return { available, waiting, current, omitted, unsupported, rows: filtered, all, filters: { ...filters },
+      loading, error, oldest, browsing, unread: waiting ? 0 : unread, latest: waiting ? undefined : ordered(rows).at(-1),
+      review: index < 0 ? null : { row: filtered[index], stage, previous: index > 0, next: index < filtered.length - 1 } };
+  }
+  function open() { page ??= new Map(rows); unread = 0; }
+  function close() { generation++; loading = false; page = null; selected = null; browsing = false; error = ''; oldest = false; }
+  function latest() { generation++; loading = false; page = new Map(rows); filters = noFilters(); selected = null; browsing = false; unread = 0; error = ''; oldest = false; onChange(); }
+  function filter(key, value) { if (!(key in filters)) return; filters[key] = String(value); selected = null; onChange(); }
+  function select(sequence) { selected = sequence; stage = 'after'; onChange(); }
+  function move(delta) {
+    const visible = filterHistory(readingRows(), filters), index = visible.findIndex(row => row.sequence === selected);
+    if (index >= 0 && visible[index + delta]) select(visible[index + delta].sequence);
+  }
+  function boundary(value) { if (value === 'before' || value === 'after') { stage = value; onChange(); } }
+  function read() { unread = 0; }
+  async function earlier() {
+    if (!available || waiting || loading || oldest) return;
+    const context = ++generation, before = readingRows()[0]?.sequence ?? Infinity;
+    loading = true; error = ''; onChange();
+    try {
+      const answer = await load();
+      if (context !== generation || !available) return;
+      if (!answer?.ok || !Array.isArray(answer.body?.feed)) throw new Error('History unavailable. Try loading earlier rounds again.');
+      const candidates = answer.body.feed.filter(entry => entry.sequence < before && PUBLIC.has(entry.event?.kind));
+      // Slice before normalization: even a whole-match response never allocates a whole-match frame cache.
+      const sorted = candidates.sort((a, b) => a.sequence - b.sequence);
+      const selectedEntries = sorted.slice(-limit);
+      const ordinary = new Set(answer.body.feed.filter(entry => entry.event?.kind === 'RoundEnergyGranted').map(roundOf));
+      const loaded = normalize(selectedEntries, board, catalogue, ordinary);
+      if (!loaded.length) { oldest = true; return; }
+      page = new Map(loaded.map(row => [row.sequence, row])); browsing = true; filters = noFilters(); selected = null;
+      oldest = sorted.length <= limit;
+    } catch (failure) { if (context === generation) error = failure.message; }
+    finally { if (context === generation) { loading = false; onChange(); } }
+  }
+  return { receive, reset, model, open, close, latest, filter, select, move, boundary, earlier, read };
 }

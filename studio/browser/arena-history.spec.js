@@ -10,7 +10,7 @@ const entry = sequence => ({ sequence, event: { kind: 'CombatActionResolved', ro
   appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7, critical: true }],
   frame: { before: roster, after: roster.map(one => creature(one.id, one.id === 1 ? 13 : 20)), timeline: [], rollOffs: [] } } });
 async function mount(page, feed = [entry(10)]) {
-  const state = { errors: [], writes: [], shown: [], status: 200, view: {
+  const state = { errors: [], writes: [], shown: [], reads: [], historyFeed: null, historyStatus: 200, historyGate: null, status: 200, view: {
     board: { slot: 'Player1', roundNumber: 2, phase: 'Planning', subPhase: 'Evolution', allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] },
     waitingFor: 'Evolution', waitingAsked: 11, waitingCreature: 1,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } },
@@ -24,22 +24,29 @@ async function mount(page, feed = [entry(10)]) {
       window.notifyArena = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
-  await page.route('**/api/**', route => {
+  await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== 'GET') state.writes.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
+      state.reads.push(url.search);
+      if (!url.search && state.historyFeed) {
+        if (state.historyGate) await state.historyGate;
+        return route.fulfill({ status: state.historyStatus, json: { ...state.view, board: { ...state.view.board, roundNumber: 1 }, feed: state.historyFeed, feedNext: 3 } });
+      }
       if (url.searchParams.has('shown')) state.shown.push(url.searchParams.get('shown'));
       return route.fulfill({ status: state.status, json: state.view });
     }
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  // Freeze before connecting: advancing an active poll can leave a zero-delay owed refresh
+  // suspended just as the fixture publishes its first notification.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
@@ -167,7 +174,7 @@ test('upkeep ticks, reveals and phase markers read beside the attacks', async ({
   const upkeep = page.locator('#history-list [data-sequence="9"]'); await upkeep.locator('summary').click();
   await expect(upkeep.locator('[data-tone="harm"]')).toHaveText('Creature 1 (Your team) · Ongoing damage −2 HP');
   await expect(page.locator('#history-list [data-sequence="10"] summary')).toContainText('Creature 4 (Opponent) · reveals Strike');
-  await expect(page.locator('#history-range')).toHaveText('Rounds 1–2 · 4 events');
+  await expect(page.locator('#history-range')).toHaveText('Loaded round 2 · 4 events');
   expect(h.state.errors).toEqual([]);
 });
 
@@ -190,4 +197,101 @@ test('ordinary energy history keeps actual gains, zero gains and the order befor
   await expect(rows(page).nth(1).locator('[data-tone="harm"]')).toHaveText('Creature 1 (Your team) · Ongoing damage −7 HP');
   await h.publish([energy]); await expect(rows(page)).toHaveCount(2);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('filters distinguish no match from no history and details use exact boundaries while the live round advances', async ({ page }, info) => {
+  const h = await mount(page, [entry(10), entry(11)]); await page.locator('#history-open').click();
+  await page.locator('#history-filters > summary').click();
+  await page.locator('#history-filter-team').selectOption('Opponent'); await expect(rows(page)).toHaveCount(2);
+  await page.locator('#history-filter-creature').selectOption('1'); await expect(rows(page)).toHaveCount(2);
+  await page.locator('#history-filter-round').selectOption('2');
+  await page.locator('#history-filter-kind').selectOption('CombatActionResolved');
+  await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
+  await expect(page.locator('#history-detail')).toContainText('Caster and spell'); await expect(page.locator('#history-detail')).toContainText('Applied effects');
+  await expect(page.locator('.history-creature').first()).toContainText('13/20 HP');
+  await page.locator('#history-before').click(); await expect(page.locator('.history-creature').first()).toContainText('20/20 HP');
+  await h.publish([{ sequence: 20, event: { kind: 'RoundStarted', roundId: 5 } }], { board: { ...h.state.view.board, roundNumber: 5, allies: [creature(1, 1), ...roster.slice(1, 3)] } });
+  await expect(page.locator('#round-number')).toHaveText('05'); await expect(page.locator('.history-creature').first()).toContainText('20/20 HP');
+  await expect(page.locator('#history-before')).toBeFocused();
+  await page.locator('#history-next').click(); await expect(page.locator('#history-detail')).toContainText('event 11');
+  await page.locator('#history-previous').click(); await expect(page.locator('#history-detail')).toContainText('event 10');
+  await page.locator('#history-filters > summary').click();
+  await fitsViewport(page, '#history-close, #history-latest');
+  await page.screenshot({ path: info.outputPath('history-review.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#history-back').click(); await page.locator('#history-filters > summary').click();
+  await page.locator('#history-filter-kind').selectOption('RoundStarted'); await expect(rows(page)).toHaveCount(0);
+  await expect(page.locator('#history-empty')).toContainText('No events match');
+  await page.locator('#history-latest:visible, #history-new:visible').click(); await expect(page.locator('#history-review')).toBeHidden();
+  await expect(page.locator('#history-list')).toContainText('Round begins');
+  expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('older history can arrive after a live update without moving its cursor or the battlefield backwards', async ({ page }) => {
+  const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, roundId: 1 } }];
+  let release; h.state.historyGate = new Promise(resolve => { release = resolve; });
+  await page.locator('#history-open').click(); await page.locator('#history-earlier').click(); await expect(page.locator('#history-earlier')).toBeDisabled();
+  await h.publish([entry(30)], { board: { ...h.state.view.board, roundNumber: 3 } });
+  await expect(page.locator('#round-number')).toHaveText('03'); release();
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
+  await expect(page.locator('#round-number')).toHaveText('03'); await expect(page.locator('#history-latest')).toContainText('1 new');
+  await h.publish([entry(31)]); await expect.poll(() => h.state.reads.includes('?since=31')).toBe(true);
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
+  await page.locator('#history-latest').click(); await expect(page.locator('#history-list [data-sequence="31"]')).toHaveCount(1);
+  expect(h.state.reads.filter(query => query === '').length).toBe(2); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('historical loading reports failure, supports retry, and a legacy event never shows current creature stats', async ({ page }) => {
+  const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, frame: undefined, roundId: 1 } }]; h.state.historyStatus = 503;
+  await page.locator('#history-open').click(); await page.locator('#history-earlier').click();
+  await expect(page.locator('#history-load-error')).toContainText('History unavailable'); await expect(rows(page)).toHaveCount(1);
+  h.state.historyStatus = 200; await page.locator('#history-earlier').click();
+  await expect(page.locator('#history-load-error')).toBeEmpty(); await expect(page.locator('#history-earlier')).toHaveText('Beginning of available history');
+  await rows(page).locator('summary').click(); await rows(page).getByRole('button', { name: 'Inspect event' }).click();
+  await expect(page.locator('#history-detail')).toContainText('Historical battlefield unavailable'); await expect(page.locator('.history-creature')).toHaveCount(0);
+  await expect(page.locator('#history-before')).toBeDisabled(); expect(h.state.errors).toEqual([]);
+});
+test('access loss erases historical filters, review and late history responses', async ({ page }) => {
+  const h = await mount(page); h.state.historyFeed = [entry(1)]; let release;
+  h.state.historyGate = new Promise(resolve => { release = resolve; });
+  await page.locator('#history-open').click(); await rows(page).locator('summary').click(); await rows(page).getByRole('button', { name: 'Inspect event' }).click();
+  await page.locator('#history-earlier').click(); h.state.status = 403; await h.publish([]);
+  await expect(page.locator('#history-dialog')).toBeHidden(); release(); await page.clock.runFor(100);
+  await expect(page.locator('#history-detail')).toBeEmpty(); await expect(page.locator('#history-filter-creature option')).toHaveCount(1);
+  await expect(rows(page)).toHaveCount(0); expect(h.state.errors).toEqual([]);
+});
+test('reload makes earlier rounds available through an explicit seat history read', async ({ page }) => {
+  const h = await mount(page); h.state.view.board.roundNumber = 6;
+  const old = { ...entry(1), event: { ...entry(1).event, roundId: 1 } }, recent = { ...entry(50), event: { ...entry(50).event, roundId: 6 } };
+  h.state.view.feed = [old, recent]; h.state.view.feedNext = 51;
+  await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+  await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
+  h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('unread counts stay reachable in the closed journal launcher and clear when it is opened', async ({ page }) => {
+  const h = await mount(page);
+  await h.publish(Array.from({ length: 1000 }, (_, index) => ({ sequence: 20 + index, event: { kind: 'RoundEnded', roundId: 2 } })));
+  await expect(page.locator('#history-unread')).toContainText('1000');
+  await expect(page.locator('#history-open')).toHaveAccessibleDescription(/1000 new/);
+  const bounds = await page.locator('#history-open').evaluate(node => ({ button: node.getBoundingClientRect().toJSON(), header: node.closest('header').getBoundingClientRect().toJSON() }));
+  expect(bounds.button.top).toBeGreaterThanOrEqual(bounds.header.top); expect(bounds.button.bottom).toBeLessThanOrEqual(bounds.header.bottom);
+  await page.locator('#history-open').click(); await expect(page.locator('#history-unread')).toBeEmpty();
+  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('Back returns focus to the inspected row and the kind filter speaks player words', async ({ page }) => {
+  const h = await mount(page, [entry(10), entry(11), { sequence: 12, event: { kind: 'RoundStarted', roundId: 2 } }]);
+  await page.locator('#history-open').click();
+  const second = page.locator('#history-list [data-sequence="11"]');
+  await second.locator('summary').click(); await second.getByRole('button', { name: 'Inspect event' }).click();
+  await page.locator('#history-back').click(); await expect(second.locator('summary')).toBeFocused();
+  await page.locator('#history-filters > summary').click();
+  await expect(page.locator('#history-filter-kind option')).toHaveText(['All event kinds', 'Spells cast', 'Rounds begun']);
+  expect(h.state.errors).toEqual([]);
+});
+test('a covered question stays unacknowledged while an event is inspected and earlier rounds load', async ({ page }) => {
+  const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, roundId: 1 } }];
+  await page.locator('#planning-open').click(); await expect.poll(() => h.state.shown).toEqual(['11']);
+  await page.locator('#planning-dialog [data-history-open]').click();
+  await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
+  await page.locator('#history-earlier').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
+  await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);
+  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });

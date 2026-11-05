@@ -16,7 +16,7 @@
     <header class="hud-top">
       <a class="brand" href="/" aria-label="Downfall Arena — back to lobby"><span aria-hidden="true">◈</span><div>DOWNFALL <b>ARENA</b><small>LIVE ARENA · PREVIEW</small></div></a>
       <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div>
-      <div class="tools"><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview" disabled><span>History</span><small id="history-preview">No match loaded</small></button><button id="round-review" type="button" hidden aria-label="Review upkeep and aftermath">↺</button><button id="switch-seat" type="button" title="Choose viewpoint" aria-label="Choose viewpoint">⇄</button><button id="settings" type="button" aria-label="Open settings">☷</button></div>
+      <div class="tools"><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="round-review" type="button" hidden aria-label="Review upkeep and aftermath">↺</button><button id="switch-seat" type="button" title="Choose viewpoint" aria-label="Choose viewpoint">⇄</button><button id="settings" type="button" aria-label="Open settings">☷</button></div>
     </header>
     <nav class="timeline-wrap" aria-label="Activation order"><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>Help</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
@@ -65,8 +65,13 @@
   </dialog>
   <dialog id="history-dialog" aria-labelledby="history-title">
     <header class="history-header"><div><p class="eyebrow">MATCH JOURNAL</p><h2 id="history-title">History</h2><p id="history-range"></p></div><button id="history-close" type="button" autofocus>Close</button></header>
-    <p id="history-empty"></p><div id="history-list" role="region" aria-label="Recent round events"></div>
-    <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><p id="history-limit"></p></footer>
+    <details id="history-filters"><summary>Filter events</summary><div class="history-filters">
+      <label>Round<select id="history-filter-round"></select></label><label>Creature<select id="history-filter-creature"></select></label>
+      <label>Team<select id="history-filter-team"><option value="">Both teams</option><option>Your team</option><option>Opponent</option><option>Unknown team</option></select></label>
+      <label>Event kind<select id="history-filter-kind"></select></label></div></details>
+    <p id="history-empty"></p><div class="history-content"><div id="history-list" role="region" aria-label="Round events"></div>
+    <section id="history-review" aria-label="Recorded event inspection" hidden><nav class="history-review-controls"><button id="history-back" type="button">Back to events</button><button id="history-previous" type="button">Previous</button><button id="history-next" type="button">Next</button><button id="history-before" type="button">Before</button><button id="history-after" type="button">After</button></nav><div id="history-detail"></div></section></div>
+    <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
   <dialog id="planning-dialog" aria-labelledby="planning-heading">
     <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
@@ -80,7 +85,10 @@
   <dialog id="combat-dialog" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
     <button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMBAT CHOICE</p><h2 id="combat-heading">Choose a spell</h2>
-    <p id="combat-help"></p><div id="combat-spells"></div>
+    <p id="combat-context"></p>
+    <div class="combat-browser-toolbar"><p id="combat-help"></p><button id="combat-details-mode" type="button" aria-pressed="false" aria-controls="combat-spells">Full details</button></div>
+    <!-- Keyboard paging remains available even when every spell button is unavailable. -->
+    <section id="combat-browser" tabindex="0" aria-label="Spellbook"><div id="combat-spells"></div></section>
     <div class="combat-dialog-footer"><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>
   </dialog>
   <dialog id="inspect-dialog" aria-labelledby="inspect-name"><form method="dialog"><button class="close" aria-label="Close inspection">×</button></form><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-stats"></p><p id="inspect-appearance" class="dialog-note"></p><p id="inspect-effects"></p><button id="inspect-growth" type="button" data-growth-open>Explore Mutation Tree</button><h3>Known spells</h3><ul id="inspect-spells"></ul><p class="dialog-note">Artwork is provisional. Names, stats and effects come from this seat's board.</p></dialog>
