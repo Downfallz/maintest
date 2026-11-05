@@ -53,7 +53,9 @@ Acknowledging on opening the controls, not on drawing the question, has two cost
 decision clock starts later than it does at the table, which draws and acknowledges at once: a duration
 recorded from the arena measures from the opening, and `playtest-timing` cannot tell the two apart. And
 a push notice (ADR 0118) goes out after its grace to a device whose person is reading the arena with the
-controls closed; opening them later does not take it back. Acknowledging on draw would start clocks for
+controls closed; opening them later does not take it back. The service worker is what keeps that notice from
+showing: it reads an arena window that is visible and focused as the game in front of somebody, the way it
+reads the table page, so the notice reaches only a device nobody is looking at. Acknowledging on draw would start clocks for
 a person who only came to look, which ADR 0125 promised not to do.
 
 Two clients can hold the same asking. Whichever posts second is refused with the next asking in hand, and
