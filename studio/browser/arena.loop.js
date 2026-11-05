@@ -18,21 +18,22 @@ async function confirm(page, selector) {
   const response = decisionWritten(page);
   await page.locator(selector).click(); expect((await response).status()).toBe(204);
 }
-// Each branch is an actual details element; open ancestors through their visible summaries.
-async function reveal(node) {
-  const ancestors = node.locator('xpath=ancestor::details');
-  for (let index = 0; index < await ancestors.count(); index++) {
-    const ancestor = ancestors.nth(index);
-    if (await ancestor.getAttribute('open') === null) await ancestor.locator(':scope > summary').click();
-  }
-}
 async function answerEvolution(page, view, capture) {
   const offer = view.options.evolution.creatures.find(one => one.availableTiers.length);
   if (!offer) { await page.locator('#planning-pass').click(); return; }
   await page.locator(`#planning-creatures [data-creature="${offer.creature}"]`).click();
   const node = page.locator(`[data-mutation="${offer.availableTiers[0]}"]`).first();
-  await reveal(node); await node.click();
-  if (capture) await capture('mutation-tree');
+  await node.click();
+  if (capture) {
+    await expect(page.locator('.mutation-card')).toHaveCount(3);
+    await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
+    for (const card of await page.locator('.mutation-card').all()) {
+      await expect(card.locator('.mutation-name')).not.toBeEmpty();
+      await expect(card.locator('.mutation-tags')).toBeVisible();
+      await expect(card.locator('.mutation-spell strong').first()).not.toBeEmpty();
+    }
+    await capture('mutation-cards');
+  }
 }
 async function answerPlanning(page, view, capture) {
   await page.locator('#planning-open').click();

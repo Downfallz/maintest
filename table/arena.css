@@ -233,3 +233,56 @@
   .upkeep-header { padding-top: 8px; padding-bottom: 8px; }
   .upkeep-footer { padding-top: 6px; padding-bottom: 6px; }
 }
+
+/* Compare offered mutations without navigating the reference tree. Header and confirmation stay put. */
+#planning-dialog { padding: 0; width: min(1120px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
+#planning-dialog[open] { display: flex; flex-direction: column; }
+.planning-header { flex: none; padding: 16px 20px 0; border-bottom: 1px solid #52695e; }
+#planning-heading { margin-bottom: 8px; }
+#planning-help { font-size: 13px; line-height: 1.45; margin: 6px 0; color: #bbcec5; }
+#planning-creatures { position: static; padding: 8px 0 12px; background: transparent; flex-wrap: nowrap; overflow-x: auto; }
+#planning-creatures button { flex: 0 0 auto; max-width: 280px; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+#planning-choices { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 16px 20px; scroll-padding: 10px; }
+.planning-footer { flex: none; position: static; padding: 12px 20px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px 14px; }
+#planning-close { float: none; margin: 0; }
+#planning-selection { font-size: 13px; overflow-wrap: anywhere; line-height: 1.4; }
+#planning-dialog-error { grid-column: 1 / -1; }
+#planning-dialog-error:empty { display: none; }
+#planning-confirm { max-width: 260px; overflow-wrap: anywhere; }
+.mutation-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; align-items: start; }
+.mutation-card { min-width: 0; border: 1px solid #536c67; border-top: 4px solid var(--mutation-colour); background: #172a30; border-radius: 7px; overflow: hidden; }
+#planning-choices .mutation-select { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; margin: 0; padding: 16px; text-align: left; border: 0; border-radius: 0; background: transparent; overflow-wrap: anywhere; color: #edf0e8; }
+#planning-choices .mutation-select[aria-pressed="true"] { background: #31443b; box-shadow: inset 0 0 0 2px var(--mutation-colour); }
+.mutation-select:focus-visible { outline: 3px solid var(--gold); outline-offset: -4px; }
+.mutation-family { color: var(--mutation-colour); font-size: 12px; }
+.mutation-name { font: 27px Georgia,serif; }
+.mutation-initiative { color: #e6d4a8; font-size: 14px; }
+.mutation-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.mutation-tags > span { padding: 4px 7px; border: 1px solid var(--mutation-colour); border-radius: 4px; font-size: 12px; color: var(--mutation-colour); }
+.mutation-spell { display: grid; gap: 5px; border-top: 1px solid #49615e; padding-top: 10px; }
+.mutation-spell strong { font-size: 15px; }
+.mutation-spell > span, .mutation-passive { color: #c7d5cd; font-size: 13px; line-height: 1.5; }
+.mutation-select-label { border: 1px solid var(--mutation-colour); border-radius: 4px; padding: 9px; text-align: center; font-size: 13px; margin-top: 3px; }
+.mutation-details { border-top: 1px solid #49615e; padding: 0 14px; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.mutation-details summary, #mutation-tree > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.mutation-details p { margin: 8px 0 12px; }
+.mutation-details h4 { margin: 12px 0 6px; color: var(--mutation-colour); }
+#mutation-tree { margin: 16px 0; border: 1px solid #52695e; border-radius: 5px; padding: 0 14px; font-size: 13px; }
+.mutation-empty { grid-column: 1 / -1; color: #c7d5cd; }
+@media (max-width: 759px) {
+  .mutation-cards { grid-template-columns: 1fr; }
+  .planning-header { padding: 12px 12px 0; }
+  #planning-heading { font-size: 23px; }
+  #planning-choices { padding: 12px; }
+  .planning-footer { padding: 10px 12px; grid-template-columns: auto 1fr; }
+  #planning-selection { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+  #planning-confirm { justify-self: end; max-width: 100%; }
+  #planning-help { font-size: 12px; }
+}
+@media (max-height: 520px) and (min-width: 760px) {
+  .planning-header { padding-top: 8px; }
+  #planning-heading { font-size: 22px; margin-bottom: 3px; }
+  #planning-help { font-size: 12px; }
+  #planning-creatures { padding: 4px 0; }
+  .planning-footer { padding-top: 6px; padding-bottom: 6px; }
+}
