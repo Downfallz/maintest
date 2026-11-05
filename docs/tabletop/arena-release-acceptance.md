@@ -54,6 +54,16 @@ replay; [the AU14 record](arena-ux-acceptance.md) lists the parity evidence feat
 Arena does not transfer a seat, accept an invitation, acknowledge a question or submit a decision; those
 actions keep their existing explicit boundaries. Invitations and account recovery stay at the table.
 
+## Local automated evidence after reconciliation (2026-11-05, on main `53af584a`)
+
+The release profile passed all 14 desktop Chromium and Android-profile cases locally in 9 minutes: both
+complete-match declarations with sound enabled, recorded sessions, simultaneous seats, the lobby rollout,
+renderer recovery, the keyboard/short-viewport check and the cold-scene sample. WebKit runs in CI; its
+native libraries are unavailable in the local container. The cold scene fetched `live.js` and exactly the
+five WebPs the scene loads. Sampled frame intervals on an idle loaded board, headless Chromium 153, one
+worker: 1440×1000 desktop 66.7 ms median / 83.4 ms 95th percentile; 412×839 Android profile at DPR 2.625,
+33.2 / 33.4 ms. As below, these are diagnostics of a software-rendered container, not device performance.
+
 ## Local automated evidence at first preparation (2026-11-04, on A7)
 
 On 2026-11-04, the six arena browser suites passed 225 cases with six pre-existing duplicate-viewport

@@ -57,7 +57,9 @@ jobs:
           retention-days: 7
   arena-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
+    # two minutes each); WebKit's system packages and the build come on top of the third.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
