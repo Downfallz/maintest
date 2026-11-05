@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { audioModule, probeAudio } from './arena-audio-probe.js';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/arena-playback.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './arena-spell-scene.js';
@@ -277,4 +278,175 @@ test('live playback shows the necromantic recipients apart from the caster blood
   await page.locator('#playback-skip').click();
   await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
+});
+
+// ART-6: one playback rate for the queue and the renderer, and an opt-in sound that stops with the action.
+async function atSpeed(page, h, speed) {
+  await page.locator('#settings').click(); await page.selectOption('#playback-speed', speed);
+  await page.getByRole('button', { name: 'Close settings' }).click();
+}
+test('at 2x the confirmed result lands at half the windup', async ({ page }, info) => {
+  const h = await mount(page); await atSpeed(page, h, '2');
+  await h.publish([entry(10)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(190); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
+  await page.clock.runFor(35); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
+  await page.screenshot({ path: info.outputPath('art6-speed.png') }); expect(h.errors).toEqual([]);
+});
+test('the scene is handed the speed the queue plays at', async ({ page }) => {
+  const h = await mount(page);
+  await expect(page.locator('#arena')).toHaveAttribute('data-rate', '1');
+  await atSpeed(page, h, '1.5'); await expect(page.locator('#arena')).toHaveAttribute('data-rate', '1.5');
+  expect(h.errors).toEqual([]);
+});
+test('changing the speed mid-action settles it and a repeated poll does not replay it', async ({ page }) => {
+  const h = await mount(page); await atSpeed(page, h, '2');
+  await h.publish([entry(10)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await atSpeed(page, h, '1.5'); await expect(page.locator('#playback-skip')).toBeHidden();
+  await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+test('a reduced-motion result stays readable for 650 ms even at 2x', async ({ page }) => {
+  const h = await mount(page); await atSpeed(page, h, '2');
+  await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(11)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
+  await page.clock.runFor(500); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'impact');
+  await page.clock.runFor(180); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'resolved');
+  expect(h.errors).toEqual([]);
+});
+test('the scene lunges at the speed it is given', async ({ page }) => {
+  await mountSpellScene(page);
+  const frame = spellFrame({ kind: 'strike', struck: ['4'], effects: [{ creature: '4', tone: 'harm', text: 'Damage 7', wound: false }],
+    visual: { family: 'physical', motif: 'impact', delivery: 'melee' }, recipients: ['4'], contact: ['4'], changes: [] });
+  const travelled = async rate => {
+    await presentSpell(page, frame, 'decision', false, rate); await presentSpell(page, frame, 'windup', false, rate);
+    // 215 ms is past the whole 2x lunge (60 ms draw, 150 ms strike) and early in the 1x strike (120 ms, then 300 ms).
+    await page.clock.runFor(215);
+    const position = await actorPosition(page); return Math.abs(position.x - position.homeX);
+  };
+  const atOne = await travelled(1), atTwo = await travelled(2);
+  expect(atTwo).toBeGreaterThan(atOne * 3);
+});
+
+async function soundOn(page) {
+  await page.locator('#settings').click(); await page.locator('#sound').check();
+  await expect(page.locator('#sound')).toBeChecked();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+}
+const probe = page => page.evaluate(() => window.audioProbe);
+async function sounding(page, h, sequence) {
+  await h.publish([entry(sequence)]); await expect(page.locator('#arena')).toHaveAttribute('data-playback', 'windup');
+  await page.clock.runFor(440); await expect.poll(() => probe(page).then(one => one.starts)).toBe(1);
+}
+test('no audio context exists before the player turns sound on', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page);
+  await h.publish([entry(10)]); await page.clock.runFor(1600);
+  expect(await probe(page)).toEqual({ contexts: 0, starts: 0, stops: 0 }); expect(h.errors).toEqual([]);
+});
+test('one confirmed impact sounds once, however often it is polled', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page); await soundOn(page);
+  await sounding(page, h, 12);
+  await h.publish([entry(12)]); await page.clock.runFor(1500);
+  expect((await probe(page)).starts).toBe(1); expect(h.errors).toEqual([]);
+});
+test('skipping during the impact cuts its tone', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page); await soundOn(page);
+  await sounding(page, h, 12);
+  await page.locator('#playback-skip').click();
+  expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
+});
+test('a hidden page cuts the tone that was playing', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page); await soundOn(page);
+  await sounding(page, h, 12);
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
+});
+test('switching seats cuts the tone that was playing', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page); await soundOn(page);
+  await sounding(page, h, 12);
+  await page.locator('#switch-seat').click();
+  expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
+});
+test('a seat revoked while sound is being turned on leaves it off', async ({ page }) => {
+  await probeAudio(page, { holdResume: true }); const h = await mount(page);
+  await page.locator('#settings').click(); await page.locator('#sound').check();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  h.state.status = 403; await page.evaluate(() => window.notifyArena());
+  await expect(page.locator('.creature')).toHaveCount(0);
+  await page.evaluate(() => window.releaseAudio());
+  await expect(page.locator('#sound')).not.toBeChecked(); expect(h.errors).toEqual([]);
+});
+test('turning sound off keeps the next impact silent', async ({ page }) => {
+  await probeAudio(page); const h = await mount(page); await soundOn(page);
+  await page.locator('#settings').click(); await page.locator('#sound').uncheck();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await h.publish([entry(13)]); await page.clock.runFor(1600);
+  expect((await probe(page)).starts).toBe(0); expect(h.errors).toEqual([]);
+});
+
+// The owner itself, against a context the test controls.
+async function owner(page) { await page.goto('/table/arena.html'); await audioModule(page); }
+// var, not let: a direct eval's let and const stay inside the eval, and the test needs them after it.
+const fakeContext = `
+  var resume = () => {}; var counts = { starts: 0, stops: 0, releases: 0, resumes: 0 };
+  var envelope = { setValueAtTime() {}, exponentialRampToValueAtTime() {} };
+  var context = { state: 'running', currentTime: 0, destination: {},
+    resume: () => { counts.resumes++; return new Promise(done => { resume = done; }); },
+    createOscillator: () => ({ frequency: envelope, connect() {}, disconnect() { counts.releases++; }, start() { counts.starts++; }, stop() { counts.stops++; }, onended: null }),
+    createGain: () => ({ gain: envelope, connect() {}, disconnect() { counts.releases++; } }) };`;
+test('muting while a resume is pending keeps sound off when it lands', async ({ page }) => {
+  await owner(page);
+  expect(await page.evaluate(async source => { eval(source); const audio = new window.TestArenaAudio(() => context);
+    const pending = audio.enable(true); audio.stop(); resume(); return await pending; }, fakeContext)).toBe(false);
+});
+test('an animation cancelled while a resume is pending does not turn sound off', async ({ page }) => {
+  await owner(page);
+  expect(await page.evaluate(async source => { eval(source); const audio = new window.TestArenaAudio(() => context);
+    const pending = audio.enable(true); audio.silence(); resume(); return await pending; }, fakeContext)).toBe(true);
+});
+test('a new tone releases the one before it, so one voice at most is alive', async ({ page }) => {
+  await owner(page);
+  expect(await page.evaluate(async source => { eval(source); const audio = new window.TestArenaAudio(() => context);
+    context.resume = async () => {}; await audio.enable(true);
+    audio.play({ family: 'necromantic', motif: 'spirits', delivery: 'cast' }); audio.play(); audio.stop(); return counts; }, fakeContext))
+    .toMatchObject({ starts: 2, stops: 4, releases: 4 });
+});
+test('a context the platform suspended is asked back on the next impact instead of staying silent', async ({ page }) => {
+  await owner(page);
+  expect(await page.evaluate(async source => { eval(source); const audio = new window.TestArenaAudio(() => context);
+    context.resume = async () => { counts.resumes++; }; await audio.enable(true);
+    context.state = 'suspended'; audio.play(); return counts; }, fakeContext)).toMatchObject({ starts: 0, resumes: 2 });
+});
+test('unavailable audio leaves sound off and throws nothing', async ({ page }) => {
+  await owner(page);
+  expect(await page.evaluate(() => new window.TestArenaAudio(() => { throw new Error('unavailable'); }).enable(true))).toBe(false);
+});
+
+const wardFrame = () => spellFrame({ kind: 'pulse', struck: [], effects: [{ creature: '2', tone: 'condition', text: 'Confirmed ward', wound: false }],
+  visual: { family: 'necromantic', motif: 'bones', delivery: 'cast' }, recipients: ['2'], contact: ['2'], changes: [] });
+const effectState = page => page.evaluate(() => window.artScene.children.list.filter(one => one.name === 'spell-vfx').map(one => ({ x: one.x, y: one.y, scale: one.scaleX })));
+test('a ward rises and grows into place', async ({ page }, info) => {
+  await mountSpellScene(page); const frame = wardFrame();
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact');
+  const initial = await effectState(page); await page.clock.runFor(120); const settled = await effectState(page);
+  expect(settled[0].y).toBeLessThan(initial[0].y); expect(settled[0].scale).toBeGreaterThan(initial[0].scale);
+  await page.screenshot({ path: info.outputPath('art6-ward.png') });
+});
+test('an arc stays pinned to its endpoints while it lands', async ({ page }) => {
+  await mountSpellScene(page);
+  const frame = spellFrame({ kind: 'strike', struck: ['4'], effects: [{ creature: '4', tone: 'harm', text: 'Damage 5', wound: false }],
+    visual: { family: 'elemental', motif: 'arc', delivery: 'cast' }, recipients: ['4'], contact: ['4'], changes: [] });
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact');
+  const initial = await effectState(page); await page.clock.runFor(50); const landing = await effectState(page);
+  expect(initial[0].scale).toBe(1); expect(landing[0].scale).toBe(1);
+  expect(landing[0].x).toBe(initial[0].x); expect(landing[0].y).toBe(initial[0].y);
+});
+test('returning to a decision clears the effects', async ({ page }) => {
+  await mountSpellScene(page); const frame = wardFrame();
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact');
+  await presentSpell(page, frame, 'decision'); expect(await renderedEffects(page)).toEqual([]);
+});
+test('reduced motion shows the result with no effect drawn', async ({ page }) => {
+  await mountSpellScene(page); const frame = wardFrame();
+  await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact', true);
+  expect(await renderedEffects(page)).toEqual([]);
 });
