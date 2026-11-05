@@ -27,7 +27,7 @@ for (const colorScheme of ['light', 'dark']) {
   });
 }
 
-test('a standalone viewer carries its palette without any stylesheet request', async ({ page }) => {
+test('a standalone viewer carries its palette and readable canvas labels without a stylesheet request', async ({ page }) => {
   const root = resolve('../..');
   const html = readFileSync(`${root}/viewer/index.html`, 'utf8').replace('<link rel="stylesheet" href="viewer.css">',
     `<style>${readFileSync(`${root}/viewer/viewer.css`, 'utf8')}</style>`);
@@ -35,4 +35,10 @@ test('a standalone viewer carries its palette without any stylesheet request', a
   await page.setContent(html);
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(11, 21, 25)');
   expect(await page.evaluate(() => [PLAYER1_COLOUR, PLAYER2_COLOUR, ACCENT, WARN])).toEqual(['#8bc6ed', '#e3a29a', '#8bc6ed', '#e7c183']);
+  const chartColours = await page.evaluate(() => {
+    window.Chart = class { static defaults = {}; };
+    chart(document.createElement('canvas'), { type: 'bar' });
+    return Chart.defaults;
+  });
+  expect(chartColours).toEqual({ color: '#adb8bd', borderColor: '#52636b' });
 });
