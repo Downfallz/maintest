@@ -54,6 +54,24 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await page.locator(`#growth-tree [data-package="${tier}"] > details:not([data-package]) > summary`).first().click();
     await fitsViewport(page, '#growth-close, #growth-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });
+    await page.keyboard.press('Escape');
+    const revealed = await read();
+    for (const creature of [revealed.board.allies.find(one => one.id === offer.creature), revealed.board.enemies[0]]) {
+      await page.locator(`#actor-layer [data-creature="${creature.id}"]`).click();
+      await expect(page.locator('#inspect-stats')).toHaveText(`${creature.health}/${creature.maxHealth} HP · ${creature.energy} energy · ${creature.totalDefense} defense · ${creature.currentInitiative} initiative`);
+      await expect(page.locator('#inspect-context')).toHaveText(`Round ${revealed.board.roundNumber} · Current state`);
+      for (const tier of creature.acquiredTiers) await expect(page.locator('#inspect-mutations')).toContainText(catalogue.packages.find(pack => pack.id === tier).name);
+      await expect(page.locator('#inspect-spells details')).toHaveCount(creature.knownSpells.length);
+      for (const spell of creature.knownSpells) await expect(page.locator(`#inspect-spells [data-inspect-spell="${spell}"] summary`)).toContainText(catalogue.cards.find(card => card.id === spell).name);
+      const first = creature.knownSpells[0];
+      if (first) {
+        await page.locator(`#inspect-spells [data-inspect-spell="${first}"] summary`).click();
+        await expect(page.locator(`#inspect-spells [data-inspect-spell="${first}"]`)).toContainText(catalogue.cards.find(card => card.id === first).targeting);
+      }
+      await fitsViewport(page, '#inspect-close');
+      if (creature.id === offer.creature) await page.screenshot({ path: info.outputPath('creature-inspection-real-host.jpg'), type: 'jpeg', quality: 85 });
+      await page.keyboard.press('Escape');
+    }
     expect(shown.length).toBe(count); expect(writes.length).toBe(written); expect(errors).toEqual([]);
   } finally { await page.close(); await stopHost(host); }
 });

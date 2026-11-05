@@ -120,7 +120,7 @@ export function createArenaMatch({ connection, onChange }) {
     if (cached) return cached;
     const action = actions[index], active = Boolean(action);
     const twoFrames = active && !action.interlude && Boolean(action.frame);
-    cached = { active, board: replayBoard(action, actions, index, stage, latest, catalogue), stage, index, count: actions.length, round: action?.round,
+    cached = { active, sequence: action?.sequence, board: replayBoard(action, actions, index, stage, latest, catalogue), stage, index, count: actions.length, round: action?.round,
       rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),

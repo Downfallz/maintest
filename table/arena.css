@@ -235,6 +235,8 @@
 #history-new { font-size: 12px; margin-bottom: 8px; }
 @media (max-width: 619px) {
   #history-open { width: 82px; font-size: 12px; }
+  /* A large unread count gets the second line; keep the launcher inside the phone header. */
+  #history-open:has(#history-unread:not(:empty)) #history-preview { display: none; }
   #arena .brand div { display: none; }
   #arena .brand > span { display: block; font-size: 25px; }
   #arena .hud-top { gap: 6px; }
@@ -529,4 +531,36 @@
 @media (max-height: 520px) and (min-width: 620px) {
   #arena[data-combat="targets"] { grid-template-rows: 46px 44px minmax(0,1fr) 108px 16px; }
   #arena[data-combat="targets"] .command-dock { padding-top: 6px; padding-bottom: 6px; }
+}
+
+/* AU12: one scrollable reference body; identity, stats and Close stay reachable. */
+#inspect-dialog { padding: 0; width: min(760px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; }
+#inspect-dialog[open] { display: flex; flex-direction: column; }
+.inspect-header, .inspect-footer { flex: none; padding: 12px 18px; background: #14282c; }
+.inspect-header h2 { margin: 4px 0; font: 26px Georgia,serif; color: var(--gold); overflow-wrap: anywhere; }
+.inspect-header p { margin: 4px 0; }
+#inspect-context { font-size: 12px; color: #c0cec3; }
+#inspect-body { overflow: auto; min-height: 0; padding: 0 18px 12px; overscroll-behavior: contain; overflow-wrap: anywhere; }
+#inspect-body h3 { font: 19px Georgia,serif; color: var(--gold); margin: 18px 0 8px; }
+#inspect-body p { line-height: 1.6; font-size: 14px; }
+#inspect-mutations { list-style: none; padding: 0; }
+#inspect-mutations li, #inspect-spells details { padding: 10px 12px; margin: 8px 0; border: 1px solid #52695e; border-radius: 6px; background: #192e32; }
+#inspect-mutations p, #inspect-spells p { margin: 6px 0; }
+#inspect-spells summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-size: 15px; color: #f0e9d7; }
+.inspect-footer { margin: 0; border-top: 1px solid #52695e; }
+.inspect-footer button { min-height: 44px; }
+.creature-defense, .creature-conditions { display: block; font-size: 10px; line-height: 1.25; }
+.creature-conditions { color: #e4c393; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 619px), (max-height: 520px) { .creature-defense, .creature-conditions { display: none; } }
+@media (max-height: 520px) {
+  .inspect-header, .inspect-footer { padding: 6px 12px; }
+  .inspect-header h2 { font-size: 20px; }
+  #inspect-side { display: none; }
+}
+@media (min-width: 620px) and (min-height: 521px) {
+  #arena .creature-tag { bottom: 80px; }
+}
+@media (max-width: 619px) and (max-height: 620px) {
+  /* Keep the 44px result button inside the short portrait dock. */
+  #arena .command-dock { row-gap: 3px; }
 }

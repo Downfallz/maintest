@@ -73,6 +73,7 @@ docs/
                 inviting one of them to a table (friends-plan.md).
                 The arena UX recovery plan (arena-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
+                AU12 adds public creature references and retained last-cast links; historical inspection stays on recorded frames.
                 ADR 0132 versions event streams: new tables record ordinary energy; resumed legacy tables
                 omit that event before sequencing for their remaining lifetime, preserving feed/checkpoint indices.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
@@ -135,7 +136,7 @@ Run build, tests, and format check before declaring any task done; when `learnin
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
 `arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js`, `arena-loop.spec.js`,
-`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js`, `arena-mutations.spec.js`, `arena-tempo.spec.js`, `arena-spellbook.spec.js`, `arena-pacing.spec.js`, `arena-growth.spec.js`, `arena-order.spec.js` and `arena-targets.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
+`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js`, `arena-mutations.spec.js`, `arena-tempo.spec.js`, `arena-spellbook.spec.js`, `arena-pacing.spec.js`, `arena-growth.spec.js`, `arena-order.spec.js`, `arena-targets.spec.js` and `arena-inspection.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

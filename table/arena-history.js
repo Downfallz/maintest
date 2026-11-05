@@ -55,7 +55,7 @@ function combatRow(entry, board, catalogue) {
   const status = action.status === 'Resolved' && resolution.isCritical === false ? 'No critical' : action.status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
-  return { title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
+  return { actor: String(action.actor.id), title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
     summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
@@ -166,11 +166,12 @@ const ordered = rows => [...rows.values()].sort((a, b) => a.sequence - b.sequenc
 // A live two-round window and one explicit reading page, each capped. Historical reads never enter
 // the live connection or playback; a generation fences responses after close, viewpoint/access changes.
 export function createArenaHistory({ limit = 200, load = async () => null, onChange = () => {} } = {}) {
+  let lastActions = new Map();
   let rows = new Map(), page = null, current = 0, available = false, waiting = false, omitted = false, unsupported = false;
   let ordinaryRounds = new Set(), board = null, catalogue = null, generation = 0, loading = false, error = '', oldest = false;
   let filters = noFilters(), selected = null, stage = 'after', unread = 0, high = -1, browsing = false;
   function reset() {
-    generation++; rows.clear(); page = null; current = 0; available = false; waiting = false; omitted = false; unsupported = false;
+    generation++; rows.clear(); lastActions.clear(); page = null; current = 0; available = false; waiting = false; omitted = false; unsupported = false;
     ordinaryRounds.clear(); board = null; catalogue = null; loading = false; error = ''; oldest = false;
     filters = noFilters(); selected = null; stage = 'after'; unread = 0; high = -1; browsing = false;
   }
@@ -194,6 +195,17 @@ export function createArenaHistory({ limit = 200, load = async () => null, onCha
     }
     const publicEntries = (view.feed ?? []).filter(entry => PUBLIC.has(entry.event?.kind) && Number.isInteger(entry.sequence) && entry.sequence >= 0);
     if (high >= 0) unread += new Set(publicEntries.filter(entry => entry.sequence > high).map(entry => entry.sequence)).size;
+    // One normalized last cast per public creature survives the two-round journal window. Select
+    // before normalization: reconnecting a long match still allocates at most one extra row per creature.
+    const roster = new Set([...(board.allies ?? []), ...(board.enemies ?? [])].map(one => String(one.id)));
+    for (const id of lastActions.keys()) if (!roster.has(id)) lastActions.delete(id);
+    const newest = new Map();
+    for (const entry of publicEntries) {
+      if (entry.event.kind !== 'CombatActionResolved') continue;
+      const id = String((entry.event.resolution?.action ?? entry.event.action)?.actor);
+      if (roster.has(id) && entry.sequence > (newest.get(id)?.sequence ?? lastActions.get(id)?.sequence ?? -1)) newest.set(id, entry);
+    }
+    for (const [id, entry] of newest) lastActions.set(id, historyEntry(entry, board, catalogue));
     const recentEntries = publicEntries.filter(entry => roundOf(entry) >= current - 1 && roundOf(entry) <= current);
     omitted ||= recentEntries.length < publicEntries.length || recentEntries.length > limit;
     const additions = normalize(recentEntries.sort((a, b) => a.sequence - b.sequence).slice(-limit), board, catalogue);
@@ -218,6 +230,17 @@ export function createArenaHistory({ limit = 200, load = async () => null, onCha
     return { available, waiting, current, omitted, unsupported, rows: filtered, all, filters: { ...filters },
       loading, error, oldest, browsing, unread: waiting ? 0 : unread, latest: waiting ? undefined : ordered(rows).at(-1),
       review: index < 0 ? null : { row: filtered[index], stage, previous: index > 0, next: index < filtered.length - 1 } };
+  }
+  function lastAction(id, through = Infinity) {
+    if (!available || waiting) return null;
+    return [...rows.values(), ...(page?.values() ?? []), ...lastActions.values()]
+      .filter(row => row.actor === String(id) && row.sequence <= through).sort((a, b) => b.sequence - a.sequence)[0] ?? null;
+  }
+  function inspect(row) {
+    generation++; loading = false; error = ''; filters = noFilters(); stage = 'after';
+    page = new Map(rows); page.set(row.sequence, row);
+    if (page.size > limit) page.delete(ordered(page).find(one => one.sequence !== row.sequence).sequence);
+    selected = row.sequence; browsing = true; onChange();
   }
   function open() { page ??= new Map(rows); unread = 0; }
   function close() { generation++; loading = false; page = null; selected = null; browsing = false; error = ''; oldest = false; }
@@ -250,5 +273,5 @@ export function createArenaHistory({ limit = 200, load = async () => null, onCha
     } catch (failure) { if (context === generation) error = failure.message; }
     finally { if (context === generation) { loading = false; onChange(); } }
   }
-  return { receive, reset, model, open, close, latest, filter, select, move, boundary, earlier, read };
+  return { receive, reset, model, lastAction, inspect, open, close, latest, filter, select, move, boundary, earlier, read };
 }
