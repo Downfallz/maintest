@@ -76,7 +76,7 @@ docs/
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
                 AU12 adds public creature references and retained last-cast links; historical inspection stays on recorded frames.
                 AU13 adds the final scorecard, recorded-seat notes, optional notices/haptics and unambiguous seat resume.
-                AU14 records cross-feature acceptance in arena-ux-acceptance.md; physical/new-player gates and A8 remain open.
+                AU14 records cross-feature acceptance in arena-ux-acceptance.md; A8 (arena-release-acceptance.md, ADR 0136) adds the rollout preference, budgets and release profiles; physical/new-player gates remain open.
                 ADR 0132 versions event streams: new tables record ordinary energy; resumed legacy tables
                 omit that event before sequencing for their remaining lifetime, preserving feed/checkpoint indices.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
