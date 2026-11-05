@@ -58,6 +58,22 @@ test('a push arriving while the arena is in front of somebody shows nothing: the
   assert.equal(w.shown.length, 0);
 });
 
+test('an arena in front of somebody at another table does not stand in for this one: the notice shows', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena?table=b&seat=player1', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 1);
+});
+
+test('an arena opened from a seat\'s own link names no table, and keeps the notice quiet while in front', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena?player1=tok', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 0);
+});
+
 test('the arena lab in front of somebody is a study, not a seat: the notice shows', async () => {
   const w = worker({ windows: [{ url: 'https://table.example/arena-lab', focused: true, visibilityState: 'visible' }] });
 

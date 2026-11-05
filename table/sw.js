@@ -42,8 +42,12 @@ async function onPush(notice) {
   // Every page is told something arrived, so a lobby in front of somebody reads its lists again now rather
   // than at its next refresh; the notice itself is then shown or not.
   for (const client of windows) client.postMessage?.({ kind: 'notice', url: notice.url ?? GAME });
-  // A test notice is the one a player asked to see, over the game or not.
-  if (!notice.test && windows.some(client => client.focused && client.visibilityState === 'visible' && pageOf(client.url) === page)) return;
+  // A test notice is the one a player asked to see, over the game or not. A game in front of somebody at another
+  // table is not this one's: a browser may hold several (ADR 0115), and a turn there stays a turn to be told of.
+  const url = notice.url ?? GAME;
+  const inFront = client => client.focused && client.visibilityState === 'visible' && pageOf(client.url) === page
+    && (page !== GAME || sameTable(client, url));
+  if (!notice.test && windows.some(inFront)) return;
   await self.registration.showNotification(notice.title ?? 'Your turn', {
     body: notice.body ?? 'The match is asking you something.',
     tag: notice.tag ?? 'turn',
