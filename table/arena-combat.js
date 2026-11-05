@@ -21,8 +21,12 @@ export function createArenaCombat({ connection, onChange, visible = () => true }
   function model() {
     const view = drawn();
     const target = opened && view?.waitingFor === 'Target' ? view.options?.target : null;
+    const actor = latest?.board?.allies?.find(one => one.id === latest?.waitingCreature);
+    const slot = latest?.board?.timeline?.find(one => one.creature === latest?.waitingCreature);
     return { available: available(), opened, chosen, picked: [...picked], sending, error,
       waitingFor: latest?.waitingFor, actor: latest?.waitingCreature,
+      reference: { energy: actor?.energy, round: latest?.board?.roundNumber, phase: latest?.board?.phase,
+        tempo: slot?.speed, turn: slot?.turn, guidance: latest?.guidance ?? [] },
       question: key, spells: offeredForLatest(), known: latest?.board?.allies?.find(one => one.id === latest?.waitingCreature)?.knownSpells ?? [], short: options()?.unaffordableSpells ?? [],
       target, canEdit: editable(), canSubmit: editable() && combatDecision(view, chosen, picked) !== null,
       emptyCast: emptyCastAllowed(target?.legalTargets),

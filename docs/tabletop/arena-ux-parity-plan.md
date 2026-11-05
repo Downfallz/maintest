@@ -70,7 +70,7 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | Explicitly one host-asked creature at a time; three buttons/confirm cycles for three creatures | Recover batch UX using existing sequential host protocol; AU5 |
 | Tempo consequences | Short rule and compact cost/critical spell reference | Rule sentence but no creature spell reference in tempo choices | Reference and clear Instinct/Precision tradeoff; AU5 |
 | Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Partial: order, sides, tempo and current marker; rendered strip omits initiative/roll details | Inspectable order and tie explanation, completed/upcoming states; AU11 |
-| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Catalogue cards and unavailable states exist; verbose list, one column on phone | Grouped compact spellbook with progressive detail; AU9 |
+| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Compact type groups, family accents, explicit full-details mode and stable reference browsing implemented (AU9) | Selected-target preview remains AU10 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Legal targets, selected count and confirmation exist; guidance is not rendered | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
 | Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Stats, condition source/duration and known spell names exist; no full spell faces or mutation ownership display | Rich reference anchored to the inspected creature; AU12 |
@@ -424,6 +424,12 @@ Show zero energy cost; omit meaningless zero critical badges.
 Acceptance: late multiclass spellbook, long names, expensive/unoffered cards, no critical, free spell,
 hidden-intent energy warning and unknown catalogue entry. Changing creature starts at its own reference
 position; a same-question poll preserves deliberate browsing. No second tap submits a spell accidentally.
+
+Implemented by `table/arena-spellbook.js` and `arena/src/spellbook.ts` through the existing combat
+controller. Served types/palette remain presentation-only; current host offers alone control eligibility.
+The reference preserves its DOM, focus and scroll through same-question reads and field-target round trips;
+a new question clears it. Full details exposes long names and complete card text, including unavailable
+cards. The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
 
 ### AU10 — Understand targets and cost before confirming
 

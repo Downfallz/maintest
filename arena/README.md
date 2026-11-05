@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -211,3 +211,27 @@ before answering and still verify that presentation sends no command or acknowle
 
 Captures: [real-host opening receipt, desktop](../docs/tabletop/images/arena-upkeep/desktop.jpg) ·
 [phone receipt with non-default/passive/zero fixture values](../docs/tabletop/images/arena-upkeep/phone-fixture.jpg).
+
+## AU9: compact grouped spellbook
+
+Combat choices group the current creature's known/offered spells by the served card type, with family
+accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
+and availability. Current question guidance supplies current chances and unavailable reasons when present;
+catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
+its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
+
+**Full details** switches the whole reference to complete names, targeting, target/caster effects and critical
+notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
+footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
+confirmation. Double-tapping a card never submits a spell.
+
+`table/arena-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
+update existing nodes, preserving focus, scroll, details mode and card positions. The same asking retains
+browsing when returning from field targets. A new asking, creature, seat, hidden page or access loss clears
+the reference and its local state. Nothing is persisted. Group/type fallback never guesses from effect prose.
+
+`arena-spellbook.spec.js` covers a late multiclass hand, long names, zero cost/no critical, unavailable and
+unknown cards, energy plans, full details, stable geometry/focus/scroll through polls, changed creatures,
+explicit confirmation, access loss and short portrait/landscape layouts. Existing combat and real-host
+journeys continue exercising the same decision protocol. AU10 owns selected-target previews.
