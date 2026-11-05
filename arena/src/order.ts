@@ -11,11 +11,14 @@ const initiative = (row: Row) => Number.isFinite(row.initiative) ? `Initiative $
 export function orderControls(reveal: ReturnType<typeof createArenaOrderReveal>, beforeOpen: () => void,
   inspect: (id: string) => void, onVisibility: () => void) {
   const dialog = el<HTMLDialogElement>('order-dialog');
-  let key = '', opener: HTMLElement | null = null, available = false;
+  let key = '', opener: HTMLElement | null = null, available = false, opening = false;
+  // Skipping playback renders at once: while Order opens, that render must not open Order or a tip itself.
   function show(automatic = false) {
-    if (!available || dialog.open) return;
+    if (!available || dialog.open || opening) return;
     opener = document.activeElement as HTMLElement;
-    if (!automatic) beforeOpen();
+    opening = true;
+    try { if (!automatic) beforeOpen(); } finally { opening = false; }
+    if (dialog.open) return;
     reveal.presented(); dialog.showModal(); onVisibility();
   }
   const openers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-order-open]'));
@@ -28,7 +31,7 @@ export function orderControls(reveal: ReturnType<typeof createArenaOrderReveal>,
   function creatureButton(row: Row) {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.orderCreature = row.id;
     button.disabled = !row.inspectable;
-    button.setAttribute('aria-label', `Inspect ${row.label} · ${row.team} · position ${row.position} · ${row.tempo} · ${initiative(row)} · ${row.state}${row.condition ? ` · ${row.condition}` : ''}`);
+    button.setAttribute('aria-label', ['Inspect ' + row.label, row.team, `position ${row.position}`, row.tempo, initiative(row), row.state, row.condition].filter(Boolean).join(' · '));
     button.addEventListener('click', () => inspect(row.id));
     return button;
   }
@@ -80,5 +83,5 @@ export function orderControls(reveal: ReturnType<typeof createArenaOrderReveal>,
     }
     if (canAuto && reveal.model().pending) show(true);
   }
-  return { render };
+  return { render, isOpening: () => opening };
 }

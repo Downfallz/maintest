@@ -3,16 +3,23 @@ import { orderOf } from './ties.js';
 import { tempoLabel } from './terms.js';
 
 // Consume the presented board, including its historical cursor/rolls during playback. Never rank locally.
+function stateOf(index, board, finished) {
+  if (finished || (board.cursor >= 0 && index < board.cursor)) return 'Completed';
+  return index === board.cursor ? 'Now' : 'Upcoming';
+}
+const teamOf = slot => slot.side === 'ally' ? 'Your team' : 'Opponent';
+function conditionOf(creature) {
+  if (creature?.isAlive === false) return 'Defeated';
+  return creature?.isStunned ? 'Stunned' : '';
+}
+
 export function arenaOrder(board) {
   const finished = ['Cleanup', 'Finalization'].includes(board?.subPhase) || board?.phase === 'EndOfRound';
   const rows = (board?.timeline ?? []).map((slot, index) => {
     const creature = board.creatures?.find(one => one.id === String(slot.creature));
-    const state = finished || (board.cursor >= 0 && index < board.cursor) ? 'Completed'
-      : index === board.cursor ? 'Now' : 'Upcoming';
     return { id: String(slot.creature), position: index + 1, label: creature?.label ?? `Creature ${slot.creature}`,
-      team: slot.side === 'ally' ? 'Your team' : slot.side === 'enemy' ? 'Opponent' : 'Unknown team',
-      speed: slot.speed, tempo: tempoLabel(slot.speed), initiative: slot.initiative,
-      roll: slot.roll || '', state, condition: creature?.isAlive === false ? 'Defeated' : creature?.isStunned ? 'Stunned' : '',
+      team: teamOf(slot), speed: slot.speed, tempo: tempoLabel(slot.speed), initiative: slot.initiative,
+      roll: slot.roll || '', state: stateOf(index, board, finished), condition: conditionOf(creature),
       inspectable: Boolean(creature) };
   });
   const summary = team => {
@@ -37,7 +44,9 @@ export function arenaTieGroups(view, tapped = []) {
       assignments: ordered.map((id, offset) => ({ id, position: positions[offset]?.position ?? null })),
       fixed: rows.filter(row => !group.some(id => String(id) === row.id) && positions.some(one =>
         one.speed === row.speed && one.initiative === row.initiative) && row.team === 'Opponent') };
-  });
+  }).map(group => ({ ...group,
+    // An opponent holding two or more of these places orders its own creatures too: only the places are known.
+    opponentOrderOpen: group.fixed.length > 1 }));
 }
 
 // A first read/reconnect is a baseline, not a fresh reveal. Keep one pending public reveal, discard it on

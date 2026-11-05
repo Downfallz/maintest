@@ -245,7 +245,7 @@ function render() {
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
-    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]');
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening();
   upkeepUI.render(canAuto());
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);

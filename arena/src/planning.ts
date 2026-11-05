@@ -40,6 +40,15 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
     el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
   }
+  type Assignment = { id: number; position: number | null };
+  type Fixed = { position: number; label: string; roll: string };
+  const assignmentText = (one: Assignment) => `${one.position == null ? 'Position unknown' : '#' + one.position} → ${name(one.id)}`;
+  const fixedText = (one: Fixed) => (one.roll ? `#${one.position} ${one.label} (${one.roll})` : `#${one.position} ${one.label}`);
+  // The opponent orders its own creatures within its places too: with two or more, only the places are certain.
+  function opponentPlacesText(detail: { fixed: Fixed[]; opponentOrderOpen: boolean }) {
+    if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
+    return `Opponent places stay fixed: ${detail.fixed.map(fixedText).join(' · ')}`;
+  }
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
     el('planning-help').textContent = 'Your team keeps its allocated places. Choose which creature takes each place within a tie, then confirm. Opponent positions stay fixed; both teams reveal together.';
@@ -51,8 +60,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       const detail = context[index];
       row.append(line(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.'),
         line(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.'),
-        line(detail.assignments.map((one: { id: number; position: number | null }) => `${one.position == null ? 'Position unknown' : `#${one.position}`} → ${name(one.id)}`).join(' · ')));
-      if (detail.fixed.length) row.append(line(`Opponent places stay fixed: ${detail.fixed.map((one: { position: number; label: string; roll: string }) => `#${one.position} ${one.label}${one.roll ? ` (${one.roll})` : ''}`).join(' · ')}`));
+        line(detail.assignments.map(assignmentText).join(' · ')));
+      if (detail.fixed.length) row.append(line(opponentPlacesText(detail)));
       if (left.length > 1) for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); row.append(node); }
       return row;
     });
