@@ -56,8 +56,10 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
     const given = new Set((next.board?.speedChoices ?? []).map(one => one.creature));
     return roster().missing.some(id => !given.has(id));
   }
+  // A batch still frozen carries on from wherever the gap left it; without one there is nothing to resume.
+  function resume() { if (batch) void pump(); }
   function receive(next) {
-    if (gapBefore(next)) { if (batch) void pump(); return; }
+    if (gapBefore(next)) return resume();
     const nextScope = tempoQuestion(next) ? `${seat}/${next.board?.roundNumber}` : '';
     const nextKey = askedKey(seat, next), previous = roster().missing;
     if (nextScope !== scope || !nextScope) clear();

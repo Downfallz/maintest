@@ -85,22 +85,30 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       kind === 'Evolution' ? model.latest.board.allies.map((one: { id: number; isAlive?: boolean; acquiredTiers?: string[] }) => [one.id, one.isAlive, one.acquiredTiers]) : null, model.tapped, creature,
       model.tempo, kind === 'Speed' && [model.latest.board.allies, model.latest.guidance]]);
     if (key === rendered && catalogue === lastCatalogue) return;
-    const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
-    // A creature tab rebuilds the tabs it sits in; a keyboard player keeps their place on the one they chose.
-    const wasPicking = kind === 'Evolution' && el('planning-creatures').contains(document.activeElement);
-    const focused = document.activeElement as HTMLElement | null;
-    const speedFocus = focused?.dataset.speed, tabFocus = focused?.dataset.tempoTab;
+    const refocus = focusKept(kind);
     for (const id of ['planning-creatures', 'planning-choices']) {
       el(id).removeAttribute('role'); el(id).removeAttribute('aria-labelledby');
     }
     if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model, catalogue); else ties(model);
     rendered = key; lastCatalogue = catalogue;
-    if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
-    if (wasPicking) el('planning-creatures').querySelector<HTMLButtonElement>(`[data-creature="${creature}"]`)?.focus({ preventScroll: true });
-    if (kind === 'Speed' && (speedFocus || tabFocus)) {
-      const target = speedFocus ? `[data-speed="${speedFocus}"]` : `[data-tempo-tab="${tabFocus}"]`;
-      dialog.querySelector<HTMLButtonElement>(target)?.focus({ preventScroll: true });
-    }
+    if (refocus) dialog.querySelector<HTMLButtonElement>(refocus)?.focus({ preventScroll: true });
+  }
+  // The control a keyboard player was on, found again once the panel is rebuilt around it: the ties they are
+  // ordering (or Confirm once they are settled), the creature tab they chose, the tempo tab or tempo they pressed.
+  function focusKept(kind: string): string | null {
+    const focused = document.activeElement as HTMLElement | null;
+    // Document order puts the ties before Confirm, so the first match is a tie left to order, else Confirm.
+    if (kind === 'TieOrder' && el('planning-choices').contains(focused)) return '#planning-choices [data-tie], #planning-confirm';
+    if (kind === 'Evolution' && el('planning-creatures').contains(focused)) return `#planning-creatures [data-creature="${creature}"]`;
+    if (kind !== 'Speed') return null;
+    if (focused?.dataset.speed) return `[data-speed="${focused.dataset.speed}"]`;
+    return focused?.dataset.tempoTab ? `[data-tempo-tab="${focused.dataset.tempoTab}"]` : null;
+  }
+  function confirmLabel(model: ReturnType<Controller['model']>) {
+    if (model.sending) return 'Sending…';
+    if (model.choice?.tier) return 'Acquire · 1 pick';
+    if (model.choice?.pass) return 'Pass all remaining picks';
+    return model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
@@ -122,9 +130,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
-    const confirmation = model.choice?.tier ? 'Acquire · 1 pick' : model.choice?.pass ? 'Pass all remaining picks'
-      : model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
-    el('planning-confirm').textContent = model.sending ? 'Sending…' : confirmation;
+    el('planning-confirm').textContent = confirmLabel(model);
     // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
     if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `Acquire · 1 pick: ${selectionText(model, catalogue)}`);
     else el('planning-confirm').removeAttribute('aria-label');
