@@ -272,3 +272,17 @@ test('recorded boundaries keep only public stats and condition durations, never 
   assert.deepEqual(row.states.before[0].conditions, ['Bleed 2 · 2 rounds']);
   assert.doesNotMatch(JSON.stringify(row), /secret|hidden|criticalChance|caster/);
 });
+
+// AU11: the journal keeps each recorded order with the initiatives and rolls of its own event.
+const orderSlot = (creature, owner = 'Player1') => ({ creature, owner, speed: 'Quick', initiative: 5 });
+const orderBoard = { slot: 'Player1', roundNumber: 2, allies: [{ id: 2, name: 'Ally 2' }], enemies: [], rollOffs: [{ creature: 2, rolls: [20] }] };
+for (const kind of ['TimelineBuilt', 'TiesOrdered']) {
+  test(`a ${kind} entry shows the event's initiatives and rolls, not the board's current ones`, () => {
+    const row = historyEntry({ sequence: 4, event: { kind, roundId: 2, timeline: { slots: [orderSlot(2)], rollOffs: [{ creature: 2, rolls: [11, 18] }] } } }, orderBoard);
+    assert.match(row.details[0].text, /Initiative 5 · d20 11 → 18/); assert.doesNotMatch(row.details[0].text, /d20 20/);
+  });
+  test(`a ${kind} entry recorded without rolls says none was recorded`, () => {
+    const row = historyEntry({ sequence: 4, event: { kind, roundId: 2, timeline: { slots: [orderSlot(2)] } } }, orderBoard);
+    assert.match(row.details[0].text, /No d20 roll recorded/);
+  });
+}

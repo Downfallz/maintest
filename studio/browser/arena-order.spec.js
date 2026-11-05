@@ -69,13 +69,14 @@ test('unrevealed opponent tempos are absent and same-team ties describe no roll 
   await expect(page.locator('.tie-group')).toContainText('Your fixed places: 1, 2');
   await expect(page.locator('#order-dialog')).toBeHidden(); expect(h.state.writes).toEqual([]);
 });
-test('tie drafts keep their own interleaved places through an order reference and reveal only once afterward', async ({ page }) => {
+test('a tie draft keeps its interleaved places through an order reference, and reading Order consumes the reveal', async ({ page }) => {
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
   await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20,
-    options: { tieOrder: { ties: [[1, 2], [3]] } }, feed: [reveal(11)] });
+    options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
   await page.locator('#planning-open').click(); await page.locator('[data-tie="2"]').click();
   await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2 · #3 → Creature 1');
   await expect(page.locator('.tie-group').first()).toContainText('Opponent places stay fixed: #2 Creature 4');
+  await expect(page.locator('.tie-group').first()).toContainText('Recorded d20 rolls allocated these team places');
   await expect(page.locator('#order-dialog')).toBeHidden();
   // Read-only reference above the draft; no additional acknowledgement or decision.
   await page.locator('#planning-order').click();
@@ -83,7 +84,7 @@ test('tie drafts keep their own interleaved places through an order reference an
   await page.keyboard.press('Escape'); await expect(page.locator('#planning-order')).toBeFocused();
   await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2');
   await page.locator('#planning-confirm').click();
-  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1, 3], asked: 20 }]);
+  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
   await h.publish({ board: { ...board, subPhase: 'IntentSelection', timeline: [slot(2), slot(4), slot(1), ...timeline.slice(3)] },
     waitingFor: null, waitingAsked: null, options: {}, feed: [reveal(12, 'TiesOrdered', [slot(2), slot(4), slot(1), ...timeline.slice(3)])] });
   // The manual reference already consumed this reveal; it must not interrupt the next question again.
