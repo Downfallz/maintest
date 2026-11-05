@@ -25,27 +25,39 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
   let error = '', failed = false, needsRefresh = false;
   const roster = () => tempoRoster(latest);
   const available = () => tempoQuestion(latest) && online && roster().missing.length > 0;
-  const editable = () => available() && opened && !batch && !failed && !needsRefresh && visible();
+  // A write still on the wire keeps the controls closed even after its batch was relinquished: the connection
+  // drops a second write while one is in flight, which would read as a refusal of a tempo the host accepted.
+  const editable = () => available() && opened && !batch && !working && !failed && !needsRefresh && visible();
   function model() {
     const { missing, accepted } = roster();
     const chosen = missing.filter(id => drafts.has(id)).length;
-    return { latest, question: key, available: available(), opened, sending: Boolean(batch), error,
+    return { latest, question: key, available: available(), opened, sending: Boolean(batch) || working, error,
       choice: drafts.has(focus) ? { speed: drafts.get(focus) } : null, tapped: [], accepted: false,
       canEdit: editable(), canSubmit: editable() && chosen === missing.length,
       tempo: { creatures: missing, accepted, focus, drafts: [...drafts], chosen, total: missing.length, needsRefresh } };
   }
   const emit = () => onChange(model());
   function clear() {
-    generation++; drafts = new Map(); focus = null; batch = null; pending = null; working = false;
+    generation++; drafts = new Map(); focus = null; batch = null; pending = null;
     ack = null; opened = false; error = ''; failed = false; needsRefresh = false;
   }
   function reset(nextSeat) { clear(); seat = nextSeat ?? null; latest = null; scope = ''; key = ''; online = false; emit(); }
   function interrupt(message, reconcile = false) {
-    generation++; batch = null; pending = null; working = false; ack = null;
+    generation++; batch = null; pending = null; ack = null;
     error = message; needsRefresh = reconcile; emit();
     if (reconcile) void connection.refresh();
   }
+  // Between two of this seat's Speed askings the host serves a snapshot that asks nothing: the question is
+  // dropped as soon as the seat answers and the next one is set once the match runs again. While creatures of
+  // the round's roster still have no receipt, that snapshot is a gap to wait through, not the end of the round.
+  function gapBefore(next) {
+    if (!scope || !next || next.over || next.playedByBot || next.waitingFor != null) return false;
+    if (`${seat}/${next.board?.roundNumber}` !== scope) return false;
+    const given = new Set((next.board?.speedChoices ?? []).map(one => one.creature));
+    return roster().missing.some(id => !given.has(id));
+  }
   function receive(next) {
+    if (gapBefore(next)) { if (batch) void pump(); return; }
     const nextScope = tempoQuestion(next) ? `${seat}/${next.board?.roundNumber}` : '';
     const nextKey = askedKey(seat, next), previous = roster().missing;
     if (nextScope !== scope || !nextScope) clear();
@@ -58,10 +70,12 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
     if (changed) { ack = null; failed = false; }
     if (batch && (!visible() || !online)) interrupt('Sending paused. Review the remaining tempos and confirm to continue.');
     else if (batch && !pending && (changed || !sameIds(previous, missing))) interrupt('The choices changed elsewhere. Review the remaining tempos.');
-    else if (!batch && opened && changed && !error) error = 'The choices changed. Accepted tempos are kept; review the remaining draft.';
+    // A new asking outdates whatever an interruption said about the old one: the refreshed roster is the answer.
+    else if (!batch && opened && changed) error = 'The choices changed. Accepted tempos are kept; review the remaining draft.';
     emit();
     if (batch) void pump();
   }
+  const engaged = () => scope !== '';
   function setOnline(value) {
     online = value;
     if (!value && batch) interrupt('Connection interrupted. Accepted tempos stay committed; review the refreshed board before continuing.', true);
@@ -129,12 +143,13 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
     } catch {
       if (context === generation) interrupt('Connection lost. This tempo may have arrived; review the refreshed board before continuing.', true);
     } finally {
-      if (context === generation) { working = false; emit(); if (batch) void pump(); }
+      // The wire is free whatever became of the batch meanwhile; a batch confirmed since then starts here.
+      working = false; emit(); if (batch) void pump();
     }
   }
   function submit() {
     if (!model().canSubmit) return Promise.resolve();
     batch = new Map(drafts); error = ''; emit(); return pump();
   }
-  return { model, reset, receive, setOnline, open, close, choose, select, submit };
+  return { model, engaged, reset, receive, setOnline, open, close, choose, select, submit };
 }

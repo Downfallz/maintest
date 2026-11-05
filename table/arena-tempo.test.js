@@ -97,3 +97,57 @@ test('accepted, unknown and opposing creatures are excluded from the editable ro
   current.waitingCreature = 2; current.options.speed.missing = [1, 2, 3, 4, 99];
   assert.deepEqual(tempoRoster(current), { missing: [2, 3], accepted: [{ creature: 1, speed: 'Quick' }] });
 });
+// The host drops the question as soon as a creature's tempo is accepted and sets the next one a moment later:
+// a poll served in between asks nothing, and the batch waits through it rather than taking it for the round's end.
+test('a snapshot asking nothing between two askings keeps the batch, the drafts and the open dialog', async () => {
+  const h = harness();
+  h.connection.submit = async command => {
+    h.writes.push(command);
+    const missing = h.current().options.speed.missing.filter(id => id !== command.creature);
+    const given = [...h.current().board.speedChoices, { creature: command.creature, speed: command.speed }];
+    h.receive({ ...h.current(), waitingFor: null, waitingAsked: null, waitingCreature: null, board: { ...h.current().board, speedChoices: given }, options: {} });
+    assert.equal(h.control.model().opened, true); assert.equal(h.control.model().sending, true);
+    h.receive({ ...h.current(), waitingFor: missing.length ? 'Speed' : null, waitingAsked: 11 + given.length, waitingCreature: missing[0] ?? null,
+      board: { ...h.current().board, speedChoices: given }, options: { speed: { missing } } });
+    return ok(null);
+  };
+  h.control.open(); h.fill(); await h.control.submit(); await flush();
+  assert.deepEqual(h.writes.map(one => one.creature), [1, 2, 3]); assert.equal(h.control.model().opened, false);
+});
+test('the same gap with no batch keeps the drafts, and the round ending through it clears them', () => {
+  const h = harness(); h.control.open(); h.control.choose({ speed: 'Quick' }); h.control.choose({ speed: 'Standard' });
+  h.receive({ ...h.current(), waitingFor: null, waitingAsked: null, waitingCreature: null, options: {} });
+  assert.deepEqual(h.control.model().tempo.drafts, [[1, 'Quick'], [2, 'Standard']]); assert.equal(h.control.model().opened, true);
+  const given = [1, 2, 3].map(creature => ({ creature, speed: 'Standard' }));
+  h.receive({ ...h.current(), waitingFor: null, waitingAsked: null, waitingCreature: null, board: { ...h.current().board, speedChoices: given }, options: {} });
+  assert.deepEqual(h.control.model().tempo, null); assert.equal(h.control.model().opened, false);
+});
+test('a confirmation after an interrupted write waits for that write instead of racing it on the wire', async () => {
+  const h = harness(), write = deferred(); let inFlight = 0;
+  h.connection.submit = command => { h.writes.push(command); inFlight++; return write.promise.finally(() => inFlight--); };
+  h.control.open(); h.fill(); const sending = h.control.submit(); await flush();
+  h.hide(); h.receive(h.current());
+  assert.equal(h.control.model().error, 'Sending paused. Review the remaining tempos and confirm to continue.');
+  assert.equal(h.control.model().sending, true); assert.equal(h.control.model().canSubmit, false);
+  write.resolve(ok(null)); await sending; await flush();
+  assert.equal(inFlight, 0); assert.equal(h.control.model().sending, false);
+  h.connection.submit = async command => { h.writes.push(command); h.accept(command); return ok(null); };
+  h.accept(h.writes[0]); assert.equal(h.control.model().canSubmit, false);
+});
+test('a new asking after an interruption replaces its message with the refreshed roster', async () => {
+  const h = harness(), write = deferred(); h.connection.submit = command => { h.writes.push(command); return write.promise; };
+  h.control.open(); h.fill(); const sending = h.control.submit(); await flush();
+  h.control.setOnline(false); h.receive(h.current()); write.resolve(ok(null)); await sending; h.control.setOnline(true);
+  assert.match(h.control.model().error, /^Sending paused|^Connection interrupted/);
+  h.accept(h.writes[0]); await flush();
+  assert.equal(h.control.model().error, 'The choices changed. Accepted tempos are kept; review the remaining draft.');
+  assert.deepEqual(h.control.model().tempo.creatures, [2, 3]);
+});
+test('the facade tells the page once of a view, a connection state and a reset', () => {
+  let changes = 0;
+  const control = createArenaPlanning({ connection: {}, onChange: () => changes++ });
+  control.reset('a/player1'); assert.equal(changes, 1);
+  control.receive(view()); assert.equal(changes, 2);
+  control.setOnline(true); assert.equal(changes, 3);
+  control.receive({ ...view(), waitingFor: 'TieOrder', options: { tieOrder: { ties: [[1, 2]] } } }); assert.equal(changes, 4);
+});

@@ -34,12 +34,41 @@ host guidance. Other tabs label catalogue-only critical chances; they never borr
 modifiers. Details remain expandable, and keyboard tabs plus a sticky confirmation footer work in short
 portrait and landscape layouts. Help describes the team workflow and preserves drafts.
 
+Between two of the seat's askings the host serves a snapshot that asks nothing: the question is dropped as
+soon as the seat answers and the next one is set once the match runs again. While creatures of the round's
+roster still have no receipt, the batch and the drafts wait through that gap; the round's tempo scope ends
+when every creature of the roster has one, when the round or the seat changes, or when another kind of
+question is asked.
+
 ## Consequences
 
-One explicit player action can answer several sequential host questions. Partial acceptance remains visible
-and cannot be rolled back. Reconnection never silently continues a previously confirmed batch. The domain,
-wire values, simultaneous reveal, checkpoint sequencing and benchmark remain unchanged.
+- Good: one explicit player action answers several sequential host questions, and the draft is the whole
+  team's at once, the way the classic table asks it.
+- Bad: partial acceptance is visible and cannot be rolled back. A refusal or a lost response midway leaves
+  the accepted tempos committed and the rest to confirm again.
+- Neutral: reconnection never silently continues a previously confirmed batch. The domain, wire values,
+  simultaneous reveal, checkpoint sequencing and benchmark are unchanged.
 
 Tests cover one/two/three eligible creatures, frozen batches, late acknowledgements, refusals, uncertain
-acceptance, external changes, privacy boundaries and explicit continuation. Real-host two-seat testing
-compares the opponent's entire board, options, feed and asking across partial submission, reload and completion.
+acceptance, external changes, the gap between askings, privacy boundaries and explicit continuation.
+Real-host two-seat testing compares the opponent's entire board, options, feed and asking across partial
+submission, reload and completion.
+
+## Alternatives considered
+
+- One wire command carrying every tempo: the host would acquire a second shape of the same question, and the
+  classic table, the recordings and the replays would have to learn it. The protocol asks one creature at a
+  time and stays that way.
+- Calling the client-side batch atomic, with a rollback on a refusal: the host has already applied the
+  accepted tempos and told nobody but this seat; nothing can take them back without a rule the game does
+  not have. The batch is honest about being sequential instead.
+- Keeping ADR 0128's one-creature confirmation and only speeding it up: each confirmation still interrupts
+  the player's reading of the team, which is what #411 found unworkable on the classic table.
+- Persisting the draft in browser storage across a reload: a draft is a private choice of one seat on one
+  device; what the host holds is reconstructed from its receipts, and nothing else survives a reload.
+
+## Follow-up
+
+- `table/arena-tempo.js` and `table/arena-planning.js`, with `arena-tempo.test.js` as the record of the
+  cases above; `arena/src/tempo.ts` for the panel.
+- `docs/tabletop/arena-ux-parity-plan.md`, AU5.

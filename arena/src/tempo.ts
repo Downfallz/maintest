@@ -1,6 +1,6 @@
 import type { createArenaPlanning } from '../../table/arena-planning.js';
 import { SPEEDS, TEMPO_RULE, tempoLabel } from '../../table/terms.js';
-import { cardCost, cardDetails, cardsById } from '../../table/card.js';
+import { cardCost, cardsById, hasCritical, referenceLines } from '../../table/card.js';
 import { chance } from '../../table/guidance.js';
 import type { Catalogue } from './planning';
 
@@ -13,21 +13,26 @@ function nextTab(key: string, index: number, count: number) {
   return (index + (key === 'ArrowRight' ? 1 : -1) + count) % count;
 }
 
+// The chance the host computed for the asked creature, or the catalogue's; neither when it is no chance at
+// all, the way the card face and the inspect panel print nothing for a spell that never crits.
 function criticalLabel(card: { critical?: string } | undefined, guide: { standardCriticalChance?: number } | null) {
-  if (guide?.standardCriticalChance != null) return `${chance(guide.standardCriticalChance)} Precision crit · current`;
-  return card?.critical == null ? null : `${card.critical} Precision crit · catalogue`;
+  if (guide?.standardCriticalChance != null) return guide.standardCriticalChance > 0 ? `${chance(guide.standardCriticalChance)} Precision crit · current` : null;
+  return hasCritical(card) ? `${card!.critical} Precision crit · catalogue` : null;
 }
 
-function spellReference(selected: { knownSpells?: string[] } | undefined, view: ReturnType<Controller['model']>['latest'], focus: number, catalogue: Catalogue | null) {
+// A spell the player opened to read stays open while the panel is rebuilt around it, tab by tab.
+function spellReference(selected: { knownSpells?: string[] } | undefined, view: ReturnType<Controller['model']>['latest'], focus: number, catalogue: Catalogue | null, expanded: Set<string>) {
   const reference = document.createElement('section'); reference.className = 'tempo-reference'; reference.setAttribute('aria-label', 'Spell reference');
   reference.append(paragraph(focus === view.waitingCreature ? 'Spell reference · current creature values when available' : 'Catalogue reference · creature-specific modifiers are not included'));
   const cards = cardsById(catalogue);
   for (const id of selected?.knownSpells ?? []) {
     const card = cards.get(id), guide = focus === view.waitingCreature ? view.guidance?.find((one: { spell: string }) => one.spell === id) : null;
-    const details = document.createElement('details'), summary = document.createElement('summary');
+    const details = document.createElement('details'), summary = document.createElement('summary'), key = `${focus}/${id}`;
     summary.textContent = [card?.name ?? id, cardCost(card) === '' ? null : `${cardCost(card)} energy`,
       criticalLabel(card, guide)].filter(Boolean).join(' · ');
-    details.append(summary, ...[...cardDetails(card).map((row: { text: string }) => row.text), card?.criticalNote, guide?.unavailableReason].filter(Boolean).map(paragraph));
+    details.append(summary, ...referenceLines(card, guide).map(paragraph));
+    details.open = expanded.has(key);
+    details.addEventListener('toggle', () => { if (details.open) expanded.add(key); else expanded.delete(key); });
     reference.append(details);
   }
   if (!selected?.knownSpells?.length) reference.append(paragraph('No known spells recorded.'));
@@ -35,6 +40,7 @@ function spellReference(selected: { knownSpells?: string[] } | undefined, view: 
 }
 
 export function tempoControls(controller: Controller, name: (id: unknown) => string) {
+  const expanded = new Set<string>();
   return (model: ReturnType<Controller['model']>, catalogue: Catalogue | null) => {
     const tempo = model.tempo!, view = model.latest, drafts = new Map<number, string>(tempo.drafts);
     const picker = el('planning-creatures'); picker.setAttribute('role', 'tablist'); picker.setAttribute('aria-label', 'Team tempos');
@@ -68,9 +74,9 @@ export function tempoControls(controller: Controller, name: (id: unknown) => str
       const detail = document.createElement('span'); detail.textContent = speed === 'Quick' ? 'Acts before Precision · cannot crit' : 'Acts after Instinct · can crit';
       button.append(label, detail); button.addEventListener('click', () => controller.choose({ speed })); buttons.append(button);
     }
-    const reference = spellReference(selected, view, tempo.focus, catalogue);
-    const summary = paragraph(tempo.creatures.map((id: number) => `${name(id)}: ${drafts.has(id) ? tempoLabel(drafts.get(id)) : 'Not chosen'}`).join(' · '));
-    summary.className = 'tempo-summary'; summary.setAttribute('aria-label', 'Team draft');
+    const reference = spellReference(selected, view, tempo.focus, catalogue, expanded);
+    const summary = paragraph(['Team draft', ...tempo.creatures.map((id: number) => `${name(id)}: ${drafts.has(id) ? tempoLabel(drafts.get(id)) : 'Not chosen'}`)].join(' · '));
+    summary.className = 'tempo-summary';
     choices.replaceChildren(title, buttons, summary);
     if (tempo.accepted.length) {
       const values = tempo.accepted.map((one: { creature: number; speed: string }) => `${name(one.creature)}: ${tempoLabel(one.speed)}`).join(' · ');
