@@ -1,15 +1,17 @@
 # Arena UX parity: understand, plan and read the match
 
 Date: 2026-11-04
-Status: proposed implementation plan; this change contains documentation only.
+Status (2026-11-05): AU1–AU13 merged; AU14 automated acceptance recorded.
+Physical-device and new-player observation gates remain open; see [the acceptance record](arena-ux-acceptance.md).
 Audit baseline: main `c2a1112b1596d7894cd41628db196df86fb86c7d`, including A7 / PR #432.
 Baseline update: ART-2 / PR #436 merged as `c788cc2`; its WebP references are now on main.
 Companion: [browser arena delivery plan](browser-arena-plan.md).
 
 ## Executive decision
 
-The arena supports the complete game loop, but it does not yet carry the classic table's accumulated
-decision support. A player can issue a legal command without understanding why it is their turn,
+At the original audit baseline, the arena supported the complete game loop without carrying the classic
+table's accumulated decision support. The gaps below concerned players issuing a legal command without
+understanding why it was their turn,
 what a mutation buys, what upkeep already did, or what just hit their creatures.
 
 Treat this as a dedicated UX workstream, **AU1–AU14**, separate from A1–A8 and ART-1–ART-6.
@@ -55,29 +57,31 @@ remains a separate workstream and does not block readable cards, guides or the c
 
 ## Gap matrix
 
-“Partial” means useful behaviour exists and must be extended rather than replaced.
+Updated against main `9c354652` (AU13 and branding #463). “Covered” denotes automated implementation evidence,
+not physical-device certification or an observed novice playtest. Each row maps to the
+[acceptance checklist](arena-ux-acceptance.md#gap-checklist); partial rows retain explicit follow-ups.
 
-| Area | Classic table evidence / existing behaviour | Arena at the audit baseline | Required change / owner |
+| Area | Classic table evidence / existing behaviour | Current arena status / merged evidence | Required change / owner |
 | --- | --- | --- | --- |
-| Phase and next action | `renderPhaseGuide`, Round guide, round cap, next evolution, decision/turn headings | Partial: round/phase, instruction and open-command button; no full phase guide | Explain current objective and upcoming step without exposing private choices; AU2 |
-| First-use explanation | Phase notices, replayable announcements, mute/keep-open; no need to invent an elaborate tutorial | Generic instructions; no equivalent notice/help system | Short contextual introduction to mutation, tempo and targeting; AU2 |
-| Opening energy | `upkeepEnergy` reads `catalogue.rules.energyPerRound`; waiting-room guard (#373) | `roundNotes` and `replayText` describe ongoing ticks only; ordinary round energy is not mentioned | Record actual gains at the grant boundary (AU3a), then render the receipt (AU3b) |
-| Upkeep details | Applied energy/heal/bleed ticks, condition chips, countdowns, per-kind steps (#250/#255) | Partial: textual upkeep/aftermath notes behind an icon, last two rounds | Readable receipt with affected creatures and discoverable details; AU3 |
-| Round turnover | Last cast → cleanup → upkeep → next question (#253/#410) | Combat queue handles casts; round notes are separate and passive | One presentation sequence including meaningful turnover, consistent historical context; AU7 |
-| Activity console | Activity feed, last-action line, structured round recap and announcements | Last-action result plus upkeep/aftermath review; no unified chronological journal | Docked/drawer console with structured records; AU1/AU6 |
-| Mutation chooser | `evolutionButtons` / `packageCard`: offered cards, family colour, tags, spells, prerequisites, budget | Full nested `details` forest; data exists but useful choices compete with future nodes | Available-now cards first, reference tree second; AU4 |
-| Mutation reference | Inspectable tree outside purchase questions, ownership, paths, passives, shared picks | Tree mounted through Evolution planning controls; no equivalent persistent reference entry | Always-reachable read-only tree and unlock receipt; AU8 |
-| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | AU5 implemented: editable team tabs, one frozen batch, explicit continuation after interruption | Sequential host protocol retained; AU5 |
-| Tempo consequences | Short rule and compact cost/critical spell reference | AU5 implemented: per-creature energy, cost/critical reference and labelled catalogue fallback | Instinct/Precision tradeoff and expandable spell details; AU5 |
-| Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | AU11 implemented: exact order/roll reference, creature links, tie positions and deferred reveal summary | Public reveal only; same-team choices retain the host protocol |
-| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Compact type groups, family accents, explicit full-details mode and stable reference browsing implemented (AU9) | Selected-target preview remains AU10 |
-| Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | AU10 implemented: current-question costs, selected-target estimates, caster effects and explicit fallback | Compact confirmation summary and current-board estimates; AU10 |
-| Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
-| Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | AU12 implemented: acquired mutations/passives, full known-spell faces, condition sources and linked last public cast | Current or explicitly recorded/pinned reference; AU12 |
-| Match conclusion | Victory/Defeat/Draw, reason, survivors/HP, full replay (#407/#377) | Correct outcome/concession/replay exist, relatively plain result panel | Recover useful final summary and console/replay entry points; AU13 |
-| Privacy and reconnect | Seat-filtered data, opaque hotseat, stable focus, waiting/ack fences | Much already present in A4–A7; selected-seat picker and lifecycle reset are deliberate | Preserve fences; remove unnecessary single-seat friction after discovery; AU13/AU14 |
-| Service tools | Push offer/test, playtest notes, audio/haptics, PWA Back/resume | Different coverage; A8 owns part of sound/resume/recovery | Reconcile A8, carry over missing relevant tools with existing authorization; AU13 |
-| Viewport/accessibility | Fixed decisions, scroll/focus retention, mobile target space, landscape fixes | Viewport shell and DOM controls exist; dense dialogues still need usability review | Per-PR criteria, final parity pass AU14; not “overflow hidden = done” |
+| Phase and next action | `renderPhaseGuide`, Round guide, round cap, next evolution, decision/turn headings | Covered — contextual objective, round cap and next step; [AU2 #442](https://github.com/Downfallz/maintest/pull/442) | Explain current objective and upcoming step without exposing private choices; AU2 |
+| First-use explanation | Phase notices, replayable announcements, mute/keep-open; no need to invent an elaborate tutorial | Covered automatically — mutation/tempo/mode-specific tips, mute and Help; [AU2 #442](https://github.com/Downfallz/maintest/pull/442). Novice observation pending | Short contextual introduction to mutation, tempo and targeting; AU2 |
+| Opening energy | `upkeepEnergy` reads `catalogue.rules.energyPerRound`; waiting-room guard (#373) | Covered — actual grant event [AU3a #447](https://github.com/Downfallz/maintest/pull/447), receipt [AU3b #451](https://github.com/Downfallz/maintest/pull/451) | Record actual gains at the grant boundary (AU3a), then render the receipt (AU3b) |
+| Upkeep details | Applied energy/heal/bleed ticks, condition chips, countdowns, per-kind steps (#250/#255) | Covered — actual/zero ticks, sources and missing-data explanations; [AU3b #451](https://github.com/Downfallz/maintest/pull/451) | Readable receipt with affected creatures and discoverable details; AU3 |
+| Round turnover | Last cast → cleanup → upkeep → next question (#253/#410) | Covered — ordered actions/aftermath/upkeep, Auto/Step/Skip; [AU7 #460](https://github.com/Downfallz/maintest/pull/460) | One presentation sequence including meaningful turnover, consistent historical context; AU7 |
+| Activity console | Activity feed, last-action line, structured round recap and announcements | Covered — retained public journal [AU1 #440](https://github.com/Downfallz/maintest/pull/440), filtering/pinned detail [AU6 #456](https://github.com/Downfallz/maintest/pull/456) | Docked/drawer console with structured records; AU1/AU6 |
+| Mutation chooser | `evolutionButtons` / `packageCard`: offered cards, family colour, tags, spells, prerequisites, budget | Covered — comparable offered cards, tags, spells and budget; [AU4 #453](https://github.com/Downfallz/maintest/pull/453) | Available-now cards first, reference tree second; AU4 |
+| Mutation reference | Inspectable tree outside purchase questions, ownership, paths, passives, shared picks | Covered — persistent read-only tree, ownership and public unlock receipt; [AU8 #457](https://github.com/Downfallz/maintest/pull/457) | Always-reachable read-only tree and unlock receipt; AU8 |
+| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | Covered — editable team tabs, one frozen batch and explicit interrupted continuation; [AU5 #454](https://github.com/Downfallz/maintest/pull/454) | Sequential host protocol retained; AU5 |
+| Tempo consequences | Short rule and compact cost/critical spell reference | Covered — per-creature energy, cost/critical reference, catalogue fallback; [AU5 #454](https://github.com/Downfallz/maintest/pull/454) | Instinct/Precision tradeoff and expandable spell details; AU5 |
+| Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Covered — exact order/roll reference and same-team ordering; [AU11 #458](https://github.com/Downfallz/maintest/pull/458) | Public reveal only; same-team choices retain the host protocol |
+| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Covered — compact grouped cards, full details and retained browsing; [AU9 #455](https://github.com/Downfallz/maintest/pull/455) | Selected-target preview remains AU10 |
+| Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Covered — current-question estimates, costs, caster effects and fallback; [AU10 #459](https://github.com/Downfallz/maintest/pull/459) | Compact confirmation summary and current-board estimates; AU10 |
+| Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Covered — applied effects, recorded before/after and linked journal; [AU6 #456](https://github.com/Downfallz/maintest/pull/456) | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
+| Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Covered — public mutations/spells/conditions and last action; [AU12 #461](https://github.com/Downfallz/maintest/pull/461) | Current or explicitly recorded/pinned reference; AU12 |
+| Match conclusion | Victory/Defeat/Draw, reason, survivors/HP, full replay (#407/#377) | Covered — authoritative scorecard and replay through final result; [AU13 #462](https://github.com/Downfallz/maintest/pull/462) | Recover useful final summary and console/replay entry points; AU13 |
+| Privacy and reconnect | Seat-filtered data, opaque hotseat, stable focus, waiting/ack fences | Covered for automated seat/lifecycle scenarios — [AU13 #462](https://github.com/Downfallz/maintest/pull/462); physical PWA resume remains open | Preserve fences; remove unnecessary single-seat friction after discovery; AU13/AU14 |
+| Service tools | Push offer/test, playtest notes, audio/haptics, PWA Back/resume | Partial release gate — notes/notices/haptics [AU13 #462](https://github.com/Downfallz/maintest/pull/462), audio [ART-6 #450](https://github.com/Downfallz/maintest/pull/450); A8 #437 still open | Reconcile A8, carry over missing relevant tools with existing authorization; AU13 |
+| Viewport/accessibility | Fixed decisions, scroll/focus retention, mobile target space, landscape fixes | Partial — AU14 keyboard and viewport acceptance; native zoom, screen readers and physical devices pending | Per-PR criteria, final parity pass AU14; not “overflow hidden = done” |
 
 ## Interaction specification
 
@@ -549,6 +553,8 @@ Do not make the arena default as a side effect of this plan.
 
 Acceptance record contains actual desktop/phone captures, test results, physical-device checks
 where performed, open limitations and a checklist for each gap row.
+AU14 evidence: [acceptance record and current captures](arena-ux-acceptance.md). Automated checks cover
+the information needed for the following journey; a human observation has not yet been performed.
 A new player must be able to explain the opening energy, select a mutation knowingly, prepare all tempos,
 identify why a creature lost HP and reopen a previous event. Observe that journey instead of relying only
 on assertions that a button exists.
