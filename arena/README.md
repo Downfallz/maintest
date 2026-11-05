@@ -526,3 +526,6 @@ and account sign-in, revocation, recovery, rollout preference and asset budgets 
 notification availability/opt-in/testing, haptics, access loss and short viewports. Controller tests cover
 late service replies and shared-device endpoint rebinding. The real-host complete-match journeys compare
 the final scorecard and replay frame to the engine, save notes to `notes.jsonl`, and exercise operator replay.
+
+Captures: [desktop result (browser fixture)](../docs/tabletop/images/arena-services/desktop-fixture.jpg) ·
+[phone result (real engine, at-activation)](../docs/tabletop/images/arena-services/phone-real-host.jpg).

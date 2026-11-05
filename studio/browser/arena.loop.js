@@ -224,7 +224,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     expect(taught.has(declaration === 'at-activation' ? 'Action' : 'Intent')).toBe(true);
     if (declaration === 'hidden-intent') expect(taught.has('Target')).toBe(true);
     await reviewAndReplay(page, latest, info, actions);
-    const savedNotes = await readFile(pathJoin(directory, hostInfo.session, 'notes.jsonl'), 'utf8');
+    const savedNotes = await readFile(pathJoin(directory, 'sessions', hostInfo.session, 'notes.jsonl'), 'utf8');
     expect(savedNotes).toContain('AU13 real-host final comment');
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
