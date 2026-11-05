@@ -108,7 +108,7 @@ function eventRow(entry, board, catalogue) {
   }
 }
 
-// Called only after the public allowlist. Normalized rows retain neither raw events nor frame snapshots.
+// Called only after the public allowlist. Keep public text and sanitized boundary values, never raw events.
 export function historyEntry(entry, board, catalogue) {
   if (!PUBLIC.has(entry?.event?.kind) || !Number.isInteger(entry?.sequence) || entry.sequence < 0) return null;
   const row = eventRow(entry, board, catalogue);

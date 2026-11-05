@@ -264,3 +264,13 @@ test('reload makes earlier rounds available through an explicit seat history rea
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
   await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('unread counts stay reachable in the closed journal launcher and clear when it is opened', async ({ page }) => {
+  const h = await mount(page);
+  await h.publish(Array.from({ length: 1000 }, (_, index) => ({ sequence: 20 + index, event: { kind: 'RoundEnded', roundId: 2 } })));
+  await expect(page.locator('#history-unread')).toContainText('1000');
+  await expect(page.locator('#history-open')).toHaveAccessibleDescription(/1000 new/);
+  const bounds = await page.locator('#history-open').evaluate(node => ({ button: node.getBoundingClientRect().toJSON(), header: node.closest('header').getBoundingClientRect().toJSON() }));
+  expect(bounds.button.top).toBeGreaterThanOrEqual(bounds.header.top); expect(bounds.button.bottom).toBeLessThanOrEqual(bounds.header.bottom);
+  await page.locator('#history-open').click(); await expect(page.locator('#history-unread')).toBeEmpty();
+  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
