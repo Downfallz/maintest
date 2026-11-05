@@ -73,7 +73,7 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Compact type groups, family accents, explicit full-details mode and stable reference browsing implemented (AU9) | Selected-target preview remains AU10 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | AU10 implemented: current-question costs, selected-target estimates, caster effects and explicit fallback | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
-| Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Stats, condition source/duration and known spell names exist; no full spell faces or mutation ownership display | Rich reference anchored to the inspected creature; AU12 |
+| Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | AU12 implemented: acquired mutations/passives, full known-spell faces, condition sources and linked last public cast | Current or explicitly recorded/pinned reference; AU12 |
 | Match conclusion | Victory/Defeat/Draw, reason, survivors/HP, full replay (#407/#377) | Correct outcome/concession/replay exist, relatively plain result panel | Recover useful final summary and console/replay entry points; AU13 |
 | Privacy and reconnect | Seat-filtered data, opaque hotseat, stable focus, waiting/ack fences | Much already present in A4–A7; selected-seat picker and lifecycle reset are deliberate | Preserve fences; remove unnecessary single-seat friction after discovery; AU13/AU14 |
 | Service tools | Push offer/test, playtest notes, audio/haptics, PWA Back/resume | Different coverage; A8 owns part of sound/resume/recovery | Reconcile A8, carry over missing relevant tools with existing authorization; AU13 |
@@ -501,6 +501,13 @@ Acceptance: ally and opponent inspection, duplicate names, acquired versus known
 new/permanent/expiring conditions, stun immunity, missing art and a defeated creature.
 No private plans inferred from artwork or public spellbooks. A historical action's inspector uses its
 recorded frame or clearly states unavailable detail; it never silently substitutes live state.
+
+Implementation: `table/arena-inspection.js`, `arena/src/inspection.ts` and the journal's bounded last-cast
+references. See [AU12 behavior and validation](../../arena/README.md#au12-public-creature-inspection).
+The current Mutation Tree is hidden in historical inspection; recorded ownership and missing-field labels
+remain explicit. Desktop captions expose defense/initiative and conditions where space permits. The journal
+keeps one extra sanitized last cast per roster creature; it neither retains unrestricted traces nor changes
+its 200-row page cap. Physical-device validation remains part of AU14.
 
 ### AU13 — Finish the surrounding play experience
 

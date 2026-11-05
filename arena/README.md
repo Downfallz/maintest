@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js arena-inspection.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -458,3 +458,41 @@ Full real-host journeys check order/rolls against seat responses in both declara
 round during match replay. Captures in `docs/tabletop/images/arena-order/` identify their data source.
 
 Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/arena-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/arena-order/phone-fixture.jpg).
+
+
+## AU12: public creature inspection
+
+Every ally and opponent, including defeated creatures and missing-art fallbacks, opens a reference with
+stable scene/journal identity, current defense/initiative, conditions and named spell/caster sources.
+Fresh conditions, permanent effects, remaining countdowns and immunity keep the shared board semantics.
+Desktop captions also expose defense, initiative and compact condition/passive cues; narrow/short layouts
+keep these in the inspection and accessible label so the field's target names remain legible.
+
+Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
+Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell
+disclosures show cost, targeting, target/caster effects and catalogue critical details, with acquired sources
+where recorded. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
+entries keep their identifiers and explicitly unavailable detail. Aggregate passive badges reuse `board.js`.
+
+**Read action in History** opens the exact last public cast made by that creature, including fizzles and
+recorded Before/After boundaries. The journal retains at most one additional normalized cast per current
+roster creature beyond its existing 200-row live/reading windows; rollover therefore keeps the link.
+Historical references filter casts by the displayed sequence and never show a future action. An unavailable
+historical cast stays unlinked. Private submissions cannot populate this cache, and losing the seat clears it.
+
+`table/arena-inspection.js` owns the pure reference, `arena/src/inspection.ts` owns stable disclosures and
+a bounded scrollable body with fixed identity/stats and Close. Ordinary polls retain focus, open spells and
+reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
+available on current inspections; historical inspections display recorded ownership instead of opening a
+current-state tree. If a text-only turnover arrives while the inspection is open, its last recorded frame
+stays explicitly labelled **Pinned reference** until closed. No unrecorded stats or spellbook are supplied.
+
+`arena-inspection.spec.js` covers both teams, namesakes, ownership versus known spells, exact action links
+past rollover, condition sources/durations, missing art/catalogue, keyboard/focus/scroll, Step history,
+revocation, 320px portrait, short landscape and enlarged text. `arena.growth.js` also compares both teams'
+inspection to a real seat and catalogue after a public purchase, with no extra command or acknowledgement.
+Captures in `docs/tabletop/images/arena-inspection/` identify fixture versus real-host data.
+
+
+Captures: [desktop reference (recorded-event fixture)](../docs/tabletop/images/arena-inspection/desktop-fixture.jpg) ·
+[phone reference (real host, public opening mutation)](../docs/tabletop/images/arena-inspection/phone-real-host.jpg).

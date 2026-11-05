@@ -1,3 +1,5 @@
+import { creatureInspection, creatureCues } from '../../table/arena-inspection.js';
+import { inspectionControls } from './inspection';
 import { arenaTargetState, arenaTargetTag } from '../../table/arena-targets.js';
 import { arenaOrder, createArenaOrderReveal } from '../../table/arena-order.js';
 import { orderControls } from './order';
@@ -25,7 +27,6 @@ import { replayOf, operatorToken } from '../../table/session.js';
 import { httpTransport, replayTransport } from '../../table/transport.js';
 import { arenaSeats, seatPath } from '../../table/arena-seats.js';
 import { createLiveConnection } from '../../table/arena-live.js';
-import { chipText, chipSource, laneOf } from '../../table/board.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel } from '../../table/terms.js';
@@ -89,6 +90,7 @@ const controls = combatControls(combat, name, passOver);
 const planningUI = planningControls(planning, name, passOver);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, () => playback.skip());
+const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
@@ -132,26 +134,38 @@ function status(state: string) {
   combat.setOnline(state === 'live'); planning.setOnline(state === 'live');
 }
 
+function inspectionContext() {
+  const replay = match.model(), playing = playback.model();
+  const historical = replay.active || playing.active;
+  const sequence = replay.active ? replay.sequence : playing.sequence;
+  const before = replay.active ? replay.stage === 'before' : playing.stage === 'windup';
+  return { historical, through: historical ? (sequence ?? -1) - (before ? 1 : 0) : Infinity,
+    label: replay.active ? `Round ${replay.round} · ${replay.note}` : playing.active
+      ? `Round ${playing.board.round} · ${before ? 'Before' : 'After'} recorded action · event ${sequence}`
+      : `Round ${playback.model().board.round ?? '—'} · Current state` };
+}
+let inspectionSnapshot: { model: ReturnType<typeof creatureInspection>; context: ReturnType<typeof inspectionContext>; action: ReturnType<typeof history.lastAction> } | null = null;
 function renderInspection() {
   const one = creatures.find(one => one.id === inspected);
-  // A text receipt has no creatures to show: the open inspection keeps what it read rather than closing on it.
-  if (!one) { if (!receiptShown) $<HTMLDialogElement>('inspect-dialog').close(); return; }
-  text('inspect-name', one.label);
-  $('inspect-growth').dataset.growthCreature = one.id;
-  text('inspect-side', one.enemy ? 'OPPONENT' : 'YOUR TEAM');
-  text('inspect-appearance', `Appearance: ${one.description}`);
-  text('inspect-stats', `${one.health}/${one.maxHealth} HP · ${one.energy} energy · ${one.totalDefense} defense · ${one.currentInitiative} initiative`);
-  const cards = new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []);
-  const effects = one.conditions.map(condition => {
-    const lane = laneOf(condition);
-    const duration = lane === null ? 'permanent' : lane === 'new' ? 'new · first countdown pending' : `${lane} rounds`;
-    return [chipText(condition), duration, chipSource(condition, cards)].filter(Boolean).join(' · ');
-  });
-  text('inspect-effects', [!one.isAlive ? 'Defeated' : '', one.isStunned ? 'Stunned' : '', one.isStunImmune ? 'Stun immune' : '', ...effects].filter(Boolean).join(' / ') || 'No ongoing effects');
-  $('inspect-spells').replaceChildren(...(one.knownSpells ?? []).map(id => {
-    const item = document.createElement('li'); item.textContent = catalogue?.cards?.find(card => card.id === id)?.name ?? id; return item;
-  }));
+  // A receipt has no exact board. Keep an already open reference explicitly pinned to its last
+  // recorded frame; never substitute future stats, or dismiss a reader because playback advanced.
+  if (!one && view && receiptShown && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
+    const held = inspectionSnapshot;
+    inspectionUI.render(held.model, `Pinned reference · ${held.context.label}`, true,
+      held.action ? `Round ${held.action.round} · ${held.action.summary}` : '');
+    return;
+  }
+  const context = inspectionContext();
+  const action = one ? history.lastAction(one.id, context.through) : null;
+  const model = creatureInspection(one, creatures, catalogue);
+  inspectionSnapshot = model ? { model, context, action } : null;
+  inspectionUI.render(model, context.label, context.historical,
+    action ? `Round ${action.round} · ${action.summary}` : '');
 }
+$('inspect-history').addEventListener('click', () => {
+  const action = inspectionSnapshot?.action;
+  if (action) historyUI.openEntry(action, $('inspect-history'));
+});
 
 // The one word over a figure: what stops it acting first, then whose slot it is.
 function tagOf(one: Creature) {
@@ -262,8 +276,14 @@ function render() {
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
+    let defense = node.querySelector<HTMLElement>('.creature-defense');
+    if (!defense) { defense = document.createElement('span'); defense.className = 'creature-defense'; node.querySelector('.caption')!.append(defense); }
+    defense.textContent = `${one.totalDefense ?? '—'} DEF · ${one.currentInitiative ?? '—'} INIT`;
+    let cues = node.querySelector<HTMLElement>('.creature-conditions');
+    if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
+    cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetTag?.spoken ?? condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${creatureCues(one)}. ${targetTag?.spoken ?? condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());
@@ -278,7 +298,6 @@ function render() {
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
     inspected = null; renderInspection();
-    for (const id of ['inspect-name', 'inspect-side', 'inspect-stats', 'inspect-appearance', 'inspect-effects', 'inspect-spells']) $(id).replaceChildren();
     text('updated', 'No board loaded');
   } else renderInspection();
   $('arena').dataset.rate = String(playbackState.rate);

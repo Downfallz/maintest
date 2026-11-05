@@ -166,5 +166,13 @@ export function historyControls(controller: ReturnType<typeof createArenaHistory
     key = nextKey;
 
   }
-  return { render };
+  function openEntry(row: Model['all'][number], source: HTMLElement) {
+    if (!active) return;
+    // Return to the creature reference when the event closes. Keep the normalized receipt
+    // even after its recent journal window expires.
+    opener = source; beforeOpen(); controller.open(); controller.inspect(row);
+    if (!dialog.open) dialog.showModal();
+    el('history-back').focus({ preventScroll: true }); onVisibility();
+  }
+  return { render, openEntry };
 }

@@ -286,3 +286,25 @@ for (const kind of ['TimelineBuilt', 'TiesOrdered']) {
     assert.match(row.details[0].text, /No d20 roll recorded/);
   });
 }
+
+test('last cast stays linked after journal rollover and never confuses a target with the caster', () => {
+  const history = createArenaHistory({ limit: 2 });
+  history.receive(view([cast(1), cast(2)]), catalogue);
+  history.receive(view([entry(3, 'RoundStarted', {}, 9), entry(4, 'RoundEnded', {}, 9)], { board: { ...board, roundNumber: 9 } }), catalogue);
+  assert.deepEqual(history.model().rows.map(row => row.sequence), [3, 4]);
+  assert.equal(history.lastAction(1).sequence, 2); assert.equal(history.lastAction(2), null);
+  history.open(); history.filter('round', '9'); history.inspect(history.lastAction(1));
+  assert.equal(history.model().review.row.sequence, 2); assert.equal(history.model().review.row.states.after[1].health, 13);
+  assert.equal(history.model().all.length, 2); assert.deepEqual(history.model().filters, { round: '', kind: '', creature: '', team: '' });
+  history.receive(view([cast(1)], { board: { ...board, roundNumber: 9 } }), catalogue);
+  assert.equal(history.lastAction(1).sequence, 2);
+  history.receive(null); assert.equal(history.lastAction(1), null);
+});
+test('a historical inspection excludes future and unrevealed casts', () => {
+  const history = createArenaHistory();
+  history.receive(view([cast(2), cast(5), entry(6, 'IntentSubmitted', { action: { actor: 1, spell: 'secret' } })]), catalogue);
+  assert.equal(history.lastAction(1, 4).sequence, 2); assert.equal(history.lastAction(1, 1), null);
+  assert.equal(history.lastAction(1).sequence, 5);
+  history.receive(view([], { waiting: { seats: [] } }), catalogue);
+  assert.equal(history.lastAction(1), null);
+});
