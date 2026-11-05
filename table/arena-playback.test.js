@@ -207,24 +207,34 @@ test('the live queue carries the card\'s visual and the harmful effects it was g
   assert.deepEqual(queue.model().cue.effects.map(effect => effect.wound), [true, false]);
 });
 
-test('playback speed scales every full-motion phase, while reduced receipts keep reading time', () => {
-  for (const rate of [1, 1.5, 2]) {
-    const h = harness(); h.queue.setRate(rate); h.receive([]); h.receive([event(10)]);
-    assert.equal([...h.timers.values()][0].ms, 420 / rate);
-    h.tick(); assert.equal([...h.timers.values()][0].ms, 850 / rate);
-    h.tick(); assert.equal([...h.timers.values()][0].ms, 250 / rate);
-    h.drain(); h.queue.setReduced(true); h.receive([event(11)]);
-    assert.equal(h.queue.model().stage, 'impact');
-    assert.equal([...h.timers.values()][0].ms, 650);
-  }
+for (const rate of [1, 1.5, 2]) test(`at ${rate}x every full-motion phase is scaled by the speed`, () => {
+  const h = harness(); h.queue.setRate(rate); h.receive([]); h.receive([event(10)]);
+  assert.equal([...h.timers.values()][0].ms, 420 / rate);
+  h.tick(); assert.equal([...h.timers.values()][0].ms, 850 / rate);
+  h.tick(); assert.equal([...h.timers.values()][0].ms, 250 / rate);
 });
-test('speed changes settle the whole queue and fence callbacks without replaying consumed events', () => {
+for (const rate of [1, 1.5, 2]) test(`at ${rate}x a reduced-motion result is still shown for 650 ms`, () => {
+  const h = harness(); h.queue.setRate(rate); h.queue.setReduced(true); h.receive([]); h.receive([event(10)]);
+  assert.equal(h.queue.model().stage, 'impact'); assert.equal([...h.timers.values()][0].ms, 650);
+});
+test('a speed change settles the whole queue', () => {
   const h = harness(); h.receive([]); h.receive([event(10), event(11)]);
-  const stale = [...h.timers.values()][0].fn;
-  h.queue.setRate(2); stale();
-  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().remaining, 0);
+  h.queue.setRate(2); assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().remaining, 0);
+});
+test('a callback scheduled before a speed change does nothing after it', () => {
+  const h = harness(); h.receive([]); h.receive([event(10)]);
+  const stale = [...h.timers.values()][0].fn; h.queue.setRate(2); stale();
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().stage, 'decision');
+});
+test('actions settled by a speed change are not replayed by the next poll', () => {
+  const h = harness(); h.receive([]); h.receive([event(10), event(11)]); h.queue.setRate(2);
   h.receive([event(10), event(11)]); assert.equal(h.queue.model().active, false);
   h.receive([event(12)]); assert.equal([...h.timers.values()][0].ms, 210);
+});
+test('choosing the speed already playing leaves the action playing', () => {
+  const h = harness(); h.queue.setRate(2); h.receive([]); h.receive([event(10)]);
   h.queue.setRate(2); assert.equal(h.queue.model().active, true);
-  h.queue.setRate(Infinity); assert.equal(h.queue.model().rate, 1); assert.equal(h.queue.model().active, false);
+});
+test('a speed outside 1x, 1.5x and 2x plays at 1x', () => {
+  const h = harness(); h.queue.setRate(2); h.queue.setRate(Infinity); assert.equal(h.queue.model().rate, 1);
 });

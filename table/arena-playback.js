@@ -49,16 +49,17 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
   let seen = null, timer = null, generation = 0, reduced = false, rate = 1, catalogue = new Map(), harmful = new Set(), bought = new Map();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
-  function later(callback, delay) {
+  // Animation phases follow the playback speed; a reduced-motion receipt is reading time and does not.
+  function later(callback, delay, scaled = true) {
     const ticket = generation;
-    timer = schedule(() => { if (ticket === generation) { timer = null; callback(); } }, delay / rate);
+    timer = schedule(() => { if (ticket === generation) { timer = null; callback(); } }, scaled ? delay / rate : delay);
   }
   function next() {
     current = queue.shift() ?? null;
     if (!current) { stage = 'decision'; emit(); return; }
     summary = resultText(current);
     stage = reduced ? 'impact' : 'windup'; emit();
-    if (reduced) later(finish, REDUCED_MS * rate);
+    if (reduced) later(finish, REDUCED_MS, false);
     else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
   function finish() {

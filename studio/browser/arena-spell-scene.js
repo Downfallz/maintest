@@ -28,11 +28,11 @@ export async function mountSpellScene(page) {
 export const spellFrame = cue => ({ stage: 'decision', actor: '1', target: cue.contact[0] ?? null, targets: [], cue,
   creatures: ['brute', 'predator', 'warped', 'brute', 'predator', 'warped'].map((form, index) =>
     ({ id: String(index + 1), form, isAlive: true, enemy: index > 2 })) });
-export async function presentSpell(page, frame, stage, reduced = false) {
-  await page.evaluate(({ frame, stage, reduced }) => {
+export async function presentSpell(page, frame, stage, reduced = false, rate = 1) {
+  await page.evaluate(({ frame, stage, reduced, rate }) => {
     window.artFrame = { ...frame, stage };
-    window.artScene.present(window.artFrame, reduced, 1);
-  }, { frame, stage, reduced });
+    window.artScene.present(window.artFrame, reduced, rate);
+  }, { frame, stage, reduced, rate });
 }
 export const renderedEffects = page => page.evaluate(() => window.artScene.children.list
   .filter(child => child.name === 'spell-vfx').map(child => ({ ...child.data.getAll(), alpha: child.alpha })));

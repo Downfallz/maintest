@@ -17,7 +17,9 @@ export async function probeAudio(page) {
       createOscillator() {
         const node = super.createOscillator(), start = node.start.bind(node), stop = node.stop.bind(node);
         node.start = (...args) => { window.audioProbe.starts++; start(...args); };
-        node.stop = (...args) => { if (!args.length) { window.audioProbe.stops++; } stop(...args); };
+        // A stop scheduled at start is not forwarded: real audio time does not follow the page clock, so a short
+        // tone could end on its own before the test acts, and a cut would be invisible.
+        node.stop = (...args) => { if (args.length) return; window.audioProbe.stops++; stop(); };
         return node;
       }
     };
