@@ -103,6 +103,15 @@ test('notification opt-in, diagnostic and selection haptic are explicit user act
   expect(await page.evaluate(() => window.serviceCalls)).toContain('vibrate');
   await expect(page.locator('#sound')).not.toBeChecked(); expect(h.errors).toEqual([]);
 });
+test('an end comment being written survives leaving the page and coming back to the same seat', async ({ page }) => {
+  const h = await mount(page); await page.locator('#match-open').click(); await page.locator('#match-notes').click();
+  await page.locator('#end-comment').fill('Half a thought about round seven');
+  const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
+  await visibility(true); await visibility(false);
+  await expect(page.locator('#comment-form')).toBeVisible(); await expect(page.locator('#notes-dialog')).toBeVisible();
+  await expect(page.locator('#end-comment')).toHaveValue('Half a thought about round seven');
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
 test('revoked access clears an unsaved note and the entire result', async ({ page }) => {
   const h = await mount(page); await page.locator('#match-open').click(); await page.locator('#match-notes').click(); await page.locator('#end-comment').fill('Private draft');
   h.status = 403; await page.evaluate(() => window.notifyArena()); await expect(page.locator('#notes-dialog')).toBeHidden(); await expect(page.locator('#match-dialog')).toBeHidden();

@@ -19,12 +19,16 @@ export function serviceControls(controller: ReturnType<typeof createArenaService
     const box = el<HTMLTextAreaElement>('end-comment'), value = box.value;
     if (await controller.note('Comment', value) && box.value === value) box.value = '';
   });
+  // A draft belongs to its seat. Coming back to the page reloads the same seat, and its view is missing until
+  // the first answer: the draft and its dialog wait for it. Another seat, or none, starts empty.
+  let draftOwner: string | null = null;
   function render() {
     const model = controller.model();
+    if (model.owner !== draftOwner) { draftOwner = model.owner; el<HTMLTextAreaElement>('end-comment').value = ''; el<HTMLDialogElement>('notes-dialog').close(); }
+    else if (model.loaded && !model.notes) { el<HTMLDialogElement>('notes-dialog').close(); el<HTMLTextAreaElement>('end-comment').value = ''; }
     el('playtest-open').hidden = !model.notes;
     el('match-notes').hidden = !model.comment;
     el('playtest-notes').hidden = !model.notes;
-    if (!model.notes) { el<HTMLDialogElement>('notes-dialog').close(); el<HTMLTextAreaElement>('end-comment').value = ''; }
     el('comment-form').hidden = !model.comment;
     el('noted').textContent = model.noteText;
     for (const button of el('notes-dialog').querySelectorAll<HTMLButtonElement>('#note-buttons button, #comment-save')) button.disabled = !model.canNote;

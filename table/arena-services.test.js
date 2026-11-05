@@ -63,3 +63,10 @@ test('double taps send one note and a late result cannot repaint another seat', 
   const sending = h.control.note('Lookup'); assert.equal(await h.control.note('Lookup'), false);
   h.control.reset(); done({ ok: true }); assert.equal(await sending, false); assert.equal(h.control.model().noteText, '');
 });
+test('the model names the seat it belongs to and says when its view has not arrived yet', () => {
+  const control = createArenaServices({ onChange() {}, scope: {} });
+  control.reset({}, [], 'one:player1');
+  assert.equal(control.model().owner, 'one:player1'); assert.equal(control.model().loaded, false);
+  control.receive({ recording: true, over: true }); assert.equal(control.model().loaded, true);
+  control.reset(); assert.equal(control.model().owner, null);
+});

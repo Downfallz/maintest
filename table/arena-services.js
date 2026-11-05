@@ -7,9 +7,9 @@ export function createArenaServices({ onChange, scope = globalThis }) {
   let current = null, view = null, online = false;
   const emit = context => { if (context === current) onChange(); };
   const valid = context => context === current && online;
-  /** @param {any} transport @param {any[]} held */
-  function reset(transport = null, held = []) {
-    current = transport ? { transport, held, noteBusy: false, noteText: '', started: false,
+  /** @param {any} transport @param {any[]} held @param {string | null} key the table and seat it belongs to */
+  function reset(transport = null, held = [], key = null) {
+    current = transport ? { transport, held, key, noteBusy: false, noteText: '', started: false,
       push: { supported: pushSupported(scope.navigator, scope), keyed: false, permission: scope.Notification?.permission ?? 'default',
         subscribed: false, busy: false, hotseat: held.length > 1,
         ios: /iPad|iPhone|iPod/.test(scope.navigator?.userAgent ?? ''), secure: scope.isSecureContext !== false },
@@ -131,7 +131,7 @@ export function createArenaServices({ onChange, scope = globalThis }) {
   function model() {
     const notes = Boolean(current && notesAreKept(view) && !view?.replay);
     const notice = noticeButton(current?.push ?? {});
-    return { notes, comment: notes && commentIsOpen(view), canNote: notes && online && !current.noteBusy,
+    return { owner: current?.key ?? null, loaded: Boolean(view), notes, comment: notes && commentIsOpen(view), canNote: notes && online && !current.noteBusy,
       noteText: current?.noteText ?? '', notice: { ...notice, disabled: notice.disabled || !online || !current?.registration },
       testShown: Boolean(current?.push.subscribed && notice.offered),
       canTest: Boolean(online && current?.push.subscribed && notice.offered && !current.push.busy), message: current?.message ?? '' };
