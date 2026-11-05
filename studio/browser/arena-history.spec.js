@@ -276,3 +276,22 @@ test('unread counts stay reachable in the closed journal launcher and clear when
   await page.locator('#history-open').click(); await expect(page.locator('#history-unread')).toBeEmpty();
   expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('Back returns focus to the inspected row and the kind filter speaks player words', async ({ page }) => {
+  const h = await mount(page, [entry(10), entry(11), { sequence: 12, event: { kind: 'RoundStarted', roundId: 2 } }]);
+  await page.locator('#history-open').click();
+  const second = page.locator('#history-list [data-sequence="11"]');
+  await second.locator('summary').click(); await second.getByRole('button', { name: 'Inspect event' }).click();
+  await page.locator('#history-back').click(); await expect(second.locator('summary')).toBeFocused();
+  await page.locator('#history-filters > summary').click();
+  await expect(page.locator('#history-filter-kind option')).toHaveText(['All event kinds', 'Spells cast', 'Rounds begun']);
+  expect(h.state.errors).toEqual([]);
+});
+test('a covered question stays unacknowledged while an event is inspected and earlier rounds load', async ({ page }) => {
+  const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, roundId: 1 } }];
+  await page.locator('#planning-open').click(); await expect.poll(() => h.state.shown).toEqual(['11']);
+  await page.locator('#planning-dialog [data-history-open]').click();
+  await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
+  await page.locator('#history-earlier').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
+  await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);
+  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

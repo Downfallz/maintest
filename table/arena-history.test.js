@@ -240,3 +240,35 @@ test('an older page retains ordinary-energy knowledge even when the grant is out
   assert.doesNotMatch(JSON.stringify(row.details), /not recorded/);
   assert.doesNotMatch(JSON.stringify(row.sections), /not recorded/);
 });
+test('next-round events read before their board arrives are kept, and only kept rows count as unread', () => {
+  // The host reads the board before the feed: one response can carry a round-2 board and round-3 events.
+  const history = createArenaHistory(); history.receive(view([cast(1)]), catalogue);
+  history.receive(view([entry(10, 'RoundStarted', {}, 3), entry(11, 'CombatActionResolved', cast(11).event, 3)]), catalogue);
+  history.receive(view([], { board: { ...board, roundNumber: 3 } }), catalogue);
+  assert.deepEqual(history.model().rows.map(one => one.sequence), [1, 10, 11]);
+  assert.equal(history.model().unread, 2); assert.equal(history.model().omitted, false);
+  history.latest(); assert.deepEqual(history.model().rows.map(one => one.sequence), [1, 10, 11]);
+});
+test('earlier pages walk back disjoint and descending, stop at the start, and ignore live rows while browsing', async () => {
+  const feed = Array.from({ length: 600 }, (_, i) => { const row = cast(i); row.event.roundId = 1 + Math.floor(i / 100); return row; });
+  let calls = 0; const history = createArenaHistory({ load: async () => { calls++; return { ok: true, body: { feed } }; } });
+  history.receive(view(feed, { board: { ...board, roundNumber: 6 } }), catalogue); history.open();
+  assert.deepEqual([history.model().all[0].sequence, history.model().all.at(-1).sequence], [400, 599]);
+  await history.earlier();
+  assert.deepEqual([history.model().all[0].sequence, history.model().all.at(-1).sequence], [200, 399]); assert.equal(history.model().oldest, false);
+  const live = cast(600); live.event.roundId = 6; history.receive(view([live], { board: { ...board, roundNumber: 6 } }), catalogue);
+  assert.equal(history.model().all.at(-1).sequence, 399); assert.equal(history.model().latest.sequence, 600);
+  await history.earlier();
+  assert.deepEqual([history.model().all[0].sequence, history.model().all.at(-1).sequence], [0, 199]); assert.equal(history.model().oldest, true);
+  await history.earlier(); assert.equal(calls, 2);
+  history.latest(); assert.deepEqual([history.model().all[0].sequence, history.model().all.at(-1).sequence], [401, 600]);
+});
+test('recorded boundaries keep only public stats and condition durations, never spellbooks, mutations or sources', () => {
+  const secret = id => ({ ...creature(id), knownSpells: ['spell:secret:v1'], acquiredTiers: ['tier:hidden:v1'], criticalChance: 0.25,
+    currentInitiative: 7, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2, source: { caster: 9, spell: 'spell:secret:v1' } }] });
+  const row = historyEntry(cast(1, { frame: { before: [secret(1), secret(2)], after: [secret(1), secret(2)] } }), board, catalogue);
+  assert.deepEqual(Object.keys(row.states.before[0]).sort(),
+    ['conditions', 'defeated', 'defense', 'energy', 'health', 'id', 'initiative', 'label', 'maxHealth', 'side']);
+  assert.deepEqual(row.states.before[0].conditions, ['Bleed 2 · 2 rounds']);
+  assert.doesNotMatch(JSON.stringify(row), /secret|hidden|criticalChance|caster/);
+});

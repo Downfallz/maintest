@@ -79,9 +79,11 @@ async function reviewAndReplay(page, latest, info, actions) {
   await fitsViewport(page, '#history-close, #history-latest, #history-before, #history-after');
   await page.screenshot({ path: info.outputPath('history-real-host.jpg'), type: 'jpeg', quality: 85 });
   if (latest.board.roundNumber > 2) {
+    const firstLive = Number(await page.locator('#history-list [data-sequence]').first().getAttribute('data-sequence'));
     await page.locator('#history-earlier').click();
     await expect(page.locator('#history-earlier')).not.toHaveText('Loading…');
-    await expect(page.locator('#history-list [data-sequence]').first()).toHaveAttribute('data-sequence', /\d+/);
+    await expect(page.locator('#history-load-error')).toBeEmpty();
+    await expect.poll(async () => Number(await page.locator('#history-list [data-sequence]').first().getAttribute('data-sequence'))).toBeLessThan(firstLive);
     await page.locator('#history-latest').click();
     await expect(page.locator(`#history-list [data-sequence="${last.sequence}"]`)).toHaveCount(1);
   }

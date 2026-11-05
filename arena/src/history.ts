@@ -1,4 +1,4 @@
-import { createArenaHistory, historyEntry } from '../../table/arena-history.js';
+import { createArenaHistory, historyEntry, KIND_LABELS } from '../../table/arena-history.js';
 
 type Model = ReturnType<ReturnType<typeof createArenaHistory>['model']>;
 type Row = NonNullable<ReturnType<typeof historyEntry>> & { status?: string };
@@ -31,7 +31,13 @@ export function historyControls(controller: ReturnType<typeof createArenaHistory
   const latest = () => { controller.latest(); list.scrollTop = list.scrollHeight; el('history-new').hidden = true; };
   el('history-new').addEventListener('click', latest); el('history-latest').addEventListener('click', latest);
   el('history-earlier').addEventListener('click', () => { void controller.earlier(); });
-  el('history-back').addEventListener('click', () => { controller.select(null); (list.querySelector('summary') as HTMLElement | null)?.focus({ preventScroll: true }); });
+  // Back returns the reader to the row they inspected, not to the top of the list.
+  el('history-back').addEventListener('click', () => {
+    const inspected = controller.model().review?.row.sequence;
+    controller.select(null);
+    const row = inspected == null ? null : entries.get(inspected)?.querySelector<HTMLElement>('summary');
+    (row ?? el('history-close')).focus({ preventScroll: true });
+  });
   el('history-previous').addEventListener('click', () => controller.move(-1));
   el('history-next').addEventListener('click', () => controller.move(1));
   for (const stage of ['before', 'after']) el(`history-${stage}`).addEventListener('click', () => controller.boundary(stage));
@@ -70,7 +76,7 @@ export function historyControls(controller: ReturnType<typeof createArenaHistory
     options('history-filter-round', [['', 'All loaded rounds'], ...[...new Set(all.map(row => row.round))].map(round => [String(round), `Round ${round}`] as [string, string])], model.filters.round);
     const people = new Map(all.flatMap(row => row.participants).map(one => [one.id, `${one.label} · ${one.side}`]));
     options('history-filter-creature', [['', 'All creatures'], ...people.entries()], model.filters.creature);
-    const kinds = new Map(all.map(row => [row.kind, row.kind.replace(/([a-z])([A-Z])/g, '$1 $2')]));
+    const kinds = new Map(all.map(row => [row.kind, (KIND_LABELS as Record<string, string>)[row.kind] ?? row.category]));
     options('history-filter-kind', [['', 'All event kinds'], ...kinds.entries()], model.filters.kind);
     el<HTMLSelectElement>('history-filter-team').value = model.filters.team;
   }

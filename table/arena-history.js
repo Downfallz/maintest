@@ -142,6 +142,15 @@ function recordedStates(event, board) {
   return { before: event.frame.before.map(snapshot), after: event.frame.after.map(snapshot) };
 }
 
+// The kind filter speaks the player's words (docs/domain/player-terminology.md), never the engine's event names.
+export const KIND_LABELS = Object.freeze({
+  CombatActionResolved: 'Spells cast', ActionRevealed: 'Spells revealed', SlotSkipped: 'Turns skipped',
+  RoundEnergyGranted: 'Round energy', OngoingEffectsApplied: 'Ongoing effects', ConditionsExpired: 'Conditions ended',
+  StunImmunityGained: 'Stun immunity', PurchasesRevealed: 'Mutations revealed', TimelineBuilt: 'Tempos revealed',
+  TiesOrdered: 'Tie order', RoundStarted: 'Rounds begun', RoundEnded: 'Rounds complete', SubPhaseEntered: 'Steps begun',
+  MatchStarted: 'Match start', MatchEnded: 'Match result', PlayerJoined: 'Players joined',
+});
+
 export function filterHistory(rows, filters) {
   return rows.filter(row => (!filters.round || String(row.round) === filters.round) &&
     (!filters.kind || row.kind === filters.kind) &&
@@ -172,7 +181,10 @@ export function createArenaHistory({ limit = 200, load = async () => null, onCha
   function receive(view, content) {
     if (!view?.board) { reset(); return; }
     available = true; waiting = Boolean(view.waiting && !view.over); board = view.board; catalogue = content;
-    current = Math.max(current, board.roundNumber ?? 0);
+    // The host reads the board before the feed, so a response can hold next-round events on this round's board.
+    // The window follows the newest round either names; the delta cursor never serves those events again.
+    const rounds = (view.feed ?? []).filter(entry => PUBLIC.has(entry.event?.kind)).map(roundOf).filter(Number.isInteger);
+    current = Math.max(current, board.roundNumber ?? 0, ...rounds);
     for (const entry of view.feed ?? []) {
       if (entry.event?.kind === 'RoundEnergyGranted') ordinaryRounds.add(roundOf(entry));
       if (entry.event?.kind && !PUBLIC.has(entry.event.kind) && !PRIVATE.has(entry.event.kind)) unsupported = true;
