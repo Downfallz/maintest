@@ -1,33 +1,41 @@
-import { createArenaHistory } from '../../table/arena-history.js';
+import { createArenaHistory, historyEntry } from '../../table/arena-history.js';
 
 type Model = ReturnType<ReturnType<typeof createArenaHistory>['model']>;
-type Row = Model['rows'][number];
+type Row = NonNullable<ReturnType<typeof historyEntry>> & { status?: string };
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function textNode(tag: string, text: string, className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
 
-export function historyControls(beforeOpen: () => void, onVisibility: () => void) {
+export function historyControls(controller: ReturnType<typeof createArenaHistory>, beforeOpen: () => void, onVisibility: () => void) {
   const dialog = el<HTMLDialogElement>('history-dialog'), list = el('history-list');
   const entries = new Map<number, HTMLElement>();
-  let opener: HTMLElement | null = null, active = false, key = '', lastSequence: number | null = null, unread = 0;
+  let opener: HTMLElement | null = null, active = false, key = '', reviewKey = '';
+  const detail = el('history-detail');
   const launchers = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-history-open]'));
   const close = () => dialog.close();
   function open(event: Event) {
     if (!active || dialog.open) return;
     opener = event.currentTarget as HTMLElement;
-    beforeOpen(); dialog.showModal(); unread = 0; el('history-new').hidden = true;
+    beforeOpen(); controller.open(); dialog.showModal(); el('history-new').hidden = true;
     // Initial opening follows the latest entry; incoming entries never move a reader browsing above it.
     list.scrollTop = list.scrollHeight; onVisibility();
   }
   launchers.forEach(button => button.addEventListener('click', open));
   el('history-close').addEventListener('click', close);
   dialog.addEventListener('close', () => {
-    onVisibility();
+    controller.close(); onVisibility();
     if (active && opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length) opener.focus({ preventScroll: true });
     opener = null;
   });
-  el('history-new').addEventListener('click', () => { list.scrollTop = list.scrollHeight; unread = 0; el('history-new').hidden = true; });
+  const latest = () => { controller.latest(); list.scrollTop = list.scrollHeight; el('history-new').hidden = true; };
+  el('history-new').addEventListener('click', latest); el('history-latest').addEventListener('click', latest);
+  el('history-earlier').addEventListener('click', () => { void controller.earlier(); });
+  el('history-back').addEventListener('click', () => { controller.select(null); (list.querySelector('summary') as HTMLElement | null)?.focus({ preventScroll: true }); });
+  el('history-previous').addEventListener('click', () => controller.move(-1));
+  el('history-next').addEventListener('click', () => controller.move(1));
+  for (const stage of ['before', 'after']) el(`history-${stage}`).addEventListener('click', () => controller.boundary(stage));
+  for (const key of ['round', 'creature', 'team', 'kind']) el(`history-filter-${key}`).addEventListener('change', event => controller.filter(key, (event.target as HTMLSelectElement).value));
 
   // A row with nothing under its title is a marker (a round or a phase beginning): it is read in place rather
   // than offering a disclosure that opens on nothing.
@@ -43,7 +51,63 @@ export function historyControls(beforeOpen: () => void, onVisibility: () => void
     for (const effect of row.details) {
       const item = textNode('li', effect.text); item.dataset.tone = effect.tone; details.append(item);
     }
-    node.append(summary, details); return node;
+    const inspect = document.createElement('button'); inspect.type = 'button'; inspect.className = 'history-inspect'; inspect.textContent = 'Inspect event';
+    inspect.addEventListener('click', () => { controller.select(row.sequence); el('history-back').focus({ preventScroll: true }); });
+    node.append(summary, details, inspect); return node;
+  }
+
+  function options(id: string, values: [string, string][], value: string) {
+    if (value && !values.some(one => one[0] === value)) values.push([value, `Not in this page (${value})`]);
+    const select = el<HTMLSelectElement>(id), key = JSON.stringify(values);
+    if (select.dataset.options !== key) {
+      select.replaceChildren(...values.map(([value, label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; return option; }));
+      select.dataset.options = key;
+    }
+    select.value = value;
+  }
+  function filters(model: Model) {
+    const all = model.all;
+    options('history-filter-round', [['', 'All loaded rounds'], ...[...new Set(all.map(row => row.round))].map(round => [String(round), `Round ${round}`] as [string, string])], model.filters.round);
+    const people = new Map(all.flatMap(row => row.participants).map(one => [one.id, `${one.label} · ${one.side}`]));
+    options('history-filter-creature', [['', 'All creatures'], ...people.entries()], model.filters.creature);
+    const kinds = new Map(all.map(row => [row.kind, row.kind.replace(/([a-z])([A-Z])/g, '$1 $2')]));
+    options('history-filter-kind', [['', 'All event kinds'], ...kinds.entries()], model.filters.kind);
+    el<HTMLSelectElement>('history-filter-team').value = model.filters.team;
+  }
+  function review(model: Model) {
+    const selected = model.review;
+    dialog.dataset.review = String(Boolean(selected)); el('history-review').hidden = !selected;
+    if (!selected) { detail.replaceChildren(); reviewKey = ''; return; }
+    el<HTMLButtonElement>('history-previous').disabled = !selected.previous;
+    el<HTMLButtonElement>('history-next').disabled = !selected.next;
+    for (const stage of ['before', 'after']) {
+      el<HTMLButtonElement>(`history-${stage}`).disabled = !selected.row.states;
+      el(`history-${stage}`).setAttribute('aria-pressed', String(stage === selected.stage));
+    }
+    const key = `${selected.row.sequence}/${selected.stage}`;
+    if (key === reviewKey) return;
+    reviewKey = key; const row = selected.row;
+    detail.replaceChildren(textNode('p', `Round ${row.round} · ${row.category} · event ${row.sequence} · ${selected.stage.toUpperCase()}`, 'history-meta'), textNode('h3', row.title));
+    for (const section of row.sections) {
+      if (!section.items.length) continue;
+      const facts = document.createElement('ul'); facts.className = 'history-effects';
+      facts.append(...section.items.map((one: { text: string; tone: string }) => { const item = textNode('li', one.text); item.dataset.tone = one.tone; return item; }));
+      detail.append(textNode('h4', section.title), facts);
+    }
+    const boundary = row.states?.[selected.stage as 'before' | 'after'];
+    detail.append(textNode('h4', boundary ? `Recorded ${selected.stage} this event` : 'Historical battlefield unavailable'));
+    if (!boundary) { detail.append(textNode('p', 'No exact before/after snapshot was recorded. The facts above remain available; current stats are never substituted.')); return; }
+    const board = textNode('div', '', 'history-snapshot');
+    const number = (value: unknown) => typeof value === 'number' ? String(value) : '—';
+    for (const one of boundary) {
+      const creature = textNode('section', '', 'history-creature'); creature.dataset.side = one.side;
+      creature.append(textNode('h4', `${one.label} · ${one.side}`),
+        textNode('p', `${number(one.health)}/${number(one.maxHealth)} HP · ${number(one.energy)} energy`),
+        textNode('p', `${number(one.defense)} defense · ${number(one.initiative)} initiative`),
+        textNode('p', [one.defeated ? 'Defeated' : '', ...one.conditions].filter(Boolean).join(' / ') || 'No recorded conditions'));
+      board.append(creature);
+    }
+    detail.append(board);
   }
 
   function render(model: Model) {
@@ -51,20 +115,31 @@ export function historyControls(beforeOpen: () => void, onVisibility: () => void
     launchers.forEach(button => { button.disabled = !active; });
     if (!active) {
       if (dialog.open) dialog.close();
-      entries.clear(); list.replaceChildren(); key = ''; lastSequence = null; unread = 0; opener = null;
+      entries.clear(); list.replaceChildren(); detail.replaceChildren(); reviewKey = ''; el('history-review').hidden = true; filters(model); key = ''; opener = null;
       el('history-preview').textContent = 'No match loaded'; el('history-new').hidden = true;
-      el('history-open').removeAttribute('title');
+      el('history-open').removeAttribute('title'); el('history-unread').textContent = ''; el('history-load-error').textContent = '';
       el('history-range').textContent = ''; el('history-empty').textContent = ''; el('history-limit').textContent = '';
       return;
     }
-    const rows = model.rows, latest = rows.at(-1);
+    filters(model); review(model);
+    el<HTMLButtonElement>('history-earlier').disabled = model.loading || model.oldest || model.waiting;
+    el('history-earlier').textContent = model.loading ? 'Loading…' : model.oldest ? 'Beginning of available history' : 'Load earlier rounds';
+    el('history-load-error').textContent = model.error;
+    el('history-latest').textContent = model.browsing || model.review ? `Return to latest${model.unread ? ` (${model.unread} new)` : ''}` : 'Latest';
+    el('history-unread').textContent = model.unread ? ` · ${model.unread} new` : '';
+    el('history-new').hidden = model.unread === 0 || model.browsing || Boolean(model.review);
+    el('history-latest').hidden = model.unread > 0 && !model.browsing && !model.review;
+    el('history-new').textContent = `${model.unread} new ${model.unread === 1 ? 'event' : 'events'} · Latest`;
+    const rows: Row[] = model.rows, latest = model.latest;
     el('history-preview').textContent = latest?.summary ?? (model.waiting ? 'Waiting for players' : 'No events yet');
     el('history-open').title = latest?.summary ?? 'Open match history';
-    const rounds = model.current > 1 ? `Rounds ${model.current - 1}–${model.current}` : `Round ${model.current || '—'}`;
+    const loaded = model.all.map(row => row.round);
+    const first = Math.min(...loaded), last = Math.max(...loaded);
+    const rounds = loaded.length ? first === last ? `Loaded round ${first}` : `Loaded rounds ${first}–${last}` : 'No loaded events';
     el('history-range').textContent = model.waiting ? 'Waiting for players' : `${rounds} · ${rows.length} ${rows.length === 1 ? 'event' : 'events'}`;
     el('history-empty').hidden = rows.length > 0;
-    el('history-empty').textContent = model.waiting ? 'The match begins when everyone is seated.' : 'No public events received for these rounds yet.';
-    el('history-limit').textContent = [model.omitted ? 'Older entries are not included in this recent history.' : 'Current and previous round · up to 200 events.',
+    el('history-empty').textContent = model.waiting ? 'The match begins when everyone is seated.' : model.all.length ? 'No events match these filters. Choose another filter or Latest.' : 'No public events received for these rounds yet.';
+    el('history-limit').textContent = [model.omitted ? 'Older entries are not included in this recent history.' : 'Up to 200 events per page. Load earlier rounds for more.',
       model.unsupported ? 'Some event types have no journal presentation.' : '', 'Reading history does not change the battlefield.'].filter(Boolean).join(' ');
     const nextKey = rows.map(row => row.sequence).join('/');
     if (nextKey === key) return;
@@ -79,11 +154,11 @@ export function historyControls(beforeOpen: () => void, onVisibility: () => void
       if (!node) { node = entryNode(row); entries.set(row.sequence, node); list.insertBefore(node, list.children[index] ?? null); }
     });
     if (focused && !list.contains(document.activeElement)) el('history-close').focus({ preventScroll: true });
-    if (dialog.open && lastSequence !== null) unread += rows.filter(row => row.sequence > lastSequence!).length;
-    if (following) { list.scrollTop = list.scrollHeight; unread = 0; } else list.scrollTop = scroll;
-    el('history-new').hidden = unread === 0;
-    el('history-new').textContent = `${unread} new ${unread === 1 ? 'event' : 'events'} · Latest`;
-    lastSequence = latest?.sequence ?? lastSequence; key = nextKey;
+    if (dialog.open && following && !model.loading && !model.browsing && !model.review && !Object.values(model.filters).some(Boolean)) {
+      list.scrollTop = list.scrollHeight; controller.read(); el('history-new').hidden = true; el('history-latest').hidden = false; el('history-unread').textContent = '';
+    } else list.scrollTop = scroll;
+    key = nextKey;
+
   }
   return { render };
 }
