@@ -75,10 +75,10 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
     el('sign-in-panel').hidden = state.mode === 'off' || signedIn;
     el('account').hidden = !signedIn;
     el('dev-sign-in').hidden = state.mode !== 'dev';
-    el('privacy-panel').hidden = state.mode === 'off';
     el('google-button').hidden = state.mode !== 'google';
     if (signedIn) {
       el('account-name').textContent = state.account.username;
+      el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
       el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
     }
     onChange(state.account, state.mode);
