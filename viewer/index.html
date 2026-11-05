@@ -33,10 +33,11 @@
     const PLAYER2 = 'Player2';
 
     // The colours viewer.css gives the two players, so a chart and the page around it name a side alike.
-    const PLAYER1_COLOUR = '#2563eb';
-    const PLAYER2_COLOUR = '#dc2626';
-    const ACCENT = '#2563eb';
-    const WARN = '#d97706';
+    const palette = getComputedStyle(document.documentElement);
+    const PLAYER1_COLOUR = palette.getPropertyValue('--player1').trim();
+    const PLAYER2_COLOUR = palette.getPropertyValue('--player2').trim();
+    const ACCENT = palette.getPropertyValue('--chart-above').trim();
+    const WARN = palette.getPropertyValue('--warn').trim();
     const RESOLVED = 'CombatActionResolved';
     const state = { artifacts: [], selected: null, charts: [] };
 
