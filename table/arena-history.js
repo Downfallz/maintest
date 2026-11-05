@@ -146,7 +146,7 @@ function recordedStates(event, board) {
 export const KIND_LABELS = Object.freeze({
   CombatActionResolved: 'Spells cast', ActionRevealed: 'Spells revealed', SlotSkipped: 'Turns skipped',
   RoundEnergyGranted: 'Round energy', OngoingEffectsApplied: 'Ongoing effects', ConditionsExpired: 'Conditions ended',
-  StunImmunityGained: 'Stun immunity', PurchasesRevealed: 'Mutations revealed', TimelineBuilt: 'Tempos revealed',
+  StunImmunityGained: 'Immunities gained', PurchasesRevealed: 'Mutations revealed', TimelineBuilt: 'Tempos revealed',
   TiesOrdered: 'Tie order', RoundStarted: 'Rounds begun', RoundEnded: 'Rounds complete', SubPhaseEntered: 'Steps begun',
   MatchStarted: 'Match start', MatchEnded: 'Match result', PlayerJoined: 'Players joined',
 });
