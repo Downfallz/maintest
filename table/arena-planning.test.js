@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArenaPlanning, planningDecision } from './arena-planning.js';
+import { createArenaPlanning, planningDecision, planningQuestion } from './arena-planning.js';
 const ok = body => ({ ok: true, body });
 const pending = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const evolution = () => ({ waitingAsked: 11, waitingFor: 'Evolution', waitingCreature: null,
@@ -20,10 +20,10 @@ test('only host-offered mutations can become a complete command', () => {
   assert.deepEqual(planningDecision(view, { creature: 1, tier: 'root' }), { kind: 'Evolution', creature: 1, tier: 'root' });
   assert.deepEqual(planningDecision(view, { pass: true }), { kind: 'Evolution', pass: true });
 });
-test('tempo commands use the currently asked creature and wire tempo names', () => {
+test('a tempo asking is never answered one creature at a time: the team draft owns it', () => {
   const view = { ...evolution(), waitingFor: 'Speed', waitingCreature: 3 };
-  assert.deepEqual(planningDecision(view, { speed: 'Quick', creature: 1 }), { kind: 'Speed', creature: 3, speed: 'Quick' });
-  assert.equal(planningDecision(view, { speed: 'Instinct' }), null);
+  assert.equal(planningQuestion(view), false);
+  assert.equal(planningDecision(view, { speed: 'Quick', creature: 3 }), null);
 });
 test('ties stay in their original groups and require every group to be settled', () => {
   const view = { ...evolution(), waitingFor: 'TieOrder', options: { tieOrder: { ties: [[1, 2], [3, 4]] } } };

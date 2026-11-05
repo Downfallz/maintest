@@ -89,6 +89,19 @@
 #planning-creatures { position: sticky; top: -24px; padding: 12px 0; background: #142126; z-index: 2; }
 #planning-choices button { margin: 4px; min-height: 44px; }
 #planning-dialog button[aria-pressed="true"] { border-color: #d6eb9a; background: #3a4933; }
+#planning-dialog [role="tab"][aria-selected="true"] { border-color: #d6eb9a; background: #3a4933; }
+#planning-creatures[role="tablist"] { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+#planning-creatures [role="tab"] { min-width: 0; padding: 10px 8px; overflow-wrap: anywhere; }
+#planning-creatures [role="tab"] span, #planning-creatures [role="tab"] small { display: block; }
+#planning-creatures [role="tab"] small { margin-top: 5px; color: #b5c5ba; }
+.tempo-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tempo-options button { display: grid; gap: 8px; text-align: left; padding: 14px; }
+.tempo-options span, .tempo-reference, .tempo-summary, .tempo-accepted { font-size: 13px; line-height: 1.5; }
+.tempo-reference { border-top: 1px solid #65766a; padding-top: 10px; }
+.tempo-reference details { margin: 8px 0; padding: 8px; background: #0b191e; border-radius: 6px; }
+.tempo-reference summary { cursor: pointer; }
+.tempo-accepted { color: #d6eb9a; }
+@media (max-width: 480px) { .tempo-options { grid-template-columns: 1fr; } }
 .mutation-branch { margin: 10px 0; border-left: 2px solid #527069; padding-left: 12px; }
 .mutation-branch > summary { padding: 12px 4px; cursor: pointer; min-height: 44px; }
 .mutation-branch .mutation-branch { margin-left: 8px; }
