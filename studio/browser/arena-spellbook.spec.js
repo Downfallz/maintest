@@ -114,3 +114,15 @@ test('short landscape, small portrait and enlarged text keep the browser scrolla
   await page.addStyleTag({ content: '#combat-dialog { font-size: 200%; } #combat-dialog * { font-size: inherit !important; }' });
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
 });
+
+test('keyboard paging keeps unavailable spell references reachable without selecting or sending', async ({ page }) => {
+  const h = await mount(page);
+  h.view.options.intent.creatures[0].castableSpells = [];
+  h.view.options.intent.creatures[0].unaffordableSpells = [];
+  await expect(spell(page, 'spell-0')).toBeDisabled({ timeout: 10000 });
+  await page.locator('#combat-browser').focus(); await page.keyboard.press('Home');
+  await expect.poll(() => page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
+  await page.keyboard.press('PageDown');
+  await expect.poll(() => page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await expect(page.locator('#combat-declare')).toBeDisabled(); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
