@@ -392,7 +392,8 @@
 #arena[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr) minmax(280px,1fr); grid-template-rows: minmax(0,1fr); gap: 16px; }
 #arena[data-combat="targets"] .actor-summary { display: none; }
 #arena[data-combat="targets"] .live-status { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; }
-#arena[data-combat="targets"] .live-status > :is(#connection, #instruction, #playback-result) { display: none; }
+#arena[data-combat="targets"] .live-status > :is(#instruction, #playback-result) { display: none; }
+#arena[data-combat="targets"][data-connection="live"] #connection { display: none; }
 #combat-preview { flex: 1; }
 #arena[data-combat="targets"] .arena-actions { grid-column: 2; grid-row: 1; }
 #arena[data-combat="targets"] .creature[data-target-state="legal"] .caption { border: 1px dashed #e5d4a8; border-radius: 4px; }

@@ -99,3 +99,15 @@ test('short portrait, landscape and enlarged preview text preserve touch targets
   await preview(page).focus(); await page.keyboard.press('End');
   await expect.poll(() => preview(page).evaluate(node => node.scrollTop)).toBeGreaterThan(0);
 });
+test('an interrupted connection stays visible beside the estimate and prevents confirmation until refreshed', async ({ page }) => {
+  const h = await mount(page); await choose(page); await target(page, 4).click();
+  h.seatStatus = 503; await notify(page);
+  await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'stale');
+  await expect(page.locator('#connection')).toBeVisible();
+  await expect(page.locator('#connection')).toContainText('Connection interrupted');
+  await expect(page.locator('#combat-confirm')).toBeDisabled(); expect(h.writes).toEqual([]);
+  h.seatStatus = 200; h.view.guidance[0].energyAfterCost = 0; await notify(page);
+  await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'live');
+  await expect(preview(page)).toContainText('2 energy → 0 after cost');
+  await expect(page.locator('#combat-confirm')).toBeEnabled(); expect(h.writes).toEqual([]);
+});
