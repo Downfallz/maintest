@@ -152,3 +152,25 @@ test('multiclass reference keeps close and creature selection reachable in short
   await expect(page.locator('#growth-tree > details').last().locator(':scope > summary')).toBeInViewport();
   await fitsViewport(page, '#growth-close, #growth-creature'); expect(h.errors).toEqual([]);
 });
+test('a future unlock waits behind a held closing cast and keeps its badge for the live spell choice', async ({ page }) => {
+  const h = await mount(page); await page.selectOption('#playback-mode', 'step');
+  const before = structuredClone([...h.view.board.allies, ...h.view.board.enemies]);
+  unlock(h); h.view.feed[0].sequence = 21; h.view.feedNext = 22;
+  h.view.feed.unshift({ sequence: 20, event: { kind: 'CombatActionResolved', roundId: 2,
+    resolution: { action: { actor: 1, spell: 'focus', targets: [1] } }, appliedOutcomes: [],
+    frame: { before, after: before, timeline: [], rollOffs: [] } } });
+  spellChoice(h, 22); await h.publish();
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '20');
+  await page.clock.runFor(1700); await expect(page.locator('#growth-receipt')).toBeHidden();
+  await expect(page.locator('#round-number')).toHaveText('02');
+  await page.locator('[data-creature="1"]').click();
+  await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  await page.locator('#playback-skip').click();
+  await expect(page.locator('#growth-receipt')).toBeVisible();
+  await expect(page.locator('#growth-announcement')).toContainText('Devour');
+  await page.locator('#combat-open').click();
+  await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
+  expect(h.shown).toEqual(['22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});

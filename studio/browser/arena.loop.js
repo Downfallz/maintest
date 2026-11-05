@@ -170,9 +170,15 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
       if (view.board.roundNumber > upkeepRound) {
-        await expect(page.locator('#upkeep-dialog')).toBeVisible({ timeout: 20000 });
-        await expect(page.locator('#upkeep-title')).toHaveText(`Round ${view.board.roundNumber} · Upkeep`);
-        await page.locator('#upkeep-close').click(); upkeepRound = view.board.roundNumber;
+        await expect(page.locator('#playback-receipt')).toBeVisible({ timeout: 20000 });
+        await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
+        await expect(page.locator('#round-number')).toHaveText(String(view.board.roundNumber).padStart(2, '0'));
+        await expect(page.locator('#receipt-sections')).toContainText('energy');
+        await expect(page.locator('.creature')).toHaveCount(0);
+        await expect(page.locator('#upkeep-dialog')).toBeHidden();
+        await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
+        await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+        upkeepRound = view.board.roundNumber;
       }
       if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
         const beforeShown = [...shown], beforeWrites = writes.length;
