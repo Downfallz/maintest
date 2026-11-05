@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { creatureInspection, creatureCues } from './arena-inspection.js';
+import { creatureInspection, creatureCues, spokenCues } from './arena-inspection.js';
 const catalogue = { cards: [
   { id: 'strike', name: 'Strike', cost: 0, type: 'Offense', targeting: 'One enemy', effects: ['Damage 4'], casterEffects: ['Gain 1 energy'], critical: '20%', criticalThreshold: 17, criticalNote: 'Double damage' },
   { id: 'secret', name: 'Not known yet' },
@@ -35,7 +35,7 @@ test('defeated opponents and new, permanent, expiring conditions keep named sour
   const model = creatureInspection(creature, [one, { id: '2', label: 'Beast · 2' }], catalogue);
   assert.equal(model.side, 'OPPONENT');
   assert.match(model.effects, /Defeated.*Immune to stun.*Bleed 3 · new · first countdown pending · from Beast · 2 · Strike/);
-  assert.match(model.effects, /DefenseBuff 2 · permanent/); assert.match(model.effects, /Regeneration 1 · 1 rounds/);
+  assert.match(model.effects, /DefenseBuff 2 · permanent/); assert.match(model.effects, /Regeneration 1 · 1 round(?!s)/);
   assert.equal(creatureCues(creature), 'Immune to stun · Bleed 3 · DefenseBuff 2 · Regeneration 1');
 });
 test('missing snapshots or catalogue fields stay unavailable rather than borrowing current knowledge', () => {
@@ -46,4 +46,15 @@ test('missing snapshots or catalogue fields stay unavailable rather than borrowi
   const legacy = creatureInspection({ id: 3 }, [], catalogue);
   assert.equal(legacy.mutationsRecorded, false); assert.equal(legacy.spellsRecorded, false);
   assert.equal(legacy.stats, '—/— HP · — energy · — defense · — initiative');
+});
+test('a condition with several rounds left counts them in the plural', () => {
+  const model = creatureInspection({ ...one, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 3 }] }, [one], catalogue);
+  assert.match(model.effects, /Bleed 2 · 3 rounds/);
+});
+test('a stunned creature is said to be stunned once, whatever repeats it', () => {
+  assert.equal(spokenCues('Stunned · Bleed 3', 'STUNNED'), 'Stunned. Bleed 3');
+  assert.equal(spokenCues('Stunned', 'Stunned. Select target'), 'Stunned. Select target');
+});
+test('a creature with no cue and no tag adds nothing to what is spoken', () => {
+  assert.equal(spokenCues('', ''), ''); assert.equal(spokenCues('', 'ACTING'), 'ACTING');
 });

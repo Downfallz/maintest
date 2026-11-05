@@ -1,4 +1,4 @@
-import { creatureInspection, creatureCues } from '../../table/arena-inspection.js';
+import { creatureInspection, creatureCues, spokenCues } from '../../table/arena-inspection.js';
 import { inspectionControls } from './inspection';
 import { arenaTargetState, arenaTargetTag } from '../../table/arena-targets.js';
 import { arenaOrder, createArenaOrderReveal } from '../../table/arena-order.js';
@@ -283,7 +283,7 @@ function render() {
     if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
     cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${creatureCues(one)}. ${targetTag?.spoken ?? condition}. ${targeting ? 'Target selection.' : 'Inspect creature.'}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());

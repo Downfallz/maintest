@@ -86,7 +86,7 @@ test('inspection reads current conditions while the receipt keeps the damage of 
   const warden = conditions => ({ ...creature(1, 13), conditions });
   await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Bleed', amountPerRound: 7 }, remainingRounds: 1 }]), ...roster.slice(1, 3)] } });
   const inspect = page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first();
-  await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText('Bleed 7 · 1 rounds'); await page.keyboard.press('Escape');
+  await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText(/Bleed 7 · 1 round(?!s)/); await page.keyboard.press('Escape');
   // The bleed has run out; a defense with its own countdown is what the creature carries now.
   await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Defense', amount: 2 }, remainingRounds: 2 }]), ...roster.slice(1, 3)] } });
   await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText('Defense 2 · 2 rounds');

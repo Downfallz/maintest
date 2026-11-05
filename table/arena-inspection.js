@@ -5,6 +5,12 @@ import { passiveOf, tagsOf } from './mat.js';
 const capital = value => value.charAt(0).toUpperCase() + value.slice(1);
 const number = value => Number.isFinite(value) ? String(value) : '—';
 
+function durationText(lane) {
+  if (lane === null) return 'permanent';
+  if (lane === 'new') return 'new · first countdown pending';
+  return lane === 1 ? '1 round' : `${lane} rounds`;
+}
+
 // Only the displayed public creature supplies ownership and known spells. Neither private planning
 // choices nor the catalogue's ability to teach a spell can make it acquired/known here.
 export function creatureInspection(creature, roster, catalogue) {
@@ -27,8 +33,7 @@ export function creatureInspection(creature, roster, catalogue) {
     const lane = laneOf(condition), source = condition.source;
     const caster = source?.caster == null ? '' : roster.find(one => String(one.id) === String(source.caster))?.label ?? `Creature ${source.caster}`;
     const spell = source?.spell == null ? '' : cards.get(source.spell)?.name ?? source.spell;
-    return [chipText(condition) || 'Condition', lane === null ? 'permanent' : lane === 'new' ? 'new · first countdown pending' : `${lane} rounds`,
-      caster ? `from ${caster}` : '', spell].filter(Boolean).join(' · ');
+    return [chipText(condition) || 'Condition', durationText(lane), caster ? `from ${caster}` : '', spell].filter(Boolean).join(' · ');
   });
   const status = [creature.isAlive === false ? 'Defeated' : '', ...badges(creature, []).map(capital)].filter(Boolean);
   return { id: String(creature.id), name: creature.label ?? creature.name ?? `Creature ${creature.id}`,
@@ -41,4 +46,15 @@ export function creatureInspection(creature, roster, catalogue) {
 // Keep the field compact. The full durations and named sources remain in the inspection.
 export function creatureCues(creature) {
   return [...badges(creature, []).map(capital), ...new Set((creature.conditions ?? []).map(chipText).filter(Boolean))].join(' · ');
+}
+
+// What a screen reader hears after the stats: the cues, then the tag or the target state, each said once and
+// none left empty. The tag repeats a cue in capitals (STUNNED), and the target state says the stun again.
+export function spokenCues(...parts) {
+  const said = new Map();
+  for (const part of parts.flatMap(one => String(one ?? '').split(/\. | · /))) {
+    const words = part.trim();
+    if (words && !said.has(words.toLowerCase())) said.set(words.toLowerCase(), words);
+  }
+  return [...said.values()].join('. ');
 }

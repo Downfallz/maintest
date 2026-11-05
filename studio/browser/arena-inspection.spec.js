@@ -64,7 +64,7 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   await expect(page.locator('#inspect-context')).toHaveText('Round 3 · Current state');
   await expect(page.locator('#inspect-stats')).toContainText('3 defense · 8 initiative');
   await expect(page.locator('#inspect-effects')).toContainText('Immune to stun / Bleed 2 · new · first countdown pending · from Skullbeast · 3 · Strike');
-  await expect(page.locator('#inspect-effects')).toContainText('permanent'); await expect(page.locator('#inspect-effects')).toContainText('1 rounds');
+  await expect(page.locator('#inspect-effects')).toContainText('permanent'); await expect(page.locator('#inspect-effects')).toContainText(/\b1 round(?!s)/);
   await expect(page.locator('#inspect-mutations')).toContainText('Acquired · Stage 4 · Initiative bonus +0');
   await expect(page.locator('#inspect-mutations')).toContainText('For every creature of the side');
   await page.locator('#inspect-spells [data-inspect-spell="strike"] summary').click();
