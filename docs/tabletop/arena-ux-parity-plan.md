@@ -258,7 +258,7 @@ No implementation slice is completed by this document.
 | AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
 | AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
-| AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
+| AU8 (implemented) | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
 | AU9 | Compact grouped spellbook with stable selection and full details | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
 | AU10 | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
 | AU11 | Readable initiative/ties and reveal summary | `timeline.js`, `ties.js`, planning + scene overlays | AU5, AU1 |
@@ -365,7 +365,7 @@ Screenshots must compare three actual opening cards on desktop and readable phon
 
 Delivered: `table/arena-mutations.js` and `arena/src/mutations.ts`, integrated with the existing
 planning controller. See [implementation and real-host captures](../../arena/README.md#au4-compare-offered-mutations).
-The tree remains read-only during Evolution; AU8 still owns persistent reference access.
+The tree remains read-only during Evolution; AU8 adds persistent public reference access.
 
 ### AU5 — Draft the whole team's tempos
 
@@ -407,6 +407,10 @@ must not appear over the old round. Skip immediately restores current command el
 Rotation, reduced-motion changes, hidden tab and revocation cancel stale timers.
 
 ### AU8 — Understand growth and new abilities
+
+Implemented with Help/inspection access, public creature progress, shared authored tree details and
+a compact reveal receipt. New own spells are marked on their first visible spell choice; private
+picks remain in the command sheet. See `arena/README.md` for lifecycle and validation details.
 
 Make the Mutation Tree available from Help/inspection outside Evolution. Show paths and prerequisites
 using the authored graph, acquired/picked/available states, multiclass progress and passives.

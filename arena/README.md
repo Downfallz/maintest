@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js arena-growth.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -230,8 +230,8 @@ Creature tabs and the confirmation footer stay visible while cards scroll. The b
 the number of creatures with host offers; defeated and already-picked creatures explain their state.
 Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
 one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
-The full Mutation Tree is a separate, read-only disclosure during Evolution; its persistent access
-outside this phase remains AU8. Same-question polls preserve disclosures, focus and scroll.
+The full Mutation Tree is a separate, read-only disclosure during Evolution; AU8 also exposes a
+public reference outside this phase. Same-question polls preserve disclosures, focus and scroll.
 
 `table/arena-mutations.js` projects this model using the existing card and mutation helpers;
 `src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
@@ -242,3 +242,36 @@ chooser in complete real-host matches, including two-seat private choices.
 
 Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
 [phone](../docs/tabletop/images/arena-mutations/phone.jpg).
+
+
+## AU8: growth reference and new abilities
+
+Help and creature inspection open a persistent **Mutation Tree** over the current draft. Inspection
+selects its creature; the reference can switch between both rosters. It reuses AU4's authored
+prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
+passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
+current host Evolution offer marks a mutation Available; the next opportunity is the host's
+`nextEvolutionRound`, never a client schedule. Unknown content and schedule remain explicit.
+
+The standalone reference shows current **public** ownership. Pending own picks remain Picked only
+in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
+closing either reference does not acknowledge or submit a question. Native disclosures, a labelled
+creature select and fixed Close control work by keyboard and on small/short screens. Unchanged polls
+preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft.
+
+`table/arena-growth.js` observes only new `PurchasesRevealed` feed events. A compact, dismissible receipt
+names the new abilities/mutations; opening it gives the public team details in the tree without forcing
+a modal. During catch-up it retains the latest reveal; History retains all public events. Its first
+read is always a baseline, including reload, visibility return and seat switch, so historical unlocks
+never masquerade as new ones. No extra storage, request, engine rule or host acknowledgement is added.
+Private submission events and board changes alone cannot create a receipt. Access loss clears all facts.
+
+A new spell badge belongs to its own creature's first visible Action/Intent spell choice. Existing
+spells taught again by another tier are excluded. Covered controls and target-only questions do not
+consume badges; closing/reopening the same asking retains them, and the next asking clears them.
+Enemy reveals contribute to the public receipt but never to the player's badges.
+
+`arena-growth.test.js` tests projection, baseline/deduplication, unknown/passive content and badge
+lifetime. `arena-growth.spec.js` tests privacy, draft preservation, in-flight acknowledgement fences,
+reload/access loss, keyboard and responsive layouts. `arena.growth.js` buys a real host offer and
+checks its public tree, exact catalogue spell names and read-only access on desktop and phone.

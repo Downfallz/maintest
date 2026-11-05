@@ -1,5 +1,5 @@
 import { mutationChoices } from '../../table/arena-mutations.js';
-import { packageForest, passiveOf, requirementLine } from '../../table/mat.js';
+import { packageForest, passiveOf, requirementLine, talentPalette, classColour, familyRoot } from '../../table/mat.js';
 import { cardsById, cardLines } from '../../table/card.js';
 import { stageLabel } from '../../table/terms.js';
 import type { Catalogue, Package } from './planning';
@@ -48,19 +48,30 @@ export function mutationCards(model: Choices, catalogue: Catalogue | null, choos
   if (!model.faces.length) grid.append(text('p', 'No mutation offered for this creature. Choose another creature or pass all remaining picks.', 'mutation-empty'));
   const tree = document.createElement('details'); tree.id = 'mutation-tree';
   tree.append(text('summary', 'Explore Mutation Tree · reference'), text('p', 'Acquired and picked mutations are marked below. Select an offered card above to spend a pick.'));
-  const cards = cardsById(catalogue), byId = new Map<string, Package & { status: string }>(model.packages.map((pack: Package & { status: string }) => [pack.id, pack]));
+  tree.append(...mutationBranches(model.packages, catalogue));
+  return [grid, tree];
+}
+
+// The command and public reference share exactly the authored prerequisite graph and card details.
+export function mutationBranches(packages: (Package & { status: string })[], catalogue: Catalogue | null) {
+  const cards = cardsById(catalogue), byId = new Map<string, Package & { status: string }>(packages.map((pack: Package & { status: string }) => [pack.id, pack]));
+  const palette = talentPalette(catalogue, cards);
   const statuses: Record<string, string> = { known: 'Acquired', picked: 'Picked · hidden until reveal', available: 'Available', future: 'Not offered this pick' };
-  function branch(node: Package & { children: typeof node[] }): HTMLDetailsElement {
-    const pack = byId.get(node.id)!;
-    const detail = document.createElement('details'); detail.className = 'mutation-branch'; detail.open = node.level === 1;
+  function branch(node: Package & { children: typeof node[] }, parents: string[]): HTMLDetailsElement {
+    const pack = byId.get(node.id)!, path = [...parents, node.id];
+    const detail = document.createElement('details'); detail.dataset.package = pack.id; detail.dataset.path = JSON.stringify(path); detail.dataset.status = pack.status; detail.className = 'mutation-branch'; detail.open = node.level === 1;
+    detail.style.setProperty('--mutation-colour', classColour(familyRoot(pack, byId).id, palette));
     detail.append(text('summary', `${pack.name} · ${stageLabel(pack.level)} · ${statuses[pack.status]}`),
       text('p', requirementLine(pack, (id: string) => byId.get(id)?.name ?? id)),
-      ...passiveOf(pack).map((line: string) => text('p', line)));
+      text('p', Number.isInteger(pack.initiativeBonus) ? `${pack.initiativeBonus >= 0 ? '+' : ''}${pack.initiativeBonus} initiative` : 'Initiative unavailable'),
+      ...(passiveOf(pack).length ? [text('h4', 'Passive · while held'), ...passiveOf(pack).map((line: string) => text('p', line))] : []));
     for (const id of pack.spells ?? []) {
-      const spell = document.createElement('details'); spell.append(text('summary', cards.get(id)?.name ?? id), text('p', cardLines(cards.get(id)).join(' · '))); detail.append(spell);
+      const card = cards.get(id);
+      const spell = document.createElement('details'); spell.dataset.path = JSON.stringify([...path, 'spell', id]);
+      spell.append(text('summary', card?.name ?? id), text('p', Number.isInteger(card?.cost) ? `${card.cost} energy` : 'Cost unavailable'),
+        text('p', cardLines(card).join(' · ') || 'Spell details unavailable.')); detail.append(spell);
     }
-    detail.append(...node.children.map(branch)); return detail;
+    detail.append(...node.children.map(child => branch(child, path))); return detail;
   }
-  tree.append(...packageForest(catalogue).map(branch));
-  return [grid, tree];
+  return packageForest(catalogue).map((node: Package & { children: typeof node[] }) => branch(node, []));
 }

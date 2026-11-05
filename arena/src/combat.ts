@@ -25,7 +25,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     if (event.key === 'Escape' && controller.model().target && !document.querySelector('dialog[open]')) { event.preventDefault(); controller.close(); }
   });
 
-  function render(model: Model, catalogue: SpellCatalogue | null) {
+  function render(model: Model, catalogue: SpellCatalogue | null, newSpells: string[] = []) {
     const cards = cardsById(catalogue);
     const targeting = model.opened && Boolean(model.target);
     const choosing = model.opened && !targeting;
@@ -61,7 +61,8 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
         const offered = model.spells.includes(id);
         node.disabled = !offered || !model.canEdit;
         node.setAttribute('aria-pressed', String(id === model.chosen));
-        node.querySelector('.spell-availability')!.textContent = model.short.includes(id) ? 'Plan · not enough energy yet · may fizzle' : offered ? 'Available' : 'Not offered this turn';
+        node.classList.toggle('spell-new', newSpells.includes(id));
+        node.querySelector('.spell-availability')!.textContent = `${newSpells.includes(id) ? 'New · ' : ''}${model.short.includes(id) ? 'Plan · not enough energy yet · may fizzle' : offered ? 'Available' : 'Not offered this turn'}`;
       }
       const confirm = el<HTMLButtonElement>('combat-declare');
       confirm.hidden = model.waitingFor !== 'Intent'; confirm.disabled = !model.canSubmit;
