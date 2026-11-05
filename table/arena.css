@@ -281,6 +281,43 @@
   .upkeep-footer { padding-top: 6px; padding-bottom: 6px; }
 }
 
+/* The review is a recorded boundary inside the journal; the live arena stays current underneath. */
+#history-dialog { width: min(1120px,calc(100vw - 24px)); }
+.history-content { display: flex; flex: 1; min-height: 0; }
+#history-list { min-width: 0; }
+#history-filters { flex: none; padding: 0 18px; border-bottom: 1px solid #52695e; }
+#history-filters > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.history-filters { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; padding-bottom: 10px; }
+.history-filters label { min-width: 0; font-size: 12px; }
+.history-filters select { display: block; width: 100%; min-height: 44px; margin-top: 5px; }
+#history-review { flex: 1.4; min-width: 0; overflow: auto; padding: 12px; border-left: 1px solid #52695e; background: #12262b; }
+#history-review[hidden] { display: none; }
+.history-review-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.history-review-controls button, .history-footer button { font-size: 12px; }
+.history-inspect { margin: 0 12px 12px; font-size: 12px; }
+.history-snapshot { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.history-creature { border: 1px solid #55736a; border-top: 3px solid #9fc6ae; padding: 10px; border-radius: 5px; overflow-wrap: anywhere; }
+.history-creature[data-side="Opponent"] { border-top-color: #e1a58c; }
+.history-creature h4 { margin: 0 0 8px; font-size: 13px; }
+.history-creature p { font-size: 12px; margin: 6px 0; }
+#history-detail { overflow-wrap: anywhere; }
+#history-load-error { color: #ffb9a8; }
+#history-empty:empty, #history-empty[hidden] { display: none; }
+@media (max-width: 759px) {
+  .history-filters { grid-template-columns: 1fr 1fr; }
+  #history-dialog[data-review="true"] #history-list, #history-dialog[data-review="true"] #history-empty { display: none; }
+  .history-snapshot { grid-template-columns: 1fr; }
+  .history-footer { padding: 8px 12px; }
+}
+#history-review { display: flex; flex-direction: column; overflow: hidden; }
+.history-review-controls { flex: none; padding-bottom: 10px; border-bottom: 1px solid #52695e; }
+.history-review-controls button[aria-pressed="true"] { border-color: #d8c48e; background: #455346; color: #fff2c8; }
+#history-detail { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-top: 8px; }
+#history-detail h3 { font: 21px Georgia,serif; margin: 10px 0 14px; }
+#history-detail h4 { margin: 12px 0 6px; font-size: 14px; }
+#history-detail .history-effects { padding-bottom: 0; }
+#history-detail .history-meta { margin: 6px 0; }
+
 @media (max-height: 520px) {
   #combat-dialog { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
   #combat-dialog > .eyebrow { min-height: 0; }

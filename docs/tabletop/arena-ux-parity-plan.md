@@ -256,7 +256,7 @@ No implementation slice is completed by this document.
 | AU3b (implemented) | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 (implemented) | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
 | AU5 (implemented) | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
-| AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
+| AU6 (implemented) | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering and recorded action boundaries | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
 | AU9 | Compact grouped spellbook with stable selection and full details (implemented) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
@@ -397,6 +397,11 @@ Acceptance: round rollover while reading; reload and earlier history; old read a
 filtered-empty state versus unavailable history; access loss clears details; a live question remains unacknowledged
 while covered by history. End-of-match journal includes the final attack.
 Keep DOM/memory bounded and measure a long session. Do not fetch another seat or an unrestricted trace.
+
+Delivered in `table/arena-history.js` and `arena/src/history.ts`: typed filters, explicit earlier-page
+reads through the selected seat's existing `history()`, structured action facts, Previous/Next and
+recorded Before/After inspection inside the journal. The arena underneath remains live; historical
+snapshots never supply commands. See [AU6 behavior, limits and captures](../../arena/README.md#au6-filter-and-inspect-match-history).
 
 ### AU7 — Let the player follow what happened
 

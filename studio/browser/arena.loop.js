@@ -77,7 +77,21 @@ async function reviewAndReplay(page, latest, info, actions) {
   const last = recent.at(-1), detail = page.locator(`#history-list [data-sequence="${last.sequence}"]`);
   await detail.locator('summary').click(); await expect(detail).toContainText(/Targets:|No targets/);
   await fitsViewport(page, '#history-close');
+  await detail.getByRole('button', { name: 'Inspect event' }).click();
+  await expect(page.locator('#history-detail')).toContainText('Applied effects');
+  await page.locator('#history-before').click(); await expect(page.locator('.history-creature')).toHaveCount(last.event.frame.before.length);
+  await page.locator('#history-after').click();
+  await fitsViewport(page, '#history-close, #history-latest, #history-before, #history-after');
   await page.screenshot({ path: info.outputPath('history-real-host.jpg'), type: 'jpeg', quality: 85 });
+  if (latest.board.roundNumber > 2) {
+    const firstLive = Number(await page.locator('#history-list [data-sequence]').first().getAttribute('data-sequence'));
+    await page.locator('#history-earlier').click();
+    await expect(page.locator('#history-earlier')).not.toHaveText('Loading…');
+    await expect(page.locator('#history-load-error')).toBeEmpty();
+    await expect.poll(async () => Number(await page.locator('#history-list [data-sequence]').first().getAttribute('data-sequence'))).toBeLessThan(firstLive);
+    await page.locator('#history-latest').click();
+    await expect(page.locator(`#history-list [data-sequence="${last.sequence}"]`)).toHaveCount(1);
+  }
   await page.locator('#history-close').click();
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing'); await page.locator('#match-replay').click();
