@@ -67,8 +67,8 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Activity console | Activity feed, last-action line, structured round recap and announcements | Last-action result plus upkeep/aftermath review; no unified chronological journal | Docked/drawer console with structured records; AU1/AU6 |
 | Mutation chooser | `evolutionButtons` / `packageCard`: offered cards, family colour, tags, spells, prerequisites, budget | Full nested `details` forest; data exists but useful choices compete with future nodes | Available-now cards first, reference tree second; AU4 |
 | Mutation reference | Inspectable tree outside purchase questions, ownership, paths, passives, shared picks | Tree mounted through Evolution planning controls; no equivalent persistent reference entry | Always-reachable read-only tree and unlock receipt; AU8 |
-| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | Explicitly one host-asked creature at a time; three buttons/confirm cycles for three creatures | Recover batch UX using existing sequential host protocol; AU5 |
-| Tempo consequences | Short rule and compact cost/critical spell reference | Rule sentence but no creature spell reference in tempo choices | Reference and clear Instinct/Precision tradeoff; AU5 |
+| Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | AU5 implemented: editable team tabs, one frozen batch, explicit continuation after interruption | Sequential host protocol retained; AU5 |
+| Tempo consequences | Short rule and compact cost/critical spell reference | AU5 implemented: per-creature energy, cost/critical reference and labelled catalogue fallback | Instinct/Precision tradeoff and expandable spell details; AU5 |
 | Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Partial: order, sides, tempo and current marker; rendered strip omits initiative/roll details | Inspectable order and tie explanation, completed/upcoming states; AU11 |
 | Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Catalogue cards and unavailable states exist; verbose list, one column on phone | Grouped compact spellbook with progressive detail; AU9 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Legal targets, selected count and confirmation exist; guidance is not rendered | Compact confirmation summary and current-board estimates; AU10 |
@@ -255,7 +255,7 @@ No implementation slice is completed by this document.
 | AU3a (implemented) | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
 | AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
-| AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
+| AU5 (implemented) | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
 | AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
@@ -369,6 +369,11 @@ sequential host questions each answered once; double-click/held-key protection; 
 a lost response after acceptance; external answer; hidden tab mid-batch; seat/round change and reconnection.
 Compare the opposite seat's entire board, options, feed and asking before/after private choices.
 No “atomic” claim: interrupted batches reconcile, then require explicit user continuation.
+
+Implemented by `table/arena-tempo.js` and `arena/src/tempo.ts`, through the existing planning facade.
+[ADR 0135](../adr/0135-draft-team-tempos-before-sequential-confirmation.md) replaces the one-creature UI
+without changing the host protocol. Local drafts are never persisted; reload reconstructs accepted choices
+only. Focused controller/browser tests and real-host private-seat journeys cover the acceptance cases above.
 
 ### AU6 — Read the round and earlier attacks
 

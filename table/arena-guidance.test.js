@@ -44,7 +44,7 @@ test('without any rules the mode is explicitly unknown, while a spell question c
   assert.doesNotMatch(text(arenaGuidance(view('Action'), null)), /declare hidden spells/);
 });
 test('the objective names the creature the way the scene does', () => {
-  assert.equal(arenaGuidance(view('Speed'), catalogue).objective, 'First: choose a tempo, then confirm.');
+  assert.equal(arenaGuidance(view('Speed'), catalogue).objective, 'Draft every eligible creature’s tempo, then confirm the team.');
   assert.equal(arenaGuidance(view('Speed'), catalogue).context, 'Command · First');
   const twins = view('Action'); twins.board.allies = [{ id: 1, name: 'Twin' }, { id: 2, name: 'Twin' }];
   assert.match(arenaGuidance(twins, catalogue).objective, /^Twin · 1: choose a spell/);

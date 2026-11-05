@@ -1,6 +1,7 @@
 import { askedKey } from './slot.js';
 import { SPEEDS } from './terms.js';
 import { isSettled, orderOf, tap } from './ties.js';
+import { createArenaTempo } from './arena-tempo.js';
 
 export function planningQuestion(view) {
   return Boolean(view && !view.over && !view.playedByBot && Number.isInteger(view.waitingAsked) &&
@@ -22,15 +23,14 @@ export function planningDecision(view, choice, tapped = []) {
     ? { kind: 'TieOrder', order: orderOf(groups, choice?.keep ? [] : tapped) } : null;
 }
 
-// A separate draft for planning: a poll, a late acknowledgement or a seat switch cannot turn an old
-// selection into a new command. Each tempo is confirmed for the creature the host actually asks about.
-export function createArenaPlanning({ connection, onChange, visible = () => true }) {
+// Mutation and tie drafts remain scoped to one asking. Tempo owns its separate, round-scoped batch.
+function createSinglePlanning({ connection, onChange, visible = () => true }) {
   let seat = null, latest = null, key = '', generation = 0, revision = 0, online = false;
   let opened = false, sending = false, answered = null, choice = null, tapped = [], error = '', ack = null, failed = false;
   const available = () => planningQuestion(latest) && online && answered !== key;
   const editable = () => available() && opened && !sending && !failed && visible();
   const command = () => planningDecision(latest, choice, tapped);
-  const model = () => ({ latest, question: key, available: available(), opened, sending, choice, tapped: [...tapped], error,
+  const model = () => ({ latest, question: key, available: available(), opened, sending, choice, tapped: [...tapped], error, tempo: null,
     canEdit: editable(), canSubmit: editable() && Boolean(command()), accepted: answered === key });
   const emit = () => onChange(model());
   function clear() { revision++; opened = false; choice = null; tapped = []; ack = null; failed = false; }
@@ -91,4 +91,21 @@ export function createArenaPlanning({ connection, onChange, visible = () => true
     } finally { if (context === generation) { sending = false; emit(); } }
   }
   return { model, reset, receive, setOnline, open, close, choose, order, restart, submit };
+}
+
+export function createArenaPlanning(options) {
+  let speed = false;
+  const notify = () => options.onChange(model());
+  const single = createSinglePlanning({ ...options, onChange: notify });
+  const tempo = createArenaTempo({ ...options, onChange: notify });
+  const active = () => speed ? tempo : single;
+  const model = () => active().model();
+  return { model,
+    reset(seat) { speed = false; single.reset(seat); tempo.reset(seat); },
+    receive(view) { speed = view?.waitingFor === 'Speed'; single.receive(view); tempo.receive(view); },
+    setOnline(value) { single.setOnline(value); tempo.setOnline(value); },
+    open: () => active().open(), close: () => active().close(), choose: value => active().choose(value),
+    submit: () => active().submit(), selectTempo: id => tempo.select(id),
+    order: id => single.order(id), restart: () => single.restart(),
+  };
 }

@@ -1,6 +1,7 @@
 import { createArenaPlanning } from '../../table/arena-planning.js';
 import { talentClasses, packageForest, passiveOf, requirementLine } from '../../table/mat.js';
-import { SPEEDS, TEMPO_RULE, tempoLabel, stageLabel } from '../../table/terms.js';
+import { tempoLabel, stageLabel } from '../../table/terms.js';
+import { tempoControls } from './tempo';
 import { untapped, orderOf } from '../../table/ties.js';
 import { cardLines, cardsById } from '../../table/card.js';
 import type { SpellCatalogue } from './combat';
@@ -17,6 +18,7 @@ function line(value: string) { const node = document.createElement('p'); node.te
 
 export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void) {
   const dialog = el<HTMLDialogElement>('planning-dialog');
+  const tempos = tempoControls(controller, name);
   let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null;
   el('planning-open').addEventListener('click', () => { beforeOpen(); controller.open(); });
   el('planning-close').addEventListener('click', () => controller.close());
@@ -62,13 +64,6 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
     el('planning-help').textContent = `${offers?.remainingPicks ?? 0} shared team picks left. At most one mutation per creature this opportunity. Picks reveal together. Explore branches, then select and confirm.`;
   }
-  function tempos(model: ReturnType<Controller['model']>) {
-    el('planning-creatures').replaceChildren();
-    el('planning-help').textContent = `${TEMPO_RULE} Choose for ${name(model.latest.waitingCreature)}. Each creature confirms separately; both teams reveal together.`;
-    el('planning-choices').replaceChildren(...SPEEDS.map((speed: string) => {
-      const node = button(tempoLabel(speed), () => controller.choose({ speed })); node.dataset.speed = speed; return node;
-    }));
-  }
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
     el('planning-help').textContent = 'The dice gave your team its places. Choose who acts first within each tie, then confirm. The last creature takes the remaining place.';
@@ -81,7 +76,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const keep = button('Keep the dice order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
     el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
   }
-  const headings: Record<string, string> = { Evolution: 'Mutation Tree', Speed: 'Choose tempo', TieOrder: 'Order ties' };
+  const headings: Record<string, string> = { Evolution: 'Mutation Tree', Speed: 'Team tempos', TieOrder: 'Order ties' };
   function closeChoices() {
     if (dialog.open) dialog.close();
     rendered = ''; creature = null;
@@ -95,6 +90,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     return node.id === 'planning-keep' && Boolean(chosen?.keep);
   }
   function selectionText(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
+    if (model.tempo) return model.tempo.needsRefresh ? 'Refreshing accepted choices…' : `${model.tempo.chosen}/${model.tempo.total} remaining tempos ready${model.tempo.accepted.length ? ` · ${model.tempo.accepted.length} already accepted` : ''}`;
     const chosen = model.choice;
     if (chosen?.pass) return 'Pass remaining picks';
     if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
@@ -106,12 +102,22 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   // the focus of a player ordering ties is kept on the ties instead of falling off the removed button.
   function rebuild(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const kind = model.latest.waitingFor;
-    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature]);
+    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature, model.tempo,
+      kind === 'Speed' && [model.latest.board.allies, model.latest.guidance]]);
     if (key === rendered && catalogue === lastCatalogue) return;
     const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
-    if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model); else ties(model);
+    const focused = document.activeElement as HTMLElement | null;
+    const speedFocus = focused?.dataset.speed, tabFocus = focused?.dataset.tempoTab;
+    for (const id of ['planning-creatures', 'planning-choices']) {
+      el(id).removeAttribute('role'); el(id).removeAttribute('aria-labelledby');
+    }
+    if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model, catalogue); else ties(model);
     rendered = key; lastCatalogue = catalogue;
     if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
+    if (kind === 'Speed' && (speedFocus || tabFocus)) {
+      const target = speedFocus ? `[data-speed="${speedFocus}"]` : `[data-tempo-tab="${tabFocus}"]`;
+      dialog.querySelector<HTMLButtonElement>(target)?.focus({ preventScroll: true });
+    }
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
@@ -122,6 +128,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
     el('planning-heading').textContent = label;
+    dialog.dataset.kind = model.latest.waitingFor;
     rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
       node.disabled = !model.canEdit || node.dataset.offered === 'false';
@@ -130,7 +137,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
-    el('planning-confirm').textContent = model.sending ? 'Sending…' : 'Confirm choice';
+    el('planning-confirm').textContent = model.sending ? 'Sending…' : model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
     if (!dialog.open) dialog.showModal();
   }
   return { render };

@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-tempo.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -93,8 +93,9 @@ Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
 `table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
-Mutation Tree with explicit confirmation. Tempo confirms one creature at a time, with simultaneous reveal
-still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
+Mutation Tree with explicit confirmation. AU5 adds editable team tempo tabs and one confirmation over the
+host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
+`table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
 finished recording using the same operator authorization as `/play?replay=...`.
@@ -177,3 +178,21 @@ energy, healing and bleed; a creature killed afterward retains its earlier recei
 read-only and deduplicated. Old recordings and resumed legacy matches have no ordinary-energy receipt;
 the UI does not invent one from the default allowance. See [ADR 0132](../docs/adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
 The automatic first-round/round-transition receipt remains AU3b; this PR supplies its recorded facts.
+
+## AU5: team tempo drafts
+
+**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
+return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
+critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
+The footer stays reachable while the choices and references scroll.
+
+`table/arena-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
+acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its
+write. A refusal, uncertainty or interruption stops automatic progress; accepted choices remain visible and
+continuation requires another explicit confirmation after a fresh seat read. Hidden pages, seat changes and
+reloads discard local drafts. No opponent choices or public history are altered before the host reveal.
+
+`arena-tempo.test.js` exercises protocol interleavings; `arena-tempo.spec.js` covers actual controls,
+references, errors, keyboard navigation, mobile layout and screenshots. `arena.loop.js` verifies full games
+in both declarations and opponent privacy across a partial batch, reload and completion on the real host.
+See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation.md).
