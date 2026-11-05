@@ -50,6 +50,84 @@ test('a push arriving while a window of the table is in front of somebody shows 
   assert.equal(w.shown.length, 0);
 });
 
+test('a push arriving while the arena is in front of somebody shows nothing: the arena is the game', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena?table=a&seat=player1', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', body: 'Round 3: choose a spell.', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 0);
+});
+
+test('an arena in front of somebody at another table does not stand in for this one: the notice shows', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena?table=b&seat=player1', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 1);
+});
+
+test('an arena opened from a seat\'s own link names no table, and keeps the notice quiet while in front', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena?player1=tok', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 0);
+});
+
+test('the arena lab in front of somebody is a study, not a seat: the notice shows', async () => {
+  const w = worker({ windows: [{ url: 'https://table.example/arena-lab', focused: true, visibilityState: 'visible' }] });
+
+  await w.fire('push', push({ title: 'Your turn', url: '/play?table=a' }));
+
+  assert.equal(w.shown.length, 1);
+});
+
+test('a tap with the arena open at the notice\'s table brings it to the front and leaves it in the arena', async () => {
+  const went = [];
+  const arena = { url: 'https://table.example/arena?table=a&seat=player1', focused: false, focus: async () => { went.push('focus:arena'); }, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [arena] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play?table=a' }, close: () => {} } });
+
+  assert.deepEqual(went, ['focus:arena']);
+  assert.deepEqual(w.opened, []);
+});
+
+test('an arena opened from a seat\'s own link names no table, and stands for the one the notice came from', async () => {
+  const went = [];
+  const arena = { url: 'https://table.example/arena?player1=tok', focused: false, focus: async () => { went.push('focus:arena'); }, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [arena] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play?table=a' }, close: () => {} } });
+
+  assert.deepEqual(went, ['focus:arena']);
+  assert.deepEqual(w.opened, []);
+});
+
+test('a tap with the arena open at another table leaves it alone and opens the game in a new window', async () => {
+  const went = [];
+  const arena = { url: 'https://table.example/arena?table=b&seat=player1', focused: false, focus: async () => { went.push('focus:arena'); }, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [arena] });
+
+  await w.fire('notificationclick', { notification: { data: { url: '/play?table=a' }, close: () => {} } });
+
+  assert.deepEqual(went, []);
+  assert.deepEqual(w.opened, ['/play?table=a']);
+});
+
+test('a tap on a lobby notice never steers the arena: the lobby opens in a new window', async () => {
+  const went = [];
+  const arena = { url: 'https://table.example/arena?table=a&seat=player1', focused: true, visibilityState: 'visible', focus: async () => { went.push('focus:arena'); }, navigate: async url => { went.push(url); } };
+  const w = worker({ windows: [arena] });
+
+  await w.fire('push', push({ title: 'A friend', url: '/lobby#friends' }));
+  assert.equal(w.shown.length, 1, 'the arena is the game, not the lobby');
+
+  await w.fire('notificationclick', { notification: { data: { url: '/lobby#friends' }, close: () => {} } });
+  assert.deepEqual(went, []);
+  assert.deepEqual(w.opened, ['/lobby#friends']);
+});
+
 test('a test notice shows over the game in front of somebody: it is the one notice that was asked for', async () => {
   const w = worker({ windows: [{ url: 'https://table.example/play', focused: true, visibilityState: 'visible' }] });
 

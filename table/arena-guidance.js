@@ -55,7 +55,7 @@ const tips = {
   mutation: { title: 'What is a mutation?', lines: [
     'A mutation develops your creature: new spells or a passive, plus initiative. Its card explains what the creature gains.',
     'Picks are shared across your team. Each creature can acquire at most one mutation this opportunity. Both teams choose privately, then reveal together.',
-    'Open Mutation Tree, select a creature and an offered mutation, then Confirm choice. Pass remaining picks gives up all your unused picks for this round.',
+    'Open Choose mutation, select a creature and an offered card, then confirm the named mutation and recipient. Pass remaining picks gives up all your unused picks for this round.',
   ] },
   tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
     'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',
@@ -90,7 +90,7 @@ function objective(view, topic) {
     case 'mutation': {
       const offer = view.options?.evolution;
       if (offer?.remainingPicks === 0) return 'No team picks remain. Review your command.';
-      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Mutation Tree to pass.';
+      if (offer?.creatures?.length && !offer.creatures.some(one => one.availableTiers?.length)) return 'No mutations offered. Open Choose mutation to pass.';
       const budget = Number.isInteger(offer?.remainingPicks) ? ` · ${count(offer.remainingPicks, 'team pick')} left` : '';
       return `Acquire a mutation${budget}.`;
     }

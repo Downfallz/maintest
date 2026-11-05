@@ -1,9 +1,8 @@
 import { createArenaPlanning } from '../../table/arena-planning.js';
-import { talentClasses, packageForest, passiveOf, requirementLine } from '../../table/mat.js';
-import { tempoLabel, stageLabel } from '../../table/terms.js';
+import { mutationChoices } from '../../table/arena-mutations.js';
+import { mutationCards } from './mutations';
 import { tempoControls } from './tempo';
 import { untapped, orderOf } from '../../table/ties.js';
-import { cardLines, cardsById } from '../../table/card.js';
 import type { SpellCatalogue } from './combat';
 
 export interface Package { id: string; name: string; level: number; initiativeBonus: number; spells: string[];
@@ -26,43 +25,19 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
 
   function mutations(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
-    const view = model.latest, allies = view.board.allies ?? [], offers = view.options.evolution;
-    if (!allies.some((one: { id: number }) => one.id === creature)) creature = offers?.creatures?.[0]?.creature ?? allies[0]?.id;
-    const picker = el('planning-creatures');
-    picker.replaceChildren(...allies.map((one: { id: number }) => {
-      // A mutation is picked for the creature whose tree is shown: switching creatures drops the selection.
-      const node = button(name(one.id), () => { if (one.id !== creature) controller.choose(null); creature = one.id; rendered = ''; render(controller.model(), catalogue); });
-      node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); node.disabled = model.sending; return node;
+    const choices = mutationChoices(model.latest, catalogue, creature);
+    creature = choices.selected;
+    el('planning-creatures').replaceChildren(...choices.roster.map((one: { id: number; name: string; context: string }) => {
+      const node = button(`${one.name} · ${one.context}`, () => {
+        if (one.id === creature) return;
+        creature = one.id; rendered = ''; controller.choose(null);
+      });
+      node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); return node;
     }));
-    const cards = cardsById(catalogue), selected = allies.find((one: { id: number }) => one.id === creature);
-    const packs = talentClasses(catalogue, cards, selected, offers, view.board.evolutionChoices);
-    const byId = new Map<string, Package & { status: string }>(packs.map((pack: Package & { status: string }) => [pack.id, pack]));
-    const statuses: Record<string, string> = { known: 'Acquired', picked: 'Picked · hidden until reveal', available: 'Available', future: 'Not offered this pick' };
-    function branch(node: Package & { children: typeof node[] }): HTMLDetailsElement {
-      const pack = byId.get(node.id)!;
-      const details = document.createElement('details'); details.className = 'mutation-branch'; details.open = node.level === 1 || pack.status === 'available';
-      const summary = document.createElement('summary'); summary.textContent = `${pack.name} · ${stageLabel(pack.level)} · ${statuses[pack.status]}`;
-      const face = document.createElement('div'); face.className = 'mutation-face';
-      face.append(line(`${pack.initiativeBonus > 0 ? '+' : ''}${pack.initiativeBonus} initiative · ${(pack.tags ?? []).join(' · ')}`),
-        line(requirementLine(pack, (id: string) => byId.get(id)?.name ?? id)));
-      for (const passive of passiveOf(pack)) face.append(line(`Held: ${passive}`));
-      for (const id of pack.spells ?? []) {
-        const card = cards.get(id); const spell = document.createElement('details');
-        const title = document.createElement('summary'); title.textContent = card?.name ?? id;
-        spell.append(title, line(cardLines(card).join(' · '))); face.append(spell);
-      }
-      const acquire = button(`Select ${pack.name}`, () => controller.choose({ creature, tier: pack.id }));
-      acquire.dataset.mutation = pack.id; acquire.disabled = pack.status !== 'available';
-      acquire.dataset.offered = String(pack.status === 'available'); face.append(acquire);
-      details.append(summary, face, ...node.children.map(branch)); return details;
-    }
-    el('planning-choices').replaceChildren(...packageForest(catalogue).map(branch));
-    // Unknown catalogue entries remain playable, with the host identifier as their label.
-    for (const id of offers?.creatures?.find((one: { creature: number }) => one.creature === creature)?.availableTiers ?? []) {
-      if (!byId.has(id)) { const node = button(id, () => controller.choose({ creature, tier: id })); node.dataset.mutation = id; node.dataset.offered = 'true'; el('planning-choices').append(node); }
-    }
+    el('planning-choices').replaceChildren(...mutationCards(choices, catalogue, tier => controller.choose({ creature, tier })));
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
-    el('planning-help').textContent = `${offers?.remainingPicks ?? 0} shared team picks left. At most one mutation per creature this opportunity. Picks reveal together. Explore branches, then select and confirm.`;
+    const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
+    el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
   }
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
@@ -76,7 +51,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const keep = button('Keep the dice order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
     el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
   }
-  const headings: Record<string, string> = { Evolution: 'Mutation Tree', Speed: 'Team tempos', TieOrder: 'Order ties' };
+  const headings: Record<string, string> = { Evolution: 'Choose mutation', Speed: 'Team tempos', TieOrder: 'Order ties' };
   function closeChoices() {
     if (dialog.open) dialog.close();
     rendered = ''; creature = null;
@@ -98,7 +73,6 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const chosen = model.choice;
     if (chosen?.pass) return 'Pass remaining picks';
     if (chosen?.tier) return `${name(chosen.creature)} · ${catalogue?.packages?.find(pack => pack.id === chosen.tier)?.name ?? chosen.tier}`;
-    if (chosen?.speed) return `${name(model.latest.waitingCreature)} · ${tempoLabel(chosen.speed)}`;
     if (chosen?.keep) return 'Dice order';
     return model.latest?.waitingFor === 'TieOrder' ? 'Chosen order' : 'Select a choice';
   }
@@ -106,10 +80,14 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   // the focus of a player ordering ties is kept on the ties instead of falling off the removed button.
   function rebuild(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const kind = model.latest.waitingFor;
-    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices, model.tapped, creature, model.tempo,
-      kind === 'Speed' && [model.latest.board.allies, model.latest.guidance]]);
+    if (kind === 'Evolution') creature = mutationChoices(model.latest, catalogue, creature).selected;
+    const key = JSON.stringify([model.question, model.latest.options, model.latest.board.evolutionChoices,
+      kind === 'Evolution' ? model.latest.board.allies.map((one: { id: number; isAlive?: boolean; acquiredTiers?: string[] }) => [one.id, one.isAlive, one.acquiredTiers]) : null, model.tapped, creature,
+      model.tempo, kind === 'Speed' && [model.latest.board.allies, model.latest.guidance]]);
     if (key === rendered && catalogue === lastCatalogue) return;
     const wasOrdering = kind === 'TieOrder' && el('planning-choices').contains(document.activeElement);
+    // A creature tab rebuilds the tabs it sits in; a keyboard player keeps their place on the one they chose.
+    const wasPicking = kind === 'Evolution' && el('planning-creatures').contains(document.activeElement);
     const focused = document.activeElement as HTMLElement | null;
     const speedFocus = focused?.dataset.speed, tabFocus = focused?.dataset.tempoTab;
     for (const id of ['planning-creatures', 'planning-choices']) {
@@ -118,6 +96,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (kind === 'Evolution') mutations(model, catalogue); else if (kind === 'Speed') tempos(model, catalogue); else ties(model);
     rendered = key; lastCatalogue = catalogue;
     if (wasOrdering) (el('planning-choices').querySelector<HTMLButtonElement>('[data-tie]') ?? el<HTMLButtonElement>('planning-confirm')).focus({ preventScroll: true });
+    if (wasPicking) el('planning-creatures').querySelector<HTMLButtonElement>(`[data-creature="${creature}"]`)?.focus({ preventScroll: true });
     if (kind === 'Speed' && (speedFocus || tabFocus)) {
       const target = speedFocus ? `[data-speed="${speedFocus}"]` : `[data-tempo-tab="${tabFocus}"]`;
       dialog.querySelector<HTMLButtonElement>(target)?.focus({ preventScroll: true });
@@ -131,18 +110,24 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el('planning-dialog-error').textContent = model.error;
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
+    dialog.dataset.kind = model.latest.waitingFor;
     el('planning-heading').textContent = label;
     dialog.dataset.kind = model.latest.waitingFor;
     rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
       node.disabled = !model.canEdit || node.dataset.offered === 'false';
       node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
+      if (node.dataset.mutation) node.querySelector('.mutation-select-label')!.textContent = isPressed(node, model.choice) ? 'Selected · confirm below' : 'Select mutation';
     }
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
-    const confirmation = model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
+    const confirmation = model.choice?.tier ? 'Acquire · 1 pick' : model.choice?.pass ? 'Pass all remaining picks'
+      : model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
     el('planning-confirm').textContent = model.sending ? 'Sending…' : confirmation;
+    // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
+    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `Acquire · 1 pick: ${selectionText(model, catalogue)}`);
+    else el('planning-confirm').removeAttribute('aria-label');
     if (!dialog.open) dialog.showModal();
   }
   return { render };

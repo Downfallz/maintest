@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-tempo.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js arena-tempo.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -92,9 +92,9 @@ text on the latest board. Result details remain available in an accessible overl
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
-`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
-Mutation Tree with explicit confirmation. AU5 adds editable team tempo tabs and one confirmation over the
-host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
+`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
+cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
 `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
@@ -122,7 +122,7 @@ is already there; otherwise **Latest** announces their count. First loads popula
 animations. Switching viewpoint, hidden tabs, lost access and renderer failure clear every journal surface.
 
 This implements AU1 of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
-Automatic upkeep presentation belongs to AU3b; older-round loading, filtering and
+Automatic upkeep is presented by AU3b below; older-round loading, filtering and
 links into replay belong to AU6. The existing upkeep review remains available. This slice adds no domain
 rules, transport contract or storage. Browser tests cover 320px portrait and short landscape, focus/drafts,
 read-only access, deduplication, scroll retention and clearing on access loss. The real-host complete-match
@@ -155,7 +155,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-Ordinary upkeep-energy receipts remain AU3; mutation cards and batch tempos remain later UX slices.
+The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
 
 `arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -170,6 +170,11 @@ acquired tiers, two branch slots and an owner-only capstone accent. `mutation-cu
 transform, retains static cues under reduced motion, and suppresses them if the requested sprite is missing.
 The live suite checks all nine branch pairs and lifecycle behavior with the production scene.
 
+ART-6 adds [playback polish](../docs/art/arena-polish.md): shared timings, live 1×/1.5×/2× playback and
+opt-in synthesized sound. `audio.ts` owns one short voice, cancels pending resumes, and is shared with the
+lab. Reduced motion keeps a 650 ms readable result at every speed. The playback suite exercises the
+production audio owner and instrumented browser audio alongside the renderer.
+
 ## AU3a: recorded ordinary energy
 
 New matches include **Upkeep · round energy** in History, with each recipient's actual gain, before/after
@@ -177,7 +182,67 @@ energy and base/passive request amounts. Zero gains are visible. These facts are
 energy, healing and bleed; a creature killed afterward retains its earlier receipt. Journal reads remain
 read-only and deduplicated. Old recordings and resumed legacy matches have no ordinary-energy receipt;
 the UI does not invent one from the default allowance. See [ADR 0132](../docs/adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
-The automatic first-round/round-transition receipt remains AU3b; this PR supplies its recorded facts.
+
+## AU3b: automatic upkeep receipts
+
+Once human arrivals clear, the arena presents one grouped **Round 1 · Upkeep** receipt. Each observed
+round transition gets the same receipt, after confirmed-action playback finishes and before a phase tip.
+An open reference or command draft delays it; Continue and Escape only dismiss presentation. Reading it
+never acknowledges an asking or submits a choice. A first visit to an advanced match does not replay old
+round announcements; the next observed round does. Catch-up keeps the latest round, not a queue of old popups.
+
+`table/arena-upkeep.js` combines only public ordinary-energy and ongoing-effect events by their own
+round IDs. Ordinary gains show before/after energy and base/passive requests, including zero. Ongoing
+energy, healing (including capped zero healing), then damage follow the engine's order. The receipt waits
+for the ongoing event so it does not announce half an upkeep. Missing ordinary energy in a legacy feed
+is explicitly unknown. Neither catalogue defaults nor current boards supply historical totals. No-tick
+rounds still show their ordinary grants. Expired conditions are not reconstructed as current effects.
+
+Creature links open the existing **current** inspection, including present condition durations; this is
+labelled separately from the historical receipt. History and round review retain the facts after dismissal,
+and replay uses the same tick extraction and wording, preserving zero results and legacy missing-data text.
+AU7 still owns paced aftermath/upkeep choreography.
+
+`src/upkeep.ts` renders a native modal with a scrollable body and reachable Continue button. Polls preserve
+nodes and focus. Viewpoint changes, hidden tabs, access loss and renderer failure erase the receipt and
+inspection. `sessionStorage` key `downfall.arena.upkeep.seen.v1` keeps at most 32 table/seat round high-water
+marks, never tokens, questions, choices or event facts. These prevent duplicate announcements on reconnect
+and reload in the same tab; blocked storage falls back to memory. A new browser tab can announce its first
+round once. Marks record presentation, not a host acknowledgement.
+
+`arena-upkeep.spec.js` covers arrivals, recorded amounts, zero healing, inspection, History, deferred drafts,
+closing-action boundaries, legacy data, reconnect/reload, access loss, renderer interruption, 320px portrait,
+short landscape and 200% text. Real-host journeys in both declaration modes read every new-round receipt
+before answering and still verify that presentation sends no command or acknowledgement.
+
+Captures: [real-host opening receipt, desktop](../docs/tabletop/images/arena-upkeep/desktop.jpg) ·
+[phone receipt with non-default/passive/zero fixture values](../docs/tabletop/images/arena-upkeep/phone-fixture.jpg).
+
+## AU4: compare offered mutations
+
+`Choose mutation` opens the host's available cards for the selected creature, with three columns on
+desktop and stacked cards on phones. Cards show family colour and name, stage, authored tags,
+initiative gain and spell names/previews. Each separate Details disclosure includes spell cost,
+targeting, effects and caster/critical text. Passive-only and shared capstones retain the catalogue's
+passive lines without invented tags or spells. Later offers may contain any number of upgrades and
+multiclass roots; missing catalogue records remain selectable by host id with explicit unknown details.
+
+Creature tabs and the confirmation footer stay visible while cards scroll. The budget is capped by
+the number of creatures with host offers; defeated and already-picked creatures explain their state.
+Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
+one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
+The full Mutation Tree is a separate, read-only disclosure during Evolution; its persistent access
+outside this phase remains AU8. Same-question polls preserve disclosures, focus and scroll.
+
+`table/arena-mutations.js` projects this model using the existing card and mutation helpers;
+`src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
+host legality checks and duplicate/stale-command protection. `arena-mutations.spec.js` covers
+comparison, late offers, recipient changes, passive capstones, missing content, effective budgets,
+poll stability, pending acknowledgement and small/landscape layouts. `arena.loop.js` exercises the
+chooser in complete real-host matches, including two-seat private choices.
+
+Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
+[phone](../docs/tabletop/images/arena-mutations/phone.jpg).
 
 ## AU5: team tempo drafts
 

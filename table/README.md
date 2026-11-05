@@ -471,7 +471,10 @@ ladder is recomputed from the results every half minute at most.
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
 when the match asks that seat something and nobody is looking at the page, screen off or browser closed
-included, and a tap on the notice opens the game. A page in front of somebody gets no notice; a page hidden
+included, and a tap on the notice opens the game. A page in front of somebody gets no notice, the arena (`/arena`)
+included: the host still sends one when the arena's controls were not opened within the grace (ADR 0126), and the
+worker keeps it quiet while an arena at that table is visible and focused, so an installed app being played is not told what it
+shows; a tap on a notice brings an arena already open at that table to the front and leaves it there. A page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
 first. Every seat page makes the offer once, in a bar at the bottom of the screen, and its answer is remembered
@@ -596,7 +599,11 @@ command drafts and never sends a decision or `shown`. It is separate from animat
 an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
 `arena/src/history.ts` renders stable accessible details. AU3a adds recorded ordinary-energy gains,
 including zero and before/after values, to new matches. Classic replay also separates recorded ordinary
-energy from ongoing ticks; neither step adds a nominal catalogue allowance. Automatic upkeep receipts, filters and earlier
+energy from ongoing ticks; neither step adds a nominal catalogue allowance. AU3b presents a grouped receipt
+once arrivals clear and at observed round transitions, after playback and before tips. `arena-upkeep.js`
+shares recorded facts with round review and replay, retains zero gains/heals, and labels absent ordinary
+energy as unknown. Inspection shows current durations separately. A bounded tab-local round marker prevents
+repeat announcements after reconnect/reload, without persisting event facts. Filters and earlier
 round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
 
 The arena's **Help** dialog explains the current objective and the round flow, including the configured

@@ -43,6 +43,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       }
     });
     await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+    await expect(page.locator('#upkeep-dialog')).toBeVisible();
+    expect(shown).toEqual([]); expect(sent).toEqual([]);
+    await page.locator('#upkeep-close').click();
     await page.evaluate(() => {
       window.arenaFrames = [];
       new MutationObserver(() => {

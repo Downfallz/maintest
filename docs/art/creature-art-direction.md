@@ -148,7 +148,7 @@ The **necromancy framing is user-corrected and accepted**. Fine colors, amount o
 2. **ART-3 — Sprite manifest + arena contrast (implemented)**: [asset mapping/fallback, placements, sprite anchoring and viewport QA](runtime-sprites.md).
 3. **ART-4 — Spell visual vocabulary (implemented)**: [confirmed physical, biological, elemental, necromantic and astral VFX](spell-vfx.md); no domain changes.
 4. **ART-5 — Mutation cues / multiclass POC (implemented)**: [explicit precedence, three-slot budget, stage 2/3 cues and owner-only capstone accents](mutation-cues.md), with cross-family, replay and lifecycle tests.
-5. **ART-6 — Polish**: timings, reduced motion, audio and screenshots.
+5. **ART-6 — Polish (implemented)**: [shared timing, 1×/1.5×/2× live playback, bounded motif choreography, reduced motion and opt-in synthesized audio](arena-polish.md), with lifecycle tests and screenshots.
 
 ### Out of scope for this documentation PR
 

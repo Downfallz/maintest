@@ -1,4 +1,5 @@
-import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps } from './feed.js';
+import { missingRoundEnergy } from './arena-upkeep.js';
+import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps, upkeepText } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { outcomeText } from './outcome.js';
 import { creatureLabel } from './arena-live.js';
@@ -68,7 +69,7 @@ function eventRow(entry, board, catalogue) {
     case 'OngoingEffectsApplied': {
       const rows = roundUpkeep([entry], roundOf(entry))?.rows ?? [];
       return { title: 'Upkeep · ongoing effects', category: 'Upkeep', details: rows.length
-        ? rows.map(tick => line(`${who(tick.creature, board)} · ${tick.label} ${tick.sign}${tick.amount} ${tick.unit}`, tick.tone))
+        ? rows.map(tick => line(`${who(tick.creature, board)} · ${upkeepText(tick)}`, tick.tone))
         : [line('No ongoing ticks applied. Ordinary round energy is separate from these ticks.')] };
     }
     case 'ConditionsExpired':
@@ -109,12 +110,15 @@ export function historyEntry(entry, board, catalogue) {
 // One instance per selected viewpoint. No animation watermark, requests, writes, or local storage.
 // Two rounds and at most 200 rows bound the first slice; earlier-round loading belongs to AU6.
 export function createArenaHistory({ limit = 200 } = {}) {
+  let ordinaryRounds = new Set();
   let rows = new Map(), current = 0, available = false, waiting = false, omitted = false, unsupported = false;
-  function reset() { rows = new Map(); current = 0; available = false; waiting = false; omitted = false; unsupported = false; }
+  function reset() { ordinaryRounds.clear(); rows = new Map(); current = 0; available = false; waiting = false; omitted = false; unsupported = false; }
   function receive(view, catalogue) {
     if (!view?.board) { reset(); return; }
     available = true; waiting = Boolean(view.waiting && !view.over);
     current = Math.max(current, view.board.roundNumber ?? 0);
+    for (const entry of view.feed ?? []) if (entry.event?.kind === 'RoundEnergyGranted') ordinaryRounds.add(roundOf(entry));
+    ordinaryRounds = new Set([...ordinaryRounds].filter(round => round >= current - 1));
     for (const entry of view.feed ?? []) {
       if (!PUBLIC.has(entry?.event?.kind)) {
         if (entry?.event?.kind && !PRIVATE.has(entry.event.kind)) unsupported = true;
@@ -122,7 +126,10 @@ export function createArenaHistory({ limit = 200 } = {}) {
       }
       if (rows.has(entry.sequence)) continue;
       const row = historyEntry(entry, view.board, catalogue);
-      if (row) rows.set(row.sequence, row);
+      if (row) {
+        if (entry.event.kind === 'OngoingEffectsApplied' && !ordinaryRounds.has(row.round)) row.details.unshift(line(missingRoundEnergy));
+        rows.set(row.sequence, row);
+      }
     }
     const ordered = [...rows.values()].sort((left, right) => left.sequence - right.sequence);
     const recent = ordered.filter(row => row.round >= current - 1 && row.round <= current);
