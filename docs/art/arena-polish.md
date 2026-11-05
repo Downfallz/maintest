@@ -38,10 +38,12 @@ use a neutral cue. No audio file, network request, microphone, autoplay or store
 
 One confirmed impact produces one tone, regardless of target count or repeated polls. Manual replay and
 baseline/catch-up snapshots do not play audio. Reduced motion and sound remain independent preferences.
-Only one oscillator/gain pair can be alive at once; each ends within 320 ms and disconnects. Skip, scene
-cancellation, mute, seat switches, hidden pages and renderer failures stop voices immediately. A pending
-resume is fenced by a generation counter, so cancellation cannot later enable sound. Unavailable or denied
-audio leaves the checkbox off and never blocks gameplay.
+Only one oscillator/gain pair can be alive at once; each ends within 320 ms and disconnects. Skip and scene
+cancellation release the voice without touching the opt-in, so ticking the box while a cast plays sticks.
+Mute, seat switches, hidden pages, a lost connection and renderer failures also fence a pending resume with
+a generation counter, so it cannot enable sound after them. A context the platform suspends (a backgrounded
+tab, a phone call) is asked back at the next impact. Unavailable or denied audio leaves the checkbox off and
+never blocks gameplay. The lab's impact tone is the shared physical one, quieter than the prototype's.
 
 ## Validation
 
