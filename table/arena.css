@@ -4,6 +4,42 @@
 #instruction { color: #c0cec3; font-size: 12px; line-height: 1.5; margin: 7px 0 0; }
 .table-return { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 44px; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 12px; }
 #no-timeline { color: var(--muted); font-size: 11px; }
+/* Detailed order lives in a bounded reference; the compact strip keeps the battlefield visible. */
+#arena .timeline-wrap { gap: 6px; min-width: 0; }
+#order-open { flex: none; font-size: 11px; min-height: 44px; padding: 6px; }
+#arena #timeline { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); grid-template-columns: none; gap: 3px; }
+#arena #timeline li { min-width: 0; padding: 0; }
+#timeline li > button { display: block; width: 100%; min-height: 44px; padding: 4px; border: 0; background: transparent; color: inherit; text-align: left; font-size: inherit; }
+#timeline li > button > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#timeline li[data-state="Completed"] { opacity: .7; }
+#order-dialog { padding: 0; width: min(780px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
+#order-dialog[open] { display: flex; flex-direction: column; }
+.order-header, .order-footer { flex: none; padding: 14px 18px; background: #14282c; }
+.order-header h2 { margin: 0 0 8px; font: 25px Georgia,serif; color: var(--gold); }
+#order-summary { margin: 0; font-size: 13px; line-height: 1.5; }
+#order-body { overflow: auto; min-height: 0; padding: 0 18px 14px; overscroll-behavior: contain; }
+#order-explanation, #order-roll-note { font-size: 13px; line-height: 1.5; color: #c2d1c9; }
+#order-list { margin: 0; padding: 0; list-style: none; }
+.order-row { border-left: 3px solid #90bca6; padding: 8px 12px; margin-top: 8px; background: #1b3034; }
+.order-row[data-team="Opponent"] { border-left-color: #d39c85; }
+.order-row[aria-current="step"] { outline: 2px solid var(--gold); }
+.order-row p { font-size: 13px; margin: 6px 0; line-height: 1.5; overflow-wrap: anywhere; }
+.order-heading { display: flex; align-items: center; gap: 10px; }
+.order-heading button { min-height: 44px; flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.order-position { font: 25px Georgia,serif; color: var(--gold); }
+.order-state { font-size: 12px; }
+.order-roll { color: #e2c998; }
+.order-band { font-size: 14px; color: var(--gold); margin: 0 0 6px; }
+.order-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #52695e; }
+.order-footer { justify-content: flex-start; font-size: 14px; letter-spacing: normal; }
+.order-footer button { min-height: 44px; font-size: 14px; }
+#order-rules { margin: 8px 0; font-size: 13px; }
+#order-rules summary { cursor: pointer; padding: 12px 0; min-height: 44px; }
+#order-context { font-size: 12px; color: #c9d7cb; margin: 12px 0 0; }
+.order-footer small { font-size: 11px; color: #b9cec5; }
+.tie-group { padding: 12px; margin-bottom: 12px; border: 1px solid #52695e; border-radius: 6px; }
+.tie-group p { line-height: 1.5; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-height: 520px) { .order-header, .order-footer { padding: 8px 12px; } }
 #seat-choices { display: grid; gap: 8px; width: min(420px,90%); overflow: auto; max-height: 45%; padding: 4px; }
 #seat-choices button { text-align: left; overflow-wrap: anywhere; }
 #loading { gap: 10px; padding: 12px; overflow: auto; }

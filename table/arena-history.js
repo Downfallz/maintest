@@ -1,3 +1,4 @@
+import { rollText } from './timeline.js';
 import { missingRoundEnergy } from './arena-upkeep.js';
 import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps, upkeepText } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
@@ -20,7 +21,7 @@ const reason = value => value?.message ?? value?.code ?? 'Reason not recorded';
 const seatName = slot => typeof slot === 'string' ? slot.toLowerCase() : slot ?? null;
 const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === id)?.name ?? id ?? 'Unknown spell';
 const orderRows = (timeline, board) => (Array.isArray(timeline?.slots) ? timeline.slots : [])
-  .map((slot, index) => line(`${index + 1} · ${who(slot.creature, board)} · ${tempoLabel(slot.speed)}`));
+  .map((slot, index) => line(`${index + 1} · ${who(slot.creature, board)} · ${tempoLabel(slot.speed)} · ${Number.isFinite(slot.initiative) ? `Initiative ${slot.initiative}` : 'Initiative not recorded'} · ${rollText(timeline.rollOffs, slot.creature) || 'No d20 roll recorded'}`));
 
 // Named the way the scene names it (creatureLabel), so a line in the journal reads the same as the figure.
 function person(id, board) {
@@ -89,7 +90,7 @@ function eventRow(entry, board, catalogue) {
       return { title: `${who(action.actor, board)} · reveals ${spellName(action.spell, catalogue)}`, category: 'Combat',
         details: [line(targets ? `Targets: ${targets}` : 'No targets'), line('Its result follows as its own entry.')] };
     }
-    case 'TimelineBuilt': return { title: 'Tempos revealed · turn order set', category: 'Command', details: orderRows(event.timeline, board) };
+    case 'TimelineBuilt': return { title: 'Tempos revealed · initial turn order', category: 'Command', details: orderRows(event.timeline, board) };
     case 'TiesOrdered': return { title: 'Tied creatures ordered', category: 'Command', details: orderRows(event.timeline, board) };
     case 'RoundStarted': return { title: 'Round begins', category: 'Upkeep', details: [] };
     case 'RoundEnded': return { title: 'Round complete', category: 'Aftermath', details: [] };

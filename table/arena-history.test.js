@@ -136,7 +136,7 @@ test('a reveal names the caster, the spell and the targets it was declared on', 
 test('a built or reordered timeline lists every slot in order with its tempo', () => {
   const timeline = { slots: [{ owner: 'Player2', creature: 2, speed: 'Quick' }, { owner: 'Player1', creature: 1, speed: 'Standard' }], rollOffs: [] };
   const built = historyEntry(entry(1, 'TimelineBuilt', { timeline }), board, catalogue);
-  assert.deepEqual(built.details.map(one => one.text), ['1 · Other · 2 (Opponent) · Instinct', '2 · First (Your team) · Precision']);
+  assert.deepEqual(built.details.map(one => one.text), ['1 · Other · 2 (Opponent) · Instinct · Initiative not recorded · No d20 roll recorded', '2 · First (Your team) · Precision · Initiative not recorded · No d20 roll recorded']);
   assert.deepEqual(historyEntry(entry(2, 'TiesOrdered', { timeline }), board, catalogue).details.length, 2);
   assert.deepEqual(historyEntry(entry(3, 'TimelineBuilt', {}), board, catalogue).details, []);
 });

@@ -69,7 +69,7 @@ remains a separate workstream and does not block readable cards, guides or the c
 | Mutation reference | Inspectable tree outside purchase questions, ownership, paths, passives, shared picks | Tree mounted through Evolution planning controls; no equivalent persistent reference entry | Always-reachable read-only tree and unlock receipt; AU8 |
 | Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | AU5 implemented: editable team tabs, one frozen batch, explicit continuation after interruption | Sequential host protocol retained; AU5 |
 | Tempo consequences | Short rule and compact cost/critical spell reference | AU5 implemented: per-creature energy, cost/critical reference and labelled catalogue fallback | Instinct/Precision tradeoff and expandable spell details; AU5 |
-| Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Partial: order, sides, tempo and current marker; rendered strip omits initiative/roll details | Inspectable order and tie explanation, completed/upcoming states; AU11 |
+| Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | AU11 implemented: exact order/roll reference, creature links, tie positions and deferred reveal summary | Public reveal only; same-team choices retain the host protocol |
 | Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Catalogue cards and unavailable states exist; verbose list, one column on phone | Grouped compact spellbook with progressive detail; AU9 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Legal targets, selected count and confirmation exist; guidance is not rendered | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Partial: same feed helpers power text and confirmed-frame animations; only last summary readily accessible | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
@@ -457,6 +457,9 @@ Tie controls show which places are fixed by the dice and which same-team order r
 Acceptance: no ties, same-team ties, cross-team rerolls, multiple tie groups, defeated/stunned actors,
 and both declarations. Keep exact host order. No opponent tempo summary before reveal.
 The compact strip does not force horizontal page scrolling; detail handles the long explanation.
+
+Implemented in `table/arena-order.js` and `arena/src/order.ts`, based on merged AU5 #454.
+See [AU11 behavior and limits](../../arena/README.md#au11-turn-order-and-recorded-dice).
 
 ### AU12 — Make every creature inspectable
 

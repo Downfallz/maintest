@@ -1,0 +1,139 @@
+import { test, expect } from '@playwright/test';
+import { returningArenaPlayer } from './arena-help-fixture.js';
+import { fitsViewport } from './fit.js';
+test.beforeEach(returningArenaPlayer);
+const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 4, totalDefense: 2,
+  isAlive: true, conditions: [], knownSpells: [], acquiredTiers: [] });
+const roster = [1, 2, 3, 4, 5, 6].map(creature);
+const slot = (id, speed = 'Quick', initiative = 5) => ({ creature: id, owner: id < 4 ? 'Player1' : 'Player2', speed, initiative });
+const timeline = [slot(1), slot(4), slot(2), slot(5, 'Standard', 3), slot(3, 'Standard', 3), slot(6, 'Standard', 1)];
+const rollOffs = [{ creature: 1, rolls: [11, 18] }, { creature: 4, rolls: [11, 8] }, { creature: 2, rolls: [2] }];
+const board = { slot: 'Player1', roundNumber: 2, phase: 'Combat', subPhase: 'Activation', activationCursor: 1,
+  allies: roster.slice(0, 3), enemies: roster.slice(3), timeline, rollOffs };
+const reveal = (sequence, kind = 'TimelineBuilt', slots = timeline) => ({ sequence, event: { kind, roundId: 2, timeline: { slots, rollOffs } } });
+async function mount(page, overrides = {}) {
+  const state = { errors: [], writes: [], shown: [], status: 200,
+    view: { board, feed: [reveal(10)], feedNext: 11, options: {}, ...overrides } };
+  page.on('pageerror', error => state.errors.push(error.message));
+  await page.clock.install();
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
+    const original = window.fetch;
+    window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+      window.notifyOrder = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
+    } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
+  });
+  await page.route('**/api/**', async route => {
+    const request = route.request(), url = new URL(request.url());
+    if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'order', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [], rules: { combatDeclaration: 'AtActivation' } } });
+    if (url.pathname.endsWith('/decision')) { state.writes.push(request.postDataJSON()); return route.fulfill({ status: 204 }); }
+    if (url.pathname === '/api/seat/player1') {
+      if (url.searchParams.has('shown')) state.shown.push(Number(url.searchParams.get('shown')));
+      return route.fulfill({ status: state.status, json: state.view });
+    }
+    return route.fulfill({ status: 500 });
+  });
+  await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  // Freeze before the first connection so a started poll cannot owe a paused zero-delay refresh.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
+  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  const publish = async extra => { state.view = { ...state.view, ...extra }; await page.evaluate(() => window.notifyOrder()); };
+  return { state, publish };
+}
+test('exact order shows bands, initiative, rerolls and creature inspection with no command', async ({ page }, info) => {
+  const h = await mount(page); await expect(page.locator('#order-dialog')).toBeHidden();
+  await page.locator('#order-open').click();
+  await expect(page.locator('#order-list [data-order-creature]')).toHaveText([1, 4, 2, 5, 3, 6].map(id => `Creature ${id}`));
+  await expect(page.locator('#order-list .order-band')).toHaveText(['Instinct', 'Precision']);
+  await expect(page.locator('#order-list li').first()).toContainText('Initiative 5');
+  await expect(page.locator('#order-list li').first()).toContainText('d20 11 → 18');
+  await expect(page.locator('#order-list [aria-current="step"]')).toContainText('Creature 4');
+  await fitsViewport(page, '#order-close');
+  await page.screenshot({ path: info.outputPath('turn-order.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#order-list [data-order-creature="4"]').click();
+  await expect(page.locator('#inspect-name')).toHaveText('Creature 4');
+  await page.keyboard.press('Escape'); await expect(page.locator('#order-list [data-order-creature="4"]')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(page.locator('#order-open')).toBeFocused();
+  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('unrevealed opponent tempos are absent and same-team ties describe no roll honestly', async ({ page }) => {
+  const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [], speedChoices: [{ creature: 4, speed: 'Quick' }] }, feed: [] });
+  await page.locator('#order-open').click(); await expect(page.locator('#order-list li')).toHaveCount(0);
+  await expect(page.locator('#order-summary')).toHaveText('Tempos stay private until the turn order is revealed.');
+  await page.keyboard.press('Escape');
+  await h.publish({ board: { ...board, subPhase: 'TieOrder', timeline: [slot(1), slot(2)], rollOffs: [] },
+    waitingFor: 'TieOrder', waitingAsked: 20, options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
+  await page.locator('#planning-open').click();
+  await expect(page.locator('.tie-group')).toContainText('same-team-only tie needs none');
+  await expect(page.locator('.tie-group')).toContainText('Your fixed places: 1, 2');
+  await expect(page.locator('#order-dialog')).toBeHidden(); expect(h.state.writes).toEqual([]);
+});
+test('tie drafts keep their own interleaved places through an order reference and reveal only once afterward', async ({ page }) => {
+  const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
+  await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20,
+    options: { tieOrder: { ties: [[1, 2], [3]] } }, feed: [reveal(11)] });
+  await page.locator('#planning-open').click(); await page.locator('[data-tie="2"]').click();
+  await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2 · #3 → Creature 1');
+  await expect(page.locator('.tie-group').first()).toContainText('Opponent places stay fixed: #2 Creature 4');
+  await expect(page.locator('#order-dialog')).toBeHidden();
+  // Read-only reference above the draft; no additional acknowledgement or decision.
+  await page.locator('#planning-order').click();
+  await expect(page.locator('#order-explanation')).toContainText('Provisional');
+  await page.keyboard.press('Escape'); await expect(page.locator('#planning-order')).toBeFocused();
+  await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2');
+  await page.locator('#planning-confirm').click();
+  expect(h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1, 3], asked: 20 }]);
+  await h.publish({ board: { ...board, subPhase: 'IntentSelection', timeline: [slot(2), slot(4), slot(1), ...timeline.slice(3)] },
+    waitingFor: null, waitingAsked: null, options: {}, feed: [reveal(12, 'TiesOrdered', [slot(2), slot(4), slot(1), ...timeline.slice(3)])] });
+  // The manual reference already consumed this reveal; it must not interrupt the next question again.
+  await expect(page.locator('#order-dialog')).toBeHidden();
+  await page.locator('#history-open').click();
+  await page.locator('#history-list details').last().locator('summary').click();
+  await expect(page.locator('#history-list')).toContainText('d20 11 → 18');
+  expect(h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
+});
+test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }) => {
+  const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
+  await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20, options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
+  await expect(page.locator('#planning-open')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
+  await h.publish({ board: { ...board, subPhase: 'IntentSelection' }, waitingFor: 'Intent', waitingAsked: 21, options: {}, feed: [reveal(12, 'TiesOrdered')] });
+  await expect(page.locator('#order-dialog')).toBeVisible(); await expect(page.locator('#order-summary')).toContainText('Your team: 2 Instinct');
+  expect(h.state.shown).toEqual([]); await page.locator('#order-close').click();
+  await h.publish({ feed: [reveal(11), reveal(12, 'TiesOrdered')] });
+  await expect(page.locator('#order-dialog')).toBeHidden(); expect(h.state.errors).toEqual([]);
+});
+test('polls preserve focus and scrolling while progress marks completed, current, stunned and defeated slots', async ({ page }) => {
+  const h = await mount(page); await page.locator('#order-open').click();
+  await page.locator('#order-list [data-order-creature="6"]').focus();
+  const scroll = await page.locator('#order-body').evaluate(node => node.scrollTop);
+  await h.publish({ feed: [] }); await expect(page.locator('#order-list [data-order-creature="6"]')).toBeFocused();
+  expect(await page.locator('#order-body').evaluate(node => node.scrollTop)).toBe(scroll);
+  await h.publish({ board: { ...board, activationCursor: 3, allies: [{ ...roster[0], isAlive: false }, roster[1], { ...roster[2], isStunned: true }] } });
+  await expect(page.locator('#order-list [data-state="Completed"]')).toHaveCount(3);
+  await expect(page.locator('#order-list')).toContainText('Defeated'); await expect(page.locator('#order-list')).toContainText('Stunned');
+  await expect(page.locator('#order-list [data-order-creature="6"]')).toBeFocused();
+  await h.publish({ board: { ...board, subPhase: 'Cleanup' } }); await expect(page.locator('#order-list [data-state="Completed"]')).toHaveCount(6);
+  expect(h.state.writes).toEqual([]);
+});
+for (const reason of ['access', 'hidden', 'seat']) test(`${reason} clears the order and all creature details`, async ({ page }) => {
+  const h = await mount(page); await page.locator('#order-open').click();
+  if (reason === 'access') { h.state.status = 403; await h.publish({}); }
+  else if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  else { await page.keyboard.press('Escape'); await page.locator('#switch-seat').click(); }
+  await expect(page.locator('#order-dialog')).toBeHidden(); await expect(page.locator('#order-list')).toBeEmpty();
+  await expect(page.locator('#order-open')).toBeDisabled(); expect(h.state.errors).toEqual([]);
+});
+test('order controls fit short landscape, small portrait and enlarged text without horizontal page overflow', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'One viewport sweep.');
+  await mount(page);
+  for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
+    await page.setViewportSize(size); await page.clock.runFor(150);
+    await fitsViewport(page, '#order-open, #help-open'); await page.locator('#order-open').click();
+    await fitsViewport(page, '#order-close');
+    await page.addStyleTag({ content: '#order-dialog p, #order-dialog button { font-size: 200% !important; }' });
+    await fitsViewport(page, '#order-close');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.keyboard.press('Escape');
+  }
+});

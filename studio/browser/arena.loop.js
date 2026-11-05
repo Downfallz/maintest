@@ -82,6 +82,11 @@ async function reviewAndReplay(page, latest, info, actions) {
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing'); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
+  for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();
+  await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2 · Turn order');
+  const displayed = await page.locator('#timeline [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature));
+  expect(await page.locator('#order-list [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature))).toEqual(displayed);
+  expect(displayed.length).toBeGreaterThan(0); await page.locator('#order-close').click();
   await fitsBattlefield(page); await fitsViewport(page, '.creature, #replay-next, #replay-previous, #replay-close');
   await page.screenshot({ path: info.outputPath('replay.jpg'), type: 'jpeg', quality: 85 });
   // Every recorded step of the last round is reachable, and an elimination is seen on one of its frames: the
@@ -146,7 +151,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.locator('#help-close').click();
     const taught = new Set(['Evolution']);
     await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
-    let captured = false;
+    let captured = false; const orderRounds = new Set();
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);
       const view = structuredClone(latest); if (!view || view.over) break;
@@ -154,6 +159,18 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await expect(page.locator('#upkeep-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#upkeep-title')).toHaveText(`Round ${view.board.roundNumber} · Upkeep`);
         await page.locator('#upkeep-close').click(); upkeepRound = view.board.roundNumber;
+      }
+      if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
+        const beforeShown = [...shown], beforeWrites = writes.length;
+        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
+        await expect(page.locator('#order-list [data-order-creature]')).toHaveText(view.board.timeline.map(slot => {
+          const creatures = [...view.board.allies, ...view.board.enemies], one = creatures.find(one => one.id === slot.creature);
+          return creatures.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name;
+        }));
+        for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);
+        expect(shown).toEqual(beforeShown); expect(writes.length).toBe(beforeWrites);
+        if (!orderRounds.size) await page.screenshot({ path: info.outputPath('order-real-host.jpg'), type: 'jpeg', quality: 85 });
+        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
       }
       if (!taught.has(view.waitingFor)) {
         await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });
