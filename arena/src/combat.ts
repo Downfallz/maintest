@@ -5,7 +5,7 @@ import { spellbookControls } from './spellbook';
 
 type Controller = ReturnType<typeof createArenaCombat>;
 type Model = ReturnType<Controller['model']>;
-export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalNote?: string }[] }
+export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string }[] }
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.
@@ -42,7 +42,8 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
       el('combat-heading').textContent = `${name(model.actor)} · choose a spell`;
       const context = model.reference;
       el('combat-context').textContent = [context.round == null ? null : `Round ${context.round}`, phaseLabel(context.phase),
-        context.tempo ? tempoLabel(context.tempo) : null, context.energy == null ? 'Energy unavailable' : `${context.energy} energy`].filter(Boolean).join(' · ');
+        context.turn == null ? null : `Turn ${context.turn}`, context.tempo ? tempoLabel(context.tempo) : null,
+        context.energy == null ? 'Energy unavailable' : `${context.energy} energy`].filter(Boolean).join(' · ');
       el('combat-help').textContent = model.waitingFor === 'Action' ? 'Choose a spell, then select its targets on the field. Confirm to cast.' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
       spellbook.render(model, catalogue);
       const confirm = el<HTMLButtonElement>('combat-declare');

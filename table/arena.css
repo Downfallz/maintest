@@ -61,16 +61,18 @@
 .combat-spell:disabled { opacity: .7; }
 .combat-spell strong { font: 17px/1.2 Georgia,serif; color: #f0e4c9; overflow-wrap: anywhere; }
 .combat-spell[aria-pressed="true"] { outline: 2px solid var(--gold); outline-offset: -2px; background: #433d2d; }
-.spell-name, .spell-family, .spell-critical, .spell-availability { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+/* The selection outline must not hide keyboard focus on the same card. */
+.combat-spell[aria-pressed="true"]:focus-visible { outline: 3px double #ffe2a6; outline-offset: 1px; }
+.spell-name, .spell-class, .spell-critical, .spell-availability { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .spell-name { align-self: start; max-height: 2.4em; }
 .spell-metadata { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
 .spell-cost { font-size: 12px; font-weight: 700; color: #e4d9ba; }
-.spell-family { max-width: 50%; font-size: 11px; color: var(--spell-accent); -webkit-line-clamp: 1; }
+.spell-class { max-width: 50%; font-size: 11px; color: var(--spell-accent); -webkit-line-clamp: 1; }
 .spell-critical { font-size: 10px; color: #becfc0; line-height: 1.2; }
 .spell-availability { font-size: 11px; color: #e1c79c; line-height: 1.3; }
 .spell-detail { display: none; font-size: 12px; line-height: 1.5; color: #c2d0c5; }
 #combat-spells[data-details="full"] .combat-spell { grid-template-rows: auto; }
-#combat-spells[data-details="full"] :is(.spell-name, .spell-family, .spell-critical, .spell-availability) { display: block; max-height: none; overflow: visible; }
+#combat-spells[data-details="full"] :is(.spell-name, .spell-class, .spell-critical, .spell-availability) { display: block; max-height: none; overflow: visible; }
 #combat-spells[data-details="full"] .spell-detail { display: grid; gap: 6px; border-top: 1px solid #73817466; padding-top: 8px; }
 .spell-caster::before { content: 'Caster · '; color: #e1c79c; }
 .combat-dialog-footer { flex: 0 0 auto; background: #132228; padding: 8px 0 0; border-top: 1px solid #73817466; }
