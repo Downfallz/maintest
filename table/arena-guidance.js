@@ -63,7 +63,7 @@ const tips = {
   ] },
   ties: { title: 'Order your tied creatures', lines: [
     'The dice settle places between teams. You decide the order within your own tied groups.',
-    'Open Order ties, choose an order or keep the dice order, then Confirm choice. Both teams’ orders reveal together.',
+    'Open Order ties, choose an order or keep the current order, then Confirm choice. Both teams’ orders reveal together.',
   ] },
   action: { title: 'Choose a spell on your turn', lines: [
     'Open Choose spell and select an offered spell. Its legal targets appear on the battlefield.',
