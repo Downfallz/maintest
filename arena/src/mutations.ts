@@ -53,10 +53,11 @@ export function mutationCards(model: Choices, catalogue: Catalogue | null, choos
 }
 
 // The command and public reference share exactly the authored prerequisite graph and card details.
-export function mutationBranches(packages: (Package & { status: string })[], catalogue: Catalogue | null) {
+// `labels` lets the public reference speak of ownership; the private chooser speaks of this pick's offer.
+export function mutationBranches(packages: (Package & { status: string })[], catalogue: Catalogue | null, labels: Record<string, string> = {}) {
   const cards = cardsById(catalogue), byId = new Map<string, Package & { status: string }>(packages.map((pack: Package & { status: string }) => [pack.id, pack]));
   const palette = talentPalette(catalogue, cards);
-  const statuses: Record<string, string> = { known: 'Acquired', picked: 'Picked · hidden until reveal', available: 'Available', future: 'Not offered this pick' };
+  const statuses: Record<string, string> = { known: 'Acquired', picked: 'Picked · hidden until reveal', available: 'Available', future: 'Not offered this pick', ...labels };
   function branch(node: Package & { children: typeof node[] }, parents: string[]): HTMLDetailsElement {
     const pack = byId.get(node.id)!, path = [...parents, node.id];
     const detail = document.createElement('details'); detail.dataset.package = pack.id; detail.dataset.path = JSON.stringify(path); detail.dataset.status = pack.status; detail.className = 'mutation-branch'; detail.open = node.level === 1;

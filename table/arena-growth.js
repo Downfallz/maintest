@@ -27,10 +27,12 @@ export function mutationReference(view, catalogue, selectedId) {
 // The initial read is a baseline, including on reload/return from a hidden tab. Only a new public reveal
 // can announce an unlock; a private submission, catalogue change, or board diff alone cannot do it.
 export function createArenaGrowth() {
-  let seen = null, known = new Map(), pending = new Map(), presented = new Map(), receipt = null;
-  function reset() { seen = null; known.clear(); pending.clear(); presented.clear(); receipt = null; }
+  // `revealed` holds, per creature, the tiers the feed has shown: a board listing more is ahead of its own feed.
+  let seen = null, known = new Map(), revealed = new Map(), pending = new Map(), presented = new Map(), receipt = null;
+  function reset() { seen = null; known.clear(); revealed.clear(); pending.clear(); presented.clear(); receipt = null; }
   function receive(view, catalogue) {
     if (!view?.board || view.replay || view.waiting) { reset(); return; }
+    const first = seen === null;
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
     const end = Math.max(-1, ...entries.map(entry => entry.sequence), Number.isInteger(view.feedNext) ? view.feedNext - 1 : -1);
     if (seen !== null) {
@@ -43,7 +45,10 @@ export function createArenaGrowth() {
           const creature = [...(view.board.allies ?? []), ...(view.board.enemies ?? [])].find(one => one.id === choice.creature);
           if (!creature) continue;
           const before = known.get(choice.creature) ?? new Set();
-          const spells = (pack?.spells ?? []).filter(id => !before.has(id) && creature.knownSpells?.includes(id));
+          // The board is read before the feed and neither waits for the other: it may not hold the purchase yet.
+          const behind = !creature.acquiredTiers?.includes(choice.tier);
+          const spells = (pack?.spells ?? []).filter(id => !before.has(id) && (behind || creature.knownSpells?.includes(id)));
+          revealed.set(choice.creature, new Set([...(revealed.get(choice.creature) ?? []), choice.tier]));
           for (const id of spells) before.add(id);
           known.set(choice.creature, before);
           if (view.board.allies?.some(one => one.id === choice.creature)) {
@@ -59,7 +64,12 @@ export function createArenaGrowth() {
       }
     }
     seen = Math.max(seen ?? -1, end);
-    known = new Map([...(view.board.allies ?? []), ...(view.board.enemies ?? [])].map(one => [one.id, new Set(one.knownSpells ?? [])]));
+    // A board ahead of the feed (a purchase applied, its reveal not yet recorded) must not become the baseline
+    // the reveal is compared with, or its new spells would read as already known.
+    for (const one of [...(view.board.allies ?? []), ...(view.board.enemies ?? [])]) {
+      if (first) revealed.set(one.id, new Set(one.acquiredTiers ?? []));
+      if ((one.acquiredTiers ?? []).every(tier => revealed.get(one.id)?.has(tier))) known.set(one.id, new Set(one.knownSpells ?? []));
+    }
   }
   function highlights(action, visible) {
     for (const [actor, shown] of presented) if (shown.question !== action.question) presented.delete(actor);

@@ -403,7 +403,7 @@
 #growth-receipt [data-growth-open] { padding: 4px 0; text-align: left; background: transparent; border: 0; color: #f1d7a2; }
 #growth-announcement { grid-row: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #c7d5cd; }
 #growth-dismiss { grid-column: 2; grid-row: 1 / 3; align-self: center; }
-.combat-spell.spell-new { border-color: #d3bd85; }
+.combat-spell.spell-new { border-color: #d3bd85; border-top-color: var(--spell-accent); }
 .combat-spell.spell-new .spell-availability { color: #f1d7a2; }
 @media (max-width: 759px) {
   #growth-tree { grid-template-columns: 1fr; }

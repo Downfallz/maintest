@@ -67,7 +67,9 @@ test('Help reference is read-only, keyboard navigable and excludes private pendi
   await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
   await expect(page.locator('#growth-tree')).not.toContainText('Picked');
   const root = page.locator('#growth-tree [data-package="predator"] > summary');
-  await root.focus(); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+  const branch = page.locator('#growth-tree [data-package="predator"]');
+  await root.focus(); await page.keyboard.press('Enter'); await expect(branch).not.toHaveAttribute('open');
+  await page.keyboard.press('Enter'); await expect(branch).toHaveAttribute('open');
   await page.locator('#growth-tree [data-package="upgrade"] > summary').click();
   await page.locator('#growth-tree [data-package="cap"] > summary').first().click();
   await expect(page.locator('#growth-tree')).toContainText('Requires one of: Stalker / Blighted');
@@ -96,6 +98,8 @@ test('reference over a mutation draft preserves its selection and does not ackno
 test('inspection selects the opponent and reveals its progress only after public purchase', async ({ page }) => {
   const h = await mount(page); await page.locator('.creature.enemy').click(); await page.locator('#inspect-growth').click();
   await expect(page.locator('#growth-creature')).toHaveValue('3'); await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
+  await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Not acquired');
+  await expect(page.locator('#growth-tree')).not.toContainText('Not offered this pick');
   unlock(h); await h.publish(); await expect(page.locator('#growth-progress')).toHaveText('Brute · Stage 1');
   await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Acquired');
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
@@ -109,6 +113,7 @@ test('public unlock receipt and new spell badge appear once; reload is a silent 
   await expect(page.locator('#growth-receipt')).toBeVisible(); await page.locator('#growth-dismiss').click();
   await h.publish(); await expect(page.locator('#growth-receipt')).toBeHidden();
   await page.locator('#combat-open').click(); await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
+  await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/); await expect(page.locator('[data-spell="focus"]')).not.toHaveClass(/spell-new/);
   await expect(page.locator('[data-spell="focus"]')).not.toContainText('New');
   await page.locator('#combat-dialog-close').click(); await page.locator('#combat-open').click();
   await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');

@@ -46,7 +46,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
       await page.locator('#planning-confirm').click(); expect((await passed).status()).toBe(204);
     }
     await expect(page.locator('#growth-receipt')).toBeVisible({ timeout: 15000 });
-    const count = shown.length;
+    const count = shown.length, written = writes.length;
     await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-creature').selectOption(String(offer.creature));
     await expect(page.locator(`#growth-tree [data-package="${tier}"] > summary`)).toContainText('Acquired');
     await page.locator('#growth-reveal-details summary').click(); await expect(page.locator('#growth-reveals')).toContainText(pack.name);
@@ -54,6 +54,6 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await page.locator(`#growth-tree [data-package="${tier}"] > details:not([data-package]) > summary`).first().click();
     await fitsViewport(page, '#growth-close, #growth-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });
-    expect(shown.length).toBe(count); expect(writes.length).toBeGreaterThan(0); expect(errors).toEqual([]);
+    expect(shown.length).toBe(count); expect(writes.length).toBe(written); expect(errors).toEqual([]);
   } finally { await page.close(); await stopHost(host); }
 });

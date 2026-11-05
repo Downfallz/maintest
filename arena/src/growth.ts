@@ -31,7 +31,8 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     el('growth-next').textContent = model.over ? 'Match complete · no further mutation opportunities'
       : model.next == null ? 'Next mutation opportunity unavailable'
         : model.next === model.current ? `Mutation opportunity this round · Round ${model.next}` : `Next mutation opportunity · Round ${model.next}`;
-    el('growth-tree').replaceChildren(...mutationBranches(model.packages, catalogue));
+    // Public: the client never knows the other side's offer, so a tier it does not hold is only "not acquired".
+    el('growth-tree').replaceChildren(...mutationBranches(model.packages, catalogue, { future: 'Not acquired' }));
     if (!model.packages.length) el('growth-tree').append(text('p', 'Mutation catalogue unavailable.'));
     for (const node of el('growth-tree').querySelectorAll<HTMLDetailsElement>('details[data-path]')) {
       if (disclosures.has(node.dataset.path)) node.open = disclosures.get(node.dataset.path)!;

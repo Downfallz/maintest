@@ -21,7 +21,7 @@ test('reference uses public ownership and host offers, never pending picks or sp
   assert.equal(model.next, 7); assert.deepEqual(model.families, []);
   const enemy = mutationReference(v, catalogue, '2');
   assert.ok(enemy.packages.every(p => p.status === 'future'));
-  assert.equal(JSON.stringify(model).includes('evolutionChoices'), false);
+  assert.ok(model.packages.every(p => p.status !== 'picked'), 'a pending own pick is never public');
   v.waitingFor = 'Action'; assert.ok(mutationReference(v, catalogue).packages.every(p => p.status === 'future'));
   delete v.board.nextEvolutionRound; assert.equal(mutationReference(v, catalogue).next, null);
 });
@@ -86,4 +86,21 @@ test('the host opportunity is inclusive of this round, never an invented future 
   v.board.nextEvolutionRound = 2; assert.equal(mutationReference(v, catalogue).next, null);
   v.board.nextEvolutionRound = 7; v.over = true;
   assert.equal(mutationReference(v, catalogue).over, true); assert.equal(mutationReference(v, catalogue).next, null);
+});
+// The host reads a seat's board before its feed and neither waits for the other, so a reveal can arrive with the
+// board from just before the purchase, and a board can show a purchase whose reveal has not been recorded yet.
+const race = (known, tiers) => ({ board: { slot: 'Player1', roundNumber: 3, allies: [{ id: 1, name: 'One', knownSpells: known, acquiredTiers: tiers }],
+  enemies: [{ id: 2, name: 'Two', knownSpells: ['old'], acquiredTiers: [] }] }, feed: [], feedNext: 20 });
+const raceAction = { opened: true, question: 'q', actor: 1, waitingFor: 'Action', known: ['old', 'new'], spells: ['old', 'new'] };
+test('a reveal read with the board from before its purchase still announces and marks the new spell', () => {
+  const growth = createArenaGrowth(); growth.receive(race(['old'], []), catalogue);
+  growth.receive({ ...race(['old'], []), feed: [reveal(20)], feedNext: 21 }, catalogue);
+  growth.receive({ ...race(['old', 'new'], ['root']), feedNext: 21 }, catalogue);
+  assert.deepEqual(growth.receipt().rows[0].spells, ['Devour']); assert.deepEqual(growth.highlights(raceAction, true), ['new']);
+});
+test('a board showing a purchase before its reveal is recorded does not swallow the new spell', () => {
+  const growth = createArenaGrowth(); growth.receive(race(['old'], []), catalogue);
+  growth.receive({ ...race(['old', 'new'], ['root']), feedNext: 20 }, catalogue);
+  growth.receive({ ...race(['old', 'new'], ['root']), feed: [reveal(20)], feedNext: 21 }, catalogue);
+  assert.deepEqual(growth.receipt().rows[0].spells, ['Devour']); assert.deepEqual(growth.highlights(raceAction, true), ['new']);
 });
