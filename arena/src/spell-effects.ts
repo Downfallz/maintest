@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DRAW_MS, STRIKE_MS, WINDUP_MS, VFX_MS } from '../../table/arena-timing.js';
 import type { SpellVisual } from './types';
 
 export interface EffectAnchor { x: number; y: number; radius: number; }
@@ -40,8 +41,8 @@ export class SpellEffects {
         quill.fillStyle(0xdfd9c9).fillTriangle(-16, -3, 16, 0, -16, 3);
         quill.lineStyle(1.5, color).lineBetween(-18, 0, 5, 0);
         quill.setRotation(Math.atan2(anchor.y - actor.y, anchor.x - actor.x));
-        this.scene.tweens.add({ targets: quill, x: anchor.x, y: anchor.y, duration: 300 / rate,
-          delay: 120 / rate, ease: 'Cubic.In' });
+        this.scene.tweens.add({ targets: quill, x: anchor.x, y: anchor.y, duration: STRIKE_MS / rate,
+          delay: DRAW_MS / rate, ease: 'Cubic.In' });
       }
       return;
     }
@@ -58,7 +59,7 @@ export class SpellEffects {
       charge.beginPath().arc(0, 0, r, -.8, 2.2).strokePath();
       charge.beginPath().arc(0, 0, r * .7, 2.4, 5).strokePath();
     }
-    this.fade(charge, rate, 400, 1.6);
+    this.fade(charge, rate, WINDUP_MS, 1.6);
   }
 
   impact(visual: SpellVisual, target: EffectAnchor, id: string, rate: number, origin?: EffectAnchor) {
@@ -67,9 +68,20 @@ export class SpellEffects {
     const g = this.graphic(motif, id, 'impact').setPosition(target.x, target.y);
     g.lineStyle(2.5, color, .95).fillStyle(color, .22);
     (PAINTERS[motif] ?? paintMark)(g, target.radius, color, motif, origin ? { x: origin.x - target.x, y: origin.y - target.y } : null);
-    this.fade(g, rate, 600, FADE_SCALE[motif] ?? 1.35);
+    const motion = Object.hasOwn(ENVELOPES, motif) ? ENVELOPES[motif] : { scale: .82, rise: 0 };
+    // Arcs stay pinned to both endpoints; other motifs arrive, hold briefly, then dissipate.
+    g.setScale(motion.scale).setAlpha(.35);
+    g.y += target.radius * motion.rise;
+    this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, y: target.y, alpha: 1,
+      duration: 100 / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, VFX_MS - 100, FADE_SCALE[motif] ?? 1.35) });
   }
 }
+
+const ENVELOPES: Record<string, { scale: number; rise: number }> = {
+  arc: { scale: 1, rise: 0 }, bones: { scale: .92, rise: .3 }, spirits: { scale: .72, rise: .3 },
+  vital: { scale: .75, rise: .18 }, void: { scale: 1.2, rise: 0 },
+  wave: { scale: .4, rise: 0 }, roar: { scale: .5, rise: 0 }, fizzle: { scale: 1, rise: 0 },
+};
 
 // A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
 const MOTIF_COLOR: Record<string, number> = { fire: 0xd58b75, wound: 0xb66f7e };

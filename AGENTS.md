@@ -58,7 +58,7 @@ tests/
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
   art/          Creature art direction (creature-art-direction.md), the ART-2 reference intake
-                (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md) and pipeline follow-ups.
+                (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md), playback polish (arena-polish.md) and pipeline follow-ups.
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, the spell catalogue, a planned change with
@@ -135,7 +135,7 @@ Run build, tests, and format check before declaring any task done; when `learnin
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
 `arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js`, `arena-loop.spec.js`,
-`arena-history.spec.js`, `arena-guidance.spec.js` and `arena-upkeep.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
+`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js` and `arena-mutations.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

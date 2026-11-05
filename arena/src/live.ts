@@ -5,6 +5,7 @@ import { createArenaHistory } from '../../table/arena-history.js';
 import { historyControls } from './history';
 import { arenaGuidance } from '../../table/arena-guidance.js';
 import { guidanceControls } from './guidance';
+import { ArenaAudio, soundControl } from './audio';
 import { ArenaScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets } from './targets';
@@ -32,6 +33,7 @@ interface View { board: object; over: boolean; waiting: unknown; waitingFor: str
   outcome?: { winner?: string; reason?: string } }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
+const audio = new ArenaAudio();
 const scene = new ArenaScene(new URL('arena-art/', document.baseURI).href);
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const reduced = () => motion.matches || $<HTMLInputElement>('reduce-motion').checked;
@@ -87,6 +89,8 @@ let wasTargeting = false;
 
 function status(state: string) {
   $('arena').dataset.connection = state;
+  // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
+  if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
   if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
@@ -237,7 +241,8 @@ function render() {
     for (const id of ['inspect-name', 'inspect-side', 'inspect-stats', 'inspect-appearance', 'inspect-effects', 'inspect-spells']) $(id).replaceChildren();
     text('updated', 'No board loaded');
   } else renderInspection();
-  scene.present(frame, reduced(), 1);
+  $('arena').dataset.rate = String(playbackState.rate);
+  scene.present(frame, reduced(), playbackState.rate);
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
@@ -248,6 +253,7 @@ function render() {
 }
 
 function choose(choice: Choice) {
+  audio.stop();
   if (rendererFailed) return;
   discovering++;
   selected = choice;
@@ -259,6 +265,7 @@ function choose(choice: Choice) {
 }
 
 async function discover() {
+  audio.stop();
   if (rendererFailed) return;
   const ticket = ++discovering;
   connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
@@ -299,12 +306,20 @@ async function discover() {
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
+  audio.stop();
   rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
 $('switch-seat').addEventListener('click', () => { void discover(); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
+scene.onCancel = () => audio.silence();
+scene.onImpact = () => {
+  if (playback.model().active && !document.hidden && !match.model().active) audio.play(frame.cue?.visual);
+};
+soundControl(audio, $<HTMLInputElement>('sound'));
+$<HTMLSelectElement>('playback-speed').value = '1';
+$('playback-speed').addEventListener('change', () => playback.setRate(Number($<HTMLSelectElement>('playback-speed').value)));
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
 function motionChanged() { playback.setReduced(reduced()); render(); }
 $('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
@@ -313,7 +328,7 @@ $('playback-skip').addEventListener('click', () => playback.skip());
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
 scene.onResizeDuringPlayback = () => playback.skip();
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });

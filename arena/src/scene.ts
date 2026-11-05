@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { placements, strikeApproach } from '../../table/arena-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/arena-art.js';
-import { DRAW_MS, STRIKE_MS } from '../../table/arena-timing.js';
+import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from '../../table/arena-timing.js';
 import type { SceneFrame, Placement } from './types';
 import { MutationCues } from './mutation-cues';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
@@ -39,6 +39,7 @@ export class ArenaScene extends Phaser.Scene {
   onReady: () => void = () => {};
   onResizeDuringPlayback: () => void = () => {};
   onImpact: () => void = () => {};
+  onCancel: () => void = () => {};
   assetFailed = false;
 
   constructor(private assetRoot: string) { super('arena'); }
@@ -68,7 +69,7 @@ export class ArenaScene extends Phaser.Scene {
   present(state: SceneFrame, reduced: boolean, rate: number) {
     this.state = state;
     this.reduced = reduced;
-    this.rate = rate;
+    this.rate = playbackRate(rate);
     if (!this.ready) return;
     const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy, one.layers]));
     const rosterChanged = roster !== this.roster;
@@ -168,7 +169,7 @@ export class ArenaScene extends Phaser.Scene {
     const actor = this.figures.get(this.state.actor!);
     if (actor) {
       this.tweens.killTweensOf(actor.image);
-      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: 430 / this.rate, delay: 80 / this.rate, ease: 'Cubic.Out' });
+      this.tweens.add({ targets: actor.image, x: actor.home.x, y: actor.home.y, angle: 0, duration: RETURN_MS / this.rate, delay: RETURN_DELAY_MS / this.rate, ease: 'Cubic.Out' });
     }
     const cue = this.state.cue;
     if (cue) { this.spellImpact(cue, actor); return; }
@@ -237,6 +238,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   private clearMotion() {
+    this.onCancel();
     this.tweens.killAll();
     this.cameras.main.resetFX();
     this.spellEffects.clear();
