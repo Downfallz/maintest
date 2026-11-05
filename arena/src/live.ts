@@ -1,3 +1,5 @@
+import { createArenaUpkeep } from '../../table/arena-upkeep.js';
+import { upkeepControls } from './upkeep';
 import { createArenaPlayback } from '../../table/arena-playback.js';
 import { createArenaHistory } from '../../table/arena-history.js';
 import { historyControls } from './history';
@@ -55,15 +57,18 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   receiving = true;
   try {
     view = next; catalogue = content ?? catalogue;
-    history.receive(next, catalogue);
+    history.receive(next, catalogue); upkeep.receive(next);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !$<HTMLDialogElement>('upkeep-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
   } finally { receiving = false; }
   render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog'].some(id => $<HTMLDialogElement>(id).open);
+let tabStorage: Storage | null = null;
+try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
+const upkeep = createArenaUpkeep(tabStorage);
 const history = createArenaHistory();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
@@ -75,11 +80,14 @@ const planningUI = planningControls(planning, name, () => playback.skip());
 const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
 const historyUI = historyControls(() => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
+const upkeepUI = upkeepControls(upkeep, id => {
+  inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
+}, () => render());
 let wasTargeting = false;
 
 function status(state: string) {
-  if (state === 'stale') playback.skip();
   $('arena').dataset.connection = state;
+  if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
   text('connection', messages[state] ?? state);
@@ -226,15 +234,17 @@ function render() {
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
     inspected = null; renderInspection();
-    for (const id of ['inspect-name', 'inspect-side', 'inspect-stats', 'inspect-effects', 'inspect-spells']) $(id).replaceChildren();
+    for (const id of ['inspect-name', 'inspect-side', 'inspect-stats', 'inspect-appearance', 'inspect-effects', 'inspect-spells']) $(id).replaceChildren();
     text('updated', 'No board loaded');
   } else renderInspection();
   scene.present(frame, reduced(), 1);
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
-  helpUI.render(guide, ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
+  const canAuto = () => ready && !rendererFailed && !document.hidden && $('arena').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
-    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]'));
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]');
+  upkeepUI.render(canAuto());
+  helpUI.render(guide, canAuto() && !upkeep.model().pending);
 }
 
 function choose(choice: Choice) {
@@ -244,14 +254,14 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
-  history.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
+  upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
 }
 
 async function discover() {
   if (rendererFailed) return;
   const ticket = ++discovering;
-  connection.stop(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
   text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -289,7 +299,7 @@ async function discover() {
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
-  rendererFailed = true; ready = false; connection.stop(); history.reset(); playback.skip(); combat.reset(); planning.reset(); match.reset();
+  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
@@ -303,7 +313,7 @@ $('playback-skip').addEventListener('click', () => playback.skip());
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
 scene.onResizeDuringPlayback = () => playback.skip();
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { discovering++; connection.stop(); view = null; history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });
@@ -313,3 +323,7 @@ try {
   bootScene(scene, $('phaser-mount'), { isReady: () => ready || rendererFailed, onContextLost: failRenderer, onNeverReady: failRenderer });
 } catch { failRenderer(); }
 void discover();
+
+for (const id of ['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog']) {
+  $(id).addEventListener('close', () => render());
+}

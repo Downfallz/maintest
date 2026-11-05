@@ -253,7 +253,7 @@ No implementation slice is completed by this document.
 | AU1 (implemented) | Always-available basic combat console, current/previous round entries and expanded action facts | New history model/UI, `feed.js`, `arena/src/live.ts`, shell | A7 |
 | AU2 (implemented) | Current objective, Round guide and dismissible contextual phase tips | Guidance model/UI, `terms.js`, current legal question | AU1 |
 | AU3a (implemented) | Record ordinary upkeep energy at the grant boundary; additive public event and compatibility ADR | Domain upkeep/event, serialization, seat visibility, consumers and rebuild tests | AU1; before AU3b |
-| AU3b | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
+| AU3b (implemented) | Opening/round upkeep receipt from recorded ordinary gains and ongoing ticks | `arena-match.js`, shared upkeep model, console, guidance | AU1–AU2, AU3a |
 | AU4 (implemented) | Available mutation cards, creature/pick context and explicit confirmation | `planning.ts`, `arena-planning.js`, shared mutation/card helpers | AU2 |
 | AU5 | Team tempo tabs and one explicit batch confirmation | Pure tempo draft/batch controller, planning UI, connection fences | AU2 |
 | AU6 | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering, action detail, `replay.js` | AU1, AU3b |
@@ -308,7 +308,7 @@ Delivered: `table/arena-guidance.js` and `arena/src/guidance.ts`, described in
 Implementation: `RoundEnergyGranted`, public journal/replay readers and versioned recording compatibility
 are specified in [ADR 0132](../adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
 New matches record actual grants; legacy resumed matches retain their original event sequences for life.
-The automatic receipt remains AU3b.
+The automatic receipt is implemented separately in AU3b below.
 
 Write the persistent-contract ADR and add a public event at the ordinary energy-grant boundary.
 For each eligible living creature, record the configured base and passive request amounts, actual combined
@@ -330,6 +330,12 @@ older recordings without the event. Assert that the receipt equals the amount ac
 grant and that the before/after values agree. No expected total is reconstructed in the browser.
 
 ### AU3b — Make automatic upkeep visible from recorded facts
+
+Implemented after merged AU3a #447, preserving its classic replay fixes and ADR 0132 compatibility.
+See [the receipt implementation and verification](../../arena/README.md#au3b-automatic-upkeep-receipts).
+The automatic receipt waits for arrivals, the recorded ongoing-effects event, playback and open dialogs;
+History/round review/replay keep recorded zero values and explicit legacy gaps. A bounded tab-local
+presentation marker prevents repeats without saving event facts or acknowledging questions.
 
 After AU3a, deliver a compact first-round receipt once arrivals clear and a receipt on each observed
 round transition. Show recorded ordinary gains, then ongoing energy, healing and damage in engine order.

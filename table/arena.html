@@ -47,6 +47,11 @@
     <output id="playback-announcement" class="playback-announcement" aria-live="polite"></output>
     <footer><span>LIVE PREVIEW · <b>PROVISIONAL ARTWORK</b></span><span id="updated">No board loaded</span></footer>
   </main>
+  <dialog id="upkeep-dialog" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
+    <header class="upkeep-header"><div><p class="eyebrow">THE ROUND HAS BEGUN</p><h2 id="upkeep-title"></h2></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
+    <div class="upkeep-scroll"><p id="upkeep-intro">Energy and ongoing effects were applied automatically. Here is what happened.</p><div id="upkeep-body"></div></div>
+    <footer class="upkeep-footer"><p>Saved in History and round review. Inspect a creature for its <strong>current</strong> stats and condition durations.</p><button type="button" data-history-open>Open History</button></footer>
+  </dialog>
   <dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-objective">
     <header class="help-header"><div><p class="eyebrow" id="help-round"></p><h2 id="help-title">Round guide</h2></div><button id="help-close" type="button" autofocus>Close</button></header>
     <div class="help-body"><p id="help-context"></p><p id="help-objective"></p><div id="help-explanation"></div><p id="help-next"></p><h3>The round</h3><ol id="help-flow" aria-label="Round phases"></ol></div>
