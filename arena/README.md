@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-mutations.spec.js arena-tempo.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -93,8 +93,9 @@ Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
 `table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
-cards with explicit confirmation and a separate reference tree (AU4). Tempo confirms one creature at a time, with simultaneous reveal
-still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
+cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
+`table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
 finished recording using the same operator authorization as `/play?replay=...`.
@@ -154,7 +155,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below; batch tempos remain AU5.
+The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
 
 `arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -284,3 +285,21 @@ chooser in complete real-host matches, including two-seat private choices.
 
 Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
 [phone](../docs/tabletop/images/arena-mutations/phone.jpg).
+
+## AU5: team tempo drafts
+
+**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
+return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
+critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
+The footer stays reachable while the choices and references scroll.
+
+`table/arena-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
+acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its
+write. A refusal, uncertainty or interruption stops automatic progress; accepted choices remain visible and
+continuation requires another explicit confirmation after a fresh seat read. Hidden pages, seat changes and
+reloads discard local drafts. No opponent choices or public history are altered before the host reveal.
+
+`arena-tempo.test.js` exercises protocol interleavings; `arena-tempo.spec.js` covers actual controls,
+references, errors, keyboard navigation, mobile layout and screenshots. `arena.loop.js` verifies full games
+in both declarations and opponent privacy across a partial batch, reload and completion on the real host.
+See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation.md).

@@ -38,9 +38,14 @@ async function answerEvolution(page, view, capture) {
 async function answerPlanning(page, view, capture) {
   await page.locator('#planning-open').click();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, capture);
-  else if (view.waitingFor === 'Speed') await page.locator('[data-speed="Standard"]').click();
+  else if (view.waitingFor === 'Speed') {
+    const count = await page.locator('[data-tempo-tab]').count();
+    for (let index = 0; index < count; index++) await page.locator('[data-speed="Standard"]').click();
+    if (capture) await capture('team-tempos');
+  }
   else await page.locator('#planning-keep').click();
   await confirm(page, '#planning-confirm');
+  if (view.waitingFor === 'Speed') await expect(page.locator('#planning-dialog')).toBeHidden({ timeout: 20000 });
 }
 function castable(view) {
   if (view.waitingFor === 'Action') return view.options.action.spells.map(one => one.spell);
@@ -224,9 +229,29 @@ test('two arena seats plan simultaneously without revealing the other team choic
       }
     }
     await expect.poll(async () => { first = await read(page, 'player1', firstTokens.player1); second = await read(other, 'player2', secondTokens.player2); return [first.waitingFor, second.waitingFor]; }, { timeout: 15000 }).toEqual(['Speed', 'Speed']);
-    await answer(page, first);
-    const afterTempo = await read(other, 'player2', secondTokens.player2);
-    expect(afterTempo.waitingAsked).toBe(second.waitingAsked); expect(afterTempo.board).toEqual(second.board); expect(afterTempo.feed).toEqual(second.feed);
+    const tempos = [];
+    page.on('request', request => { if (request.url().endsWith('/decision') && request.postDataJSON()?.kind === 'Speed') tempos.push(request.postDataJSON()); });
+    // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
+    // neither the draft nor the rest of the old confirmed batch resumes by itself.
+    await page.route('**/decision', route => route.request().postDataJSON()?.kind === 'Speed' && tempos.length === 2 ? route.abort('failed') : route.continue());
+    await page.locator('#planning-open').click();
+    for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
+    expect(tempos).toEqual([]);
+    await page.screenshot({ path: info.outputPath('au5-real-team-tempos.jpg'), type: 'jpeg', quality: 85 });
+    await confirm(page, '#planning-confirm');
+    await expect(page.locator('#planning-dialog-error')).toContainText('may have arrived');
+    const partial = await read(page, 'player1', firstTokens.player1); expect(partial.board.speedChoices).toHaveLength(1);
+    const privateSurface = value => ({ board: value.board, options: value.options, feed: value.feed,
+      waitingAsked: value.waitingAsked, waitingFor: value.waitingFor, waitingCreature: value.waitingCreature });
+    expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
+    await page.unroute('**/decision');
+    await page.reload(); await page.locator('#seat-choices button').click(); await page.locator('#planning-open').click();
+    await expect(page.locator('[data-tempo-tab]')).toHaveCount(2); await expect(page.locator('#planning-confirm')).toBeDisabled();
+    expect(tempos).toHaveLength(2);
+    await page.locator('[data-speed="Standard"]').click(); await page.locator('[data-speed="Quick"]').click();
+    await confirm(page, '#planning-confirm'); await expect(page.locator('#planning-dialog')).toBeHidden();
+    expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
+    expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
     await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
     await other.locator('#match-open').click(); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
     await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
