@@ -214,7 +214,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.screenshot({ path: info.outputPath('guidance-real-host.jpg'), type: 'jpeg', quality: 85 });
     await page.locator('#help-close').click();
     const taught = new Set(['Evolution']);
-    await page.locator('#settings').click(); await page.locator('#reduce-motion').check(); await page.keyboard.press('Escape');
+    // A whole match with sound on: the opt-in is a setting, never a decision (ADR 0134, ADR 0136).
+    await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
+    await expect(page.locator('#sound')).not.toBeChecked(); await page.locator('#sound').check();
+    await expect(page.locator('#sound')).toBeChecked();
+    await page.screenshot({ path: info.outputPath('release-settings.jpg'), type: 'jpeg', quality: 85 });
+    await page.keyboard.press('Escape'); expect(writes).toEqual([]);
     const captured = new Set(), orderRounds = new Set(); let spellbookRound = 0;
     for (let step = 0; step < 200 && !latest?.over; step++) {
       await expect.poll(() => latest?.over || Boolean(latest?.waitingFor), { timeout: 15000 }).toBe(true);

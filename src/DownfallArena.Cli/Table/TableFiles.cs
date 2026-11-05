@@ -37,6 +37,7 @@ internal sealed class TableFiles
             ["/index.html"] = index,
             ["/play"] = index,
             ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
+            ["/arena-preferences.js"] = (Path.Combine(tableDirectory, "arena-preferences.js"), JavaScript),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),

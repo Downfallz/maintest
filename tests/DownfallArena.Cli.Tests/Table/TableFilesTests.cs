@@ -86,6 +86,7 @@ public sealed class TableFilesTests
     [Fact]
     public void The_live_arena_loads_its_own_bundle_beside_the_shared_art_and_styles()
     {
+        Files.Get("/arena-preferences.js").ContentType.ShouldContain("text/javascript");
         var page = Files.Get("/arena");
 
         page.Status.ShouldBe(200);

@@ -381,6 +381,11 @@ function failRenderer() {
   audio.stop();
   rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
+  // The match goes on without the scene: the same seat continues at the table, not the lobby.
+  if (selected) {
+    text('access-link', 'Continue at table');
+    $<HTMLAnchorElement>('access-link').href = seatPath('/play', selected, storage);
+  }
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
 $('switch-seat').addEventListener('click', () => { void discover(false); });

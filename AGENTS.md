@@ -36,7 +36,7 @@ table/                         Static HTML table: the page two people play a tab
                                presentation.js is the pure seat-to-presentation boundary shared with future live arena work.
                                `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-arena-plan.md, ADR 0123); `/arena` is the opt-in Phaser
-                               complete game loop for one authenticated seat (ADRs 0125–0128).
+                               complete game loop for one authenticated seat (ADRs 0125–0128), opt-in behind a lobby preference (ADR 0136).
 arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
@@ -78,7 +78,7 @@ docs/
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
                 AU12 adds public creature references and retained last-cast links; historical inspection stays on recorded frames.
                 AU13 adds the final scorecard, recorded-seat notes, optional notices/haptics and unambiguous seat resume.
-                AU14 records cross-feature acceptance in arena-ux-acceptance.md; physical/new-player gates and A8 remain open.
+                AU14 records cross-feature acceptance in arena-ux-acceptance.md; A8 (arena-release-acceptance.md, ADR 0136) adds the rollout preference, budgets and release profiles; physical/new-player gates remain open.
                 ADR 0132 versions event streams: new tables record ordinary energy; resumed legacy tables
                 omit that event before sequencing for their remaining lifetime, preserving feed/checkpoint indices.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
@@ -141,7 +141,7 @@ Run build, tests, and format check before declaring any task done; when `learnin
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
 `arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js`, `arena-loop.spec.js`,
-`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js`, `arena-mutations.spec.js`, `arena-tempo.spec.js`, `arena-spellbook.spec.js`, `arena-pacing.spec.js`, `arena-growth.spec.js`, `arena-order.spec.js`, `arena-targets.spec.js`, `arena-inspection.spec.js`, `arena-services.spec.js` and `arena-parity.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
+`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js`, `arena-mutations.spec.js`, `arena-tempo.spec.js`, `arena-spellbook.spec.js`, `arena-pacing.spec.js`, `arena-growth.spec.js`, `arena-order.spec.js`, `arena-targets.spec.js`, `arena-inspection.spec.js`, `arena-services.spec.js`, `arena-parity.spec.js` and `arena-release.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

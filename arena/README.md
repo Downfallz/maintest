@@ -45,7 +45,7 @@ the TypeScript imports them and owns Phaser and DOM integration.
 
 No rules, legality, damage or random resolution are reimplemented here. `/arena-lab` keeps its fixture
 and makes no API requests. `/arena` is the opt-in live entry point: choose an accepted seat, inspect its
-board, and answer combat questions. Return to `/play` for planning and the rest of the game loop. It shares [`table/presentation.js`](../table/presentation.js)
+board, and complete planning, combat, review and replay. `/play` remains the classic alternative. It shares [`table/presentation.js`](../table/presentation.js)
 with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) describes
 seat discovery, explicit viewpoints, read-only transport, arrival behavior and recovery.
 
@@ -66,6 +66,8 @@ stops and clears its display, then reconnects from a new snapshot. The host's ex
 accepted seat as arrived, which may start a waiting match.
 The live bundle measured 1,556,136 bytes uncompressed in AU14 (425,910 with local gzip). Four creature WebPs total 1,212,726 bytes,
 plus the eclipse background; the old three-frame sheet is no longer loaded. Device performance and transfer compression remain to be measured before release.
+The build enforces raw/gzip bundle and initial-art budgets (A8); transfer compression and physical-device
+performance still require release measurement.
 
 ## Verify
 
@@ -542,6 +544,13 @@ editable team tempos, targeting and recorded damage. It also checks primary cont
 references at 320×568, 844×390 and 720×500. The last size is a 200% desktop reflow proxy, not native zoom.
 `arena.loop.js` captures edited tempos and later spellbooks during the existing complete actual-host games.
 
-A8 #437 remains open: its release-profile checks, rollout preference and enforced byte budgets must be
-rebased and validated separately. Physical devices, native zoom, screen readers and a first-time human
+A8 brings the release-profile checks, rollout preference and enforced byte budgets (below). Physical devices, native zoom, screen readers and a first-time human
 playtest are explicit open gates; automated evidence does not certify them or switch the default client.
+
+## A8: opt-in release candidate
+
+A8 adds a reversible lobby preference, build-enforced asset budgets, renderer recovery to the same seat and
+release browser gates ([ADR 0136](../docs/adr/0136-gate-the-arena-release-behind-a-reversible-preference.md)).
+Sound is ART-6's ([ADR 0134](../docs/adr/0134-polish-confirmed-playback-with-opt-in-sound.md)). See the
+[acceptance record](../docs/tabletop/arena-release-acceptance.md) for budgets, repeatable browser measurements
+and the physical-device checks still pending.

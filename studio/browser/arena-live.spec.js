@@ -1,9 +1,10 @@
+import { writeFile } from 'node:fs/promises';
 import { creatureAppearance } from '../../table/arena-art.js';
 import { mountSpellScene, presentSpell } from './arena-spell-scene.js';
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { returningArenaPlayer } from './arena-help-fixture.js';
-import { fitsViewport } from './fit.js';
+import { fitsViewport, fitsBattlefield } from './fit.js';
 test.beforeEach(returningArenaPlayer);
 
 // The packages as the host serves them: the authored level and the mutation art the builder publishes.
@@ -308,4 +309,48 @@ test('mixed builds keep their targets inside the viewport and say their appearan
   await page.setViewportSize({ width: 844, height: 390 });
   await fits(page);
   await page.screenshot({ path: info.outputPath('art5-landscape.png') });
+});
+
+test('a failed renderer retains a usable link to the same seat at the table', async ({ page }) => {
+  await mount(page); await choose(page, 2);
+  const fallback = await page.locator('#play-link').getAttribute('href');
+  await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await expect(page.locator('#load-title')).toHaveText('The renderer was interrupted');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', fallback);
+  await expect(page.locator('#access-link')).toHaveText('Continue at table');
+  await fitsViewport(page, '#access-link, #retry');
+});
+
+test('keyboard inspection and settings return focus and fit a short viewport', async ({ page }, info) => {
+  await mount(page); await choose(page);
+  await page.setViewportSize({ width: 720, height: 500 }); // CSS viewport of a 1440×1000 desktop at 200% zoom.
+  await fitsViewport(page, '.creature, #settings, #play-link'); await fitsBattlefield(page);
+  const target = page.locator('.creature').first(); await target.focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await page.keyboard.press('Escape'); await expect(target).toBeFocused();
+  await page.locator('#settings').focus(); await page.keyboard.press('Enter');
+  await page.locator('#sound').focus(); await page.keyboard.press('Space');
+  await expect(page.locator('#sound')).toBeChecked(); await page.keyboard.press('Escape'); await expect(page.locator('#settings')).toBeFocused();
+  await page.screenshot({ path: info.outputPath('arena-short-viewport.jpg'), type: 'jpeg', quality: 85 });
+});
+
+test('cold scene resources and sampled frame intervals are recorded for release review', async ({ page }, info) => {
+  await mount(page); await choose(page);
+  const metrics = await page.evaluate(async () => {
+    const intervals = []; let previous = performance.now();
+    await new Promise(resolve => {
+      const sample = now => { intervals.push(now - previous); previous = now; if (intervals.length < 90) requestAnimationFrame(sample); else resolve(); };
+      requestAnimationFrame(sample);
+    });
+    intervals.shift(); intervals.sort((a, b) => a - b);
+    const resources = performance.getEntriesByType('resource').filter(entry => /arena-art|arena-build/.test(entry.name));
+    return { userAgent: navigator.userAgent, viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
+      p50FrameMs: intervals[Math.floor(intervals.length * .5)], p95FrameMs: intervals[Math.floor(intervals.length * .95)],
+      resources: resources.map(entry => ({ file: new URL(entry.name).pathname, decodedBytes: entry.decodedBodySize, transferBytes: entry.transferSize, durationMs: entry.duration })) };
+  });
+  // The scene loads the background and the four creature bodies; the retired three-form sheet is never fetched.
+  const art = metrics.resources.filter(entry => entry.file.endsWith('.webp')).map(entry => entry.file.split('/').pop()).sort();
+  expect(art).toEqual(['base-creature.webp', 'brute.webp', 'eclipse-arena.webp', 'predator.webp', 'warped.webp']);
+  expect(metrics.resources.reduce((sum, entry) => sum + entry.decodedBytes, 0)).toBeLessThan(4 * 1024 * 1024);
+  await writeFile(info.outputPath('release-metrics.json'), JSON.stringify(metrics, null, 2));
+  await info.attach('release-metrics', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
 });

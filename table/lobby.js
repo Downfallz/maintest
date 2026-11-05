@@ -1,3 +1,4 @@
+import { preferredPresentation, savePresentation, presentationPath } from './arena-preferences.js';
 import { mountAccount, nextPath } from './account.js';
 import { mountDevices } from './devices.js';
 import { mountFriends } from './friends.js';
@@ -188,6 +189,12 @@ export function mountHomeNavigation(doc, win = globalThis) {
 
 export function mountLobby(doc, location, storage) {
   const el = id => doc.getElementById(id);
+  let presentation = preferredPresentation(storage);
+  const chooser = el('presentation');
+  if (chooser) {
+    chooser.value = presentation;
+    chooser.addEventListener('change', () => { presentation = chooser.value; savePresentation(storage, presentation); });
+  }
   let listing = null;
   let mine = [];
   let invitations = [];
@@ -215,7 +222,7 @@ export function mountLobby(doc, location, storage) {
   function enter(entry) {
     activateSeats(entry.seats, storage);
     // The link also carries the seats so browsers that refuse storage can still play this visit.
-    location.assign(`/play?${new URLSearchParams(entry.seats.map(item => [item.seat, item.token]))}`);
+    location.assign(`${presentationPath(presentation)}?${new URLSearchParams(entry.seats.map(item => [item.seat, item.token]))}`);
   }
   function askSignIn() {
     problem('Sign in to play, then choose your player name.');

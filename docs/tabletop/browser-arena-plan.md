@@ -314,3 +314,12 @@ history, not in the tree: nothing refers to them any more.
 | ![Targeting](images/arena-lab/phaser-targeting.png) | ![Resolution](images/arena-lab/phaser-resolution.png) |
 
 [Phone portrait](images/arena-lab/phaser-portrait.png) · [Phone landscape](images/arena-lab/phaser-landscape.png)
+
+## A8 — Opt-in release candidate
+
+[ADR 0136](../adr/0136-gate-the-arena-release-behind-a-reversible-preference.md) adds a browser-local
+Table/Arena preference in the lobby, renderer recovery to the same table, build-enforced asset budgets and a
+Chromium/Android-profile/WebKit release suite. Sound is ART-6's opt-in playback sound
+([ADR 0134](../adr/0134-polish-confirmed-playback-with-opt-in-sound.md)).
+The [acceptance record](arena-release-acceptance.md) distinguishes automated evidence from physical Android,
+iOS and assistive-technology checks still pending. The table remains the default until that release gate closes.
