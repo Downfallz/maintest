@@ -151,3 +151,11 @@ test('the facade tells the page once of a view, a connection state and a reset',
   control.setOnline(true); assert.equal(changes, 3);
   control.receive({ ...view(), waitingFor: 'TieOrder', options: { tieOrder: { ties: [[1, 2]] } } }); assert.equal(changes, 4);
 });
+test('the refresh a lost response asks for keeps its message, and a later asking replaces it', async () => {
+  const h = harness();
+  h.connection.submit = async command => { h.writes.push(command); h.accept(command); throw new Error('lost'); };
+  h.control.open(); h.fill(); await h.control.submit(); await flush();
+  assert.match(h.control.model().error, /may have arrived/); assert.deepEqual(h.control.model().tempo.creatures, [2, 3]);
+  h.accept({ creature: 2, speed: 'Quick' });
+  assert.equal(h.control.model().error, 'The choices changed. Accepted tempos are kept; review the remaining draft.');
+});

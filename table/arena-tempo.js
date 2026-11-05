@@ -66,12 +66,14 @@ export function createArenaTempo({ connection, onChange, visible = () => true })
     const { missing } = roster();
     drafts = new Map([...drafts].filter(([id]) => missing.includes(id)));
     if (!missing.includes(focus)) focus = missing.find(id => !drafts.has(id)) ?? missing[0] ?? null;
+    const reconciled = needsRefresh;
     needsRefresh = false;
     if (changed) { ack = null; failed = false; }
     if (batch && (!visible() || !online)) interrupt('Sending paused. Review the remaining tempos and confirm to continue.');
     else if (batch && !pending && (changed || !sameIds(previous, missing))) interrupt('The choices changed elsewhere. Review the remaining tempos.');
-    // A new asking outdates whatever an interruption said about the old one: the refreshed roster is the answer.
-    else if (!batch && opened && changed) error = 'The choices changed. Accepted tempos are kept; review the remaining draft.';
+    // A new asking outdates what an interruption said about the old one, except the refresh that interruption
+    // asked for: its message is what explains the roster that refresh brings ("this tempo may have arrived").
+    else if (!batch && opened && changed && !reconciled) error = 'The choices changed. Accepted tempos are kept; review the remaining draft.';
     emit();
     if (batch) void pump();
   }
