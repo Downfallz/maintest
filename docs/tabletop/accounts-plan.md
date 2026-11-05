@@ -157,19 +157,21 @@ time.
 
 ## The home page
 
-The mockup: <https://claude.ai/artifact/7aDdifjT6H1kpNAmuGBqhN> (private to the owner until shared). Four states, all on `/`, in the table's own
-visual language (felt-dark, Georgia headings, one gold action):
+The original mockup: <https://claude.ai/artifact/7aDdifjT6H1kpNAmuGBqhN> (private to the owner until shared).
+The current layout is documented in [Home navigation](home-navigation.md), using the
+[official slate/gold/copper palette](../art/branding.md). Four states, all on `/`:
 
-1. **Signed out.** The hero (*Downfall Arena — two players, one arena*), one action: **Continue with Google**
-   (Google's own button, as their branding rules require). Under it, the live public tables, read-only: *MarkF vs
-   Greedy · Round 4*, *bastien vs — open —*. Joining one, or typing an invitation code, opens the sign-in and
-   comes back to what was asked (`sessionStorage` keeps the intent). A footer line: what is kept (a name and an
-   id, never the email), and the operator's *Admin* link.
+1. **Signed out.** A short introduction to the tactical duel, creature artwork and three steps explaining
+   mutations, tempo and spells. **Enter the arena** leads to **Continue with Google** (Google's own button).
+   The dashboard and account-only navigation are hidden. Leaderboard has its own page; **Your data** and
+   **Join with a code** open dialogs from the responsive menu. An invitation follows `/j/<code>` and the
+   existing `next` sign-in return path. The operator's **Admin** link remains permission-gated.
 2. **Choose your name** (first sign-in only). One card: the field, a live *available / taken / reserved* line,
    the rules in one sentence, **Enter the arena →**. *This is the name other players see on every table.*
 3. **Signed in: the lobby.** Today's lobby, with the account chip (username, *Sign out*, *Sign out everywhere*)
    in the masthead. **Your games** comes from the host, so it is the same on the phone and the laptop, and a card
-   says *Your turn* when a question waits for one of your seats. **Open tables** and **New table** as today.
+   says *Your turn* when a question waits for one of your seats. Invitations, **Find an opponent** and
+   **New battle** stay on the dashboard; Friends and Notifications open dialogs from the menu.
 4. **Arriving with an invitation, signed out.** *bastien invited you to a 2v2 battle* — sign in to accept —
    then ADR 0116's confirmation.
 

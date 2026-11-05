@@ -25,7 +25,7 @@ export function askedText(answer) {
 /** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
 export const REFRESH_EVERY = 30000;
 
-export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null } = {}) {
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null, onRequests = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null;
   let list = null;
@@ -79,7 +79,16 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     if (key === drawn) return;
     drawn = key;
     el('friends-panel').hidden = !account;
-    if (!account || !list) return;
+    onRequests(account ? (list?.incoming?.length ?? 0) : 0);
+    if (!account || !list) {
+      el('friend-incoming').hidden = true;
+      el('friend-outgoing').hidden = true;
+      el('friend-incoming-list').replaceChildren();
+      el('friend-outgoing-list').replaceChildren();
+      el('friend-count').textContent = '';
+      el('friend-list').replaceChildren(...(account ? [node('li', 'Finding your friends…', 'empty-state')] : []));
+      return;
+    }
     const sections = friendSections(list);
     el('friend-incoming-title').textContent = sections.incoming.title;
     el('friend-incoming').hidden = !sections.incoming.shown;
@@ -147,6 +156,8 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;
       account = next;
+      list = null;
+      render();
       problem();
       note();
       void refresh();

@@ -75,6 +75,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     if (!panel) return;
     const shown = deviceButton(state);
     panel.hidden = !state.account || shown.hidden;
+    if (el('device-unavailable')) el('device-unavailable').hidden = !panel.hidden;
     const button = el('device-toggle');
     button.textContent = shown.label;
     button.disabled = shown.disabled;
