@@ -80,7 +80,8 @@ export function spellbookControls(controller: Controller) {
       if (before !== null && after !== null) scroll.scrollTop += after - before;
     };
   }
-  function render(model: Model, catalogue: SpellCatalogue | null) {
+  // `newSpells` are this creature's spells a public reveal has just unlocked (AU8): marked, never selected.
+  function render(model: Model, catalogue: SpellCatalogue | null, newSpells: string[] = []) {
     if (question !== model.question) { clear(); question = model.question; }
     const groups = arenaSpellbook(model, catalogue);
     const next = JSON.stringify(groups.map(group => [group.type, group.spells.map((one: { id: string }) => one.id)]));
@@ -94,7 +95,8 @@ export function spellbookControls(controller: Controller) {
       node.setAttribute('aria-pressed', String(spell.id === model.chosen));
       node.querySelector('.spell-cost')!.textContent = spell.cost === '' ? 'Cost unavailable' : `${spell.cost} energy`;
       node.querySelector('.spell-critical')!.textContent = spell.critical;
-      node.querySelector('.spell-availability')!.textContent = spell.availability;
+      node.classList.toggle('spell-new', newSpells.includes(spell.id));
+      node.querySelector('.spell-availability')!.textContent = `${newSpells.includes(spell.id) ? 'New · ' : ''}${spell.availability}`;
     }
     drawMode();
     settle();

@@ -25,7 +25,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     if (event.key === 'Escape' && controller.model().target && !document.querySelector('dialog[open]')) { event.preventDefault(); controller.close(); }
   });
 
-  function render(model: Model, catalogue: SpellCatalogue | null) {
+  function render(model: Model, catalogue: SpellCatalogue | null, newSpells: string[] = []) {
     const cards = cardsById(catalogue);
     const targeting = model.opened && Boolean(model.target);
     const choosing = model.opened && !targeting;
@@ -45,7 +45,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
         context.turn == null ? null : `Turn ${context.turn}`, context.tempo ? tempoLabel(context.tempo) : null,
         context.energy == null ? 'Energy unavailable' : `${context.energy} energy`].filter(Boolean).join(' · ');
       el('combat-help').textContent = model.waitingFor === 'Action' ? 'Choose a spell, then select its targets on the field. Confirm to cast.' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
-      spellbook.render(model, catalogue);
+      spellbook.render(model, catalogue, newSpells);
       const confirm = el<HTMLButtonElement>('combat-declare');
       confirm.hidden = model.waitingFor !== 'Intent'; confirm.disabled = !model.canSubmit;
       confirm.textContent = model.sending ? 'Sending…' : model.chosen ? `Declare ${cardTitle(cards.get(model.chosen)) || model.chosen}${model.short.includes(model.chosen) ? ' · may fizzle' : ''}` : 'Select a spell';

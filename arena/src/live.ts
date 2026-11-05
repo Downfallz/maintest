@@ -1,3 +1,5 @@
+import { createArenaGrowth } from '../../table/arena-growth.js';
+import { growthControls } from './growth';
 import { createArenaUpkeep } from '../../table/arena-upkeep.js';
 import { upkeepControls } from './upkeep';
 import { createArenaPlayback } from '../../table/arena-playback.js';
@@ -59,19 +61,20 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   receiving = true;
   try {
     view = next; catalogue = content ?? catalogue;
-    history.receive(next, catalogue); upkeep.receive(next);
+    history.receive(next, catalogue); upkeep.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !$<HTMLDialogElement>('upkeep-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !$<HTMLDialogElement>('upkeep-dialog').open && !$<HTMLDialogElement>('growth-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
   } finally { receiving = false; }
   render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createArenaUpkeep(tabStorage);
 const history = createArenaHistory({ load: () => connection.history(), onChange: () => render() });
+const growth = createArenaGrowth();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
 const match = createArenaMatch({ connection, onChange: () => render() });
@@ -81,6 +84,7 @@ const planningUI = planningControls(planning, name, () => playback.skip());
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
 const historyUI = historyControls(history, () => playback.skip(), () => render());
+const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
 const upkeepUI = upkeepControls(upkeep, id => {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
@@ -123,6 +127,7 @@ function renderInspection() {
   const one = creatures.find(one => one.id === inspected);
   if (!one) { $<HTMLDialogElement>('inspect-dialog').close(); return; }
   text('inspect-name', one.label);
+  $('inspect-growth').dataset.growthCreature = one.id;
   text('inspect-side', one.enemy ? 'OPPONENT' : 'YOUR TEAM');
   text('inspect-appearance', `Appearance: ${one.description}`);
   text('inspect-stats', `${one.health}/${one.maxHealth} HP · ${one.energy} energy · ${one.totalDefense} defense · ${one.currentInitiative} initiative`);
@@ -185,7 +190,8 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  controls.render(action, catalogue); planningUI.render(planning.model(), catalogue); matchUI.render(); historyUI.render(history.model());
+  growthUI.render(view, catalogue, visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened);
+  controls.render(action, catalogue, growth.highlights(action, visible() && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); historyUI.render(history.model());
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : 'Inspect creatures');
   if ($('arena').dataset.connection === 'live') text('connection', connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
@@ -260,7 +266,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
-  upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
+  upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   connection.start(httpTransport(choice.seat, choice.token, request), catalogue);
 }
 
@@ -268,7 +274,7 @@ async function discover() {
   audio.stop();
   if (rendererFailed) return;
   const ticket = ++discovering;
-  connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
   text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -307,7 +313,7 @@ scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();
-  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
+  rendererFailed = true; ready = false; view = null; connection.stop(); upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
   render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
@@ -328,7 +334,7 @@ $('playback-skip').addEventListener('click', () => playback.skip());
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
 scene.onResizeDuringPlayback = () => playback.skip();
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
-function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
+function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspend(); else if (selected) choose(selected); else void discover();
 });
