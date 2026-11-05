@@ -405,10 +405,10 @@ snapshots never supply commands. See [AU6 behavior, limits and captures](../../a
 
 ### AU7 — Let the player follow what happened
 
-Implemented in `feat/arena-paced-turnover`, based on merged AU6 #456 (including its early next-round feed
+Implemented in #460, based on merged AU6 #456 (including its early next-round feed
 fix), AU5 #454, AU9 #455 and merged AU8 #457. Auto/Step/Skip share the action/turnover queue. Missing turnover snapshots use
 labelled text-only receipts; Next tracks explicit reading separately from receipt/sequence consumption.
-Opening a live command skips to the authoritative state. Presented/skipped upkeep does not reopen as a
+Opening a live command skips to the authoritative state. Upkeep presented in the queue, or passed over by the player's Skip, does not reopen as a
 second automatic modal. Round 1 retains its arrival-gated introduction; existing drafts defer notices.
 See `arena/README.md` for bounds, lifecycle behavior and acceptance tests.
 

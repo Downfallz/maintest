@@ -178,8 +178,7 @@ test('connection loss settles an animation without opening the queued receipt of
   await expect(page.locator('#arena')).toHaveAttribute('data-connection', 'stale');
   await expect(page.locator('#playback-skip')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
-  await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('+5 energy');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
   expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 

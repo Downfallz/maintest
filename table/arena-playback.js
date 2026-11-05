@@ -85,14 +85,16 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
   function finish() {
     stage = 'resolved'; emit(); if (mode === 'auto') later(next, SETTLE_MS);
   }
-  // Settling shows the latest board with one result to read, whichever the caller names.
-  function settle(text) {
-    for (const item of [current, ...queue]) if (item?.receipt?.category === 'Upkeep') onUpkeepHandled(item.round);
+  // Settling shows the latest board with one result to read, whichever the caller names. An upkeep already
+  // presented was handled when it was shown; one still queued is handled only when the player chose to skip
+  // it. A rotation, a motion or speed change, a lost connection or a catch-up leaves it to the upkeep notice.
+  function settle(text, dismissUpkeep = false) {
+    if (dismissUpkeep) for (const item of queue) if (item.receipt?.category === 'Upkeep') onUpkeepHandled(item.round);
     cancelTimer(); queue = []; current = null; stage = 'decision'; summary = text; emit();
   }
   // What the player reads after a skip is the last result they would have reached, not the one cut short.
-  function skip() {
-    settle(queue.length ? resultText(queue.at(-1)) : summary);
+  function skip({ dismissUpkeep = false } = {}) {
+    settle(queue.length ? resultText(queue.at(-1)) : summary, dismissUpkeep);
   }
   function reset() {
     cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
@@ -114,9 +116,10 @@ export function createArenaPlayback({ onChange, schedule = setTimeout, cancel = 
     // Legacy events have text but no trustworthy intermediate board. A long catch-up (one read bringing more
     // than the limit or crossing several rounds, a reconnection's worth) must not keep a decision behind old pictures either. Both settle
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
-    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog.
-    if (!animate || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
-      for (const item of arriving) if (animate && item.receipt?.category === 'Upkeep') onUpkeepHandled(item.round);
+    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. A held Step
+    // waits for Next, so what arrives under a dialog queues behind it; Auto would play it unseen and settles.
+    const held = current !== null && mode === 'step';
+    if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       settle(resultText(arriving.at(-1))); return;
     }
     for (const item of arriving) {

@@ -429,6 +429,7 @@
 #playback-pacing select, #playback-next { min-height: 44px; font: inherit; font-size: 12px; padding: 6px 8px; }
 #playback-pacing select { color: #e9e5da; background: #151c24; border: 1px solid #64717c; border-radius: 6px; }
 #playback-next { border-color: #a88b54; }
+#playback-next[aria-disabled="true"] { opacity: .5; cursor: default; }
 @media (max-width: 600px), (max-height: 500px) {
   #playback-pacing label { display: none; }
   #playback-receipt { inset: 6px; padding: 12px 16px; }

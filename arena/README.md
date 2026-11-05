@@ -273,8 +273,8 @@ Creature tabs and the confirmation footer stay visible while cards scroll. The b
 the number of creatures with host offers; defeated and already-picked creatures explain their state.
 Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
 one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
-The full Mutation Tree is a separate, read-only disclosure during Evolution; its persistent access
-outside this phase remains AU8. Same-question polls preserve disclosures, focus and scroll.
+The full Mutation Tree is a separate, read-only disclosure during Evolution; AU8 also exposes a
+public reference outside this phase. Same-question polls preserve disclosures, focus and scroll.
 
 `table/arena-mutations.js` projects this model using the existing card and mutation helpers;
 `src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
@@ -331,10 +331,12 @@ journeys continue exercising the same decision protocol. AU10 owns selected-targ
 
 ## AU7: pace results and round turnover
 
-Presentation settings select **Auto** (default) or **Step**; the active reading toolbar can switch between them, independent of Help, reduced motion and animation speed.
+Presentation settings select **Auto** (default) or **Step**, and so does the reading toolbar under the board; the choice
+is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
 An action still animates in Step, then holds its exact applied frame until **Next result**. **Auto** resumes
-without replaying the impact. **Skip to present**, opening a live choice, rotation, a motion/speed change or
-connection loss immediately restores the authoritative board. These presentation controls never submit or
+without replaying the impact. **Skip to present**, opening a live choice, rotation (an orientation change, not every resize), a motion/speed change or
+connection loss immediately restores the authoritative board. In Step, results that arrive while a
+dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
@@ -349,8 +351,9 @@ or spellbook** instead of borrowing future values. The next command may be opene
 skips the historical display. The journal and round notes retain all received facts.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
-an item was explicitly read. A presented or skipped queued upkeep suppresses the duplicate automatic upkeep
-modal (the existing tab-local marker); receipts that arrive under an open draft/reference remain available
+an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
+duplicate automatic upkeep modal (the existing tab-local marker); a rotation, a motion/speed change, a lost
+connection or a catch-up never showed it, so its upkeep modal still opens; receipts that arrive under an open draft/reference remain available
 through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. First reads/reconnects
 baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
 sixty queued new items fall back to the latest board and summary; History remains the reading surface for

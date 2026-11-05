@@ -64,6 +64,6 @@ Optional Step pacing now holds the applied frame until Next, and Auto remains th
 confirmation. This extends the original automatic-only reading rhythm; it does not change command authority.
 The same queue orders meaningful cleanup, ordinary energy, ongoing effects and match results. Turnover has
 no exact board, so it uses a labelled text-only surface instead of borrowing a combat or current board.
-Received, presented and explicit Next positions are separate; skipping preserves journal facts and suppresses
+Received, presented and explicit Next positions are separate; the player's own skip preserves journal facts and suppresses
 a duplicate upkeep modal without claiming it was read. See the AU7 section in `arena/README.md` for bounded
 catch-up and the opening-round exception. No event contract, engine rule or transport changes.

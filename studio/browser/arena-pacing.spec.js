@@ -63,15 +63,19 @@ test('opening the next choice explicitly skips unread receipts without a second 
   await expect(page.locator('#playback-next')).toBeVisible(); await page.locator('#combat-open').click();
   await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#playback-receipt')).toBeHidden();
   await expect(page.locator('#combat-context')).toContainText('7 energy');
-  await page.getByRole('button', { name: 'Close spell choices' }).click();
+  await page.getByRole('button', { name: 'Close spell choices' }).click(); await h.publish([]);
+  await expect(page.locator('#connection')).toHaveText('LIVE'); await page.clock.runFor(500);
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 
+const rotate = page => { const { width, height } = page.viewportSize(); return page.setViewportSize({ width: height, height: width }); };
 test('rotation and reduced motion invalidate Step callbacks and keep the current board', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), cleanup, energy, ongoing]);
   await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10');
-  await page.clock.runFor(1700); await page.setViewportSize({ width: 844, height: 390 });
+  await page.clock.runFor(1700); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.fastForward(5000); await fits(page);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#round-number')).toHaveText('02'); await expect(page.locator('#round-phase')).toHaveText('COMBAT');
   await h.publish([entry(14)]); await expect(page.locator('#playback-skip')).toBeVisible();
   await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
   await page.getByRole('button', { name: 'Close settings' }).click();
@@ -94,4 +98,49 @@ test('the last result after lethal upkeep is read even when there is no next com
   await page.locator('#playback-next').click(); await expect(page.locator('#receipt-title')).toHaveText('Match complete');
   await expect(page.locator('#round-phase')).toHaveText('MATCH COMPLETE');
   await page.locator('#playback-next').click(); await expect(page.locator('#match-open')).toBeVisible(); expect(h.errors).toEqual([]);
+});
+
+test('rotation passes over a queued upkeep without hiding it: the upkeep notice still opens', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
+  await page.clock.runFor(1700); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
+  await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
+  expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+test('a resize that keeps the orientation keeps the held result', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+  await page.clock.runFor(1700); const { width, height } = page.viewportSize();
+  await page.setViewportSize({ width: width - 20, height: height - 60 });
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#playback-next')).toBeEnabled();
+  expect(h.errors).toEqual([]);
+});
+
+test('an inspection opened on a held Step survives the next arrival', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10)]);
+  await page.clock.runFor(1700); await page.locator('[data-creature="1"]').click();
+  await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toHaveText('Skip to present (2)');
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#playback-next')).toBeEnabled();
+  await expect(page.locator('#playback-next')).toHaveText('Next result'); expect(h.errors).toEqual([]);
+});
+
+test('a receipt arriving under an open inspection leaves it open and takes the focus back on close', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10), cleanup]);
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '10'); await page.locator('[data-creature="1"]').click();
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await page.clock.runFor(1700);
+  await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await expect(page.locator('#inspect-name')).toHaveText(/\S/);
+  await page.keyboard.press('Escape'); await expect(page.locator('#playback-receipt')).toBeFocused(); expect(h.errors).toEqual([]);
+});
+
+test('Next keeps the keyboard focus while the following result plays', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+  await page.clock.runFor(1700); await page.locator('#playback-next').click();
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', '11');
+  await expect(page.locator('#playback-next')).toBeFocused(); await expect(page.locator('#playback-next')).toBeDisabled();
+  await page.clock.runFor(1700); await expect(page.locator('#playback-next')).toBeEnabled();
+  await page.keyboard.press('Enter'); await expect(page.locator('#playback-next')).toBeHidden();
+  await expect(page.locator('#arena')).toHaveAttribute('data-sequence', ''); expect(h.errors).toEqual([]);
 });
