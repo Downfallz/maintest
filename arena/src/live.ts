@@ -112,7 +112,7 @@ function status(state: string) {
   $('arena').dataset.connection = state;
   // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
   if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
-  if (state === 'signin' || state === 'revoked') services.reset();
+  if (['signin', 'revoked'].includes(state)) services.reset();
   services.setOnline(state === 'live');
   if (state === 'stale') playback.skip();
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',

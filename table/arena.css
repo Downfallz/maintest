@@ -588,3 +588,5 @@
 #end-comment { box-sizing: border-box; width: 100%; background: #102027; color: #f1eddf; padding: 10px; border: 1px solid #829582; font: inherit; }
 #notices-tools { border-top: 1px solid #82958255; margin-top: 16px; }
 @media (max-height: 500px) { .match-header { padding: 10px 16px; } .match-header h2 { font-size: 26px; } .match-body, .match-footer { padding: 8px 16px; } }
+
+#match-replay-error, #noted, #notices-problem { display: block; margin: 1em 0; }

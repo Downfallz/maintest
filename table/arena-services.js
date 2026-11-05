@@ -40,7 +40,10 @@ export function createArenaServices({ onChange, scope = globalThis }) {
       await refreshHeld(context);
       await closeNotices(context);
     } catch { if (valid(context)) context.message = 'Notifications could not be prepared. Reopen this seat to retry.'; }
-    finally { if (!online && !context.registration) context.started = false; emit(context); }
+    finally {
+      if (!online && !context.registration) context.started = false;
+      emit(context);
+    }
   }
   async function refreshHeld(context) {
     const held = await context.registration.pushManager.getSubscription();
@@ -57,30 +60,36 @@ export function createArenaServices({ onChange, scope = globalThis }) {
     const notices = await context.registration?.getNotifications?.() ?? [];
     if (valid(context)) for (const notice of notices) if (String(notice.tag).startsWith(`${TAG}:`)) notice.close();
   }
+  async function stopNotices(context) {
+    const held = await context.registration.pushManager.getSubscription();
+    if (!valid(context)) return;
+    await held?.unsubscribe();
+    if (!valid(context)) return;
+    await Promise.all(context.held.map(transport => transport.forgetPush()));
+    context.push.subscribed = false;
+  }
+  async function subscribe(context) {
+    const permission = await scope.Notification.requestPermission();
+    if (!valid(context)) return;
+    context.push.permission = permission;
+    if (permission !== 'granted') return;
+    const made = await context.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(context.publicKey) });
+    if (!valid(context)) return;
+    const answers = await Promise.all(context.held.map(transport => transport.push(made.toJSON())));
+    if (!valid(context)) return;
+    context.push.subscribed = answers.every(answer => answer.ok);
+    if (!context.push.subscribed) {
+      await made.unsubscribe();
+      context.message = 'The host could not save notifications. Try again.';
+    }
+  }
   async function toggle() {
     const context = current;
     if (!context || !valid(context) || model().notice.disabled || !context.registration) return;
     context.push.busy = true; context.message = ''; emit(context);
     try {
-      if (context.push.subscribed) {
-        const held = await context.registration.pushManager.getSubscription();
-        if (!valid(context)) return;
-        await held?.unsubscribe();
-        if (!valid(context)) return;
-        await Promise.all(context.held.map(transport => transport.forgetPush()));
-        context.push.subscribed = false;
-      } else {
-        const permission = await scope.Notification.requestPermission();
-        if (!valid(context)) return;
-        context.push.permission = permission;
-        if (permission !== 'granted') return;
-        const made = await context.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(context.publicKey) });
-        if (!valid(context)) return;
-        const answers = await Promise.all(context.held.map(transport => transport.push(made.toJSON())));
-        if (!valid(context)) return;
-        context.push.subscribed = answers.every(answer => answer.ok);
-        if (!context.push.subscribed) { await made.unsubscribe(); context.message = 'The host could not save notifications. Try again.'; }
-      }
+      if (context.push.subscribed) await stopNotices(context);
+      else await subscribe(context);
     } catch { if (valid(context)) context.message = 'Notifications could not be changed. Check browser permissions and try again.'; }
     finally { context.push.busy = false; emit(context); }
   }
@@ -113,7 +122,10 @@ export function createArenaServices({ onChange, scope = globalThis }) {
       if (!valid(context)) return false;
       context.noteText = answer.ok ? noted(kind) : answer.body?.message ?? `The host answered ${answer.status}.`;
       return answer.ok;
-    } catch { if (valid(context)) context.noteText = 'Could not save the note. Check your connection and try again.'; return false; }
+    } catch {
+      if (valid(context)) context.noteText = 'Could not save the note. Check your connection and try again.';
+      return false;
+    }
     finally { context.noteBusy = false; emit(context); }
   }
   function model() {

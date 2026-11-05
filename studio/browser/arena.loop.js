@@ -95,8 +95,10 @@ async function reviewAndReplay(page, latest, info, actions) {
   await page.locator('#history-close').click();
   await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
-  await expect(page.locator('#match-title')).toHaveText(!latest.outcome.winner ? 'Draw' : latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat');
-  for (const team of [latest.board.allies, latest.board.enemies]) await expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`);
+  let title = 'Draw';
+  if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';
+  await expect(page.locator('#match-title')).toHaveText(title);
+  await Promise.all([latest.board.allies, latest.board.enemies].map(team => expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`)));
   await page.screenshot({ path: info.outputPath('final-result-real-host.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#match-notes').click();
   await page.getByRole('button', { name: 'I had to look this up', exact: true }).click(); await expect(page.locator('#noted')).toHaveText('Noted: you looked a rule up.');
@@ -122,7 +124,7 @@ async function reviewAndReplay(page, latest, info, actions) {
   await expect(page.locator('#replay-position')).toHaveText(/ (\d+) of \1$/);
   if (latest.outcome.reason === 'Elimination') expect(defeated).toBeGreaterThan(0);
   await expect(page.locator('#replay-note')).toHaveText('Final public battlefield confirmed by the host.');
-  for (const one of [...latest.board.allies, ...latest.board.enemies]) await expect(page.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);
+  await Promise.all([...latest.board.allies, ...latest.board.enemies].map(one => expect(page.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`)));
   await page.locator('#replay-close').click(); await expect(page.locator('#match-dialog')).toBeVisible();
 }
 // The recorded session endpoint is the same operator-only endpoint used by the table's replay.

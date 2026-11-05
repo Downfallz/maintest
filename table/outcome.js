@@ -36,23 +36,29 @@ export function outcomeText(view, seat) {
   return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
 }
 
+function resultHeading(view, seat) {
+  const outcome = view.outcome;
+  if (!outcome) return { title: 'Match complete', tone: 'unknown' };
+  if (!outcome.winner) return { title: 'Draw', tone: 'draw' };
+  const won = outcome.winner === seat;
+  const title = won ? 'Victory' : 'Defeat';
+  return { title: view.replay ? `${seatLabel(outcome.winner)} wins` : title, tone: won ? 'victory' : 'defeat' };
+}
+
+function teamResult(label, creatures) {
+  const complete = Array.isArray(creatures) && creatures.length > 0;
+  const alive = complete && creatures.every(one => typeof one.isAlive === 'boolean')
+    ? `${creatures.filter(one => one.isAlive).length}/${creatures.length} standing` : 'Survivors unavailable';
+  const health = complete && creatures.every(one => Number.isFinite(one.health))
+    ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
+  return { label, text: `${alive} · ${health}` };
+}
+
 // A result never elects its own winner from health. Missing legacy fields stay unavailable.
 export function matchResultSummary(view, seat) {
   if (!view?.over) return null;
-  const outcome = view.outcome, won = outcome?.winner === seat;
-  const tone = !outcome ? 'unknown' : !outcome.winner ? 'draw' : won ? 'victory' : 'defeat';
-  const title = !outcome ? 'Match complete' : !outcome.winner ? 'Draw'
-    : view.replay ? `${seatLabel(outcome.winner)} wins` : won ? 'Victory' : 'Defeat';
-  const teams = ['allies', 'enemies'].map((side, index) => {
-    const creatures = view.board?.[side];
-    const label = view.replay ? seatLabel(index ? (seat === 'player1' ? 'player2' : 'player1') : seat)
-      : index ? 'Opponent' : 'Your team';
-    const complete = Array.isArray(creatures) && creatures.length > 0;
-    const alive = complete && creatures.every(one => typeof one.isAlive === 'boolean')
-      ? `${creatures.filter(one => one.isAlive).length}/${creatures.length} standing` : 'Survivors unavailable';
-    const health = complete && creatures.every(one => Number.isFinite(one.health))
-      ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
-    return { label, text: `${alive} · ${health}` };
-  });
-  return { title, tone, reason: outcomeText(view, seat), teams, round: view.board?.roundNumber };
+  const other = seat === 'player1' ? 'player2' : 'player1';
+  const teams = [teamResult(view.replay ? seatLabel(seat) : 'Your team', view.board?.allies),
+    teamResult(view.replay ? seatLabel(other) : 'Opponent', view.board?.enemies)];
+  return { ...resultHeading(view, seat), reason: outcomeText(view, seat), teams, round: view.board?.roundNumber };
 }
