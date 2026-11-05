@@ -36,8 +36,11 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
+  // Freeze before connecting, as the history and playback fixtures do: pausing later fast-forwards the first
+  // poll, and a notification landing while it is in flight owes a zero-delay refresh that a paused clock strands.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
   await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
-  state.writes.length = 0; await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
+  state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
@@ -65,7 +68,7 @@ test('inspection is current while receipt and journal retain historical zero hea
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   await h.publish([], { board: { ...h.state.view.board, allies: [creature(1, 0), ...roster.slice(1, 3)] } });
   await page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first().click();
-  await expect(page.locator('#inspect-stats')).toContainText('0/20 HP'); await expect(page.locator('#inspect-effects')).toContainText('Defeated');
+  await expect(page.locator('#inspect-stats')).toHaveText(/^0\/20 HP/); await expect(page.locator('#inspect-effects')).toContainText('Defeated');
   await expect(page.locator('#inspect-effects')).not.toContainText('Bleed'); await page.keyboard.press('Escape');
   const rows = page.locator('#upkeep-body section').nth(1).locator('li');
   await expect(rows).toHaveCount(3); await expect(rows.nth(0)).toContainText('Energy from effects +2');
