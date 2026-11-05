@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js arena-order.spec.js arena-targets.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -327,6 +327,47 @@ the reference and its local state. Nothing is persisted. Group/type fallback nev
 unknown cards, energy plans, full details, stable geometry/focus/scroll through polls, changed creatures,
 explicit confirmation, access loss and short portrait/landscape layouts. Existing combat and real-host
 journeys continue exercising the same decision protocol. AU10 adds selected-target previews below.
+
+
+## AU7: pace results and round turnover
+
+Presentation settings select **Auto** (default) or **Step**, and so does the reading toolbar under the board; the choice
+is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
+An action still animates in Step, then holds its exact applied frame until **Next result**. **Auto** resumes
+without replaying the impact. **Skip to present**, opening a live choice, rotation (an orientation change, not every resize), a motion/speed change or
+connection loss immediately restores the authoritative board. In Step, results that arrive while a
+dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or
+acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
+
+The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
+ongoing effects and the match result. Adjacent energy/ongoing records for the same round share a receipt,
+including when they arrive in separate responses. Empty cleanup is omitted; zero healing and zero energy
+remain recorded facts. A missing ordinary-energy record is explicitly unknown. Round 1 retains its
+arrival-gated introductory receipt.
+
+Action frames supply their own round, phase, creatures, resources, known spells and timeline. Turnover
+records do not contain an exact battlefield: the scene shows a labelled text receipt with **no creature stats
+or spellbook** instead of borrowing future values. The next command may be opened at any time; this first
+skips the historical display. The journal and round notes retain all received facts.
+
+Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
+an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
+duplicate automatic upkeep modal (the existing tab-local marker); a rotation, a motion/speed change, a lost
+connection or a catch-up never showed it, so its upkeep modal still opens; receipts that arrive under an open draft/reference remain available
+through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. First reads/reconnects
+baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
+sixty queued new items fall back to the latest board and summary; History remains the reading surface for
+that backlog. An unframed legacy cast also falls back to confirmed text, without invented animation.
+AU8 unlock receipts stay hidden during paced history; opening a live spell choice after Skip retains its new-spell badge.
+
+`arena-pacing.spec.js` covers ordered closing actions, no future budget/spells, split receipts, Step/Auto,
+Skip, current command access, match completion, rotation and revocation. Playback/upkeep unit tests cover
+deduplication, late callbacks, zero/unknown energy, meaningful cleanup and bounded catch-up. Captures below
+are recorded-event browser fixtures, not real-match screenshots.
+
+![Step upkeep on desktop](../docs/tabletop/images/arena-pacing/desktop-fixture.jpg)
+![Step upkeep on phone](../docs/tabletop/images/arena-pacing/phone-fixture.jpg)
+
 
 ## AU8: growth reference and new abilities
 

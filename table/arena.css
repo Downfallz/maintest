@@ -415,6 +415,48 @@
   .planning-footer { padding-top: 6px; padding-bottom: 6px; }
 }
 
+/* A receipt without an exact board gets its own reading surface, never future stats behind old text. */
+#playback-receipt { position: absolute; z-index: 8; inset: 16px max(16px, 12%); overflow: auto; overscroll-behavior: contain; padding: 20px 26px; background: #151c24f5; border: 1px solid #a88b54; border-radius: 12px; color: #e9e5da; text-align: left; }
+#playback-receipt h2 { margin: 4px 0 12px; font-size: 24px; }
+#playback-receipt h3 { color: #dfc18b; font-size: 15px; margin: 16px 0 8px; }
+#playback-receipt p { font-size: 13px; line-height: 1.55; }
+#playback-receipt .receipt-note { color: #c1c7cc; font-size: 12px; }
+#playback-receipt [data-tone="energy"] { color: #c2daf0; }
+#playback-receipt [data-tone="harm"] { color: #f3b3aa; }
+#arena[data-receipt="true"] .team-label { visibility: hidden; }
+#playback-pacing { display: flex; align-items: center; gap: 6px; }
+#playback-pacing label { font-size: 11px; color: #c1c7cc; }
+#playback-pacing select, #playback-next { min-height: 44px; font: inherit; font-size: 12px; padding: 6px 8px; }
+#playback-pacing select { color: #e9e5da; background: #151c24; border: 1px solid #64717c; border-radius: 6px; }
+#playback-next { border-color: #a88b54; }
+#playback-next[aria-disabled="true"] { opacity: .5; cursor: default; }
+@media (max-width: 600px), (max-height: 500px) {
+  #playback-pacing label { display: none; }
+  #playback-receipt { inset: 6px; padding: 12px 16px; }
+  #playback-receipt h2 { font-size: 18px; margin-bottom: 6px; }
+  #playback-receipt h3 { margin-top: 10px; }
+  #playback-skip { white-space: normal; }
+}
+
+#playback-pacing { justify-content: center; gap: 10px; padding: 4px 10px; background: #142126; border-top: 1px solid #607568; }
+#arena:has(#playback-pacing:not([hidden])) { grid-template-rows: 74px 56px minmax(0,1fr) 54px 132px 24px; }
+@media (max-width: 900px) {
+  #arena:has(#playback-pacing:not([hidden])) { grid-template-rows: 60px 48px minmax(0,1fr) 54px 118px 20px; }
+}
+@media (max-width: 619px) {
+  #arena:has(#playback-pacing:not([hidden])) { grid-template-rows: 56px 46px minmax(0,1fr) 54px 172px 20px; }
+  #playback-pacing { gap: 4px; padding-inline: 6px; }
+  #playback-pacing label { display: none; }
+  #playback-pacing select { width: 65px; }
+  #playback-next, #playback-skip { padding: 4px 6px; font-size: 11px; }
+}
+@media (max-height: 650px) and (max-width: 619px) {
+  #arena:has(#playback-pacing:not([hidden])) { grid-template-rows: 48px 44px minmax(0,1fr) 52px 144px 16px; }
+}
+@media (max-height: 520px) and (min-width: 620px) {
+  #arena:has(#playback-pacing:not([hidden])) { grid-template-rows: 46px 44px minmax(0,1fr) 52px 86px 16px; }
+}
+
 /* The public tree can cover a command draft without changing it. Only its body scrolls. */
 #growth-dialog { padding: 0; width: min(1040px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; }
 #growth-dialog[open] { display: flex; flex-direction: column; }

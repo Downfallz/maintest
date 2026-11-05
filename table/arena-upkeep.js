@@ -57,6 +57,9 @@ export function createArenaUpkeep(storage) {
     const receipt = available ? upkeepReceipt(entries, latest.board.roundNumber, latest.board) : null;
     return { available, receipt, pending: Boolean(receipt?.complete && pendingRound === receipt.round && receipt.round > (seen[scope] ?? 0)) };
   }
-  function presented() { const receipt = model().receipt; if (receipt) { mark(receipt.round); pendingRound = 0; } }
+  function presented(round = model().receipt?.round) {
+    if (Number.isInteger(round) && round > (seen[scope] ?? 0)) mark(round);
+    if (pendingRound <= round) pendingRound = 0;
+  }
   return { reset, clear, receive, model, presented };
 }

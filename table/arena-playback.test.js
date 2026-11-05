@@ -15,9 +15,10 @@ const view = (feed = [], extra = {}) => ({ board: { allies: [creature(1)], enemi
   slot: 'Player1', roundNumber: 2, subPhase: 'Activation', phase: 'Combat', timeline, activationCursor: 1 }, feed, ...extra });
 const cards = new Map([['hit', { name: 'Strike' }]]);
 function harness() {
-  const timers = new Map(); let index = 0;
-  const queue = createArenaPlayback({ onChange: () => {}, schedule: (fn, ms) => { timers.set(++index, { fn, ms }); return index; }, cancel: id => timers.delete(id) });
-  return { queue, timers, receive: (events, extra, options) => queue.receive(view(events, extra), cards, options),
+  const timers = new Map(), handled = []; let index = 0;
+  const queue = createArenaPlayback({ onChange: () => {}, schedule: (fn, ms) => { timers.set(++index, { fn, ms }); return index; }, cancel: id => timers.delete(id),
+    onUpkeepHandled: round => handled.push(round) });
+  return { queue, timers, handled, receive: (events, extra, options) => queue.receive(view(events, extra), cards, options),
     tick() { const [id, timer] = timers.entries().next().value; timers.delete(id); timer.fn(); },
     drain() { while (timers.size) this.tick(); } };
 }
@@ -237,4 +238,137 @@ test('choosing the speed already playing leaves the action playing', () => {
 });
 test('a speed outside 1x, 1.5x and 2x plays at 1x', () => {
   const h = harness(); h.queue.setRate(2); h.queue.setRate(Infinity); assert.equal(h.queue.model().rate, 1);
+});
+
+const upkeepEvent = (sequence, kind = 'OngoingEffectsApplied', fields = {}) => ({ sequence, event: { kind, roundId: 3, ...fields } });
+const energyEvent = sequence => upkeepEvent(sequence, 'RoundEnergyGranted', { grants: [
+  { creature: 1, gained: 2, before: 1, after: 3, baseRequested: 2, passiveRequested: 0 }] });
+const cleanupEvent = sequence => ({ sequence, event: { kind: 'ConditionsExpired', roundId: 2,
+  expired: { 1: [{ effect: { kind: 'DefenseBuff', amount: 2 } }] } } });
+
+test('Step holds the exact applied frame until an explicit Next, with received, presented and read positions separate', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([event(4), event(5)]);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 4); // not during a windup
+  h.drain(); assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.queue.model().sequence, 4);
+  assert.equal(h.queue.model().read, null); assert.equal(h.queue.model().presented, 4);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().read, 4);
+  h.drain(); h.queue.advance(); assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().read, 5);
+});
+test('Auto resumes from a held Step without replaying its impact; a stale auto callback cannot bypass Step', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
+  const stale = [...h.timers.values()][0].fn;
+  h.queue.setMode('step'); stale(); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
+  h.queue.setMode('auto'); h.tick(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
+});
+test('the own closing cast, meaningful aftermath and combined next upkeep are read in order', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  const latest = view().board; latest.roundNumber = 3; latest.phase = 'Planning'; latest.subPhase = 'Evolution';
+  latest.allies[0].knownSpells = ['future-spell']; latest.allies[0].energy = 99;
+  h.receive([event(4), cleanupEvent(5), energyEvent(6), upkeepEvent(7)], { board: latest });
+  assert.equal(h.queue.model().board.round, 2); assert.equal(h.queue.model().board.creatures[0].energy, 5);
+  assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
+  h.drain(); h.queue.advance();
+  assert.equal(h.queue.model().receipt.category, 'Aftermath'); assert.equal(h.queue.model().board.round, 2);
+  assert.equal(h.queue.model().board.phase, 'EndOfRound'); assert.deepEqual(h.queue.model().board.creatures, []);
+  h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
+  assert.match(h.queue.model().summary, /\+2 energy.*1 → 3/); assert.match(h.queue.model().summary, /No ongoing ticks/);
+  assert.doesNotMatch(h.queue.model().summary, /unknown|not recorded/); assert.equal(h.queue.model().receipt.sections.length, 2);
+  h.queue.advance(); assert.equal(h.queue.model().board.creatures[0].energy, 99); assert.equal(h.queue.model().board.subPhase, 'Evolution');
+});
+test('events arriving ahead of their board stay queued when the empty next-round snapshot arrives', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([event(4), energyEvent(5), upkeepEvent(6)]);
+  h.receive([], { board: { ...view().board, roundNumber: 3 } });
+  assert.equal(h.queue.model().remaining, 2); h.drain(); h.queue.advance();
+  assert.match(h.queue.model().summary, /\+2 energy/); assert.equal(h.queue.model().board.round, 3);
+});
+test('split upkeep responses append facts to the same held receipt without duplicating their sequences', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([energyEvent(4)]);
+  h.receive([upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 3 }] })]);
+  assert.equal(h.queue.model().remaining, 1); assert.equal(h.queue.model().sequence, 5);
+  assert.match(h.queue.model().summary, /Ongoing damage −3 HP/); h.receive([energyEvent(4), upkeepEvent(5)]);
+  assert.equal(h.queue.model().receipt.sections.length, 2);
+});
+test('legacy upkeep says the ordinary energy is unknown, not zero', () => {
+  const h = harness(); h.receive([]); h.receive([upkeepEvent(4)]);
+  assert.match(h.queue.model().summary, /Ordinary round energy was not recorded/);
+  assert.match(h.queue.model().summary, /No ongoing ticks/); assert.deepEqual(h.queue.model().board.creatures, []);
+});
+test('lethal upkeep precedes the match result even without another command', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([energyEvent(4), upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 13 }] }),
+    upkeepEvent(6, 'MatchEnded', { outcome: { winner: 'Player1', reason: 'Elimination' } })], { over: true });
+  assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.match(h.queue.model().summary, /−13 HP/);
+  assert.equal(h.queue.model().cue, null); h.queue.advance();
+  assert.equal(h.queue.model().receipt.category, 'Result'); assert.equal(h.queue.model().board.phase, 'Match complete');
+  h.queue.advance(); assert.equal(h.queue.model().active, false);
+});
+test('empty cleanup has no pace step; immunity alone does', () => {
+  const h = harness(); h.receive([]); h.receive([{ sequence: 4, event: { kind: 'ConditionsExpired', roundId: 2, expired: {} } }]);
+  assert.equal(h.queue.model().active, false);
+  h.receive([{ sequence: 5, event: { kind: 'StunImmunityGained', roundId: 2, creatures: [2] } }]);
+  assert.match(h.queue.model().summary, /immune to stun/);
+});
+test('the player\'s own skip handles queued upkeep notices but never claims they were explicitly read', () => {
+  const handled = []; const queue = createArenaPlayback({ onChange() {}, schedule() {}, onUpkeepHandled: round => handled.push(round) });
+  queue.receive(view(), cards); queue.receive(view([event(4), energyEvent(5), upkeepEvent(6)]), cards);
+  assert.deepEqual(handled, []); queue.skip({ dismissUpkeep: true }); assert.deepEqual(handled, [3]);
+  assert.equal(queue.model().read, null); assert.equal(queue.model().presented, 4);
+  assert.match(queue.model().summary, /\+2 energy/);
+});
+test('presenting upkeep marks it handled before handing the screen back to automatic tips', () => {
+  const handled = []; const queue = createArenaPlayback({ onChange() {}, schedule() {}, onUpkeepHandled: round => handled.push(round) });
+  queue.receive(view(), cards); queue.receive(view([energyEvent(4), upkeepEvent(5)]), cards);
+  assert.deepEqual(handled, [3]); assert.equal(queue.model().read, null);
+});
+test('a long catch-up of receipts settles with a summary and cancels the older Step', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([event(4)]); h.drain();
+  h.receive(Array.from({ length: 61 }, (_, index) => upkeepEvent(5 + index, 'OngoingEffectsApplied', { roundId: 3 + index })));
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().remaining, 0); assert.equal(h.timers.size, 0);
+  assert.match(h.queue.model().summary, /No ongoing ticks/);
+});
+test('a Step backlog grown over several reads settles once it passes sixty items', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  for (let read = 0; read < 5; read++) h.receive(Array.from({ length: 12 }, (_, index) => event(4 + read * 12 + index)));
+  assert.equal(h.queue.model().active, true); assert.equal(h.queue.model().remaining, 60);
+  h.receive([event(64), event(65)]);
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().remaining, 0); assert.equal(h.timers.size, 0);
+});
+test('rotation, motion, speed and connection settles leave an unshown upkeep to its own notice', () => {
+  for (const settle of [q => q.skip(), q => q.setRate(2), q => q.setReduced(true)]) {
+    const h = harness(); h.receive([]); h.receive([event(4), energyEvent(5), upkeepEvent(6)]);
+    settle(h.queue); assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
+  }
+});
+test('what arrives under a dialog queues behind a held Step, while Auto settles it', () => {
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.drain();
+  step.receive([event(5), energyEvent(6)], {}, { animate: false });
+  assert.equal(step.queue.model().sequence, 4); assert.equal(step.queue.model().remaining, 3); assert.deepEqual(step.handled, []);
+  const auto = harness(); auto.receive([]); auto.receive([event(4)]);
+  auto.receive([event(5), energyEvent(6)], {}, { animate: false });
+  assert.equal(auto.queue.model().active, false); assert.deepEqual(auto.handled, []);
+});
+test('a catch-up that never shows its upkeep leaves it to the upkeep notice', () => {
+  const h = harness(); h.receive([]);
+  h.receive([event(4), energyEvent(5), upkeepEvent(6), event(7, { roundId: 4 }), event(8, { roundId: 5 })]);
+  assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
+});
+test('reduced motion retains Step pacing and resetting clears every receipt', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.setReduced(true); h.receive([]); h.receive([event(4), energyEvent(5)]);
+  h.drain(); assert.equal(h.queue.model().sequence, 4); h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  h.queue.reset(); assert.equal(h.queue.model().receipt, null); assert.equal(h.queue.model().presented, null); assert.equal(h.queue.model().read, null);
+  h.receive([energyEvent(5)]); assert.equal(h.queue.model().active, false);
+});
+test('a response crossing several rounds catches up without a queue even with few casts', () => {
+  const h = harness(); h.receive([]); h.receive([event(4), event(5, { roundId: 3 }), event(6, { roundId: 4 })]);
+  assert.equal(h.queue.model().active, false); assert.match(h.queue.model().summary, /Strike/);
+});
+test('late ongoing facts give an automatic energy receipt a fresh reading interval', () => {
+  const h = harness(); h.receive([]); h.receive([energyEvent(4)]); const stale = [...h.timers.values()][0].fn;
+  h.receive([upkeepEvent(5)]); stale(); assert.equal(h.queue.model().active, true);
+  assert.equal([...h.timers.values()][0].ms, 3500); h.drain(); assert.equal(h.queue.model().active, false);
+});
+test('opening-round introduction remains arrival-gated by the upkeep controller', () => {
+  const h = harness(); h.receive([], { waiting: {} });
+  h.receive([{ ...energyEvent(4), event: { ...energyEvent(4).event, roundId: 1 } }]);
+  assert.equal(h.queue.model().active, false);
 });

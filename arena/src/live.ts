@@ -67,7 +67,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: ready && !rendererFailed && !document.hidden && !$<HTMLDialogElement>('history-dialog').open && !$<HTMLDialogElement>('help-dialog').open && !$<HTMLDialogElement>('upkeep-dialog').open && !$<HTMLDialogElement>('order-dialog').open && !$<HTMLDialogElement>('growth-dialog').open && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active });
   } finally { receiving = false; }
   render();
 } });
@@ -82,11 +82,13 @@ const growth = createArenaGrowth();
 const combat = createArenaCombat({ connection, onChange: () => render(), visible });
 const planning = createArenaPlanning({ connection, onChange: () => render(), visible });
 const match = createArenaMatch({ connection, onChange: () => render() });
-const playback = createArenaPlayback({ onChange: () => render() });
-const controls = combatControls(combat, name, () => playback.skip());
-const planningUI = planningControls(planning, name, () => playback.skip());
+const playback = createArenaPlayback({ onChange: () => render(), onUpkeepHandled: round => upkeep.presented(round) });
+// Opening a live choice or the result is the player's skip: what was still queued, upkeep included, is passed over.
+const passOver = () => playback.skip({ dismissUpkeep: true });
+const controls = combatControls(combat, name, passOver);
+const planningUI = planningControls(planning, name, passOver);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
-const matchUI = matchControls(match, () => { playback.skip(); combat.close(); planning.close(); }, () => playback.skip());
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, () => playback.skip());
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
@@ -132,7 +134,8 @@ function status(state: string) {
 
 function renderInspection() {
   const one = creatures.find(one => one.id === inspected);
-  if (!one) { $<HTMLDialogElement>('inspect-dialog').close(); return; }
+  // A text receipt has no creatures to show: the open inspection keeps what it read rather than closing on it.
+  if (!one) { if (!receiptShown) $<HTMLDialogElement>('inspect-dialog').close(); return; }
   text('inspect-name', one.label);
   $('inspect-growth').dataset.growthCreature = one.id;
   text('inspect-side', one.enemy ? 'OPPONENT' : 'YOUR TEAM');
@@ -173,6 +176,24 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   if (combatOpened) return 'LIVE · COMBAT';
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
+
+let receiptKey = '', receiptRound: number | null = null, receiptShown = false;
+function renderReceipt(receipt: ReturnType<typeof playback.model>['receipt'], round: number | null) {
+  $('playback-receipt').hidden = !receipt;
+  const key = JSON.stringify([round, receipt]);
+  if (key === receiptKey) return;
+  const scroll = receiptRound === round ? $('playback-receipt').scrollTop : 0;
+  receiptKey = key; receiptRound = round;
+  $('receipt-title').textContent = receipt?.category === 'Upkeep' ? 'Upkeep' : receipt?.title ?? '';
+  $('receipt-sections').replaceChildren(...(receipt?.sections ?? []).map((section: { title: string; items: { text: string; tone: string }[] }) => {
+    const group = document.createElement('section'), title = document.createElement('h3');
+    title.textContent = section.title; group.append(title);
+    for (const row of section.items) { const line = document.createElement('p'); line.textContent = row.text; line.dataset.tone = row.tone; group.append(line); }
+    return group;
+  }));
+  $('playback-receipt').scrollTop = scroll;
+}
+
 function render() {
   if (receiving) return;
   const playbackState = playback.model();
@@ -188,19 +209,28 @@ function render() {
   $('arena').dataset.playback = playbackState.stage;
   $('arena').dataset.sequence = String(playbackState.sequence ?? '');
   $('playback-skip').hidden = !playbackState.active;
-  text('playback-skip', `Skip (${playbackState.remaining})`);
+  text('playback-skip', `Skip to present (${playbackState.remaining})`);
+  $('playback-pacing').hidden = !view || replay.active;
+  $<HTMLSelectElement>('playback-mode').value = playbackState.mode;
+  $<HTMLSelectElement>('playback-preference').value = playbackState.mode;
+  $('playback-next').hidden = !playbackState.active || playbackState.mode !== 'step';
+  // Not disabled: a focused button that becomes disabled drops focus between two results.
+  $('playback-next').setAttribute('aria-disabled', String(!playbackState.canNext));
+  text('playback-next', playbackState.remaining > 1 ? 'Next result' : 'Return to present');
+  receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round);
+  $('arena').dataset.receipt = String(Boolean(playbackState.receipt));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
   $('playback-result').setAttribute('aria-label', `Action result: ${playbackState.summary}`);
-  text('result-label', playbackState.active ? 'Playing confirmed action' : 'Last action');
+  text('result-label', playbackState.active ? 'Confirmed result' : 'Last result');
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   growthUI.render(view, catalogue, visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened);
-  controls.render(action, catalogue, growth.highlights(action, visible() && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); historyUI.render(history.model());
+  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); historyUI.render(history.model());
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : 'Inspect creatures');
-  if ($('arena').dataset.connection === 'live') text('connection', connectionText(replay.active, action.opened));
+  if ($('arena').dataset.connection === 'live') text('connection', playbackState.active ? 'READING CONFIRMED EVENTS' : connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
   for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
   for (const one of creatures) {
@@ -238,10 +268,10 @@ function render() {
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
   const order = arenaOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
-  text('actor-name', playbackState.active ? name(frame.actor) : headline(board));
+  text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', playbackState.active ? `Playing confirmed results. Skip${action.available ? ' or choose your next action' : ''} at any time.` : guide.objective);
+  text('instruction', playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   $('loading').hidden = Boolean(view && ready && !rendererFailed);
   if (!view) {
@@ -333,9 +363,19 @@ $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dia
 function motionChanged() { playback.setReduced(reduced()); render(); }
 $('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
 playback.setReduced(reduced());
-$('playback-skip').addEventListener('click', () => playback.skip());
+$('playback-preference').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-preference').value));
+$('playback-mode').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-mode').value));
+$('playback-next').addEventListener('click', () => {
+  playback.advance();
+  if (!playback.model().active && !document.querySelector('dialog[open]'))
+    (['planning-open', 'combat-open', 'match-open'].map(id => $(id)).find(node => !node.hidden) ?? $('settings')).focus({ preventScroll: true });
+});
+$('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
 scene.onResizeDuringPlayback = () => playback.skip();
+// A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
+// keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
+matchMedia('(orientation: portrait)').addEventListener('change', () => { if (playback.model().active) playback.skip(); });
 // The board goes with the page's eyes; the catalogue stays, it cannot change while the host runs.
 function suspend() { audio.stop(); discovering++; connection.stop(); view = null; upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); render(); text('connection', 'Paused'); }
 document.addEventListener('visibilitychange', () => {
@@ -351,3 +391,12 @@ void discover();
 for (const id of ['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog']) {
   $(id).addEventListener('close', () => render());
 }
+// A receipt that became current under the inspection removed the creature it opened from: focus goes to the
+// receipt being read, or to that creature again once it is back, never to the page itself. A tap focuses no
+// opener, so focus can still sit inside the closed dialog.
+$('inspect-dialog').addEventListener('close', () => {
+  const focused = document.activeElement;
+  if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
+  const node = inspected === null ? undefined : nodes.get(inspected);
+  (node ?? (receiptShown ? $('playback-receipt') : undefined))?.focus({ preventScroll: true });
+});
