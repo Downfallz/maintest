@@ -31,3 +31,11 @@ test('optional feedback tolerates unavailable browser APIs and storage', () => {
   f.update({ sound: true, haptics: true });
   assert.doesNotThrow(() => f.cue('select'));
 });
+
+
+test('arena selection can reuse haptics without inheriting classic sound opt-in', () => {
+  const calls = [];
+  const feedback = createFeedback({ navigator: { vibrate: () => calls.push('pulse') }, AudioContext: class { constructor() { calls.push('audio'); } } }, null);
+  feedback.update({ sound: true, haptics: true }); feedback.cue('select', { sound: false });
+  assert.deepEqual(calls, ['pulse']);
+});

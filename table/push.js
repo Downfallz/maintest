@@ -78,3 +78,23 @@ export function testReading({ page, host, hostOk }) {
   else if (hostOk) lines.push('Two notices, then. Both appeared: notices work. Only the page\'s: the push service is not reaching this browser; check the browser\'s own settings for this site, and a battery saver that puts it to sleep. Neither: the browser is not showing notifications for this site.');
   return lines.join(' ');
 }
+
+export async function showOwnNotice(registration, scope = globalThis) {
+  if (!registration?.showNotification) return 'no worker';
+  try {
+    await registration.update?.();
+  } catch {
+    // An update that cannot be fetched leaves the worker there is, which still shows.
+  }
+  const permission = scope.Notification?.permission;
+  if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
+  try {
+    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
+  } catch (error) {
+    return error?.message || String(error);
+  }
+  // Taken is not shown: a browser lists the notices it is showing, and one it took and lists no more it dropped
+  // on the way, which is the browser's or the system's doing, not the page's.
+  const listed = await registration.getNotifications?.({ tag: 'test:page' }) ?? null;
+  return listed !== null && listed.length === 0 ? 'the browser took it and then listed no such notice: it dropped it' : null;
+}

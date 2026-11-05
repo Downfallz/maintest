@@ -16,13 +16,13 @@ export function createFeedback(globalScope, store) {
   return {
     settings: () => ({ ...settings }),
     update(next) { settings = { ...settings, ...next }; saveFeedbackSettings(store, settings); },
-    cue(kind) {
+    cue(kind, { sound = true } = {}) {
       if (settings.haptics) {
         try { globalScope.navigator?.vibrate?.(kind === 'confirm' ? 18 : 8); } catch {
           // A device that refuses the pulse simply has no haptics.
         }
       }
-      if (!settings.sound) return;
+      if (!settings.sound || !sound) return;
       const Audio = globalScope.AudioContext || globalScope.webkitAudioContext;
       if (!Audio) return;
       try {

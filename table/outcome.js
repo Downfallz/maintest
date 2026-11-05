@@ -23,7 +23,7 @@ export function rematchLink(table, held) {
 export function outcomeText(view, seat) {
   const outcome = view?.outcome;
   if (!outcome) return 'The match is over.';
-  const because = { Elimination: 'the last team standing', RoundCap: 'more health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason;
+  const because = { Elimination: outcome.winner ? 'the last team standing' : 'neither team survived', RoundCap: outcome.winner ? 'more health at the round cap' : 'equal health at the round cap', Concession: 'a concession' }[outcome.reason] ?? outcome.reason ?? 'reason not recorded';
   if (!outcome.winner) return `The match is a draw · ${because}.`;
   const won = outcome.winner === seat;
   const winner = seatLabel(outcome.winner);
@@ -34,4 +34,25 @@ export function outcomeText(view, seat) {
     return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
   }
   return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
+}
+
+// A result never elects its own winner from health. Missing legacy fields stay unavailable.
+export function matchResultSummary(view, seat) {
+  if (!view?.over) return null;
+  const outcome = view.outcome, won = outcome?.winner === seat;
+  const tone = !outcome ? 'unknown' : !outcome.winner ? 'draw' : won ? 'victory' : 'defeat';
+  const title = !outcome ? 'Match complete' : !outcome.winner ? 'Draw'
+    : view.replay ? `${seatLabel(outcome.winner)} wins` : won ? 'Victory' : 'Defeat';
+  const teams = ['allies', 'enemies'].map((side, index) => {
+    const creatures = view.board?.[side];
+    const label = view.replay ? seatLabel(index ? (seat === 'player1' ? 'player2' : 'player1') : seat)
+      : index ? 'Opponent' : 'Your team';
+    const complete = Array.isArray(creatures) && creatures.length > 0;
+    const alive = complete && creatures.every(one => typeof one.isAlive === 'boolean')
+      ? `${creatures.filter(one => one.isAlive).length}/${creatures.length} standing` : 'Survivors unavailable';
+    const health = complete && creatures.every(one => Number.isFinite(one.health))
+      ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
+    return { label, text: `${alive} · ${health}` };
+  });
+  return { title, tone, reason: outcomeText(view, seat), teams, round: view.board?.roundNumber };
 }

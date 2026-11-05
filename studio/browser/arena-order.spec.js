@@ -34,10 +34,10 @@ async function mount(page, overrides = {}) {
     }
     return route.fulfill({ status: 500 });
   });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
   // Freeze before the first connection so a started poll cannot owe a paused zero-delay refresh.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
   const publish = async extra => { state.view = { ...state.view, ...extra }; await page.evaluate(() => window.notifyOrder()); };
   return { state, publish };
 }

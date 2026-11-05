@@ -40,7 +40,7 @@ async function mount(page, kind = 'Action') {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await page.locator('#combat-open').click(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#combat-open').click(); return state;
 }
 const notify = page => page.evaluate(() => window.notifyArena());
 const target = (page, id) => page.locator(`.creature[data-creature="${id}"]`);

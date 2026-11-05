@@ -34,11 +34,11 @@ async function mount(page, { waiting = null, mode = 'AtActivation', kind = 'Evol
     }
     return route.fulfill({ status: 500 });
   });
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
   // Discovery POSTs the saved capabilities to resume; measure guide writes after this baseline.
   state.writes.length = 0;
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyArena());
@@ -71,7 +71,7 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
   const h = await mount(page); await close(page);
   await h.publish([], { waitingAsked: 12, waitingCreature: 2 }); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#help-dialog')).toBeHidden();
   await h.publish([], { waitingFor: 'Speed', waitingAsked: 13, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-explanation')).toContainText('only Precision can crit');

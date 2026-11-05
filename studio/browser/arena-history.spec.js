@@ -40,11 +40,11 @@ async function mount(page, feed = [entry(10)]) {
     }
     return route.fulfill({ status: 500 });
   });
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
   // Freeze before connecting: advancing an active poll can leave a zero-delay owed refresh
   // suspended just as the fixture publishes its first notification.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
@@ -261,7 +261,7 @@ test('reload makes earlier rounds available through an explicit seat history rea
   const h = await mount(page); h.state.view.board.roundNumber = 6;
   const old = { ...entry(1), event: { ...entry(1).event, roundId: 1 } }, recent = { ...entry(50), event: { ...entry(50).event, roundId: 6 } };
   h.state.view.feed = [old, recent]; h.state.view.feedNext = 51;
-  await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+  await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
   await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);

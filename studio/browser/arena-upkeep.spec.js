@@ -35,11 +35,11 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     }
     return route.fulfill({ status: 500 });
   });
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
   // Freeze before connecting, as the history and playback fixtures do: pausing later fast-forwards the first
   // poll, and a notification landing while it is in flight owes a zero-delay refresh that a paused clock strands.
-  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden();
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
     state.view = { ...state.view, ...extra, feed, feedNext: Math.max(state.view.feedNext, ...feed.map(one => one.sequence + 1)) };
@@ -119,7 +119,7 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.view.feed = [energy(1), ongoing(1)]; await page.reload(); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
   await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#round-number')).toHaveText('02');

@@ -22,7 +22,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
       if (url.searchParams.has('shown')) shown.push(url.searchParams.get('shown'));
       if (url.pathname.endsWith('/decision')) writes.push(request.postDataJSON());
     });
-    await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await page.locator('#seat-choices button').click();
+    await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();
     await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
     const initial = await read();

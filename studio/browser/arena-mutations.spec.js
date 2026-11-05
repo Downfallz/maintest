@@ -38,7 +38,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/arena.html'); await expect(page.locator('#arena')).toHaveAttribute('data-ready', 'true');
-  await page.locator('#seat-choices button').click(); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#loading')).toBeHidden();
   await page.locator('#planning-open').click(); await page.clock.pauseAt(new Date(Date.now() + 1500));
   const publish = async () => page.evaluate(() => window.notifyArena());
   return { state, publish };
