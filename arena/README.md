@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-mutations.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -92,8 +92,8 @@ text on the latest board. Result details remain available in an accessible overl
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
-`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the catalogue's
-Mutation Tree with explicit confirmation. Tempo confirms one creature at a time, with simultaneous reveal
+`table/arena-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
+cards with explicit confirmation and a separate reference tree (AU4). Tempo confirms one creature at a time, with simultaneous reveal
 still owned by the host. `table/arena-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/arena?replay=<session>&seat=player2` opens a
@@ -154,7 +154,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/arena-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-Ordinary upkeep-energy receipts remain AU3; mutation cards and batch tempos remain later UX slices.
+Ordinary upkeep-energy receipts remain AU3; mutation cards are covered by AU4 below; batch tempos remain AU5.
 
 `arena-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -177,3 +177,29 @@ energy, healing and bleed; a creature killed afterward retains its earlier recei
 read-only and deduplicated. Old recordings and resumed legacy matches have no ordinary-energy receipt;
 the UI does not invent one from the default allowance. See [ADR 0132](../docs/adr/0132-record-ordinary-round-energy-without-renumbering-old-tables.md).
 The automatic first-round/round-transition receipt remains AU3b; this PR supplies its recorded facts.
+
+## AU4: compare offered mutations
+
+`Choose mutation` opens the host's available cards for the selected creature, with three columns on
+desktop and stacked cards on phones. Cards show family colour and name, stage, authored tags,
+initiative gain and spell names/previews. Each separate Details disclosure includes spell cost,
+targeting, effects and caster/critical text. Passive-only and shared capstones retain the catalogue's
+passive lines without invented tags or spells. Later offers may contain any number of upgrades and
+multiclass roots; missing catalogue records remain selectable by host id with explicit unknown details.
+
+Creature tabs and the confirmation footer stay visible while cards scroll. The budget is capped by
+the number of creatures with host offers; defeated and already-picked creatures explain their state.
+Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
+one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
+The full Mutation Tree is a separate, read-only disclosure during Evolution; its persistent access
+outside this phase remains AU8. Same-question polls preserve disclosures, focus and scroll.
+
+`table/arena-mutations.js` projects this model using the existing card and mutation helpers;
+`src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
+host legality checks and duplicate/stale-command protection. `arena-mutations.spec.js` covers
+comparison, late offers, recipient changes, passive capstones, missing content, effective budgets,
+poll stability, pending acknowledgement and small/landscape layouts. `arena.loop.js` exercises the
+chooser in complete real-host matches, including two-seat private choices.
+
+Real-host opening cards: [desktop](../docs/tabletop/images/arena-mutations/desktop.jpg) ·
+[phone](../docs/tabletop/images/arena-mutations/phone.jpg).
