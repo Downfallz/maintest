@@ -95,6 +95,8 @@ test('tie drafts keep their own interleaved places through an order reference an
 });
 test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }) => {
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
+  await h.publish({ board: { ...board, subPhase: 'TurnOrderResolution' }, feed: [reveal(11)] });
+  await expect(page.locator('#timeline li')).toHaveCount(6); await expect(page.locator('#order-dialog')).toBeHidden();
   await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20, options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
   await expect(page.locator('#planning-open')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
   await h.publish({ board: { ...board, subPhase: 'IntentSelection' }, waitingFor: 'Intent', waitingAsked: 21, options: {}, feed: [reveal(12, 'TiesOrdered')] });

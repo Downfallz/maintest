@@ -48,6 +48,9 @@ test('multiple tie groups map chosen occupants only to their offered positions w
 });
 test('reveal is once per observed round, never over an unresolved tie or replayed on duplicates', () => {
   const controller = createArenaOrderReveal(); controller.receive(view({ feed: [] }));
+  // The driver may expose the built timeline before it has asked the tie question.
+  controller.receive(view({ board: { ...board, subPhase: 'TurnOrderResolution' }, feed: [reveal(1)] }));
+  assert.equal(controller.model().pending, false);
   controller.receive(view({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', feed: [reveal(1)] }));
   assert.equal(controller.model().pending, false);
   controller.receive(view({ feed: [reveal(1)] })); assert.equal(controller.model().pending, true);

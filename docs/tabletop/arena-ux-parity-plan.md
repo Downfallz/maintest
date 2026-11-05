@@ -458,7 +458,7 @@ Acceptance: no ties, same-team ties, cross-team rerolls, multiple tie groups, de
 and both declarations. Keep exact host order. No opponent tempo summary before reveal.
 The compact strip does not force horizontal page scrolling; detail handles the long explanation.
 
-Implemented in `table/arena-order.js` and `arena/src/order.ts`, based on merged AU5 #454.
+Implemented in [PR #458](https://github.com/Downfallz/maintest/pull/458), `table/arena-order.js` and `arena/src/order.ts`, based on merged AU5 #454.
 See [AU11 behavior and limits](../../arena/README.md#au11-turn-order-and-recorded-dice).
 
 ### AU12 — Make every creature inspectable

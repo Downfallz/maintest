@@ -291,3 +291,5 @@ native controls. `arena-order.spec.js` covers private/unrevealed choices, interl
 repeat reveals, cursor/condition updates, focus/scroll, lost access and small/landscape/enlarged text.
 Full real-host journeys check order/rolls against seat responses in both declarations and inspect a past
 round during match replay. Captures in `docs/tabletop/images/arena-order/` identify their data source.
+
+Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/arena-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/arena-order/phone-fixture.jpg).

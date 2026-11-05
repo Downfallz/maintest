@@ -59,7 +59,7 @@ export function createArenaOrderReveal() {
   }
   function model() {
     return { pending: pending !== null && latest?.board?.timeline?.length > 0 &&
-      latest.board.subPhase !== 'TieOrder' && latest.waitingFor !== 'TieOrder' };
+      ['IntentSelection', 'Activation'].includes(latest.board.subPhase) && latest.waitingFor !== 'TieOrder' };
   }
   function presented() { pending = null; }
   return { receive, reset, model, presented };

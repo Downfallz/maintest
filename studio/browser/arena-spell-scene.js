@@ -22,7 +22,7 @@ export async function mountSpellScene(page) {
   await page.goto('/art4-scene.html');
   await page.addScriptTag({ content: (await bundle).outputFiles[0].text });
   await expect.poll(() => page.evaluate(() => Boolean(window.artReady))).toBe(true);
-  await page.clock.pauseAt(new Date(Date.now() + 500));
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
 }
 
 export const spellFrame = cue => ({ stage: 'decision', actor: '1', target: cue.contact[0] ?? null, targets: [], cue,
