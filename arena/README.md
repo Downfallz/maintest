@@ -73,7 +73,7 @@ plus the eclipse background; the old three-frame sheet is no longer loaded. Devi
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js
+npm --prefix studio/browser test -- arena-lab.spec.js arena-live.spec.js arena-combat.spec.js arena-playback.spec.js arena-loop.spec.js arena-history.spec.js arena-guidance.spec.js arena-upkeep.spec.js arena-spellbook.spec.js arena-mutations.spec.js arena-tempo.spec.js arena-pacing.spec.js arena-growth.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -355,6 +355,7 @@ through the deferred upkeep notice. No receipt facts, frames or drafts are persi
 baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
 sixty queued new items fall back to the latest board and summary; History remains the reading surface for
 that backlog. An unframed legacy cast also falls back to confirmed text, without invented animation.
+AU8 unlock receipts stay hidden during paced history; opening a live spell choice after Skip retains its new-spell badge.
 
 `arena-pacing.spec.js` covers ordered closing actions, no future budget/spells, split receipts, Step/Auto,
 Skip, current command access, match completion, rotation and revocation. Playback/upkeep unit tests cover
@@ -363,3 +364,37 @@ are recorded-event browser fixtures, not real-match screenshots.
 
 ![Step upkeep on desktop](../docs/tabletop/images/arena-pacing/desktop-fixture.jpg)
 ![Step upkeep on phone](../docs/tabletop/images/arena-pacing/phone-fixture.jpg)
+
+
+## AU8: growth reference and new abilities
+
+Help and creature inspection open a persistent **Mutation Tree** over the current draft. Inspection
+selects its creature; the reference can switch between both rosters. It reuses AU4's authored
+prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
+passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
+current host Evolution offer marks a mutation Available; the next opportunity is the host's
+`nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
+not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit.
+
+The standalone reference shows current **public** ownership. Pending own picks remain Picked only
+in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
+closing either reference does not acknowledge or submit a question. Native disclosures, a labelled
+creature select and fixed Close control work by keyboard and on small/short screens. Unchanged polls
+preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft.
+
+`table/arena-growth.js` observes only new `PurchasesRevealed` feed events. A compact, dismissible receipt
+names the new abilities/mutations; opening it gives the public team details in the tree without forcing
+a modal. During catch-up it retains the latest reveal; History retains all public events. Its first
+read is always a baseline, including reload, visibility return and seat switch, so historical unlocks
+never masquerade as new ones. No extra storage, request, engine rule or host acknowledgement is added.
+Private submission events and board changes alone cannot create a receipt. Access loss clears all facts.
+
+A new spell badge belongs to its own creature's first visible Action/Intent spell choice. Existing
+spells taught again by another tier are excluded. Covered controls and target-only questions do not
+consume badges; closing/reopening the same asking retains them, and the next asking clears them.
+Enemy reveals contribute to the public receipt but never to the player's badges.
+
+`arena-growth.test.js` tests projection, baseline/deduplication, unknown/passive content and badge
+lifetime. `arena-growth.spec.js` tests privacy, draft preservation, in-flight acknowledgement fences,
+reload/access loss, keyboard and responsive layouts. `arena.growth.js` buys a real host offer and
+checks its public tree, exact catalogue spell names and read-only access on desktop and phone.
