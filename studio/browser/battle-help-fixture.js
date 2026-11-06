@@ -11,7 +11,20 @@ export async function returningBattlePlayer({ context }) {
 // after a previous pick, or was closed by the player and waits behind its button.
 export async function mutationTree(page) {
   const dialog = page.locator('#planning-dialog'), button = page.locator('#planning-open');
-  await expect.poll(async () => await dialog.isVisible() || await button.isVisible(), { timeout: 20000 }).toBe(true);
+  await acknowledge(page, async () => await dialog.isVisible() || await button.isVisible());
   if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});
   await expect(dialog).toBeVisible();
 }
+
+// The battle holds every confirmed action for the player's OK (ADR 0139). A journey reads them as a player
+// would: it presses OK whenever one is waiting, until the condition it is after holds.
+export async function acknowledge(page, until, timeout = 45000) {
+  const next = page.locator('#playback-next'), end = Date.now() + timeout;
+  for (;;) {
+    if (await until()) return;
+    if (Date.now() > end) throw new Error('Timed out reading confirmed results');
+    if (await next.isVisible() && await next.getAttribute('aria-disabled') === 'false') await next.click({ timeout: 2000 }).catch(() => {});
+    else await page.waitForTimeout(100);
+  }
+}
+export const readResults = page => acknowledge(page, async () => !await page.locator('#playback-skip').isVisible());

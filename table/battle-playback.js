@@ -4,7 +4,7 @@ import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { livePresentation } from './battle-live.js';
-import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
+import { IMPACT_MS, REDUCED_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
   : [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
@@ -92,8 +92,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (reduced) later(finish, REDUCED_MS, false);
     else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
+  // A creature's action always waits for the player's OK, in Auto as in Step: nothing after it, a next action,
+  // the turnover or the live question, is shown before the player has read it (ADR 0139). Auto paces receipts only.
   function finish() {
-    stage = 'resolved'; emit(); if (mode === 'auto') later(next, SETTLE_MS);
+    stage = 'resolved'; emit();
   }
   // Settling shows the latest board with one result to read, whichever the caller names. An upkeep already
   // presented was handled when it was shown; one still queued is handled only when the player chose to skip
@@ -159,7 +161,9 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
-      canNext: Boolean(current && stage === 'resolved'), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      canNext: Boolean(current && stage === 'resolved'),
+      // Next is offered for every action, whatever the pace, and for receipts when the player steps through them.
+      asks: Boolean(current && (!current.receipt || mode === 'step')), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;
@@ -177,7 +181,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const nextMode = value === 'step' ? 'step' : 'auto';
     if (mode === nextMode) return;
     mode = nextMode;
-    if (current && stage === 'resolved') { cancelTimer(); if (mode === 'auto') later(next, current.receipt ? 3500 : SETTLE_MS, !current.receipt); }
+    if (current?.receipt && stage === 'resolved') { cancelTimer(); if (mode === 'auto') later(next, 3500, false); }
     emit();
   }
   function advance() {
