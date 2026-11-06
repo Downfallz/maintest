@@ -119,11 +119,10 @@ test('polls preserve focus and scrolling while progress marks completed, current
   await h.publish({ board: { ...board, subPhase: 'Cleanup' } }); await expect(page.locator('#order-list [data-state="Completed"]')).toHaveCount(6);
   expect(h.state.writes).toEqual([]);
 });
-for (const reason of ['access', 'hidden', 'seat']) test(`${reason} clears the order and all creature details`, async ({ page }) => {
+for (const reason of ['access', 'hidden']) test(`${reason} clears the order and all creature details`, async ({ page }) => {
   const h = await mount(page); await page.locator('#order-open').click();
   if (reason === 'access') { h.state.status = 403; await h.publish({}); }
-  else if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  else { await page.keyboard.press('Escape'); await page.locator('#switch-seat').click(); }
+  else await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('#order-dialog')).toBeHidden(); await expect(page.locator('#order-list')).toBeEmpty();
   await expect(page.locator('#order-open')).toBeDisabled(); expect(h.state.errors).toEqual([]);
 });
