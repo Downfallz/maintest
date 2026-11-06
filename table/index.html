@@ -10,8 +10,11 @@
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="stylesheet" href="table.css" />
+    <link rel="stylesheet" href="lobby.css" />
+    <script type="module" src="navigation.js"></script>
   </head>
-  <body>
+  <body class="classic-page">
+    <header class="masthead lobby-header home-header" data-navigation="classic" hidden></header>
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></div>
       <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="versus" class="versus-line" hidden></p><p id="phase" aria-live="polite">Connecting…</p><a class="admin-link" href="/">Tables</a> <a id="admin-link" class="admin-link" href="/admin" hidden>Admin</a></div>

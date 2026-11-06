@@ -2,7 +2,7 @@
 // every rule; this page only checks a name's shape before asking, as the sign-in does, and draws what the host
 // says. The pure part is what the panel says; the mount does the asking.
 
-import { accountRequest, nameProblem } from './account.js';
+import { accountRequest, confirmAction, nameProblem } from './account.js';
 
 /** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
 export function friendSections(list) {
@@ -42,16 +42,19 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     return result;
   }
 
-  function action(label, className, act) {
+  function action(label, className, act, confirm = null) {
     const button = node('button', label, className);
     button.type = 'button';
     button.addEventListener('click', async () => {
       if (busy) return;
       busy = true;
-      button.disabled = true;
-      problem();
-      try { await act(); await refresh(true); }
-      catch (error) { problem(error.message || 'Could not reach the host. Try again.'); }
+      try {
+        if (confirm && !await confirm()) return;
+        button.disabled = true;
+        problem();
+        await act();
+        await refresh(true);
+      } catch (error) { problem(error.message || 'Could not reach the host. Try again.'); }
       finally { busy = false; button.disabled = false; }
     });
     return button;
@@ -64,6 +67,12 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     buttons.append(...actions);
     item.append(buttons);
     return item;
+  }
+
+  function removeButton(link) {
+    return action('Remove', 'secondary',
+      () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'),
+      () => confirmAction(doc, `Remove ${link.username}?`, 'You will no longer be friends. They will not be notified.', 'Remove friend'));
   }
 
   function inviteButton(link) {
@@ -97,7 +106,7 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       action('Decline', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
     ])));
     el('friend-list').replaceChildren(...(sections.friends.items.length
-      ? sections.friends.items.map(link => row(link, [...(onInvite ? [inviteButton(link)] : []), action('Remove', 'secondary', () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'))]))
+      ? sections.friends.items.map(link => row(link, [...(onInvite ? [inviteButton(link)] : []), removeButton(link)]))
       : [node('li', sections.friends.empty, 'empty-state')]));
     el('friend-count').textContent = sections.friends.items.length || '';
     el('friend-outgoing').hidden = !sections.outgoing.shown;

@@ -2,7 +2,7 @@
 
 The home page has two jobs: explain Downfall Arena to a visitor and bring a returning player to their next
 battle. It uses the [official palette](../art/branding.md) and existing arena artwork. This changes the static
-HTML/CSS/JavaScript presentation, with no new routes, framework or account rules.
+HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 
 ## Page states
 
@@ -16,6 +16,12 @@ HTML/CSS/JavaScript presentation, with no new routes, framework or account rules
 
 ## Navigation
 
+The lobby and leaderboard share a responsive header. Signed-in players also have it at the classic table
+and in the live arena, alongside the controls for the current match. Friends, Notifications, Your data
+and Join with a code open in place. Inviting a friend from outside the lobby opens the lobby with that
+player selected. A single verified seat opens directly in the arena. Shared-device players still choose
+a viewpoint before either private board is read.
+
 | Entry | Destination | Availability |
 | --- | --- | --- |
 | Play | Home/dashboard | Everyone |
@@ -23,9 +29,9 @@ HTML/CSS/JavaScript presentation, with no new routes, framework or account rules
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Notifications | Dialog with the existing device controls or an unavailable explanation | Signed-in players |
 | Your data | Dialog explaining retained account, friendship and game data | Everyone |
-| Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Everyone |
+| Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
 | Admin | Existing `/admin` page | Existing operator check |
-| Account avatar/name | Existing sign-out, sign-out-everywhere and delete actions | Signed-in players |
+| Account avatar/name | Confirm sign-out on this device or everywhere, or type the player name to delete the account | Signed-in players |
 
 At 1100 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA
@@ -33,7 +39,7 @@ application menu. Native dialogs handle focus containment and Escape, include an
 and restore focus to the menu toggle on narrow screens or their desktop opener. Long modal content scrolls
 inside a viewport-bounded body while the heading and close button remain visible.
 
-Incoming friend requests appear as a count in the menu. Inviting from Friends closes that window and opens
+Incoming friend requests appear as a count in the menu. Removing a friend asks for confirmation by player name. Inviting from Friends closes that window and opens
 the existing create dialog with the chosen friend selected. Merely opening Notifications never requests
 browser permission; the existing explicit device action owns that request. Google sign-in still uses the
 provider's rendered button, not a custom credential control.

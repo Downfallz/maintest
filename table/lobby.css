@@ -2,7 +2,7 @@
 .lobby-header { max-width: 1280px; }
 .lobby-header .brand { display: flex; color: var(--ink); text-decoration: none; }
 .lobby-header nav { margin-left: auto; display: flex; align-items: center; gap: 20px; }
-.lobby-header nav a { color: var(--gold); }
+
 .lobby-main { max-width: 1280px; margin: auto; }
 .lobby-hero { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 50px 0 28px; }
 .lobby-hero h2 { font: 400 clamp(36px, 5vw, 58px)/1.15 Georgia, serif; letter-spacing: -1.5px; margin: 12px 0; }
@@ -95,7 +95,7 @@
   .lobby-page { padding-left: 18px; padding-right: 18px; }
   .lobby-header { min-height: 88px; gap: 12px; } .lobby-header h1 { font-size: 21px; }
   .lobby-header .brand-mark { width: 34px; height: 42px; font-size: 26px; }
-  .lobby-header nav { gap: 10px; } .lobby-header nav a { font-size: 12px; }
+  .lobby-header nav { gap: 10px; }
   .lobby-header .brand { gap: 10px; }
   .lobby-hero { align-items: stretch; flex-direction: column; padding-top: 32px; gap: 20px; }
   .lobby-hero .primary { width: 100%; }
@@ -221,3 +221,20 @@
   .home-footer { margin-top: 16px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .home-page { scroll-behavior: auto; } }
+
+.navigation-panels { display: contents; }
+#friend-count { color: var(--muted); font-size: .85em; }
+#friend-count:not(:empty)::before { content: "("; }
+#friend-count:not(:empty)::after { content: ")"; }
+#friend-count:empty { display: none; }
+.home-navigation > :is(a, button) { font-family: inherit; line-height: 1.25; }
+#account-problem { color: var(--refused); }
+:is(.classic-page, .arena-page) .home-header { min-height: 48px; padding: 0 12px; }
+:is(.classic-page, .arena-page)[data-home="member"] :is(.hud-top, .masthead:not(.home-header)) > .brand,
+.classic-page[data-home="member"] .session-state .admin-link { display: none; }
+body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex; }
+.classic-page[data-home="member"] .masthead:not(.home-header) { min-height: 44px; }
+.home-header .account-menu { z-index: 2; }
+@media (max-width: 700px) {
+  .home-header .account-menu { position: absolute; top: calc(100% + 4px); right: 0; }
+}
