@@ -69,5 +69,7 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
   }
   // Help on or off for this game, from its settings: tips already read stay read either way.
   function setHelp(on: boolean) { preferences.apply(!on); el<HTMLInputElement>('help-mute').checked = !on; }
-  return { render, pending, setHelp };
+  // Each game teaches its phases again (ADR 0142): what was read is counted per game.
+  function setGame(id: string | null) { preferences.setGame(id); }
+  return { render, pending, setHelp, setGame };
 }

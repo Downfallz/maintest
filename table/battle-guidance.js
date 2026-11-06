@@ -7,23 +7,37 @@ const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
 const topicOf = { Evolution: 'mutation', Speed: 'tempo', TieOrder: 'ties', Action: 'action', Intent: 'intent', Target: 'target' };
 const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
-// Only generic instructional preferences cross sessions. No match, seat, question, token or choice is saved.
+// A tip explains its phase the first time that phase comes in each game: a player with tips on is taught in
+// every game, one with them off in none. Only the topics read and the game's id are kept, for the latest
+// games; no seat, question, token or choice is saved. Version 1 kept one list for the browser; its muted
+// choice carries over, its topics do not, so tips come back once in each game.
+const KEPT_GAMES = 20;
+const gameKey = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value) ? value : '';
 export function helpPreferences(storage) {
-  let muted = false, seen = new Set();
+  let muted = false, games = [], game = '';
   try {
     const value = JSON.parse(storage?.getItem(HELP_PREFERENCE_KEY) ?? 'null');
-    if (value?.version === 1) {
-      muted = value.muted === true;
-      seen = new Set(Array.isArray(value.seen) ? value.seen.filter(topic => TOPICS.includes(topic)) : []);
+    if (value?.version === 1 || value?.version === 2) muted = value.muted === true;
+    if (value?.version === 2 && Array.isArray(value.games)) {
+      games = value.games.filter(one => typeof one?.game === 'string' && gameKey(one.game) === one.game).slice(0, KEPT_GAMES)
+        .map(one => ({ game: one.game, seen: [...new Set(Array.isArray(one.seen) ? one.seen.filter(topic => TOPICS.includes(topic)) : [])] }));
     }
   } catch { /* Help works in memory when storage is unavailable or malformed. */ }
   function save() {
-    try { storage?.setItem(HELP_PREFERENCE_KEY, JSON.stringify({ version: 1, muted, seen: [...seen] })); } catch { /* Optional preference. */ }
+    try { storage?.setItem(HELP_PREFERENCE_KEY, JSON.stringify({ version: 2, muted, games })); } catch { /* Optional preference. */ }
   }
+  const seen = () => games.find(one => one.game === game)?.seen ?? [];
   return {
     muted: () => muted,
-    shouldShow: topic => TOPICS.includes(topic) && !muted && !seen.has(topic),
-    markSeen(topic) { if (TOPICS.includes(topic) && !seen.has(topic)) { seen.add(topic); save(); } },
+    shouldShow: topic => TOPICS.includes(topic) && !muted && !seen().includes(topic),
+    markSeen(topic) {
+      if (!TOPICS.includes(topic) || seen().includes(topic)) return;
+      const entry = games.find(one => one.game === game) ?? { game, seen: [] };
+      entry.seen.push(topic);
+      games = [entry, ...games.filter(one => one !== entry)].slice(0, KEPT_GAMES); save();
+    },
+    // The game the tips are counted for; none before a seat is chosen.
+    setGame(value) { game = gameKey(value); },
     setMuted(value) { muted = value === true; save(); },
     // The game's settings decide (ADR 0140); only the topics already read stay this browser's own.
     apply(value) { muted = value === true; },

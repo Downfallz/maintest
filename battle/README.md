@@ -148,10 +148,11 @@ The **Help** button opens the current explanation and a four-phase round guide. 
 opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
 a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
 
-Each instructional subject opens automatically once, after playback and other dialogs have settled.
-**Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
-planning/combat choices and settings. Generic seen-subject/mute preferences use
-`downfall.arena.help.v1`; no seat, token, match, question or choice is persisted. Denied storage falls
+Each instructional subject opens automatically once in each game, after playback and other dialogs have settled
+([ADR 0142](../docs/adr/0142-teach-each-phase-once-per-game.md)). **Phase tips** in Game settings turns them on
+or off for every new game; **Do not show phase tips in this game** mutes them for this game only (ADR 0140).
+Help remains available from the timeline, planning/combat choices and settings. The subjects read are kept
+per game, for the latest twenty games, under `downfall.arena.help.v1`; no seat, token, question or choice is persisted. Denied storage falls
 back to the current page's memory. Opening Help preserves drafts, restores focus on close and never
 acknowledges a question or sends a command. Access loss clears its text.
 
