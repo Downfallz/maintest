@@ -397,3 +397,11 @@ test('opening-round introduction remains arrival-gated by the upkeep controller'
   h.receive([{ ...energyEvent(4), event: { ...energyEvent(4).event, roundId: 1 } }]);
   assert.equal(h.queue.model().active, false);
 });
+test('an incoming action held in Auto keeps its hold when the next result arrives under a dialog', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4)]); h.tick(); h.tick();
+  assert.equal(h.queue.model().stage, 'resolved');
+  h.receive([incoming(5)], {}, { animate: false });
+  assert.equal(h.queue.model().sequence, 4, 'the held action is still the one being read');
+  assert.equal(h.queue.model().remaining, 2);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5);
+});

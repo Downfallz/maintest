@@ -132,9 +132,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // Legacy events have text but no trustworthy intermediate board. A long catch-up (one read bringing more
     // than the limit or crossing several rounds, a reconnection's worth) must not keep a decision behind old pictures either. Both settle
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
-    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. A held Step
-    // waits for Next, so what arrives under a dialog queues behind it; Auto would play it unseen and settles.
-    const held = current !== null && mode === 'step';
+    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. A held Step,
+    // or an incoming action waiting for its OK in Auto too (ADR 0139), keeps what arrives under a dialog queued
+    // behind it; anything else would play unseen in Auto, so it settles.
+    const held = current !== null && (mode === 'step' || incoming(current));
     if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       settle(resultText(arriving.at(-1))); return;
     }
