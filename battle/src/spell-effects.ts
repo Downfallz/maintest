@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DRAW_MS, STRIKE_MS, WINDUP_MS, VFX_MS } from '../../table/battle-timing.js';
+import { DRAW_MS, STRIKE_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
 import type { SpellVisual } from './types';
 
 export interface EffectAnchor { x: number; y: number; radius: number; }
@@ -73,7 +73,7 @@ export class SpellEffects {
     g.setScale(motion.scale).setAlpha(.35);
     g.y += target.radius * motion.rise;
     this.scene.tweens.add({ targets: g, scaleX: 1, scaleY: 1, y: target.y, alpha: 1,
-      duration: 100 / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, VFX_MS - 100, FADE_SCALE[motif] ?? 1.35) });
+      duration: 100 * MOTION_SCALE / rate, ease: 'Cubic.Out', onComplete: () => this.fade(g, rate, VFX_MS - 100 * MOTION_SCALE, FADE_SCALE[motif] ?? 1.35) });
   }
 }
 

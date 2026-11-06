@@ -1,6 +1,6 @@
 import { battleFixture, sampleAction, sampleFrame } from './battle-lab-fixture.js';
 import { combatChanges, combatSnapshot } from './combat-fx.js';
-import { WINDUP_MS } from './battle-timing.js';
+import { MOTION_SCALE, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 // The two stages during which a presentation is in flight: the only ones a skip can cut short.
 const PLAYING = Object.freeze(['windup', 'impact']);
@@ -51,7 +51,7 @@ export function labTransition(state, action) {
 }
 
 // The sample's pacing: the impact lands, then the frame settles. Halved at 2×; any other speed plays at 1×.
-const CUES = Object.freeze([[WINDUP_MS, 'impact'], [1250, 'finish']]);
+const CUES = Object.freeze([[WINDUP_MS, 'impact'], [1250 * MOTION_SCALE, 'finish']]);
 
 // Reset/skip/unmount invalidate pending work, even if an old callback has already been queued.
 //
@@ -76,7 +76,7 @@ export function createLabPlayback(schedule = (callback, delay) => setTimeout(cal
         emit({ type: 'finish' });
         return;
       }
-      const rate = speed === 2 ? 2 : 1;
+      const rate = playbackRate(speed);
       for (const [delay, type] of CUES) {
         timers.push(schedule(() => { if (current === generation) emit({ type }); }, delay / rate));
       }
