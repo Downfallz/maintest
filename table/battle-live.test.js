@@ -103,12 +103,14 @@ test('closed notification streams reconnect with bounded backoff while polling c
 
 test('identical host names remain distinguishable without replacing their names or identities', () => {
   const result = livePresentation({ board: { allies: [{ id: 1, name: 'Main' }], enemies: [{ id: 4, name: 'Main' }] } });
-  assert.deepEqual(result.creatures.map(one => one.label), ['Main · 1', 'Main · 4']);
+  assert.deepEqual(result.creatures.map(one => one.label), ['Creature 1', 'Creature 4'], 'the base creature reads as a creature, numbered');
   assert.deepEqual(result.creatures.map(one => one.name), ['Main', 'Main']);
 });
 test('one label names a creature on every surface: the name alone, the id beside a namesake, the id for an unknown', () => {
   const board = { allies: [{ id: 1, name: 'Main' }, { id: 2, name: 'Scout' }], enemies: [{ id: 4, name: 'Main' }, { id: 5, name: '' }] };
-  assert.deepEqual([1, 2, 4, 5, 9].map(id => creatureLabel(board, id)), ['Main · 1', 'Scout', 'Main · 4', 'Creature 5', 'Creature 9']);
+  assert.deepEqual([1, 2, 4, 5, 9].map(id => creatureLabel(board, id)), ['Creature 1', 'Scout', 'Creature 4', 'Creature 5', 'Creature 9']);
+  const twins = { allies: [{ id: 1, name: 'Scout' }], enemies: [{ id: 4, name: 'Scout' }] };
+  assert.deepEqual([1, 4].map(id => creatureLabel(twins, id)), ['Scout · 1', 'Scout · 4']);
   assert.equal(creatureLabel(null, 3), 'Creature 3'); assert.equal(creatureLabel(board, undefined), 'Creature ?');
 });
 

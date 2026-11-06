@@ -3,11 +3,23 @@ import { missingRoundEnergy, upkeepReceipt, upkeepDisplay } from './battle-upkee
 import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
-import { livePresentation } from './battle-live.js';
+import { creatureLabel, livePresentation } from './battle-live.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
   : [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
+
+// What the reading bar says of the item being read: whose it is, what was cast, and what came of it, in the
+// names the board uses. A receipt says only its title: the receipt itself is on the field.
+export function readingCard(item, board, theirs) {
+  if (!item) return null;
+  if (item.receipt) return { kind: 'summary', title: item.receipt.title, detail: '' };
+  const name = id => creatureLabel(board, id);
+  const outcome = item.status === 'Fizzled' ? [`Fizzled: ${item.reason}`]
+    : [...(item.status === 'Critical' ? ['Critical'] : []),
+      ...(item.effects?.length ? item.effects.map(effect => `${effect.text} → ${name(effect.target?.id)}`) : ['No effect'])];
+  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · ') };
+}
 
 function pacedUpkeep(entries, board, round, ordinaryRounds) {
   const receipt = upkeepReceipt(entries, round, board);
@@ -183,7 +195,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       canNext: Boolean(current && stage === 'resolved'),
       // Next is offered for every incoming action, whatever the pace, and for everything when the player steps.
-      asks: Boolean(current && waits(current)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      asks: Boolean(current && waits(current)), reading: readingCard(current, latest?.board, incoming(current)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;

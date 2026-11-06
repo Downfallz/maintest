@@ -347,7 +347,9 @@ move on by themselves in either pace; Step holds the turnover receipts (aftermat
 Auto plays them by itself. While results remain, the action, mutation and
 result entries are withdrawn and nothing opens by itself. **Skip all**, rotation (an orientation change, not every resize), a motion/speed change or
 connection loss immediately restores the authoritative board. Results that arrive while a dialog
-covers the board queue behind a held item (an incoming action, or a receipt in Step); otherwise they settle rather than play unseen. These presentation controls never submit or
+covers the board queue behind a held item (an incoming action, or a receipt in Step); otherwise they settle rather than play unseen. While results are read the dock is one card, in the dock's own row so the field never resizes: whose action
+it was (opponent's, the player's own, or a round summary, with how many more follow), what was cast, what came of
+it, and **OK**/**Next** and **Skip all** beside it. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,

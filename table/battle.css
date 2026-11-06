@@ -7,10 +7,13 @@
 /* Detailed order lives in a bounded reference; the compact strip keeps the battlefield visible. */
 #battle .timeline-wrap { gap: 6px; min-width: 0; }
 #order-open { flex: none; font-size: 11px; min-height: 44px; padding: 6px; }
-#battle #timeline { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); grid-template-columns: none; gap: 3px; }
-#battle #timeline li { min-width: 0; padding: 0; }
-#timeline li > button { display: block; width: 100%; min-height: 44px; padding: 4px; border: 0; background: transparent; color: inherit; text-align: left; font-size: inherit; }
-#timeline li > button > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The turn order names every creature in full: the strip scrolls sideways when the names outgrow it, and the
+   creature acting is brought into view. */
+#battle #timeline { position: relative; flex: 1; min-width: 0; display: flex; gap: 3px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+#battle #timeline::-webkit-scrollbar { display: none; }
+#battle #timeline li { flex: 1 0 auto; min-width: max-content; padding: 0; scroll-snap-align: start; }
+#timeline li > button { display: block; width: 100%; min-height: 44px; padding: 4px 8px; border: 0; background: transparent; color: inherit; text-align: left; font-size: inherit; }
+#timeline li > button > span { display: block; white-space: nowrap; }
 #timeline li[data-state="Completed"] { opacity: .7; }
 #order-dialog { padding: 0; width: min(780px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
 #order-dialog[open] { display: flex; flex-direction: column; }
@@ -136,7 +139,6 @@
 }
 /* Result details stay in an overlay, so multi-target outcomes cannot grow the fixed dock. */
 #playback-result { min-height: 44px; font-size: 11px; padding: 6px 10px; margin-top: 4px; }
-#playback-skip { min-height: 44px; padding: 8px; font-size: 11px; white-space: nowrap; }
 #result-text { display: block; line-height: 1.7; overflow-wrap: anywhere; font-size: 14px; }
 .creature-effect { position: absolute; left: 0; right: 0; bottom: 100%; color: #fff0ce; background: #102129ed; border: 1px solid #bca77570; border-radius: 4px; padding: 4px; font-size: 10px; line-height: 1.4; max-height: 44px; overflow: hidden; pointer-events: none; }
 @media (max-width: 619px) {
@@ -402,20 +404,13 @@
 #playback-receipt [data-tone="energy"] { color: #c2daf0; }
 #playback-receipt [data-tone="harm"] { color: #f3b3aa; }
 #battle[data-receipt="true"] .team-label { visibility: hidden; }
-#playback-pacing { display: flex; align-items: center; gap: 6px; }
-#playback-next { min-height: 44px; font: inherit; font-size: 12px; padding: 6px 8px; }
-#playback-next { border-color: #a88b54; }
-#playback-next[aria-disabled="true"] { opacity: .5; cursor: default; }
 @media (max-width: 600px), (max-height: 500px) {
   #playback-receipt { inset: 6px; padding: 12px 16px; }
   #playback-receipt h2 { font-size: 18px; margin-bottom: 6px; }
   #playback-receipt h3 { margin-top: 10px; }
-  #playback-skip { white-space: normal; }
 }
 
 @media (max-width: 619px) {
-  #playback-pacing { gap: 4px; padding-inline: 6px; }
-  #playback-next, #playback-skip { padding: 4px 6px; font-size: 11px; }
 }
 @media (max-height: 650px) and (max-width: 619px) {
 }
@@ -635,9 +630,6 @@
 #playback-receipt.paced-upkeep .eyebrow, #playback-receipt.paced-upkeep .receipt-note { display: none; }
 #paced-summary { margin: 3px 0; }
 #playback-receipt.paced-upkeep button { min-height: 44px; border: 0; background: transparent; color: var(--gold); }
-/* The upkeep sheet says what the dock below it would repeat: the field takes the dock's place while it reads. */
-#battle:has(#playback-receipt.paced-upkeep:not([hidden])) .command-dock { display: none; }
-#battle:has(#playback-receipt.paced-upkeep:not([hidden])) #battle-zone { grid-row: 3 / -1; }
 body:has(#upkeep-dialog[open]) #battle :is(.command-dock, #playback-pacing) { display: none; }
 body:has(#upkeep-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: calc(var(--upkeep-dock-height, 128px) + env(safe-area-inset-bottom)); }
 body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
@@ -665,9 +657,37 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 }
 @media (max-height: 520px) and (min-width: 620px) { #battle { grid-template-rows: 46px 44px minmax(0,1fr) 86px; } }
 @media (max-height: 650px) and (max-width: 619px) { #battle { grid-template-rows: 44px 44px minmax(0,1fr) 144px; } }
-/* Next and Skip float over the battlefield: a row appearing would resize the scene, which cancels playback. */
-#battle-zone #playback-pacing { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 12; gap: 8px; padding: 4px 8px; border: 1px solid #607568; border-radius: 8px; background: #142126e6; }
-#battle-zone:has(#playback-pacing:not([hidden])) #playback-receipt { padding-bottom: 64px; }
+/* While results are read, the dock is a single card: whose action it was, what came of it, and the OK beside
+   it. It takes the dock's own row, which keeps its height: resizing the field would cancel the animation. */
+#battle[data-reading="true"] .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
+#playback-pacing { grid-column: 1 / -1; grid-row: 1 / -1; align-self: center; display: flex; align-items: center; gap: 16px; min-width: 0;
+  padding: 12px 16px 12px 18px; border: 1px solid #4f6459; border-left: 3px solid var(--reading-accent, #8cb4a0); border-radius: 10px;
+  background: linear-gradient(90deg, #1b2b30, #142126); box-shadow: 0 6px 18px #0006; }
+#playback-pacing[data-kind="incoming"] { --reading-accent: #d98b6f; }
+#playback-pacing[data-kind="own"] { --reading-accent: #8cc7ad; }
+#playback-pacing[data-kind="summary"] { --reading-accent: var(--gold); }
+.reading-text { flex: 1; min-width: 0; }
+.reading-text p { margin: 0; }
+#reading-kind { color: var(--reading-accent, #8cb4a0); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+#reading-title { margin-top: 3px; color: #f2eee2; font: 400 19px/1.25 Georgia, serif; overflow-wrap: anywhere; }
+#reading-detail { margin-top: 3px; color: #c4d0c7; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.reading-buttons { flex: none; display: flex; align-items: center; gap: 10px; }
+#playback-next { min-width: 112px; min-height: 48px; padding: 8px 22px; border: 1px solid #d8b878; border-radius: 8px;
+  background: linear-gradient(#e6c88c, #c9a463); color: #1a1d1a; font: 700 15px/1 system-ui, sans-serif; letter-spacing: .04em; }
+#playback-next[aria-disabled="true"] { opacity: .45; cursor: default; }
+#playback-skip { min-height: 44px; padding: 8px 12px; border: 1px solid #607568; border-radius: 8px; background: transparent; color: #c4d0c7; font-size: 12px; white-space: nowrap; }
+@media (max-width: 619px) {
+  #playback-pacing { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 12px 10px 14px; }
+  #reading-title { font-size: 17px; }
+  #reading-detail { font-size: 12px; }
+  .reading-buttons { gap: 8px; }
+  #playback-next { flex: 1; min-height: 46px; }
+}
+@media (max-height: 520px) and (min-width: 620px), (max-height: 650px) and (max-width: 619px) {
+  #playback-pacing { flex-direction: row; align-items: center; padding: 6px 10px; gap: 10px; }
+  #reading-kind { font-size: 9px; } #reading-title { font-size: 15px; margin-top: 1px; } #reading-detail { font-size: 11px; margin-top: 1px; }
+  #playback-next { flex: none; min-width: 88px; min-height: 44px; padding: 6px 14px; }
+}
 
 /* Evolution keeps its private draft beside the battlefield. Reserve space in the actual
    scene so Phaser and the accessible creature targets keep the same coordinate system. */

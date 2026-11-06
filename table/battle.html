@@ -29,7 +29,6 @@
       <aside id="growth-receipt" hidden aria-label="Mutations revealed"><span class="growth-receipt-mark" aria-hidden="true"></span><p class="growth-receipt-text"><strong>Mutations revealed</strong><span id="growth-receipt-summary"></span></p><button type="button" data-growth-open data-growth-mode="reveal" aria-describedby="growth-announcement">See</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation reveal">×</button></aside>
       <div id="actor-layer" aria-label="Inspect creatures"></div>
       <article id="playback-receipt" hidden tabindex="0" aria-labelledby="receipt-title"><p class="eyebrow">RECORDED ROUND EVENTS</p><h2 id="receipt-title"></h2><p class="receipt-note">Text receipt · no exact battlefield was recorded for this step.</p><p id="paced-summary" hidden></p><button id="paced-details" type="button" hidden aria-controls="receipt-sections" aria-expanded="false">Details</button><div id="receipt-sections"></div><button type="button" data-history-open>Open History</button></article>
-      <div id="playback-pacing" hidden><button id="playback-next" type="button" hidden>OK</button><button id="playback-skip" type="button" hidden>Skip</button></div>
       <div id="loading" hidden><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Opening your battle</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
     </section>
     <section class="command-dock" aria-label="Live match status">
@@ -44,6 +43,7 @@
           <div class="combat-buttons"><button id="combat-back" type="button" aria-label="Change spell">Spells</button><button class="primary" id="combat-confirm" type="button">Cast</button><button id="combat-cancel" type="button" aria-label="Cancel action">×</button></div>
         </div>
       </div>
+      <div id="playback-pacing" hidden><div class="reading-text"><p id="reading-kind"></p><p id="reading-title"></p><p id="reading-detail"></p></div><div class="reading-buttons"><button id="playback-skip" type="button" hidden>Skip</button><button id="playback-next" type="button" hidden>OK</button></div></div>
     </section>
     <section id="replay-controls" hidden aria-label="Recorded match replay">
       <div><strong id="replay-position"></strong><p id="replay-text" aria-live="polite"></p><small id="replay-note"></small></div>

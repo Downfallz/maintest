@@ -254,8 +254,14 @@ function render() {
   if (playbackState.asks && playbackState.canNext && !nextWasUsable && !document.querySelector('dialog:modal')
     && (!focused || focused === document.body || !focused.getClientRects().length)) $('playback-next').focus({ preventScroll: true });
   text('playback-next', playbackState.remaining > 1 ? 'Next' : 'OK');
-  // The reading preference lives in the settings; the row only holds Next and Skip while results play.
-  $('playback-pacing').hidden = !view || replay.active || targeting || ($('playback-next').hidden && $('playback-skip').hidden);
+  // While results are read the dock is one card: whose action, what it did, and the OK beside it.
+  $('playback-pacing').hidden = !view || replay.active || targeting || !playbackState.active;
+  const reading = playbackState.reading;
+  $('playback-pacing').dataset.kind = reading?.kind ?? '';
+  const more = playbackState.remaining > 1 ? ` · ${playbackState.remaining - 1} more` : '';
+  text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
+  text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
+  $('reading-detail').hidden = !reading?.detail;
   receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
   $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
   $('playback-result').hidden = !playbackState.summary;
@@ -277,7 +283,7 @@ function render() {
   frame = mutation.frame;
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
-  if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING CONFIRMED EVENTS' : connectionText(replay.active, action.opened));
+  if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
   for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
   for (const one of creatures) {

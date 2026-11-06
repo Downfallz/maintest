@@ -1,5 +1,6 @@
 import { creatureAppearance } from './battle-art.js';
 import { boardPresentation } from './presentation.js';
+import { creatureName } from './terms.js';
 
 // How every surface of the battle names a creature off a seat's board (the scene, the journal, the guide):
 // its name, and its id beside it only when another creature on the board shares that name. A creature the
@@ -8,7 +9,9 @@ export function creatureLabel(board, id) {
   const roster = [...(board?.allies ?? []), ...(board?.enemies ?? [])];
   const one = roster.find(creature => creature.id === id);
   if (!one?.name) return `Creature ${id ?? '?'}`;
-  return roster.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${id}` : one.name;
+  const name = creatureName(one.name);
+  if (name === 'Creature') return `Creature ${id}`;
+  return roster.filter(other => other.name === one.name).length > 1 ? `${name} · ${id}` : name;
 }
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.

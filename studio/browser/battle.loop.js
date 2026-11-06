@@ -242,6 +242,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#order-list [data-order-creature]')).toHaveText(view.board.timeline.map(slot => {
           const creatures = [...view.board.allies, ...view.board.enemies], one = creatures.find(one => one.id === slot.creature);
+          // The base creature reads as a numbered creature (player-terminology.md); other namesakes take their id.
+          if (one.name === 'Main') return `Creature ${one.id}`;
           return creatures.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name;
         }));
         for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);

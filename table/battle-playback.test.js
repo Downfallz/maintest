@@ -440,3 +440,21 @@ test('an upkeep that arrives once its round\'s combat has begun draws no borrowe
   assert.equal(h.queue.model().receipt.category, 'Upkeep');
   assert.deepEqual(h.queue.model().board.creatures, []);
 });
+test('the reading card says whose action it is, what was cast and what came of it, in the board\'s names', () => {
+  const h = harness(); h.receive([]);
+  h.receive([incoming(4)], { board: { ...view().board, allies: [{ ...creature(1), name: 'Main' }], enemies: [{ ...creature(2, 13), name: 'Main' }, creature(3)] } });
+
+  const card = h.queue.model().reading;
+
+  assert.equal(card.kind, 'incoming'); assert.equal(card.title, 'Creature 2 · Strike');
+  assert.match(card.detail, /^Critical · .+ → Creature 1$/);
+});
+test('the reading card marks the player\'s own cast, a fizzle and a round summary', () => {
+  const own = harness(); own.receive([]); own.receive([event(4)]);
+  assert.equal(own.queue.model().reading.kind, 'own');
+  const fizzle = harness(); fizzle.receive([]);
+  fizzle.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, fizzled: true, fizzleReason: { message: 'Not enough energy' } }, appliedOutcomes: [] })]);
+  assert.match(fizzle.queue.model().reading.detail, /^Fizzled: /);
+  const summary = harness(); summary.queue.setMode('step'); summary.receive([]); summary.receive([cleanupEvent(4)]);
+  assert.deepEqual(summary.queue.model().reading, { kind: 'summary', title: summary.queue.model().receipt.title, detail: '' });
+});
