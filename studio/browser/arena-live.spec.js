@@ -133,7 +133,7 @@ test('network failures mark the retained board stale and recover with a new snap
 test('an invitation is reviewed at the table and never claimed here', async ({ page }) => {
   const state = await mount(page, { saved: false, invitation: true, search: '?player1=invite' });
   await expect(page.locator('#access-link')).toHaveText('Review invitation'); await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?player1=invite');
-  expect(state.requests.map(one => one.path)).toEqual(['/api/lobby/resume', '/api/lobby/invitations']);
+  expect(state.requests.map(one => one.path).sort()).toEqual(['/api/lobby/invitations', '/api/lobby/resume', '/api/me']);
 });
 test('a refused discovery sends the player to sign in, and back here afterwards', async ({ page }) => {
   await mount(page, { saved: false, search: '?player1=first', resumeStatus: 401 });

@@ -58,38 +58,23 @@ export function loadGoogle(doc, win = globalThis) {
   });
 }
 
-/**
- * Draws the account: the sign-in when nobody is signed in, the chip when somebody is, and the name dialog in
- * between. `onChange` is told the account (or null) whenever it changes, so the lobby can redraw what it shows.
- */
-export function mountAccount(doc, { request = accountRequest, google = () => loadGoogle(doc), onChange = () => {} } = {}) {
+export function confirmAction(doc, title, detail, label) {
+  const dialog = doc.getElementById('action-dialog');
+  doc.getElementById('action-title').textContent = title;
+  doc.getElementById('action-detail').textContent = detail;
+  doc.getElementById('action-confirm').textContent = label;
+  dialog.returnValue = '';
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
+  });
+}
+
+function mountSignIn(doc, { request, google, refresh, say }) {
   const el = id => doc.getElementById(id);
   let ticket = null;
   let checking = 0;
   let timer = null;
-
-  const say = (id, text = '') => { el(id).textContent = text; el(id).hidden = !text; };
-
-  function show(state) {
-    const signedIn = state.account !== null;
-    el('sign-in-panel').hidden = state.mode === 'off' || signedIn;
-    el('account').hidden = !signedIn;
-    el('dev-sign-in').hidden = state.mode !== 'dev';
-    el('google-button').hidden = state.mode !== 'google';
-    if (signedIn) {
-      el('account-name').textContent = state.account.username;
-      el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
-      el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
-    }
-    onChange(state.account, state.mode);
-  }
-
-  async function refresh() {
-    const state = accountState(await request('/api/me').catch(() => null));
-    show(state);
-    return state;
-  }
-
   async function signedIn(answer) {
     if (answer.needsUsername) {
       ticket = answer.ticket;
@@ -157,11 +142,54 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
 
   el('name-cancel').addEventListener('click', () => { ticket = null; el('name-dialog').close(); });
 
+  return withGoogle;
+}
+
+/**
+ * Draws the account: the sign-in when nobody is signed in, the chip when somebody is, and the name dialog in
+ * between. `onChange` is told the account (or null) whenever it changes, so the lobby can redraw what it shows.
+ */
+export function mountAccount(doc, { request = accountRequest, readMe = () => request('/api/me'), google = () => loadGoogle(doc), onChange = () => {} } = {}) {
+  const el = id => doc.getElementById(id);
+  const say = (id, text = '') => { el(id).textContent = text; el(id).hidden = !text; };
+  const signIn = el('sign-in-panel') ? mountSignIn(doc, { request, google, refresh, say }) : null;
+
+  async function refresh() {
+    const state = accountState(await readMe().catch(() => ({ accounts: 'unavailable' })));
+    if (signIn) {
+      el('sign-in-panel').hidden = state.mode === 'off' || Boolean(state.account);
+      el('dev-sign-in').hidden = state.mode !== 'dev';
+      el('google-button').hidden = state.mode !== 'google';
+      // Unreachable is neither signed out nor accounts-off: no way in is offered, so the panel says why.
+      if (state.mode === 'unavailable') say('sign-in-problem', 'Could not reach the host to check your account. Reload the page to try again.');
+      else if (el('sign-in-problem').textContent.startsWith('Could not reach the host to check')) say('sign-in-problem');
+    }
+    el('account').hidden = !state.account;
+    if (state.account) {
+      el('account-name').textContent = state.account.username;
+      el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
+      el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
+    }
+    onChange(state.account, state.mode);
+    return state;
+  }
+
   for (const [id, everywhere] of [['sign-out', false], ['sign-out-everywhere', true]]) {
     el(id).addEventListener('click', async () => {
-      await request('/api/account/signout', { everywhere }).catch(() => {});
+      say('account-problem');
+      const title = everywhere ? 'Sign out everywhere?' : 'Sign out on this device?';
+      const detail = everywhere ? 'You will need to sign in again on every device.' : 'You can sign in again to resume your games.';
       el('account-menu').open = false;
-      await refresh();
+      el('account-menu').querySelector('summary').focus();
+      if (!await confirmAction(doc, title, detail, everywhere ? 'Sign out everywhere' : 'Sign out')) return;
+      el(id).disabled = true;
+      try {
+        await request('/api/account/signout', { everywhere });
+        await refresh();
+      } catch (error) {
+        el('account-menu').open = true;
+        say('account-problem', error.message);
+      } finally { el(id).disabled = false; }
     });
   }
 
@@ -186,5 +214,5 @@ export function mountAccount(doc, { request = accountRequest, google = () => loa
     } finally { el('delete-submit').disabled = false; }
   });
 
-  return refresh().then(state => withGoogle(state).then(() => state));
+  return refresh().then(async state => { await signIn?.(state); return state; });
 }

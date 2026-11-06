@@ -4,7 +4,7 @@ import { fitsViewport } from './fit.js';
 test.beforeEach(returningArenaPlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: health > 0, conditions: [], knownSpells: [], acquiredTiers: [] });
-async function mount(page, { over = true, recording = true, outcome = { winner: 'player1', reason: 'Elimination' }, both = false, permission = 'default', unsupported = false } = {}) {
+async function mount(page, { over = true, recording = true, outcome = { winner: 'player1', reason: 'Elimination' }, both = false, account = null, permission = 'default', unsupported = false } = {}) {
   const state = { status: 200, writes: [], reads: [], errors: [], view: { over, recording, outcome,
     waitingFor: null, feed: [], feedNext: 0, board: { slot: 'Player1', roundNumber: 7, phase: 'Combat', subPhase: 'Activation',
       allies: [creature(1, 17), creature(2, 4), creature(3, 0)], enemies: [creature(4, 0), creature(5, 0), creature(6, 0)], timeline: [] } } };
@@ -32,6 +32,8 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
   await page.route('**/api/**', async route => {
     const req = route.request(), url = new URL(req.url()); state.reads.push({ path: url.pathname, query: url.search, token: req.headers()['x-seat-token'] });
     if (req.method() !== 'GET' && !url.pathname.endsWith('/resume')) state.writes.push({ path: url.pathname, method: req.method(), body: req.postDataJSON(), token: req.headers()['x-seat-token'] });
+    if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account } });
+    if (url.pathname === '/api/friends') return route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } });
     if (url.pathname.endsWith('/resume')) return route.fulfill({ json: { tables: [{ table: { id: 'one', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }, ...(both ? [{ seat: 'player2', token: 'second' }] : [])] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [] } });
     if (url.pathname === '/api/lobby/push') return route.fulfill({ json: { publicKey: 'AQID' } });
@@ -61,9 +63,19 @@ test('empty replay keeps an explicit message on the result and a legacy outcome 
   await expect(page.locator('#match-dialog')).toBeVisible(); await expect(page.locator('#replay-controls')).toBeHidden();
 });
 test('one accepted seat resumes without selection or a shown acknowledgement; switching clears it first', async ({ page }) => {
+  // Record the initial HTML and every title change, including the asynchronous seat lookup.
+  await page.addInitScript(() => {
+    window.accessPanelShown = false;
+    new MutationObserver(() => {
+      const panel = document.querySelector('#loading');
+      if (panel && !panel.hidden) window.accessPanelShown = true;
+    }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+  });
   const h = await mount(page); await expect(page.locator('#seat-choices')).toBeEmpty();
+  expect(await page.evaluate(() => window.accessPanelShown)).toBe(false);
   expect(h.reads.filter(one => one.path.startsWith('/api/seat/')).every(one => one.token === 'first' && !one.query.includes('shown='))).toBe(true);
   await page.locator('#switch-seat').click(); await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#seat-choices button')).toHaveCount(1);
+  await expect(page.locator('#load-title')).toHaveText('Choose your viewpoint');
   await expect(page.locator('#noted')).toBeEmpty(); await expect(page.locator('#match-stats')).toBeEmpty();
 });
 test('two accepted seats stay behind explicit selection and suppress notification controls', async ({ page }) => {
@@ -122,4 +134,27 @@ test('final actions fit short landscape and portrait with readable stats', async
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport); await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"], #match-notes');
   }
+});
+
+test('a signed-in player can read a menu panel and return to the same live match in short landscape', async ({ page }, info) => {
+  await page.setViewportSize({ width: 740, height: 320 });
+  await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  const board = page.locator('#battle-zone');
+  const before = await board.boundingBox();
+  // The signed-in navigation uses the match toolbar's row, preserving the full field height.
+  const withoutHeader = await page.locator('.home-header').evaluate(header => {
+    header.hidden = true;
+    const height = document.getElementById('battle-zone').getBoundingClientRect().height;
+    header.hidden = false;
+    return height;
+  });
+  expect(before.height).toBe(withoutHeader);
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await page.getByRole('button', { name: 'Your data', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'What we keep' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  expect(await board.boundingBox()).toEqual(before);
+  await expect(page.locator('#connection')).toHaveText('LIVE');
+  await fitsViewport(page, '#home-menu-toggle, #settings, #order-open');
+  await page.screenshot({ path: info.outputPath('signed-in-arena-landscape.jpg'), type: 'jpeg' });
 });

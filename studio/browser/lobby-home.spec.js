@@ -9,8 +9,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false } = {}) {
-  const state = { account, mode, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false } = {}) {
+  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -25,8 +25,9 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const json = value => route.fulfill({ json: value });
+    if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
     if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator });
-    if (path === '/api/account/signout') { state.account = null; return json({}); }
+    if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
       if (state.offline) return route.fulfill({ status: 503, json: { message: 'Offline' } });
@@ -37,6 +38,10 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       const tables = state.account || state.mode === 'off' ? [held] : [];
       if (delayMine && state.mineReads === 1) await new Promise(resolve => { state.release = resolve; });
       return json({ tables, invitations: [] });
+    }
+    if (path === `/api/friends/${friend.id}` && route.request().method() === 'DELETE') {
+      state.removals = (state.removals ?? 0) + 1;
+      state.friends = { ...state.friends, friends: [] }; return json({});
     }
     if (path === '/api/friends') { state.friendReads++; return json(state.friends); }
     if (path === `/api/friends/requests/${challenger.id}/accept`) {
@@ -76,6 +81,7 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await expect(page.locator('#sign-in-panel')).toBeInViewport();
   await page.evaluate(() => scrollTo(0, 0));
   await openNavigation(page);
+  await expect(page.locator('#join-open')).toBeHidden();
   await expect(page.getByRole('link', { name: 'Leaderboard', exact: true })).toHaveAttribute('href', '/leaderboard');
   await page.getByRole('button', { name: 'Your data', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Your data', exact: true })).toBeVisible();
@@ -133,7 +139,7 @@ test('inviting a friend leaves the friends window and selects that friend in the
 });
 
 test('joining validates the code inside its window and follows a valid invitation', async ({ page }) => {
-  await home(page, { account: null });
+  await home(page);
   await openPanel(page, 'Join with a code');
   await page.getByLabel('Invitation code').fill('ABC');
   await page.getByRole('button', { name: 'Join →', exact: true }).click();
@@ -150,7 +156,10 @@ test('sign-out clears private content even when an earlier game request finishes
   await expect.poll(() => Boolean(state.release)).toBe(true);
   await page.locator('#account-menu summary').click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.locator('#action-dialog')).toContainText('Sign out on this device?');
+  await page.locator('#action-confirm').click();
   await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  expect(state.signouts).toEqual([{ everywhere: false }]);
   state.release();
   await expect(page.locator('#my-tables .game-card')).toHaveCount(0);
   await expect(page.locator('#friend-list')).toBeEmpty();
@@ -183,9 +192,12 @@ test('local hosts still resume games and reconnect automatically without a refre
 
 test('navigation and dialogs fit narrow, intermediate and short landscape screens', async ({ page }) => {
   await home(page, { account: { ...player, username: 'VeryLongPlayerName123' }, operator: true });
-  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1280, 800], [740, 320]]) {
+  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1241, 800], [1280, 800], [740, 320]]) {
     await page.setViewportSize({ width, height });
     await noOverflow(page);
+    await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
+    if (width <= 1240) await expect(page.locator('#home-menu-toggle')).toBeVisible();
+    else await expect(page.locator('#home-menu-toggle')).toBeHidden();
     await openPanel(page, /^Friends/);
     const dialog = page.locator('#friends-dialog');
     await expect(dialog).toBeVisible();
@@ -205,4 +217,69 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
   await openNavigation(page);
   await page.locator('.home-header').click({ position: { x: 1, y: 1 } });
   await expect(page.locator('#home-navigation')).toBeHidden();
+});
+
+test('removing a friend requires confirming the named player, and hides an empty count', async ({ page }) => {
+  const state = await home(page);
+  await openPanel(page, /^Friends/);
+  const remove = page.getByRole('button', { name: 'Remove', exact: true });
+  await remove.click();
+  await expect(page.locator('#action-title')).toHaveText('Remove Bastien?');
+  await page.keyboard.press('Escape');
+  await expect(remove).toBeVisible();
+  expect(state.removals).toBeUndefined();
+  await remove.click();
+  await page.locator('#action-confirm').click();
+  await expect(page.locator('#friend-list')).toHaveText(/No friends yet/);
+  await expect(page.locator('#friend-count')).toBeHidden();
+  expect(state.removals).toBe(1);
+});
+
+test('account deletion can be cancelled and signing out everywhere requires its own confirmation', async ({ page }) => {
+  const state = await home(page);
+  await page.locator('#account-menu summary').click();
+  await page.locator('#delete-account').click();
+  await expect(page.getByLabel('Type your player name to confirm')).toBeFocused();
+  await page.locator('#delete-cancel').click();
+  await page.locator('#account-menu summary').click();
+  await page.locator('#sign-out-everywhere').click();
+  await expect(page.locator('#action-detail')).toContainText('every device');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(state.signouts).toBeUndefined();
+  if (!await page.locator('#sign-out-everywhere').isVisible()) await page.locator('#account-menu summary').click();
+  await page.locator('#sign-out-everywhere').click();
+  await page.locator('#action-confirm').click();
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  expect(state.signouts).toEqual([{ everywhere: true }]);
+});
+
+for (const file of ['leaderboard', 'arena', 'index']) {
+  test(`the signed-in ${file} page opens the same menu and friends panel in place`, async ({ page }) => {
+    await home(page);
+    await page.goto(`/table/${file}.html`);
+    await expect(page.locator('#account-name')).toHaveText(player.username);
+    await openNavigation(page);
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Your data', 'Join with a code']);
+    const sharedStyle = await nav.evaluate(node => {
+      const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
+      const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
+      return { link: styleOf('#leaderboard-link'), button: styleOf('#notifications-open') };
+    });
+    expect(sharedStyle.link).toEqual(sharedStyle.button);
+    if (file === 'leaderboard') await expect(nav.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute('aria-current', 'page');
+    await nav.getByRole('button', { name: /^Friends/ }).click();
+    await expect(page.locator('#friends-dialog')).toBeVisible();
+    await expect(page.locator('#friend-list')).toContainText(friend.username);
+    await expect(page).toHaveURL(new RegExp(`/${file}\\.html$`));
+    await page.keyboard.press('Escape');
+    await noOverflow(page);
+  });
+}
+
+test('an account host that cannot be reached says so instead of offering a sign-in with no way in', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google', meDown: true });
+  await expect(page.locator('#sign-in-problem')).toHaveText('Could not reach the host to check your account. Reload the page to try again.');
+  await expect(page.locator('#home-games')).toBeHidden();
+  expect(state.errors).toEqual([]);
 });

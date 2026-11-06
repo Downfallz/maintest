@@ -77,6 +77,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   render();
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
+  !document.querySelector('.navigation-panels dialog[open]') &&
   !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
@@ -112,6 +113,7 @@ function status(state: string) {
   $('arena').dataset.connection = state;
   // Losing the connection or the seat fences a pending sound opt-in; an animation's own cancellation does not.
   if (state === 'stale' || state === 'signin' || state === 'revoked') audio.stop();
+  if (state === 'signin' || state === 'revoked' || (state === 'stale' && !view)) $('loading').hidden = false;
   if (['signin', 'revoked'].includes(state)) services.reset();
   services.setOnline(state === 'live');
   if (state === 'stale') playback.skip();
@@ -299,11 +301,11 @@ function render() {
   const order = arenaOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
-  const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : 'Choose a seat to enter';
+  const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : guide.objective);
+  text('instruction', !view ? '' : playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
-  $('loading').hidden = Boolean(view && ready && !rendererFailed);
+  if (view && ready && !rendererFailed) $('loading').hidden = true;
   if (!view) {
     inspected = null; renderInspection();
     text('updated', 'No board loaded');
@@ -325,6 +327,7 @@ function choose(choice: Choice) {
   if (rendererFailed) return;
   discovering++;
   selected = choice;
+  $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
   $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
@@ -338,10 +341,11 @@ async function discover(autoResume = true) {
   audio.stop();
   if (rendererFailed) return;
   const ticket = ++discovering;
+  $('loading').hidden = true;
   connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
   $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
-  text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Choose a seat');
-  text('load-title', 'Choose your viewpoint'); text('load-detail', 'Verifying the seats saved in this browser…');
+  text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Connecting…');
+  text('load-title', 'Opening your arena'); text('load-detail', 'Verifying the seats saved in this browser…');
   text('access-link', 'Open tables'); $<HTMLAnchorElement>('access-link').href = '/';
   const recorded = replayOf(location.search);
   if (recorded) {
@@ -356,6 +360,9 @@ async function discover(autoResume = true) {
     if (ticket !== discovering) return;
     heldSeats = result.held;
     if (autoResume && result.choices.length === 1 && !result.invitations.length && result.held.filter((one: Choice) => one.table.id === result.choices[0].table.id).length === 1) { choose(result.choices[0]); return; }
+    $('loading').hidden = false;
+    text('load-title', result.choices.length ? 'Choose your viewpoint' : 'No seat available');
+    text('connection', result.choices.length ? 'Choose a seat' : 'No active seat');
     text('load-detail', result.choices.length ? 'Only the selected seat will be loaded. Choose who is holding this device.' : 'No accepted seat was found for this link or browser.');
     for (const choice of result.choices as Choice[]) {
       const button = document.createElement('button'); button.type = 'button';
@@ -364,14 +371,16 @@ async function discover(autoResume = true) {
       button.addEventListener('click', () => choose(choice)); $('seat-choices').append(button);
     }
     if (result.invitations.length) {
+      text('load-title', 'Review your invitation');
       text('load-detail', 'This link is an invitation. Accept it at the table before opening its live view.');
       text('access-link', 'Review invitation'); $<HTMLAnchorElement>('access-link').href = `/play${location.search}`;
     }
     $('retry').hidden = result.choices.length > 0;
   } catch (error) {
     if (ticket !== discovering) return;
+    $('loading').hidden = false;
     if ((error as { status?: number }).status === 401) status('signin');
-    else { text('load-detail', 'Could not verify saved seats. Check the connection and try again.'); $('retry').hidden = false; }
+    else { text('load-title', 'Connection interrupted'); text('load-detail', 'Could not verify saved seats. Check the connection and try again.'); $('retry').hidden = false; }
   }
 }
 
@@ -379,8 +388,8 @@ scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one
 scene.onReady = () => { ready = true; $('arena').dataset.ready = 'true'; $('arena').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();
-  rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
-  render(); text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
+  discovering++; rendererFailed = true; ready = false; view = null; connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset();
+  render(); $('loading').hidden = false; text('load-title', 'The renderer was interrupted'); text('load-detail', 'Reload to restore the scene, or continue playing at the table.');
   // The match goes on without the scene: the same seat continues at the table, not the lobby.
   if (selected) {
     text('access-link', 'Continue at table');

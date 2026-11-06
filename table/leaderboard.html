@@ -11,12 +11,10 @@
   <link rel="stylesheet" href="table.css" />
   <link rel="stylesheet" href="lobby.css" />
   <link rel="stylesheet" href="leaderboard.css" />
+  <script type="module" src="navigation.js"></script>
 </head>
 <body class="lobby-page">
-  <header class="masthead lobby-header">
-    <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></a>
-    <nav aria-label="Ladder navigation"><a href="/">Tables</a></nav>
-  </header>
+  <header class="masthead lobby-header home-header" data-navigation="leaderboard"></header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="ladder-title">
       <div><p class="eyebrow">Ranked games between two players</p><h2 id="ladder-title">The ladder.</h2><p class="hero-detail">Every finished game between two accounts moves both ratings. Beat a stronger player and you climb further.</p></div>

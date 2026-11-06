@@ -174,8 +174,8 @@ test('the lobby\'s dialog opens with the table\'s entrance', async ({ page }) =>
 test('mobile header saves space and the guide stays above the sticky round bar', async ({ page }, info) => {
   await page.evaluate(() => scrollTo(0, 0));
   if (isPhone(page)) {
-    expect((await page.locator('.masthead').boundingBox()).height).toBeLessThanOrEqual(50);
-    await expect(page.locator('.brand')).toBeHidden();
+    expect((await page.locator('.masthead:not(.home-header)').boundingBox()).height).toBeLessThanOrEqual(50);
+    await expect(page.locator('.masthead:not(.home-header) .brand')).toBeHidden();
     await expect(page.locator('#phase')).toBeHidden();
   }
   await page.locator('#shape > summary').click();
@@ -191,6 +191,25 @@ test('mobile header saves space and the guide stays above the sticky round bar',
   expect(aboveDock).toBe(true);
   await expectNoSidewaysScroll(page);
   await page.screenshot({ path: info.outputPath('round-guide.png'), animations: 'disabled' });
+});
+
+test('the classic match ignores game shortcuts while its player menu owns focus', async ({ page }) => {
+  await page.route('**/api/me', route => route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_one', username: 'Marc' } } }));
+  const decisions = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().endsWith('/decision')) decisions.push(request.url());
+  });
+  await page.reload();
+  await expect(page.locator('#account-name')).toHaveText('Marc');
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+  const menu = page.locator('#home-menu-toggle');
+  if (await menu.isVisible()) await menu.click();
+  await page.locator('#data-open').click();
+  await page.keyboard.press('1');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#data-dialog')).toBeHidden();
+  await expect(page.locator('.speed-spell')).toHaveCount(6);
+  expect(decisions).toEqual([]);
 });
 
 test('speed spells fit in one compact list and only positive critical chances stand out', async ({ page }, info) => {

@@ -1,8 +1,8 @@
 import { preferredPresentation, savePresentation, presentationPath } from './arena-preferences.js';
-import { mountAccount, nextPath } from './account.js';
-import { mountDevices } from './devices.js';
-import { mountFriends } from './friends.js';
-import { activateSeats, isOperator, operatorToken, savedSeats } from './session.js';
+import { nextPath } from './account.js';
+import { mountNavigation } from './navigation.js';
+export { codePath } from './navigation.js';
+import { activateSeats, savedSeats } from './session.js';
 
 export function visibleTables(tables, mine, all = false) {
   const held = new Set(mine.map(entry => entry.table.id));
@@ -14,11 +14,6 @@ export function tableState(table) {
   if (table.openSeats > 0) return table.waiting ? 'Waiting for a player' : 'Player needed';
   if (table.waiting) return 'Waiting to start';
   return Number.isInteger(table.round) ? `Round ${table.round}` : 'In progress';
-}
-
-export function codePath(value) {
-  const code = value.trim().replace(/[\s-]/g, '').toUpperCase();
-  return /^[A-Z0-9]{8}$/.test(code) ? `/j/${code}` : null;
 }
 
 export async function lobbyRequest(path, body, token, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
@@ -107,84 +102,6 @@ function statusText(state) {
   if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
   const tables = state.tables.length === 1 ? 'table' : 'tables';
   return `${state.tables.length} ${tables} ongoing · updates automatically`;
-}
-
-// A disclosure on phones, a normal navigation bar on desktop. Feature panels keep the
-// existing account/friends/device controllers and let native dialogs handle modality.
-export function mountHomeNavigation(doc, win = globalThis) {
-  const el = id => doc.getElementById(id);
-  const toggle = el('home-menu-toggle'), menu = el('home-navigation');
-  const narrow = win.matchMedia('(max-width: 1100px)');
-  const panels = [...doc.querySelectorAll('.home-dialog')];
-  const openers = new Map();
-  let identity;
-  function closeMenu(focus = false) {
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', 'Open navigation');
-    if (focus && narrow.matches) toggle.focus();
-  }
-  toggle.addEventListener('click', () => {
-    const open = toggle.getAttribute('aria-expanded') !== 'true';
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-    el('account-menu').open = false;
-  });
-  narrow.addEventListener('change', () => {
-    const focusWasInMenu = menu.contains(doc.activeElement);
-    closeMenu(focusWasInMenu);
-  });
-  function closePanels(restore = true) {
-    for (const panel of panels) if (panel.open) {
-      if (!restore) openers.delete(panel);
-      panel.close();
-    }
-  }
-  for (const button of doc.querySelectorAll('[data-home-dialog]')) button.addEventListener('click', () => {
-    const panel = el(button.dataset.homeDialog);
-    closePanels(false);
-    openers.set(panel, button);
-    closeMenu();
-    el('account-menu').open = false;
-    panel.showModal();
-  });
-  for (const panel of panels) {
-    panel.querySelector('[data-home-close]').addEventListener('click', () => panel.close());
-    panel.addEventListener('close', () => {
-      const opener = openers.get(panel);
-      openers.delete(panel);
-      const target = narrow.matches ? toggle : opener;
-      if (opener && target?.getClientRects().length) target.focus();
-    });
-  }
-  menu.addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
-  doc.addEventListener('click', event => {
-    if (!menu.contains(event.target) && !toggle.contains(event.target)) closeMenu();
-    if (!el('account').contains(event.target)) el('account-menu').open = false;
-  });
-  doc.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    if (toggle.getAttribute('aria-expanded') === 'true') { closeMenu(true); event.preventDefault(); }
-    if (el('account-menu').open) { el('account-menu').open = false; el('account-menu').querySelector('summary').focus(); }
-  });
-  return {
-    closePanels,
-    setAccount(account, mode) {
-      const playable = Boolean(account) || mode === 'off';
-      doc.body.dataset.home = account ? 'member' : mode === 'off' ? 'local' : 'guest';
-      el('welcome-intro').hidden = playable;
-      el('home-games').hidden = !playable;
-      el('friends-open').hidden = !account;
-      el('notifications-open').hidden = !account;
-      el('leaderboard-link').hidden = mode === 'off';
-      el('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'The arena awaits';
-      if (identity !== (account?.id ?? null)) { closePanels(false); closeMenu(); identity = account?.id ?? null; }
-    },
-    requests(count) {
-      el('friend-requests-badge').textContent = count ? String(count) : '';
-      el('friend-requests-badge').hidden = !count;
-      el('friends-open').setAttribute('aria-label', count ? `Friends · ${count} pending request${count === 1 ? '' : 's'}` : 'Friends');
-    },
-  };
 }
 
 export function mountLobby(doc, location, storage) {
@@ -371,13 +288,6 @@ export function mountLobby(doc, location, storage) {
     el('filter-all').setAttribute('aria-pressed', String(all));
     if (listing) render();
   });
-  el('join-code').addEventListener('submit', event => {
-    event.preventDefault();
-    const path = codePath(el('code').value);
-    if (path) location.assign(path);
-    else { el('join-problem').textContent = 'Enter the eight-character code from your invitation.'; el('join-problem').hidden = false; el('code').focus(); }
-  });
-  el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
   const dialog = el('create-dialog');
   // The friends a seat can be kept for (ADR 0129), read when the dialog opens: the list is short and changes rarely.
   async function loadFriends(chosen) {
@@ -462,9 +372,6 @@ export function mountLobby(doc, location, storage) {
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
     finally { busy = false; showOpponent(); }
   });
-  void lobbyRequest('/api/me', undefined, operatorToken(storage)).then(body => {
-    if (isOperator({ ok: true, body })) el('admin-link').hidden = false;
-  }).catch(() => {});
   void refresh();
   const resume = () => { if (!doc.hidden && !dialog.open && !busy) void refresh(); };
   doc.addEventListener('visibilitychange', resume);
@@ -495,23 +402,18 @@ export function mountLobby(doc, location, storage) {
 if (typeof document !== 'undefined') {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
-  const navigation = mountHomeNavigation(document);
   const lobby = mountLobby(document, globalThis.location, storage);
-  const devices = mountDevices(document, { storage });
-  const friends = mountFriends(document, {
-    onInvite: friend => { navigation.closePanels(false); lobby.invite(friend); },
-    onRequests: count => navigation.requests(count),
-  });
-  lobby.onOutstanding(outstanding => friends.setOutstanding(outstanding));
   const next = nextPath(globalThis.location.search);
-  void mountAccount(document, {
-    onChange: (account, mode) => {
-      // Sent here to sign in on the way to a seat or an invitation: once signed in, back to it.
+  const friends = mountNavigation(document, storage, {
+    onInvite: lobby.invite,
+    onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return; }
-      navigation.setAccount(account, mode);
+      const playable = Boolean(account) || mode === 'off';
+      document.getElementById('welcome-intro').hidden = playable;
+      document.getElementById('home-games').hidden = !playable;
+      document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'The arena awaits';
       lobby.setAccount(account, mode);
-      devices.setAccount(account);
-      friends.setAccount(account);
     },
   });
+  lobby.onOutstanding(friends.setOutstanding);
 }

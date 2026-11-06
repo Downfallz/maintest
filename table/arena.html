@@ -10,8 +10,11 @@
   <link rel="stylesheet" href="arena-lab.css">
   <link rel="stylesheet" href="arena.css">
   <script type="module" src="arena-build/live.js"></script>
+  <link rel="stylesheet" href="lobby.css">
+  <script type="module" src="navigation.js"></script>
 </head>
-<body>
+<body class="arena-page">
+  <header class="masthead lobby-header home-header" data-navigation="arena" hidden></header>
   <main id="arena" class="arena-shell" data-ready="false">
     <header class="hud-top">
       <a class="brand" href="/" aria-label="Downfall Arena — back to lobby"><span aria-hidden="true">◈</span><div>DOWNFALL <b>ARENA</b><small>LIVE ARENA · PREVIEW</small></div></a>
@@ -25,13 +28,13 @@
       <aside id="growth-receipt" hidden aria-label="New mutations"><button type="button" data-growth-open aria-describedby="growth-announcement">Mutation unlocks ↗</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation receipt">×</button></aside>
       <div id="actor-layer" aria-label="Inspect creatures"></div>
       <article id="playback-receipt" hidden tabindex="0" aria-labelledby="receipt-title"><p class="eyebrow">RECORDED ROUND EVENTS</p><h2 id="receipt-title"></h2><p class="receipt-note">Text receipt · no exact battlefield was recorded for this step.</p><div id="receipt-sections"></div><button type="button" data-history-open>Open History</button></article>
-      <div id="loading"><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Choose your viewpoint</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
+      <div id="loading" hidden><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Opening your arena</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
     </section>
     <div id="playback-pacing" hidden><label for="playback-mode">Read results</label><select id="playback-mode"><option value="auto">Auto</option><option value="step">Step</option></select><button id="playback-next" type="button" hidden>Next result</button>
         <button id="playback-skip" type="button" hidden>Skip</button></div>
     <section class="command-dock" aria-label="Live match status">
-      <div class="actor-summary"><div><p class="eyebrow" id="perspective">YOUR VIEWPOINT</p><h1 id="actor-name">Live arena</h1><p id="actor-meta">Choose a seat to enter</p></div></div>
-      <div class="live-status"><section id="combat-preview" class="target-preview" tabindex="0" aria-label="Selected action estimate" hidden></section><span id="connection" role="status" aria-live="polite">Choose a seat</span><p id="instruction">Choose a viewpoint to play.</p><button id="playback-result" type="button" hidden><span id="result-label">Last action</span> ↗</button><p id="combat-error" role="alert" hidden></p><p id="planning-error" role="alert" hidden></p><p id="match-error" role="alert" hidden></p></div>
+      <div class="actor-summary"><div><p class="eyebrow" id="perspective">YOUR VIEWPOINT</p><h1 id="actor-name">Live arena</h1><p id="actor-meta">Loading the match…</p></div></div>
+      <div class="live-status"><section id="combat-preview" class="target-preview" tabindex="0" aria-label="Selected action estimate" hidden></section><span id="connection" role="status" aria-live="polite">Connecting…</span><p id="instruction">Loading the match…</p><button id="playback-result" type="button" hidden><span id="result-label">Last action</span> ↗</button><p id="combat-error" role="alert" hidden></p><p id="planning-error" role="alert" hidden></p><p id="match-error" role="alert" hidden></p></div>
       <div class="arena-actions">
         <button class="primary" id="planning-open" type="button" hidden>Choose mutation</button>
         <button class="primary" id="match-open" type="button" hidden>Match result</button>

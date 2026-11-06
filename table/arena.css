@@ -590,3 +590,26 @@
 @media (max-height: 500px) { .match-header { padding: 10px 16px; } .match-header h2 { font-size: 26px; } .match-body, .match-footer { padding: 8px 16px; } }
 
 #match-replay-error, #noted, #notices-problem { display: block; margin: 1em 0; }
+
+/* Keep the battlefield inside the viewport when the signed-in header is present. */
+.arena-page { display: flex; flex-direction: column; }
+.arena-page #arena { flex: 1 1 0; height: auto; min-height: 0; }
+.arena-page .home-header { width: 100%; max-width: none; display: flex; align-items: center; flex: none; background: var(--paper); border-bottom: 1px solid var(--line); }
+.arena-page .home-header .brand { letter-spacing: normal; }
+.arena-page .home-header .brand h1 { margin: 0; font: 400 21px Georgia, serif; }
+.arena-page .home-header .eyebrow { display: block; text-transform: uppercase; margin: 0; }
+.arena-page .home-header .brand-mark { display: grid; place-items: center; width: 32px; height: 38px; border: 1px solid var(--brand-ember); border-radius: 10px 3px; font: 26px Georgia, serif; }
+.arena-page .navigation-panels dialog { margin: auto; }
+
+/* On short landscape screens the menu occupies the former brand slot in the match toolbar. */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1240px) {
+  .arena-page[data-home="member"] .home-header {
+    position: absolute; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
+    width: auto; height: 46px; min-height: 0; background: transparent; border: 0;
+  }
+  .arena-page .home-header .brand, .arena-page .home-menu-toggle > span:last-child,
+  .arena-page .home-header #account-name { display: none; }
+  .arena-page .home-header .home-navigation { left: 0; right: auto; width: min(360px, calc(100vw - 24px)); }
+  .arena-page .home-header .account-menu { left: 0; right: auto; }
+  .arena-page[data-home="member"] .hud-top { padding-left: 140px; }
+}
