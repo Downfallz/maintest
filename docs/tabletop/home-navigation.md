@@ -62,6 +62,9 @@ modal focus and Escape, code validation, logout during an in-flight request, sig
 Layout checks include 320, 390, 900, 1101 and 1280 CSS-pixel widths and a 740 × 320 landscape viewport.
 The existing table, admin and branding browser suites cover the shared styles and behaviours.
 
+A host whose `/api/me` cannot be reached is neither signed out nor accounts-off: the introduction offers no
+sign-in it cannot complete, and its sign-in panel says the account could not be checked and to reload.
+
 The screenshots use deterministic API fixtures; the Google button is stubbed in the browser test.
 
 | Guest desktop | Player desktop |

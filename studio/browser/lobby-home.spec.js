@@ -9,8 +9,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false } = {}) {
-  const state = { account, mode, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false } = {}) {
+  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -25,6 +25,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     const json = value => route.fulfill({ json: value });
+    if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
     if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator });
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
@@ -272,3 +273,10 @@ for (const file of ['leaderboard', 'arena', 'index']) {
     await noOverflow(page);
   });
 }
+
+test('an account host that cannot be reached says so instead of offering a sign-in with no way in', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google', meDown: true });
+  await expect(page.locator('#sign-in-problem')).toHaveText('Could not reach the host to check your account. Reload the page to try again.');
+  await expect(page.locator('#home-games')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});

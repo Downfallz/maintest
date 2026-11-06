@@ -160,6 +160,9 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       el('sign-in-panel').hidden = state.mode === 'off' || Boolean(state.account);
       el('dev-sign-in').hidden = state.mode !== 'dev';
       el('google-button').hidden = state.mode !== 'google';
+      // Unreachable is neither signed out nor accounts-off: no way in is offered, so the panel says why.
+      if (state.mode === 'unavailable') say('sign-in-problem', 'Could not reach the host to check your account. Reload the page to try again.');
+      else if (el('sign-in-problem').textContent.startsWith('Could not reach the host to check')) say('sign-in-problem');
     }
     el('account').hidden = !state.account;
     if (state.account) {
