@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
@@ -35,7 +35,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) {
       state.privateReads.push(path); state.mineReads++;
-      const tables = state.account || state.mode === 'off' ? [held] : [];
+      const tables = state.account || state.mode === 'off' ? games ?? [held] : [];
       if (delayMine && state.mineReads === 1) await new Promise(resolve => { state.release = resolve; });
       return json({ tables, invitations: [] });
     }
@@ -282,4 +282,24 @@ test('an account host that cannot be reached says so instead of offering a sign-
   await expect(page.locator('#sign-in-problem')).toHaveText('Could not reach the host to check your account. Reload the page to try again.');
   await expect(page.locator('#home-games')).toBeHidden();
   expect(state.errors).toEqual([]);
+});
+
+test('your games split into ongoing and finished tabs, your turn first, six to a page', async ({ page }) => {
+  const game = (id, { over = false, turn = false } = {}) => ({ table: { ...battle, id, over,
+    seats: [{ ...battle.seats[0], turn: !over && turn }, { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+  const games = [game('waiting-on-them'), game('done-1', { over: true }), game('your-move', { turn: true }),
+    ...Array.from({ length: 7 }, (_, index) => game(`done-${index + 2}`, { over: true }))];
+  const state = await home(page, { games });
+  const cards = page.locator('#my-tables .game-card');
+  await expect(cards).toHaveCount(2); await expect(page.locator('#mine-ongoing')).toHaveAttribute('aria-pressed', 'true');
+  await expect(cards.first()).toContainText('your-move'); await expect(cards.first()).toContainText('Your turn');
+  await expect(page.locator('#ongoing-count')).toHaveText('· 2'); await expect(page.locator('#finished-count')).toHaveText('· 8');
+  await expect(page.locator('#mine-pages')).toBeHidden();
+  await page.locator('#mine-finished').click();
+  await expect(cards).toHaveCount(6); await expect(cards.first()).toContainText('View game');
+  await expect(page.locator('#mine-page')).toHaveText('Page 1 of 2'); await expect(page.locator('#mine-previous')).toBeDisabled();
+  await page.locator('#mine-next').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-page')).toHaveText('Page 2 of 2');
+  await expect(page.locator('#mine-next')).toBeDisabled();
+  await page.locator('#mine-ongoing').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-pages')).toBeHidden();
+  await noOverflow(page); expect(state.errors).toEqual([]);
 });

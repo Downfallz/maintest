@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, myGames, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -107,4 +107,19 @@ test('the create dialog starts on the friend asked for, and on nobody when they 
   assert.deepEqual(friendChoice(friends, 'acct_stranger'), { value: '', missing: true }, 'a rematch against a non-friend picks nobody by default');
   assert.deepEqual(friendChoice(friends, null), { value: '', missing: false });
   assert.deepEqual(friendChoice([], 'acct_mark'), { value: '', missing: true });
+});
+
+test('your games split into ongoing and finished, your turn first, six to a page', () => {
+  const seats = turn => [{ seat: 'player1', kind: 'person', name: 'You', turn }, { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false }];
+  const game = (id, { over = false, turn = false } = {}) => ({ table: { id, over, seats: seats(turn) }, seats: [{ seat: 'player1' }] });
+  const mine = [game('a'), game('b', { over: true }), game('c', { turn: true }), ...Array.from({ length: 7 }, (_, i) => game(`f${i}`, { over: true }))];
+  const ongoing = myGames(mine, 'ongoing');
+  assert.deepEqual([ongoing.ongoing, ongoing.finished, ongoing.pages, ongoing.page], [2, 8, 1, 0]);
+  assert.deepEqual(ongoing.items.map(entry => entry.table.id), ['c', 'a'], 'the game waiting for you comes first, the rest keep their order');
+  const finished = myGames(mine, 'finished');
+  assert.deepEqual([finished.pages, finished.items.length], [2, 6]);
+  assert.deepEqual(finished.items.map(entry => entry.table.id).slice(0, 2), ['b', 'f0']);
+  const last = myGames(mine, 'finished', 1); assert.deepEqual(last.items.map(entry => entry.table.id), ['f5', 'f6']);
+  assert.equal(myGames(mine, 'finished', 9).page, 1, 'a page past the end shows the last one');
+  assert.deepEqual(myGames([], 'ongoing'), { ongoing: 0, finished: 0, pages: 1, page: 0, items: [] });
 });
