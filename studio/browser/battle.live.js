@@ -33,8 +33,8 @@ test('the real host supplies the battle and external decisions update it without
   await expect(battle.locator('#upkeep-dialog')).toBeVisible();
   await battle.locator('#upkeep-close').click();
   for (const one of before.board.allies) {
-    await expect(battle.locator(`[data-creature="${one.id}"]`)).toHaveClass(/ally/);
-    await expect(battle.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);
+    await expect(battle.locator(`#actor-layer [data-creature="${one.id}"]`)).toHaveClass(/ally/);
+    await expect(battle.locator(`#actor-layer [data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);
   }
   await battle.screenshot({ path: info.outputPath('real-live-board.jpg'), type: 'jpeg', quality: 85 });
   // The driver acts through another client. The battle sends no command; the only acknowledgement it owns is

@@ -11,7 +11,7 @@ export async function returningBattlePlayer({ context }) {
 // after a previous pick, or was closed by the player and waits behind its button.
 export async function mutationTree(page) {
   const dialog = page.locator('#planning-dialog'), button = page.locator('#planning-open');
-  await expect(dialog.or(button).first()).toBeVisible({ timeout: 20000 });
+  await expect.poll(async () => await dialog.isVisible() || await button.isVisible(), { timeout: 20000 }).toBe(true);
   if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});
   await expect(dialog).toBeVisible();
 }
