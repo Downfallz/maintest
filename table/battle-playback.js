@@ -89,19 +89,22 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     presented = current.sequence;
     if (current.receipt?.category === 'Upkeep') onUpkeepHandled(current.round);
     summary = resultText(current);
-    if (current.receipt) { stage = 'resolved'; emit(); if (mode === 'auto') later(next, 3500, false); return; }
+    if (current.receipt) { stage = 'resolved'; emit(); if (!waits(current)) later(next, 3500, false); return; }
     stage = reduced ? 'impact' : 'windup'; emit();
     if (reduced) later(finish, REDUCED_MS, false);
     else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
   // An incoming action, one the other team's creature took, waits for the player's OK in Auto as in Step:
   // nothing after it, a next action, the turnover or the live question, shows before it is read (ADR 0139).
-  // The player's own casts, which they chose, and the turnover receipts move on by themselves in Auto.
+  // The player's own casts, which they chose, never wait (ADR 0141); the turnover receipts wait in Step only.
   function incoming(item) {
     return Boolean(item && !item.receipt && !latest?.board?.allies?.some(one => String(one.id) === String(item.actor?.id)));
   }
+  function waits(item) {
+    return incoming(item) || (mode === 'step' && Boolean(item?.receipt));
+  }
   function finish() {
-    stage = 'resolved'; emit(); if (mode === 'auto' && !incoming(current)) later(next, SETTLE_MS);
+    stage = 'resolved'; emit(); if (!waits(current)) later(next, SETTLE_MS);
   }
   // Settling shows the latest board with one result to read, whichever the caller names. An upkeep already
   // presented was handled when it was shown; one still queued is handled only when the player chose to skip
@@ -134,10 +137,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // Legacy events have text but no trustworthy intermediate board. A long catch-up (one read bringing more
     // than the limit or crossing several rounds, a reconnection's worth) must not keep a decision behind old pictures either. Both settle
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
-    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. A held Step,
-    // or an incoming action waiting for its OK in Auto too (ADR 0139), keeps what arrives under a dialog queued
-    // behind it; anything else would play unseen in Auto, so it settles.
-    const held = current !== null && (mode === 'step' || incoming(current));
+    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. An incoming
+    // action waiting for its OK (ADR 0139), or a receipt held in Step, keeps what arrives under a dialog queued
+    // behind it; anything else would play unseen, so it settles.
+    const held = current !== null && waits(current);
     if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       settle(resultText(arriving.at(-1))); return;
     }
@@ -155,7 +158,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
         previous.snapshot = item.snapshot ?? previous.snapshot;
         if (previous === current) {
           presented = item.sequence; summary = resultText(previous);
-          cancelTimer(); if (mode === 'auto') later(next, 3500, false);
+          cancelTimer(); if (!waits(current)) later(next, 3500, false);
         }
       } else queue.push(item);
     }
@@ -180,7 +183,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       canNext: Boolean(current && stage === 'resolved'),
       // Next is offered for every incoming action, whatever the pace, and for everything when the player steps.
-      asks: Boolean(current && (mode === 'step' || incoming(current))), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      asks: Boolean(current && waits(current)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;
@@ -199,7 +202,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (mode === nextMode) return;
     mode = nextMode;
     if (current && stage === 'resolved' && !incoming(current)) {
-      cancelTimer(); if (mode === 'auto') later(next, current.receipt ? 3500 : SETTLE_MS, !current.receipt);
+      cancelTimer(); if (!waits(current)) later(next, current.receipt ? 3500 : SETTLE_MS, !current.receipt);
     }
     emit();
   }

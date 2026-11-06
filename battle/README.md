@@ -337,14 +337,16 @@ Match settings (the gear in the header) select **Step** (default) or **Auto**; t
 is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
 settings** (the menu; kept with the account when signed in, in the browser otherwise; Step, 1×, tips on by
 default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
-**Skip to present** is not offered while an incoming action waits for its OK.
+**Skip all** is offered while two or more results remain, never while an incoming action waits for its OK
+([ADR 0141](../docs/adr/0141-never-hold-the-player-s-own-cast.md)).
 Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
 **OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
-([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). In Auto the player's own
-casts and the turnover receipts move on by themselves; Step waits for **Next** on every item. While results remain, the action, mutation and
-result entries are withdrawn and nothing opens by itself. **Skip to present**, rotation (an orientation change, not every resize), a motion/speed change or
-connection loss immediately restores the authoritative board. In Step, results that arrive while a
-dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or
+([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). The player's own casts
+move on by themselves in either pace; Step holds the turnover receipts (aftermath, upkeep, result) for **Next**,
+Auto plays them by itself. While results remain, the action, mutation and
+result entries are withdrawn and nothing opens by itself. **Skip all**, rotation (an orientation change, not every resize), a motion/speed change or
+connection loss immediately restores the authoritative board. Results that arrive while a dialog
+covers the board queue behind a held item (an incoming action, or a receipt in Step); otherwise they settle rather than play unseen. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
