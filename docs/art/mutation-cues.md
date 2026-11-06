@@ -5,7 +5,7 @@ are reviewable prototype choices, not new gameplay rules or final commissioned a
 
 ## Selection policy
 
-`creatureAppearance` in `table/arena-art.js` reads only the displayed creature's acquired tier IDs, and
+`creatureAppearance` in `table/battle-art.js` reads only the displayed creature's acquired tier IDs, and
 what each one shows comes with the catalogue's packages: the authored `level` and the `visual` (family and
 motif) the builder publishes from `data/presentation/mutation-art.json`, checked against the packages and
 the root each descends from. The page names no package. Unknown IDs and packages nobody drew are ignored,
@@ -52,7 +52,7 @@ No reference image is regenerated, recolored or edited, and no new image is down
 
 ## Renderer and lifecycle
 
-`arena/src/mutation-cues.ts` owns at most three graphics per figure, drawn inside the existing silhouette
+`battle/src/mutation-cues.ts` owns at most three graphics per figure, drawn inside the existing silhouette
 bounds. They follow the image's position, scale, angle, alpha and facing, including lunge/recoil/idle motion.
 Stage 3 changes both normalized size and geometry. These marks do not animate independently and remain
 visible under reduced motion. Defeat dims them with their body. Target rectangles, anchoring and game
@@ -71,7 +71,7 @@ Spell VFX have their separate short-lived owner and do not erase these persisten
 - Production Phaser tests: all nine branches at both stages, mirrored enemies, exact graphics budget,
   movement, resize, reduced motion, defeat, old frames, missing texture and empty-roster cleanup.
 - Live tests: authoritative polling changes a mixed build, inspection explains appearance, and six advanced
-  builds fit desktop, narrow phones and landscape over the eclipse arena.
+  builds fit desktop, narrow phones and landscape over the eclipse battlefield.
 - Screenshots compare stages 2/3 side by side and six mixed/capstone builds in the actual live shell.
 
 Fine colors and slot anchors remain POC choices to review. The source art's smallest details naturally

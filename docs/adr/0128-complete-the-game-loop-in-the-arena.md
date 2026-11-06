@@ -5,7 +5,7 @@ Status: Accepted for the opt-in arena
 
 ## Context
 
-This is A7 of the [browser arena plan](../tabletop/browser-arena-plan.md). A6 presents confirmed combat but
+This is A7 of the [browser arena plan](../tabletop/browser-battle-plan.md). A6 presents confirmed combat but
 still sends players to `/play` for planning and a match's conclusion.
 The arena needs to complete a match without acquiring a second set of game rules or confusing a historical
 frame with a question that can be answered now. Simultaneous choices and recorded sessions also require

@@ -6,22 +6,23 @@ const ICON = '/icon-192.png';
 
 const GAME = '/play';
 
-const ARENA = '/arena';
+// An already-open tab may still use the previous route until its next navigation.
+const battlePath = path => path === '/battle' || path === '/arena';
 
 const LOBBY = '/lobby';
 
 // The page a URL is on, with the lobby's two addresses read as one (`/` without a query is the lobby) and the
-// arena read as the game: a seat played there is the same seat, asked the same thing (ADR 0126), so an arena
-// in front of somebody is the "your turn" as much as the table page is. The arena lab is a study, not a seat.
+// battle read as the game: a seat played there is the same seat, asked the same thing (ADR 0126), so a battle
+// in front of somebody is the "your turn" as much as the table page is. The battle lab is a study, not a seat.
 function pageOf(url) {
   const path = new URL(url, 'https://downfall.invalid').pathname;
   if (path === '/') return LOBBY;
-  return path === ARENA ? GAME : path;
+  return battlePath(path) ? GAME : path;
 }
 
-const isArena = client => new URL(client.url).pathname === ARENA;
+const isBattle = client => battlePath(new URL(client.url).pathname);
 
-// Whether an arena page is at the table a "your turn" came from. The arena names its table in its address
+// Whether a battle page is at the table a "your turn" came from. The battle names its table in its address
 // (`?table=`) when it was chosen from the lobby's list; opened from a seat's own link it names the seat's token
 // instead, which the worker cannot read a table off, and the one table a device usually holds is taken to be
 // it. Only two tables both named, and named differently, is another table.
@@ -61,20 +62,20 @@ async function onPush(notice) {
 // A tap goes where the notice says: the game at the table it came from, or the lobby for a friend or an
 // invitation. The page already open there when there is one, another page of the table sent there otherwise,
 // unless it is one this worker does not control, which cannot be steered; a new window when there is none.
-// An arena page is the view of the game its player chose: for a "your turn" at its table it is brought to the
-// front and left in the arena, never sent to the table page, and for anything else it is left alone.
+// An battle page is the view of the game its player chose: for a "your turn" at its table it is brought to the
+// front and left in the battle, never sent to the table page, and for anything else it is left alone.
 async function onTap(url) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const at = client => { const here = new URL(client.url); return `${here.pathname}${here.search}`; };
   const page = pageOf(url);
-  const played = page === GAME ? windows.find(client => isArena(client) && sameTable(client, url)) : undefined;
+  const played = page === GAME ? windows.find(client => isBattle(client) && sameTable(client, url)) : undefined;
   const open = windows.find(client => at(client) === url)
-    ?? windows.find(client => !isArena(client) && pageOf(client.url) === page)
+    ?? windows.find(client => !isBattle(client) && pageOf(client.url) === page)
     ?? played
-    ?? windows.find(client => !isArena(client));
+    ?? windows.find(client => !isBattle(client));
   if (open) {
     await open.focus();
-    if (at(open) === url || isArena(open)) return;
+    if (at(open) === url || isBattle(open)) return;
     try {
       if (open.navigate) {
         await open.navigate(url);

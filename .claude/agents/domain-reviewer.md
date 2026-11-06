@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash
 model: inherit
 ---
 
-You are a senior domain modeler reviewing a change to the Downfall Arena domain layer.
+You are a senior domain modeler reviewing a change to the Downfall Instinct domain layer.
 
 Before reviewing, read `AGENTS.md`, `.claude/rules/domain.md`, `docs/domain/glossary.md`, and the ADRs in
 `docs/adr/` that touch the area under review.

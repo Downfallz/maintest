@@ -4,7 +4,7 @@ import { mountFriends } from './friends.js';
 import { operatorToken } from './session.js';
 
 const headerContent = `
-    <a class="brand" href="/" aria-label="Downfall Arena home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">Tactical creature combat</span><h1>Downfall Arena</h1></div></a>
+    <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">Tactical creature combat</span><h1>Downfall Instinct</h1></div></a>
     <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation"><span aria-hidden="true">☰</span><span>Menu</span></button>
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Play</a>
@@ -136,7 +136,7 @@ function mountHomeNavigation(doc, win = globalThis) {
 export function mountNavigation(doc, storage, { onInvite, onChange = () => {} } = {}) {
   const header = doc.querySelector('[data-navigation]');
   const page = header.dataset.navigation;
-  const game = page === 'classic' || page === 'arena';
+  const game = page === 'classic' || page === 'battle';
   const el = id => doc.getElementById(id);
   header.innerHTML = headerContent;
   doc.body.insertAdjacentHTML('beforeend', panels);

@@ -7,7 +7,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Infrastructure.Resources;
 
 /// <summary>
-/// How each package shows on the creature that bought it in the arena (ADR 0133): the family whose body it
+/// How each package shows on the creature that bought it in the battle (ADR 0133): the family whose body it
 /// belongs to and the accent it draws, keyed by the package's versioned id. Presentation, not content: kept out of
 /// the consolidated schema, so authoring it moves neither the content hash nor a benchmark digest, and kept out
 /// of the page, so a content pass that adds a package adds its picture here and changes no page
@@ -26,7 +26,7 @@ public sealed class MutationArt
     /// <summary>The three bodies of the art direction, in the order a tie between them is broken.</summary>
     public static readonly IReadOnlyList<string> Families = ["brute", "predator", "warped"];
 
-    /// <summary>The accents the arena knows how to draw on a body; a root package draws none.</summary>
+    /// <summary>The accents the battle knows how to draw on a body; a root package draws none.</summary>
     public static readonly IReadOnlyList<string> Motifs =
         ["fissures", "plates", "crown", "talons", "fangs", "glands", "shards", "souls", "astral", "reinforcement", "precision", "circuit"];
 

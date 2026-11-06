@@ -12,7 +12,7 @@
 | [learning/journal.md](learning/journal.md) | One entry per change that moves a number: content, engine, agents, benchmark digest. |
 | [art/creature-art-direction.md](art/creature-art-direction.md) | Approved creature concepts, spell staging, mutation cues, and the ART-2–6 asset plan. |
 | [art/asset-intake.md](art/asset-intake.md) | ART-2 WebP references, original PNG upload paths, hashes, alpha audit and ART-3 handoff. |
-| [art/runtime-sprites.md](art/runtime-sprites.md) | ART-3 arena sprite selection, anchors, contrast and fallbacks. |
+| [art/runtime-sprites.md](art/runtime-sprites.md) | ART-3 battle sprite selection, anchors, contrast and fallbacks. |
 | [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |

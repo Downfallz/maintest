@@ -55,4 +55,4 @@ ART-5's content-authored mappings, catalogue labels and per-figure depth; do not
 - Queue tests cover each phase at each rate, the unscaled reduced receipt, settling, the callback fence and
   no replay. Browser tests cover the scene's rate, gesture-only audio, one tone per impact, cuts on Skip, a
   hidden page and a seat switch, the owner's fences against a controlled context, and the arc staying pinned.
-- The [ART-6 handoff](../art/arena-polish.md) records the timings, lifecycle and limitations.
+- The [ART-6 handoff](../art/battle-polish.md) records the timings, lifecycle and limitations.

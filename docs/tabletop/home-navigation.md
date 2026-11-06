@@ -1,7 +1,7 @@
 # Home navigation
 
-The home page has two jobs: explain Downfall Arena to a visitor and bring a returning player to their next
-battle. It uses the [official palette](../art/branding.md) and existing arena artwork. This changes the static
+The home page has two jobs: explain Downfall Instinct to a visitor and bring a returning player to their next
+battle. It uses the [official palette](../art/branding.md) and existing battle artwork. This changes the static
 HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 
 ## Page states
@@ -17,9 +17,9 @@ HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 ## Navigation
 
 The lobby and leaderboard share a responsive header. Signed-in players also have it at the classic table
-and in the live arena, alongside the controls for the current match. Friends, Notifications, Your data
+and in the live battle, alongside the controls for the current match. Friends, Notifications, Your data
 and Join with a code open in place. Inviting a friend from outside the lobby opens the lobby with that
-player selected. A single verified seat opens directly in the arena. Shared-device players still choose
+player selected. A single verified seat opens directly on the battlefield. Shared-device players still choose
 a viewpoint before either private board is read.
 
 | Entry | Destination | Availability |

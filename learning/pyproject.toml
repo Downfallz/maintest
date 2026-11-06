@@ -1,7 +1,7 @@
 [project]
 name = "downfall-learning"
 version = "0.1.0"
-description = "The learning side of Downfall Arena: weight search, behaviour cloning, value regression (learning phase L6)."
+description = "The learning side of Downfall Instinct: weight search, behaviour cloning, value regression (learning phase L6)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

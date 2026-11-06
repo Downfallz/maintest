@@ -1,4 +1,4 @@
-import { preferredPresentation, savePresentation, presentationPath } from './arena-preferences.js';
+import { preferredPresentation, savePresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
 import { mountNavigation } from './navigation.js';
 export { codePath } from './navigation.js';
@@ -411,7 +411,7 @@ if (typeof document !== 'undefined') {
       const playable = Boolean(account) || mode === 'off';
       document.getElementById('welcome-intro').hidden = playable;
       document.getElementById('home-games').hidden = !playable;
-      document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'The arena awaits';
+      document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
       lobby.setAccount(account, mode);
     },
   });

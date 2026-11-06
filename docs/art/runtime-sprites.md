@@ -1,12 +1,12 @@
-# ART-3 — Arena sprite integration
+# ART-3 — Battle sprite integration
 
 The approved base Creature, Brute, Predator and Warped now replace the prototype winged/robed sheet in
-both arena scenes. See [ADR 0130](../adr/0130-map-arena-creatures-to-audited-sprites.md) for the selection
-and fallback rules and [`table/arena-art.js`](../../table/arena-art.js) for the authoritative manifest.
+both battle scenes. See [ADR 0130](../adr/0130-map-arena-creatures-to-audited-sprites.md) for the selection
+and fallback rules and [`table/battle-art.js`](../../table/battle-art.js) for the authoritative manifest.
 
 ## Assets and geometry
 
-The four files in `table/arena-art/` are byte-identical copies of the [ART-2 references](asset-intake.md).
+The four files in `table/battle-art/` are byte-identical copies of the [ART-2 references](asset-intake.md).
 The audit's `referenceWebp.sha256` values remain their source hashes; a Node test checks every runtime copy.
 All canvases remain 1536×1024. No original PNG, regenerated artwork, crop, alpha threshold or new RGB encode
 is introduced in ART-3. A lower alpha maximum of 254 and faint edge traces remain recorded source limitations.
@@ -42,7 +42,7 @@ active/target indicators and portrait/landscape rotation. Fine Warped tendrils a
 lose detail on phones; names, stats and the full rectangular targets remain legible and usable. These are
 static illustrations with transform animations, not skeletal rigs or final commissioned assets.
 
-The documented ART-2 verifier checks the reference images. `node --test table/arena-art.test.js` additionally
-checks runtime byte identity, mapping, replay and geometry. The normal arena browser suite covers rendering,
+The documented ART-2 verifier checks the reference images. `node --test table/battle-art.test.js` additionally
+checks runtime byte identity, mapping, replay and geometry. The normal battle browser suite covers rendering,
 fallbacks and controls; the host's WebP tests check explicit binary routes. PNG source upload is independent
 of this integration. Runtime validation does not change the historical intake's `runtimeReady: false` field.

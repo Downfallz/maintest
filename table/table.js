@@ -180,7 +180,7 @@ function settle(seats) {
   }
   // The live preview finds its seats where this page keeps them: in storage, or, when nothing is kept, in the
   // address it is opened from (ADR 0125).
-  element('arena-link').href = addressAfter('/arena', seats, kept);
+  element('battle-link').href = addressAfter('/battle', seats, kept);
 
   enter(seats, null);
 }
@@ -952,7 +952,7 @@ function matchResult(state, current) {
   result.setAttribute('aria-label', 'Match result');
   const eyebrow = document.createElement('span');
   eyebrow.className = 'match-result-eyebrow';
-  eyebrow.textContent = 'DOWNFALL ARENA · FINAL';
+  eyebrow.textContent = 'DOWNFALL INSTINCT · FINAL';
   const heading = document.createElement('strong');
   heading.className = 'match-result-title';
   heading.textContent = resultTitle(view, outcome, won, draw);

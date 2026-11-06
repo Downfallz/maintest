@@ -1,4 +1,4 @@
-# Downfall Arena: the rulebook
+# Downfall Instinct: the rulebook
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
 2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card

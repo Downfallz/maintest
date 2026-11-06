@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b1519" />
-  <title>Downfall Arena — tactical creature combat</title>
+  <title>Downfall Instinct — tactical creature combat</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -16,12 +16,12 @@
   <header class="masthead lobby-header home-header" data-navigation="lobby"></header>
   <main class="lobby-main">
     <section id="welcome-intro" class="welcome-intro" aria-labelledby="intro-title">
-      <div class="intro-copy"><p class="eyebrow">Adapt. Evolve. Survive.</p><h2 id="intro-title">Build your creatures.<br>Outplay your rival.</h2><p class="intro-description">A turn-based tactical duel in a world on the edge. Command three creatures, shape their mutations, and make every spell count.</p><div class="intro-actions"><a class="primary" href="#sign-in-panel">Enter the arena <span aria-hidden="true">→</span></a><a href="#how-it-plays">How it plays <span aria-hidden="true">↓</span></a></div><p class="intro-caption">Play in your browser · Solo or against another player</p></div>
-      <div class="intro-art" role="img" aria-label="Three mutated creatures face the golden eclipse in a ruined arena"><img class="intro-beast intro-brute" src="arena-art/brute.webp" alt="" /><img class="intro-beast intro-predator" src="arena-art/predator.webp" alt="" /><img class="intro-beast intro-warped" src="arena-art/warped.webp" alt="" /><span class="intro-art-caption">The arena changes you.</span></div>
+      <div class="intro-copy"><p class="eyebrow">Adapt. Evolve. Survive.</p><h2 id="intro-title">Build your creatures.<br>Outplay your rival.</h2><p class="intro-description">A turn-based tactical duel in a world on the edge. Command three creatures, shape their mutations, and make every spell count.</p><div class="intro-actions"><a class="primary" href="#sign-in-panel">Play Downfall Instinct <span aria-hidden="true">→</span></a><a href="#how-it-plays">How it plays <span aria-hidden="true">↓</span></a></div><p class="intro-caption">Play in your browser · Solo or against another player</p></div>
+      <div class="intro-art" role="img" aria-label="Three mutated creatures face the golden eclipse among the ruins"><img class="intro-beast intro-brute" src="battle-art/brute.webp" alt="" /><img class="intro-beast intro-predator" src="battle-art/predator.webp" alt="" /><img class="intro-beast intro-warped" src="battle-art/warped.webp" alt="" /></div>
       <ol id="how-it-plays" class="how-it-plays"><li><span class="step-number">01</span><div><h3>Shape your team</h3><p>Choose mutations as the battle unfolds. Give each creature its own spells and strengths.</p></div></li><li><span class="step-number">02</span><div><h3>Time your attack</h3><p>Manage your energy and choose when to act. Timing can change the next exchange.</p></div></li><li><span class="step-number">03</span><div><h3>Make your move</h3><p>Pick a spell and its targets. Adapt to your opponent and fight for the last creature standing.</p></div></li></ol>
     </section>
     <section id="sign-in-panel" class="lobby-panel sign-in-panel" aria-labelledby="sign-in-heading" hidden>
-      <div><p class="eyebrow">Enter the arena</p><h2 id="sign-in-heading">Your next battle starts here.</h2><p class="muted">Sign in, choose your player name, and enter the arena.</p></div>
+      <div><p class="eyebrow">Play Downfall Instinct</p><h2 id="sign-in-heading">Your next battle starts here.</h2><p class="muted">Sign in, choose your player name, and start playing.</p></div>
       <div class="sign-in-actions">
         <div id="google-button" class="google-button" hidden></div>
         <form id="dev-sign-in" hidden><label for="dev-username">Developer sign-in: any player name</label><div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div></form>
@@ -29,8 +29,8 @@
       </div>
     </section>
     <div id="home-games" hidden>
-      <section class="lobby-hero" aria-labelledby="welcome"><div><p id="hero-eyebrow" class="eyebrow">The arena awaits</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
-      <label class="presentation-choice" for="presentation">Game view <select id="presentation"><option value="table">Table · classic</option><option value="arena">Arena · preview</option></select><small>Applies when opening a game here. You can return to the table from the arena.</small></label>
+      <section class="lobby-hero" aria-labelledby="welcome"><div><p id="hero-eyebrow" class="eyebrow">Your games</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
+      <label class="presentation-choice" for="presentation">Game view <select id="presentation"><option value="table">Table · classic</option><option value="battle">Battle view · preview</option></select><small>Applies when opening a game here. You can return to the table from the battle view.</small></label>
       <output id="lobby-status" class="lobby-status muted" aria-live="polite">Finding games…</output>
       <p id="lobby-problem" class="problem" role="alert" hidden></p>
       <div class="lobby-games">
@@ -50,7 +50,7 @@
       </div>
     </div>
   </main>
-  <footer class="home-footer"><span>Downfall Arena</span><span>Mutate. Adapt. Strike.</span></footer>
+  <footer class="home-footer"><span>Downfall Instinct</span><span>Mutate. Adapt. Strike.</span></footer>
   <dialog id="create-dialog" aria-labelledby="create-title">
     <form id="create-table"><div class="dialog-heading"><div><p class="eyebrow">A new battle</p><h2 id="create-title">Create a table</h2></div><button id="create-close" type="button" class="secondary" aria-label="Close new table">×</button></div>
       <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
@@ -62,13 +62,13 @@
     </form>
   </dialog>
   <dialog id="name-dialog" aria-labelledby="name-title">
-    <form id="name-form"><p class="eyebrow">Welcome to the arena</p><h2 id="name-title" class="name-title">Choose your player name</h2>
+    <form id="name-form"><p class="eyebrow">Welcome to Downfall Instinct</p><h2 id="name-title" class="name-title">Choose your player name</h2>
       <p class="muted">This is the name other players see on every table. It can't be changed for now.</p>
       <label for="username">Player name</label><input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" required />
       <p id="name-check" class="name-check" role="status" hidden></p>
       <p class="muted">3 to 20 characters: letters, digits, _ and -. Starts with a letter.</p>
       <p id="name-problem" class="problem" role="alert" hidden></p>
-      <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Enter the arena →</button></div>
+      <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Play Downfall Instinct →</button></div>
     </form>
   </dialog>
   <script type="module" src="lobby.js"></script>

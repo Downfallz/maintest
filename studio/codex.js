@@ -114,7 +114,7 @@ export function explore(catalogue, ui, open, repaint, navigate) {
   const spells = active(catalogue.spells);
   const view = h('div', 'codex');
   view.append(append(h('section', 'codex-hero'),
-    label('THE ARENA FIELD GUIDE'),
+    label('MUTATION FIELD GUIDE'),
     h('h2', '', 'Find your next move.'),
     h('p', 'codex-copy', 'Every mutation. Every spell. Your next build.'),
     append(h('div', 'hero-stats'), stat(packages.length, 'mutations'), stat(spells.length, 'spells'), stat(new Set(packages.map(item => item.document.level)).size, 'stages'))));
@@ -254,7 +254,7 @@ function effectRow(effect) {
 function creatureReading(view, item, catalogue, open) {
   const doc = item.document;
   view.append(append(h('div', 'reader-stats'), stat(doc.baseHealth, 'HP'), stat(doc.baseEnergy, 'energy'), stat(doc.baseDefense, 'defense'), stat(doc.baseInitiative, 'initiative')),
-    title('STARTING KIT', 'Ready for the arena', 'Spells this creature knows before acquiring any mutations.'));
+    title('STARTING KIT', 'Ready for battle', 'Spells this creature knows before acquiring any mutations.'));
   const spells = (doc.startingSpellIds ?? []).map(id => named(catalogue.spells, id, catalogue)).filter(Boolean);
   view.append(append(h('div', 'spell-grid'), ...spells.map(spell => spellTile(spell, catalogue, open))));
 }

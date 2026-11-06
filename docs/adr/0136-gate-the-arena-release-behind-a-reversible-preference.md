@@ -7,7 +7,7 @@ Status: Accepted for the opt-in release candidate; physical-device acceptance re
 ## Context
 
 A7 (#432) completed the game loop, and AU1–AU14 (#440–#464) brought the arena to the classic table's
-parity, recorded in [the AU14 acceptance record](../tabletop/arena-ux-acceptance.md). A working,
+parity, recorded in [the AU14 acceptance record](../tabletop/battle-ux-acceptance.md). A working,
 parity-checked match does not establish how a player reaches it, mobile performance, download size or
 behaviour across browser engines.
 
@@ -37,7 +37,7 @@ storage-disabled browsers can still choose a view for the current lobby visit. A
 budget fails the build and has to raise the budget explicitly, with its reason.
 
 Physical Android/iOS GPU, browser chrome, thermal/battery behavior and assistive technology remain release
-checks in [the acceptance record](../tabletop/arena-release-acceptance.md). A public default switch requires
+checks in [the acceptance record](../tabletop/battle-release-acceptance.md). A public default switch requires
 that evidence; merging this candidate does not assert those checks passed.
 
 ## Validation

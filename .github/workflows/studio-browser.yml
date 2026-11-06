@@ -4,7 +4,7 @@ on:
     paths:
       - 'studio/**'
       - 'table/**'
-      - 'arena/**'
+      - 'battle/**'
       - 'src/**'
       - 'viewer/viewer.css'
       - 'data/**'
@@ -15,9 +15,9 @@ permissions:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    # The three projects of the five arena suites and the table suites took fourteen minutes on the run that
+    # The three projects of the five battle suites and the table suites took fourteen minutes on the run that
     # added the complete loop (#432), and its real-host journeys, two of them a whole 3v3 match driven
-    # through the arena, were cut off at the twenty-minute budget that held since playback (#431). With the
+    # through the battle, were cut off at the twenty-minute budget that held since playback (#431). With the
     # growth (AU8) and order (AU11) suites the mobile and desktop journeys alone took seventeen to twenty-five
     # minutes depending on the runner, and the real-engine journeys after them were cut off at thirty (#458).
     # AU13 brought the whole job to thirty-eight to forty minutes, and AU14's keyboard journeys and longer
@@ -35,8 +35,8 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
-      - name: Build the isolated arena prototype
-        run: npm --prefix arena ci --ignore-scripts && npm --prefix arena run build
+      - name: Build the isolated battle prototype
+        run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
 
       - name: Build the practice host and catalogue
         run: |
@@ -55,7 +55,7 @@ jobs:
           name: studio-browser
           path: studio/browser/test-results
           retention-days: 7
-  arena-release:
+  battle-release:
     runs-on: ubuntu-latest
     # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
     # two minutes each); WebKit's system packages and the build come on top of the third.
@@ -74,16 +74,16 @@ jobs:
           global-json-file: global.json
       - name: Build release candidate and check asset budgets
         run: |
-          npm --prefix arena ci --ignore-scripts && npm --prefix arena run build
+          npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
           dotnet build src/DownfallArena.Cli
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
       - name: Play complete matches in desktop, Android and iOS browser profiles
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config arena.release.config.js
+        run: node node_modules/playwright/cli.js test --config battle.release.config.js
       - name: Keep release measurements and screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: arena-release
+          name: battle-release
           path: studio/browser/test-results
           retention-days: 7

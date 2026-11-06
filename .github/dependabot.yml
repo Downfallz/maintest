@@ -17,8 +17,8 @@ updates:
     directory: /learning
     schedule:
       interval: weekly
-  # The arena prototype's renderer and its build (ADR 0123), pinned by arena/package-lock.json.
+  # The battle prototype's renderer and its build (ADR 0123), pinned by battle/package-lock.json.
   - package-ecosystem: npm
-    directory: /arena
+    directory: /battle
     schedule:
       interval: weekly

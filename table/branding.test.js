@@ -25,9 +25,12 @@ test('brand text, links and action labels remain readable on their intended surf
 });
 test('installed app and browser chrome use the same slate as the page', () => {
   const manifest = JSON.parse(read('table/manifest.webmanifest'));
+  assert.equal(manifest.name, 'Downfall Instinct');
+  assert.equal(manifest.short_name, 'Downfall Instinct');
+  assert.match(read('viewer/index.html'), /<title>Downfall Instinct viewer<\/title>/);
   assert.equal(manifest.background_color, tokens['--brand-slate']);
   assert.equal(manifest.theme_color, tokens['--brand-slate']);
-  for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'arena', 'arena-lab']) {
+  for (const page of ['index', 'lobby', 'leaderboard', 'admin', 'pilot', 'battle', 'battle-lab']) {
     assert.ok(read(`table/${page}.html`).includes(`name="theme-color" content="${tokens['--brand-slate']}"`));
   }
   assert.ok(read('studio/index.html').includes(`name="theme-color" content="${tokens['--brand-slate']}"`));

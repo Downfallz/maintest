@@ -162,12 +162,12 @@ The current layout is documented in [Home navigation](home-navigation.md), using
 [official slate/gold/copper palette](../art/branding.md). Four states, all on `/`:
 
 1. **Signed out.** A short introduction to the tactical duel, creature artwork and three steps explaining
-   mutations, tempo and spells. **Enter the arena** leads to **Continue with Google** (Google's own button).
+   mutations, tempo and spells. **Enter the battle view** leads to **Continue with Google** (Google's own button).
    The dashboard and account-only navigation are hidden. Leaderboard has its own page; **Your data** and
    **Join with a code** open dialogs from the responsive menu. An invitation follows `/j/<code>` and the
    existing `next` sign-in return path. The operator's **Admin** link remains permission-gated.
 2. **Choose your name** (first sign-in only). One card: the field, a live *available / taken / reserved* line,
-   the rules in one sentence, **Enter the arena →**. *This is the name other players see on every table.*
+   the rules in one sentence, **Enter the battle view →**. *This is the name other players see on every table.*
 3. **Signed in: the lobby.** Today's lobby, with the account chip (username, *Sign out*, *Sign out everywhere*)
    in the masthead. **Your games** comes from the host, so it is the same on the phone and the laptop, and a card
    says *Your turn* when a question waits for one of your seats. Invitations, **Find an opponent** and

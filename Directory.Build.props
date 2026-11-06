@@ -12,6 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <Product>Downfall Instinct</Product>
   </PropertyGroup>
 
   <PropertyGroup Label="Quality">

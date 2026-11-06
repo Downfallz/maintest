@@ -7,7 +7,7 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Infrastructure.Resources;
 
 /// <summary>
-/// How each spell's confirmed cast is drawn in the arena (ADR 0131): a family, a motif and a delivery, keyed by
+/// How each spell's confirmed cast is drawn in the battle (ADR 0131): a family, a motif and a delivery, keyed by
 /// the spell's versioned id. Presentation, not content: kept out of the consolidated schema, so authoring it
 /// moves neither the content hash nor a benchmark digest, and kept out of the page, so a content pass that adds a
 /// spell adds its picture here and changes no page (docs/tabletop/app-roadmap.md, stage 3). Authored in
@@ -26,7 +26,7 @@ public sealed class SpellArt
     public static readonly IReadOnlyList<string> Families =
         ["physical", "biological", "elemental", "necromantic", "astral", "neutral"];
 
-    /// <summary>The shapes the arena knows how to draw; a motif outside the list would fall to a plain mark.</summary>
+    /// <summary>The shapes the battle knows how to draw; a motif outside the list would fall to a plain mark.</summary>
     public static readonly IReadOnlyList<string> Motifs =
         ["impact", "slash", "bite", "quill", "wave", "roar", "plates", "spores", "arc", "fire", "ice", "bones", "spirits", "void", "vital", "focus"];
 

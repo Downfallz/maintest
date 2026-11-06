@@ -1,4 +1,4 @@
-# Downfall Arena — Tier evolution migration plan
+# Downfall Instinct — Tier evolution migration plan
 
 Status: planning only. Nothing here is implemented or deployed. The plan itself is committed so the work has
 a fixed reference; that commit is not a decision to do any of it.

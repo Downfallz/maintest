@@ -26,7 +26,7 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
 - `presentation/package-tags.json`: those identity tags, two or three words per package keyed by its id. The
   builder checks them against the packages and the vocabulary and publishes them beside the schema as
   `package-tags.json`, outside the content hash; the table shows them on its package cards.
-- `presentation/spell-art.json`: how the arena draws each spell's confirmed cast (ADR 0131): a family, a motif and
+- `presentation/spell-art.json`: how the battle view draws each spell's confirmed cast (ADR 0131): a family, a motif and
   a delivery keyed by the spell's id. The builder checks them against the spells and the vocabularies and
   publishes them beside the schema as `spell-art.json`, outside the content hash; the host serves them on each
   card as `visual`.

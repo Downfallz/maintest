@@ -36,7 +36,7 @@ export function presentedView(latest, replay = null, entries = null) {
   };
 }
 
-// Display facts shared by the table and the future live arena. Preserve the host's team/slot order and all
+// Display facts shared by the table and the future live battle. Preserve the host's team/slot order and all
 // creature fields (including dead creatures and conditions); never rebuild stats or read private choices.
 export function boardPresentation(board) {
   const cursor = cursorOf(board);

@@ -33,7 +33,7 @@ public sealed class PackageTagsTests : IDisposable
         package.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ShouldBe(["Defense", "Sustain"]);
     }
 
-    /// <summary>The arena shows a package on the creature that bought it from what the package says (ADR 0133).</summary>
+    /// <summary>The battle shows a package on the creature that bought it from what the package says (ADR 0133).</summary>
     [Fact]
     public async Task The_catalogue_carries_how_each_package_shows_on_a_creature()
     {
@@ -48,7 +48,7 @@ public sealed class PackageTagsTests : IDisposable
         visual.GetProperty("motif").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
-    /// <summary>The arena draws a confirmed cast from what the card says (ADR 0131); a card nobody drew says nothing.</summary>
+    /// <summary>The battle draws a confirmed cast from what the card says (ADR 0131); a card nobody drew says nothing.</summary>
     [Fact]
     public async Task The_catalogue_carries_how_each_card_s_cast_is_drawn()
     {

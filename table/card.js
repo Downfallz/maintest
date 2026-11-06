@@ -55,7 +55,7 @@ export function hasCritical(card) {
 }
 
 // What a spell reference prints under its name: the card's rows, its critical note, and the host's reason when
-// it says the spell cannot be cast now. The tempo pages of the table and the arena print the same list.
+// it says the spell cannot be cast now. The tempo pages of the table and the battle print the same list.
 export function referenceLines(card, guide) {
   return [...cardDetails(card).map(row => row.text), card?.criticalNote, guide?.unavailableReason].filter(Boolean);
 }

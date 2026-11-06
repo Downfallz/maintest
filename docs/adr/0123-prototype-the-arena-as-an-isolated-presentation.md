@@ -30,7 +30,7 @@ Use provisional generated illustrations with a selectable vector fallback for mi
 Later live integration must keep the authoritative seat view, displayed historical frame and pending
 local choice separate. The engine owns legality, resolution and progress. Animation completion never
 becomes a game command. The fixture must never be imported by a live adapter. See the
-[delivery plan](../tabletop/browser-arena-plan.md) and [build instructions](../../arena/README.md).
+[delivery plan](../tabletop/browser-battle-plan.md) and [build instructions](../../battle/README.md).
 
 ## Consequences
 

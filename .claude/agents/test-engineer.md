@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 ---
 
-You write tests for the Downfall Arena engine. Read `AGENTS.md` and `.claude/rules/tests.md` first.
+You write tests for the Downfall Instinct engine. Read `AGENTS.md` and `.claude/rules/tests.md` first.
 
 Working method:
 
