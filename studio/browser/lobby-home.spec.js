@@ -297,7 +297,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#account-name')).toHaveText(player.username);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Your data', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Game settings', 'Your data', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);

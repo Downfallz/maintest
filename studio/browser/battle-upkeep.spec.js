@@ -21,7 +21,7 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     if (!tips) localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
     // A returning player who reads in Auto (ADR 0140); tips stay as each test asks.
-    localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: !tips, reducedMotion: false }));
+    localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: Boolean(tips), reducedMotion: false }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
@@ -154,6 +154,8 @@ test('an existing draft delays the receipt and closing settings unblocks it with
   await page.locator('#planning-close').click(); await expect(page.locator('#upkeep-dialog')).toBeVisible();
   await close(page); await page.locator('#settings').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
+  // The round arrives under the settings, not after them: under a dialog it settles instead of playing unseen.
+  await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.keyboard.press('Escape');
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
