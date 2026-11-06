@@ -91,7 +91,8 @@ test('finished matches replay before and after frames, then return to result', a
 });
 test('a session replay link reads only that recording and preserves perspective', async ({ page }) => {
   const h = await mount(page, { replay: true }); await page.locator('#match-open').click(); await page.locator('#match-replay').click(); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
-  expect([...new Set(h.reads)].sort()).toEqual(['/api/me', '/api/sessions/finished/replay']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  // The player's own game settings (ADR 0140) may be read as for any game; no seat is.
+  expect([...new Set(h.reads)].filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/me', '/api/sessions/finished/replay']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) test(`planning confirmation fits ${viewport.width}x${viewport.height}`, async ({ page }) => {
   await page.setViewportSize(viewport); const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();

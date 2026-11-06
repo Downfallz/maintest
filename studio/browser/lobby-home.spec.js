@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
@@ -35,7 +35,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) {
       state.privateReads.push(path); state.mineReads++;
-      const tables = state.account || state.mode === 'off' ? [held] : [];
+      const tables = state.account || state.mode === 'off' ? games ?? [held] : [];
       if (delayMine && state.mineReads === 1) await new Promise(resolve => { state.release = resolve; });
       return json({ tables, invitations: [] });
     }
@@ -48,6 +48,12 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
+    if (path === '/api/account/preferences') {
+      if (!state.account) return route.fulfill({ status: 401, json: { message: 'Sign in first.' } });
+      if (state.holdPreferences) await state.holdPreferences;
+      if (route.request().method() === 'PUT') { state.saved = route.request().postDataJSON(); return json({ preferences: state.saved, saved: true }); }
+      return json({ preferences: state.saved ?? { pace: 'step', speed: 1, help: true, reducedMotion: false }, saved: Boolean(state.saved) });
+    }
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
   await page.goto('/table/lobby.html');
@@ -91,6 +97,54 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await noOverflow(page);
   expect(state.privateReads).toEqual([]);
   expect(state.friendReads).toBe(0);
+  expect(state.errors).toEqual([]);
+});
+
+test('a signed-in player keeps game settings with the account, starting from step, 1x and tips on', async ({ page }) => {
+  const state = await home(page);
+
+  await openPanel(page, 'Game settings');
+
+  const dialog = page.getByRole('dialog', { name: 'Game settings' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Read confirmed results')).toHaveValue('step');
+  await expect(dialog.getByLabel('Playback speed')).toHaveValue('1');
+  await expect(dialog.getByLabel('Phase tips')).toBeChecked();
+  await expect(dialog.getByLabel('Less motion')).not.toBeChecked();
+  await expect(page.locator('#game-settings-where')).toContainText('Kept with your account');
+  await dialog.getByLabel('Read confirmed results').selectOption('auto');
+  await expect.poll(() => state.saved).toEqual({ pace: 'auto', speed: 1, help: true, reducedMotion: false });
+  await dialog.getByLabel('Playback speed').selectOption('1.5');
+  await expect.poll(() => state.saved?.speed).toBe(1.5);
+  await noOverflow(page);
+  expect(state.errors).toEqual([]);
+});
+
+test('game settings cannot be changed until the account has said what they are', async ({ page }) => {
+  const state = await home(page);
+  let release; state.holdPreferences = new Promise(resolve => { release = resolve; });
+  state.saved = { pace: 'auto', speed: 2, help: true, reducedMotion: false };
+
+  await openPanel(page, 'Game settings');
+
+  await expect(page.getByLabel('Playback speed')).toBeDisabled();
+  release();
+  await expect(page.getByLabel('Playback speed')).toBeEnabled();
+  await expect(page.getByLabel('Playback speed')).toHaveValue('2');
+  await page.getByLabel('Playback speed').selectOption('0.5');
+  await expect.poll(() => state.saved.speed).toBe(0.5);
+  expect(state.errors).toEqual([]);
+});
+
+test('a guest keeps game settings in this browser and asks the host nothing', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google' });
+
+  await openPanel(page, 'Game settings');
+  await page.getByLabel('Phase tips').uncheck();
+
+  await expect(page.locator('#game-settings-where')).toContainText('Kept in this browser');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('downfall.arena.game-settings.v1'))?.help)).toBe(false);
+  expect(state.saved).toBeUndefined();
   expect(state.errors).toEqual([]);
 });
 
@@ -260,7 +314,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#account-name')).toHaveText(player.username);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Your data', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Game settings', 'Your data', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
@@ -282,4 +336,24 @@ test('an account host that cannot be reached says so instead of offering a sign-
   await expect(page.locator('#sign-in-problem')).toHaveText('Could not reach the host to check your account. Reload the page to try again.');
   await expect(page.locator('#home-games')).toBeHidden();
   expect(state.errors).toEqual([]);
+});
+
+test('your games split into ongoing and finished tabs, your turn first, six to a page', async ({ page }) => {
+  const game = (id, { over = false, turn = false } = {}) => ({ table: { ...battle, id, over,
+    seats: [{ ...battle.seats[0], turn: !over && turn }, { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+  const games = [game('waiting-on-them'), game('done-1', { over: true }), game('your-move', { turn: true }),
+    ...Array.from({ length: 7 }, (_, index) => game(`done-${index + 2}`, { over: true }))];
+  const state = await home(page, { games });
+  const cards = page.locator('#my-tables .game-card');
+  await expect(cards).toHaveCount(2); await expect(page.locator('#mine-ongoing')).toHaveAttribute('aria-pressed', 'true');
+  await expect(cards.first()).toContainText('your-move'); await expect(cards.first()).toContainText('Your turn');
+  await expect(page.locator('#ongoing-count')).toHaveText('· 2'); await expect(page.locator('#finished-count')).toHaveText('· 8');
+  await expect(page.locator('#mine-pages')).toBeHidden();
+  await page.locator('#mine-finished').click();
+  await expect(cards).toHaveCount(6); await expect(cards.first()).toContainText('View game');
+  await expect(page.locator('#mine-page')).toHaveText('Page 1 of 2'); await expect(page.locator('#mine-previous')).toBeDisabled();
+  await page.locator('#mine-next').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-page')).toHaveText('Page 2 of 2');
+  await expect(page.locator('#mine-next')).toBeDisabled();
+  await page.locator('#mine-ongoing').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-pages')).toBeHidden();
+  await noOverflow(page); expect(state.errors).toEqual([]);
 });

@@ -1,9 +1,13 @@
 import { expect } from '@playwright/test';
-// Existing command/history journeys run as returning players. Default-on first-use tips are exercised
-// in battle-guidance.spec.js and the real-host battle.loop.js journeys, without this preference.
+// Existing command/history journeys run as returning players who chose Auto and muted the phase tips in their
+// game settings (ADR 0140). A new player's defaults (Step, 1×, tips on) are exercised in battle-guidance.spec.js,
+// battle-pacing.spec.js and the real-host battle.loop.js journeys, without these settings.
 export async function returningBattlePlayer({ context }) {
   await context.addInitScript(() => {
-    try { localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] })); } catch { /* Storage-denial fixtures remain meaningful. */ }
+    try {
+      localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
+      localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: false, reducedMotion: false }));
+    } catch { /* Storage-denial fixtures remain meaningful. */ }
   });
 }
 
@@ -27,4 +31,4 @@ export async function acknowledge(page, until, timeout = 45000) {
     else await page.waitForTimeout(100);
   }
 }
-export const readResults = page => acknowledge(page, async () => !await page.locator('#playback-skip').isVisible());
+export const readResults = page => acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true');

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
@@ -75,8 +76,9 @@ test('initial history shows confirmed attacks with accessible details and no hid
 });
 test('skip and duplicate polls keep every action without replaying it', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11), entry(12)]);
-  await expect(page.locator('#playback-skip')).toBeVisible(); await page.locator('#history-open').click();
-  await expect(page.locator('#playback-skip')).toBeHidden(); await expect(rows(page)).toHaveCount(3);
+  // An opponent's actions offer no Skip (ADR 0139); opening History is the reader's own way past them.
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await page.locator('#history-open').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'false'); await expect(rows(page)).toHaveCount(3);
   await h.publish([entry(12), entry(10)]); await expect(rows(page)).toHaveCount(3);
   await page.locator('#history-close').click(); await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(3);
   expect(h.state.errors).toEqual([]);
@@ -156,7 +158,9 @@ test('actions arriving while the journal is open settle on the board and stay re
 });
 test('the action result opens the journal over itself and takes the focus back', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11)]);
-  await page.locator('#playback-skip').click(); await page.locator('#playback-result').click();
+  // The opponent's action is read to its end and confirmed with OK (ADR 0139).
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#playback-next').click(); await page.locator('#playback-result').click();
   await expect(page.locator('#result-dialog')).toBeVisible();
   await page.locator('#result-dialog [data-history-open]').click(); await expect(rows(page)).toHaveCount(2);
   await page.keyboard.press('Escape');

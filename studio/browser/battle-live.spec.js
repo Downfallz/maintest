@@ -45,6 +45,44 @@ async function choose(page, seat = 1) {
   await expect(page.locator('#connection')).toHaveText('LIVE'); await expect(page.locator('#loading')).toBeHidden();
 }
 const fits = page => fitsViewport(page, '.creature, #help-open, #settings');
+test('a new player reads in Step at 1x with tips, and a change in Match settings lasts for that game alone', async ({ page }) => {
+  // A new player: no game settings and no muted tips in this browser (ADR 0140).
+  await page.addInitScript(() => { localStorage.removeItem('downfall.arena.game-settings.v1'); localStorage.removeItem('downfall.arena.help.v1'); });
+  await mount(page); await choose(page);
+
+  // Tips are on: the first one shows itself and is closed like any other.
+  await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-mute')).not.toBeChecked();
+  await page.locator('#help-close').click();
+  await page.locator('#settings').click();
+  await expect(page.locator('#playback-preference')).toHaveValue('step');
+  await expect(page.locator('#playback-speed')).toHaveValue('1');
+  await page.selectOption('#playback-preference', 'auto');
+  await page.selectOption('#playback-speed', '2');
+  await page.getByRole('button', { name: 'Close settings' }).click();
+
+  const kept = () => page.evaluate(() => ({ globals: localStorage.getItem('downfall.arena.game-settings.v1'),
+    game: JSON.parse(localStorage.getItem('downfall.arena.game-overrides.v1') ?? '[]').find(one => one.game === 'table-a') }));
+  expect(await kept()).toEqual({ globals: null, game: { game: 'table-a', pace: 'auto', speed: 2, help: true, reducedMotion: false } });
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect(page.locator('#playback-speed')).toHaveValue('2');
+});
+
+test('a game first opened with the player settings keeps them when those settings change later', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('downfall.arena.game-settings.v1', sessionStorage.getItem('next-settings')
+    ?? JSON.stringify({ pace: 'auto', speed: 1.5, help: false, reducedMotion: false })));
+  await mount(page); await choose(page);
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('downfall.arena.game-overrides.v1') ?? '')).toContain('"speed":1.5');
+
+  await page.evaluate(() => sessionStorage.setItem('next-settings', JSON.stringify({ pace: 'step', speed: 0.5, help: true, reducedMotion: true })));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await choose(page);
+
+  await expect(page.locator('#playback-preference')).toHaveValue('auto');
+  await expect(page.locator('#playback-speed')).toHaveValue('1.5');
+  await expect(page.locator('#reduce-motion')).not.toBeChecked();
+});
+
 test('no seat is read before a seat is chosen, and only the chosen one after', async ({ page }) => {
   const state = await mount(page);
   expect(state.requests.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
@@ -128,7 +166,8 @@ test('network failures mark the retained board stale and recover with a new snap
 test('an invitation is reviewed at the table and never claimed here', async ({ page }) => {
   const state = await mount(page, { saved: false, invitation: true, search: '?player1=invite' });
   await expect(page.locator('#access-link')).toHaveText('Review invitation'); await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?player1=invite');
-  expect(state.requests.map(one => one.path).sort()).toEqual(['/api/lobby/invitations', '/api/lobby/resume', '/api/me']);
+  // The player's game settings (ADR 0140) may be read as on every page; the invitation is not.
+  expect(state.requests.map(one => one.path).filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/lobby/invitations', '/api/lobby/resume', '/api/me']);
 });
 test('a refused discovery sends the player to sign in, and back here afterwards', async ({ page }) => {
   await mount(page, { saved: false, search: '?player1=first', resumeStatus: 401 });

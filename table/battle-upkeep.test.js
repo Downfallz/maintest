@@ -103,3 +103,17 @@ test('scene markers group actual deltas by creature, including zero and separate
   assert.equal(upkeepDisplay(receipt.energy.slice(1), []).summary, '+0 energy each · 1 creature');
   assert.equal(upkeepDisplay([], [], missingRoundEnergy).summary, missingRoundEnergy);
 });
+for (const subPhase of ['IntentSelection', 'Activation', 'Cleanup']) test(`a page opened once the round is in ${subPhase} does not announce its upkeep`, () => {
+  const combat = round => view(round, [energy(round), ongoing(round)], { board: { ...board, roundNumber: round, phase: 'Combat', subPhase } });
+  const fresh = createBattleUpkeep(storage()); fresh.reset('seat'); fresh.receive(combat(1));
+  assert.equal(fresh.model().pending, false, 'round 1 opened mid-combat');
+  const store = storage(); const before = createBattleUpkeep(store); before.reset('seat'); before.receive(view(3)); before.presented(3);
+  const back = createBattleUpkeep(store); back.reset('seat'); back.receive(combat(5));
+  assert.equal(back.model().pending, false, 'returning rounds later, mid-combat');
+  back.receive(view(6)); assert.equal(back.model().pending, true, 'the next round seen live is announced as before');
+});
+test('a page opened while the round is still in its opening phases still announces its upkeep', () => {
+  const opening = createBattleUpkeep(storage()); opening.reset('seat');
+  opening.receive(view(1, [energy(1), ongoing(1)], { board: { ...board, roundNumber: 1, phase: 'Planning', subPhase: 'Evolution' } }));
+  assert.equal(opening.model().pending, true);
+});

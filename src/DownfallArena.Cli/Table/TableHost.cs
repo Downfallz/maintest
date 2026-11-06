@@ -106,6 +106,8 @@ internal static class TableHost
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, accounts.Notices);
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
+            // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
+            accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         }
         var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push) { Accounts = accounts };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.

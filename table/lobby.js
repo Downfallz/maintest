@@ -53,6 +53,19 @@ export function turnOf(table, held = []) {
   return { mine: false, text: `${name}'s turn` };
 }
 
+export const GAMES_PER_PAGE = 6;
+/**
+ * The player's own games, as the lobby's two tabs show them: ongoing (the ones waiting for this player first,
+ * the others in the host's order) or finished, a page at a time. A page past the end shows the last one.
+ */
+export function myGames(mine, tab, page = 0, size = GAMES_PER_PAGE) {
+  const ongoing = mine.filter(entry => !entry.table.over), finished = mine.filter(entry => entry.table.over);
+  const waiting = entry => turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === true;
+  const list = tab === 'finished' ? finished : [...ongoing.filter(waiting), ...ongoing.filter(entry => !waiting(entry))];
+  const pages = Math.max(1, Math.ceil(list.length / size)), at = Math.min(Math.max(0, page), pages - 1);
+  return { ongoing: ongoing.length, finished: finished.length, pages, page: at, items: list.slice(at * size, (at + 1) * size) };
+}
+
 function cardAction(table, entry) {
   if (!entry) return 'Take a seat →';
   return table.over ? 'View game →' : 'Resume game →';
@@ -113,7 +126,7 @@ export function mountLobby(doc, location, storage) {
     chooser.addEventListener('change', () => { presentation = chooser.value; savePresentation(storage, presentation); });
   }
   let listing = null;
-  let mine = [];
+  let mine = [], mineTab = 'ongoing', minePage = 0;
   let invitations = [];
   let friends = [];
   let reinviting = null;
@@ -228,7 +241,7 @@ export function mountLobby(doc, location, storage) {
     return root;
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, minePage]);
     if (key === drawn) return;
     drawn = key;
     const available = visibleTables(listing.tables, mine, showAll);
@@ -237,9 +250,16 @@ export function mountLobby(doc, location, storage) {
     el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
     onOutstanding(mine.some(entry => invitedState(entry.invited)?.waiting));
     el('mine-count').textContent = mine.length;
+    const games = myGames(mine, mineTab, minePage); minePage = games.page;
+    el('ongoing-count').textContent = games.ongoing ? `· ${games.ongoing}` : '';
+    el('finished-count').textContent = games.finished ? `· ${games.finished}` : '';
+    el('mine-pages').hidden = games.pages <= 1;
+    el('mine-page').textContent = `Page ${games.page + 1} of ${games.pages}`;
+    el('mine-previous').disabled = games.page === 0; el('mine-next').disabled = games.page >= games.pages - 1;
     el('tables-count').textContent = available.length;
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
-    el('my-tables').replaceChildren(...(mine.length ? mine.map(entry => card(entry.table, entry)) : [node('p', none, 'empty-state')]));
+    const empty = mine.length && mineTab === 'finished' ? 'No finished games yet.' : mine.length ? 'No games in progress. Your finished ones are under Finished.' : none;
+    el('my-tables').replaceChildren(...(games.items.length ? games.items.map(entry => card(entry.table, entry)) : [node('p', empty, 'empty-state')]));
     el('open-tables').replaceChildren(...(available.length ? available.map(table => card(table)) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
     el('new-table').disabled = !listing.recording;
     el('lobby-status').textContent = statusText(listing);
@@ -282,6 +302,16 @@ export function mountLobby(doc, location, storage) {
     }
     return signInFirst() ? { tables: [] } : lobbyRequest('/api/lobby/resume', { tokens });
   }
+  for (const [id, tab] of [['mine-ongoing', 'ongoing'], ['mine-finished', 'finished']]) el(id).addEventListener('click', () => {
+    mineTab = tab; minePage = 0;
+    el('mine-ongoing').setAttribute('aria-pressed', String(tab === 'ongoing'));
+    el('mine-finished').setAttribute('aria-pressed', String(tab === 'finished'));
+    if (listing) render();
+  });
+  for (const [id, step] of [['mine-previous', -1], ['mine-next', 1]]) el(id).addEventListener('click', () => {
+    minePage += step; if (listing) render();
+    el('my-games-section').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
   for (const [id, all] of [['filter-open', false], ['filter-all', true]]) el(id).addEventListener('click', () => {
     showAll = all;
     el('filter-open').setAttribute('aria-pressed', String(!all));

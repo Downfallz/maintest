@@ -46,6 +46,13 @@
 .lobby-filters > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lobby-filters button { border-radius: 24px; font-size: 12px; padding: 8px 14px; }
 .lobby-filters button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
+.lobby-filters button span { color: var(--muted); }
+/* Your games page six at a time; the pager stays one line, its buttons full-size targets. */
+.lobby-pages { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.lobby-pages[hidden] { display: none; }
+.lobby-pages button { min-height: 44px; border-radius: 24px; font-size: 12px; padding: 8px 14px; }
+.lobby-pages button:disabled { opacity: .45; cursor: default; }
+#mine-page { font-size: 12px; color: var(--muted); }
 .empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); line-height: 1.7; }
 .lobby-panel { padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-glass); margin-bottom: 18px; }
 .lobby-panel h2 { font: 400 22px Georgia, serif; margin: 10px 0 18px; }
@@ -178,6 +185,14 @@
 .home-dialog :is(.privacy-panel, .device-panel) h2 { margin-top: 0; }
 .home-dialog .privacy-panel p { font-size: 14px; line-height: 1.75; margin: 12px 0; }
 .home-page #join-problem { margin-bottom: 0; }
+.game-settings-panel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.game-settings-panel fieldset:disabled { opacity: .6; }
+.game-settings-panel label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.game-settings-panel label > span { display: flex; flex-direction: column; gap: 3px; }
+.game-settings-panel small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.game-settings-panel select { min-height: 44px; min-width: 96px; }
+.game-settings-panel input[type="checkbox"] { width: 22px; height: 22px; flex: none; }
+.game-settings-panel #game-settings-where { font-size: 13px; line-height: 1.6; margin: 14px 0 0; }
 @media (max-width: 1240px) {
   .home-header { gap: 14px; }
   .home-menu-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; background: transparent; min-height: 44px; }

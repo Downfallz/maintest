@@ -14,7 +14,8 @@ const catalogue = { cards: [
   { id: 'root', name: 'Brute', level: 1, initiativeBonus: 2, spells: ['strike'], tags: ['Resilient'] },
   { id: 'cap', name: 'Shared bulwark', level: 4, initiativeBonus: 0, spells: [], passiveLines: ['For every creature of the side: defense +2'] },
   { id: 'pending', name: 'PRIVATE_MUTATION', level: 2, spells: ['hidden'] },
-] };
+], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false },
+  { kind: 'DefenseUp', glyph: '◇', harmful: false }, { kind: 'DefenseDown', glyph: '◇', harmful: true }] };
 const cast = () => ({ sequence: 4, event: { kind: 'CombatActionResolved', roundId: 2,
   resolution: { action: { actor: 1, spell: 'strike', targets: [3] }, isCritical: false },
   appliedOutcomes: [{ kind: 'DamageOutcome', target: 3, amount: 7 }],
@@ -166,7 +167,7 @@ test('field labels keep defense, initiative and conditions legible beside the st
   await expect(actor).toHaveAttribute('aria-label', /3 defense, 8 initiative.*Immune to stun/);
   if (page.viewportSize().width >= 620) {
     await expect(actor.locator('.creature-defense')).toBeVisible();
-    await expect(actor.locator('.creature-defense')).toHaveText('3 DEF');
+    await expect(actor.locator('.creature-defense')).toHaveText('3');
     const bounds = await actor.evaluate(node => ({ tag: node.querySelector('.creature-tag').getBoundingClientRect().bottom, caption: node.querySelector('.caption').getBoundingClientRect().top }));
     expect(bounds.tag).toBeLessThanOrEqual(bounds.caption);
     await page.clock.runFor(50);
@@ -183,7 +184,8 @@ test('initiative stands under every name on the field, on phones too, below the 
   for (const id of ['1', '3']) {
     const node = page.locator(`#actor-layer [data-creature="${id}"]`);
     await expect(node.locator('.creature-init')).toBeVisible();
-    const [name, init] = await node.evaluate(one => [one.querySelector('.creature-name'), one.querySelector('.creature-init')].map(part => part.getBoundingClientRect().toJSON()));
+    // The initiative leads the badge row, and the row is what stands centred under the name.
+    const [name, init] = await node.evaluate(one => [one.querySelector('.creature-name'), one.querySelector('.creature-badges')].map(part => part.getBoundingClientRect().toJSON()));
     // Right under the whole name, centred on it, and the name itself never cut to make room.
     expect(init.top).toBeGreaterThanOrEqual(name.bottom - 1); expect(init.top - name.bottom).toBeLessThan(8);
     expect(Math.abs((init.left + init.right) / 2 - (name.left + name.right) / 2)).toBeLessThan(2);
@@ -191,4 +193,33 @@ test('initiative stands under every name on the field, on phones too, below the 
   }
   await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8 INIT');
   expect(h.errors).toEqual([]);
+});
+
+test('defense shows with a shield and each kind of condition with its icon, on phones too; zero defense shows nothing', async ({ page }) => {
+  const h = await mount(page);
+  h.view.board.allies[0] = { ...h.view.board.allies[0], isStunned: true, conditions: [
+    { effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }, { effect: { kind: 'Bleed', amountPerRound: 1 }, remainingRounds: 1 },
+    { effect: { kind: 'Regeneration', amountPerRound: 1 }, remainingRounds: 2 },
+    { effect: { kind: 'DefenseUp', amount: 2 }, remainingRounds: 1 }, { effect: { kind: 'DefenseDown', amount: 1 }, remainingRounds: 1 }] };
+  h.view.board.allies[1] = { ...h.view.board.allies[1], totalDefense: 0 };
+  await h.publish();
+  const first = page.locator('#actor-layer [data-creature="1"]'), second = page.locator('#actor-layer [data-creature="2"]');
+  await expect(first.locator('.creature-defense')).toBeVisible(); await expect(first.locator('.creature-defense')).toHaveText('3');
+  await expect(first.locator('.creature-defense')).toHaveAttribute('title', '3 defense');
+  await expect(second.locator('.creature-defense')).toBeHidden();
+  const cues = first.locator('.creature-conditions .cue');
+  await expect(cues).toHaveCount(5); await expect(cues.first()).toBeVisible();
+  expect(await cues.evaluateAll(nodes => nodes.map(node => node.dataset.cue))).toEqual(['health-loss', 'health-gain', 'defense-gain', 'defense-loss', 'stun']);
+  await expect(cues.first()).toHaveAttribute('title', 'Bleed 2 · Bleed 1');
+  await expect(second.locator('.creature-conditions')).toBeHidden();
+  // The status tag still clears the caption, now taller by its badge rows.
+  const clear = await first.evaluate(node => node.querySelector('.creature-tag').getBoundingClientRect().bottom <= node.querySelector('.caption').getBoundingClientRect().top + 1);
+  expect(clear).toBe(true); expect(h.errors).toEqual([]);
+});
+
+test('a new round is announced at the top of the field, then fades; opening the page is not a new round', async ({ page }) => {
+  const h = await mount(page); await expect(page.locator('#round-toast')).toBeHidden();
+  h.view.board.roundNumber = 4; await h.publish();
+  await expect(page.locator('#round-toast')).toBeVisible(); await expect(page.locator('#round-toast')).toContainText('Round 4');
+  await page.clock.runFor(2700); await expect(page.locator('#round-toast')).toBeHidden(); expect(h.errors).toEqual([]);
 });

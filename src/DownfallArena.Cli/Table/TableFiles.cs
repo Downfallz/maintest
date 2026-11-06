@@ -42,6 +42,7 @@ internal sealed class TableFiles
             ["/navigation.js"] = (Path.Combine(tableDirectory, "navigation.js"), JavaScript),
             ["/account.js"] = (Path.Combine(tableDirectory, "account.js"), JavaScript),
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
+            ["/game-preferences.js"] = (Path.Combine(tableDirectory, "game-preferences.js"), JavaScript),
             ["/friends.js"] = (Path.Combine(tableDirectory, "friends.js"), JavaScript),
             ["/players.js"] = (Path.Combine(tableDirectory, "players.js"), JavaScript),
             ["/leaderboard"] = (Path.Combine(tableDirectory, "leaderboard.html"), StudioResponse.Html),

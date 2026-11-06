@@ -267,6 +267,7 @@ const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolut
 test('the player\'s own cast moves on by itself in Auto; Step still waits for Next on it', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
   assert.equal(h.queue.model().asks, false); assert.equal([...h.timers.values()][0].ms, SETTLE);
+  assert.equal(h.queue.model().incoming, false);
   h.tick(); assert.equal(h.queue.model().sequence, 5);
   const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.tick(); step.tick();
   assert.equal(step.queue.model().asks, true); assert.equal(step.timers.size, 0);
@@ -275,6 +276,7 @@ test('in Auto as in Step an incoming action holds for the OK; switching pace nev
   const h = harness(); h.receive([]); h.receive([incoming(4), incoming(5)]); h.tick(); h.tick();
   assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.timers.size, 0);
   assert.equal(h.queue.model().asks, true); assert.equal(h.queue.model().canNext, true);
+  assert.equal(h.queue.model().incoming, true, 'an incoming action is read, never skipped');
   h.queue.setMode('step'); h.queue.setMode('auto'); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
   h.tick(); h.tick(); h.queue.advance(); assert.equal(h.queue.model().active, false, 'the OK on the last action returns to the present');
@@ -404,4 +406,34 @@ test('an incoming action held in Auto keeps its hold when the next result arrive
   assert.equal(h.queue.model().sequence, 4, 'the held action is still the one being read');
   assert.equal(h.queue.model().remaining, 2);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5);
+});
+test('an upkeep read on its own round shows that round\'s creatures; one the board has moved past shows none', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  const latest = { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' };
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: latest });
+  assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
+  assert.deepEqual(h.queue.model().board.creatures.map(one => one.id), ['1', '2', '3']);
+  const later = harness(); later.queue.setMode('step'); later.receive([]);
+  const moved = view().board; moved.roundNumber = 4;
+  later.receive([energyEvent(4), upkeepEvent(5)], { board: moved });
+  assert.deepEqual(later.queue.model().board.creatures, []);
+});
+test('a held upkeep keeps the board it arrived with when the same round\'s combat arrives behind it', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' } });
+  const health = () => h.queue.model().board.creatures.find(one => one.id === '2').health;
+  const before = health();
+
+  h.receive([], { board: { ...view().board, roundNumber: 3, enemies: [creature(2, 1), creature(3)] } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.equal(health(), before, 'the combat after it is not read into the upkeep');
+});
+test('an upkeep that arrives once its round\'s combat has begun draws no borrowed board', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3 } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.deepEqual(h.queue.model().board.creatures, []);
 });

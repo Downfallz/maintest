@@ -333,8 +333,11 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 ## AU7: pace results and round turnover
 
-Match settings (the gear in the header) select **Auto** (default) or **Step**; the choice
-is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
+Match settings (the gear in the header) select **Step** (default) or **Auto**; the choice
+is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
+settings** (the menu; kept with the account when signed in, in the browser otherwise; Step, 1×, tips on by
+default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
+**Skip to present** is not offered while an incoming action waits for its OK.
 Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
 **OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
 ([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). In Auto the player's own
@@ -476,8 +479,13 @@ Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/imag
 Every ally and opponent, including defeated creatures and missing-art fallbacks, opens a reference with
 stable scene/journal identity, current defense/initiative, conditions and named spell/caster sources.
 Fresh conditions, permanent effects, remaining countdowns and immunity keep the shared board semantics.
-Desktop captions also expose defense, initiative and compact condition/passive cues; narrow/short layouts
-keep these in the inspection and accessible label so the field's target names remain legible.
+Every caption, on every screen, carries a badge row under the full name: initiative, defense with a
+shield when above zero, and one icon per kind of condition (`src/condition-icons.ts`). The icon comes
+from the host's effect cue, the stat the effect moves and whether it is a loss, so the page names no
+effect: a health loss is a drop, a gain a heart, defense a shield up or cracked, a stun a star. The
+numbers and the engine's words are in each badge's title, the accessible label and the inspection; the
+status tag above is placed from the caption's measured height. A new round seen live is announced by a
+short banner at the top of the field that fades by itself.
 
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
 Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell

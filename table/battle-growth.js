@@ -24,6 +24,15 @@ export function mutationReference(view, catalogue, selectedId) {
     next: !view?.over && Number.isInteger(board?.nextEvolutionRound) && board.nextEvolutionRound >= (board.roundNumber ?? 0) ? board.nextEvolutionRound : null };
 }
 
+const PAST_TEMPOS = ['TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'];
+function tempoCommitted(board, round) {
+  if ((board.roundNumber ?? 0) > round || PAST_TEMPOS.includes(board.subPhase)) return true;
+  if (board.subPhase !== 'Speed') return false;
+  const given = new Set((board.speedChoices ?? []).map(one => one.creature));
+  const living = (board.allies ?? []).filter(one => one.isAlive !== false);
+  return living.length > 0 && living.every(one => given.has(one.id));
+}
+
 // The initial read is a baseline, including on reload/return from a hidden tab. Only a new public reveal
 // can announce an unlock; a private submission, catalogue change, or board diff alone cannot do it.
 export function createBattleGrowth() {
@@ -74,6 +83,9 @@ export function createBattleGrowth() {
       }
     }
     seen = Math.max(seen ?? -1, end);
+    // The reveal is read before the tempos: once this seat has given every tempo, or the round has moved past
+    // them, its crests and receipt clear by themselves. A gap between two tempo askings is not a commit.
+    if (receipt && tempoCommitted(view.board, receipt.round)) receipt = null;
     // A board ahead of the feed (a purchase applied, its reveal not yet recorded) must not become the baseline
     // the reveal is compared with, or its new spells would read as already known.
     for (const one of [...(view.board.allies ?? []), ...(view.board.enemies ?? [])]) {

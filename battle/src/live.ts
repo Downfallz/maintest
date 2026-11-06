@@ -1,6 +1,7 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
+import { conditionIcons, iconElement } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.js';
@@ -15,6 +16,7 @@ import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance } from '../../table/battle-guidance.js';
 import { guidanceControls } from './guidance';
+import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
 import { mutationScene } from './mutation-scene';
 import { BattleScene } from './scene';
@@ -102,7 +104,7 @@ const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
-const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
+const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
 }
@@ -203,6 +205,20 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
 }
 
 type GrowthRow = { creature: number; mutation: string; stage: number | null; colour: string; spells: string[]; passives: string[]; initiative: number | null };
+// A new round gets a short announcement at the top of the field when the shown board reaches it live; a page
+// opening on a round, a replay or a seat change is a baseline, never a new round.
+let announcedRound: number | null = null, roundToastTimer = 0;
+function announceRound(round: number | null) {
+  if (round == null) { announcedRound = null; return; }
+  if (announcedRound !== null && round > announcedRound) {
+    const toast = $('round-toast');
+    text('round-toast-number', `Round ${round}`);
+    toast.hidden = false; toast.classList.remove('showing'); void toast.offsetWidth; toast.classList.add('showing');
+    window.clearTimeout(roundToastTimer);
+    roundToastTimer = window.setTimeout(() => { toast.hidden = true; toast.classList.remove('showing'); }, 2600);
+  }
+  announcedRound = round;
+}
 let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
 
 function render() {
@@ -218,8 +234,10 @@ function render() {
     historical: playbackState.active || replay.active, online: $('battle').dataset.connection === 'live' });
   frame = (replay.active ? board.frame : playbackState.frame) as SceneFrame;
   $('battle').dataset.playback = playbackState.stage;
+  $('battle').dataset.reading = String(playbackState.active);
   $('battle').dataset.sequence = String(playbackState.sequence ?? '');
-  $('playback-skip').hidden = !playbackState.active;
+  // An opponent's action is read, never skipped: it offers OK alone (ADR 0139).
+  $('playback-skip').hidden = !playbackState.active || playbackState.incoming;
   text('playback-skip', `Skip to present (${playbackState.remaining})`);
   // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
   // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.
@@ -297,18 +315,30 @@ function render() {
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
-    let defense = node.querySelector<HTMLElement>('.creature-defense');
-    if (!defense) { defense = document.createElement('span'); defense.className = 'creature-defense'; node.querySelector('.caption')!.append(defense); }
-    defense.textContent = `${one.totalDefense ?? '—'} DEF`;
-    // Initiative decides who acts first, so it stands beside the name on every screen, phones included.
+    // Initiative, defense when it is above zero, and one icon per kind of condition, on every screen: the numbers
+    // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
     node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
-    let cues = node.querySelector<HTMLElement>('.creature-conditions');
-    if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
-    cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
+    const defense = node.querySelector<HTMLElement>('.creature-defense')!;
+    const defended = Number.isFinite(one.totalDefense) && one.totalDefense > 0;
+    defense.hidden = !defended; defense.title = defended ? `${one.totalDefense} defense` : '';
+    if (defended && defense.dataset.value !== String(one.totalDefense)) {
+      defense.dataset.value = String(one.totalDefense); defense.replaceChildren(iconElement('defense-gain'), document.createTextNode(String(one.totalDefense)));
+    }
+    const cues = node.querySelector<HTMLElement>('.creature-conditions')!;
+    const icons = conditionIcons(one, catalogue?.effects ?? []);
+    const iconKey = JSON.stringify(icons);
+    if (cues.dataset.icons !== iconKey) {
+      cues.dataset.icons = iconKey;
+      cues.replaceChildren(...icons.map(icon => { const cue = document.createElement('span'); cue.className = 'cue'; cue.title = icon.title; cue.dataset.cue = icon.key; cue.append(iconElement(icon.key)); return cue; }));
+    }
+    cues.hidden = icons.length === 0;
+    // The status tag stands above the whole caption, however many badge rows a narrow figure wraps it into.
+    node.style.setProperty('--caption-height', `${node.querySelector<HTMLElement>('.caption')!.offsetHeight}px`);
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
     node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
+  announceRound(view && !replay.active ? board.round : null);
   text('round-phase', phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
@@ -369,6 +399,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
+  applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
@@ -439,13 +470,36 @@ scene.onImpact = () => {
   if (playback.model().active && !document.hidden && !match.model().active) audio.play(frame.cue?.visual);
 };
 soundControl(audio, $<HTMLInputElement>('sound'));
-$<HTMLSelectElement>('playback-speed').value = '1';
-$('playback-speed').addEventListener('change', () => playback.setRate(Number($<HTMLSelectElement>('playback-speed').value)));
+// The player's settings start every game (ADR 0140): the account's, or this browser's when signed out. The
+// first time a game is opened they are copied into it, so changing them later starts new games differently
+// and leaves this one as it was; what this page's settings change, they change for this game alone.
+let settings = localSettings(storage);
+let settingsKnown = false;
+const gameOf = () => selected?.table.id ?? null;
+function applySettings() {
+  const game = gameOf(), kept = gameOverride(storage, game);
+  const chosen = effectiveSettings(settings, kept);
+  if (game && settingsKnown && Object.keys(kept).length < Object.keys(chosen).length) saveGameOverride(storage, game, chosen);
+  $<HTMLSelectElement>('playback-preference').value = chosen.pace; playback.setMode(chosen.pace);
+  $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
+  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced());
+  helpUI.setHelp(chosen.help);
+}
+function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
+void loadSettings(storage).then(answer => { settings = answer.settings; settingsKnown = true; applySettings(); render(); });
+$('playback-speed').addEventListener('change', () => {
+  const speed = Number($<HTMLSelectElement>('playback-speed').value);
+  playback.setRate(speed); keepForGame({ speed });
+});
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
 function motionChanged() { playback.setReduced(reduced()); render(); }
-$('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
-playback.setReduced(reduced());
-$('playback-preference').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-preference').value));
+$('reduce-motion').addEventListener('change', () => { keepForGame({ reducedMotion: $<HTMLInputElement>('reduce-motion').checked }); motionChanged(); });
+motion.addEventListener('change', motionChanged);
+applySettings();
+$('playback-preference').addEventListener('change', () => {
+  const pace = $<HTMLSelectElement>('playback-preference').value;
+  playback.setMode(pace); keepForGame({ pace });
+});
 $('playback-next').addEventListener('click', () => {
   playback.advance();
   if (!playback.model().active && !document.querySelector('dialog[open]'))

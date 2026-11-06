@@ -46,8 +46,11 @@ export function createBattleUpkeep(storage) {
     const round = view.board.roundNumber ?? 0;
     entries = retainRoundEvents(entries, (view.feed ?? []).filter(entry => ['RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)), round);
     if (round > observed) {
-      // Joining an already advanced match is not an observed round transition.
-      if ((round === 1 && !view.over) || observed > 0) pendingRound = round;
+      // Joining an already advanced match is not an observed round transition. Neither is reaching a round
+      // whose combat has begun (a page opened mid-round, or back after rounds away): its upkeep is long past
+      // and stays in History rather than interrupting the turn the player came back to.
+      const begun = ['IntentSelection', 'Activation', 'Cleanup', 'Finalization'].includes(view.board.subPhase);
+      if (!begun && ((round === 1 && !view.over) || observed > 0)) pendingRound = round;
       else mark(round);
       observed = round;
     }

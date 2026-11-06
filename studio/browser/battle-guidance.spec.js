@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { fitsViewport } from './fit.js';
+import { readResults } from './battle-help-fixture.js';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
 const roster = [1, 2, 3, 4, 5, 6].map(id => creature(id));
@@ -86,7 +88,8 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
 test('mute prevents future tips, keeps History, and Help reopens the current subject', async ({ page }) => {
   const h = await mount(page); await page.locator('#help-mute').check(); await close(page); await page.locator('#planning-close').click();
   await h.publish([entry(1)], { waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
-  await page.locator('#playback-skip').click(); await expect(page.locator('#help-dialog')).toBeHidden();
+  // An opponent's action is read with OK, never skipped (ADR 0139).
+  await readResults(page); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
@@ -111,9 +114,11 @@ for (const [kind, phrase] of [['Action', 'No hidden spell declaration'], ['Inten
 test('a next-round tip waits for the closing action and never shows its budget on the old frame', async ({ page }) => {
   const h = await mount(page, { kind: null }); await expect(page.locator('#help-dialog')).toBeHidden();
   await h.publish([entry(1, 2)], { board: { ...h.state.view.board, roundNumber: 3, nextEvolutionRound: 3 }, waitingFor: 'Evolution', waitingAsked: 12 });
-  await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#help-dialog')).toBeHidden();
+  await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#help-dialog')).toBeHidden();
   await expect(page.locator('#instruction')).not.toContainText('team picks');
-  await page.locator('#playback-skip').click(); await expect(page.locator('#help-dialog')).toBeVisible();
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '1'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#playback-next').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   await expect(page.locator('#help-round')).toHaveText('Round 3 of 12'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 for (const reason of ['revoked', 'hidden']) test(`${reason} clears guide text and stale focus`, async ({ page }) => {

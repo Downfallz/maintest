@@ -14,4 +14,8 @@ public static class AccountErrors
     public static readonly DomainError UsernameTaken = new("Account.UsernameTaken", "Another player already has that name. Choose another.");
 
     public static readonly DomainError AlreadyRegistered = new("Account.AlreadyRegistered", "This sign-in already has an account.");
+
+    public static readonly DomainError PreferencesInvalid = new(
+        "Account.PreferencesInvalid",
+        "Game settings take a pace of auto or step and a speed of 0.5, 1, 1.5 or 2.");
 }

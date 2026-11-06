@@ -2,6 +2,7 @@ import { accountRequest, mountAccount } from './account.js';
 import { mountDevices } from './devices.js';
 import { mountFriends } from './friends.js';
 import { operatorToken } from './session.js';
+import { mountGameSettings } from './game-preferences.js';
 
 const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">Tactical creature combat</span><h1>Downfall Instinct</h1></div></a>
@@ -11,6 +12,7 @@ const headerContent = `
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
       <a id="leaderboard-link" href="/leaderboard" hidden>Leaderboard</a>
       <button id="notifications-open" type="button" data-home-dialog="notifications-dialog" hidden>Notifications</button>
+      <button id="game-settings-open" type="button" data-home-dialog="game-settings-dialog">Game settings</button>
       <button id="data-open" type="button" data-home-dialog="data-dialog">Your data</button>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
@@ -29,7 +31,13 @@ const panels = `<div class="navigation-panels lobby-page home-page">
           <p class="muted">A friend can invite you to a table and be told about it on their phone. Declining and removing are silent.</p>
         </section></div></dialog>
   <dialog id="notifications-dialog" class="home-dialog" aria-labelledby="notifications-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Stay in the game</p><h2 id="notifications-dialog-title">Notifications</h2></div><button type="button" data-home-close aria-label="Close notifications">×</button></div><div class="home-dialog-body"><section id="device-panel" class="lobby-panel device-panel" aria-labelledby="device-heading" hidden><h2 id="device-heading">Be told on this device</h2><p id="device-hint" class="muted"></p><div class="device-actions"><button id="device-toggle" type="button" class="primary"></button><button id="device-test" type="button" class="secondary" hidden>Send a test</button></div><p id="device-problem" class="problem" role="alert" hidden></p><output id="device-result" class="muted" hidden></output></section><p id="device-unavailable" class="muted">Notifications are not available right now. Your games and invitations are always available here.</p></div></dialog>
-  <dialog id="data-dialog" class="home-dialog" aria-labelledby="data-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your account, your choice</p><h2 id="data-dialog-title">Your data</h2></div><button type="button" data-home-close aria-label="Close your data">×</button></div><div class="home-dialog-body"><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you ask to be notified on a device, where to reach that browser, until you stop it or sign out everywhere.</p><p>The games your seats play are recorded under the internal id, to replay them and to improve the bots.</p><p>Delete your account any time from your name at the top: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p></section></div></dialog>
+  <dialog id="game-settings-dialog" class="home-dialog" aria-labelledby="game-settings-title"><div class="dialog-heading"><div><p class="eyebrow">Every new game</p><h2 id="game-settings-title">Game settings</h2></div><button type="button" data-home-close aria-label="Close game settings">×</button></div><div class="home-dialog-body"><form id="game-settings" class="lobby-panel game-settings-panel"><fieldset id="game-settings-fields">
+    <label for="game-settings-pace"><span>Read confirmed results<small>Step waits for Next on everything · Auto plays your own casts and the turnover; opponent actions always wait for your OK</small></span><select id="game-settings-pace"><option value="step">Step</option><option value="auto">Auto</option></select></label>
+    <label for="game-settings-speed"><span>Playback speed</span><select id="game-settings-speed"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
+    <label for="game-settings-help"><span>Phase tips<small>Explain each phase the first time it comes</small></span><input id="game-settings-help" type="checkbox"></label>
+    <label for="game-settings-motion"><span>Less motion<small>Keep the scene still</small></span><input id="game-settings-motion" type="checkbox"></label>
+    </fieldset><p id="game-settings-where" class="muted"></p><p id="game-settings-problem" class="problem" role="alert" hidden></p></form></div></dialog>
+  <dialog id="data-dialog" class="home-dialog" aria-labelledby="data-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your account, your choice</p><h2 id="data-dialog-title">Your data</h2></div><button type="button" data-home-close aria-label="Close your data">×</button></div><div class="home-dialog-body"><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you ask to be notified on a device, where to reach that browser, until you stop it or sign out everywhere.</p><p>Your game settings (reading pace, speed, phase tips, less motion), until you change them or delete your account.</p><p>The games your seats play are recorded under the internal id, to replay them and to improve the bots.</p><p>Delete your account any time from your name at the top: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p></section></div></dialog>
   <dialog id="join-dialog" class="home-dialog" aria-labelledby="join-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">An invitation awaits</p><h2 id="join-dialog-title">Join a battle</h2></div><button type="button" data-home-close aria-label="Close join a battle">×</button></div><div class="home-dialog-body"><p class="muted">Enter the code shared by another player to join their battle.</p><form id="join-code"><label for="code">Invitation code</label><div class="code-row"><input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7F2Q9XM" maxlength="16" required /><button type="submit" class="primary">Join →</button></div><p id="join-problem" class="problem" role="alert" hidden></p></form></div></dialog>
   <dialog id="delete-dialog" aria-labelledby="delete-title">
     <form id="delete-form"><p class="eyebrow">This cannot be undone</p><h2 id="delete-title" class="name-title">Delete your account</h2>
@@ -145,6 +153,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {} } 
   }
   const navigation = mountHomeNavigation(doc);
   const devices = mountDevices(doc, { storage });
+  const gameSettings = mountGameSettings(doc, storage);
   const friends = mountFriends(doc, {
     onRequests: navigation.requests,
     onInvite: friend => {
@@ -176,6 +185,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {} } 
       header.hidden = game && !account;
       navigation.setAccount(account, mode);
       devices.setAccount(account);
+      gameSettings.setAccount(account);
       friends.setAccount(account);
       onChange(account, mode);
     },
