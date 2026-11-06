@@ -1,4 +1,4 @@
-# 0126. Answer combat questions in the live battle view
+# 0126. Answer combat questions in the live arena
 
 Date: 2026-11-03
 Status: Accepted for the opt-in combat integration
@@ -13,7 +13,7 @@ reads and return links that work without storage. Those boundaries remain in pla
 
 ## Decision
 
-Keep `/battle` opt-in and require the existing explicit viewpoint selection. Inspection alone sends
+Keep `/arena` opt-in and require the existing explicit viewpoint selection. Inspection alone sends
 neither a combat command nor a `shown` acknowledgement. Opening combat controls displays the current
 question, then acknowledges its `waitingAsked` through the existing seat transport. Evolution, Tempo,
 ties and the remainder of the game loop stay at `/play` until A7. Invitations still belong there.
@@ -25,7 +25,7 @@ candidates and bounds come from the current seat options. Unaffordable hidden pl
 with a fizzle warning, as at the table. Known but unoffered cards are disabled. Empty casts require
 confirmation too. Share target validation and combat command construction in `slot.js` with `/play`.
 
-Keep the draft in `battle-combat.js`, independent of DOM and Phaser. Its identity includes the selected
+Keep the draft in `arena-combat.js`, independent of DOM and Phaser. Its identity includes the selected
 seat and asking; changing either invalidates it. Acknowledgement responses must still match that
 asking. Revalidate the draft before writing, suppress duplicate confirmations, and fence callbacks
 from closed/reopened controls. A hidden page, covered controls, stale connection or failed renderer
@@ -51,21 +51,21 @@ content or game rules change. No new dependency is needed.
 
 Acknowledging on opening the controls, not on drawing the question, has two costs, accepted here. The
 decision clock starts later than it does at the table, which draws and acknowledges at once: a duration
-recorded from the battle view measures from the opening, and `playtest-timing` cannot tell the two apart. And
-a push notice (ADR 0118) goes out after its grace to a device whose person is reading the battle view with the
+recorded from the arena measures from the opening, and `playtest-timing` cannot tell the two apart. And
+a push notice (ADR 0118) goes out after its grace to a device whose person is reading the arena with the
 controls closed; opening them later does not take it back. The service worker is what keeps that notice from
-showing: it reads a battle view window that is visible and focused as the game in front of somebody, the way it
+showing: it reads an arena window that is visible and focused as the game in front of somebody, the way it
 reads the table page, so the notice reaches only a device nobody is looking at. Acknowledging on draw would start clocks for
 a person who only came to look, which ADR 0125 promised not to do.
 
 Two clients can hold the same asking. Whichever posts second is refused with the next asking in hand, and
-the refusal stays on the battle view's dock until the player's next move: the refresh the write triggers must
+the refusal stays on the arena's dock until the player's next move: the refresh the write triggers must
 not take it down.
 
 Deterministic tests cover target bounds, stale questions/options, duplicate confirmation, rejected and
 uncertain writes, seat changes and late reads. Browser tests cover catalogue choices, keyboard input,
 selection, mobile bounds and readonly inspection. Real-host journeys send both combat declarations
-from the battle view while an external driver answers only the planning questions still outside A5.
+from the arena while an external driver answers only the planning questions still outside A5.
 
 ## Alternatives considered
 
@@ -77,7 +77,7 @@ from the battle view while an external driver answers only the planning question
 
 ## Follow-up
 
-- `TableFiles` routes `battle-combat.js` with the other bundled modules; `TableFilesTests` holds every module beside the page.
+- `TableFiles` routes `arena-combat.js` with the other bundled modules; `TableFilesTests` holds every module beside the page.
 - `.github/workflows/studio-browser.yml` budgets twenty minutes for the three projects plus the real-host journeys.
 - A6 consumes confirmed event frames for playback without making an animation a prerequisite for the next command.
-- A7 brings Evolution, Tempo and ties into the battle view, and with them the question of acknowledging on draw.
+- A7 brings Evolution, Tempo and ties into the arena, and with them the question of acknowledging on draw.

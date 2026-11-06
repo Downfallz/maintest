@@ -1,7 +1,7 @@
-# 0131. Give confirmed battle spells a visual vocabulary
+# 0131. Give confirmed arena spells a visual vocabulary
 
 Date: 2026-11-04
-Status: Accepted for the opt-in battle
+Status: Accepted for the opt-in arena
 
 ## Context
 

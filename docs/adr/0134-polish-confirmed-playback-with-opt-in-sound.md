@@ -1,7 +1,7 @@
 # 0134. Polish confirmed playback with opt-in sound
 
 Date: 2026-11-04
-Status: Accepted for the opt-in battle
+Status: Accepted for the opt-in arena
 
 ## Context
 
@@ -49,9 +49,9 @@ ART-5's content-authored mappings, catalogue labels and per-figure depth; do not
 
 ## Follow-up
 
-- `battle-timing.js` holds the choreography constants and `playbackRate`; `battle-playback.js` scales its
+- `arena-timing.js` holds the choreography constants and `playbackRate`; `arena-playback.js` scales its
   animation phases by the rate and leaves the reduced-motion receipt unscaled.
-- `BattleAudio.stop()` fences and silences, `silence()` only releases voices; `scene.onCancel` silences.
+- `ArenaAudio.stop()` fences and silences, `silence()` only releases voices; `scene.onCancel` silences.
 - Queue tests cover each phase at each rate, the unscaled reduced receipt, settling, the callback fence and
   no replay. Browser tests cover the scene's rate, gesture-only audio, one tone per impact, cuts on Skip, a
   hidden page and a seat switch, the owner's fences against a controlled context, and the arc staying pinned.

@@ -1,7 +1,7 @@
-# 0133. Compose bounded mutation cues on one battle view body
+# 0133. Compose bounded mutation cues on one arena body
 
 Date: 2026-11-04
-Status: Accepted for the opt-in battle, as a prototype policy
+Status: Accepted for the opt-in arena, as a prototype policy
 
 ## Context
 

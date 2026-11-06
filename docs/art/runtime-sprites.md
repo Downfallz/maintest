@@ -1,7 +1,7 @@
 # ART-3 — Battle sprite integration
 
 The approved base Creature, Brute, Predator and Warped now replace the prototype winged/robed sheet in
-both battle scenes. See [ADR 0130](../adr/0130-map-battle-creatures-to-audited-sprites.md) for the selection
+both battle scenes. See [ADR 0130](../adr/0130-map-arena-creatures-to-audited-sprites.md) for the selection
 and fallback rules and [`table/battle-art.js`](../../table/battle-art.js) for the authoritative manifest.
 
 ## Assets and geometry

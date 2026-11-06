@@ -1,18 +1,18 @@
 # 0135. Draft team tempos before sequential confirmation
 
 Date: 2026-11-04
-Status: Accepted for the opt-in battle
+Status: Accepted for the opt-in arena
 Supersedes: ADR 0128's one-creature tempo confirmation UI only
 
 ## Context
 
-AU5 restores the classic table's team tempo draft (#411) inside the battle. The host still asks one creature
+AU5 restores the classic table's team tempo draft (#411) inside the arena. The host still asks one creature
 at a time and holds both seats' private choices until simultaneous reveal (ADR 0111). Requiring a separate
 player confirmation for each creature adds friction; calling a client-side batch atomic would be incorrect.
 
 ## Decision
 
-Keep the host protocol and rules. `battle-tempo.js` owns a seat/round-scoped in-memory draft; the planning
+Keep the host protocol and rules. `arena-tempo.js` owns a seat/round-scoped in-memory draft; the planning
 facade delegates Speed to it while mutation and tie controllers retain their existing asking-scoped behavior.
 Each eligible creature has an editable tab. Selecting advances to the next incomplete tab; all tabs remain
 reachable. Confirm is enabled only when every remaining eligible creature has a valid draft.
@@ -69,6 +69,6 @@ submission, reload and completion.
 
 ## Follow-up
 
-- `table/battle-tempo.js` and `table/battle-planning.js`, with `battle-tempo.test.js` as the record of the
-  cases above; `battle/src/tempo.ts` for the panel.
-- `docs/tabletop/battle-ux-parity-plan.md`, AU5.
+- `table/arena-tempo.js` and `table/arena-planning.js`, with `arena-tempo.test.js` as the record of the
+  cases above; `arena/src/tempo.ts` for the panel.
+- `docs/tabletop/arena-ux-parity-plan.md`, AU5.

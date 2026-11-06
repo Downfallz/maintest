@@ -23,5 +23,6 @@ uses the canonical route. The client reads the previous view preference and writ
 when the player selects a view. Existing help and upkeep storage keys keep their original values.
 The notification worker recognizes a match in either an old or a new tab during rollout.
 
-Compiled .NET project identifiers, the frozen prototype and historical screenshots keep their existing
-identity. Current client modules, build scripts and host routes use the new vocabulary.
+Compiled .NET project identifiers, the frozen prototype, historical screenshots and accepted ADRs keep their
+existing identity: ADRs 0123–0136 say "arena" and `/arena` because that was the name when they were decided,
+and this ADR supersedes the name, not those decisions. Current client modules, build scripts and host routes use the new vocabulary.

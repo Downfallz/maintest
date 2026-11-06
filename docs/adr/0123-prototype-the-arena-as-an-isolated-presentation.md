@@ -1,4 +1,4 @@
-# 0123. Prototype the battle view as an isolated presentation
+# 0123. Prototype the arena as an isolated presentation
 
 Date: 2026-11-03
 Status: Accepted for the isolated prototype; live adoption is a later decision
@@ -11,8 +11,8 @@ a Phaser proof of concept. The .NET engine already supplies public before/after 
 
 ## Decision
 
-Use pinned Phaser 3.90.0 and TypeScript in `battle/` for the isolated `/battle-lab` scene. Bundle with
-esbuild into ignored `table/battle-build/`; npm's lockfile pins the build. CI and a dedicated Node stage
+Use pinned Phaser 3.90.0 and TypeScript in `arena/` for the isolated `/arena-lab` scene. Bundle with
+esbuild into ignored `table/arena-build/`; npm's lockfile pins the build. CI and a dedicated Node stage
 in Docker build the bundle before .NET route tests or packaging. The runtime serves JavaScript, WebP
 art and license notices locally through explicit `TableFiles` routes; no CDN is required.
 
@@ -57,5 +57,5 @@ becomes a game command. The fixture must never be imported by a live adapter. Se
 ## Follow-up
 
 - `TableFiles` routes the bundle and the art; `TableFilesTests` holds them, and says to build when it is absent.
-- `AGENTS.md`, the `/verify` skill, CI, the Docker image and Dependabot know the `battle/` package.
+- `AGENTS.md`, the `/verify` skill, CI, the Docker image and Dependabot know the `arena/` package.
 - The live adapter (A3–A4) replaces the fixture with the seat projection; this ADR's fixture rule holds until then.

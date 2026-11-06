@@ -158,7 +158,7 @@ start a second instance of `table.js`. Refresh `main` again before implementing 
 Built on `main` at `96edfe27` after PR #425 merged, including its replay guard, preserved asked creature,
 fixture-based browser assertions and choice-field analyser correction. The account result changes from
 #421 are included in the integration baseline.
-[ADR 0125](../adr/0125-read-one-authenticated-seat-in-the-live-battle.md) records live adoption without
+[ADR 0125](../adr/0125-read-one-authenticated-seat-in-the-live-arena.md) records live adoption without
 rewriting the accepted prototype decision.
 
 `/battle` asks for a viewpoint, resumes accepted seats through the lobby, and displays the selected
@@ -185,7 +185,7 @@ Screens captured from the actual .NET host in this slice (Evolution, before deci
 ### A5 delivery boundary
 
 Built on `main` at `91ee9554`, including the fixes merged in #427, Phaser 4.2.1 and the player labels
-from #428. [ADR 0126](../adr/0126-answer-combat-questions-in-the-live-battle.md) extends A4 with explicit
+from #428. [ADR 0126](../adr/0126-answer-combat-questions-in-the-live-arena.md) extends A4 with explicit
 combat controls. The A4 description above records the earlier read-only slice.
 
 Opening the spell/target controls acknowledges that question; inspection alone remains read-only.
@@ -213,7 +213,7 @@ Captured from the real host during A5 combat:
 
 ### A6 delivery boundary
 
-Built on the merged A5 (#430), including its control/transport fixes. [ADR 0127](../adr/0127-play-confirmed-actions-in-the-live-battle.md)
+Built on the merged A5 (#430), including its control/transport fixes. [ADR 0127](../adr/0127-play-confirmed-actions-in-the-live-arena.md)
 adds ordered playback of the public CombatActionResolved frames. Each action uses its own before/after board;
 multiple arrivals and the final cast before upkeep or match completion retain their order. Applied damage
 hits every affected target; recovery, energy and conditions pulse; fizzles do not hit; deaths use the frame.
@@ -239,7 +239,7 @@ Captured during a real-engine Strike on desktop and phone:
 
 ### A7 delivery boundary
 
-Built on the merged A6 (#431). [ADR 0128](../adr/0128-complete-the-game-loop-in-the-battle.md) completes the
+Built on the merged A6 (#431). [ADR 0128](../adr/0128-complete-the-game-loop-in-the-arena.md) completes the
 loop in the scene shell: Mutation Tree selection, per-creature Tempo confirmation, grouped tie ordering,
 upkeep and aftermath review, concession, the host's match result and a manual whole-match replay. Both combat
 declarations complete a 3v3 match through the battle view controls, and two browser contexts verify simultaneous
@@ -252,7 +252,7 @@ still pending.
 
 ## Revised immersive prototype (A2)
 
-The maintainer authorized the **Phaser + TypeScript** spike. [ADR 0123](../adr/0123-prototype-the-battle-as-an-isolated-presentation.md)
+The maintainer authorized the **Phaser + TypeScript** spike. [ADR 0123](../adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the scoped dependency and build decision. The .NET engine and existing API boundary remain
 unchanged. The implementation proves one action's presentation; live play is still a separate workstream.
 The following direction continues to guide A3–A8:
@@ -317,7 +317,7 @@ history, not in the tree: nothing refers to them any more.
 
 ## A8 — Opt-in release candidate
 
-[ADR 0136](../adr/0136-gate-the-battle-release-behind-a-reversible-preference.md) adds a browser-local
+[ADR 0136](../adr/0136-gate-the-arena-release-behind-a-reversible-preference.md) adds a browser-local
 Table/Battle preference in the lobby, renderer recovery to the same table, build-enforced asset budgets and a
 Chromium/Android-profile/WebKit release suite. Sound is ART-6's opt-in playback sound
 ([ADR 0134](../adr/0134-polish-confirmed-playback-with-opt-in-sound.md)).

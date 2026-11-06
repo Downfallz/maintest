@@ -2,7 +2,7 @@
 
 Two Phaser pages: a viewport-bound visual experiment at `/battle-lab`, isolated from the actual `/play` client,
 and `/battle`, the opt-in complete game loop for one authenticated seat (ADRs 0125–0128).
-Pinned Phaser 4.2.1 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-battle-as-an-isolated-presentation.md)
+Pinned Phaser 4.2.1 + TypeScript, bundled locally with esbuild. [ADR 0123](../docs/adr/0123-prototype-the-arena-as-an-isolated-presentation.md)
 records the choice; the [delivery plan](../docs/tabletop/browser-battle-plan.md) covers live integration.
 
 ## Build and run
@@ -46,7 +46,7 @@ the TypeScript imports them and owns Phaser and DOM integration.
 No rules, legality, damage or random resolution are reimplemented here. `/battle-lab` keeps its fixture
 and makes no API requests. `/battle` is the opt-in live entry point: choose an accepted seat, inspect its
 board, and complete planning, combat, review and replay. `/play` remains the classic alternative. It shares [`table/presentation.js`](../table/presentation.js)
-with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-battle.md) describes
+with the table. [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md) describes
 seat discovery, explicit viewpoints, read-only transport, arrival behavior and recovery.
 
 - `src/live.ts`: live DOM adapter and lifecycle; no lab imports.
@@ -59,7 +59,7 @@ seat discovery, explicit viewpoints, read-only transport, arrival behavior and r
 Opening combat controls acknowledges the visible asking. Explicit confirmation sends Action, Intent or
 Target through the existing transport; inspection alone remains read-only. `table/battle-combat.js`
 fences drafts and pending commands, while `src/combat.ts` draws their accessible controls.
-[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-battle.md) records this extension.
+[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) records this extension.
 Invitation acceptance stays at `/play`.
 401/403 clears private content; a transient failure labels the last snapshot stale. A hidden page
 stops and clears its display, then reconnects from a new snapshot. The host's existing reads mark an
@@ -93,7 +93,7 @@ returns never replay history. Legacy events, and one read bringing more than twe
 text on the latest board. Result details remain available in an accessible overlay. Both pages use four audited forms with uniform scaling and explicit ground anchors ([ART-3](../docs/art/runtime-sprites.md)). Real-device Safari,
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
-A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-battle.md)).
+A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
 `table/battle-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
 cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
 confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
@@ -550,7 +550,7 @@ playtest are explicit open gates; automated evidence does not certify them or sw
 ## A8: opt-in release candidate
 
 A8 adds a reversible lobby preference, build-enforced asset budgets, renderer recovery to the same seat and
-release browser gates ([ADR 0136](../docs/adr/0136-gate-the-battle-release-behind-a-reversible-preference.md)).
+release browser gates ([ADR 0136](../docs/adr/0136-gate-the-arena-release-behind-a-reversible-preference.md)).
 Sound is ART-6's ([ADR 0134](../docs/adr/0134-polish-confirmed-playback-with-opt-in-sound.md)). See the
 [acceptance record](../docs/tabletop/battle-release-acceptance.md) for budgets, repeatable browser measurements
 and the physical-device checks still pending.

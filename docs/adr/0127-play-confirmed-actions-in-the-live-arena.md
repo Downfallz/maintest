@@ -1,7 +1,7 @@
-# 0127. Play confirmed actions in the live battle view
+# 0127. Play confirmed actions in the live arena
 
 Date: 2026-11-03
-Status: Accepted for the opt-in battle
+Status: Accepted for the opt-in arena
 
 ## Context
 
@@ -53,8 +53,8 @@ fizzles, lifecycle clearing, current-question control access, and the final cast
 
 ## Follow-up
 
-- `TableFiles` routes `battle-playback.js` with the other bundled modules; `TableFilesTests` holds every module beside the page.
-- The browser job's twenty-minute budget now carries four battle suites; the run that added this one took fifteen.
+- `TableFiles` routes `arena-playback.js` with the other bundled modules; `TableFilesTests` holds every module beside the page.
+- The browser job's twenty-minute budget now carries four arena suites; the run that added this one took fifteen.
 - A7 brings upkeep and aftermath choreography and the rest of the loop into the scene over the same queue.
 
 
@@ -65,5 +65,5 @@ confirmation. This extends the original automatic-only reading rhythm; it does n
 The same queue orders meaningful cleanup, ordinary energy, ongoing effects and match results. Turnover has
 no exact board, so it uses a labelled text-only surface instead of borrowing a combat or current board.
 Received, presented and explicit Next positions are separate; the player's own skip preserves journal facts and suppresses
-a duplicate upkeep modal without claiming it was read. See the AU7 section in `battle/README.md` for bounded
+a duplicate upkeep modal without claiming it was read. See the AU7 section in `arena/README.md` for bounded
 catch-up and the opening-round exception. No event contract, engine rule or transport changes.

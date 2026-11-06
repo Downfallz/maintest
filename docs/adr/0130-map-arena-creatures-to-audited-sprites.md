@@ -1,11 +1,11 @@
-# 0130. Map battle creatures to audited sprites
+# 0130. Map arena creatures to audited sprites
 
 Date: 2026-11-04
-Status: Accepted for the opt-in battle
+Status: Accepted for the opt-in arena
 
 ## Context
 
-ART-2 audited four selected creature references. The battle view still assigned its old three-frame sheet by
+ART-2 audited four selected creature references. The arena still assigned its old three-frame sheet by
 roster position and stretched each frame into a square. That cannot show an unmutated ancestor or reliably
 identify a mutation. Family precedence in multiclass builds remains an ART-5 design question.
 
@@ -13,9 +13,9 @@ identify a mutation. Family precedence in multiclass builds remains an ART-5 des
 
 Keep this entirely in presentation. No domain, catalogue IDs, legality or combat changes.
 
-- `table/battle-art.js` owns the four-entry sprite manifest: source dimensions, principal silhouette bounds,
+- `table/arena-art.js` owns the four-entry sprite manifest: source dimensions, principal silhouette bounds,
   ground anchors and local filenames. Runtime files copy the ART-2 WebPs byte-for-byte; do not regenerate,
-  crop or threshold the selected art. Original PNGs are not required to run the battle.
+  crop or threshold the selected art. Original PNGs are not required to run the arena.
 - Map the displayed snapshot's acquired root IDs (`brute`, `prowler`, `occultist`, all `tier:…:v1`) to Brute,
   Predator and Warped. A single known family uses that form through its later stages. No known root, legacy
   missing mutation data, or several known families uses the base Creature. This is a neutral placeholder,

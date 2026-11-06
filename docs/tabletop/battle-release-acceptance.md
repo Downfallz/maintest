@@ -8,7 +8,7 @@ available in the battle view, including renderer recovery.
 The reconciliation drops A8's own synthesized sound: ART-6's opt-in playback sound
 ([ADR 0134](../adr/0134-polish-confirmed-playback-with-opt-in-sound.md)) covers it, and a second engine
 would put two sound switches in one settings dialog. The rest of A8 stands, as
-[ADR 0136](../adr/0136-gate-the-battle-release-behind-a-reversible-preference.md) records.
+[ADR 0136](../adr/0136-gate-the-arena-release-behind-a-reversible-preference.md) records.
 
 ## Repeatable gates
 

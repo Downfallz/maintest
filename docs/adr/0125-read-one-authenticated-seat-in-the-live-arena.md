@@ -1,4 +1,4 @@
-# 0125. Read one authenticated seat in the live battle view
+# 0125. Read one authenticated seat in the live arena
 
 Date: 2026-11-03
 Status: Accepted for the opt-in read-only integration
@@ -11,7 +11,7 @@ private data or changing the established table's command and acknowledgement lif
 
 ## Decision
 
-Serve a separate `/battle` entry point alongside `/battle-lab` and `/play`. Keep the laboratory on its
+Serve a separate `/arena` entry point alongside `/arena-lab` and `/play`. Keep the laboratory on its
 sample reducer. The live bundle may share the renderer, geometry and styles, but cannot import the
 sample fixture or state machine. Both clients use `boardPresentation` to read the host's timeline,
 activation cursor and team projection. There is no simulation, inferred legality or action playback.
@@ -48,7 +48,7 @@ table instead of inventing another interpretation of fresh or permanent effects.
 The existing table remains the place to play. The preview does not time questions or animate attacks,
 and skipping or inspecting cannot advance the game. A5 adds commands; A6 adds confirmed-action
 playback. Desktop/mobile browser tests cover viewpoints, state updates, access loss, reconnect and
-storage-disabled links. A real-host journey checks projection parity and confirms the battle view issues
+storage-disabled links. A real-host journey checks projection parity and confirms the arena issues
 no command or acknowledgement while another client advances the game.
 
 ## Alternatives considered
@@ -65,9 +65,9 @@ no command or acknowledgement while another client advances the game.
 
 ## Follow-up
 
-- `TableFiles` routes `/battle`, its stylesheet, the three modules and the live bundle; `TableFilesTests` holds them.
+- `TableFiles` routes `/arena`, its stylesheet, the three modules and the live bundle; `TableFilesTests` holds them.
 - `/play` links to the preview from the Match menu, carrying the seats when the browser keeps none in storage.
-- `battle/build.mjs` refuses a live bundle that reaches the laboratory's fixture or reducer.
+- `arena/build.mjs` refuses a live bundle that reaches the laboratory's fixture or reducer.
 - A5 adds commands through the same transport; A6 adds confirmed-action playback over the same snapshots.
 
 ## AU13 extension — one accepted seat and surrounding tools (2026-11-05)
