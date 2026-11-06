@@ -185,6 +185,12 @@
 .home-dialog :is(.privacy-panel, .device-panel) h2 { margin-top: 0; }
 .home-dialog .privacy-panel p { font-size: 14px; line-height: 1.75; margin: 12px 0; }
 .home-page #join-problem { margin-bottom: 0; }
+.game-settings-panel label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.game-settings-panel label > span { display: flex; flex-direction: column; gap: 3px; }
+.game-settings-panel small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.game-settings-panel select { min-height: 44px; min-width: 96px; }
+.game-settings-panel input[type="checkbox"] { width: 22px; height: 22px; flex: none; }
+.game-settings-panel #game-settings-where { font-size: 13px; line-height: 1.6; margin: 14px 0 0; }
 @media (max-width: 1240px) {
   .home-header { gap: 14px; }
   .home-menu-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; background: transparent; min-height: 44px; }

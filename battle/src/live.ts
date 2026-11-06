@@ -16,6 +16,7 @@ import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance } from '../../table/battle-guidance.js';
 import { guidanceControls } from './guidance';
+import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
 import { mutationScene } from './mutation-scene';
 import { BattleScene } from './scene';
@@ -103,7 +104,7 @@ const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
-const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
+const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
 }
@@ -233,6 +234,7 @@ function render() {
     historical: playbackState.active || replay.active, online: $('battle').dataset.connection === 'live' });
   frame = (replay.active ? board.frame : playbackState.frame) as SceneFrame;
   $('battle').dataset.playback = playbackState.stage;
+  $('battle').dataset.reading = String(playbackState.active);
   $('battle').dataset.sequence = String(playbackState.sequence ?? '');
   // An opponent's action is read, never skipped: it offers OK alone (ADR 0139).
   $('playback-skip').hidden = !playbackState.active || playbackState.incoming;
@@ -397,6 +399,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
+  applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
@@ -467,13 +470,36 @@ scene.onImpact = () => {
   if (playback.model().active && !document.hidden && !match.model().active) audio.play(frame.cue?.visual);
 };
 soundControl(audio, $<HTMLInputElement>('sound'));
-$<HTMLSelectElement>('playback-speed').value = '1';
-$('playback-speed').addEventListener('change', () => playback.setRate(Number($<HTMLSelectElement>('playback-speed').value)));
+// The player's settings start every game (ADR 0140): the account's, or this browser's when signed out. The
+// first time a game is opened they are copied into it, so changing them later starts new games differently
+// and leaves this one as it was; what this page's settings change, they change for this game alone.
+let settings = localSettings(storage);
+let settingsKnown = false;
+const gameOf = () => selected?.table.id ?? null;
+function applySettings() {
+  const game = gameOf(), kept = gameOverride(storage, game);
+  const chosen = effectiveSettings(settings, kept);
+  if (game && settingsKnown && Object.keys(kept).length < Object.keys(chosen).length) saveGameOverride(storage, game, chosen);
+  $<HTMLSelectElement>('playback-preference').value = chosen.pace; playback.setMode(chosen.pace);
+  $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
+  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced());
+  helpUI.setHelp(chosen.help);
+}
+function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
+void loadSettings(storage).then(answer => { settings = answer.settings; settingsKnown = true; applySettings(); render(); });
+$('playback-speed').addEventListener('change', () => {
+  const speed = Number($<HTMLSelectElement>('playback-speed').value);
+  playback.setRate(speed); keepForGame({ speed });
+});
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
 function motionChanged() { playback.setReduced(reduced()); render(); }
-$('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
-playback.setReduced(reduced());
-$('playback-preference').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-preference').value));
+$('reduce-motion').addEventListener('change', () => { keepForGame({ reducedMotion: $<HTMLInputElement>('reduce-motion').checked }); motionChanged(); });
+motion.addEventListener('change', motionChanged);
+applySettings();
+$('playback-preference').addEventListener('change', () => {
+  const pace = $<HTMLSelectElement>('playback-preference').value;
+  playback.setMode(pace); keepForGame({ pace });
+});
 $('playback-next').addEventListener('click', () => {
   playback.advance();
   if (!playback.model().active && !document.querySelector('dialog[open]'))

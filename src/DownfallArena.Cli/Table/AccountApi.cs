@@ -21,6 +21,7 @@ internal sealed class AccountApi
     private const string NamesPrefix = Prefix + "/names/";
 
     private const string PushRoute = Prefix + "/push";
+    private const string PreferencesRoute = Prefix + "/preferences";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -80,6 +81,9 @@ internal sealed class AccountApi
 
     /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
     public Func<AccountId, Task>? ForgetFriends { get; set; }
+
+    /// <summary>Where each account's game settings are kept (ADR 0140); null on a host that keeps none.</summary>
+    public IPreferenceStore? Preferences { get; set; }
 
     /// <summary>How <c>/api/me</c> names the mode to a page.</summary>
     public static string Named(AccountsMode mode) => mode switch
@@ -148,6 +152,8 @@ internal sealed class AccountApi
                 ("PUT", PushRoute) => await RegisterDeviceAsync(body, request),
                 ("DELETE", PushRoute) => await ForgetDeviceAsync(body, request),
                 ("POST", PushRoute + "/test") => await TestDeviceAsync(body, request),
+                ("GET", PreferencesRoute) => await PreferencesAsync(request),
+                ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
             };
@@ -276,6 +282,11 @@ internal sealed class AccountApi
             await forget(who.Account.Id);
         }
 
+        if (Preferences is { } preferences)
+        {
+            await preferences.ForgetAsync(who.Account.Id);
+        }
+
         return Answer(new { deleted = true }, AccountSessions.ClearCookie(request.Secure));
     }
 
@@ -351,6 +362,55 @@ internal sealed class AccountApi
         return StudioResponse.OfJson(new { sent = test.Sent, message = test.Message }, Web, test.Sent ? 200 : 502);
     }
 
+    /// <summary>The settings every new game of the account starts from (ADR 0140): the saved ones, or the defaults.</summary>
+    private async Task<StudioResponse> PreferencesAsync(AccountRequest request)
+    {
+        if (Preferences is not { } store)
+        {
+            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        var saved = await store.GetAsync(who.Account.Id);
+        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null }, who.Renewed);
+    }
+
+    /// <summary>Replaces the account's settings; a game already open keeps what it was set to.</summary>
+    private async Task<StudioResponse> SavePreferencesAsync(string body, AccountRequest request)
+    {
+        if (Preferences is not { } store)
+        {
+            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        var asked = Read<PreferencesBody>(body);
+        var created = GamePreferences.Create(asked?.Pace, asked?.Speed ?? 0m, asked?.Help ?? true, asked?.ReducedMotion ?? false);
+        if (created.IsFailure)
+        {
+            return Refused(created.Error);
+        }
+
+        await store.SaveAsync(who.Account.Id, created.Value);
+        return Answer(new { preferences = DescribePreferences(created.Value), saved = true }, who.Renewed);
+    }
+
+    private static object DescribePreferences(GamePreferences preferences) => new
+    {
+        pace = preferences.Pace == ReadingPace.Step ? "step" : "auto",
+        speed = preferences.Speed,
+        help = preferences.Help,
+        reducedMotion = preferences.ReducedMotion,
+    };
+
     private async Task<StudioResponse> NameAsync(string candidate)
     {
         var check = await _registry.CheckUsernameAsync(candidate);
@@ -377,6 +437,8 @@ internal sealed class AccountApi
         StudioResponse.OfJson(new { error = code, message }, Web, status);
 
     private sealed record CredentialBody(string? Credential);
+
+    private sealed record PreferencesBody(string? Pace, decimal? Speed, bool? Help, bool? ReducedMotion);
 
     private sealed record RegisterBody(string? Ticket, string? Username);
 

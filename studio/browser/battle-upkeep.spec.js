@@ -20,6 +20,8 @@ async function mount(page, { waiting = null, round = 1, feed = [energy(round), o
   await page.addInitScript(({ tips }) => {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' }));
     if (!tips) localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
+    // A returning player who reads in Auto (ADR 0140); tips stay as each test asks.
+    localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: !tips, reducedMotion: false }));
     const original = window.fetch;
     window.fetch = (url, options) => String(url).endsWith('/events') ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));

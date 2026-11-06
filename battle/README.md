@@ -333,8 +333,11 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 ## AU7: pace results and round turnover
 
-Match settings (the gear in the header) select **Auto** (default) or **Step**; the choice
-is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
+Match settings (the gear in the header) select **Step** (default) or **Auto**; the choice
+is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
+settings** (the menu; kept with the account when signed in, in the browser otherwise; Step, 1×, tips on by
+default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
+**Skip to present** is not offered while an incoming action waits for its OK.
 Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
 **OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
 ([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). In Auto the player's own

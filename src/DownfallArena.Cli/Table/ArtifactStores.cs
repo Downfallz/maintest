@@ -95,6 +95,23 @@ internal static class ArtifactStores
         return await BlobDeviceStore.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>Where each account's game settings are kept (ADR 0140): beside the accounts, under <c>preferences/</c>.</summary>
+    public static async Task<IPreferenceStore> OpenPreferencesAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FilePreferenceStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
+        }
+
+        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobPreferenceStore.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>Where each account's friendships are kept (ADR 0129): beside the accounts, under <c>friends/</c>.</summary>
     public static async Task<IFriendStore> OpenFriendsAsync(string target, CancellationToken cancellationToken = default)
     {

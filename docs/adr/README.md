@@ -145,3 +145,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted |
 | [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view |
 | [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view |
+| [0140](0140-keep-game-settings-with-the-account.md) | Keep game settings with the account, override them per game | Accepted for the opt-in battle view |

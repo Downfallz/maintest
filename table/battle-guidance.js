@@ -25,6 +25,8 @@ export function helpPreferences(storage) {
     shouldShow: topic => TOPICS.includes(topic) && !muted && !seen.has(topic),
     markSeen(topic) { if (TOPICS.includes(topic) && !seen.has(topic)) { seen.add(topic); save(); } },
     setMuted(value) { muted = value === true; save(); },
+    // The game's settings decide (ADR 0140); only the topics already read stay this browser's own.
+    apply(value) { muted = value === true; },
   };
 }
 

@@ -4,7 +4,7 @@ type Model = ReturnType<typeof battleGuidance>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
 
-export function guidanceControls(storage: Storage | null, beforeOpen: () => void, onVisibility: () => void) {
+export function guidanceControls(storage: Storage | null, beforeOpen: () => void, onVisibility: () => void, onMuted?: (muted: boolean) => void) {
   const dialog = el<HTMLDialogElement>('help-dialog'), preferences = helpPreferences(storage);
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-help-open]'));
   let model: Model | null = null, opener: HTMLElement | null = null, opening = false, key = '';
@@ -27,7 +27,9 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
     opener = null;
   });
   el('help-mute').addEventListener('change', event => {
-    preferences.setMuted((event.target as HTMLInputElement).checked); onVisibility();
+    const muted = (event.target as HTMLInputElement).checked;
+    if (onMuted) { preferences.apply(muted); onMuted(muted); } else preferences.setMuted(muted);
+    onVisibility();
   });
 
   function render(next: Model, canAuto: boolean) {
@@ -65,5 +67,7 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
   function pending() {
     return opening || dialog.open || Boolean(model?.available && preferences.shouldShow(model.topic));
   }
-  return { render, pending };
+  // Help on or off for this game, from its settings: tips already read stay read either way.
+  function setHelp(on: boolean) { preferences.apply(!on); el<HTMLInputElement>('help-mute').checked = !on; }
+  return { render, pending, setHelp };
 }

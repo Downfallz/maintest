@@ -48,6 +48,11 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
+    if (path === '/api/account/preferences') {
+      if (!state.account) return route.fulfill({ status: 401, json: { message: 'Sign in first.' } });
+      if (route.request().method() === 'PUT') { state.saved = route.request().postDataJSON(); return json({ preferences: state.saved, saved: true }); }
+      return json({ preferences: state.saved ?? { pace: 'step', speed: 1, help: true, reducedMotion: false }, saved: Boolean(state.saved) });
+    }
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
   await page.goto('/table/lobby.html');
@@ -91,6 +96,38 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await noOverflow(page);
   expect(state.privateReads).toEqual([]);
   expect(state.friendReads).toBe(0);
+  expect(state.errors).toEqual([]);
+});
+
+test('a signed-in player keeps game settings with the account, starting from step, 1x and tips on', async ({ page }) => {
+  const state = await home(page);
+
+  await openPanel(page, 'Game settings');
+
+  const dialog = page.getByRole('dialog', { name: 'Game settings' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Read confirmed results')).toHaveValue('step');
+  await expect(dialog.getByLabel('Playback speed')).toHaveValue('1');
+  await expect(dialog.getByLabel('Phase tips')).toBeChecked();
+  await expect(dialog.getByLabel('Less motion')).not.toBeChecked();
+  await expect(page.locator('#game-settings-where')).toContainText('Kept with your account');
+  await dialog.getByLabel('Read confirmed results').selectOption('auto');
+  await expect.poll(() => state.saved).toEqual({ pace: 'auto', speed: 1, help: true, reducedMotion: false });
+  await dialog.getByLabel('Playback speed').selectOption('1.5');
+  await expect.poll(() => state.saved?.speed).toBe(1.5);
+  await noOverflow(page);
+  expect(state.errors).toEqual([]);
+});
+
+test('a guest keeps game settings in this browser and asks the host nothing', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google' });
+
+  await openPanel(page, 'Game settings');
+  await page.getByLabel('Phase tips').uncheck();
+
+  await expect(page.locator('#game-settings-where')).toContainText('Kept in this browser');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('downfall.arena.game-settings.v1'))?.help)).toBe(false);
+  expect(state.saved).toBeUndefined();
   expect(state.errors).toEqual([]);
 });
 
