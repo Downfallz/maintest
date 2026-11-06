@@ -1,5 +1,5 @@
 import { cardsById } from './card.js';
-import { talentClasses, familyRoot } from './mat.js';
+import { talentClasses, familyRoot, talentPalette, classColour } from './mat.js';
 import { creatureLabel } from './battle-live.js';
 
 // A public reference: never pass evolutionChoices to talentClasses. Pending own picks belong only in
@@ -40,6 +40,8 @@ export function createBattleGrowth() {
       for (const entry of fresh) {
         if (entry.event?.kind !== 'PurchasesRevealed') continue;
         const rows = [];
+        const byId = new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
+        const palette = talentPalette(catalogue, cardsById(catalogue));
         for (const choice of entry.event.choices ?? []) {
           const pack = catalogue?.packages?.find(one => one.id === choice.tier);
           const creature = [...(view.board.allies ?? []), ...(view.board.enemies ?? [])].find(one => one.id === choice.creature);
@@ -55,12 +57,20 @@ export function createBattleGrowth() {
             const ids = pending.get(choice.creature) ?? new Set();
             spells.forEach(id => ids.add(id)); pending.set(choice.creature, ids);
           }
+          // What a reader needs to tell the reveals apart at a glance: the family's colour, the stage it reached,
+          // and what it bought this round. An unpublished tier keeps its id and claims nothing else.
+          const root = pack ? familyRoot(pack, byId) : null;
+          const cards = spells.map(id => catalogue?.cards?.find(card => card.id === id));
           rows.push({ creature: choice.creature, name: creatureLabel(view.board, choice.creature),
             enemy: !view.board.allies?.some(one => one.id === choice.creature), mutation: pack?.name ?? choice.tier,
-            spells: spells.map(id => catalogue?.cards?.find(card => card.id === id)?.name ?? id) });
+            spells: spells.map((id, i) => cards[i]?.name ?? id),
+            stage: pack?.level ?? null, family: root?.name ?? null, colour: classColour(root?.id ?? choice.tier, palette),
+            initiative: Number.isFinite(pack?.initiativeBonus) ? pack.initiativeBonus : null, passives: pack?.passiveLines ?? [],
+            details: spells.map((id, i) => ({ name: cards[i]?.name ?? id, cost: cards[i]?.cost ?? null, targeting: cards[i]?.targeting ?? null })) });
         }
         // Catch-up keeps the latest public reveal. Every reveal remains available in History.
-        if (rows.length) receipt = { sequence: entry.sequence, round: entry.event.roundId ?? entry.round, rows };
+        if (rows.length) receipt = { sequence: entry.sequence, round: entry.event.roundId ?? entry.round, rows,
+          counts: { ours: rows.filter(row => !row.enemy).length, theirs: rows.filter(row => row.enemy).length } };
       }
     }
     seen = Math.max(seen ?? -1, end);

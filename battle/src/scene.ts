@@ -4,6 +4,7 @@ import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.
 import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
+import { MutationReveal } from './mutation-reveal';
 import { MutationCues } from './mutation-cues';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
 
@@ -30,6 +31,7 @@ export class BattleScene extends Phaser.Scene {
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
   private upkeepMarkers = new UpkeepMarkers(this);
+  private mutationReveal = new MutationReveal(this);
   private spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
@@ -142,6 +144,7 @@ export class BattleScene extends Phaser.Scene {
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
+      this.mutationReveal.present(undefined, new Map(), this.reduced);
       return;
     }
     // A bottom sheet shortens a portrait board, but the two teams still need separate rows.
@@ -162,7 +165,9 @@ export class BattleScene extends Phaser.Scene {
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
     for (const figure of this.figures.values()) this.followCues(figure);
-    this.upkeepMarkers.present(this.state.upkeep, new Map(this.state.creatures.map((one, i) => [one.id, positions[i]])), this.reduced);
+    const homes = new Map(this.state.creatures.map((one, i) => [one.id, positions[i]]));
+    this.upkeepMarkers.present(this.state.upkeep, homes, this.reduced);
+    this.mutationReveal.present(this.state.upkeep ? undefined : this.state.reveal, homes, this.reduced);
     this.onLayout(positions);
   }
 
