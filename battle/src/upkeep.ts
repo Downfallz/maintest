@@ -1,4 +1,5 @@
-import { createBattleUpkeep } from '../../table/battle-upkeep.js';
+import { createBattleUpkeep, upkeepDisplay } from '../../table/battle-upkeep.js';
+import { receiptDetails } from './receipt-details';
 
 type Controller = ReturnType<typeof createBattleUpkeep>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -9,6 +10,17 @@ const node = (tag: string, text: string, className = '') => {
 export function upkeepControls(controller: Controller, inspect: (id: string) => void, onVisibility: () => void) {
   const dialog = el<HTMLDialogElement>('upkeep-dialog');
   let key = '', renderedRound = 0, opening = false, opener: HTMLElement | null = null;
+  const details = el<HTMLButtonElement>('upkeep-details');
+  const body = el('upkeep-body');
+  // Reserve only the compact dock. Opening Details may cover more of the scene on request.
+  const header = dialog.querySelector<HTMLElement>('.upkeep-header')!;
+  const tools = dialog.querySelector<HTMLElement>('.upkeep-tools')!;
+  const reserve = new ResizeObserver(() => {
+    if (dialog.open) el('battle').style.setProperty('--upkeep-dock-height', `${header.offsetHeight + tools.offsetHeight + 12}px`);
+  });
+  reserve.observe(header); reserve.observe(tools);
+  let display: ReturnType<typeof upkeepDisplay> | null = null;
+  const { expand } = receiptDetails(details, body);
   el('upkeep-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
     // Restore focus before rendering: the next phase tip may open and own focus in that render.
@@ -21,13 +33,15 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
     if (!model.available || !model.receipt) {
       opener = null;
       if (dialog.open) dialog.close();
-      el('upkeep-body').replaceChildren(); el('upkeep-title').textContent = ''; key = ''; renderedRound = 0; return;
+      display = null; expand(false); el('upkeep-intro').textContent = ''; body.replaceChildren(); el('upkeep-title').textContent = ''; key = ''; renderedRound = 0; return;
     }
     const receipt = model.receipt;
     // Do not replace the round being read under History/inspection. A newer pending receipt follows on close.
     if (dialog.open && renderedRound !== receipt.round) return;
     const nextKey = JSON.stringify(receipt);
     if (nextKey !== key) {
+      display = upkeepDisplay(receipt.energy, receipt.ongoing, receipt.energyNote);
+      el('upkeep-intro').textContent = display.summary;
       el('upkeep-title').textContent = `Round ${receipt.round} · Upkeep`;
       const sections = [
         { title: 'Round energy', rows: receipt.energy, empty: receipt.energyNote },
@@ -48,8 +62,8 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
     }
     if (model.pending && canAuto && !dialog.open && !opening) {
       opening = true; opener = document.activeElement as HTMLElement;
-      controller.presented(); dialog.showModal(); opening = false; onVisibility();
+      expand(false); controller.presented(); dialog.showModal(); opening = false; onVisibility();
     }
   }
-  return { render };
+  return { render, markers: (round: number | null) => dialog.open && round === renderedRound ? display?.markers : undefined };
 }

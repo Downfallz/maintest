@@ -50,6 +50,14 @@ implementation PR for each row. Test paths are under `studio/browser/` unless st
 | Service tools | Covered on main; release scope partial | `battle-services.spec.js`, `table.push.js`: optional feedback, denied/unsupported notices, both-seat suppression, recorded-only notes; A8 still open |
 | Viewport / accessibility | Partial | AU14 keyboard journey and short-view sweep pass; native zoom, assistive technology and physical device checks remain below |
 
+### Upkeep presentation after AU14
+
+The opening receipt docks below the battlefield. Its summary and Phaser markers use recorded
+energy and ongoing-effect amounts, including zero. Details expands the original rows with links to
+current creature inspection. Continue still hands off to the next eligible AU guide.
+A paced upkeep without an exact historical board shows named event markers without live stats.
+Auto, Step, Skip, History and round review retain their existing roles.
+
 ## Cross-cutting matrix
 
 | Required scenario | Evidence / limits |

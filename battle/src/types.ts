@@ -19,7 +19,11 @@ export const creaturesOf = (state: LabState) => [...state.board.allies, ...state
 export const isEnemy = (state: LabState, id: string) => state.board.enemies.some(one => one.id === id);
 
 // A render frame has presentation state only. The live adapter never imports the lab's sample or reducer.
+export interface UpkeepMarker {
+  id: string; name: string; side: string; lines: { text: string; tone: string }[];
+}
 export interface SceneFrame {
+  upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];

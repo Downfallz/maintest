@@ -9,6 +9,7 @@ import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
+import { renderReceipt } from './playback-receipt';
 import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
@@ -201,22 +202,7 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
 
-let receiptKey = '', receiptRound: number | null = null, receiptShown = false;
-function renderReceipt(receipt: ReturnType<typeof playback.model>['receipt'], round: number | null) {
-  $('playback-receipt').hidden = !receipt;
-  const key = JSON.stringify([round, receipt]);
-  if (key === receiptKey) return;
-  const scroll = receiptRound === round ? $('playback-receipt').scrollTop : 0;
-  receiptKey = key; receiptRound = round;
-  $('receipt-title').textContent = receipt?.category === 'Upkeep' ? 'Upkeep' : receipt?.title ?? '';
-  $('receipt-sections').replaceChildren(...(receipt?.sections ?? []).map((section: { title: string; items: { text: string; tone: string }[] }) => {
-    const group = document.createElement('section'), title = document.createElement('h3');
-    title.textContent = section.title; group.append(title);
-    for (const row of section.items) { const line = document.createElement('p'); line.textContent = row.text; line.dataset.tone = row.tone; group.append(line); }
-    return group;
-  }));
-  $('playback-receipt').scrollTop = scroll;
-}
+let receiptShown = false;
 
 function render() {
   if (receiving) return;
@@ -243,7 +229,7 @@ function render() {
   // Not disabled: a focused button that becomes disabled drops focus between two results.
   $('playback-next').setAttribute('aria-disabled', String(!playbackState.canNext));
   text('playback-next', playbackState.remaining > 1 ? 'Next result' : 'Return to present');
-  receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round);
+  receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
   $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
@@ -311,13 +297,18 @@ function render() {
     text('updated', 'No board loaded');
   } else renderInspection();
   $('battle').dataset.rate = String(playbackState.rate);
-  scene.present(frame, reduced(), playbackState.rate);
+
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening();
   upkeepUI.render(canAuto());
+  const liveMarkers = upkeepUI.markers(board.round);
+  if (liveMarkers) text('round-phase', 'UPKEEP');
+  const markers = replay.active ? undefined : playbackState.upkeep?.markers ?? liveMarkers;
+  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.upkeep), round: board.round } };
+  scene.present(frame, reduced(), playbackState.rate);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
 }

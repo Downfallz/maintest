@@ -58,7 +58,13 @@ test('arrivals gate one grouped receipt, then the mutation tip, without acknowle
   await expect(page.locator('#upkeep-body')).toContainText('+0 energy · 2 → 2');
   await expect(page.locator('#upkeep-body')).toContainText('No ongoing effects ticked');
   await expect(page.locator('#upkeep-body')).not.toContainText('99');
-  await fitsViewport(page, '#upkeep-close');
+  await expect(page.locator('#upkeep-body')).toBeHidden();
+  await expect(page.locator('#upkeep-intro')).toHaveText('Round energy · 6 creatures');
+  await page.clock.runFor(350);
+  const sheet = await page.locator('#upkeep-dialog').boundingBox();
+  const zone = await page.locator('#battle-zone').boundingBox();
+  expect(sheet.y).toBeGreaterThanOrEqual(zone.y + zone.height);
+  await fitsViewport(page, '#upkeep-close, #upkeep-details');
   await page.screenshot({ path: info.outputPath('upkeep-receipt.jpg'), type: 'jpeg', quality: 85 });
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]);
   await close(page); await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
@@ -67,6 +73,7 @@ test('arrivals gate one grouped receipt, then the mutation tip, without acknowle
 test('inspection is current while receipt and journal retain historical zero healing and lethal damage', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   await h.publish([], { board: { ...h.state.view.board, allies: [creature(1, 0), ...roster.slice(1, 3)] } });
+  await page.locator('#upkeep-details').click();
   await page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first().click();
   await expect(page.locator('#inspect-stats')).toHaveText(/^0\/20 HP/); await expect(page.locator('#inspect-effects')).toContainText('Defeated');
   await expect(page.locator('#inspect-effects')).not.toContainText('Bleed'); await page.keyboard.press('Escape');
@@ -85,6 +92,7 @@ test('inspection reads current conditions while the receipt keeps the damage of 
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
   const warden = conditions => ({ ...creature(1, 13), conditions });
   await h.publish([], { board: { ...h.state.view.board, allies: [warden([{ effect: { kind: 'Bleed', amountPerRound: 7 }, remainingRounds: 1 }]), ...roster.slice(1, 3)] } });
+  await page.locator('#upkeep-details').click();
   const inspect = page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).first();
   await inspect.click(); await expect(page.locator('#inspect-effects')).toContainText(/Bleed 7 · 1 round(?!s)/); await page.keyboard.press('Escape');
   // The bleed has run out; a defense with its own countdown is what the creature carries now.
@@ -147,6 +155,7 @@ test('an existing draft delays the receipt and closing settings unblocks it with
 });
 for (const reason of ['revoked', 'hidden', 'renderer']) test(`${reason} clears the receipt and inspection`, async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#upkeep-dialog')).toBeVisible();
+  await page.locator('#upkeep-details').click();
   await page.getByRole('button', { name: 'Inspect Warden · Your team', exact: true }).click();
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
@@ -157,6 +166,7 @@ for (const reason of ['revoked', 'hidden', 'renderer']) test(`${reason} clears t
 test('Continue stays reachable in short landscape and at 200 percent text', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
+  await page.locator('#upkeep-details').click();
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#upkeep-close');
     await page.locator('#upkeep-body section').last().scrollIntoViewIfNeeded();
