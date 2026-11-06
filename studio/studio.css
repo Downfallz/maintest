@@ -999,5 +999,5 @@ main {
   .strategy-results { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
 
-/* The guide shares the arena's copper detail and eclipse-gold actions. */
+/* The guide shares the battle's copper detail and eclipse-gold actions. */
 .codex-hero > .eyebrow { color: var(--brand-ember); }

@@ -7,8 +7,10 @@ for (const colorScheme of ['light', 'dark']) {
     await page.emulateMedia({ colorScheme });
     // This check isolates delivered HTML/CSS; behaviour is exercised by the existing journeys.
     await page.route('**/*.js', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
-    for (const path of ['/', '/table/lobby.html', '/table/index.html', '/table/admin.html', '/table/pilot.html', '/table/leaderboard.html', '/table/arena.html']) {
+    for (const path of ['/', '/table/lobby.html', '/table/index.html', '/table/admin.html', '/table/pilot.html', '/table/leaderboard.html', '/table/battle.html']) {
       await page.goto(path);
+      await expect(page).toHaveTitle(/^Downfall Instinct\b/);
+      if (path === '/') await expect(page.locator('.brand strong')).toHaveText('DOWNFALL INSTINCT');
       await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
       const palette = await page.evaluate(() => {
         const style = getComputedStyle(document.documentElement);

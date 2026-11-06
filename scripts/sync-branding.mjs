@@ -7,7 +7,7 @@ const start = '/* BEGIN GENERATED BRANDING — run node scripts/sync-branding.mj
 const end = '/* END GENERATED BRANDING */';
 const palette = (await readFile(new URL('docs/art/branding.css', root), 'utf8')).trimEnd();
 const block = `${start}\n${palette}\n${end}\n`;
-for (const path of ['table/table.css', 'viewer/viewer.css', 'table/arena-lab.css']) {
+for (const path of ['table/table.css', 'viewer/viewer.css', 'table/battle-lab.css']) {
   const file = new URL(path, root), current = await readFile(file, 'utf8');
   const body = current.startsWith(start) ? current.slice(current.indexOf(end) + end.length).replace(/^\n/, '') : current;
   const expected = block + body;

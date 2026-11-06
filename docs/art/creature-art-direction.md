@@ -1,4 +1,4 @@
-# Downfall Arena — Creature art direction and spell presentation
+# Downfall Instinct — Creature art direction and spell presentation
 
 Status: **design handoff, not implementation**. Reviewed with the game owner on 2026-11-03/04.
 This document records explicit decisions separately from visual proposals and outstanding questions.
@@ -12,7 +12,7 @@ The canonical spell display-name register is [`docs/domain/package-renaming-plan
 3. **Brute**: selected *low armored quadruped with enormous forepaws* concept (previously non-humanoid concept #1) — low, massive, organically armored quadruped with immense front paws. No human posture, equipment or manufactured plate.
 4. **Predator**: selected *feral elongated six-legged stalker* concept (previously feral concept #2) — fast, elongated, predatory **six-legged** beast; not an avian skeleton. Claws and spine quills.
 5. **Warped**: selected *asymmetric split-mask occult quadruped* direction (previously evolution-study panel #4) — quadruped, asymmetric, bent anatomy, split bone-mask skull and occult membranes; not a robed humanoid. A separate earlier *antlered/tendril, spectacular ascendant Warped* study (also called #4 in the brainstorm) inspires **Transcendent**, not Stage 1. These are distinct images; the Stage 1 source is now identified in ART-2 below, while the Transcendent study and original generation IDs remain unverified.
-6. Shared anatomy across all: distinctive bone-mask skull, hooked claws, bony dorsal protrusions. Palette: charcoal/slate blue, desaturated gray, bone ivory and limited ochre/burnt-orange accents. **Reserve bright warm gold for the UI's active/selected-target signal**: ambient creature amber must stay dimmer, smaller and visually distinct from the active/target outline. Maintain strong subject-background value contrast in the eclipse arena.
+6. Shared anatomy across all: distinctive bone-mask skull, hooked claws, bony dorsal protrusions. Palette: charcoal/slate blue, desaturated gray, bone ivory and limited ochre/burnt-orange accents. **Reserve bright warm gold for the UI's active/selected-target signal**: ambient creature amber must stay dimmer, smaller and visually distinct from the active/target outline. Maintain strong subject-background value contrast in the eclipse battlefield.
 7. A family owns a dominant silhouette, while Stage 2 and Stage 3 mutations add **visual cues**, Stage 3 usually amplifying the Stage 2 motif. Stage 4 Capstones add a restrained passive-themed accent, not a fourth full silhouette. This is **not** an approval to produce a unique full sprite for every package.
 8. Free multiclassing means cosmetic layers must compose or prioritize gracefully. ART-5 now implements a bounded precedence/layer POC for review; final anatomical variants remain open.
 9. Physical **Brute**, biologically **Predator**, occult/magical **Warped**. Within Warped: elemental **Stormborn**, authentic death magic/necromancy **Necrotic**, and astral/vital/void **Ethereal**. Do not reduce Necrotic/Revenant to infections, insects or biological parasites: that belongs to Predator.
@@ -22,7 +22,7 @@ The canonical spell display-name register is [`docs/domain/package-renaming-plan
 
 The four owner-supplied originals are now audited and identified in [ART-2 source intake](asset-intake.md), with [machine-readable hashes and alpha measurements](source-intake.json). The current source register supersedes the earlier unverified, number-only references: base Creature = `1000011763.png`; Brute = `1000011765.png`; Predator = `1000011762.png`; Warped = `1000011764.png`. WebP previews are committed; the owner will add the original PNGs separately under `docs/art/sources/`. These filenames were matched by visible anatomy, correcting an inconsistent chat handoff. Never replace a reviewed source with an approximate regenerated image without visual approval.
 
-The old winged predator and robed wraith sheet is retained as historical prototype provenance. [ART-3](runtime-sprites.md) now uses the four audited WebP references in both arena scenes with explicit mapping, anchors and fallbacks. The audited originals have real transparency; all have maximum alpha 254 and low-alpha traces outside the main silhouette. The separate Transcendent inspiration has not been imported.
+The old winged predator and robed wraith sheet is retained as historical prototype provenance. [ART-3](runtime-sprites.md) now uses the four audited WebP references in both battle scenes with explicit mapping, anchors and fallbacks. The audited originals have real transparency; all have maximum alpha 254 and low-alpha traces outside the main silhouette. The separate Transcendent inspiration has not been imported.
 
 ## The visual language
 
@@ -145,10 +145,10 @@ The **necromancy framing is user-corrected and accepted**. Fine colors, amount o
 ## Proposed follow-up slices (not implementation authorization)
 
 1. **ART-2 — Reference asset intake (PNG upload pending)**: [WebP references, corrected identification, transparency/dimension audit, visual review and provenance](asset-intake.md). Runtime integration is recorded separately in ART-3.
-2. **ART-3 — Sprite manifest + arena contrast (implemented)**: [asset mapping/fallback, placements, sprite anchoring and viewport QA](runtime-sprites.md).
+2. **ART-3 — Sprite manifest + battle contrast (implemented)**: [asset mapping/fallback, placements, sprite anchoring and viewport QA](runtime-sprites.md).
 3. **ART-4 — Spell visual vocabulary (implemented)**: [confirmed physical, biological, elemental, necromantic and astral VFX](spell-vfx.md); no domain changes.
 4. **ART-5 — Mutation cues / multiclass POC (implemented)**: [explicit precedence, three-slot budget, stage 2/3 cues and owner-only capstone accents](mutation-cues.md), with cross-family, replay and lifecycle tests.
-5. **ART-6 — Polish (implemented)**: [shared timing, 1×/1.5×/2× live playback, bounded motif choreography, reduced motion and opt-in synthesized audio](arena-polish.md), with lifecycle tests and screenshots.
+5. **ART-6 — Polish (implemented)**: [shared timing, 1×/1.5×/2× live playback, bounded motif choreography, reduced motion and opt-in synthesized audio](battle-polish.md), with lifecycle tests and screenshots.
 
 ### Out of scope for this documentation PR
 

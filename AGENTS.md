@@ -5,7 +5,7 @@ Humans: this is also the shortest accurate description of how we work here. Keep
 
 ## What this project is
 
-Downfall Arena is a turn-based tactical board game (two players, each commanding a team of creatures, played in
+Downfall Instinct is a turn-based tactical board game (two players, each commanding a team of creatures, played in
 rounds made of planning and combat phases) implemented as a .NET engine. The repository is deliberately also a
 playground for professional engineering practice: Domain-Driven Design, clean architecture, executable
 architecture rules, ADRs, and AI-assisted development.
@@ -33,11 +33,11 @@ benchmarks/                    The fixed benchmark seeds and one outcome digest 
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
-                               presentation.js is the pure seat-to-presentation boundary shared with future live arena work.
-                               `/arena-lab` is an isolated visual study using fictional sample frames, not a live seat
-                               (docs/tabletop/browser-arena-plan.md, ADR 0123); `/arena` is the opt-in Phaser
+                               presentation.js is the pure seat-to-presentation boundary shared with future live battle work.
+                               `/battle-lab` is an isolated visual study using fictional sample frames, not a live seat
+                               (docs/tabletop/browser-battle-plan.md, ADR 0123); `/battle` is the opt-in Phaser
                                complete game loop for one authenticated seat (ADRs 0125–0128), opt-in behind a lobby preference (ADR 0136).
-arena/                         Isolated Phaser/TypeScript presentation; builds into ignored table/arena-build/.
+battle/                         Isolated Phaser/TypeScript presentation; builds into ignored table/battle-build/.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
                                and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
@@ -59,7 +59,7 @@ tests/
 docs/
   art/          Official UI palette (branding.md, branding.css; regenerate with `node scripts/sync-branding.mjs`),
                 creature art direction (creature-art-direction.md), the ART-2 reference intake
-                (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md), playback polish (arena-polish.md) and pipeline follow-ups.
+                (asset-intake.md, source-intake.json), runtime sprites (runtime-sprites.md), spell VFX (spell-vfx.md), mutation cues (mutation-cues.md), playback polish (battle-polish.md) and pipeline follow-ups.
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, the spell catalogue, a planned change with
@@ -74,11 +74,11 @@ docs/
                 inviting one of them to a table (friends-plan.md).
                 Home navigation (home-navigation.md) separates the signed-out introduction from the dashboard;
                 friends, notifications, privacy and invitation codes open from a responsive menu.
-                The arena UX recovery plan (arena-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
+                The battle view UX recovery plan (battle-ux-parity-plan.md, AU1–AU14) maps classic behaviours,
                 reuse boundaries and acceptance criteria; AU3a records energy before AU3b renders receipts.
                 AU12 adds public creature references and retained last-cast links; historical inspection stays on recorded frames.
                 AU13 adds the final scorecard, recorded-seat notes, optional notices/haptics and unambiguous seat resume.
-                AU14 records cross-feature acceptance in arena-ux-acceptance.md; A8 (arena-release-acceptance.md, ADR 0136) adds the rollout preference, budgets and release profiles; physical/new-player gates remain open.
+                AU14 records cross-feature acceptance in battle-ux-acceptance.md; A8 (battle-release-acceptance.md, ADR 0136) adds the rollout preference, budgets and release profiles; physical/new-player gates remain open.
                 ADR 0132 versions event streams: new tables record ordinary energy; resumed legacy tables
                 omit that event before sequencing for their remaining lifetime, preserving feed/checkpoint indices.
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
@@ -89,7 +89,7 @@ legacy/         Frozen prototypes from before the clean slate. Read-only referen
 ## Commands
 
 ```bash
-npm --prefix arena ci --ignore-scripts && npm --prefix arena run build   # arena assets required by host route tests
+npm --prefix battle ci --ignore-scripts && npm --prefix battle run build   # battle assets required by host route tests
 dotnet restore
 dotnet build --no-restore                 # warnings are errors
 dotnet test --no-build                    # Microsoft.Testing.Platform runner (see global.json)
@@ -139,9 +139,9 @@ scripts/iterate.sh --explore 0.2 --clone-on-explore                  # fit the c
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
-when `arena/` or `table/arena-*` changes, rebuild the bundle (`npm --prefix arena run build`) and run the browser suite's
-`arena-lab.spec.js`, `arena-live.spec.js`, `arena-combat.spec.js`, `arena-playback.spec.js`, `arena-loop.spec.js`,
-`arena-history.spec.js`, `arena-guidance.spec.js`, `arena-upkeep.spec.js`, `arena-mutations.spec.js`, `arena-tempo.spec.js`, `arena-spellbook.spec.js`, `arena-pacing.spec.js`, `arena-growth.spec.js`, `arena-order.spec.js`, `arena-targets.spec.js`, `arena-inspection.spec.js`, `arena-services.spec.js`, `arena-parity.spec.js` and `arena-release.spec.js` (arena/README.md). CI runs these, then sends the build and the coverage
+when `battle/` or `table/battle-*` changes, rebuild the bundle (`npm --prefix battle run build`) and run the browser suite's
+`battle-lab.spec.js`, `battle-live.spec.js`, `battle-combat.spec.js`, `battle-playback.spec.js`, `battle-loop.spec.js`,
+`battle-history.spec.js`, `battle-guidance.spec.js`, `battle-upkeep.spec.js`, `battle-mutations.spec.js`, `battle-tempo.spec.js`, `battle-spellbook.spec.js`, `battle-pacing.spec.js`, `battle-growth.spec.js`, `battle-order.spec.js`, `battle-targets.spec.js`, `battle-inspection.spec.js`, `battle-services.spec.js`, `battle-parity.spec.js` and `battle-release.spec.js` (battle/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

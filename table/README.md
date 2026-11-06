@@ -1,4 +1,4 @@
-# Downfall Arena table
+# Downfall Instinct table
 
 A static tabletop client designed primarily for desktop, with responsive phone controls, served by the
 existing .NET table host. No framework, build step, external fonts, or runtime dependencies. Game rules, legal options and card text still come from the host.
@@ -71,7 +71,7 @@ the ten seconds it may wait to catch up are for a bot still deciding, and nobody
 
 ## Read-only presentation boundary
 
-`presentation.js` is the shared seam between a seat controller and a renderer (ADR 0123, arena step A3).
+`presentation.js` is the shared seam between a seat controller and a renderer (ADR 0123, battle step A3).
 The existing `/play` uses it; a future live Phaser adapter can import it without starting this page.
 
 | Function | Input and responsibility |
@@ -471,10 +471,10 @@ ladder is recomputed from the results every half minute at most.
 
 A page offers **Notify me when it's my turn** once the host has push keys (ADR 0118): the phone is then told
 when the match asks that seat something and nobody is looking at the page, screen off or browser closed
-included, and a tap on the notice opens the game. A page in front of somebody gets no notice, the arena (`/arena`)
-included: the host still sends one when the arena's controls were not opened within the grace (ADR 0126), and the
-worker keeps it quiet while an arena at that table is visible and focused, so an installed app being played is not told what it
-shows; a tap on a notice brings an arena already open at that table to the front and leaves it there. A page hidden
+included, and a tap on the notice opens the game. A page in front of somebody gets no notice, the battle view (`/battle`)
+included: the host still sends one when the battle view's controls were not opened within the grace (ADR 0126), and the
+worker keeps it quiet while a battle view at that table is visible and focused, so an installed app being played is not told what it
+shows; a tap on a notice brings a battle view already open at that table to the front and leaves it there. A page hidden
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn" and the round, nothing else. On an iPhone the button says to add the table to the home screen
 first. Every seat page makes the offer once, in a bar at the bottom of the screen, and its answer is remembered
@@ -557,9 +557,9 @@ meant for their opponent does not take that seat by accident; playing both seats
 second button. A player who lost the device holding a seat gets a **New invitation** from the admin panel,
 which cuts that device off.
 
-## Arena design laboratory
+## Battle design laboratory
 
-`/arena-lab` opens an isolated Phaser battlefield that fits the viewport in portrait and landscape.
+`/battle-lab` opens an isolated Phaser battlefield that fits the viewport in portrait and landscape.
 It has provisional illustrated creatures, a fixed sample action with three target outcomes, animated
 impact, keyboard/touch controls and inspection/settings overlays. It uses no seat or API. Reset, skip,
 2× playback, optional sound and reduced motion are available. `/play` remains the actual game.
@@ -567,47 +567,47 @@ impact, keyboard/touch controls and inspection/settings overlays. It uses no sea
 Build the local renderer before opening the lab or running host route tests:
 
 ```bash
-npm --prefix arena ci --ignore-scripts
-npm --prefix arena run build
+npm --prefix battle ci --ignore-scripts
+npm --prefix battle run build
 ```
 
-Docker and CI build it automatically. See [build details](../arena/README.md) and the
-[browser arena plan](../docs/tabletop/browser-arena-plan.md) for screenshots and the integration PR sequence.
+Docker and CI build it automatically. See [build details](../battle/README.md) and the
+[browser battle plan](../docs/tabletop/browser-battle-plan.md) for screenshots and the integration PR sequence.
 
-## Live arena preview
+## Battle view preview
 
-`/arena` is an opt-in live view with combat controls, linked from **Match → Open live arena preview**.
+`/battle` is an opt-in live view with combat controls, linked from **Match → Open battle view preview**.
 It asks for a viewpoint before reading a private board and supports accepted saved or linked seats.
 Inspection sends no commands or `shown`. Opening combat controls acknowledges the visible question;
 spell and target choices require explicit confirmation. Action, hidden Intent and revealed Target use
 `slot.js` builders shared with `/play`; the host remains the authority for options and resolution.
 
-`arena-combat.js` owns drafts and request lifetimes, `arena-live.js` owns fenced polling/SSE, and the
-separate `arena-build/live.js` bundle cannot import the lab sample. `arena-playback.js` queues confirmed
+`battle-combat.js` owns drafts and request lifetimes, `battle-live.js` owns fenced polling/SSE, and the
+separate `battle-build/live.js` bundle cannot import the lab sample. `battle-playback.js` queues confirmed
 combat frames and deduplicates them by sequence. Damage, conditions and defeats follow the host's before/after
 frames, including the last action before upkeep. Skip or opening combat controls settles to the current board;
 playback never acknowledges or sends a decision. First reads, legacy frames and long catch-ups settle immediately.
-[ADR 0127](../docs/adr/0127-play-confirmed-actions-in-the-live-arena.md) records that boundary. Mutations, tempos, ties and results are available in the arena
-([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)); invitation acceptance remains at `/play`.
-The existing host still marks an accepted seat as arrived on authenticated reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-arena.md),
-[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-arena.md) and
-[the build instructions](../arena/README.md).
+[ADR 0127](../docs/adr/0127-play-confirmed-actions-in-the-live-battle.md) records that boundary. Mutations, tempos, ties and results are available in the battle view
+([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-battle.md)); invitation acceptance remains at `/play`.
+The existing host still marks an accepted seat as arrived on authenticated reads. See [ADR 0125](../docs/adr/0125-read-one-authenticated-seat-in-the-live-battle.md),
+[ADR 0126](../docs/adr/0126-answer-combat-questions-in-the-live-battle.md) and
+[the build instructions](../battle/README.md).
 
-The arena's **History** drawer retains public events from the current and previous round, capped at 200.
+The battle view's **History** drawer retains public events from the current and previous round, capped at 200.
 Attacks expand into actual applied effects and recorded before/after changes; reading history preserves
 command drafts and never sends a decision or `shown`. It is separate from animation playback, so skipping
-an animation does not remove its result. `arena-history.js` normalizes/deduplicates public events and
-`arena/src/history.ts` renders stable accessible details. AU3a adds recorded ordinary-energy gains,
+an animation does not remove its result. `battle-history.js` normalizes/deduplicates public events and
+`battle/src/history.ts` renders stable accessible details. AU3a adds recorded ordinary-energy gains,
 including zero and before/after values, to new matches. Classic replay also separates recorded ordinary
 energy from ongoing ticks; neither step adds a nominal catalogue allowance. AU3b presents a grouped receipt
-once arrivals clear and at observed round transitions, after playback and before tips. `arena-upkeep.js`
+once arrivals clear and at observed round transitions, after playback and before tips. `battle-upkeep.js`
 shares recorded facts with round review and replay, retains zero gains/heals, and labels absent ordinary
 energy as unknown. Inspection shows current durations separately. A bounded tab-local round marker prevents
 repeat announcements after reconnect/reload, without persisting event facts. Filters and earlier
-round loading remain later slices of the [UX parity plan](../docs/tabletop/arena-ux-parity-plan.md).
+round loading remain later slices of the [UX parity plan](../docs/tabletop/battle-ux-parity-plan.md).
 
-The arena's **Help** dialog explains the current objective and the round flow, including the configured
+The battle view's **Help** dialog explains the current objective and the round flow, including the configured
 spell declaration mode. First-use tips appear once per subject and can be muted; Help remains available.
-`arena-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
+`battle-guidance.js` derives text from the current seat/offer and authoritative next mutation round.
 It does not acknowledge questions or send commands, and opening it preserves pending choices.
-See [AU2 and its verification](../arena/README.md#au2-objectives-and-contextual-help).
+See [AU2 and its verification](../battle/README.md#au2-objectives-and-contextual-help).

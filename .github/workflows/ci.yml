@@ -79,8 +79,8 @@ jobs:
           # Full history so SonarCloud can attribute new code and blame lines.
           fetch-depth: 0
 
-      - name: Build the isolated arena prototype
-        run: npm --prefix arena ci --ignore-scripts && npm --prefix arena run build
+      - name: Build the isolated battle prototype
+        run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -138,8 +138,8 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
-          /d:sonar.exclusions="legacy/**,artifacts/**,**/.venv/**,table/arena-build/**"
-          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,arena/**,scripts/**"
+          /d:sonar.exclusions="legacy/**,artifacts/**,**/.venv/**,table/battle-build/**"
+          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,battle/**,scripts/**"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
           /d:sonar.issue.ignore.multicriteria="e1,e2"

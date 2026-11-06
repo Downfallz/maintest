@@ -77,7 +77,7 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await expect(page.locator('#notifications-open')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText('Saved on this browser');
-  await page.getByRole('link', { name: 'Enter the arena' }).click();
+  await page.getByRole('link', { name: 'Play Downfall Instinct' }).click();
   await expect(page.locator('#sign-in-panel')).toBeInViewport();
   await page.evaluate(() => scrollTo(0, 0));
   await openNavigation(page);
@@ -253,7 +253,7 @@ test('account deletion can be cancelled and signing out everywhere requires its 
   expect(state.signouts).toEqual([{ everywhere: true }]);
 });
 
-for (const file of ['leaderboard', 'arena', 'index']) {
+for (const file of ['leaderboard', 'battle', 'index']) {
   test(`the signed-in ${file} page opens the same menu and friends panel in place`, async ({ page }) => {
     await home(page);
     await page.goto(`/table/${file}.html`);

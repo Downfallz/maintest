@@ -28,6 +28,8 @@ test('a refusal keeps the hosts code so the page can tell a lapsed sign-in from 
 test('after signing in a player goes back only to a seat or an invitation of this host', () => {
   assert.equal(signInPath('/play?invite=abc'), '/lobby?next=%2Fplay%3Finvite%3Dabc');
   assert.equal(nextPath('?next=%2Fplay%3Finvite%3Dabc'), '/play?invite=abc');
+  assert.equal(nextPath('?next=%2Farena%3Ftable%3Done%23history'), '/battle?table=one#history');
+  assert.equal(nextPath('?next=%2Farena-other'), null);
   assert.equal(nextPath('?next=%2Fj%2FK7F2Q9XM'), '/j/K7F2Q9XM');
   for (const away of ['https://evil.example', '//evil.example/play', '/admin', 'javascript:alert(1)', '']) assert.equal(nextPath(`?next=${encodeURIComponent(away)}`), null, away);
   assert.equal(nextPath(''), null);

@@ -1,4 +1,4 @@
-import { returningArenaPlayer } from './arena-help-fixture.js';
+import { returningBattlePlayer } from './battle-help-fixture.js';
 import { test, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -90,11 +90,11 @@ test('a seat page on a host with keys registers the worker and offers the notice
     await expect(button).toBeEnabled({ timeout: 10000 });
     await expect(button).toHaveText(/Notify me when it's my turn|Stop notifying me/);
   }
-  // The arena uses the same host key and worker; entering neither subscribes nor sends a diagnostic.
-  await returningArenaPlayer({ context });
-  const arenaWrites = [];
-  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/lobby/push') && request.method() !== 'GET') arenaWrites.push(request.method()); });
-  await page.goto(new URL('/arena', seatLink).href);
+  // The battle uses the same host key and worker; entering neither subscribes nor sends a diagnostic.
+  await returningBattlePlayer({ context });
+  const battleWrites = [];
+  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/lobby/push') && request.method() !== 'GET') battleWrites.push(request.method()); });
+  await page.goto(new URL('/battle', seatLink).href);
   await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();
   await page.locator('#settings').click();
@@ -102,6 +102,6 @@ test('a seat page on a host with keys registers the worker and offers the notice
   await expect(page.locator('#notices-problem')).toBeEmpty();
   await expect(page.locator('#playtest-open')).toBeHidden();
   // An already opted-in endpoint may be rebound; subscriptions/test requests are never automatic.
-  expect(arenaWrites.every(method => method === 'PUT')).toBe(true);
+  expect(battleWrites.every(method => method === 'PUT')).toBe(true);
 
 });

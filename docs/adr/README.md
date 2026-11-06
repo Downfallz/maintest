@@ -128,17 +128,18 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0121](0121-the-public-lobby-offers-one-bot-the-strongest.md) | Offer one bot in the public lobby: the strongest | Accepted |
 | [0117](0117-a-player-makes-every-pick-of-an-opportunity-at-once.md) | At a table, ask each player every pick of an opportunity before either reaches the match | Accepted |
 | [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) | A player signs in with Google, and their seats belong to their account | Accepted |
-| [0123](0123-prototype-the-arena-as-an-isolated-presentation.md) | Prototype the arena as an isolated presentation | Accepted for the isolated prototype |
+| [0123](0123-prototype-the-battle-as-an-isolated-presentation.md) | Prototype the battle as an isolated presentation | Accepted for the isolated prototype |
 | [0124](0124-rank-players-with-glicko-2-over-ranked-results.md) | Rank players with Glicko-2, over the results of games between two accounts | Accepted |
-| [0125](0125-read-one-authenticated-seat-in-the-live-arena.md) | Read one authenticated seat in the live arena | Accepted for the opt-in read-only integration |
-| [0126](0126-answer-combat-questions-in-the-live-arena.md) | Answer combat questions in the live arena | Accepted for the opt-in combat integration |
-| [0127](0127-play-confirmed-actions-in-the-live-arena.md) | Play confirmed actions in the live arena | Accepted for the opt-in arena |
-| [0128](0128-complete-the-game-loop-in-the-arena.md) | Complete the game loop in the arena | Accepted for the opt-in arena |
+| [0125](0125-read-one-authenticated-seat-in-the-live-battle.md) | Read one authenticated seat in the live battle | Accepted for the opt-in read-only integration |
+| [0126](0126-answer-combat-questions-in-the-live-battle.md) | Answer combat questions in the live battle | Accepted for the opt-in combat integration |
+| [0127](0127-play-confirmed-actions-in-the-live-battle.md) | Play confirmed actions in the live battle | Accepted for the opt-in battle |
+| [0128](0128-complete-the-game-loop-in-the-battle.md) | Complete the game loop in the battle | Accepted for the opt-in battle |
 | [0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md) | A player keeps friends, and invites one of them to a table | Accepted |
-| [0130](0130-map-arena-creatures-to-audited-sprites.md) | Map arena creatures to audited sprites | Accepted for the opt-in arena |
-| [0131](0131-give-confirmed-arena-spells-a-visual-vocabulary.md) | Give confirmed arena spells a visual vocabulary | Accepted for the opt-in arena |
+| [0130](0130-map-battle-creatures-to-audited-sprites.md) | Map battle creatures to audited sprites | Accepted for the opt-in battle |
+| [0131](0131-give-confirmed-battle-spells-a-visual-vocabulary.md) | Give confirmed battle spells a visual vocabulary | Accepted for the opt-in battle |
 | [0132](0132-record-ordinary-round-energy-without-renumbering-old-tables.md) | Record ordinary round energy without renumbering old tables | Accepted |
-| [0133](0133-compose-bounded-mutation-cues-on-one-arena-body.md) | Compose bounded mutation cues on one arena body | Accepted for the opt-in arena, as a prototype policy |
-| [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in arena |
-| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena |
-| [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |
+| [0133](0133-compose-bounded-mutation-cues-on-one-battle-body.md) | Compose bounded mutation cues on one battle body | Accepted for the opt-in battle, as a prototype policy |
+| [0134](0134-polish-confirmed-playback-with-opt-in-sound.md) | Polish confirmed playback with opt-in sound | Accepted for the opt-in battle |
+| [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in battle |
+| [0136](0136-gate-the-battle-release-behind-a-reversible-preference.md) | Gate the battle release behind a reversible preference | Accepted for the opt-in release candidate |
+| [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted |

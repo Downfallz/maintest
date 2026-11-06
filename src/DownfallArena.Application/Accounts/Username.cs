@@ -21,7 +21,7 @@ public sealed record Username
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "admin", "administrator", "operator", "pilot", "system", "support", "moderator", "guest", "anonymous",
-        "nobody", "you", "me", "open", "player", "player1", "player2", "bot", "bots", "downfall", "downfallarena",
+        "nobody", "you", "me", "open", "player", "player1", "player2", "bot", "bots", "downfall", "downfallarena", "downfallinstinct",
         "automa", "random", "greedy", "lookahead", "minimax", "heuristic", "policy", "explore", "opening", "clone",
     };
 

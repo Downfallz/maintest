@@ -1,4 +1,4 @@
-# Downfall Arena
+# Downfall Instinct
 
 [![CI](https://github.com/Downfallz/maintest/actions/workflows/ci.yml/badge.svg)](https://github.com/Downfallz/maintest/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Downfallz_maintest&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Downfallz_maintest)

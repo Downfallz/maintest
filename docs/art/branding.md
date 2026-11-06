@@ -1,6 +1,12 @@
-# Downfall Arena — colour identity
+# Downfall Instinct — brand identity
 
-Status: accepted, 2026-11-05. The arena is the visual reference for the whole application.
+**Downfall Instinct** is the official English and French title. Use both words, with a space and no
+punctuation, on the home page, in the installed app, on the rulebook and in the studio and viewer.
+A typographic wordmark may uppercase both words. Use **Battle view** for the animated presentation and
+**battlefield** for the combat surface. The two play styles share one game identity.
+See [ADR 0137](../adr/0137-name-the-game-downfall-instinct.md).
+
+The battle view supplies the visual reference for the application. The palette was adopted on 2026-11-05.
 
 **Slate, eclipse gold and copper ember, with ivory text.** This replaces forest-green surfaces and the
 studio's lime action colour. Keep the dark fantasy atmosphere, restrained accents and readable controls.
@@ -20,8 +26,8 @@ studio's lime action colour. Keep the dark fantasy atmosphere, restrained accent
 | Slate mist | `#ADB8BD` | `--brand-muted` | Supporting text |
 | Warm shadow | `#352E25` | `--brand-wash` | Selected/active surface behind gold text |
 
-The slate, panel, raised surface, gold, focus and ivory come from `table/arena-lab.css`; copper appears in
-arena opponent detail in `table/arena.css`. Border and muted values consolidate the previous grey-green
+The slate, panel, raised surface, gold, focus and ivory come from `table/battle-lab.css`; copper appears in
+battle opponent detail in `table/battle.css`. Border and muted values consolidate the previous grey-green
 variants into slate. Copper is a secondary decorative accent, not a new gameplay state.
 
 ## Usage
@@ -55,7 +61,7 @@ node --test studio/*.test.js table/*.test.js
 ```
 
 The synchronizer writes a clearly marked token block at the start of `table/table.css`,
-`table/arena-lab.css` and `viewer/viewer.css`. Studio inherits the viewer tokens. This intentional build-time
+`table/battle-lab.css` and `viewer/viewer.css`. Studio inherits the viewer tokens. This intentional build-time
 copy keeps the fixed HTTP route tables, GitHub Pages subpath and self-contained C#/Python viewer reports
 working without an extra request or a dependency on a live web server. The normal Node test suite runs
 `node scripts/sync-branding.mjs --check` and rejects drift. Edit the source, not the generated blocks.
@@ -71,7 +77,7 @@ These non-CSS formats must be updated with any future palette change; the theme 
 
 Lobby (including accounts, friends and devices), leaderboard, classic match and replay, Mutation Tree,
 command panels and overlays, admin, pilot, content studio, tuning/authoring panels, artifact viewer,
-installed-app chrome and icons. The arena CSS shell shares the tokens; its Phaser/TypeScript renderer,
+installed-app chrome and icons. The battle CSS shell shares the tokens; its Phaser/TypeScript renderer,
 illustrations and gameplay colours are unchanged.
 
 ## Reference captures

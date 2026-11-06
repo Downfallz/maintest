@@ -3,6 +3,14 @@
 One entry per term. Code must use these exact words. Status: `decided`, `inherited` (from the legacy
 prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined).
 
+## Game identity
+
+| Term | Definition | Status |
+| --- | --- | --- |
+| Downfall Instinct | Official game title in English and French. Use the full title for the product. Instinct on its own also names a tempo choice in play. | decided |
+| Battle view | Animated presentation of a Match, served at `/battle`. It shares the rules, seats and progression of the classic table. | decided |
+| Battlefield | The area that shows both Teams during play. | decided |
+
 ## Match and players
 
 | Term | Definition | Status |

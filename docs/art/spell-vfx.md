@@ -2,7 +2,7 @@
 
 Implemented on top of the merged ART-3 (#439). ART-4 now integrates `main`, including the AU1
 history console (#440); opening that console settles VFX through the existing playback cancellation path.
-See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) for the presentation boundary.
+See [ADR 0131](../adr/0131-give-confirmed-battle-spells-a-visual-vocabulary.md) for the presentation boundary.
 
 ## Coverage
 

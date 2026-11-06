@@ -19,7 +19,7 @@ on:
       - tools/**
       - data/**
       - table/**
-      - arena/**
+      - battle/**
       - viewer/index.html
       - viewer/viewer.css
       - learning/weights/**
@@ -41,7 +41,7 @@ on:
       - tools/**
       - data/**
       - table/**
-      - arena/**
+      - battle/**
       - viewer/index.html
       - viewer/viewer.css
       - learning/weights/**

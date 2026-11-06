@@ -96,5 +96,5 @@ node_modules
 studio/browser/test-results/
 studio/browser/playwright-report/
 
-# Reproducible Phaser bundle (npm --prefix arena run build).
-/table/arena-build/
+# Reproducible Phaser bundle (npm --prefix battle run build).
+/table/battle-build/

@@ -19,7 +19,7 @@ export function rematchLink(table, held) {
 }
 
 // How the match ended, for the seat reading it: who won and why, off the outcome the host serves. A page on
-// an older host that serves none says only that it is over. The table and the arena say it in the same words.
+// an older host that serves none says only that it is over. The table and the battle say it in the same words.
 export function outcomeText(view, seat) {
   const outcome = view?.outcome;
   if (!outcome) return 'The match is over.';

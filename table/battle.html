@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1519">
+  <meta name="referrer" content="no-referrer">
+  <title>Downfall Instinct · Live preview</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="battle-lab.css">
+  <link rel="stylesheet" href="battle.css">
+  <script type="module" src="battle-build/live.js"></script>
+  <link rel="stylesheet" href="lobby.css">
+  <script type="module" src="navigation.js"></script>
+</head>
+<body class="battle-page">
+  <header class="masthead lobby-header home-header" data-navigation="battle" hidden></header>
+  <main id="battle" class="battle-shell" data-ready="false">
+    <header class="hud-top">
+      <a class="brand" href="/" aria-label="Downfall Instinct — back to lobby"><span aria-hidden="true">◈</span><div>DOWNFALL <b>INSTINCT</b><small>BATTLE VIEW · PREVIEW</small></div></a>
+      <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div>
+      <div class="tools"><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="round-review" type="button" hidden aria-label="Review upkeep and aftermath">↺</button><button id="switch-seat" type="button" title="Choose viewpoint" aria-label="Choose viewpoint">⇄</button><button id="settings" type="button" aria-label="Open settings">☷</button></div>
+    </header>
+    <nav class="timeline-wrap" aria-label="Activation order"><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>Help</button><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
+    <section id="battle-zone" aria-label="Battlefield">
+      <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
+      <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
+      <aside id="growth-receipt" hidden aria-label="New mutations"><button type="button" data-growth-open aria-describedby="growth-announcement">Mutation unlocks ↗</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation receipt">×</button></aside>
+      <div id="actor-layer" aria-label="Inspect creatures"></div>
+      <article id="playback-receipt" hidden tabindex="0" aria-labelledby="receipt-title"><p class="eyebrow">RECORDED ROUND EVENTS</p><h2 id="receipt-title"></h2><p class="receipt-note">Text receipt · no exact battlefield was recorded for this step.</p><div id="receipt-sections"></div><button type="button" data-history-open>Open History</button></article>
+      <div id="loading" hidden><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Opening your battle</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
+    </section>
+    <div id="playback-pacing" hidden><label for="playback-mode">Read results</label><select id="playback-mode"><option value="auto">Auto</option><option value="step">Step</option></select><button id="playback-next" type="button" hidden>Next result</button>
+        <button id="playback-skip" type="button" hidden>Skip</button></div>
+    <section class="command-dock" aria-label="Live match status">
+      <div class="actor-summary"><div><p class="eyebrow" id="perspective">YOUR VIEWPOINT</p><h1 id="actor-name">Battle view</h1><p id="actor-meta">Loading the match…</p></div></div>
+      <div class="live-status"><section id="combat-preview" class="target-preview" tabindex="0" aria-label="Selected action estimate" hidden></section><span id="connection" role="status" aria-live="polite">Connecting…</span><p id="instruction">Loading the match…</p><button id="playback-result" type="button" hidden><span id="result-label">Last action</span> ↗</button><p id="combat-error" role="alert" hidden></p><p id="planning-error" role="alert" hidden></p><p id="match-error" role="alert" hidden></p></div>
+      <div class="battle-actions">
+        <button class="primary" id="planning-open" type="button" hidden>Choose mutation</button>
+        <button class="primary" id="match-open" type="button" hidden>Match result</button>
+        <button class="primary" id="combat-open" type="button" hidden>Choose action</button>
+        <div id="combat-targets" hidden>
+          <strong id="combat-title"></strong><p id="combat-selection" aria-live="polite"></p>
+          <div class="combat-buttons"><button id="combat-back" type="button" aria-label="Change spell">Spells</button><button class="primary" id="combat-confirm" type="button">Cast</button><button id="combat-cancel" type="button" aria-label="Cancel action">×</button></div>
+        </div>
+        <a class="table-return" id="play-link" href="/play" aria-label="Continue at table" hidden>Table <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+    <section id="replay-controls" hidden aria-label="Recorded match replay">
+      <div><strong id="replay-position"></strong><p id="replay-text" aria-live="polite"></p><small id="replay-note"></small></div>
+      <div class="replay-buttons"><button id="replay-previous" type="button">Previous</button><button id="replay-next" type="button">Next</button><select id="replay-round" aria-label="Replay round"></select><button id="replay-close" type="button">Return to result</button></div>
+    </section>
+    <output id="playback-announcement" class="playback-announcement" aria-live="polite"></output>
+    <footer><span>LIVE PREVIEW · <b>PROVISIONAL ARTWORK</b></span><span id="updated">No board loaded</span></footer>
+  </main>
+  <dialog id="order-dialog" aria-labelledby="order-title">
+    <header class="order-header"><h2 id="order-title">Turn order</h2><p id="order-summary"></p></header>
+    <div id="order-body"><p id="order-context"></p><details id="order-rules"><summary>How the order is decided</summary><p id="order-explanation"></p><p id="order-roll-note"></p></details><ol id="order-list"></ol></div>
+    <footer class="order-footer"><button id="order-close" type="button">Continue</button><button type="button" data-history-open>History</button><small>Read-only · follows the displayed battlefield</small></footer>
+  </dialog>
+  <dialog id="upkeep-dialog" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
+    <header class="upkeep-header"><div><p class="eyebrow">THE ROUND HAS BEGUN</p><h2 id="upkeep-title"></h2></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
+    <div class="upkeep-scroll"><p id="upkeep-intro">Energy and ongoing effects were applied automatically. Here is what happened.</p><div id="upkeep-body"></div></div>
+    <footer class="upkeep-footer"><p>Saved in History and round review. Inspect a creature for its <strong>current</strong> stats and condition durations.</p><button type="button" data-history-open>Open History</button></footer>
+  </dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-objective">
+    <header class="help-header"><div><p class="eyebrow" id="help-round"></p><h2 id="help-title">Round guide</h2></div><button id="help-close" type="button" autofocus>Close</button></header>
+    <div class="help-body"><p id="help-context"></p><p id="help-objective"></p><div id="help-explanation"></div><p id="help-next"></p><button type="button" data-growth-open>Explore Mutation Tree</button><h3>The round</h3><ol id="help-flow" aria-label="Round phases"></ol></div>
+    <footer class="help-footer"><label><input id="help-mute" type="checkbox"> Do not show phase tips again</label><p>Help stays available. History keeps your match events.</p></footer>
+  </dialog>
+  <dialog id="growth-dialog" aria-labelledby="growth-title">
+    <header class="growth-header"><div><p class="eyebrow">PUBLIC GROWTH · REFERENCE</p><h2 id="growth-title">Mutation Tree</h2></div><button id="growth-close" type="button" autofocus>Close</button></header>
+    <div class="growth-picker"><label for="growth-creature">Creature</label><select id="growth-creature"></select></div>
+    <div id="growth-body"><p id="growth-progress"></p><p id="growth-next"></p><p class="dialog-note">Current revealed progress. Pending picks stay in your command sheet. Availability comes from the host's current offer; exploring never spends a pick.</p><details id="growth-reveal-details" hidden><summary>Latest mutation unlocks</summary><ul id="growth-reveals"></ul></details><div id="growth-tree"></div></div>
+  </dialog>
+  <dialog id="history-dialog" aria-labelledby="history-title">
+    <header class="history-header"><div><p class="eyebrow">MATCH JOURNAL</p><h2 id="history-title">History</h2><p id="history-range"></p></div><button id="history-close" type="button" autofocus>Close</button></header>
+    <details id="history-filters"><summary>Filter events</summary><div class="history-filters">
+      <label>Round<select id="history-filter-round"></select></label><label>Creature<select id="history-filter-creature"></select></label>
+      <label>Team<select id="history-filter-team"><option value="">Both teams</option><option>Your team</option><option>Opponent</option><option>Unknown team</option></select></label>
+      <label>Event kind<select id="history-filter-kind"></select></label></div></details>
+    <p id="history-empty"></p><div class="history-content"><div id="history-list" role="region" aria-label="Round events"></div>
+    <section id="history-review" aria-label="Recorded event inspection" hidden><nav class="history-review-controls"><button id="history-back" type="button">Back to events</button><button id="history-previous" type="button">Previous</button><button id="history-next" type="button">Next</button><button id="history-before" type="button">Before</button><button id="history-after" type="button">After</button></nav><div id="history-detail"></div></section></div>
+    <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
+  </dialog>
+  <dialog id="planning-dialog" aria-labelledby="planning-heading">
+    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
+    <div id="planning-creatures" aria-label="Choose a creature"></div></div><div id="planning-choices"></div>
+    <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
+  </dialog>
+  <dialog id="round-dialog" aria-labelledby="round-title"><form method="dialog"><button class="close" aria-label="Close round review">×</button></form><p class="eyebrow">CONFIRMED ROUND EVENTS</p><h2 id="round-title">Upkeep &amp; aftermath</h2><p>Applied recovery, ongoing damage and cleanup from the last two rounds. The battlefield remains current.</p><ol id="round-notes"></ol></dialog>
+  <dialog id="match-dialog" aria-labelledby="match-title">
+    <header class="match-header"><div><p class="eyebrow">DOWNFALL INSTINCT · FINAL</p><h2 id="match-title">Match complete</h2></div><form method="dialog"><button aria-label="Close match result">Close</button></form></header>
+    <div class="match-body"><p id="match-outcome"></p><div id="match-stats"></div><output id="match-replay-error"></output></div>
+    <footer class="match-footer"><button class="primary" id="match-replay" type="button">Replay the match</button><button type="button" data-history-open>Console · History</button><button id="match-notes" type="button" hidden>End comment</button><a href="/">Back to tables</a></footer>
+  </dialog>
+  <dialog id="notes-dialog" aria-labelledby="notes-title"><form method="dialog"><button class="close" aria-label="Close playtest notes">×</button></form><h2 id="notes-title">Playtest notes</h2><div id="playtest-notes"><p>Saved with this recorded session for the selected seat.</p><div id="note-buttons"></div><div id="comment-form" hidden><label for="end-comment">How did the match feel?</label><textarea id="end-comment" rows="4" maxlength="4000"></textarea><button id="comment-save" type="button">Save comment</button></div><output id="noted"></output></div></dialog>
+  <dialog id="concede-dialog" aria-labelledby="concede-title"><h2 id="concede-title">Concede this match?</h2><p>Your opponent wins immediately. This cannot be undone.</p><button id="concede-confirm" type="button">Concede match</button><form method="dialog"><button id="concede-cancel" type="submit" autofocus>Keep playing</button></form><p id="concede-error"></p></dialog>
+  <dialog id="result-dialog" aria-labelledby="result-title"><form method="dialog"><button class="close" aria-label="Close action result">×</button></form><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="result-title">Action result</h2><p id="result-text"></p><button type="button" data-history-open>Open match history</button></dialog>
+  <dialog id="combat-dialog" aria-labelledby="combat-heading">
+    <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
+    <button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMBAT CHOICE</p><h2 id="combat-heading">Choose a spell</h2>
+    <p id="combat-context"></p>
+    <div class="combat-browser-toolbar"><p id="combat-help"></p><button id="combat-details-mode" type="button" aria-pressed="false" aria-controls="combat-spells">Full details</button></div>
+    <!-- Keyboard paging remains available even when every spell button is unavailable. -->
+    <section id="combat-browser" tabindex="0" aria-label="Spellbook"><div id="combat-spells"></div></section>
+    <div class="combat-dialog-footer"><section id="intent-preview" class="target-preview" tabindex="0" aria-label="Hidden intent estimate" hidden></section><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>
+  </dialog>
+  <dialog id="inspect-dialog" aria-labelledby="inspect-name">
+    <header class="inspect-header"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p><p id="inspect-stats"></p></header>
+    <div id="inspect-body" tabindex="0" aria-label="Creature details">
+      <h3>Conditions</h3><p id="inspect-effects"></p>
+      <h3>Acquired mutations</h3><ul id="inspect-mutations"></ul>
+      <button id="inspect-growth" type="button" data-growth-open>Explore Mutation Tree</button>
+      <h3>Known spells</h3><p class="dialog-note">Catalogue reference. Known spells do not reveal a planned spell or its targets.</p><div id="inspect-spells"></div>
+      <h3 id="inspect-action-heading">Last public action</h3><p id="inspect-last-action"></p><button id="inspect-history" type="button" hidden>Read action in History</button>
+      <p id="inspect-appearance" class="dialog-note"></p><p class="dialog-note">Artwork is provisional.</p>
+    </div>
+    <form method="dialog" class="inspect-footer"><button id="inspect-close" aria-label="Close inspection">Close</button></form>
+  </dialog>
+  <dialog id="settings-dialog" aria-labelledby="settings-title"><form method="dialog"><button class="close" aria-label="Close settings">×</button></form><h2 id="settings-title">Presentation</h2><label for="reduce-motion"><span>Less motion<small>Keep the scene still</small></span><input id="reduce-motion" type="checkbox"></label><label for="sound"><span>Spell sounds<small>Off until enabled · quiet, short cues</small></span><input id="sound" type="checkbox"></label><label for="playback-preference"><span>Read confirmed results<small>Auto advances · Step waits for Next</small></span><select id="playback-preference"><option value="auto">Auto</option><option value="step">Step</option></select></label><label for="playback-speed"><span>Playback speed</span><select id="playback-speed"><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><p class="dialog-note">Auto advances confirmed results; Step waits for Next result. These controls never submit a choice. Changing speed settles pending playback. Less motion keeps results readable. Play mutations, tempos and combat here. Review upkeep and aftermath with the round button. Skip playback or open your next choice to return to the current board.</p><label for="haptics"><span>Selection vibration<small>Optional · supported devices only</small></span><input id="haptics" type="checkbox"></label><section id="notices-tools" hidden><h3>Turn notifications</h3><button id="notices-toggle" type="button"></button><p id="notices-hint"></p><button id="notices-test" type="button" hidden>Test notifications</button><output id="notices-problem"></output></section><button id="playtest-open" type="button" hidden>Playtest notes</button><button type="button" data-help-open>Help and round guide</button><button id="concede-open" type="button" hidden>Concede match…</button></dialog>
+</body>
+</html>

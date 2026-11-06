@@ -40,6 +40,7 @@ public sealed class UsernameTests
     [Theory]
     [InlineData("Greedy")]
     [InlineData("ADMIN")]
+    [InlineData("DownfallInstinct")]
     [InlineData("player2")]
     [InlineData("you")]
     public void A_word_a_card_already_means_something_by_is_reserved_whatever_its_case(string typed)

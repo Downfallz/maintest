@@ -1,6 +1,6 @@
 # Learning
 
-The Python side of Downfall Arena (learning phase L6, ADR 0013): the engine records datasets and evaluations
+The Python side of Downfall Instinct (learning phase L6, ADR 0013): the engine records datasets and evaluations
 as JSON, this project reads them, searches the heuristic agent's weights, tunes the game content itself
 (ADR 0021), trains the first policies, and writes back what the engine and the viewer read. The full
 description is in `docs/learning/training.md`.

@@ -110,7 +110,7 @@ internal sealed class TableComposer
 
     /// <summary>
     /// Each package with the words it is known by and how it shows on a creature, and each card with how its cast
-    /// is drawn, where the builder published them next to the schema: presentation the table and the arena show,
+    /// is drawn, where the builder published them next to the schema: presentation the table and the battle show,
     /// kept out of the schema so the content hash does not move with them.
     /// </summary>
     private CatalogueView Tagged(CatalogueView catalogue)

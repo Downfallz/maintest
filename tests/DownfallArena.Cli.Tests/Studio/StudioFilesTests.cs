@@ -19,7 +19,7 @@ public sealed partial class StudioFilesTests
         Path.Combine(AppContext.BaseDirectory, "viewer"));
 
     [Theory]
-    [InlineData("/", "Downfall Arena content studio")]
+    [InlineData("/", "Downfall Instinct content studio")]
     [InlineData("/index.html", "<script type=\"module\" src=\"studio.js\">")]
     [InlineData("/studio.js", "import { backendForThisPage } from './backend.js';")]
     [InlineData("/backend.js", "/api/catalogue")]

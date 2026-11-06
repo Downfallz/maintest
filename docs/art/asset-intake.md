@@ -6,7 +6,7 @@ audited WebPs with explicit anchors and fallbacks; the source register retains i
 This commit contains four WebP reference derivatives and the audit of the owner-supplied PNGs.
 The owner will add the original PNGs separately under `docs/art/sources/`; no PNG is included here.
 They implement the reference-intake slice of the [art direction](creature-art-direction.md),
-not the ART-3 runtime integration. The existing arena art remains in use.
+not the ART-3 runtime integration. The existing battle art remains in use.
 
 ## Source identification
 
@@ -70,11 +70,11 @@ Threshold-128 and threshold-250 bounds in the inventory are diagnostic only.
   the base's four legs and Warped's split mask distinguish the forms at source size.
 - A browser composite review at 360×210 pixels per image over checkerboard, white, dark slate
   and the existing eclipse background (mirrored) confirmed cutouts without a rectangular matte.
-  Fine membranes and dark limbs lose separation against the busy arena; contrast and placement
+  Fine membranes and dark limbs lose separation against the busy battle; contrast and placement
   still need the actual six-creature Phaser review in ART-3. This source check is not gameplay QA.
 - Runtime readiness remains false for every source. ART-3 must determine derivative sizes,
   transparent-padding cleanup if needed, ground anchors and placements without altering originals.
-- Check the derivatives over the actual eclipse arena at 1440×1000, 844×390 and 390×844,
+- Check the derivatives over the actual eclipse battlefield at 1440×1000, 844×390 and 390×844,
   with six creatures, mirrored enemies and the active/target outline. Validate edge contamination,
   warm highlights versus UI gold, small-size silhouette readability and target bounds.
 - Preserve fallback and reduced-motion behavior. No gameplay, display names, family precedence,

@@ -65,6 +65,21 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}api/tables", token: null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    [Theory]
+    [InlineData("arena", "battle")]
+    [InlineData("arena-lab", "battle-lab")]
+    public async Task Existing_bookmarks_reach_the_renamed_page_with_their_query(string previous, string current)
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        const string query = "?player1=held%2Bseat&table=one";
+        using var redirect = await Get($"{url}{previous}{query}", token: null);
+        redirect.StatusCode.ShouldBe(HttpStatusCode.SeeOther);
+        redirect.Headers.Location!.OriginalString.ShouldBe($"/{current}{query}");
+        using var page = await Get($"{url}{current}{query}", token: null);
+        page.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("Downfall Instinct");
+    }
+
     /// <summary>The stream of a table's changes (ADR 0119): what it says first, what it says on a change, and under whose token.</summary>
     [Fact]
     public async Task A_seat_streams_its_table_s_changes_as_they_happen()

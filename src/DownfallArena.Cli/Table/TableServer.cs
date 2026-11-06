@@ -183,6 +183,13 @@ internal sealed class TableServer : IDisposable
             return _files.Get("/lobby");
         }
 
+        // Bookmarks and invitations can carry seat capabilities in their query string.
+        if (path is "/arena" or "/arena-lab")
+        {
+            var destination = path == "/arena" ? "/battle" : "/battle-lab";
+            return StudioResponse.OfRedirect(destination + request.Url?.Query);
+        }
+
         if (path == FormerLobby)
         {
             return request.Url?.Query.Contains("token=", StringComparison.Ordinal) == true

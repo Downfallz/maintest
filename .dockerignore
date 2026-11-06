@@ -11,7 +11,7 @@
 !tools/
 !data/
 !table/
-!arena/
+!battle/
 !viewer/index.html
 !viewer/viewer.css
 !docs/tabletop/playtest.rules.json
@@ -28,4 +28,4 @@ table/README.md
 
 # Build the browser bundle in its own stage.
 **/node_modules
-table/arena-build/
+table/battle-build/
