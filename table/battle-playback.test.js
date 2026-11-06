@@ -409,7 +409,7 @@ test('an incoming action held in Auto keeps its hold when the next result arrive
 });
 test('an upkeep read on its own round shows that round\'s creatures; one the board has moved past shows none', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);
-  const latest = view().board; latest.roundNumber = 3;
+  const latest = { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' };
   h.receive([energyEvent(4), upkeepEvent(5)], { board: latest });
   assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
   assert.deepEqual(h.queue.model().board.creatures.map(one => one.id), ['1', '2', '3']);
@@ -417,4 +417,23 @@ test('an upkeep read on its own round shows that round\'s creatures; one the boa
   const moved = view().board; moved.roundNumber = 4;
   later.receive([energyEvent(4), upkeepEvent(5)], { board: moved });
   assert.deepEqual(later.queue.model().board.creatures, []);
+});
+test('a held upkeep keeps the board it arrived with when the same round\'s combat arrives behind it', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution' } });
+  const health = () => h.queue.model().board.creatures.find(one => one.id === '2').health;
+  const before = health();
+
+  h.receive([], { board: { ...view().board, roundNumber: 3, enemies: [creature(2, 1), creature(3)] } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.equal(health(), before, 'the combat after it is not read into the upkeep');
+});
+test('an upkeep that arrives once its round\'s combat has begun draws no borrowed board', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3 } });
+
+  assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.deepEqual(h.queue.model().board.creatures, []);
 });

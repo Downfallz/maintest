@@ -50,6 +50,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (path === '/api/lobby/push') return json({ publicKey: null });
     if (path === '/api/account/preferences') {
       if (!state.account) return route.fulfill({ status: 401, json: { message: 'Sign in first.' } });
+      if (state.holdPreferences) await state.holdPreferences;
       if (route.request().method() === 'PUT') { state.saved = route.request().postDataJSON(); return json({ preferences: state.saved, saved: true }); }
       return json({ preferences: state.saved ?? { pace: 'step', speed: 1, help: true, reducedMotion: false }, saved: Boolean(state.saved) });
     }
@@ -116,6 +117,22 @@ test('a signed-in player keeps game settings with the account, starting from ste
   await dialog.getByLabel('Playback speed').selectOption('1.5');
   await expect.poll(() => state.saved?.speed).toBe(1.5);
   await noOverflow(page);
+  expect(state.errors).toEqual([]);
+});
+
+test('game settings cannot be changed until the account has said what they are', async ({ page }) => {
+  const state = await home(page);
+  let release; state.holdPreferences = new Promise(resolve => { release = resolve; });
+  state.saved = { pace: 'auto', speed: 2, help: true, reducedMotion: false };
+
+  await openPanel(page, 'Game settings');
+
+  await expect(page.getByLabel('Playback speed')).toBeDisabled();
+  release();
+  await expect(page.getByLabel('Playback speed')).toBeEnabled();
+  await expect(page.getByLabel('Playback speed')).toHaveValue('2');
+  await page.getByLabel('Playback speed').selectOption('0.5');
+  await expect.poll(() => state.saved.speed).toBe(0.5);
   expect(state.errors).toEqual([]);
 });
 

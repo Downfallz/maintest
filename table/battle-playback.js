@@ -37,6 +37,8 @@ const framed = action => Array.isArray(action.frame?.before) && Array.isArray(ac
   && action.frame.before.every(one => action.frame.after.some(next => next.id === one.id));
 
 const NEUTRAL = Object.freeze({ family: 'neutral', motif: 'focus', delivery: 'cast' });
+// The sub-phases of a round once its combat has begun, as battle-upkeep.js reads them.
+const COMBAT_BEGUN = Object.freeze(['IntentSelection', 'Activation', 'Cleanup', 'Finalization']);
 const FIZZLE = Object.freeze({ family: 'neutral', motif: 'fizzle', delivery: 'cast' });
 
 // How a cast is drawn comes with its card, where the builder published the spell art (ADR 0131): the page
@@ -139,12 +141,18 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       settle(resultText(arriving.at(-1))); return;
     }
+    // An upkeep keeps the board it arrived with, when that board is still its own round before combat: what
+    // arrives later belongs to the planning and combat after it, never to the upkeep being read.
+    const before = view.board?.roundNumber !== undefined && !COMBAT_BEGUN.includes(view.board.subPhase);
     for (const item of arriving) {
+      if (item.receipt?.category === 'Upkeep') item.snapshot = before && view.board.roundNumber === item.round ? view : null;
       const previous = queue.at(-1) ?? current;
       if (item.receipt?.category === 'Upkeep' && previous?.receipt?.category === 'Upkeep' && previous.round === item.round) {
         previous.upkeepEvents.push(...item.upkeepEvents);
         previous.upkeep = pacedUpkeep(previous.upkeepEvents, view.board, previous.round, ordinaryRounds);
         previous.receipt.sections.push(...item.receipt.sections); previous.sequence = item.sequence;
+        // A split upkeep reads on the board that brought its last part, while that is still before combat.
+        previous.snapshot = item.snapshot ?? previous.snapshot;
         if (previous === current) {
           presented = item.sequence; summary = resultText(previous);
           cancelTimer(); if (mode === 'auto') later(next, 3500, false);
@@ -156,10 +164,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function model() {
     const action = current && !current.receipt ? current : null;
     const replay = action ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
-    // An upkeep read on the board of its own round shows that round's creatures under its markers, as the
-    // opening upkeep does; any other receipt, or one the board has moved past, draws no borrowed board.
-    const ownRound = current?.receipt?.category === 'Upkeep' && latest?.board?.roundNumber === current.round;
-    const display = ownRound ? { ...latest, board: { ...latest.board, phase: 'StartOfRound', subPhase: 'OngoingEffects', timeline: [] } }
+    // An upkeep read on the board it arrived with shows that round's creatures under its markers, as the
+    // opening upkeep does; any other receipt, or an upkeep that arrived with a later board, draws none.
+    const own = current?.receipt?.category === 'Upkeep' ? current.snapshot : null;
+    const display = own ? { ...own, board: { ...own.board, phase: 'StartOfRound', subPhase: 'OngoingEffects', timeline: [] } }
       : current?.receipt ? { board: { roundNumber: current.round,
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }

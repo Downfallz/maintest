@@ -90,11 +90,15 @@ export function settingsWhere(account) {
     : 'Kept in this browser until you sign in. A game already begun keeps its own settings; change them there from Match settings.';
 }
 
-/** The menu's Game settings panel: it reads the settings when it opens and saves each change at once. */
+/**
+ * The menu's Game settings panel: it reads the settings when it opens and saves each change at once. Nothing
+ * can be changed while a read is out: the read decides both what is shown and where a change is kept, and a
+ * read that started before a save waits for it, so neither can overwrite the other.
+ */
 export function mountGameSettings(doc, storage, { request = accountRequest } = {}) {
   const el = id => doc.getElementById(id);
   const fields = { pace: el('game-settings-pace'), speed: el('game-settings-speed'), help: el('game-settings-help'), reducedMotion: el('game-settings-motion') };
-  let account = false, ticket = 0;
+  let account = false, ticket = 0, saving = Promise.resolve();
   function show(settings) {
     fields.pace.value = settings.pace; fields.speed.value = String(settings.speed);
     fields.help.checked = settings.help; fields.reducedMotion.checked = settings.reducedMotion;
@@ -103,18 +107,20 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
   function problem(message) { el('game-settings-problem').textContent = message ?? ''; el('game-settings-problem').hidden = !message; }
   async function refresh() {
     const mine = ++ticket;
+    el('game-settings-fields').disabled = true;
     show(localSettings(storage));
+    await saving;
     const answer = await loadSettings(storage, request);
     if (mine !== ticket) return;
     account = answer.account; show(answer.settings);
+    el('game-settings-fields').disabled = false;
   }
   el('game-settings-open').addEventListener('click', () => { problem(null); void refresh(); });
   el('game-settings').addEventListener('submit', event => event.preventDefault());
-  el('game-settings').addEventListener('change', async () => {
-    ticket++;
+  el('game-settings').addEventListener('change', () => {
     const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked };
-    try { await saveSettings(storage, value, { account, request }); problem(null); }
-    catch (error) { problem(`Saved in this browser only: ${error?.message ?? 'the host did not answer'}.`); }
+    saving = saving.then(() => saveSettings(storage, value, { account, request })).then(() => problem(null),
+      error => problem(`Saved in this browser only: ${error?.message ?? 'the host did not answer'}.`));
   });
   show(localSettings(storage));
   // Whether the host keeps them is the host's answer, read again whenever the player signs in or out.
