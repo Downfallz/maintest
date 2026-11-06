@@ -23,14 +23,25 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
 });
-test('skip and opening combat controls settle to the latest board without waiting for animations', async ({ page }) => {
-  const h = await mount(page); await h.publish([entry(10), entry(11)]);
-  await expect(page.locator('#playback-skip')).toBeVisible(); await page.locator('#playback-skip').click();
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
-  await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible();
-  await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
-  await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.runFor(5000);
-  await expect(page.locator('#combat-dialog')).toBeVisible();
+test('the next choice is withdrawn while results are read, and skip settles to the latest board', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
+  await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.clock.runFor(5000); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.locator('#playback-skip').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-open')).toBeVisible();
+  await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.clock.runFor(3200); await expect(page.locator('#combat-open')).toBeVisible();
+  await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
+});
+test('an incoming last action holds for its OK however long; the next round and its mutation wait for it', async ({ page }) => {
+  const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 1 ? 0 : 20));
+  const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
+  await h.publish([entry(10, { actor: 4, targets: [1], after })], { board, waitingFor: 'Evolution' });
+  await page.clock.runFor(10000);
+  await expect(page.locator('[data-creature="1"] .creature-tag')).toHaveText('DEFEATED'); await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#planning-open')).toBeHidden(); await expect(page.locator('#planning-dialog')).toBeHidden();
+  await expect(page.locator('#playback-next')).toHaveText('OK'); await expect(page.locator('#playback-next')).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
 });
 test('the final lethal action remains in its round before the next upkeep snapshot', async ({ page }) => {
   const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 4 ? 0 : 20));

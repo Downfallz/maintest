@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 test.beforeEach(returningBattlePlayer);
 
@@ -63,6 +63,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
       // A round's public order is revealed once, before its first combat question, and covers the board
       // until it is read (AU11). Reading it writes nothing.
+      await readResults(page);
       if (!orderRounds.has(view.board.roundNumber)) {
         const beforeShown = shown.length, beforeSent = sent.length;
         await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
@@ -115,9 +116,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         expect(shown.creatures.find(creature => creature.id === one.id)?.text).toBe(`${one.health}/${one.maxHealth} HP · ${one.energy} EN`);
       }
     }
-    // The last playback can finish and open upkeep between isVisible() and click(). Observe its
-    // completion instead of racing a transient Skip button underneath the next round's receipt.
-    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+    // Each confirmed action waits for its OK (ADR 0139); read them all as a player would.
+    await readResults(page);
     const after = await nextQuestion();
     await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(after.waitingAsked);
     for (const one of [...after.board.allies, ...after.board.enemies]) {

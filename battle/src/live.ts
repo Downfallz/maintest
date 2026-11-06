@@ -224,10 +224,17 @@ function render() {
   // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
   // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.
   $<HTMLSelectElement>('playback-preference').value = playbackState.mode;
-  $('playback-next').hidden = !playbackState.active || playbackState.mode !== 'step';
+  // Every action asks for its OK; Step asks it of the round receipts too (ADR 0139).
+  const nextWasUsable = $('playback-next').getAttribute('aria-disabled') === 'false' && !$('playback-next').hidden;
+  $('playback-next').hidden = !playbackState.asks;
   // Not disabled: a focused button that becomes disabled drops focus between two results.
   $('playback-next').setAttribute('aria-disabled', String(!playbackState.canNext));
-  text('playback-next', playbackState.remaining > 1 ? 'Next result' : 'Return to present');
+  // When the OK becomes available and focus has nowhere to be (a command it sat on was just withdrawn), it lands
+  // on the OK, so a keyboard reads the result and moves on from the same place.
+  const focused = document.activeElement as HTMLElement | null;
+  if (playbackState.asks && playbackState.canNext && !nextWasUsable && !document.querySelector('dialog:modal')
+    && (!focused || focused === document.body || !focused.getClientRects().length)) $('playback-next').focus({ preventScroll: true });
+  text('playback-next', playbackState.remaining > 1 ? 'Next' : 'OK');
   // The reading preference lives in the settings; the row only holds Next and Skip while results play.
   $('playback-pacing').hidden = !view || replay.active || targeting || ($('playback-next').hidden && $('playback-skip').hidden);
   receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
@@ -243,6 +250,9 @@ function render() {
   const showGrowth = visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened;
   growthUI.render(view, catalogue, showGrowth);
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  // No command is offered while results are still to be read: the next choice appears once the player has
+  // seen what led to it (ADR 0139). Skip to present remains the deliberate way out.
+  if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
   const plan = planning.model();
   const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
   frame = mutation.frame;
@@ -306,7 +316,7 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : mutation.prompt ?? guide.objective);
+  text('instruction', !view ? '' : playbackState.active ? `${playbackState.asks ? 'Read the result, then choose OK.' : 'Results are playing.'} Your next choice follows; Skip to present at any time.` : mutation.prompt ?? guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   if (!view) inspected = null;

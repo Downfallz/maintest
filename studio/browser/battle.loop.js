@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer, mutationTree } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree, acknowledge, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -65,7 +65,7 @@ function castable(view) {
 }
 async function answerCombat(page, view, capture) {
   const kind = view.waitingFor;
-  await page.locator('#combat-open').click(); let spell;
+  await readResults(page); await page.locator('#combat-open').click(); let spell;
   if (capture && kind !== 'Target') await capture('late-spellbook');
   if (kind !== 'Target') { spell = castable(view).find(id => id.includes('heavy_strike')) ?? castable(view)[0]; await page.locator(`[data-spell="${spell}"]`).click(); }
   if (kind !== 'Intent') {
@@ -79,7 +79,8 @@ async function answerCombat(page, view, capture) {
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
 async function readTurnover(page, round, info) {
   const paced = page.locator('#playback-receipt'), notice = page.locator('#upkeep-dialog');
-  await expect(paced.or(notice).filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+  // The closing actions wait for their OK before the turnover reads (ADR 0139).
+  await acknowledge(page, async () => await paced.isVisible() || await notice.isVisible());
   if (await notice.isVisible()) {
     await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
@@ -94,7 +95,7 @@ async function readTurnover(page, round, info) {
     await expect(page.locator('.creature')).toHaveCount(0);
     await expect(notice).toBeHidden();
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
-    await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+    await readResults(page);
   }
 }
 function captureSubject(view) {
@@ -109,8 +110,8 @@ function expectWritesFenced(writes) {
   expect(new Set(writes.map(one => one.command.asked)).size).toBe(writes.length);
 }
 async function reviewAndReplay(page, latest, info, actions) {
-  // The last actions play out under reduced motion; clicking Skip would race a button about to go.
-  await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 20000 });
+  // The last actions wait for their OK under reduced motion, as every action does (ADR 0139).
+  await readResults(page);
   await page.locator('#history-open').click();
   const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
   expect(recent.length).toBeGreaterThan(1);
@@ -233,6 +234,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await readTurnover(page, view.board.roundNumber, info);
         upkeepRound = view.board.roundNumber;
       }
+      await readResults(page);
       if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
         const beforeShown = [...shown], beforeWrites = writes.length;
         await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });

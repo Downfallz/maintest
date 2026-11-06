@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { SETTLE_MS as SETTLE } from './battle-timing.js';
 import { createBattlePlayback, actionCue } from './battle-playback.js';
 const creature = (id, health = 20) => ({ id, health, maxHealth: 20, energy: 5, totalDefense: 2, isAlive: health > 0, name: `Creature ${id}` });
 const before = [creature(1), creature(2), creature(3)];
@@ -20,7 +21,14 @@ function harness() {
     onUpkeepHandled: round => handled.push(round) });
   return { queue, timers, handled, receive: (events, extra, options) => queue.receive(view(events, extra), cards, options),
     tick() { const [id, timer] = timers.entries().next().value; timers.delete(id); timer.fn(); },
-    drain() { while (timers.size) this.tick(); } };
+    // Drains the timers and, in Auto, gives the OK each action waits for, as the player would.
+    drain() {
+      for (;;) {
+        while (timers.size) this.tick();
+        const m = queue.model();
+        if (m.active && m.stage === 'resolved' && m.mode === 'auto' && !m.receipt) queue.advance(); else break;
+      }
+    } };
 }
 test('first snapshot is a baseline, including historical results', () => {
   const h = harness(); h.receive([event(2)], { feedNext: 9 }); assert.equal(h.queue.model().active, false);
@@ -212,7 +220,7 @@ for (const rate of [0.5, 1, 1.5, 2]) test(`at ${rate}x every full-motion phase i
   const h = harness(); h.queue.setRate(rate); h.receive([]); h.receive([event(10)]);
   assert.equal([...h.timers.values()][0].ms, 840 / rate);
   h.tick(); assert.equal([...h.timers.values()][0].ms, 1700 / rate);
-  h.tick(); assert.equal([...h.timers.values()][0].ms, 500 / rate);
+  h.tick(); assert.equal([...h.timers.values()][0].ms, SETTLE / rate, 'the own cast then settles at the speed');
 });
 for (const rate of [0.5, 1, 1.5, 2]) test(`at ${rate}x a reduced-motion result is still shown for 650 ms`, () => {
   const h = harness(); h.queue.setRate(rate); h.queue.setReduced(true); h.receive([]); h.receive([event(10)]);
@@ -254,11 +262,28 @@ test('Step holds the exact applied frame until an explicit Next, with received, 
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().read, 4);
   h.drain(); h.queue.advance(); assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().read, 5);
 });
-test('Auto resumes from a held Step without replaying its impact; a stale auto callback cannot bypass Step', () => {
+const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: true },
+  appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7, critical: true }] });
+test('the player\'s own cast moves on by itself in Auto; Step still waits for Next on it', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
-  const stale = [...h.timers.values()][0].fn;
-  h.queue.setMode('step'); stale(); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
-  h.queue.setMode('auto'); h.tick(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
+  assert.equal(h.queue.model().asks, false); assert.equal([...h.timers.values()][0].ms, SETTLE);
+  h.tick(); assert.equal(h.queue.model().sequence, 5);
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.tick(); step.tick();
+  assert.equal(step.queue.model().asks, true); assert.equal(step.timers.size, 0);
+});
+test('in Auto as in Step an incoming action holds for the OK; switching pace never moves past it', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4), incoming(5)]); h.tick(); h.tick();
+  assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.timers.size, 0);
+  assert.equal(h.queue.model().asks, true); assert.equal(h.queue.model().canNext, true);
+  h.queue.setMode('step'); h.queue.setMode('auto'); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
+  h.tick(); h.tick(); h.queue.advance(); assert.equal(h.queue.model().active, false, 'the OK on the last action returns to the present');
+});
+test('in Auto the turnover after an incoming last action waits for its OK, then reads by itself', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4), cleanupEvent(5), energyEvent(6), upkeepEvent(7)]);
+  h.tick(); h.tick(); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
+  h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Aftermath'); assert.equal(h.queue.model().asks, false);
+  assert.equal([...h.timers.values()][0].ms, 3500); h.tick(); assert.equal(h.queue.model().receipt.category, 'Upkeep');
 });
 test('the own closing cast, meaningful aftermath and combined next upkeep are read in order', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);
@@ -371,4 +396,12 @@ test('opening-round introduction remains arrival-gated by the upkeep controller'
   const h = harness(); h.receive([], { waiting: {} });
   h.receive([{ ...energyEvent(4), event: { ...energyEvent(4).event, roundId: 1 } }]);
   assert.equal(h.queue.model().active, false);
+});
+test('an incoming action held in Auto keeps its hold when the next result arrives under a dialog', () => {
+  const h = harness(); h.receive([]); h.receive([incoming(4)]); h.tick(); h.tick();
+  assert.equal(h.queue.model().stage, 'resolved');
+  h.receive([incoming(5)], {}, { animate: false });
+  assert.equal(h.queue.model().sequence, 4, 'the held action is still the one being read');
+  assert.equal(h.queue.model().remaining, 2);
+  h.queue.advance(); assert.equal(h.queue.model().sequence, 5);
 });
