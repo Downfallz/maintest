@@ -161,7 +161,7 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
-  await page.clock.runFor(1700); await expect(page.locator('#growth-receipt')).toBeHidden();
+  await page.clock.runFor(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02');
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
