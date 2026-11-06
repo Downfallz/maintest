@@ -12,6 +12,8 @@ const energy = { sequence: 12, event: { kind: 'RoundEnergyGranted', roundId: 3, 
 const ongoing = { sequence: 13, event: { kind: 'OngoingEffectsApplied', roundId: 3, bleedTicks: [{ creature: 4, damage: 2 }] } };
 const nextRound = h => ({ ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', timeline: [],
   allies: before.slice(0, 3).map(one => ({ ...one, energy: 7, knownSpells: ['strike', 'future'] })) });
+// The opponent's cast: it waits for its OK in either pace, where the player's own moves on by itself (ADR 0141).
+const theirs = sequence => entry(sequence, { actor: 4, targets: [1] });
 const step = async page => { await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); };
 const fits = page => fitsViewport(page, '#playback-next, #playback-skip, #combat-open, #planning-open, #settings, #playback-result');
 
@@ -23,7 +25,7 @@ async function finishCast(page, sequence = 10) {
 
 test('Step reads the closing attack, aftermath and upkeep before showing the next live objective', async ({ page }, info) => {
   const h = await mount(page); await step(page);
-  await h.publish([entry(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,
+  await h.publish([theirs(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,
     options: { evolution: { remaining: 2, choices: [] } } });
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('#round-number')).toHaveText('02');
@@ -79,7 +81,7 @@ test('Auto continues held results; an incoming one offers OK, not Skip, and retu
 
 test('the next choice waits for the reading, and skipping it passes unread receipts without a second upkeep modal', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
-  await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-open')).toBeHidden();
   await page.locator('#playback-skip').click(); await page.locator('#combat-open').click();
   await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#playback-receipt')).toBeHidden();
   await expect(page.locator('#combat-context')).toContainText('7 energy');
@@ -96,10 +98,10 @@ test('rotation and reduced motion invalidate Step callbacks and keep the current
   await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.fastForward(5000); await fits(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#playback-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02'); await expect(page.locator('#round-phase')).toHaveText('COMBAT');
-  await h.publish([entry(14)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  await h.publish([entry(14)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
   await page.getByRole('button', { name: 'Close settings' }).click();
-  await expect(page.locator('#playback-skip')).toBeHidden(); expect(h.errors).toEqual([]);
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'false'); expect(h.errors).toEqual([]);
 });
 
 test('seat revocation clears a held receipt and cannot resurrect it', async ({ page }) => {
@@ -121,7 +123,7 @@ test('the last result after lethal upkeep is read even when there is no next com
 });
 
 test('rotation passes over a queued upkeep without hiding it: the upkeep notice still opens', async ({ page }) => {
-  const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
+  const h = await mount(page); await step(page); await h.publish([theirs(10), energy, ongoing], { board: nextRound(h) });
   await finishCast(page); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
@@ -129,18 +131,18 @@ test('rotation passes over a queued upkeep without hiding it: the upkeep notice 
 });
 
 test('a resize that keeps the orientation keeps the held result', async ({ page }) => {
-  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+  const h = await mount(page); await step(page); await h.publish([theirs(10), entry(11, { actor: 4 })]);
   await finishCast(page); const { width, height } = page.viewportSize();
   await page.setViewportSize({ width: width - 20, height: height - 60 });
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#playback-next')).toBeEnabled();
   expect(h.errors).toEqual([]);
 });
 
-test('an inspection opened on a held Step survives the next arrival', async ({ page }) => {
-  const h = await mount(page); await step(page); await h.publish([entry(10)]);
+test('an inspection opened on a held action survives the next arrival', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([theirs(10)]);
   await finishCast(page); await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-dialog')).toBeVisible();
-  await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toHaveText('Skip to present (2)');
+  await h.publish([theirs(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-next')).toHaveText('Next');
   await page.getByRole('button', { name: 'Close inspection' }).click();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#playback-next')).toBeEnabled();
   await expect(page.locator('#playback-next')).toHaveText('Next'); expect(h.errors).toEqual([]);
@@ -156,7 +158,7 @@ test('a receipt arriving under an open inspection leaves it open and takes the f
 });
 
 test('Next keeps the keyboard focus while the following result plays', async ({ page }) => {
-  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+  const h = await mount(page); await step(page); await h.publish([theirs(10), entry(11, { actor: 4 })]);
   await finishCast(page); await page.locator('#playback-next').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await expect(page.locator('#playback-next')).toBeFocused(); await expect(page.locator('#playback-next')).toBeDisabled();

@@ -126,7 +126,8 @@ test('defeated opponents and missing art or catalogue remain inspectable with ex
 
 test('Step inspection uses recorded knowledge and never offers the current mutation tree', async ({ page }) => {
   const h = await playbackMount(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
-  await h.publish([entry(10)], { board: { ...h.state.view.board, roundNumber: 3,
+  // The opponent's action, held for its OK: the player's own would move on by itself (ADR 0141).
+  await h.publish([entry(10, { actor: 4, targets: [1] })], { board: { ...h.state.view.board, roundNumber: 3,
     allies: before.slice(0, 3).map(one => ({ ...one, acquiredTiers: ['FUTURE'], knownSpells: ['FUTURE'], energy: 99 })) } });
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.clock.runFor(3400);
   await page.locator('#actor-layer [data-creature="1"]').click();
