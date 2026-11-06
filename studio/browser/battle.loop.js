@@ -92,7 +92,7 @@ async function readTurnover(page, round, info) {
     await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
     await expect(page.locator('#receipt-sections')).toContainText('energy');
-    await expect(page.locator('.creature')).toHaveCount(0);
+    await expect(page.locator('.command-dock')).toBeHidden();
     await expect(notice).toBeHidden();
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
     await readResults(page);

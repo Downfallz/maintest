@@ -635,6 +635,9 @@
 #playback-receipt.paced-upkeep .eyebrow, #playback-receipt.paced-upkeep .receipt-note { display: none; }
 #paced-summary { margin: 3px 0; }
 #playback-receipt.paced-upkeep button { min-height: 44px; border: 0; background: transparent; color: var(--gold); }
+/* The upkeep sheet says what the dock below it would repeat: the field takes the dock's place while it reads. */
+#battle:has(#playback-receipt.paced-upkeep:not([hidden])) .command-dock { display: none; }
+#battle:has(#playback-receipt.paced-upkeep:not([hidden])) #battle-zone { grid-row: 3 / -1; }
 body:has(#upkeep-dialog[open]) #battle :is(.command-dock, #playback-pacing) { display: none; }
 body:has(#upkeep-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: calc(var(--upkeep-dock-height, 128px) + env(safe-area-inset-bottom)); }
 body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }

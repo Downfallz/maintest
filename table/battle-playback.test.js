@@ -405,3 +405,14 @@ test('an incoming action held in Auto keeps its hold when the next result arrive
   assert.equal(h.queue.model().remaining, 2);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5);
 });
+test('an upkeep read on its own round shows that round\'s creatures; one the board has moved past shows none', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  const latest = view().board; latest.roundNumber = 3;
+  h.receive([energyEvent(4), upkeepEvent(5)], { board: latest });
+  assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
+  assert.deepEqual(h.queue.model().board.creatures.map(one => one.id), ['1', '2', '3']);
+  const later = harness(); later.queue.setMode('step'); later.receive([]);
+  const moved = view().board; moved.roundNumber = 4;
+  later.receive([energyEvent(4), upkeepEvent(5)], { board: moved });
+  assert.deepEqual(later.queue.model().board.creatures, []);
+});

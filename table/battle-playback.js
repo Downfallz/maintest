@@ -156,7 +156,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function model() {
     const action = current && !current.receipt ? current : null;
     const replay = action ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
-    const display = current?.receipt ? { board: { roundNumber: current.round,
+    // An upkeep read on the board of its own round shows that round's creatures under its markers, as the
+    // opening upkeep does; any other receipt, or one the board has moved past, draws no borrowed board.
+    const ownRound = current?.receipt?.category === 'Upkeep' && latest?.board?.roundNumber === current.round;
+    const display = ownRound ? { ...latest, board: { ...latest.board, phase: 'StartOfRound', subPhase: 'OngoingEffects', timeline: [] } }
+      : current?.receipt ? { board: { roundNumber: current.round,
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
       : action ? presentedView(latest, replay) : latest;

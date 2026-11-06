@@ -44,6 +44,8 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await expect(page.locator('#playback-receipt')).toContainText('+2 energy');
   await expect(page.locator('#playback-receipt')).toContainText('Ongoing damage −2 HP');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  // The upkeep reads on its own round's board, creatures included, and the dock it would repeat steps aside.
+  await expect(page.locator('#actor-layer [data-creature="1"]')).toBeVisible(); await expect(page.locator('.command-dock')).toBeHidden();
   await page.clock.fastForward(5000); await expect(page.locator('#playback-receipt')).toBeVisible(); await fits(page);
   await expect(page.locator('#receipt-sections')).toBeHidden();
   await expect(page.locator('#paced-summary')).toContainText('HP');

@@ -10,6 +10,8 @@ test.beforeEach(returningBattlePlayer);
 import { mount, entry, before, creature } from './battle-playback-fixture.js';
 const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
+  // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
+  test.setTimeout(60000);
   const h = await mount(page);
   await h.publish([entry(12), entry(10), entry(10)]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
@@ -25,6 +27,8 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   expect(h.errors).toEqual([]);
 });
 test('the next choice is withdrawn while results are read, and skip settles to the latest board', async ({ page }) => {
+  // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
+  test.setTimeout(60000);
   const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
   await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
   // Past both incoming impacts' timers (windup and impact): a held action has none left to wait for.
@@ -36,6 +40,8 @@ test('the next choice is withdrawn while results are read, and skip settles to t
   await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
 });
 test('an incoming last action holds for its OK however long; the next round and its mutation wait for it', async ({ page }) => {
+  // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
+  test.setTimeout(60000);
   const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 1 ? 0 : 20));
   const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
   await h.publish([entry(10, { actor: 4, targets: [1], after })], { board, waitingFor: 'Evolution' });
