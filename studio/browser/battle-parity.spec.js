@@ -111,7 +111,8 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
     appliedOutcomes: [{ kind: 'DamageOutcome', target: 4, amount: 7 }], frame: { before: roster, after, timeline: [], rollOffs: [] } } }];
   state.view.feedNext = 11; state.view.board.enemies = after.slice(3);
   await page.evaluate(() => window.notifyBattle());
-  await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 10000 });
+  // The own cast holds for its OK, which takes the focus once usable (ADR 0139).
+  await keyboardActivate(page, '#playback-next'); await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 10000 });
   await keyboardActivate(page, '#history-open');
   await keyboardActivate(page, '#history-list [data-sequence="10"] summary');
   await expect(page.locator('#history-list [data-sequence="10"]')).toContainText('7');
