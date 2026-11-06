@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mount, entry, before } from './battle-playback-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
+import { WINDUP_MS, IMPACT_MS, SETTLE_MS } from '../../table/battle-timing.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 // Full-size software-rendered frames plus paused-clock playback can exceed 30 s on a busy runner.
@@ -14,6 +15,12 @@ const nextRound = h => ({ ...h.state.view.board, roundNumber: 3, phase: 'Plannin
 const step = async page => { await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); };
 const fits = page => fitsViewport(page, '#playback-mode, #playback-next, #playback-skip, #combat-open, #planning-open, #settings, #playback-result');
 
+// SSE delivery starts the presentation clock. Wait for its sequence before advancing fake time.
+async function finishCast(page, sequence = 10) {
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', String(sequence));
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+}
+
 test('Step reads the closing attack, aftermath and upkeep before showing the next live objective', async ({ page }, info) => {
   const h = await mount(page); await step(page);
   await h.publish([entry(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,
@@ -21,7 +28,7 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#round-phase')).toHaveText('COMBAT');
-  await page.clock.runFor(1700);
+  await finishCast(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('5 EN');
   await expect(page.locator('#planning-help')).toBeEmpty();
@@ -54,7 +61,7 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
 test('Auto continues held results and skip restores the live command without acknowledging it', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
-  await page.clock.runFor(1700); await page.selectOption('#playback-mode', 'auto'); await page.clock.runFor(300);
+  await finishCast(page); await page.selectOption('#playback-mode', 'auto'); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await page.locator('#playback-skip').click(); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#combat-open')).toBeEnabled();
@@ -77,7 +84,7 @@ const rotate = page => { const { width, height } = page.viewportSize(); return p
 test('rotation and reduced motion invalidate Step callbacks and keep the current board', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), cleanup, energy, ongoing]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
-  await page.clock.runFor(1700); await rotate(page);
+  await finishCast(page); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.fastForward(5000); await fits(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#playback-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02'); await expect(page.locator('#round-phase')).toHaveText('COMBAT');
@@ -107,7 +114,7 @@ test('the last result after lethal upkeep is read even when there is no next com
 
 test('rotation passes over a queued upkeep without hiding it: the upkeep notice still opens', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
-  await page.clock.runFor(1700); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
+  await finishCast(page); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
@@ -115,7 +122,7 @@ test('rotation passes over a queued upkeep without hiding it: the upkeep notice 
 
 test('a resize that keeps the orientation keeps the held result', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
-  await page.clock.runFor(1700); const { width, height } = page.viewportSize();
+  await finishCast(page); const { width, height } = page.viewportSize();
   await page.setViewportSize({ width: width - 20, height: height - 60 });
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#playback-next')).toBeEnabled();
   expect(h.errors).toEqual([]);
@@ -123,7 +130,7 @@ test('a resize that keeps the orientation keeps the held result', async ({ page 
 
 test('an inspection opened on a held Step survives the next arrival', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10)]);
-  await page.clock.runFor(1700); await page.locator('[data-creature="1"]').click();
+  await finishCast(page); await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-dialog')).toBeVisible();
   await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toHaveText('Skip to present (2)');
   await page.getByRole('button', { name: 'Close inspection' }).click();
@@ -134,7 +141,7 @@ test('an inspection opened on a held Step survives the next arrival', async ({ p
 test('a receipt arriving under an open inspection leaves it open and takes the focus back on close', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10), cleanup]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.locator('[data-creature="1"]').click();
-  await expect(page.locator('#inspect-dialog')).toBeVisible(); await page.clock.runFor(1700);
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await finishCast(page); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#inspect-dialog')).toBeVisible();
   await expect(page.locator('#inspect-name')).toHaveText(/\S/);
   await page.keyboard.press('Escape'); await expect(page.locator('#playback-receipt')).toBeFocused(); expect(h.errors).toEqual([]);
@@ -142,10 +149,10 @@ test('a receipt arriving under an open inspection leaves it open and takes the f
 
 test('Next keeps the keyboard focus while the following result plays', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
-  await page.clock.runFor(1700); await page.locator('#playback-next').click();
+  await finishCast(page); await page.locator('#playback-next').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await expect(page.locator('#playback-next')).toBeFocused(); await expect(page.locator('#playback-next')).toBeDisabled();
-  await page.clock.runFor(1700); await expect(page.locator('#playback-next')).toBeEnabled();
+  await finishCast(page, 11); await expect(page.locator('#playback-next')).toBeEnabled();
   await page.keyboard.press('Enter'); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); expect(h.errors).toEqual([]);
 });

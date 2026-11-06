@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 import { fitsViewport } from './fit.js';
 const creature = (id, health = 20) => ({ id, name: id === 1 ? 'Warden' : `Creature ${id}`, health, maxHealth: 20, energy: 7,
   totalDefense: 2, isAlive: health > 0, knownSpells: ['strike'], conditions: [], acquiredTiers: [] });
@@ -112,7 +113,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#playback-mode').selectOption('step'); await page.clock.runFor(1700);
+  await page.locator('#playback-mode').selectOption('step'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
