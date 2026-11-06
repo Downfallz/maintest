@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
-import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from '../../table/battle-timing.js';
+import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import type { SceneFrame, Placement } from './types';
 import { MutationCues } from './mutation-cues';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
@@ -179,10 +179,10 @@ export class BattleScene extends Phaser.Scene {
       const target = this.figures.get(id);
       if (!target) continue;
       const { dx, dy } = actor ? strikeApproach(actor.home, target.home) : { dx: 0, dy: 0 };
-      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+      this.tweens.add({ targets: target.image, x: target.home.x + dx * 18, y: target.home.y + dy * 18, angle: dx * 5, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
       this.burst(target, 0xffd995, true);
     }
-    if (struck.length) this.cameras.main.shake(160 / this.rate, .003);
+    if (struck.length) this.cameras.main.shake(160 * MOTION_SCALE / this.rate, .003);
   }
 
   private anchor(figure: Figure): EffectAnchor {
@@ -214,11 +214,11 @@ export class BattleScene extends Phaser.Scene {
       if (!self && cue.visual.delivery === 'melee' && cue.struck.includes(id) && actor) {
         const { dx, dy } = strikeApproach(actor.home, target.home);
         this.tweens.add({ targets: target.image, x: target.home.x + dx * 12, y: target.home.y + dy * 12,
-          angle: dx * 4, yoyo: true, duration: 140 / this.rate, ease: 'Quad.Out' });
+          angle: dx * 4, yoyo: true, duration: 140 * MOTION_SCALE / this.rate, ease: 'Quad.Out' });
       }
     }
     if (cue.visual.family === 'physical' && cue.contact.some(id => cue.struck.includes(id))) {
-      this.cameras.main.shake(120 / this.rate, .0015);
+      this.cameras.main.shake(120 * MOTION_SCALE / this.rate, .0015);
     }
   }
 
@@ -227,13 +227,13 @@ export class BattleScene extends Phaser.Scene {
     const x = target.home.x; const y = target.home.y - visibleHeight * .5;
     const ring = this.add.circle(x, y, 12).setStrokeStyle(4, color).setDepth(2000);
     this.effects.push(ring);
-    this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 / this.rate });
+    this.tweens.add({ targets: ring, scale: 5, alpha: 0, duration: 360 * MOTION_SCALE / this.rate });
     if (!sparks) return;
     for (let i = 0; i < 14; i++) {
       const angle = i * Math.PI * 2 / 14;
       const spark = this.add.rectangle(x, y, 4, 13, i % 2 ? color : 0xcd6d43).setRotation(angle).setDepth(2001);
       this.effects.push(spark);
-      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) / this.rate });
+      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * 85, y: y + Math.sin(angle) * 65, alpha: 0, duration: (280 + i * 15) * MOTION_SCALE / this.rate });
     }
   }
 
@@ -252,13 +252,8 @@ export class BattleScene extends Phaser.Scene {
 
   update(time: number) {
     if (!this.state) return;
-    const idle = !this.reduced && !playing(this.state);
-    let index = 0;
-    for (const figure of this.figures.values()) {
-      if (idle) figure.image.y = figure.home.y + Math.sin(time / 800 + index * 1.7) * 2;
-      this.followCues(figure);
-      index++;
-    }
+    // Creatures stand still between actions: only a played action moves them.
+    for (const figure of this.figures.values()) this.followCues(figure);
     const width = Math.max(1, this.scale.width);
     const height = Math.max(1, this.scale.height);
     const drift = this.reduced ? 0 : time * .007;

@@ -246,7 +246,7 @@ async function atSpeed(page, h, speed) {
 test('at 2x the confirmed result lands at half the windup', async ({ page }, info) => {
   const h = await mount(page); await atSpeed(page, h, '2');
   await h.publish([entry(10)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
-  await page.clock.runFor(190); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
+  await page.clock.runFor(400); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
   await page.clock.runFor(35); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
   await page.screenshot({ path: info.outputPath('art6-speed.png') }); expect(h.errors).toEqual([]);
 });
@@ -277,8 +277,8 @@ test('the scene lunges at the speed it is given', async ({ page }) => {
     visual: { family: 'physical', motif: 'impact', delivery: 'melee' }, recipients: ['4'], contact: ['4'], changes: [] });
   const travelled = async rate => {
     await presentSpell(page, frame, 'decision', false, rate); await presentSpell(page, frame, 'windup', false, rate);
-    // 215 ms is past the whole 2x lunge (60 ms draw, 150 ms strike) and early in the 1x strike (120 ms, then 300 ms).
-    await page.clock.runFor(215);
+    // 430 ms is past the whole 2x lunge (120 ms draw, 300 ms strike) and early in the 1x strike (240 ms, then 600 ms).
+    await page.clock.runFor(430);
     const position = await actorPosition(page); return Math.abs(position.x - position.homeX);
   };
   const atOne = await travelled(1), atTwo = await travelled(2);
@@ -293,7 +293,7 @@ async function soundOn(page) {
 const probe = page => page.evaluate(() => window.audioProbe);
 async function sounding(page, h, sequence) {
   await h.publish([entry(sequence)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
-  await page.clock.runFor(440); await expect.poll(() => probe(page).then(one => one.starts)).toBe(1);
+  await page.clock.runFor(860); await expect.poll(() => probe(page).then(one => one.starts)).toBe(1);
 }
 test('no audio context exists before the player turns sound on', async ({ page }) => {
   await probeAudio(page); const h = await mount(page);
