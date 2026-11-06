@@ -3,6 +3,7 @@ import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
 import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from '../../table/battle-timing.js';
 import type { SceneFrame, Placement } from './types';
+import { UpkeepMarkers } from './upkeep-markers';
 import { MutationCues } from './mutation-cues';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
 
@@ -28,6 +29,7 @@ export class BattleScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private motes: Phaser.GameObjects.Arc[] = [];
   private effects: Phaser.GameObjects.GameObject[] = [];
+  private upkeepMarkers = new UpkeepMarkers(this);
   private spellEffects = new SpellEffects(this);
   private state!: SceneFrame;
   private reduced = false;
@@ -121,7 +123,10 @@ export class BattleScene extends Phaser.Scene {
       const factor = Math.max(width / source.width, height / source.height);
       this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
     }
-    if (!this.figures.size) return;
+    if (!this.figures.size) {
+      this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
+      return;
+    }
     const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length, this.state.creatures.filter(one => one.enemy).length);
     const inFlight = playing(this.state);
     for (const [index, creature] of this.state.creatures.entries()) {
@@ -137,6 +142,7 @@ export class BattleScene extends Phaser.Scene {
       figure.ring.setPosition(home.x, home.y).setDisplaySize(home.size * .80, Math.max(14, home.size * .13)).setDepth(home.y - .5);
     }
     for (const figure of this.figures.values()) this.followCues(figure);
+    this.upkeepMarkers.present(this.state.upkeep, new Map(this.state.creatures.map((one, i) => [one.id, positions[i]])), this.reduced);
     this.onLayout(positions);
   }
 

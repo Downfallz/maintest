@@ -1,5 +1,5 @@
 import { resolvedSince, lastResolvedText } from './feed.js';
-import { missingRoundEnergy } from './battle-upkeep.js';
+import { missingRoundEnergy, upkeepReceipt, upkeepDisplay } from './battle-upkeep.js';
 import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
@@ -8,6 +8,11 @@ import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './bat
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
   : [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
+
+function pacedUpkeep(entries, board, round, ordinaryRounds) {
+  const receipt = upkeepReceipt(entries, round, board);
+  return receipt ? upkeepDisplay(receipt.energy, receipt.ongoing, ordinaryRounds.has(round) ? '' : receipt.energyNote) : null;
+}
 
 // Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred.
 function receipts(entries, board, ordinaryRounds) {
@@ -18,7 +23,12 @@ function receipts(entries, board, ordinaryRounds) {
     if (row?.category === 'Upkeep' && row.round === 1) return [];
     if (!row || (row.category === 'Aftermath' && !row.details.length)) return [];
     if (entry.event.kind === 'OngoingEffectsApplied' && !ordinaryRounds.has(row.round)) row.details.push({ text: missingRoundEnergy, tone: 'neutral' });
-    return [{ sequence: row.sequence, round: row.round || board?.roundNumber, receipt: { title: row.title, category: row.category, sections: [{ title: row.title, items: row.details }] } }];
+    const upkeepEvents = row.category === 'Upkeep' ? [entry] : [];
+    return [{
+      sequence: row.sequence, round: row.round || board?.roundNumber,
+      upkeepEvents, upkeep: upkeepEvents.length ? pacedUpkeep(upkeepEvents, board, row.round, ordinaryRounds) : null,
+      receipt: { title: row.title, category: row.category, sections: [{ title: row.title, items: row.details }] },
+    }];
   });
 }
 
@@ -125,6 +135,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     for (const item of arriving) {
       const previous = queue.at(-1) ?? current;
       if (item.receipt?.category === 'Upkeep' && previous?.receipt?.category === 'Upkeep' && previous.round === item.round) {
+        previous.upkeepEvents.push(...item.upkeepEvents);
+        previous.upkeep = pacedUpkeep(previous.upkeepEvents, view.board, previous.round, ordinaryRounds);
         previous.receipt.sections.push(...item.receipt.sections); previous.sequence = item.sequence;
         if (previous === current) {
           presented = item.sequence; summary = resultText(previous);
@@ -146,7 +158,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
-      stage, rate, mode, presented, read, receipt: current?.receipt ?? null,
+      stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       canNext: Boolean(current && stage === 'resolved'), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {

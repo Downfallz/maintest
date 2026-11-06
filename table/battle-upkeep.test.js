@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBattleUpkeep, upkeepReceipt, missingRoundEnergy } from './battle-upkeep.js';
+import { createBattleUpkeep, upkeepReceipt, upkeepDisplay, missingRoundEnergy } from './battle-upkeep.js';
 import { roundNotes, replayText } from './battle-match.js';
 import { matchReplay } from './feed.js';
 import { createBattleHistory } from './battle-history.js';
@@ -92,4 +92,14 @@ test('paced upkeep handled ahead of its board cannot reopen or move the tab mark
   controller.receive(view(3)); assert.equal(controller.model().pending, false);
   const restored = createBattleUpkeep(saved); restored.reset('table:player1'); restored.receive(view(3));
   assert.equal(restored.model().pending, false); restored.receive(view(4)); assert.equal(restored.model().pending, true);
+});
+
+test('scene markers group actual deltas by creature, including zero and separate energy sources', () => {
+  const receipt = upkeepReceipt([energy(), ongoing()], 1, board);
+  const display = upkeepDisplay(receipt.energy, receipt.ongoing, receipt.energyNote);
+  assert.equal(display.summary, 'Round energy · 2 creatures · 3 ongoing effects');
+  assert.deepEqual(display.markers.map(marker => [marker.id, ...marker.lines.map(line => line.text)]),
+    [['1', '+5 EN', '+2 EN', '+0 HP', '−7 HP'], ['4', '+0 EN']]);
+  assert.equal(upkeepDisplay(receipt.energy.slice(1), []).summary, '+0 energy each · 1 creature');
+  assert.equal(upkeepDisplay([], [], missingRoundEnergy).summary, missingRoundEnergy);
 });

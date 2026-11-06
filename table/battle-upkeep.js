@@ -63,3 +63,25 @@ export function createBattleUpkeep(storage) {
   }
   return { reset, clear, receive, model, presented };
 }
+
+// Compact presentation shares the recorded deltas with the full receipt. One marker per recipient
+// avoids covering one creature with several badges when recovery and bleed tick together.
+export function upkeepDisplay(energy, ongoing, energyNote = '') {
+  const count = energy.length;
+  const subjects = count === 1 ? '1 creature' : `${count} creatures`;
+  let energySummary = energyNote;
+  if (count) {
+    energySummary = energy.every(row => row.amount === energy[0].amount)
+      ? `+${energy[0].amount} energy each · ${subjects}` : `Round energy · ${subjects}`;
+  }
+  const summary = [energySummary];
+  const markers = new Map();
+  for (const row of [...energy, ...ongoing]) {
+    const id = String(row.creature);
+    if (!markers.has(id)) markers.set(id, { id, name: row.label, side: row.side, lines: [] });
+    markers.get(id).lines.push({ text: `${row.sign}${row.amount} ${row.unit === 'energy' ? 'EN' : 'HP'}`, tone: row.tone });
+  }
+  if (ongoing.length === 1) summary.push(`${ongoing[0].label} · ${ongoing[0].text}`);
+  if (ongoing.length > 1) summary.push(`${ongoing.length} ongoing effects`);
+  return { summary: summary.filter(Boolean).join(' · '), markers: [...markers.values()] };
+}

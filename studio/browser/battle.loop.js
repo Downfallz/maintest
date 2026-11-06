@@ -199,6 +199,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
     await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
+    await expect(page.locator('#upkeep-body')).toBeHidden();
+    await expect(page.locator('#upkeep-intro')).toHaveText('+2 energy each · 6 creatures');
     await expect(page.locator('#upkeep-body .upkeep-rows li')).toHaveCount(6);
     await expect(page.locator('#upkeep-body')).toContainText('+2 energy · 0 → 2');
     expect(shown).toEqual([]); expect(writes).toEqual([]);

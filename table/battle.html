@@ -27,7 +27,7 @@
       <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
       <aside id="growth-receipt" hidden aria-label="New mutations"><button type="button" data-growth-open aria-describedby="growth-announcement">Mutation unlocks ↗</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation receipt">×</button></aside>
       <div id="actor-layer" aria-label="Inspect creatures"></div>
-      <article id="playback-receipt" hidden tabindex="0" aria-labelledby="receipt-title"><p class="eyebrow">RECORDED ROUND EVENTS</p><h2 id="receipt-title"></h2><p class="receipt-note">Text receipt · no exact battlefield was recorded for this step.</p><div id="receipt-sections"></div><button type="button" data-history-open>Open History</button></article>
+      <article id="playback-receipt" hidden tabindex="0" aria-labelledby="receipt-title"><p class="eyebrow">RECORDED ROUND EVENTS</p><h2 id="receipt-title"></h2><p class="receipt-note">Text receipt · no exact battlefield was recorded for this step.</p><p id="paced-summary" hidden></p><button id="paced-details" type="button" hidden aria-controls="receipt-sections" aria-expanded="false">Details</button><div id="receipt-sections"></div><button type="button" data-history-open>Open History</button></article>
       <div id="loading" hidden><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Opening your battle</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
     </section>
     <div id="playback-pacing" hidden><label for="playback-mode">Read results</label><select id="playback-mode"><option value="auto">Auto</option><option value="step">Step</option></select><button id="playback-next" type="button" hidden>Next result</button>
@@ -59,9 +59,9 @@
     <footer class="order-footer"><button id="order-close" type="button">Continue</button><button type="button" data-history-open>History</button><small>Read-only · follows the displayed battlefield</small></footer>
   </dialog>
   <dialog id="upkeep-dialog" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
-    <header class="upkeep-header"><div><p class="eyebrow">THE ROUND HAS BEGUN</p><h2 id="upkeep-title"></h2></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
-    <div class="upkeep-scroll"><p id="upkeep-intro">Energy and ongoing effects were applied automatically. Here is what happened.</p><div id="upkeep-body"></div></div>
-    <footer class="upkeep-footer"><p>Saved in History and round review. Inspect a creature for its <strong>current</strong> stats and condition durations.</p><button type="button" data-history-open>Open History</button></footer>
+    <header class="upkeep-header"><div><h2 id="upkeep-title"></h2><p id="upkeep-intro"></p></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
+    <div class="upkeep-tools"><button id="upkeep-details" type="button" aria-controls="upkeep-body" aria-expanded="false">Details</button><button type="button" data-history-open>History</button></div>
+    <div id="upkeep-body" class="upkeep-scroll" hidden></div>
   </dialog>
   <dialog id="help-dialog" aria-labelledby="help-title" aria-describedby="help-objective">
     <header class="help-header"><div><p class="eyebrow" id="help-round"></p><h2 id="help-title">Round guide</h2></div><button id="help-close" type="button" autofocus>Close</button></header>
