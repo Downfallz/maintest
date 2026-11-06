@@ -702,3 +702,9 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
   #planning-dialog[data-kind="Evolution"] .planning-footer { margin-top: auto; }
   #mutation-preview-region { max-height: 35dvh; }
 }
+/* Expand into the timeline row on a phone and leave enough stage height for two readable teams. */
+@media (max-width: 759px) and (orientation: portrait) {
+  body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(71dvh,calc(100dvh - 252px),660px); }
+  body:has(#planning-dialog.expanded-tree[open]) #battle-zone { grid-row-start: 2; }
+  body:has(#planning-dialog.expanded-tree[open]) .timeline-wrap { visibility: hidden; }
+}

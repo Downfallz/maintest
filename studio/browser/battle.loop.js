@@ -34,6 +34,7 @@ async function answerEvolution(page, view, capture) {
     await expect(page.locator('.mutation-preview')).toBeVisible();
     const later = view.board.roundNumber > 1;
     if (later) await page.locator('#mutation-expand').click();
+    await fitsBattlefield(page);
     await capture(captureSubject(view));
     if (later) await page.locator('#mutation-expand').click();
   }
