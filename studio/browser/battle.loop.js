@@ -79,8 +79,10 @@ async function answerCombat(page, view, capture) {
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
 async function readTurnover(page, round, info) {
   const paced = page.locator('#playback-receipt'), notice = page.locator('#upkeep-dialog');
-  // The closing actions wait for their OK before the turnover reads (ADR 0139).
-  await acknowledge(page, async () => await paced.isVisible() || await notice.isVisible());
+  // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
+  // default, the aftermath before the upkeep waits for its Next (ADR 0141).
+  const title = page.locator('#receipt-title');
+  await acknowledge(page, async () => (await paced.isVisible() && await title.textContent() === 'Upkeep') || await notice.isVisible());
   if (await notice.isVisible()) {
     await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
