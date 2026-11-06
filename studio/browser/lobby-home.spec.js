@@ -192,9 +192,12 @@ test('local hosts still resume games and reconnect automatically without a refre
 
 test('navigation and dialogs fit narrow, intermediate and short landscape screens', async ({ page }) => {
   await home(page, { account: { ...player, username: 'VeryLongPlayerName123' }, operator: true });
-  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1280, 800], [740, 320]]) {
+  for (const [width, height] of [[320, 740], [900, 700], [1101, 800], [1240, 800], [1241, 800], [1280, 800], [740, 320]]) {
     await page.setViewportSize({ width, height });
     await noOverflow(page);
+    await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
+    if (width <= 1240) await expect(page.locator('#home-menu-toggle')).toBeVisible();
+    else await expect(page.locator('#home-menu-toggle')).toBeHidden();
     await openPanel(page, /^Friends/);
     const dialog = page.locator('#friends-dialog');
     await expect(dialog).toBeVisible();

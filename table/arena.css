@@ -602,7 +602,7 @@
 .arena-page .navigation-panels dialog { margin: auto; }
 
 /* On short landscape screens the menu occupies the former brand slot in the match toolbar. */
-@media (orientation: landscape) and (max-height: 500px) and (max-width: 1100px) {
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1240px) {
   .arena-page[data-home="member"] .home-header {
     position: absolute; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
     width: auto; height: 46px; min-height: 0; background: transparent; border: 0;

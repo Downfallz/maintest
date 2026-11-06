@@ -33,7 +33,7 @@ a viewpoint before either private board is read.
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Confirm sign-out on this device or everywhere, or type the player name to delete the account | Signed-in players |
 
-At 1100 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
+At 1240 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA
 application menu. Native dialogs handle focus containment and Escape, include an explicit close button,
 and restore focus to the menu toggle on narrow screens or their desktop opener. Long modal content scrolls
@@ -59,7 +59,7 @@ after a failed request. Existing invitation and `next` redirects are preserved.
 
 `studio/browser/lobby-home.spec.js` exercises guest/member/local modes, friend acceptance and invitation,
 modal focus and Escape, code validation, logout during an in-flight request, sign-in and automatic retry.
-Layout checks include 320, 390, 900, 1101 and 1280 CSS-pixel widths and a 740 × 320 landscape viewport.
+Layout checks include 320, 390, 900, 1101, 1240, 1241 and 1280 CSS-pixel widths and a 740 × 320 landscape viewport.
 The existing table, admin and branding browser suites cover the shared styles and behaviours.
 
 A host whose `/api/me` cannot be reached is neither signed out nor accounts-off: the introduction offers no

@@ -56,7 +56,7 @@ export function codePath(value) {
 function mountHomeNavigation(doc, win = globalThis) {
   const el = id => doc.getElementById(id);
   const toggle = el('home-menu-toggle'), menu = el('home-navigation');
-  const narrow = win.matchMedia('(max-width: 1100px)');
+  const narrow = win.matchMedia('(max-width: 1240px)');
   const panels = [...doc.querySelectorAll('.home-dialog')];
   const openers = new Map();
   let identity;
