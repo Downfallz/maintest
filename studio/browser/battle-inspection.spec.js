@@ -127,7 +127,7 @@ test('Step inspection uses recorded knowledge and never offers the current mutat
   const h = await playbackMount(page); await page.selectOption('#playback-mode', 'step');
   await h.publish([entry(10)], { board: { ...h.state.view.board, roundNumber: 3,
     allies: before.slice(0, 3).map(one => ({ ...one, acquiredTiers: ['FUTURE'], knownSpells: ['FUTURE'], energy: 99 })) } });
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.clock.runFor(1700);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.clock.runFor(3400);
   await page.locator('#actor-layer [data-creature="1"]').click();
   await expect(page.locator('#inspect-context')).toHaveText('Round 2 · After recorded action · event 10');
   await expect(page.locator('#inspect-stats')).toContainText('5 energy'); await expect(page.locator('#inspect-dialog')).not.toContainText('FUTURE');

@@ -120,13 +120,13 @@ test('reset during playback cancels pending results and a second cast resolves n
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.locator('#reset').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
-  await page.clock.runFor(2000);
+  await page.clock.runFor(4000);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('');
   await choose(page, 'b2');
   await page.locator('#confirm').click();
-  await page.clock.runFor(1250);
+  await page.clock.runFor(2500);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b2"] .creature-stats')).toContainText('5/24 HP');
@@ -164,13 +164,13 @@ test('2× playback runs the timed cast at half its cues, with a skip on offer un
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await expect(page.locator('#skip')).toBeVisible();
   await expect(page.locator('#skip')).toBeFocused();
-  // The impact is due at 210 ms and the settled frame at 625 ms, half of 420 and 1250.
-  await page.clock.runFor(209);
+  // The impact is due at 420 ms and the settled frame at 1250 ms, half of 840 and 2500.
+  await page.clock.runFor(419);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.clock.runFor(1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('-4 HP');
-  await page.clock.runFor(414);
+  await page.clock.runFor(829);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'impact');
   await page.clock.runFor(1);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
