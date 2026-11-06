@@ -289,7 +289,9 @@ function render() {
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     let defense = node.querySelector<HTMLElement>('.creature-defense');
     if (!defense) { defense = document.createElement('span'); defense.className = 'creature-defense'; node.querySelector('.caption')!.append(defense); }
-    defense.textContent = `${one.totalDefense ?? '—'} DEF · ${one.currentInitiative ?? '—'} INIT`;
+    defense.textContent = `${one.totalDefense ?? '—'} DEF`;
+    // Initiative decides who acts first, so it stands beside the name on every screen, phones included.
+    node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
     let cues = node.querySelector<HTMLElement>('.creature-conditions');
     if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
     cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;

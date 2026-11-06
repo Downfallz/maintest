@@ -543,6 +543,12 @@
 .inspect-footer { margin: 0; border-top: 1px solid #52695e; }
 .inspect-footer button { min-height: 44px; }
 .creature-defense, .creature-conditions { display: block; font-size: 10px; line-height: 1.25; }
+/* Initiative sits under the whole name, never beside it: a disambiguated name must not be cut to fit. */
+.creature-init {
+  display: table; margin: 2px auto 0; padding: 1px 6px; border: 1px solid #eac88e99; border-radius: 9px;
+  background: #101e24d9; color: #f1d7a2; font: 700 9px/1.45 system-ui,sans-serif; letter-spacing: .04em; white-space: nowrap; text-shadow: none;
+}
+.creature-init:empty { display: none; }
 .creature-conditions { color: #e4c393; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 619px), (max-height: 520px) { .creature-defense, .creature-conditions { display: none; } }
 @media (max-height: 520px) {
@@ -550,8 +556,10 @@
   .inspect-header h2 { font-size: 20px; }
   #inspect-side { display: none; }
 }
+/* The status tag clears the whole caption, initiative line included. */
+#battle .creature-tag { bottom: 72px; }
 @media (min-width: 620px) and (min-height: 521px) {
-  #battle .creature-tag { bottom: 80px; }
+  #battle .creature-tag { bottom: 100px; }
 }
 @media (max-width: 619px) and (max-height: 620px) {
   /* Keep the 44px result button inside the short portrait dock. */
