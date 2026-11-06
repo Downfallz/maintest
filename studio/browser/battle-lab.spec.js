@@ -115,19 +115,20 @@ test('keyboard casting and skip need no live API', async ({ page }) => {
 test('reset during playback cancels pending results and a second cast resolves normally', async ({ page }) => {
   // The page's timers are the test's to run: a cast is then in flight for as long as the test says, and the
   // cancelled cues get their due time to fire, which a stale one would, on a board asked to forget it.
+  const castDuration = 1250 * MOTION_SCALE / Number(await page.locator('#playback-speed').inputValue());
   await pauseClock(page);
   await choose(page);
   await page.locator('#confirm').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.locator('#reset').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
-  await page.clock.runFor(2000);
+  await page.clock.runFor(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('');
   await choose(page, 'b2');
   await page.locator('#confirm').click();
-  await page.clock.runFor(1250 * MOTION_SCALE);
+  await page.clock.runFor(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b2"] .creature-stats')).toContainText('5/24 HP');
