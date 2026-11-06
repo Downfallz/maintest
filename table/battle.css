@@ -376,28 +376,9 @@
 #planning-dialog-error { grid-column: 1 / -1; }
 #planning-dialog-error:empty { display: none; }
 #planning-confirm { max-width: 260px; overflow-wrap: anywhere; }
-.mutation-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; align-items: start; }
-.mutation-card { min-width: 0; border: 1px solid #536c67; border-top: 4px solid var(--mutation-colour); background: #172a30; border-radius: 7px; overflow: hidden; }
-#planning-choices .mutation-select { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: 100%; margin: 0; padding: 16px; text-align: left; border: 0; border-radius: 0; background: transparent; overflow-wrap: anywhere; color: #edf0e8; }
-#planning-choices .mutation-select[aria-pressed="true"] { background: #31443b; box-shadow: inset 0 0 0 2px var(--mutation-colour); }
-.mutation-select:focus-visible { outline: 3px solid var(--gold); outline-offset: -4px; }
-.mutation-family { color: var(--mutation-colour); font-size: 12px; }
-.mutation-name { font: 27px Georgia,serif; }
-.mutation-initiative { color: #e6d4a8; font-size: 14px; }
-.mutation-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.mutation-tags > span { padding: 4px 7px; border: 1px solid var(--mutation-colour); border-radius: 4px; font-size: 12px; color: var(--mutation-colour); }
-.mutation-spell { display: grid; gap: 5px; border-top: 1px solid #49615e; padding-top: 10px; }
-.mutation-spell strong { font-size: 15px; }
-.mutation-spell > span, .mutation-passive { color: #c7d5cd; font-size: 13px; line-height: 1.5; }
-.mutation-select-label { border: 1px solid var(--mutation-colour); border-radius: 4px; padding: 9px; text-align: center; font-size: 13px; margin-top: 3px; }
-.mutation-details { border-top: 1px solid #49615e; padding: 0 14px; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
-.mutation-details summary, #mutation-tree > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
-.mutation-details p { margin: 8px 0 12px; }
-.mutation-details h4 { margin: 12px 0 6px; color: var(--mutation-colour); }
 #mutation-tree { margin: 16px 0; border: 1px solid #52695e; border-radius: 5px; padding: 0 14px; font-size: 13px; }
 .mutation-empty { grid-column: 1 / -1; color: #c7d5cd; }
 @media (max-width: 759px) {
-  .mutation-cards { grid-template-columns: 1fr; }
   .planning-header { padding: 12px 12px 0; }
   #planning-heading { font-size: 23px; }
   #planning-choices { padding: 12px; }
@@ -628,3 +609,96 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 }
 #battle-zone:has(.paced-upkeep) #phaser-mount::before { content: "OPPONENT"; top: 4px; }
 #battle-zone:has(.paced-upkeep) #phaser-mount::after { content: "YOUR TEAM"; top: 50%; }
+
+/* Evolution keeps its private draft beside the battlefield. Reserve space in the actual
+   scene so Phaser and the accessible creature targets keep the same coordinate system. */
+body:has(#planning-dialog[data-kind="Evolution"][open]) {
+  --mutation-height: clamp(295px,52dvh,470px); --mutation-width: clamp(310px,38vw,480px);
+}
+body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(74dvh,660px); --mutation-width: clamp(350px,48vw,650px); }
+#planning-dialog[data-kind="Evolution"] {
+  position: fixed; z-index: 12; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: none;
+  height: var(--mutation-height); max-height: none; border: 0; border-top: 2px solid var(--gold);
+  border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
+}
+body:has(#planning-dialog[data-kind="Evolution"][open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
+body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
+#planning-dialog[data-kind="Evolution"] .planning-header {
+  padding: 4px 14px 0; display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto);
+  grid-template-rows: minmax(48px,auto) auto; column-gap: 4px; align-items: center;
+}
+#planning-dialog[data-kind="Evolution"] .planning-header .eyebrow { display: none; }
+#planning-dialog[data-kind="Evolution"] .planning-header :is(.history-reference,#mutation-expand) {
+  grid-row: 1; min-height: 44px; min-width: 44px; padding: 3px; float: none; margin: 0;
+  font-size: 12px; border: 0; background: none; color: var(--muted);
+}
+#planning-dialog[data-kind="Evolution"] #mutation-expand { grid-column: 2; color: var(--gold); }
+#planning-dialog[data-kind="Evolution"] [data-help-open] { grid-column: 3; }
+#planning-dialog[data-kind="Evolution"] [data-history-open] { grid-column: 4; }
+#planning-dialog[data-kind="Evolution"] #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
+#planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
+#planning-dialog[data-kind="Evolution"] #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
+#planning-dialog[data-kind="Evolution"] #planning-creatures button {
+  flex: 1 1 0; min-width: 0; min-height: 44px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px;
+}
+#planning-dialog[data-kind="Evolution"] #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
+#planning-dialog[data-kind="Evolution"] #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+#planning-dialog[data-kind="Evolution"] #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
+#planning-dialog[data-kind="Evolution"] .planning-footer {
+  padding: 5px 12px max(5px,env(safe-area-inset-bottom)); grid-template-columns: auto minmax(0,1fr);
+  background: var(--panel); border-top: 1px solid var(--line);
+}
+#planning-dialog[data-kind="Evolution"] #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#planning-dialog[data-kind="Evolution"] #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+#planning-dialog[data-kind="Evolution"] #planning-pass, #mutation-inspect { border: 0; background: transparent; color: var(--muted); font-size: 12px; }
+#planning-dialog[data-kind="Evolution"] #mutation-tree { margin: 6px 0 0; padding: 0; border: 0; }
+#mutation-tree > summary, .mutation-details > summary { min-height: 44px; padding: 12px 0; color: var(--gold); cursor: pointer; }
+.mutation-graph { position: relative; isolation: isolate; display: grid; gap: 12px; }
+.mutation-origin { justify-self: center; font: 15px/12px Georgia,serif; color: var(--gold); }
+.mutation-links { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.mutation-links path { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.mutation-links path.lit { stroke: var(--gold); stroke-width: 2; }
+.mutation-tier { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(28%,125px),1fr)); gap: 6px; }
+.mutation-node { min-width: 0; }
+#planning-choices .mutation-select {
+  width: 100%; height: 100%; min-width: 0; margin: 0; display: grid; align-content: center; justify-items: center; gap: 3px;
+  padding: 6px 4px; text-align: center; background: linear-gradient(180deg,color-mix(in srgb,var(--mutation-colour) 8%,var(--panel)),var(--panel));
+  color: var(--mutation-colour); border: 1px solid color-mix(in srgb,var(--mutation-colour) 45%,var(--panel)); border-radius: 7px; overflow-wrap: anywhere;
+}
+#planning-choices .mutation-select[aria-pressed="true"] { border-color: var(--mutation-colour); background: color-mix(in srgb,var(--mutation-colour) 18%,var(--panel)); }
+.mutation-select svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.mutation-name { font: 16px Georgia,serif; color: var(--ink); }
+.mutation-select small { font-size: 11px; color: var(--mutation-colour); }
+.mutation-node:not([data-status="available"]) .mutation-select { padding: 3px; gap: 1px; border-style: dashed; }
+.mutation-node:not([data-status="available"]) svg { display: none; }
+#mutation-preview-region { flex: none; max-height: min(17dvh,150px); overflow: auto; overscroll-behavior: contain; }
+#planning-dialog.expanded-tree #mutation-preview-region { max-height: 28dvh; }
+.mutation-preview { margin: 0 12px 4px; padding: 6px 10px 0; border-left: 2px solid var(--mutation-colour); background: var(--raised); font-size: 13px; overflow-wrap: anywhere; }
+.preview-name { display: inline; font: 17px Georgia,serif; }
+.mutation-initiative { margin-left: 8px; color: var(--muted); font-size: 12px; }
+.mutation-spell { margin-top: 4px; line-height: 1.45; }
+.mutation-spell strong { margin-right: 7px; }
+.mutation-details > summary { font-size: 12px; }
+.mutation-details p,.mutation-details h4,.mutation-passive { margin: 6px 0; }
+.mutation-future { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.mutation-entry #planning-open { flex: 1; min-width: 0; min-height: 44px; padding: 6px 10px; color: var(--gold); border-color: var(--line); background: var(--panel); }
+.creature[data-mutation-recipient="true"] .creature-tag { color: var(--gold); }
+.creature[data-mutation-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
+@media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
+  #planning-dialog[data-kind="Evolution"] { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#planning-dialog[data-kind="Evolution"][open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
+  body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
+}
+@media (orientation: portrait) and (max-height: 660px) {
+  #planning-dialog[data-kind="Evolution"]:not(.expanded-tree) #planning-creatures { display: none; }
+  #planning-dialog[data-kind="Evolution"]:not(.expanded-tree) .planning-header { grid-template-rows: minmax(48px,auto); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mutation-links path.lit { animation: mutation-ink 180ms ease-out; }
+  @keyframes mutation-ink { from { opacity: .35; } to { opacity: 1; } }
+}
+@media (min-width: 760px) and (min-height: 600px) {
+  #planning-dialog[data-kind="Evolution"] #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
+  #planning-dialog[data-kind="Evolution"] .planning-footer { margin-top: auto; }
+  #mutation-preview-region { max-height: 35dvh; }
+}

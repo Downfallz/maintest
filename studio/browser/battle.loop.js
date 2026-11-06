@@ -25,14 +25,17 @@ async function answerEvolution(page, view, capture) {
   const node = page.locator(`[data-mutation="${offer.availableTiers[0]}"]`).first();
   await node.click();
   if (capture) {
-    await expect(page.locator('.mutation-card')).toHaveCount(3);
+    await expect(page.locator('[data-mutation]')).toHaveCount(offer.availableTiers.length);
     await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
-    for (const card of await page.locator('.mutation-card').all()) {
+    for (const card of await page.locator('.mutation-node[data-status="available"]').all()) {
       await expect(card.locator('.mutation-name')).not.toBeEmpty();
       await expect(card.locator('.mutation-tags')).toBeVisible();
-      await expect(card.locator('.mutation-spell strong').first()).not.toBeEmpty();
     }
-    await capture('mutation-cards');
+    await expect(page.locator('.mutation-preview')).toBeVisible();
+    const later = view.board.roundNumber > 1;
+    if (later) await page.locator('#mutation-expand').click();
+    await capture(captureSubject(view));
+    if (later) await page.locator('#mutation-expand').click();
   }
 }
 async function answerPlanning(page, view, capture) {
@@ -94,7 +97,7 @@ async function readTurnover(page, round, info) {
   }
 }
 function captureSubject(view) {
-  if (view.waitingFor === 'Evolution') return 'mutation-cards';
+  if (view.waitingFor === 'Evolution') return view.board.roundNumber === 1 ? 'mutation-opening' : 'mutation-later';
   if (view.waitingFor === 'Speed') return 'team-tempos';
   return 'late-spellbook';
 }
@@ -262,7 +265,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     if (declaration === 'hidden-intent') { expect(latest.outcome.reason).toBe('RoundCap'); expect(latest.board.roundNumber).toBe(2); }
     else {
       expect(latest.board.roundNumber).toBeGreaterThan(2);
-      expect([...captured]).toEqual(expect.arrayContaining(['mutation-cards', 'team-tempos', 'late-spellbook']));
+      expect([...captured]).toEqual(expect.arrayContaining(['mutation-opening', 'team-tempos', 'late-spellbook']));
       expect([...latest.board.allies, ...latest.board.enemies].some(one => !one.isAlive)).toBe(true);
       expect(writes.filter(one => one.command.kind === 'Evolution' && one.command.tier).length).toBeGreaterThan(2);
     }

@@ -4,12 +4,12 @@ import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 const roster = [1, 2, 3].map(id => ({ id, name: `Creature ${id}`, isAlive: true, health: 20, maxHealth: 20, energy: 2, conditions: [], acquiredTiers: [], knownSpells: [] }));
 const roots = ['Brute', 'Predator', 'Warped'];
-const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
+const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, visual: { family: name.toLowerCase() }, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
   { id: 'future', name: 'Ironhide', level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
   { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: '0%' })) };
-async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2 } = {}) {
+async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = '#planning-open' } = {}) {
   const state = { errors: [], writes: [], shown: [], status: 200, view: {
     board: { slot: 'Player1', roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', allies, enemies: [], evolutionChoices: picks, timeline: [] },
     waitingFor: 'Evolution', waitingAsked: 11, options: { evolution: { remainingPicks: remaining, creatures: allies.filter(one => one.isAlive && !picks.some(pick => pick.creature === one.id)).map(one => ({ creature: one.id, availableTiers: ids })) } }, feed: [], feedNext: 0 } };
@@ -39,40 +39,40 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden();
-  await page.locator('#planning-open').click(); await page.clock.pauseAt(new Date(Date.now() + 1500));
+  await page.locator(open).click(); await page.clock.pauseAt(new Date(Date.now() + 1500));
   const publish = async () => page.evaluate(() => window.notifyBattle());
   return { state, publish };
 }
-test('three offered families compare by tags, spells and initiative; details do not select or write', async ({ page }, info) => {
-  const h = await mount(page);
-  await expect(page.locator('.mutation-card')).toHaveCount(3); await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
+test('a battlefield creature opens three branches and only explicit confirmation submits the named pick', async ({ page }, info) => {
+  const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });
+  const nodes = page.locator('[data-mutation]');
+  await expect(nodes).toHaveCount(3); await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
+  await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
+  await expect(page.locator('#planning-confirm')).toBeDisabled();
+  await expect(page.locator('.mutation-links path')).toHaveCount(3);
+  expect(new Set(await page.locator('.mutation-node').evaluateAll(nodes => nodes.map(node => node.style.getPropertyValue('--mutation-colour')))).size).toBe(3);
   for (let i = 0; i < 3; i++) {
-    await expect(page.locator('.mutation-card').nth(i)).toContainText(roots[i]);
-    await expect(page.locator('.mutation-card').nth(i)).toContainText(`+${i} initiative`);
+    await nodes.nth(i).click(); await expect(page.locator('.mutation-preview')).toContainText(`+${i} initiative`);
   }
-  expect(new Set(await page.locator('.mutation-card').evaluateAll(nodes => nodes.map(node => node.style.getPropertyValue('--mutation-colour')))).size).toBe(3);
-  await expect(page.locator('.mutation-card').first()).toContainText('Guard');
-  await expect(page.locator('.mutation-card').nth(1)).toContainText('Devour');
-  await page.locator('.mutation-details summary').first().click(); await expect(page.locator('.mutation-details').first()).toContainText('Strike · 0 energy');
-  await expect(page.locator('.mutation-details').first()).toContainText('Recorded caster effect');
-  await expect(page.locator('#planning-confirm')).toBeDisabled(); expect(h.state.writes).toEqual([]);
-  await page.locator('.mutation-details summary').first().click();
+  await nodes.first().click(); await page.locator('.mutation-details summary').click();
+  await expect(page.locator('.mutation-details')).toContainText('Strike · 0 energy');
+  await expect(page.locator('.mutation-details')).toContainText('Recorded caster effect');
+  await nodes.nth(1).click(); await expect(page.locator('.mutation-preview')).toContainText('Devour');
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-form', 'base-creature');
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-preview-form', 'predator');
+  await expect(page.locator('#planning-selection')).toHaveText('Creature 2 · Predator');
+  await expect(page.locator('#planning-confirm')).toHaveAccessibleName('Confirm Predator · 1 pick · Creature 2');
+  await expect(nodes.nth(1)).toHaveAccessibleDescription(/Speed.*Bleed.*Devour/);
+  await page.clock.runFor(150);
   await fitsViewport(page, '#planning-creatures, #planning-confirm, #planning-close');
-  if (info.project.name === 'desktop') {
-    const boxes = await page.locator('.mutation-card').evaluateAll(nodes => nodes.map(node => ({ x: node.getBoundingClientRect().x, y: node.getBoundingClientRect().y })));
-    expect(new Set(boxes.map(one => one.y)).size).toBe(1); expect(new Set(boxes.map(one => one.x)).size).toBe(3);
-  }
-  await page.screenshot({ path: info.outputPath('mutation-cards.jpg'), type: 'jpeg', quality: 85 });
-  await page.locator('[data-mutation="root1"]').click(); await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
-  await expect(page.locator('#planning-confirm')).toHaveAccessibleName('Acquire · 1 pick: Creature 1 · Predator');
-  await expect(page.locator('[data-mutation="root1"]')).toHaveAccessibleName('Predator Predator · Stage 1');
-  await expect(page.locator('[data-mutation="root1"]')).toHaveAccessibleDescription(/\+1 initiative.*Devour/);
-  expect(h.state.writes).toEqual([]); await page.locator('#planning-confirm').dblclick();
+  await page.screenshot({ path: info.outputPath('mutation-opening.jpg'), type: 'jpeg', quality: 90 });
+  expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
+  await page.locator('#planning-confirm').dblclick();
   await expect.poll(() => h.state.writes.length).toBe(1);
-  expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 1, tier: 'root1', asked: 11 }); expect(h.state.errors).toEqual([]);
+  expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 2, tier: 'root1', asked: 11 }); expect(h.state.errors).toEqual([]);
 });
 test('polls and selection preserve detail nodes, focus and deliberate scroll', async ({ page }) => {
-  const h = await mount(page); const summary = page.locator('.mutation-details summary').last();
+  const h = await mount(page); await page.locator('[data-mutation="root2"]').click(); const summary = page.locator('.mutation-details summary').last();
   await summary.click(); await summary.evaluate(node => { node.dataset.sentinel = 'kept'; node.focus(); });
   const scroll = await page.locator('#planning-choices').evaluate(node => node.scrollTop);
   await h.publish(); await page.clock.runFor(50);
@@ -90,16 +90,25 @@ test('a keyboard switch of creature keeps focus on the tab that was chosen', asy
   await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Enter');
   await expect(page.locator('#planning-creatures [data-creature="1"]')).toBeFocused(); expect(h.state.errors).toEqual([]);
 });
-test('phone cards stack in one scrolling column while the tabs and the confirmation stay in view', async ({ page }, info) => {
-  test.skip(info.project.name === 'desktop', 'The phone projects own this layout.');
-  const h = await mount(page); const choices = page.locator('#planning-choices');
-  const boxes = await page.locator('.mutation-card').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(box => ({ x: Math.round(box.x), y: box.y })));
-  expect(new Set(boxes.map(one => one.x)).size).toBe(1);
-  expect(boxes.every((one, i) => i === 0 || one.y > boxes[i - 1].y)).toBe(true);
-  expect(await choices.evaluate(node => [getComputedStyle(node).overflowY, node.scrollHeight > node.clientHeight])).toEqual(['auto', true]);
-  await choices.evaluate(node => { node.scrollTop = node.scrollHeight; });
-  await expect(page.locator('#planning-creatures')).toBeInViewport(); await expect(page.locator('#planning-confirm')).toBeInViewport();
-  await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.state.errors).toEqual([]);
+test('the phone tree leaves the whole battlefield visible and enables switching recipients directly on it', async ({ page }, info) => {
+  test.skip(info.project.name === 'desktop', 'Phone layout.');
+  const h = await mount(page);
+  await page.clock.runFor(150);
+  const scene = await page.locator('#battle-zone').boundingBox(), dock = await page.locator('#planning-dialog').boundingBox();
+  expect(scene.y + scene.height).toBeLessThanOrEqual(dock.y + 1);
+  await page.locator('#mutation-expand').click();
+  expect((await page.locator('#planning-dialog').boundingBox()).height).toBeGreaterThan(dock.height);
+  await page.locator('#mutation-expand').click();
+  expect(h.state.writes).toEqual([]);
+  const boxes = await page.locator('[data-mutation]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().y));
+  expect(new Set(boxes).size).toBe(1);
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#actor-layer [data-creature="3"]').click();
+  await expect(page.locator('#planning-confirm')).toBeDisabled();
+  await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 3');
+  await page.locator('#mutation-inspect').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(page.locator('#planning-dialog')).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(page.locator('#planning-dialog')).toBeHidden();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('switching recipients clears the old pick and confirmation names the new creature', async ({ page }) => {
   const h = await mount(page); await page.locator('[data-mutation="root0"]').click();
@@ -111,9 +120,9 @@ test('switching recipients clears the old pick and confirmation names the new cr
 test('dead and already-picked creatures explain their state and empty offers; pass uses whole-team semantics', async ({ page }) => {
   // As the host sends it: the picks left are already capped at the one creature it can still offer a pick to.
   const h = await mount(page, { allies: [roster[0], { ...roster[1], isAlive: false }, roster[2]], picks: [{ creature: 3, tier: 'root0' }], remaining: 1 });
-  await expect(page.locator('#planning-help')).toContainText('1 team pick available. One mutation per creature');
-  await expect(page.locator('#planning-creatures')).toContainText('Defeated'); await expect(page.locator('#planning-creatures')).toContainText('Picked · hidden until reveal');
-  await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('.mutation-card')).toHaveCount(0);
+  await expect(page.locator('#planning-help')).toContainText('1 team pick available');
+  await expect(page.locator('#planning-creatures [data-creature="2"]')).toHaveAccessibleName(/Defeated/); await expect(page.locator('#planning-creatures [data-creature="3"]')).toHaveAccessibleName(/Picked · hidden until reveal/);
+  await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('[data-mutation]')).toHaveCount(0);
   await expect(page.locator('.mutation-empty')).toContainText('Choose another creature');
   await page.locator('#mutation-tree > summary').click(); await expect(page.locator('#mutation-tree')).toContainText('Brute · Stage 1 · Picked');
   await page.locator('#planning-pass').click(); await expect(page.locator('#planning-confirm')).toHaveText('Pass all remaining picks');
@@ -122,27 +131,31 @@ test('dead and already-picked creatures explain their state and empty offers; pa
 });
 test('capstones preserve shared passives, no fake tags or spells, and the tree remains read-only', async ({ page }) => {
   const h = await mount(page, { ids: ['cap'], allies: [{ ...roster[0], acquiredTiers: ['root0', 'future'] }] });
-  await expect(page.locator('.mutation-card')).toHaveCount(1); await expect(page.locator('.mutation-tags')).toHaveCount(0);
-  await expect(page.locator('.mutation-spell')).toHaveCount(0); await expect(page.locator('.mutation-card')).toContainText('For every creature of the side');
+  await expect(page.locator('[data-mutation]')).toHaveCount(1); await page.locator('[data-mutation="cap"]').click();
+  await expect(page.locator('.mutation-spell')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the side');
   await page.locator('#mutation-tree > summary').click(); await expect(page.locator('#mutation-tree')).toContainText('Brute · Stage 1 · Acquired');
   await expect(page.locator('#mutation-tree button')).toHaveCount(0); expect(h.state.writes).toEqual([]);
   await page.locator('[data-mutation="cap"]').click(); await expect(page.locator('#planning-confirm')).toBeEnabled(); expect(h.state.errors).toEqual([]);
 });
-test('later offers compare multiple upgrades and multiclass roots without forcing three cards', async ({ page }) => {
+test('later offers compare multiple upgrades and multiclass roots without forcing three cards', async ({ page }, info) => {
   const content = structuredClone(catalogue);
   content.packages.push({ id: 'upgrade2', name: 'Second upgrade', level: 2, prerequisites: ['root0'], initiativeBonus: 2, spells: ['spell0'] });
   const h = await mount(page, { content, ids: ['future', 'upgrade2', 'root1', 'root2'], allies: [{ ...roster[0], acquiredTiers: ['root0'] }] });
-  await expect(page.locator('.mutation-card')).toHaveCount(4);
+  await expect(page.locator('[data-mutation]')).toHaveCount(4);
   await expect(page.locator('[data-mutation="root0"]')).toHaveCount(0);
-  await expect(page.locator('[data-mutation="future"] .mutation-family')).toHaveText('Brute · Stage 2');
-  await expect(page.locator('[data-mutation="root2"] .mutation-family')).toHaveText('Warped · Stage 1');
+  await expect(page.locator('[data-mutation="future"]')).toHaveAccessibleName(/Brute · Stage 2/);
+  await expect(page.locator('[data-mutation="root2"]')).toHaveAccessibleName(/Warped · Stage 1/);
+  await expect(page.locator('.mutation-node[data-status=known]')).toContainText('Brute');
+  await page.locator('[data-mutation="future"]').click(); await page.clock.runFor(200);
+  await page.screenshot({ path: info.outputPath('mutation-later.jpg'), type: 'jpeg', quality: 90 });
   await page.locator('[data-mutation="upgrade2"]').click(); await page.locator('[data-mutation="root2"]').click();
   expect(h.state.writes).toEqual([]); await page.locator('#planning-confirm').click();
   await expect.poll(() => h.state.writes.length).toBe(1); expect(h.state.writes[0].tier).toBe('root2'); expect(h.state.errors).toEqual([]);
 });
 test('missing catalogue still offers the host id with an explicit unknown detail state', async ({ page }) => {
   const h = await mount(page, { content: null, ids: ['unpublished:mutation'] });
-  await expect(page.locator('.mutation-card')).toContainText('Catalogue details unavailable'); await expect(page.locator('.mutation-card')).toContainText('Initiative unavailable');
+  await page.locator('[data-mutation="unpublished:mutation"]').click();
+  await expect(page.locator('.mutation-preview')).toContainText('Catalogue details unavailable'); await expect(page.locator('.mutation-preview')).toContainText('Initiative unavailable');
   await page.locator('[data-mutation="unpublished:mutation"]').click(); await page.locator('#planning-confirm').click();
   await expect.poll(() => h.state.writes.length).toBe(1); expect(h.state.writes[0].tier).toBe('unpublished:mutation'); expect(h.state.errors).toEqual([]);
 });

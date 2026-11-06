@@ -23,6 +23,7 @@ export interface UpkeepMarker {
   id: string; name: string; side: string; lines: { text: string; tone: string }[];
 }
 export interface SceneFrame {
+  mutationFocus?: string;
   upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];

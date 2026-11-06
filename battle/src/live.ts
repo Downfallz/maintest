@@ -16,6 +16,7 @@ import { historyControls } from './history';
 import { battleGuidance } from '../../table/battle-guidance.js';
 import { guidanceControls } from './guidance';
 import { BattleAudio, soundControl } from './audio';
+import { mutationScene } from './mutation-scene';
 import { BattleScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets } from './targets';
@@ -93,7 +94,7 @@ const playback = createBattlePlayback({ onChange: () => render(), onUpkeepHandle
 // Opening a live choice or the result is the player's skip: what was still queued, upkeep included, is passed over.
 const passOver = () => playback.skip({ dismissUpkeep: true });
 const controls = combatControls(combat, name, passOver);
-const planningUI = planningControls(planning, name, passOver);
+const planningUI = planningControls(planning, name, passOver, inspectCreature);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, () => playback.skip());
 const services = createBattleServices({ onChange: () => servicesUI.render() });
@@ -102,9 +103,10 @@ const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
 const growthUI = growthControls(growth, () => playback.skip(), () => render());
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render());
-const upkeepUI = upkeepControls(upkeep, id => {
+function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
-}, () => render());
+}
+const upkeepUI = upkeepControls(upkeep, inspectCreature, () => render());
 const orderUI = orderControls(orderReveal, () => playback.skip(), id => {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
 }, () => render());
@@ -202,7 +204,7 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
 
-let receiptShown = false;
+let receiptShown = false, lastMutationReveal: number | null = null;
 
 function render() {
   if (receiving) return;
@@ -241,7 +243,11 @@ function render() {
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   growthUI.render(view, catalogue, visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened);
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
-  $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : 'Inspect creatures');
+  const plan = planning.model();
+  const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
+  frame = mutation.frame;
+  $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
+  $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
   if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING CONFIRMED EVENTS' : connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
   for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
@@ -249,9 +255,18 @@ function render() {
     let node = nodes.get(one.id);
     if (!node) {
       node = creatureButton(one.id);
-      node.addEventListener('click', () => { if (controls.target(one.id)) return; inspected = one.id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal(); });
+      node.addEventListener('click', event => {
+        if (controls.target(one.id)) return;
+        if ((event.currentTarget as HTMLElement).dataset.mutationRecipient === 'true') planningUI.openCreature(Number(one.id));
+        else inspectCreature(one.id);
+      });
       $('actor-layer').append(node); nodes.set(one.id, node);
     }
+    const offered = mutation.eligible.has(one.id);
+    node.dataset.mutationRecipient = String(offered);
+    node.dataset.mutationFocus = String(mutation.recipient === one.id);
+    if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
+    else delete node.dataset.previewForm;
     node.dataset.form = one.form;
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     const targetState = battleTargetState(action, one.id);
@@ -262,7 +277,7 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
-    const condition = targetTag?.tag ?? tagOf(one);
+    const condition = mutation.tag(one.id) ?? targetTag?.tag ?? tagOf(one);
     let effect = node.querySelector<HTMLElement>('.creature-effect');
     if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
     const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
@@ -279,7 +294,7 @@ function render() {
     if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
     cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
+    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   text('round-phase', phaseLabel(board.phase).toUpperCase());
@@ -289,7 +304,7 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : guide.objective);
+  text('instruction', !view ? '' : playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : mutation.prompt ?? guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   if (!view) {
@@ -309,6 +324,12 @@ function render() {
   const markers = replay.active ? undefined : playbackState.upkeep?.markers ?? liveMarkers;
   if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.upkeep), round: board.round } };
   scene.present(frame, reduced(), playbackState.rate);
+  const reveal = growth.receipt();
+  if (!reveal) lastMutationReveal = null;
+  else if (lastMutationReveal !== reveal.sequence && reveal.round === board.round && visible() && !replay.active && !playbackState.active && !plan.opened) {
+    lastMutationReveal = reveal.sequence;
+    if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
+  }
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
 }

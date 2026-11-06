@@ -57,7 +57,7 @@ test('first mutation tip explains team picks, highlights Command and acknowledge
   await page.screenshot({ path: info.outputPath('mutation-guide.jpg'), type: 'jpeg', quality: 85 });
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]);
   await page.keyboard.press('Escape'); await expect(page.locator('#help-open')).toBeFocused();
-  await expect(page.locator('#instruction')).toContainText('Acquire a mutation'); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#instruction')).toContainText('Choose a creature on the battlefield'); expect(h.state.errors).toEqual([]);
 });
 test('waiting room including empty seats defers the first tip until actual arrival', async ({ page }) => {
   const h = await mount(page, { waiting: { seats: [] } });

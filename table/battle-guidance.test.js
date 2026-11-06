@@ -14,7 +14,7 @@ test('mutation guidance uses the team offer and explains the actual pass semanti
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
   const depleted = battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 0 } } }), catalogue);
   assert.equal(depleted.topic, null); assert.match(depleted.objective, /No team picks remain/);
-  assert.match(battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered\. Open Choose mutation to pass/);
+  assert.match(battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: [] }] } } }), catalogue).objective, /No mutations offered\. Open Mutation tree to pass/);
 });
 test('the next mutation comes from the board on an even round, not a client schedule', () => {
   const input = view(null); input.board.roundNumber = 2; input.board.nextEvolutionRound = 6;

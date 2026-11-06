@@ -90,10 +90,10 @@ export class BattleScene extends Phaser.Scene {
     for (const creature of state.creatures) {
       const figure = this.figures.get(creature.id)!;
       const acting = creature.id === state.actor;
-      const selected = creature.id === state.target || state.selected?.includes(creature.id) === true;
+      const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      figure.image.setAlpha(creature.isAlive ? 1 : .20);
+      figure.image.setAlpha(!creature.isAlive ? .20 : state.mutationFocus && !selected ? .52 : 1);
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
     }
@@ -103,6 +103,13 @@ export class BattleScene extends Phaser.Scene {
       if (!reduced) this.impact();
     }
     this.previous = state.stage;
+  }
+
+  revealMutations(ids: string[]) {
+    for (const id of ids) {
+      const figure = this.figures.get(id);
+      if (figure) this.burst(figure, GOLD, false);
+    }
   }
 
   private makeFigures() {
@@ -137,7 +144,10 @@ export class BattleScene extends Phaser.Scene {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
       return;
     }
-    const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length, this.state.creatures.filter(one => one.enemy).length);
+    // A bottom sheet shortens a portrait board, but the two teams still need separate rows.
+    const portraitDraft = this.state.mutationFocus && width < 620 && matchMedia('(orientation: portrait)').matches;
+    const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length,
+      this.state.creatures.filter(one => one.enemy).length, portraitDraft ? true : undefined);
     const inFlight = playing(this.state);
     for (const [index, creature] of this.state.creatures.entries()) {
       const figure = this.figures.get(creature.id)!;

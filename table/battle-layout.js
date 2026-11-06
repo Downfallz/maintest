@@ -11,9 +11,9 @@ export function isPortrait(width, height) {
   return width < 620 && height > width * .65;
 }
 
-export function placements(width, height, allies = 3, enemies = 3) {
+export function placements(width, height, allies = 3, enemies = 3, portrait = isPortrait(width, height)) {
   const floor = Math.max(60, height - 44);
-  if (isPortrait(width, height)) {
+  if (portrait) {
     const size = Math.min(width * .30, floor * .40);
     const row = (y, count) => (count === 3 ? [.17, .5, .83] : Array.from({ length: count }, (_, index) => (index + .5) / count)).map(x => ({ x: width * x, y, size, hitWidth: Math.max(MIN_HIT, width * .29) }));
     return [...row(floor * .95, allies), ...row(floor * .45, enemies)];
