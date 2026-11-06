@@ -11,10 +11,13 @@ export function isPortrait(width, height) {
   return width < 620 && height > width * .65;
 }
 
-export function placements(width, height, allies = 3, enemies = 3) {
+export function placements(width, height, allies = 3, enemies = 3, portrait = isPortrait(width, height)) {
   const floor = Math.max(60, height - 44);
-  if (isPortrait(width, height)) {
-    const size = Math.min(width * .30, floor * .40);
+  if (portrait) {
+    // A hit target is the figure plus its 42px caption, so the rows half a floor apart fit at most
+    // that much figure without the lower row's targets covering the upper row's captions. Only a
+    // short stage reaches that cap: the one a mutation sheet leaves above itself on a phone.
+    const size = Math.max(1, Math.min(width * .30, floor * .40, floor * .50 - 42));
     const row = (y, count) => (count === 3 ? [.17, .5, .83] : Array.from({ length: count }, (_, index) => (index + .5) / count)).map(x => ({ x: width * x, y, size, hitWidth: Math.max(MIN_HIT, width * .29) }));
     return [...row(floor * .95, allies), ...row(floor * .45, enemies)];
   }

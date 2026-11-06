@@ -76,3 +76,14 @@ test('an overlapping or very close target never sends the attacker backwards pas
   const close = strikeApproach(one, { ...one, x: 15 });
   assert.ok(close.x > one.x && close.x < 15);
 });
+
+test('portrait rows never overlap their hit targets, even on the short stage a mutation sheet leaves', () => {
+  // The hit target spans the figure and the caption under it, as placeHitTargets lays it out.
+  const span = one => { const top = Math.max(0, one.y - one.size); return [top, top + Math.max(44, one.size + 42)]; };
+  for (const [width, height] of [sizes.phone, sizes.narrow, [320, 255], [390, 260], [320, 208], [360, 300]]) {
+    const placed = placements(width, height, 3, 3, true);
+    const [allyTop] = span(placed[0]), [, enemyBottom] = span(placed[3]);
+    assert.ok(enemyBottom <= allyTop + 1e-6, `${width}x${height}: enemy targets end at ${enemyBottom}, allies start at ${allyTop}`);
+    assert.ok(placed.every(one => one.size > 0 && one.hitWidth >= 44), `${width}x${height}: visible figures, reachable targets`);
+  }
+});

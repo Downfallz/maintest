@@ -1,6 +1,6 @@
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { mutationChoices } from '../../table/battle-mutations.js';
-import { mutationCards } from './mutations';
+import { mutationTree } from './mutation-tree';
 import { tempoControls } from './tempo';
 import { battleTieGroups } from '../../table/battle-order.js';
 import { untapped, orderOf } from '../../table/ties.js';
@@ -16,29 +16,58 @@ function button(label: string, action: () => void) {
 }
 function line(value: string) { const node = document.createElement('p'); node.textContent = value; return node; }
 
-export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void) {
+export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void, inspect: (id: string) => void) {
   const dialog = el<HTMLDialogElement>('planning-dialog');
+  let tree: ReturnType<typeof mutationTree> | null = null;
   const tempos = tempoControls(controller, name);
   let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null;
+  const expand = el<HTMLButtonElement>('mutation-expand');
+  function expandTree(value: boolean) {
+    dialog.classList.toggle('expanded-tree', value);
+    expand.setAttribute('aria-expanded', String(value)); expand.textContent = value ? 'Compact' : 'Expand';
+  }
+  expand.addEventListener('click', () => expandTree(!dialog.classList.contains('expanded-tree')));
   el('planning-open').addEventListener('click', () => { beforeOpen(); controller.open(); });
   el('planning-close').addEventListener('click', () => controller.close());
   el('planning-confirm').addEventListener('click', () => { void controller.submit(); });
   dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
 
+  function selectCreature(id: number) {
+    if (id === creature) return;
+    creature = id; rendered = ''; controller.choose(null);
+  }
+  // A creature tapped while the draft cannot change (sending, or a failed acknowledgement)
+  // is inspected instead: the tap never does nothing, and never drops the draft being sent.
+  function openCreature(id: number) {
+    if (!controller.model().opened) { beforeOpen(); controller.open(); }
+    if (controller.model().canEdit) selectCreature(id);
+    else inspect(String(id));
+  }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && dialog.open && dialog.dataset.kind === 'Evolution' && !document.querySelector('dialog:modal')) {
+      event.preventDefault(); controller.close();
+    }
+  });
   function mutations(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
     el('planning-creatures').replaceChildren(...choices.roster.map((one: { id: number; name: string; context: string }) => {
-      const node = button(`${one.name} · ${one.context}`, () => {
-        if (one.id === creature) return;
-        creature = one.id; rendered = ''; controller.choose(null);
-      });
+      const node = button(one.name, () => selectCreature(one.id));
+      node.setAttribute('aria-label', `${one.name} · ${one.context}`);
+      if (!one.context.endsWith('available')) { const status = document.createElement('small'); status.textContent = one.context; node.append(status); }
       node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); return node;
     }));
-    el('planning-choices').replaceChildren(...mutationCards(choices, catalogue, tier => controller.choose({ creature, tier })));
+    tree?.dispose();
+    tree = mutationTree(choices, catalogue, tier => controller.choose({ creature, tier }));
+    el('planning-choices').replaceChildren(tree.graph, tree.tree);
+    el('mutation-preview-region').replaceChildren(tree.pane);
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; el('planning-choices').append(pass);
+    if (creature != null) {
+      const inspectButton = button('Inspect creature', () => inspect(String(creature)));
+      inspectButton.id = 'mutation-inspect'; el('planning-choices').append(inspectButton);
+    }
     const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
-    el('planning-help').textContent = `${budget}. One mutation per creature this opportunity. Select a card, then confirm. Pass gives up all remaining team picks this round.`;
+    el('planning-help').textContent = budget;
   }
   type Assignment = { id: number; position: number | null };
   type Fixed = { position: number; label: string; roll: string };
@@ -70,6 +99,9 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   }
   const headings: Record<string, string> = { Evolution: 'Choose mutation', Speed: 'Team tempos', TieOrder: 'Order ties' };
   function closeChoices() {
+    if (!tree && !dialog.open && !rendered) return;
+    tree?.dispose(); tree = null;
+    expandTree(false); el('mutation-preview-region').replaceChildren(); el('mutation-preview-region').hidden = true;
     if (dialog.open) dialog.close();
     rendered = ''; creature = null;
     el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
@@ -123,36 +155,45 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   }
   function confirmLabel(model: ReturnType<Controller['model']>) {
     if (model.sending) return 'Sending…';
-    if (model.choice?.tier) return 'Acquire · 1 pick';
+    if (model.choice?.tier) return 'Confirm ' + (lastCatalogue?.packages?.find(pack => pack.id === model.choice.tier)?.name ?? model.choice.tier);
     if (model.choice?.pass) return 'Pass all remaining picks';
     return model.tempo ? `Confirm tempos · ${model.tempo.chosen}/${model.tempo.total}` : 'Confirm choice';
   }
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
     el('planning-order').hidden = !model.opened || model.latest?.waitingFor !== 'TieOrder';
-    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = label;
+    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = model.latest?.waitingFor === 'Evolution' ? 'Mutation tree ↗' : label;
     el<HTMLButtonElement>('planning-open').disabled = model.sending;
     el('planning-error').textContent = model.error; el('planning-error').hidden = !model.error || model.opened;
     el('planning-dialog-error').textContent = model.error;
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
-    el('planning-heading').textContent = label;
-    dialog.dataset.kind = model.latest.waitingFor;
+    expand.hidden = model.latest.waitingFor !== 'Evolution';
+    el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
     rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
-      node.disabled = !model.canEdit || node.dataset.offered === 'false';
-      node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
-      if (node.dataset.mutation) node.querySelector('.mutation-select-label')!.textContent = isPressed(node, model.choice) ? 'Selected · confirm below' : 'Select mutation';
+      // Inspecting reads the board and never edits the draft, so it stays available while sending.
+      node.disabled = node.id !== 'mutation-inspect' && (!model.canEdit || node.dataset.offered === 'false');
+      if (node.id !== 'mutation-inspect') node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
     }
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
+    el('mutation-preview-region').hidden = model.latest.waitingFor !== 'Evolution' || !model.choice?.tier;
+    tree?.select(model.choice?.tier ?? null);
     el('planning-selection').textContent = selectionText(model, catalogue);
     el<HTMLButtonElement>('planning-confirm').disabled = !model.canSubmit;
     el('planning-confirm').textContent = confirmLabel(model);
     // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
-    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `Acquire · 1 pick: ${selectionText(model, catalogue)}`);
+    if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `${confirmLabel(model)} · 1 pick · ${name(model.choice.creature)}`);
     else el('planning-confirm').removeAttribute('aria-label');
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      if (model.latest.waitingFor === 'Evolution') {
+        // A short portrait sheet hides the recipient tabs: focus then starts on the tree itself.
+        dialog.show();
+        [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button')]
+          .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
+      } else dialog.showModal();
+    }
   }
-  return { render };
+  return { render, openCreature, recipient: () => creature };
 }

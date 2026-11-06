@@ -81,8 +81,9 @@
     <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
   <dialog id="planning-dialog" aria-labelledby="planning-heading">
-    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
+    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><button id="mutation-expand" type="button" aria-expanded="false" hidden>Expand</button><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
     <div id="planning-creatures" aria-label="Choose a creature"></div></div><div id="planning-choices"></div>
+    <section id="mutation-preview-region" aria-label="Selected mutation preview" hidden></section>
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
   </dialog>
   <dialog id="match-dialog" aria-labelledby="match-title">

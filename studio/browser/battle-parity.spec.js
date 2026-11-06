@@ -80,9 +80,9 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   expect(state.shown).toEqual([]); await keyboardActivate(page, '#upkeep-close');
   await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
   await keyboardActivate(page, '#help-close'); await keyboardActivate(page, '#planning-open');
-  await keyboardActivate(page, '.mutation-details summary >> nth=1');
-  await expect(page.locator('.mutation-details').nth(1)).toContainText('Strike · 2 energy');
   await keyboardActivate(page, '[data-mutation="Predator"]');
+  await keyboardActivate(page, '.mutation-details summary');
+  await expect(page.locator('.mutation-details')).toContainText('Strike · 2 energy');
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   expect(state.writes).toEqual([]); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');

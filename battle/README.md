@@ -94,8 +94,8 @@ text on the latest board. Result details remain available in an accessible overl
 Android GPU/performance, screen readers and high zoom remain future acceptance.
 
 A7 completes planning and the match result in the scene shell ([ADR 0128](../docs/adr/0128-complete-the-game-loop-in-the-arena.md)).
-`table/battle-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders offered mutation
-cards with explicit confirmation and a separate reference tree (AU4). AU5 adds editable team tempo tabs and one
+`table/battle-planning.js` fences mutation, tempo and tie drafts; `src/planning.ts` renders the private mutation tree
+with explicit confirmation and a separate read-only reference (AU4). AU5 adds editable team tempo tabs and one
 confirmation over the host's sequential questions, with simultaneous reveal still owned by the host (ADR 0135).
 `table/battle-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
@@ -157,7 +157,7 @@ acknowledges a question or sends a command. Access loss clears its text.
 
 `table/battle-guidance.js` derives this read-only model; `src/guidance.ts` owns the native dialog.
 The UI's pass label now says **Pass remaining picks**, matching the engine's existing whole-round pass.
-The AU3b receipt precedes first-use tips; mutation cards are covered by AU4 below and team tempos by AU5.
+The AU3b receipt precedes first-use tips; the mutation chooser is covered by AU4 below and team tempos by AU5.
 
 `battle-guidance.spec.js` covers default-on first-use behavior, persistence, mute/reopen, pending commands,
 waiting/access loss, playback boundaries, both declaration modes, short orientations and enlarged text.
@@ -264,28 +264,25 @@ Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/
 
 ## AU4: compare offered mutations
 
-`Choose mutation` opens the host's available cards for the selected creature, with three columns on
-desktop and stacked cards on phones. Cards show family colour and name, stage, authored tags,
-initiative gain and spell names/previews. Each separate Details disclosure includes spell cost,
-targeting, effects and caster/critical text. Passive-only and shared capstones retain the catalogue's
-passive lines without invented tags or spells. Later offers may contain any number of upgrades and
-multiclass roots; missing catalogue records remain selectable by host id with explicit unknown details.
+Tap an eligible ally on the battlefield, or use **Mutation tree**, to open its private draft.
+The graph docks below the scene on phones and beside it on wider screens. Expand gives it more
+space. Each selectable node corresponds to an offer from the host. Acquired paths and connections
+use catalogue prerequisites, including shared capstones. Unknown offers stay selectable by id.
 
-Creature tabs and the confirmation footer stay visible while cards scroll. The budget is capped by
-the number of creatures with host offers; defeated and already-picked creatures explain their state.
-Selecting a card changes only the local draft. Acquire names its recipient and mutation and spends
-one team pick; changing creature clears that draft. Pass explicitly gives up all remaining team picks.
-The full Mutation Tree is a separate, read-only disclosure during Evolution; AU8 also exposes a
-public reference outside this phase. Same-question polls preserve disclosures, focus and scroll.
+Selecting a branch previews its initiative, spells, passives and possible later paths. Phaser previews
+available art only for that creature in the private command. Public inspection and replay keep their
+recorded forms. Confirm spends one team pick. Switching creatures clears the draft, and passing requires
+explicit confirmation for all remaining team picks. The full tree remains available as a read-only
+disclosure. AU8 also exposes a public reference outside this phase.
 
-`table/battle-mutations.js` projects this model using the existing card and mutation helpers;
-`src/mutations.ts` renders it. The existing planning controller still owns acknowledgement,
+`table/battle-mutations.js` supplies the host-filtered offers. `src/mutation-tree.ts` draws the graph
+and `src/mutation-scene.ts` projects the private preview. The existing planning controller still owns acknowledgement,
 host legality checks and duplicate/stale-command protection. `battle-mutations.spec.js` covers
 comparison, late offers, recipient changes, passive capstones, missing content, effective budgets,
 poll stability, pending acknowledgement and small/landscape layouts. `battle.loop.js` exercises the
 chooser in complete real-host matches, including two-seat private choices.
 
-Real-host opening cards: [desktop](../docs/tabletop/images/battle-mutations/desktop.jpg) ·
+Original AU4 card layout: [desktop](../docs/tabletop/images/battle-mutations/desktop.jpg) ·
 [phone](../docs/tabletop/images/battle-mutations/phone.jpg).
 
 ## AU5: team tempo drafts
