@@ -60,7 +60,9 @@ export class BattleScene extends Phaser.Scene {
     fallback.generateTexture('missing-figure', 80, 100);
     fallback.destroy();
     for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
+    this.fitCamera();
     this.scale.on('resize', () => {
+      this.fitCamera();
       if (this.state && playing(this.state)) this.onResizeDuringPlayback();
       this.arrange();
     });
@@ -116,8 +118,16 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  // The framebuffer uses device pixels; all art, animation distances and DOM targets share CSS coordinates.
+  private fitCamera() {
+    const { clientWidth: width, clientHeight: height } = this.game.canvas;
+    if (!width || !height) return;
+    this.cameras.main.setSize(this.scale.width, this.scale.height)
+      .setZoom(this.scale.width / width, this.scale.height / height).centerOn(width / 2, height / 2);
+  }
+
   private arrange(resetPositions = false) {
-    const { width, height } = this.scale;
+    const { displayWidth: width, displayHeight: height } = this.cameras.main;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
       const factor = Math.max(width / source.width, height / source.height);
@@ -260,8 +270,8 @@ export class BattleScene extends Phaser.Scene {
     if (!this.state) return;
     // Creatures stand still between actions: only a played action moves them.
     for (const figure of this.figures.values()) this.followCues(figure);
-    const width = Math.max(1, this.scale.width);
-    const height = Math.max(1, this.scale.height);
+    const width = Math.max(1, this.cameras.main.displayWidth);
+    const height = Math.max(1, this.cameras.main.displayHeight);
     const drift = this.reduced ? 0 : time * .007;
     this.motes.forEach((mote, i) => {
       mote.setPosition(wrap(i * 131 + drift, width), wrap(i * 73 - drift * .7, height));

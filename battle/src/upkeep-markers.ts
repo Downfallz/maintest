@@ -46,7 +46,7 @@ export class UpkeepMarkers {
       }
     }
     if (!cue) return;
-    const { width, height } = this.scene.scale;
+    const { displayWidth: width, displayHeight: height } = this.scene.cameras.main;
     for (const side of ['Opponent', 'Your team']) {
       const row = cue.markers.filter(marker => marker.side === side);
       row.forEach((marker, i) => {
