@@ -122,13 +122,13 @@ test('reset during playback cancels pending results and a second cast resolves n
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'windup');
   await page.locator('#reset').click();
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
-  await page.clock.runFor(castDuration);
+  await page.clock.fastForward(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'decision');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b1"] .creature-result')).toHaveText('');
   await choose(page, 'b2');
   await page.locator('#confirm').click();
-  await page.clock.runFor(castDuration);
+  await page.clock.fastForward(castDuration);
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   await expect(page.locator('[data-creature="b1"] .creature-stats')).toContainText('18/24 HP');
   await expect(page.locator('[data-creature="b2"] .creature-stats')).toContainText('5/24 HP');
