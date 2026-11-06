@@ -36,9 +36,12 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (id === creature) return;
     creature = id; rendered = ''; controller.choose(null);
   }
+  // A creature tapped while the draft cannot change (sending, or a failed acknowledgement)
+  // is inspected instead: the tap never does nothing, and never drops the draft being sent.
   function openCreature(id: number) {
     if (!controller.model().opened) { beforeOpen(); controller.open(); }
     if (controller.model().canEdit) selectCreature(id);
+    else inspect(String(id));
   }
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && dialog.open && dialog.dataset.kind === 'Evolution' && !document.querySelector('dialog:modal')) {
@@ -170,7 +173,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
     rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
-      node.disabled = !model.canEdit || node.dataset.offered === 'false';
+      // Inspecting reads the board and never edits the draft, so it stays available while sending.
+      node.disabled = node.id !== 'mutation-inspect' && (!model.canEdit || node.dataset.offered === 'false');
       if (node.id !== 'mutation-inspect') node.setAttribute('aria-pressed', String(isPressed(node, model.choice)));
     }
     for (const node of Array.from(el('planning-creatures').querySelectorAll<HTMLButtonElement>('button'))) node.disabled = !model.canEdit;
@@ -184,7 +188,10 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     else el('planning-confirm').removeAttribute('aria-label');
     if (!dialog.open) {
       if (model.latest.waitingFor === 'Evolution') {
-        dialog.show(); dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]')?.focus({ preventScroll: true });
+        // A short portrait sheet hides the recipient tabs: focus then starts on the tree itself.
+        dialog.show();
+        [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button')]
+          .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
       } else dialog.showModal();
     }
   }

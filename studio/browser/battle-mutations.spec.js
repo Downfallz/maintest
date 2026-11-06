@@ -31,7 +31,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
       return route.fulfill({ status: state.status, json: state.view });
     }
     if (url.pathname.endsWith('/decision')) {
-      state.writes.push(route.request().postDataJSON());
+      state.writes.push(route.request().postDataJSON()); if (state.hold) await state.hold;
       state.view = { ...state.view, waitingFor: null, waitingAsked: null };
       return route.fulfill({ status: 204 });
     }
@@ -181,4 +181,23 @@ test('long names and 200 percent text retain reachable confirmation in short por
   await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '.mutation-select, .mutation-spell > span, .mutation-passive, .mutation-details { font-size: 26px !important; }' });
   await page.locator('.mutation-details summary').last().scrollIntoViewIfNeeded(); await expect(page.locator('.mutation-details summary').last()).toBeInViewport();
   await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.state.errors).toEqual([]);
+});
+
+test('a short portrait sheet without recipient tabs still starts keyboard focus inside the tree', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 }); const h = await mount(page);
+  await expect(page.locator('#planning-creatures')).toBeHidden();
+  await expect(page.locator('[data-mutation="root0"]')).toBeFocused(); expect(h.state.errors).toEqual([]);
+});
+
+test('a creature tapped while the pick is being sent is inspected, not left dead or switched', async ({ page }) => {
+  const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });
+  let release; h.state.hold = new Promise(resolve => { release = resolve; });
+  await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
+  await expect(page.locator('#planning-confirm')).toHaveText('Sending…');
+  await expect(page.locator('#mutation-inspect')).toBeEnabled();
+  await page.locator('#actor-layer [data-creature="1"]').click();
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await expect(page.locator('#inspect-name')).toHaveText('Creature 1');
+  await page.keyboard.press('Escape'); release();
+  await expect.poll(() => h.state.writes).toEqual([{ kind: 'Evolution', creature: 2, tier: 'root0', asked: 11 }]);
+  expect(h.state.errors).toEqual([]);
 });
