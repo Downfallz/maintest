@@ -60,8 +60,9 @@ Auto, Step, Skip, History and round review retain their existing roles.
 
 ### Mutation presentation after AU14
 
-After the upkeep and first-use guide, eligible allies open their private mutation tree directly
-from the battlefield. The docked tree connects acquired mutations and current offers using the
+After the upkeep and first-use guide, the mutation phase opens the private mutation tree by itself
+(ADR 0138), and eligible allies switch it directly from the battlefield. It stays open across the seat's
+picks while team picks remain. The docked tree connects acquired mutations and current offers using the
 catalogue prerequisites. A branch previews the selected creature's appearance and unlocks in the
 local command. Confirm sends the AU decision through the existing asking and acknowledgement.
 Public forms and unlock cues follow the host reveal. The full reference, inspection, pass and

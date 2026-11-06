@@ -202,7 +202,7 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
 
-let receiptShown = false, lastMutationReveal: number | null = null;
+let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
 
 function render() {
   if (receiving) return;
@@ -328,6 +328,13 @@ function render() {
   }
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
+  // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
+  // turn order and a first-use tip, never over another dialog or playback. Once per asking: a player who
+  // closes it reopens it from the battlefield or the dock (ADR 0138).
+  const asked = planning.model();
+  if (asked.opened) mutationOpened = asked.question;
+  else if (asked.available && asked.latest?.waitingFor === 'Evolution' && mutationOpened !== asked.question
+    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending) { mutationOpened = asked.question; planning.open(); }
 }
 
 function choose(choice: Choice) {
