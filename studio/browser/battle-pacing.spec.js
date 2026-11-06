@@ -62,12 +62,10 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test('in Auto every action still waits for its OK, and skip restores the live command without acknowledging it', async ({ page }) => {
-  const h = await mount(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
+test('Auto continues held results and skip restores the live command without acknowledging it', async ({ page }) => {
+  const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
-  await finishCast(page); await page.clock.runFor(5000);
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await expect(page.locator('#combat-open')).toBeHidden();
-  await expect(page.locator('#playback-next')).toHaveText('Next'); await page.locator('#playback-next').click();
+  await finishCast(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'auto'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await page.locator('#playback-skip').click(); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#combat-open')).toBeEnabled();
@@ -145,13 +143,13 @@ test('an inspection opened on a held Step survives the next arrival', async ({ p
   await expect(page.locator('#playback-next')).toHaveText('Next'); expect(h.errors).toEqual([]);
 });
 
-test('an inspection over a held action keeps it held; the receipt comes after the OK', async ({ page }) => {
+test('a receipt arriving under an open inspection leaves it open and takes the focus back on close', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10), cleanup]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.locator('[data-creature="1"]').click();
-  await expect(page.locator('#inspect-dialog')).toBeVisible(); await finishCast(page); await page.clock.runFor(5000);
-  await expect(page.locator('#playback-receipt')).toBeHidden(); await expect(page.locator('#inspect-dialog')).toBeVisible();
-  await page.keyboard.press('Escape'); await expect(page.locator('[data-creature="1"]')).toBeFocused();
-  await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toBeVisible(); expect(h.errors).toEqual([]);
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await finishCast(page); await page.clock.runFor(SETTLE_MS);
+  await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await expect(page.locator('#inspect-name')).toHaveText(/\S/);
+  await page.keyboard.press('Escape'); await expect(page.locator('#playback-receipt')).toBeFocused(); expect(h.errors).toEqual([]);
 });
 
 test('Next keeps the keyboard focus while the following result plays', async ({ page }) => {
@@ -162,4 +160,16 @@ test('Next keeps the keyboard focus while the following result plays', async ({ 
   await finishCast(page, 11); await expect(page.locator('#playback-next')).toBeEnabled();
   await page.keyboard.press('Enter'); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); expect(h.errors).toEqual([]);
+});
+
+test('in Auto the own cast moves on by itself and an incoming one waits for its OK, an inspection over it included', async ({ page }) => {
+  const h = await mount(page); await h.publish([entry(10), entry(11, { actor: 4, targets: [1] }), { ...cleanup, sequence: 12 }]);
+  await expect(page.locator('#playback-next')).toBeHidden(); await finishCast(page); await page.clock.runFor(SETTLE_MS);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
+  await page.locator('[data-creature="2"]').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await finishCast(page, 11); await page.clock.runFor(5000);
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await page.keyboard.press('Escape'); await expect(page.locator('#combat-open')).toBeHidden();
+  await expect(page.locator('#playback-next')).toHaveText('Next'); await page.locator('#playback-next').click();
+  await expect(page.locator('#playback-receipt')).toBeVisible(); expect(h.errors).toEqual([]);
 });

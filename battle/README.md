@@ -335,10 +335,10 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 Match settings (the gear in the header) select **Auto** (default) or **Step**; the choice
 is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
-Every action, in either pace, animates and then holds its exact applied frame until the player's **OK**
-(**Next** while more follows); only then comes the next action, the turnover or the live board
-([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). Auto reads the turnover
-receipts by itself; Step waits for **Next** there too. While results remain, the action, mutation and
+Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
+**OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
+([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). In Auto the player's own
+casts and the turnover receipts move on by themselves; Step waits for **Next** on every item. While results remain, the action, mutation and
 result entries are withdrawn and nothing opens by itself. **Skip to present**, rotation (an orientation change, not every resize), a motion/speed change or
 connection loss immediately restores the authoritative board. In Step, results that arrive while a
 dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or

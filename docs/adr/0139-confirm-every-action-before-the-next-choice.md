@@ -1,4 +1,4 @@
-# 0139 — Confirm every action before the next choice
+# 0139 — Confirm every incoming action before the next choice
 
 Date: 2026-11-06
 
@@ -14,10 +14,11 @@ left four or five results to read while the next phase was already being asked.
 
 ## Decision
 
-Every confirmed creature action, the player's own included, waits for the player's **OK** after its
+Every incoming action, one the other team's creature took, waits for the player's **OK** after its
 animation, in Auto and in Step. Only after it does the queue move on: to the next action, to the round
-turnover (aftermath, upkeep, the result), or back to the live board. Auto now paces the turnover receipts
-alone; Step also waits for **Next** on them. While results remain to be read, no command is offered: the
+turnover (aftermath, upkeep, the result), or back to the live board. The player's own casts, which they
+chose and confirmed, move on by themselves in Auto, as the turnover receipts do; Step waits for **Next** on
+every item. While results remain to be read, no command is offered: the
 action, mutation and match-result entries are withdrawn, and nothing opens by itself, the mutation tree
 included. **Skip to present** remains the deliberate way to the current board. The button reads **Next**
 while more follows and **OK** on the last result, and takes the focus when it becomes usable and focus has
@@ -26,8 +27,8 @@ nowhere else to be.
 ## Consequences
 
 - Good: the player always sees what led to the question before being asked it.
-- Good: Auto and Step now differ only in how the turnover is read.
-- Bad: a round costs one press per action. Skip covers a player who wants the board at once.
+- Good: the player's own casts cost no press; only what they did not choose waits for them.
+- Bad: a round costs one press per incoming action. Skip covers a player who wants the board at once.
 - Neutral: the host, the events and the acknowledgement of a question are unchanged. A question is still
   acknowledged when its controls are shown, which now happens after the reading.
 
@@ -36,6 +37,8 @@ nowhere else to be.
 - Keep Auto unconfirmed and only withdraw the commands during playback: the opponent's actions would still
   pass by without the player having read them.
 - Remove Auto: the turnover receipts are reading time with nothing to decide, and Auto still serves them.
+- Confirm the player's own casts too: they were chosen a moment before, and a press on each only slows the
+  round without teaching anything.
 
 ## Follow-up
 

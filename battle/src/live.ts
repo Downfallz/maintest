@@ -316,7 +316,7 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? `${playbackState.asks ? 'Read the result, then choose OK.' : 'Reading the round turnover.'} Your next choice follows; Skip to present at any time.` : mutation.prompt ?? guide.objective);
+  text('instruction', !view ? '' : playbackState.active ? `${playbackState.asks ? 'Read the result, then choose OK.' : 'Results are playing.'} Your next choice follows; Skip to present at any time.` : mutation.prompt ?? guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   if (!view) inspected = null;
