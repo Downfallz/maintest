@@ -50,10 +50,11 @@ test('the real catalogue tree follows public purchases without acknowledging the
     }
     await expect(page.locator('#growth-receipt')).toBeVisible({ timeout: 15000 });
     const count = shown.length, written = writes.length;
-    await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-creature').selectOption(String(offer.creature));
-    await expect(page.locator(`#growth-tree [data-package="${tier}"] > summary`)).toContainText('Acquired');
-    await page.locator('#growth-reveal-details summary').click(); await expect(page.locator('#growth-reveals')).toContainText(pack.name);
+    await page.locator('#growth-receipt [data-growth-open]').click(); await expect(page.locator('#growth-reveals')).toContainText(pack.name);
     for (const id of pack.spells) await expect(page.locator('#growth-reveals')).toContainText(catalogue.cards.find(card => card.id === id).name);
+    await page.screenshot({ path: info.outputPath('mutation-reveal-real-host.png') });
+    await page.locator('#growth-explore').click(); await page.locator('#growth-creature').selectOption(String(offer.creature));
+    await expect(page.locator(`#growth-tree [data-package="${tier}"] > summary`)).toContainText('Acquired');
     await page.locator(`#growth-tree [data-package="${tier}"] > details:not([data-package]) > summary`).first().click();
     await fitsViewport(page, '#growth-close, #growth-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });

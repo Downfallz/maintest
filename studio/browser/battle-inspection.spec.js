@@ -166,11 +166,29 @@ test('field labels keep defense, initiative and conditions legible beside the st
   await expect(actor).toHaveAttribute('aria-label', /3 defense, 8 initiative.*Immune to stun/);
   if (page.viewportSize().width >= 620) {
     await expect(actor.locator('.creature-defense')).toBeVisible();
-    await expect(actor.locator('.creature-defense')).toHaveText('3 DEF · 8 INIT');
+    await expect(actor.locator('.creature-defense')).toHaveText('3 DEF');
     const bounds = await actor.evaluate(node => ({ tag: node.querySelector('.creature-tag').getBoundingClientRect().bottom, caption: node.querySelector('.caption').getBoundingClientRect().top }));
     expect(bounds.tag).toBeLessThanOrEqual(bounds.caption);
     await page.clock.runFor(50);
     await page.screenshot({ path: info.outputPath('field-cues-fixture.jpg'), type: 'jpeg', quality: 85 });
   }
+  expect(h.errors).toEqual([]);
+});
+
+test('initiative stands under every name on the field, on phones too, below the status tag', async ({ page }) => {
+  const h = await mount(page); h.view.board.allies[0].isStunned = true; await h.publish();
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('STUNNED');
+  const clear = await page.locator('#actor-layer [data-creature="1"]').evaluate(node => node.querySelector('.creature-tag').getBoundingClientRect().bottom <= node.querySelector('.caption').getBoundingClientRect().top);
+  expect(clear).toBe(true);
+  for (const id of ['1', '3']) {
+    const node = page.locator(`#actor-layer [data-creature="${id}"]`);
+    await expect(node.locator('.creature-init')).toBeVisible();
+    const [name, init] = await node.evaluate(one => [one.querySelector('.creature-name'), one.querySelector('.creature-init')].map(part => part.getBoundingClientRect().toJSON()));
+    // Right under the whole name, centred on it, and the name itself never cut to make room.
+    expect(init.top).toBeGreaterThanOrEqual(name.bottom - 1); expect(init.top - name.bottom).toBeLessThan(8);
+    expect(Math.abs((init.left + init.right) / 2 - (name.left + name.right) / 2)).toBeLessThan(2);
+    expect(await node.locator('.creature-name').evaluate(one => one.scrollWidth <= one.clientWidth)).toBe(true);
+  }
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8 INIT');
   expect(h.errors).toEqual([]);
 });

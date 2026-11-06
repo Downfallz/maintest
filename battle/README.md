@@ -385,11 +385,17 @@ The standalone reference shows current **public** ownership. Pending own picks r
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
 closing either reference does not acknowledge or submit a question. Native disclosures, a labelled
 creature select and fixed Close control work by keyboard and on small/short screens. Unchanged polls
-preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft.
+preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft. Disclosures are kept across polls of the same
+creature, not carried to another one.
 
-`table/battle-growth.js` observes only new `PurchasesRevealed` feed events. A compact, dismissible receipt
-names the new abilities/mutations; opening it gives the public team details in the tree without forcing
-a modal. During catch-up it retains the latest reveal; History retains all public events. Its first
+`table/battle-growth.js` observes only new `PurchasesRevealed` feed events. The reveal is read in three
+depths. On the battlefield, `src/mutation-reveal.ts` stands a Phaser crest above each creature that
+mutated: the mutation in its family's colour, the stage reached and its new spells. The crests stay while
+the field is uncovered, below the floating receipt. That receipt is one dismissible line, "Mutations
+revealed" with the count per side, and the status line under it speaks every reveal in full. **See**
+opens the reveal sheet: one card per creature, grouped by side, with stage, initiative, new spells with
+their cost and targets, and passives. Each card leads to its creature's path in the reference tree,
+where the families it holds open first. During catch-up it retains the latest reveal; History retains all public events. Its first
 read is always a baseline, including reload, visibility return and seat switch, so historical unlocks
 never masquerade as new ones. No extra storage, request, engine rule or host acknowledgement is added.
 Private submission events and board changes alone cannot create a receipt. Access loss clears all facts.

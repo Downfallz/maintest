@@ -202,6 +202,7 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
   return planning.model().opened ? 'LIVE · COMMAND' : 'LIVE';
 }
 
+type GrowthRow = { creature: number; mutation: string; stage: number | null; colour: string; spells: string[]; passives: string[]; initiative: number | null };
 let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
 
 function render() {
@@ -239,7 +240,8 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  growthUI.render(view, catalogue, visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened);
+  const showGrowth = visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened;
+  growthUI.render(view, catalogue, showGrowth);
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   const plan = planning.model();
   const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
@@ -287,7 +289,9 @@ function render() {
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
     let defense = node.querySelector<HTMLElement>('.creature-defense');
     if (!defense) { defense = document.createElement('span'); defense.className = 'creature-defense'; node.querySelector('.caption')!.append(defense); }
-    defense.textContent = `${one.totalDefense ?? '—'} DEF · ${one.currentInitiative ?? '—'} INIT`;
+    defense.textContent = `${one.totalDefense ?? '—'} DEF`;
+    // Initiative decides who acts first, so it stands beside the name on every screen, phones included.
+    node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
     let cues = node.querySelector<HTMLElement>('.creature-conditions');
     if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
     cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
@@ -319,6 +323,15 @@ function render() {
   if (liveMarkers) text('round-phase', 'UPKEEP');
   const markers = replay.active ? undefined : playbackState.upkeep?.markers ?? liveMarkers;
   if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.upkeep), round: board.round } };
+  // The reveal's crests stand on the battlefield while its receipt is up, on the live board only.
+  const unlocks = showGrowth ? growth.receipt() : null;
+  $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
+  // The receipt floats over the top of the field: crests start below it rather than behind it.
+  const receiptBox = $('growth-receipt').getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
+  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - stageBox.top + 4) : 0;
+  if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
+    id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
+    fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
   scene.present(frame, reduced(), playbackState.rate);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;

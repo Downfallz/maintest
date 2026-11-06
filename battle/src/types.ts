@@ -22,8 +22,13 @@ export const isEnemy = (state: LabState, id: string) => state.board.enemies.some
 export interface UpkeepMarker {
   id: string; name: string; side: string; lines: { text: string; tone: string }[];
 }
+// A public mutation reveal as the battlefield writes it: the gains named, or what to say when it bought no spell.
+export interface MutationRevealMarker {
+  id: string; mutation: string; stage: number | null; colour: string; gains: string[]; fallback: string;
+}
 export interface SceneFrame {
   mutationFocus?: string;
+  reveal?: { round: number; inset?: number; markers: MutationRevealMarker[] };
   upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];

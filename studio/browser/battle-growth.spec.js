@@ -104,9 +104,44 @@ test('inspection selects the opponent and reveals its progress only after public
   await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Acquired');
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
-  await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-reveal-details summary').click();
-  await expect(page.locator('#growth-reveals')).toContainText('First (Your team) · Predator · New: Devour');
-  await expect(page.locator('#growth-reveals')).toContainText('Rival (Opponent) · Brute'); expect(h.errors).toEqual([]);
+  await page.locator('#growth-receipt [data-growth-open]').click();
+  await expect(page.locator('#growth-reveals .reveal-group').first()).toContainText('First');
+  await expect(page.locator('#growth-reveals .reveal-group').first()).toContainText('+ Devour');
+  await expect(page.locator('#growth-reveals .reveal-group').last()).toContainText('Rival'); expect(h.errors).toEqual([]);
+});
+test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
+  const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
+  await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, stage 1, new Devour\. Rival, opponent: Brute, stage 1\./);
+  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
+  await page.locator('#growth-receipt [data-growth-open]').click();
+  await expect(page.locator('#growth-dialog')).toHaveAttribute('data-mode', 'reveal'); await expect(page.locator('#growth-title')).toHaveText('Mutations revealed');
+  await expect(page.locator('#growth-creature')).toBeHidden();
+  const [own, rival] = [page.locator('.reveal-group').first(), page.locator('.reveal-group').last()];
+  await expect(own.locator('h3')).toHaveText('Your team'); await expect(rival.locator('h3')).toHaveText('Opponent');
+  await expect(own.locator('.reveal-mutation')).toHaveText('Predator'); await expect(own.locator('.reveal-stage')).toHaveText('Stage 1');
+  await expect(own.locator('.reveal-spells')).toContainText('+ Devour'); await expect(own.locator('.reveal-spells')).toContainText('2 energy · One enemy');
+  await expect(own.locator('.reveal-meta')).toHaveText('+1 initiative');
+  await expect(rival.locator('.reveal-passive')).toHaveText('No new spell this time.');
+  await page.screenshot({ path: info.outputPath('mutation-reveal.jpg'), type: 'jpeg', quality: 85 });
+  await rival.getByRole('button', { name: "See Rival's mutation path" }).click();
+  await expect(page.locator('#growth-dialog')).toHaveAttribute('data-mode', 'tree'); await expect(page.locator('#growth-creature')).toHaveValue('3');
+  await expect(page.locator('#growth-creature')).toBeFocused();
+  await expect(page.locator('#growth-tree [data-package="brute"]')).toHaveAttribute('open');
+  await expect(page.locator('#growth-tree [data-package="predator"]')).not.toHaveAttribute('open');
+  await page.locator('#growth-close').click(); await page.locator('#growth-receipt [data-growth-open]').click();
+  await page.locator('#growth-explore').click(); await expect(page.locator('#growth-creature')).toHaveValue('1');
+  await page.keyboard.press('Escape'); await page.locator('#growth-dismiss').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('crests leave the field while a choice or history covers it', async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); spellChoice(h); await h.publish();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await page.locator('#combat-open').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  await page.locator('#combat-dialog-close').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await page.locator('#history-open').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  expect(h.errors).toEqual([]);
 });
 test('public unlock receipt and new spell badge appear once; reload is a silent baseline', async ({ page }) => {
   const h = await mount(page); unlock(h); spellChoice(h); await h.publish();
