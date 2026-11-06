@@ -234,7 +234,8 @@ function render() {
   frame = (replay.active ? board.frame : playbackState.frame) as SceneFrame;
   $('battle').dataset.playback = playbackState.stage;
   $('battle').dataset.sequence = String(playbackState.sequence ?? '');
-  $('playback-skip').hidden = !playbackState.active;
+  // An opponent's action is read, never skipped: it offers OK alone (ADR 0139).
+  $('playback-skip').hidden = !playbackState.active || playbackState.incoming;
   text('playback-skip', `Skip to present (${playbackState.remaining})`);
   // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
   // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.

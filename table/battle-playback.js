@@ -172,7 +172,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       canNext: Boolean(current && stage === 'resolved'),
       // Next is offered for every incoming action, whatever the pace, and for everything when the player steps.
-      asks: Boolean(current && (mode === 'step' || incoming(current))), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      asks: Boolean(current && (mode === 'step' || incoming(current))), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;

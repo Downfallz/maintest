@@ -267,6 +267,7 @@ const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolut
 test('the player\'s own cast moves on by itself in Auto; Step still waits for Next on it', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
   assert.equal(h.queue.model().asks, false); assert.equal([...h.timers.values()][0].ms, SETTLE);
+  assert.equal(h.queue.model().incoming, false);
   h.tick(); assert.equal(h.queue.model().sequence, 5);
   const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.tick(); step.tick();
   assert.equal(step.queue.model().asks, true); assert.equal(step.timers.size, 0);
@@ -275,6 +276,7 @@ test('in Auto as in Step an incoming action holds for the OK; switching pace nev
   const h = harness(); h.receive([]); h.receive([incoming(4), incoming(5)]); h.tick(); h.tick();
   assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.timers.size, 0);
   assert.equal(h.queue.model().asks, true); assert.equal(h.queue.model().canNext, true);
+  assert.equal(h.queue.model().incoming, true, 'an incoming action is read, never skipped');
   h.queue.setMode('step'); h.queue.setMode('auto'); assert.equal(h.queue.model().sequence, 4); assert.equal(h.timers.size, 0);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().stage, 'windup');
   h.tick(); h.tick(); h.queue.advance(); assert.equal(h.queue.model().active, false, 'the OK on the last action returns to the present');

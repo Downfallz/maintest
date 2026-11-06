@@ -64,12 +64,13 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test('Auto continues held results and skip restores the live command without acknowledging it', async ({ page }) => {
+test('Auto continues held results; an incoming one offers OK, not Skip, and returns the live command without acknowledging it', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await finishCast(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'auto'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
-  await page.locator('#playback-skip').click(); await expect(page.locator('#playback-next')).toBeHidden();
+  await expect(page.locator('#playback-skip')).toBeHidden(); await finishCast(page, 11);
+  await page.locator('#playback-next').click(); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#combat-open')).toBeEnabled();
   await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);

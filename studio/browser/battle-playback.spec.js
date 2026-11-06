@@ -30,10 +30,13 @@ test('the next choice is withdrawn while results are read, and skip settles to t
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
   test.setTimeout(60000);
   const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
-  await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
-  // Past both incoming impacts' timers (windup and impact): a held action has none left to wait for.
+  // An opponent's action offers OK alone, never Skip, and the next choice waits for it.
+  await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#combat-open')).toBeHidden();
+  // Past the incoming impact's timers (windup and impact): a held action has none left to wait for.
   await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200); await expect(page.locator('#combat-open')).toBeHidden();
-  await page.locator('#playback-skip').click();
+  await page.locator('#playback-next').click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200);
+  await page.locator('#playback-next').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-open')).toBeVisible();
   await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
   await page.clock.runFor(3200); await expect(page.locator('#combat-open')).toBeVisible();

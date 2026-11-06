@@ -111,8 +111,8 @@ test('closing attack playback finishes before the next-round receipt and phase t
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] }, isCritical: false }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7 }],
     frame: { before: roster, after: roster.map(one => creature(one.id, one.id === 1 ? 13 : 20)), timeline: [], rollOffs: [] } } };
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
-  await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  await expect(page.locator('#help-dialog')).toBeHidden();
+  await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
+  await expect(page.locator('#upkeep-dialog')).toBeHidden(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
@@ -185,10 +185,10 @@ test('connection loss settles an animation without opening the queued receipt of
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] } }, appliedOutcomes: [],
     frame: { before: roster, after: roster, timeline: [], rollOffs: [] } } };
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 } });
-  await expect(page.locator('#playback-skip')).toBeVisible();
+  await expect(page.locator('#playback-next')).toBeVisible();
   h.state.status = 500; await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale');
-  await expect(page.locator('#playback-skip')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('#playback-next')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
   expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
