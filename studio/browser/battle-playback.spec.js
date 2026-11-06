@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { audioModule, probeAudio } from './battle-audio-probe.js';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/battle-playback.js';
+import { WINDUP_MS, IMPACT_MS, SETTLE_MS } from '../../table/battle-timing.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './battle-spell-scene.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
@@ -26,7 +27,8 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
 test('the next choice is withdrawn while results are read, and skip settles to the latest board', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
   await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
-  await page.clock.runFor(5000); await expect(page.locator('#combat-open')).toBeHidden();
+  // Past both incoming impacts' timers (windup and impact): a held action has none left to wait for.
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200); await expect(page.locator('#combat-open')).toBeHidden();
   await page.locator('#playback-skip').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-open')).toBeVisible();
   await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
@@ -37,7 +39,8 @@ test('an incoming last action holds for its OK however long; the next round and 
   const h = await mount(page); const after = before.map(one => creature(one.id, one.id === 1 ? 0 : 20));
   const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
   await h.publish([entry(10, { actor: 4, targets: [1], after })], { board, waitingFor: 'Evolution' });
-  await page.clock.runFor(10000);
+  // Twice what the cast and its settle take: no timer is left to move a held action on.
+  await page.clock.runFor(2 * (WINDUP_MS + IMPACT_MS + SETTLE_MS));
   await expect(page.locator('[data-creature="1"] .creature-tag')).toHaveText('DEFEATED'); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#planning-open')).toBeHidden(); await expect(page.locator('#planning-dialog')).toBeHidden();
   await expect(page.locator('#playback-next')).toHaveText('OK'); await expect(page.locator('#playback-next')).toBeFocused();
