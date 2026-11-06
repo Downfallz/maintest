@@ -4151,6 +4151,7 @@ function setupTalentWindow(state) {
 // Keyboard shortcuts use the same guards and submission path as pointer input. Number keys select;
 // repeating the same number never commits a card or target by accident. Enter is the explicit commit.
 function keyboardDecision(state, event) {
+  if (event.target?.closest?.('.home-header, .navigation-panels')) return;
   if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
   if (event.key === 'Escape' && state.boardOpen) {
     event.preventDefault();

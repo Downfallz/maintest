@@ -25,6 +25,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
   click('combat-declare', () => { void controller.submit(); });
   dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
   document.addEventListener('keydown', event => {
+    if ((event.target as Element | null)?.closest?.('.home-header, .navigation-panels')) return;
     if (event.key === 'Escape' && controller.model().target && !document.querySelector('dialog[open]')) { event.preventDefault(); controller.close(); }
   });
 
