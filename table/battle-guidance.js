@@ -55,7 +55,7 @@ const tips = {
   mutation: { title: 'What is a mutation?', lines: [
     'A mutation develops your creature: new spells or a passive, plus initiative. Its branch explains what the creature gains.',
     'Picks are shared across your team. Each creature can acquire at most one mutation this opportunity. Both teams choose privately, then reveal together.',
-    'Choose an eligible creature on the battlefield or open Mutation tree. Preview a branch, then confirm the named mutation and recipient. Pass remaining picks gives up all your unused picks for this round.',
+    'The mutation tree opens with the phase. Choose an eligible creature on the battlefield, preview a branch, then confirm the named mutation and recipient. The tree stays open while team picks remain. Pass remaining picks gives up all your unused picks for this round.',
   ] },
   tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
     'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',

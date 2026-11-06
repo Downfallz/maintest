@@ -20,7 +20,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   const dialog = el<HTMLDialogElement>('planning-dialog');
   let tree: ReturnType<typeof mutationTree> | null = null;
   const tempos = tempoControls(controller, name);
-  let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null;
+  let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null, question = '';
   const expand = el<HTMLButtonElement>('mutation-expand');
   function expandTree(value: boolean) {
     dialog.classList.toggle('expanded-tree', value);
@@ -66,8 +66,6 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       const inspectButton = button('Inspect creature', () => inspect(String(creature)));
       inspectButton.id = 'mutation-inspect'; el('planning-choices').append(inspectButton);
     }
-    const budget = choices.remaining == null ? 'Team pick count unavailable' : `${choices.remaining} team pick${choices.remaining === 1 ? '' : 's'} available`;
-    el('planning-help').textContent = budget;
   }
   type Assignment = { id: number; position: number | null };
   type Fixed = { position: number; label: string; roll: string };
@@ -103,7 +101,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     tree?.dispose(); tree = null;
     expandTree(false); el('mutation-preview-region').replaceChildren(); el('mutation-preview-region').hidden = true;
     if (dialog.open) dialog.close();
-    rendered = ''; creature = null;
+    rendered = ''; creature = null; question = '';
     el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
   }
   // The same selection is drawn pressed wherever it sits: a mutation button, a tempo, pass or the dice order.
@@ -153,6 +151,19 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (focused?.dataset.speed) return `[data-speed="${focused.dataset.speed}"]`;
     return focused?.dataset.tempoTab ? `[data-tempo-tab="${focused.dataset.tempoTab}"]` : null;
   }
+  // The team's picks are the budget a player spends here. Between a sent pick and the next asking the count
+  // is the one the host has not restated yet, so it says the pick went and what is left after it.
+  function pickBudget(model: ReturnType<Controller['model']>) {
+    const offered = model.latest?.options?.evolution?.remainingPicks;
+    if (!Number.isInteger(offered)) return 'Team pick count unavailable';
+    const sent = model.accepted && !model.available, left = sent ? offered - 1 : offered;
+    return `${sent ? 'Pick sent · ' : ''}${left} team pick${left === 1 ? '' : 's'} remaining`;
+  }
+  // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
+  function focusStart() {
+    [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button:not(:disabled)')]
+      .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
+  }
   function confirmLabel(model: ReturnType<Controller['model']>) {
     if (model.sending) return 'Sending…';
     if (model.choice?.tier) return 'Confirm ' + (lastCatalogue?.packages?.find(pack => pack.id === model.choice.tier)?.name ?? model.choice.tier);
@@ -171,6 +182,11 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     dialog.dataset.kind = model.latest.waitingFor;
     expand.hidden = model.latest.waitingFor !== 'Evolution';
     el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
+    // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing
+    // left to offer, so the next creature with offers is shown, and a keyboard starts there again.
+    const continued = dialog.open && question !== '' && model.question !== question && model.latest.waitingFor === 'Evolution';
+    if (continued && !mutationChoices(model.latest, catalogue, creature).faces.length) creature = null;
+    question = model.question;
     rebuild(model, catalogue);
     for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
       // Inspecting reads the board and never edits the draft, so it stays available while sending.
@@ -186,14 +202,10 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
     if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `${confirmLabel(model)} · 1 pick · ${name(model.choice.creature)}`);
     else el('planning-confirm').removeAttribute('aria-label');
+    if (model.latest.waitingFor === 'Evolution') el('planning-help').textContent = pickBudget(model);
     if (!dialog.open) {
-      if (model.latest.waitingFor === 'Evolution') {
-        // A short portrait sheet hides the recipient tabs: focus then starts on the tree itself.
-        dialog.show();
-        [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button')]
-          .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
-      } else dialog.showModal();
-    }
+      if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); } else dialog.showModal();
+    } else if (continued && (!dialog.contains(document.activeElement) || (document.activeElement as HTMLButtonElement).disabled)) focusStart();
   }
   return { render, openCreature, recipient: () => creature };
 }

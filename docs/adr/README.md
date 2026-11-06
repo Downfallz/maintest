@@ -143,3 +143,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0135](0135-draft-team-tempos-before-sequential-confirmation.md) | Draft team tempos before sequential confirmation | Accepted for the opt-in arena |
 | [0136](0136-gate-the-arena-release-behind-a-reversible-preference.md) | Gate the arena release behind a reversible preference | Accepted for the opt-in release candidate |
 | [0137](0137-name-the-game-downfall-instinct.md) | Name the game Downfall Instinct | Accepted |
+| [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view |

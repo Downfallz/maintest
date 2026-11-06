@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
@@ -24,6 +24,9 @@ test('the real catalogue tree follows public purchases without acknowledging the
     });
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible(); await page.locator('#upkeep-close').click();
+    // The mutation tree opens by itself and acknowledges the asking (ADR 0138); the player closes it to read
+    // the public reference, whose own reads are counted from here.
+    await mutationTree(page); await page.locator('#planning-close').click(); await expect.poll(() => shown.length).toBe(1); shown.length = 0;
     await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
     const initial = await read();
     await expect(page.locator('#growth-next')).toHaveText(`Mutation opportunity this round · Round ${initial.board.nextEvolutionRound}`);
@@ -41,7 +44,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
     let next;
     await expect.poll(async () => { next = await read(); return next.waitingAsked; }).not.toBe(initial.waitingAsked);
     if (next.waitingFor === 'Evolution') {
-      await page.locator('#planning-open').click(); await page.locator('#planning-pass').click();
+      await mutationTree(page); await page.locator('#planning-pass').click();
       const passed = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator('#planning-confirm').click(); expect((await passed).status()).toBe(204);
     }

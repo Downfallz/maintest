@@ -264,7 +264,10 @@ Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/
 
 ## AU4: compare offered mutations
 
-Tap an eligible ally on the battlefield, or use **Mutation tree**, to open its private draft.
+The mutation phase opens its private tree by itself once the board is clear: after the upkeep receipt, the
+turn order and a first-use tip ([ADR 0138](../docs/adr/0138-open-the-mutation-tree-with-the-mutation-phase.md)).
+A pick that leaves team picks keeps the tree open on the next creature with offers and its remaining picks;
+the last pick or a pass closes it. Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
 The graph docks below the scene on phones and beside it on wider screens. Expand gives it more
 space. Each selectable node corresponds to an offer from the host. Acquired paths and connections
 use catalogue prerequisites, including shared capstones. Unknown offers stay selectable by id.

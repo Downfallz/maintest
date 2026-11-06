@@ -56,7 +56,10 @@ test('first mutation tip explains team picks, highlights Command and acknowledge
   await expect(page.locator('#help-close')).toBeFocused(); await fitsViewport(page, '#help-close');
   await page.screenshot({ path: info.outputPath('mutation-guide.jpg'), type: 'jpeg', quality: 85 });
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]);
-  await page.keyboard.press('Escape'); await expect(page.locator('#help-open')).toBeFocused();
+  // Closing the tip opens the tree it explained (ADR 0138), which acknowledges the asking and takes focus.
+  await page.keyboard.press('Escape'); await expect(page.locator('#planning-dialog')).toBeVisible();
+  await expect(page.locator('#planning-creatures [aria-pressed="true"]')).toBeFocused(); await expect.poll(() => h.state.shown).toEqual(['11']);
+  await page.locator('#planning-close').click();
   await expect(page.locator('#instruction')).toContainText('Choose a creature on the battlefield'); expect(h.state.errors).toEqual([]);
 });
 test('waiting room including empty seats defers the first tip until actual arrival', async ({ page }) => {
@@ -76,20 +79,21 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
   await h.publish([], { waitingFor: 'Speed', waitingAsked: 13, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-explanation')).toContainText('only Precision can crit');
   await close(page); await h.publish([], { waitingAsked: 14, waitingCreature: 3 });
-  await expect(page.locator('#help-dialog')).toBeHidden(); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // Only the mutation tree acknowledged, on the Evolution askings it opened for; no tip and no tempo asking did.
+  await expect(page.locator('#help-dialog')).toBeHidden(); expect(h.state.shown).toContain('12');
+  expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('mute prevents future tips, keeps History, and Help reopens the current subject', async ({ page }) => {
-  const h = await mount(page); await page.locator('#help-mute').check(); await close(page);
+  const h = await mount(page); await page.locator('#help-mute').check(); await close(page); await page.locator('#planning-close').click();
   await h.publish([entry(1)], { waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await page.locator('#playback-skip').click(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('manual Help preserves a mutation draft and fences a delayed acknowledgement', async ({ page }) => {
-  const h = await mount(page); await close(page);
-  let release; h.state.ack = new Promise(resolve => { release = resolve; });
-  await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  const h = await mount(page); let release; h.state.ack = new Promise(resolve => { release = resolve; });
+  await close(page); await page.locator('[data-mutation="root"]').click();
   await page.locator('#planning-confirm').click(); await page.locator('#planning-dialog [data-help-open]').click();
   await expect(page.locator('#planning-confirm')).toBeDisabled(); release();
   await expect.poll(() => h.state.shown.length).toBe(1); expect(h.state.writes).toEqual([]);
@@ -125,7 +129,8 @@ test('tips, primary choices and round guide fit short portrait, landscape and 20
   const h = await mount(page);
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#help-close');
-    await close(page); await fitsViewport(page, '#help-open, #planning-open, #history-open');
+    await close(page); if (await page.locator('#planning-dialog').isVisible()) await page.locator('#planning-close').click();
+    await fitsViewport(page, '#help-open, #planning-open, #history-open');
     await page.locator('#help-open').click();
   }
   await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '.help-body, .help-body p, .help-footer label { font-size: 28px !important; }' });
@@ -149,7 +154,7 @@ test('Help preserves a spell and selected field target without another acknowled
   await h.publish([]); await close(page);
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#combat-confirm')).toBeEnabled(); await expect(page.locator('#help-open')).toBeFocused();
-  expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.shown).toEqual(['11', '12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 
 test('an unseen tip waits until the player closes another dialog', async ({ page }) => {
@@ -158,7 +163,7 @@ test('an unseen tip waits until the player closes another dialog', async ({ page
   await expect(page.locator('#help-dialog')).toBeHidden(); await expect(page.locator('#history-dialog')).toBeVisible();
   await page.locator('#history-close').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('blocked preference storage keeps first-use help and in-memory dismissal working', async ({ page }) => {
@@ -174,7 +179,7 @@ test('blocked preference storage keeps first-use help and in-memory dismissal wo
   const h = await mount(page); await expect(page.locator('#help-dialog')).toBeVisible(); await close(page);
   await h.publish([], { waitingAsked: 12 }); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#help-open').click(); await expect(page.locator('#help-dialog')).toBeVisible();
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.shown).toContain('12'); expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('a hidden-intent table, whose catalogue names no declaration, teaches hidden spells from the first tip', async ({ page }) => {
   const h = await mount(page, { mode: null });

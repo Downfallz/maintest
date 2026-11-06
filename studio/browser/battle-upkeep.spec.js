@@ -85,8 +85,9 @@ test('inspection is current while receipt and journal retain historical zero hea
   await page.locator('#upkeep-dialog [data-history-open]').click();
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('Healing over time +0');
+  // Closing the receipt opens the mutation tree (ADR 0138): that, not the receipt, acknowledges the asking.
   await page.locator('#history-close').click(); await close(page);
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
@@ -105,7 +106,7 @@ test('inspection reads current conditions while the receipt keeps the damage of 
 });
 test('closing attack playback finishes before the next-round receipt and phase tip', async ({ page }) => {
   const h = await mount(page, { round: 2, feed: [], tips: true });
-  await page.locator('#help-close').click();
+  await page.locator('#help-close').click(); await page.locator('#planning-close').click();
   const attack = { sequence: 25, round: 3, event: { kind: 'CombatActionResolved', roundId: 2,
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] }, isCritical: false }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7 }],
     frame: { before: roster, after: roster.map(one => creature(one.id, one.id === 1 ? 13 : 20)), timeline: [], rollOffs: [] } } };
@@ -118,7 +119,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await page.locator('#playback-next').click();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
   await page.locator('#help-close').click(); await page.locator('#playback-result').click();
-  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('polls, hidden-tab reconnection and reload do not repeat the same receipt', async ({ page }) => {
   const h = await mount(page); await close(page); await h.publish([]);
@@ -128,11 +129,12 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.view.feed = [energy(1), ongoing(1)]; await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden();
-  await expect(page.locator('#upkeep-dialog')).toBeHidden();
+  await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
   await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // The tree opened once before the reload and once after; neither receipt acknowledged anything.
+  expect(h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);
 });
 test('a legacy receipt states missing ordinary energy alongside actual effects', async ({ page }) => {
   const h = await mount(page, { feed: [ongoing(1, true)] });
@@ -144,7 +146,7 @@ test('a legacy receipt states missing ordinary energy alongside actual effects',
 });
 test('an existing draft delays the receipt and closing settings unblocks it without a write', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1)] });
-  await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();
   await h.publish([ongoing(1)]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('#planning-selection')).toHaveText('Warden · Warden');
   await page.locator('#planning-close').click(); await expect(page.locator('#upkeep-dialog')).toBeVisible();
@@ -178,7 +180,7 @@ test('Continue stays reachable in short landscape and at 200 percent text', asyn
 });
 
 test('connection loss settles an animation without opening the queued receipt offline', async ({ page }) => {
-  const h = await mount(page, { round: 2, feed: [] });
+  const h = await mount(page, { round: 2, feed: [] }); await page.locator('#planning-close').click();
   const attack = { sequence: 25, event: { kind: 'CombatActionResolved', roundId: 2,
     resolution: { action: { actor: 4, spell: 'strike', targets: [1] } }, appliedOutcomes: [],
     frame: { before: roster, after: roster, timeline: [], rollOffs: [] } } };
@@ -189,7 +191,7 @@ test('connection loss settles an animation without opening the queued receipt of
   await expect(page.locator('#playback-skip')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
-  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('a newer round never replaces the receipt currently being read under History', async ({ page }) => {
@@ -200,5 +202,5 @@ test('a newer round never replaces the receipt currently being read under Histor
   await page.locator('#history-close').click(); await close(page);
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Upkeep');
   await close(page); await h.publish([]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
-  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });

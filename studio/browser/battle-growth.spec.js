@@ -81,13 +81,13 @@ test('Help reference is read-only, keyboard navigable and excludes private pendi
   await expect(page.locator('#growth-next')).toHaveText('Next mutation opportunity · Round 8');
   await expect(cap).toHaveAttribute('open'); await expect(cap.locator(':scope > summary')).toBeFocused();
   await expect(page.locator('#growth-tree [data-package="cap"]').last()).not.toHaveAttribute('open');
-  expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.screenshot({ path: info.outputPath('mutation-reference.png') });
   await page.keyboard.press('Escape'); await expect(page.locator('#help-dialog [data-growth-open]')).toBeFocused();
   expect(h.errors).toEqual([]);
 });
 test('reference over a mutation draft preserves its selection and does not acknowledge again', async ({ page }) => {
-  const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="predator"]').click();
+  const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="predator"]').click();
   await page.locator('#planning-dialog [data-help-open]').click(); await page.locator('#help-dialog [data-growth-open]').click();
   await h.publish(); await expect(page.locator('#planning-confirm')).toBeDisabled();
   expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
@@ -102,7 +102,7 @@ test('inspection selects the opponent and reveals its progress only after public
   await expect(page.locator('#growth-tree')).not.toContainText('Not offered this pick');
   unlock(h); await h.publish(); await expect(page.locator('#growth-progress')).toHaveText('Brute · Stage 1');
   await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Acquired');
-  await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
   await page.locator('#growth-receipt [data-growth-open]').click(); await page.locator('#growth-reveal-details summary').click();
   await expect(page.locator('#growth-reveals')).toContainText('First (Your team) · Predator · New: Devour');
@@ -153,7 +153,7 @@ test('multiclass reference keeps close and creature selection reachable in short
   await fitsViewport(page, '#growth-close, #growth-creature'); expect(h.errors).toEqual([]);
 });
 test('a future unlock waits behind a held closing cast and keeps its badge for the live spell choice', async ({ page }) => {
-  const h = await mount(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
+  const h = await mount(page); await page.locator('#planning-close').click(); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
   const before = structuredClone([...h.view.board.allies, ...h.view.board.enemies]);
   unlock(h); h.view.feed[0].sequence = 21; h.view.feedNext = 22;
   h.view.feed.unshift({ sequence: 20, event: { kind: 'CombatActionResolved', roundId: 2,
@@ -166,11 +166,11 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
   await page.getByRole('button', { name: 'Close inspection' }).click();
-  expect(h.shown).toEqual([]); expect(h.writes).toEqual([]);
+  expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.locator('#playback-skip').click();
   await expect(page.locator('#growth-receipt')).toBeVisible();
   await expect(page.locator('#growth-announcement')).toContainText('Devour');
   await page.locator('#combat-open').click();
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
-  expect(h.shown).toEqual(['22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  expect(h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
