@@ -4,7 +4,7 @@ import type { Placement } from './types';
 // stands. Both the laboratory and the live preview draw them, so the two cannot drift apart in what a tap lands on.
 
 // Static structure only; every authored text is assigned through textContent by the caller.
-const TEMPLATE = '<span class="creature-tag"></span><span class="creature-result"></span><span class="caption"><span class="creature-name"></span><span class="creature-init"></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats"></span></span>';
+const TEMPLATE = '<span class="creature-tag"></span><span class="creature-result"></span><span class="caption"><span class="creature-name"></span><span class="creature-badges"><span class="creature-init"></span><span class="creature-defense" hidden></span><span class="creature-conditions"></span></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats"></span></span>';
 
 export function creatureButton(id: string) {
   const node = document.createElement('button');

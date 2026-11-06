@@ -23,6 +23,7 @@
     </header>
     <nav class="timeline-wrap" aria-label="Activation order"><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
+      <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow">NEW ROUND</span><strong id="round-toast-number"></strong></div>
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
       <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
       <aside id="growth-receipt" hidden aria-label="Mutations revealed"><span class="growth-receipt-mark" aria-hidden="true"></span><p class="growth-receipt-text"><strong>Mutations revealed</strong><span id="growth-receipt-summary"></span></p><button type="button" data-growth-open data-growth-mode="reveal" aria-describedby="growth-announcement">See</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation reveal">×</button></aside>

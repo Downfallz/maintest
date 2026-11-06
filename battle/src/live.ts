@@ -1,6 +1,7 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
+import { conditionIcons, iconElement } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.js';
@@ -203,6 +204,20 @@ function connectionText(replaying: boolean, combatOpened: boolean) {
 }
 
 type GrowthRow = { creature: number; mutation: string; stage: number | null; colour: string; spells: string[]; passives: string[]; initiative: number | null };
+// A new round gets a short announcement at the top of the field when the shown board reaches it live; a page
+// opening on a round, a replay or a seat change is a baseline, never a new round.
+let announcedRound: number | null = null, roundToastTimer = 0;
+function announceRound(round: number | null) {
+  if (round == null) { announcedRound = null; return; }
+  if (announcedRound !== null && round > announcedRound) {
+    const toast = $('round-toast');
+    text('round-toast-number', `Round ${round}`);
+    toast.hidden = false; toast.classList.remove('showing'); void toast.offsetWidth; toast.classList.add('showing');
+    window.clearTimeout(roundToastTimer);
+    roundToastTimer = window.setTimeout(() => { toast.hidden = true; toast.classList.remove('showing'); }, 2600);
+  }
+  announcedRound = round;
+}
 let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
 
 function render() {
@@ -297,18 +312,30 @@ function render() {
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
-    let defense = node.querySelector<HTMLElement>('.creature-defense');
-    if (!defense) { defense = document.createElement('span'); defense.className = 'creature-defense'; node.querySelector('.caption')!.append(defense); }
-    defense.textContent = `${one.totalDefense ?? '—'} DEF`;
-    // Initiative decides who acts first, so it stands beside the name on every screen, phones included.
+    // Initiative, defense when it is above zero, and one icon per kind of condition, on every screen: the numbers
+    // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
     node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
-    let cues = node.querySelector<HTMLElement>('.creature-conditions');
-    if (!cues) { cues = document.createElement('span'); cues.className = 'creature-conditions'; node.querySelector('.caption')!.append(cues); }
-    cues.textContent = creatureCues(one); cues.hidden = !cues.textContent;
+    const defense = node.querySelector<HTMLElement>('.creature-defense')!;
+    const defended = Number.isFinite(one.totalDefense) && one.totalDefense > 0;
+    defense.hidden = !defended; defense.title = defended ? `${one.totalDefense} defense` : '';
+    if (defended && defense.dataset.value !== String(one.totalDefense)) {
+      defense.dataset.value = String(one.totalDefense); defense.replaceChildren(iconElement('defense-gain'), document.createTextNode(String(one.totalDefense)));
+    }
+    const cues = node.querySelector<HTMLElement>('.creature-conditions')!;
+    const icons = conditionIcons(one, catalogue?.effects ?? []);
+    const iconKey = JSON.stringify(icons);
+    if (cues.dataset.icons !== iconKey) {
+      cues.dataset.icons = iconKey;
+      cues.replaceChildren(...icons.map(icon => { const cue = document.createElement('span'); cue.className = 'cue'; cue.title = icon.title; cue.dataset.cue = icon.key; cue.append(iconElement(icon.key)); return cue; }));
+    }
+    cues.hidden = icons.length === 0;
+    // The status tag stands above the whole caption, however many badge rows a narrow figure wraps it into.
+    node.style.setProperty('--caption-height', `${node.querySelector<HTMLElement>('.caption')!.offsetHeight}px`);
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
     node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
+  announceRound(view && !replay.active ? board.round : null);
   text('round-phase', phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);

@@ -476,8 +476,13 @@ Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/imag
 Every ally and opponent, including defeated creatures and missing-art fallbacks, opens a reference with
 stable scene/journal identity, current defense/initiative, conditions and named spell/caster sources.
 Fresh conditions, permanent effects, remaining countdowns and immunity keep the shared board semantics.
-Desktop captions also expose defense, initiative and compact condition/passive cues; narrow/short layouts
-keep these in the inspection and accessible label so the field's target names remain legible.
+Every caption, on every screen, carries a badge row under the full name: initiative, defense with a
+shield when above zero, and one icon per kind of condition (`src/condition-icons.ts`). The icon comes
+from the host's effect cue, the stat the effect moves and whether it is a loss, so the page names no
+effect: a health loss is a drop, a gain a heart, defense a shield up or cracked, a stun a star. The
+numbers and the engine's words are in each badge's title, the accessible label and the inspection; the
+status tag above is placed from the caption's measured height. A new round seen live is announced by a
+short banner at the top of the field that fades by itself.
 
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
 Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell

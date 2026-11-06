@@ -542,25 +542,36 @@
 #inspect-spells summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-size: 15px; color: #f0e9d7; }
 .inspect-footer { margin: 0; border-top: 1px solid #52695e; }
 .inspect-footer button { min-height: 44px; }
-.creature-defense, .creature-conditions { display: block; font-size: 10px; line-height: 1.25; }
-/* Initiative sits under the whole name, never beside it: a disambiguated name must not be cut to fit. */
-.creature-init {
-  display: table; margin: 2px auto 0; padding: 1px 6px; border: 1px solid #eac88e99; border-radius: 9px;
+/* Under the name, one row of badges on every screen: initiative, defense when above zero (a shield), and an
+   icon per kind of condition. A narrow figure wraps the row; the full words are in the titles. */
+.creature-badges { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px; margin-top: 2px; }
+.creature-init, .creature-defense {
+  display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border: 1px solid #eac88e99; border-radius: 9px;
   background: #101e24d9; color: #f1d7a2; font: 700 9px/1.45 system-ui,sans-serif; letter-spacing: .04em; white-space: nowrap; text-shadow: none;
 }
-.creature-init:empty { display: none; }
-.creature-conditions { color: #e4c393; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 619px), (max-height: 520px) { .creature-defense, .creature-conditions { display: none; } }
+.creature-init:empty, .creature-defense[hidden], .creature-conditions[hidden] { display: none; }
+.creature-defense { padding-left: 3px; border-color: #8fc3ef99; color: #d6e9fb; }
+.creature-defense .cue-icon { width: 11px; height: 11px; }
+.creature-conditions { display: inline-flex; gap: 2px; }
+.creature-conditions .cue { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: #101e24e0; border: 1px solid #ffffff26; }
+.cue-icon { width: 11px; height: 11px; fill: currentColor; }
+.cue-icon path.stroked { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.cue-health-loss { color: #ef7a6c; } .cue-health-gain { color: #86d897; }
+.cue-defense-gain { color: #8fc3ef; } .cue-defense-loss { color: #e8a76f; }
+.cue-stun { color: #f2d76b; } .cue-energy-gain, .cue-energy-loss { color: #8edcf0; }
+.cue-initiative-gain, .cue-initiative-loss { color: #d2b6f2; } .cue-damage-gain, .cue-damage-loss { color: #f0b48a; } .cue-other { color: #c7d5cd; }
+@media (min-width: 760px) and (min-height: 600px) {
+  .creature-init, .creature-defense { font-size: 10px; }
+  .creature-conditions .cue { width: 20px; height: 20px; }
+  .creature-conditions .cue-icon, .creature-defense .cue-icon { width: 13px; height: 13px; }
+}
 @media (max-height: 520px) {
   .inspect-header, .inspect-footer { padding: 6px 12px; }
   .inspect-header h2 { font-size: 20px; }
   #inspect-side { display: none; }
 }
-/* The status tag clears the whole caption, initiative line included. */
-#battle .creature-tag { bottom: 72px; }
-@media (min-width: 620px) and (min-height: 521px) {
-  #battle .creature-tag { bottom: 100px; }
-}
+/* The status tag clears the whole caption, whatever its badge rows: the page measures it per figure. */
+#battle .creature-tag { bottom: calc(var(--caption-height, 72px) + 6px); }
 @media (max-width: 619px) and (max-height: 620px) {
   /* Keep the 44px result button inside the short portrait dock. */
   #battle .command-dock { row-gap: 3px; }
@@ -752,4 +763,18 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
   body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(71dvh,calc(100dvh - 252px),660px); }
   body:has(#planning-dialog.expanded-tree[open]) #battle-zone { grid-row-start: 2; }
   body:has(#planning-dialog.expanded-tree[open]) .timeline-wrap { display: none; }
+}
+
+/* A new round's announcement: a short banner at the top of the field that fades by itself. */
+#round-toast {
+  position: absolute; z-index: 9; top: 14px; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px;
+  padding: 8px 26px 10px; border: 1px solid #b79868; border-radius: 10px; background: linear-gradient(180deg,#1d3236f2,#122126f2);
+  box-shadow: 0 10px 28px #0008; pointer-events: none; text-align: center;
+}
+#round-toast[hidden] { display: none; }
+#round-toast .eyebrow { margin: 0; font-size: 10px; letter-spacing: .2em; color: var(--muted); }
+#round-toast strong { font: 26px Georgia,serif; color: #f1d7a2; letter-spacing: .04em; }
+@media (prefers-reduced-motion: no-preference) {
+  #round-toast.showing { animation: round-toast 2600ms ease both; }
+  @keyframes round-toast { 0% { opacity: 0; transform: translate(-50%,-8px); } 12%, 78% { opacity: 1; transform: translate(-50%,0); } 100% { opacity: 0; transform: translate(-50%,-4px); } }
 }
