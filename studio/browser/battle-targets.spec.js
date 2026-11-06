@@ -67,7 +67,7 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   await page.locator('#combat-confirm').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'Action', creature: 1, spell: 'spell-0', targets: [4, 5], asked: 21 }]);
-  await expect(page.locator('#playback-pacing')).toBeVisible();
+  await expect(page.locator('#playback-pacing')).toBeHidden();
 });
 test('a stunned legal target keeps its stun visible and spoken while targets are chosen', async ({ page }) => {
   const h = await mount(page); h.view.board.enemies[1].isStunned = true; await notify(page);

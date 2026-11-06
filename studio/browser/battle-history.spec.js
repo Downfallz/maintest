@@ -102,9 +102,8 @@ test('new events preserve expanded details, keyboard focus and reading position'
   await expect.poll(() => page.locator('#history-list').evaluate(node => node.scrollHeight - node.scrollTop - node.clientHeight)).toBeLessThan(2);
   expect(h.state.errors).toEqual([]);
 });
-for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} erases all journal surfaces and pending updates`, async ({ page }) => {
+for (const reason of ['hidden', 'revoked']) test(`${reason} erases all journal surfaces and pending updates`, async ({ page }) => {
   const h = await mount(page); await page.locator('#history-open').click();
-  if (reason === 'seat') { await page.locator('#history-close').click(); await page.locator('#switch-seat').click(); }
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(rows(page)).toHaveCount(0); await expect(page.locator('#history-dialog')).toBeHidden();
@@ -116,7 +115,7 @@ test('two-round retention is explicit and capped while viewport controls stay re
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const h = await mount(page, Array.from({ length: 205 }, (_, i) => entry(i + 1)));
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#history-open, #switch-seat, #settings');
+    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#history-open, #help-open, #settings');
     await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(200);
     await expect(page.locator('#history-limit')).toContainText('Older entries are not included');
     await fitsViewport(page, '#history-close'); await page.locator('#history-close').click();

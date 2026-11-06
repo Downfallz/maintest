@@ -153,7 +153,7 @@ test('multiclass reference keeps close and creature selection reachable in short
   await fitsViewport(page, '#growth-close, #growth-creature'); expect(h.errors).toEqual([]);
 });
 test('a future unlock waits behind a held closing cast and keeps its badge for the live spell choice', async ({ page }) => {
-  const h = await mount(page); await page.selectOption('#playback-mode', 'step');
+  const h = await mount(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
   const before = structuredClone([...h.view.board.allies, ...h.view.board.enemies]);
   unlock(h); h.view.feed[0].sequence = 21; h.view.feedNext = 22;
   h.view.feed.unshift({ sequence: 20, event: { kind: 'CombatActionResolved', roundId: 2,
@@ -161,7 +161,7 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
-  await page.clock.runFor(1700); await expect(page.locator('#growth-receipt')).toBeHidden();
+  await page.clock.runFor(3400); await expect(page.locator('#growth-receipt')).toBeHidden();
   await expect(page.locator('#round-number')).toHaveText('02');
   await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');

@@ -333,7 +333,7 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 ## AU7: pace results and round turnover
 
-Presentation settings select **Auto** (default) or **Step**, and so does the reading toolbar under the board; the choice
+Match settings (the gear in the header) select **Auto** (default) or **Step**; the choice
 is independent of Help, reduced motion and animation speed, and lasts for the page (it is not stored).
 An action still animates in Step, then holds its exact applied frame until **Next result**. **Auto** resumes
 without replaying the impact. **Skip to present**, opening a live choice, rotation (an orientation change, not every resize), a motion/speed change or
@@ -554,3 +554,12 @@ release browser gates ([ADR 0136](../docs/adr/0136-gate-the-arena-release-behind
 Sound is ART-6's ([ADR 0134](../docs/adr/0134-polish-confirmed-playback-with-opt-in-sound.md)). See the
 [acceptance record](../docs/tabletop/battle-release-acceptance.md) for budgets, repeatable browser measurements
 and the physical-device checks still pending.
+
+## Header and dock simplification
+
+The live view keeps its header to the round, its phase beside it, History, Help (`?`) and one gear for every
+match setting: motion, sound, reading mode, playback speed, vibration, notifications, notes and concede.
+The "choose viewpoint" switch, the upkeep-and-aftermath review overlay, the dock's link back to the table and the
+"provisional artwork" footer are gone; the seat is named in the dock without the word viewpoint. **Next result** and
+**Skip** float over the bottom of the battlefield only while results play, because a row appearing in the grid would
+resize the scene, and a resize cancels playback. On a phone the header is 48px (44px on short screens).

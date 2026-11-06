@@ -13,13 +13,13 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   await h.publish([entry(12), entry(10), entry(10)]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
-  await fits(page); await page.clock.runFor(440);
+  await fits(page); await page.clock.runFor(860);
   await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
   await expect(page.locator('[data-creature="4"] .creature-effect')).toContainText('Damage 7!');
   await page.screenshot({ path: info.outputPath('confirmed-impact.jpg'), type: 'jpeg', quality: 85 });
-  await h.publish([entry(10), entry(12)]); await page.clock.runFor(1100);
+  await h.publish([entry(10), entry(12)]); await page.clock.runFor(2200);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '12');
-  await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
+  await page.clock.runFor(3200); await expect(page.locator('#playback-skip')).toBeHidden();
   await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
 });
@@ -29,7 +29,7 @@ test('skip and opening combat controls settle to the latest board without waitin
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible();
   await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
-  await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.runFor(2500);
+  await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.runFor(5000);
   await expect(page.locator('#combat-dialog')).toBeVisible();
 });
 test('the final lethal action remains in its round before the next upkeep snapshot', async ({ page }) => {
@@ -37,9 +37,9 @@ test('the final lethal action remains in its round before the next upkeep snapsh
   const board = { ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', allies: after.slice(0, 3), enemies: after.slice(3) };
   await h.publish([entry(10, { after })], { board, waitingFor: 'Evolution' });
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
-  await expect(page.locator('#round-number')).toHaveText('02'); await page.clock.runFor(440);
+  await expect(page.locator('#round-number')).toHaveText('02'); await page.clock.runFor(860);
   await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
-  await page.clock.runFor(1200); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
+  await page.clock.runFor(2400); await expect(page.locator('#round-number')).toHaveText('03'); expect(h.errors).toEqual([]);
 });
 test('multi-target impacts, conditions and an enemy actor render without lab assumptions', async ({ page }) => {
   const h = await mount(page);
@@ -48,7 +48,7 @@ test('multi-target impacts, conditions and an enemy actor render without lab ass
   await h.publish([entry(10, { actor: 4, targets: [1, 2], after, outcomes: [
     { kind: 'DamageOutcome', target: 1, amount: 7 }, { kind: 'DamageOutcome', target: 2, amount: 7 },
     { kind: 'ConditionOutcome', target: 2, effect: { kind: 'Bleed', amountPerRound: 2 } }] })]);
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup'); await page.clock.runFor(440);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup'); await page.clock.runFor(860);
   await expect(page.locator('[data-creature="1"] .creature-effect')).toContainText('Damage 7');
   await expect(page.locator('[data-creature="2"] .creature-effect')).toContainText('Bleed 2');
   await page.locator('[data-creature="2"]').click(); await expect(page.locator('#inspect-effects')).toContainText('Stunned');
@@ -59,7 +59,7 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
   await h.publish([entry(10, { fizzled: kind === 'fizzle', legacy: kind === 'legacy', targets: kind === 'support' ? [] : [4],
     outcomes: kind === 'support' ? [{ kind: 'HealOutcome', target: 1, amount: 3 }, { kind: 'EnergyOutcome', target: 1, amount: 2 }] : undefined })]);
   await expect(page.locator('#playback-result')).toBeVisible();
-  await page.clock.runFor(440); await page.locator('#playback-result').click();
+  await page.clock.runFor(860); await page.locator('#playback-result').click();
   await expect(page.locator('#result-text')).toContainText(kind === 'fizzle' ? 'fizzled: Not enough energy' : kind === 'support' ? 'Heal 3' : 'Damage 7');
   if (kind === 'legacy') await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.errors).toEqual([]);
@@ -67,7 +67,7 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
 test('the dock\'s instruction is back once the last action has settled', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]);
   await expect(page.locator('#playback-skip')).toBeVisible();
-  await page.clock.runFor(1600); await expect(page.locator('#playback-skip')).toBeHidden();
+  await page.clock.runFor(3200); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
   await expect(page.locator('#instruction')).toContainText('choose a spell, then targets');
@@ -79,9 +79,8 @@ test('reduced motion shows applied results immediately and resize cancels playba
   await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(100);
   await expect(page.locator('#playback-skip')).toBeHidden(); await fits(page); expect(h.errors).toEqual([]);
 });
-for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
+for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
-  if (reason === 'seat') await page.locator('#switch-seat').click();
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
@@ -174,13 +173,13 @@ test('quills fly to each confirmed recipient and are gone once the action settle
   const errors = await mounted(page); const frame = quills();
   await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
   expect((await renderedEffects(page)).map(effect => effect.creature)).toEqual(['4', '5']);
-  await presentSpell(page, frame, 'decision'); await page.clock.runFor(700);
+  await presentSpell(page, frame, 'decision'); await page.clock.runFor(1400);
   expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
 });
 test('a resize during the windup cancels the quills in flight', async ({ page }) => {
   const errors = await mounted(page); const frame = quills();
   await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'windup');
-  await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(700);
+  await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(1400);
   expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
 });
 test('reduced motion draws no vector at impact', async ({ page }) => {
@@ -193,7 +192,7 @@ test('a fizzle launches nothing and leaves only a broken cast mark at the caster
   await presentSpell(page, fizzle, 'decision'); await presentSpell(page, fizzle, 'windup'); expect(await renderedEffects(page)).toEqual([]);
   await presentSpell(page, fizzle, 'impact');
   expect((await renderedEffects(page)).map(effect => [effect.creature, effect.motif])).toEqual([['1', 'fizzle']]);
-  await page.clock.runFor(900); expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
+  await page.clock.runFor(1800); expect(await renderedEffects(page)).toEqual([]); expect(errors).toEqual([]);
 });
 test('a caster that is its own beneficiary shows both the blood cost and the ward', async ({ page }) => {
   const errors = await mounted(page);
@@ -227,7 +226,7 @@ test('live playback shows the necromantic recipients apart from the caster blood
   action.event.resolution.isCritical = false;
   await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
-  await page.clock.runFor(460);
+  await page.clock.runFor(900);
   await expect(page.locator('[data-creature="1"] .creature-effect')).toContainText('Damage 2');
   await expect(page.locator('[data-creature="4"] .creature-effect')).toContainText('Bleed 2');
   await expect(page.locator('[data-creature="5"] .creature-effect')).toContainText('Bleed 2');
@@ -297,13 +296,13 @@ async function sounding(page, h, sequence) {
 }
 test('no audio context exists before the player turns sound on', async ({ page }) => {
   await probeAudio(page); const h = await mount(page);
-  await h.publish([entry(10)]); await page.clock.runFor(1600);
+  await h.publish([entry(10)]); await page.clock.runFor(3200);
   expect(await probe(page)).toEqual({ contexts: 0, starts: 0, stops: 0 }); expect(h.errors).toEqual([]);
 });
 test('one confirmed impact sounds once, however often it is polled', async ({ page }) => {
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await sounding(page, h, 12);
-  await h.publish([entry(12)]); await page.clock.runFor(1500);
+  await h.publish([entry(12)]); await page.clock.runFor(3000);
   expect((await probe(page)).starts).toBe(1); expect(h.errors).toEqual([]);
 });
 test('skipping during the impact cuts its tone', async ({ page }) => {
@@ -316,12 +315,6 @@ test('a hidden page cuts the tone that was playing', async ({ page }) => {
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await sounding(page, h, 12);
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
-});
-test('switching seats cuts the tone that was playing', async ({ page }) => {
-  await probeAudio(page); const h = await mount(page); await soundOn(page);
-  await sounding(page, h, 12);
-  await page.locator('#switch-seat').click();
   expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
 });
 test('a seat revoked while sound is being turned on leaves it off', async ({ page }) => {
@@ -337,7 +330,7 @@ test('turning sound off keeps the next impact silent', async ({ page }) => {
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await page.locator('#settings').click(); await page.locator('#sound').uncheck();
   await page.getByRole('button', { name: 'Close settings' }).click();
-  await h.publish([entry(13)]); await page.clock.runFor(1600);
+  await h.publish([entry(13)]); await page.clock.runFor(3200);
   expect((await probe(page)).starts).toBe(0); expect(h.errors).toEqual([]);
 });
 

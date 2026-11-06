@@ -75,7 +75,6 @@
 .combat-buttons button { font-size: 12px; padding: 8px; }
 #combat-confirm { flex: 1; }
 #combat-error, #combat-dialog-error, #planning-error, #planning-dialog-error, #match-error { color: #ffbca9; font-size: 11px; margin: 5px 0 0; max-height: 48px; overflow: auto; }
-#battle[data-combat="targets"] #play-link { display: none; }
 #battle[data-combat="targets"] .creature.is-targetable { cursor: pointer; }
 #battle .creature[aria-pressed="true"] .caption { background: #5a48297d; border-bottom: 1px solid var(--gold); }
 #combat-dialog { width: min(900px,calc(100vw - 28px)); height: min(780px,calc(100dvh - 32px)); padding: 20px; overflow: hidden; }
@@ -142,7 +141,6 @@
 .creature-effect { position: absolute; left: 0; right: 0; bottom: 100%; color: #fff0ce; background: #102129ed; border: 1px solid #bca77570; border-radius: 4px; padding: 4px; font-size: 10px; line-height: 1.4; max-height: 44px; overflow: hidden; pointer-events: none; }
 @media (max-width: 619px) {
   #battle:has(#playback-skip:not([hidden])) .battle-actions { flex-wrap: wrap; }
-  #battle:has(#playback-skip:not([hidden])) #play-link { display: none; }
   #playback-result { margin: 0; }
   /* Room for the result while an action plays; the instruction is back the moment the board is current. */
   #battle:has(#playback-skip:not([hidden])) #instruction { display: none; }
@@ -186,7 +184,7 @@
 #concede-dialog form { display: inline; }
 #replay-controls { grid-column: 1 / -1; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: #142126; padding: 12px 24px; overflow: hidden; min-height: 0; border-top: 1px solid #607568; }
 #replay-controls > div:first-child { overflow: auto; }
-#battle[data-replay="true"] { grid-template-rows: 76px 70px minmax(0, 1fr) minmax(140px, 25vh) 26px; }
+#battle[data-replay="true"] { grid-template-rows: 76px 70px minmax(0, 1fr) minmax(140px, 25vh); }
 #battle[data-replay="true"] .command-dock { display: none; }
 #replay-controls p { margin: 8px 0; }
 .replay-buttons { margin-top: 10px; }
@@ -196,11 +194,11 @@
   #planning-creatures { top: -18px; }
   .planning-footer { bottom: -18px; }
   .mutation-branch { padding-left: 6px; }
-  #battle[data-replay="true"] { grid-template-rows: 60px 52px minmax(0, 1fr) minmax(150px, 30vh) 20px; }
+  #battle[data-replay="true"] { grid-template-rows: 60px 52px minmax(0, 1fr) minmax(150px, 30vh); }
   #replay-controls { padding: 10px 14px; }
 }
 @media (max-height: 520px) and (min-width: 620px) {
-  #battle[data-replay="true"] { grid-template-rows: 50px 46px minmax(0, 1fr) 110px 18px; }
+  #battle[data-replay="true"] { grid-template-rows: 50px 46px minmax(0, 1fr) 110px; }
   #replay-controls { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 12px; padding: 8px 16px; }
   .replay-buttons { align-content: center; margin-top: 0; }
 }
@@ -277,11 +275,11 @@
   .help-header, .help-body, .help-footer { padding-left: 12px; padding-right: 12px; }
 }
 @media (max-height: 650px) and (max-width: 619px) {
-  #battle { grid-template-rows: 48px 44px minmax(0,1fr) 144px 16px; }
-  #battle[data-replay="true"] { grid-template-rows: 60px 44px minmax(0,1fr) minmax(150px,30vh) 20px; }
+  #battle { grid-template-rows: 44px 44px minmax(0,1fr) 144px; }
+  #battle[data-replay="true"] { grid-template-rows: 60px 44px minmax(0,1fr) minmax(150px,30vh); }
 }
 @media (max-height: 520px) and (min-width: 620px) {
-  #battle { grid-template-rows: 46px 44px minmax(0,1fr) 86px 16px; }
+  #battle { grid-template-rows: 46px 44px minmax(0,1fr) 86px; }
   .help-header { padding: 8px 12px; }
   #help-title { font-size: 22px; }
 }
@@ -405,36 +403,23 @@
 #playback-receipt [data-tone="harm"] { color: #f3b3aa; }
 #battle[data-receipt="true"] .team-label { visibility: hidden; }
 #playback-pacing { display: flex; align-items: center; gap: 6px; }
-#playback-pacing label { font-size: 11px; color: #c1c7cc; }
-#playback-pacing select, #playback-next { min-height: 44px; font: inherit; font-size: 12px; padding: 6px 8px; }
-#playback-pacing select { color: #e9e5da; background: #151c24; border: 1px solid #64717c; border-radius: 6px; }
+#playback-next { min-height: 44px; font: inherit; font-size: 12px; padding: 6px 8px; }
 #playback-next { border-color: #a88b54; }
 #playback-next[aria-disabled="true"] { opacity: .5; cursor: default; }
 @media (max-width: 600px), (max-height: 500px) {
-  #playback-pacing label { display: none; }
   #playback-receipt { inset: 6px; padding: 12px 16px; }
   #playback-receipt h2 { font-size: 18px; margin-bottom: 6px; }
   #playback-receipt h3 { margin-top: 10px; }
   #playback-skip { white-space: normal; }
 }
 
-#playback-pacing { justify-content: center; gap: 10px; padding: 4px 10px; background: #142126; border-top: 1px solid #607568; }
-#battle:has(#playback-pacing:not([hidden])) { grid-template-rows: 74px 56px minmax(0,1fr) 54px 132px 24px; }
-@media (max-width: 900px) {
-  #battle:has(#playback-pacing:not([hidden])) { grid-template-rows: 60px 48px minmax(0,1fr) 54px 118px 20px; }
-}
 @media (max-width: 619px) {
-  #battle:has(#playback-pacing:not([hidden])) { grid-template-rows: 56px 46px minmax(0,1fr) 54px 172px 20px; }
   #playback-pacing { gap: 4px; padding-inline: 6px; }
-  #playback-pacing label { display: none; }
-  #playback-pacing select { width: 65px; }
   #playback-next, #playback-skip { padding: 4px 6px; font-size: 11px; }
 }
 @media (max-height: 650px) and (max-width: 619px) {
-  #battle:has(#playback-pacing:not([hidden])) { grid-template-rows: 48px 44px minmax(0,1fr) 52px 144px 16px; }
 }
 @media (max-height: 520px) and (min-width: 620px) {
-  #battle:has(#playback-pacing:not([hidden])) { grid-template-rows: 46px 44px minmax(0,1fr) 52px 86px 16px; }
 }
 
 /* The public tree can cover a command draft without changing it. Only its body scrolls. */
@@ -497,17 +482,17 @@
 #battle[data-combat="targets"] .creature-tag { font-size: 10px; white-space: nowrap; background: #101d22e6; padding: 2px 4px; border-radius: 3px; }
 #battle[data-combat="targets"] .creature[data-target-state="unavailable"] .creature-tag { color: #c5cbc4; }
 @media (max-width: 619px) {
-  #battle[data-combat="targets"] { grid-template-rows: 56px 46px minmax(0,1fr) 210px 20px; }
+  #battle[data-combat="targets"] { grid-template-rows: 48px 46px minmax(0,1fr) 210px; }
   #battle[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) 90px; gap: 6px; padding: 8px 12px; }
   #battle[data-combat="targets"] .battle-actions { grid-column: 1; grid-row: 2; }
   #combat-selection { margin: 4px 0; }
   #battle[data-combat="targets"] .creature-tag { font-size: 8px; }
 }
 @media (max-height: 650px) and (max-width: 619px) {
-  #battle[data-combat="targets"] { grid-template-rows: 48px 44px minmax(0,1fr) 200px 16px; }
+  #battle[data-combat="targets"] { grid-template-rows: 44px 44px minmax(0,1fr) 200px; }
 }
 @media (max-height: 520px) and (min-width: 620px) {
-  #battle[data-combat="targets"] { grid-template-rows: 46px 44px minmax(0,1fr) 108px 16px; }
+  #battle[data-combat="targets"] { grid-template-rows: 46px 44px minmax(0,1fr) 108px; }
   #battle[data-combat="targets"] .command-dock { padding-top: 6px; padding-bottom: 6px; }
 }
 
@@ -601,7 +586,7 @@
 #playback-receipt.paced-upkeep .eyebrow, #playback-receipt.paced-upkeep .receipt-note { display: none; }
 #paced-summary { margin: 3px 0; }
 #playback-receipt.paced-upkeep button { min-height: 44px; border: 0; background: transparent; color: var(--gold); }
-body:has(#upkeep-dialog[open]) #battle :is(.command-dock, #playback-pacing, footer) { display: none; }
+body:has(#upkeep-dialog[open]) #battle :is(.command-dock, #playback-pacing) { display: none; }
 body:has(#upkeep-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: calc(var(--upkeep-dock-height, 128px) + env(safe-area-inset-bottom)); }
 body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #battle-zone:has(.paced-upkeep) #phaser-mount::before, #battle-zone:has(.paced-upkeep) #phaser-mount::after {
@@ -609,6 +594,28 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 }
 #battle-zone:has(.paced-upkeep) #phaser-mount::before { content: "OPPONENT"; top: 4px; }
 #battle-zone:has(.paced-upkeep) #phaser-mount::after { content: "YOUR TEAM"; top: 50%; }
+
+/* The live view has no footer: its rows end at the command dock. The phase sits beside the round,
+   so the header can stay short on a phone. Help and the match settings live in the header's tools. */
+#battle { grid-template-rows: 74px 56px minmax(0,1fr) 132px; }
+#battle .round { display: flex; align-items: baseline; justify-content: center; gap: 8px; white-space: nowrap; min-width: 0; overflow: hidden; }
+#battle .round small { display: inline; margin: 0; font-size: 9px; letter-spacing: 2px; }
+#battle .tools { align-items: center; }
+#battle #help-open, #battle #settings { min-width: 44px; min-height: 44px; font-size: 20px; padding: 4px 9px; }
+@media (max-width: 900px) { #battle { grid-template-rows: 60px 48px minmax(0,1fr) 118px; } }
+@media (max-width: 619px) {
+  #battle { grid-template-rows: 48px 46px minmax(0,1fr) 172px; }
+  #battle .hud-top { gap: 4px; }
+  #battle .round { gap: 4px; letter-spacing: 0; }
+  #battle .round small { font-size: 7px; letter-spacing: .5px; }
+  #battle .round b { font-size: 18px; }
+  #battle #help-open, #battle #settings { padding: 2px; font-size: 19px; }
+}
+@media (max-height: 520px) and (min-width: 620px) { #battle { grid-template-rows: 46px 44px minmax(0,1fr) 86px; } }
+@media (max-height: 650px) and (max-width: 619px) { #battle { grid-template-rows: 44px 44px minmax(0,1fr) 144px; } }
+/* Next and Skip float over the battlefield: a row appearing would resize the scene, which cancels playback. */
+#battle-zone #playback-pacing { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 12; gap: 8px; padding: 4px 8px; border: 1px solid #607568; border-radius: 8px; background: #142126e6; }
+#battle-zone:has(#playback-pacing:not([hidden])) #playback-receipt { padding-bottom: 64px; }
 
 /* Evolution keeps its private draft beside the battlefield. Reserve space in the actual
    scene so Phaser and the accessible creature targets keep the same coordinate system. */

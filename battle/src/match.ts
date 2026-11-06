@@ -3,11 +3,10 @@ import { createBattleMatch } from '../../table/battle-match.js';
 type Controller = ReturnType<typeof createBattleMatch>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
-export function matchControls(controller: Controller, beforeOpen: () => void, beforeReview: () => void) {
+export function matchControls(controller: Controller, beforeOpen: () => void) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
-  let notesKey = '', roundsKey = '', resultKey = '';
+  let roundsKey = '', resultKey = '';
   el('match-open').addEventListener('click', () => { beforeOpen(); result.showModal(); });
-  el('round-review').addEventListener('click', () => { beforeReview(); el<HTMLDialogElement>('round-dialog').showModal(); });
   el('match-replay').addEventListener('click', async () => { beforeOpen(); await controller.replay(); if (controller.model().active) { result.close(); el('replay-next').focus(); } });
   el('replay-previous').addEventListener('click', () => controller.move(-1));
   el('replay-next').addEventListener('click', () => controller.move(1));
@@ -19,7 +18,6 @@ export function matchControls(controller: Controller, beforeOpen: () => void, be
   function render() {
     const model = controller.model();
     el('match-open').hidden = !model.over || model.active;
-    el('round-review').hidden = !model.notes.length || model.active;
     el('concede-open').hidden = !model.canConcede;
     el<HTMLButtonElement>('concede-confirm').disabled = model.busy || !model.canConcede || el('battle').dataset.connection !== 'live';
     el<HTMLButtonElement>('concede-cancel').disabled = model.busy;
@@ -50,11 +48,6 @@ export function matchControls(controller: Controller, beforeOpen: () => void, be
       el('replay-round').replaceChildren(...model.rounds.map((round: number) => { const option = document.createElement('option'); option.value = String(round); option.textContent = `Round ${round}`; return option; }));
     }
     el<HTMLSelectElement>('replay-round').value = String(model.round);
-    const notes = JSON.stringify(model.notes);
-    if (notes !== notesKey) {
-      notesKey = notes;
-      el('round-notes').replaceChildren(...model.notes.map((note: string) => { const node = document.createElement('li'); node.textContent = note; return node; }));
-    }
   }
   return { render };
 }

@@ -86,8 +86,7 @@ test('inspection is current while receipt and journal retain historical zero hea
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('Healing over time +0');
   await page.locator('#history-close').click(); await close(page);
-  await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('+5 energy');
-  await expect(page.locator('#round-notes')).toContainText('Healing over time +0'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {
   const h = await mount(page, { feed: [energy(1), ongoing(1, true)] });
@@ -113,7 +112,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await h.publish([attack, energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3 }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('#help-dialog')).toBeHidden();
-  await page.locator('#playback-mode').selectOption('step'); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
+  await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
   await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
@@ -140,7 +139,7 @@ test('a legacy receipt states missing ordinary energy alongside actual effects',
   await expect(page.locator('#upkeep-body')).toContainText('actual gain is unknown');
   await expect(page.locator('#upkeep-body')).toContainText('Ongoing damage −7');
   await expect(page.locator('#upkeep-body')).not.toContainText('99');
-  await close(page); await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('actual gain is unknown');
+  await close(page);
   expect(h.state.errors).toEqual([]);
 });
 test('an existing draft delays the receipt and closing settings unblocks it without a write', async ({ page }) => {

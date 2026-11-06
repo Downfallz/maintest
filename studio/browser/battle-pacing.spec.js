@@ -13,7 +13,7 @@ const ongoing = { sequence: 13, event: { kind: 'OngoingEffectsApplied', roundId:
 const nextRound = h => ({ ...h.state.view.board, roundNumber: 3, phase: 'Planning', subPhase: 'Evolution', timeline: [],
   allies: before.slice(0, 3).map(one => ({ ...one, energy: 7, knownSpells: ['strike', 'future'] })) });
 const step = async page => { await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); };
-const fits = page => fitsViewport(page, '#playback-mode, #playback-next, #playback-skip, #combat-open, #planning-open, #settings, #playback-result');
+const fits = page => fitsViewport(page, '#playback-next, #playback-skip, #combat-open, #planning-open, #settings, #playback-result');
 
 // SSE delivery starts the presentation clock. Wait for its sequence before advancing fake time.
 async function finishCast(page, sequence = 10) {
@@ -61,7 +61,7 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
 test('Auto continues held results and skip restores the live command without acknowledging it', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
-  await finishCast(page); await page.selectOption('#playback-mode', 'auto'); await page.clock.runFor(SETTLE_MS);
+  await finishCast(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'auto'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await page.locator('#playback-skip').click(); await expect(page.locator('#playback-next')).toBeHidden();
   await expect(page.locator('#combat-open')).toBeEnabled();

@@ -107,7 +107,7 @@ test('combat controls and all field targets fit short portrait and landscape', a
   await mount(page); await bolt(page);
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 1440, height: 1000 }]) {
     await page.setViewportSize(viewport);
-    await fitsViewport(page, '.creature, #combat-confirm, #combat-back, #combat-cancel, #switch-seat, #settings');
+    await fitsViewport(page, '.creature, #combat-confirm, #combat-back, #combat-cancel, #settings');
   }
 });
 
@@ -155,7 +155,7 @@ test('opening and rejected-action controls stay inside the dock on short screens
     async function contained() {
       await expect.poll(() => page.evaluate(() => {
         const dock = document.querySelector('.command-dock').getBoundingClientRect();
-        return [...document.querySelectorAll('#combat-open, #play-link')].filter(node => !node.hidden).flatMap(node => {
+        return [...document.querySelectorAll('#combat-open')].filter(node => !node.hidden).flatMap(node => {
           const box = node.getBoundingClientRect();
           return box.top < dock.top - 1 || box.bottom > dock.bottom + 1 ? [node.id] : [];
         });
