@@ -51,10 +51,14 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await page.locator('#paced-details').click();
   await page.clock.runFor(300);
   await page.screenshot({ path: info.outputPath('paced-upkeep.jpg'), type: 'jpeg', quality: 85 });
+  // Nothing of the new asking is acknowledged while the turnover is still being read.
+  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
   await page.locator('#playback-next').click();
   await expect(page.locator('#round-phase')).toHaveText('COMMAND'); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('7 EN');
-  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
+  // Once the reading ends, the mutation phase opens its tree by itself and acknowledges the asking (ADR 0138).
+  await expect(page.locator('#planning-dialog')).toBeVisible();
+  await expect.poll(() => h.state.requests.filter(one => one.query.includes('shown=')).map(one => new URLSearchParams(one.query).get('shown'))).toEqual(['6']);
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
 });
 

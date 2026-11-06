@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -40,7 +40,7 @@ async function answerEvolution(page, view, capture) {
   }
 }
 async function answerPlanning(page, view, capture) {
-  await page.locator('#planning-open').click();
+  if (view.waitingFor === 'Evolution') await mutationTree(page); else await page.locator('#planning-open').click();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, capture);
   else if (view.waitingFor === 'Speed') {
     const count = await page.locator('[data-tempo-tab]').count();
@@ -309,7 +309,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
     for (const [surface, seat, token] of [[page, 'player1', firstTokens.player1], [other, 'player2', secondTokens.player2]]) {
       for (let pick = 0; pick < 3; pick++) {
         const view = await read(surface, seat, token); if (view.waitingFor !== 'Evolution') break;
-        await surface.locator('#planning-open').click(); await surface.locator('#planning-pass').click(); await confirm(surface, '#planning-confirm');
+        await mutationTree(surface); await surface.locator('#planning-pass').click(); await confirm(surface, '#planning-confirm');
         await expect.poll(async () => (await read(surface, seat, token)).waitingAsked).not.toBe(view.waitingAsked);
       }
     }

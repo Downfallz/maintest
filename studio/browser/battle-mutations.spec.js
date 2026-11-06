@@ -9,7 +9,7 @@ const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, vi
   { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: '0%' })) };
-async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = '#planning-open' } = {}) {
+async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = null } = {}) {
   const state = { errors: [], writes: [], shown: [], status: 200, view: {
     board: { slot: 'Player1', roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', allies, enemies: [], evolutionChoices: picks, timeline: [] },
     waitingFor: 'Evolution', waitingAsked: 11, options: { evolution: { remainingPicks: remaining, creatures: allies.filter(one => one.isAlive && !picks.some(pick => pick.creature === one.id)).map(one => ({ creature: one.id, availableTiers: ids })) } }, feed: [], feedNext: 0 } };
@@ -32,14 +32,17 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
     }
     if (url.pathname.endsWith('/decision')) {
       state.writes.push(route.request().postDataJSON()); if (state.hold) await state.hold;
-      state.view = { ...state.view, waitingFor: null, waitingAsked: null };
+      state.view = state.next ? state.next(state.view) : { ...state.view, waitingFor: null, waitingAsked: null }; state.next = null;
       return route.fulfill({ status: 204 });
     }
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden();
-  await page.locator(open).click(); await page.clock.pauseAt(new Date(Date.now() + 1500));
+  // The mutation phase opens its tree by itself (ADR 0138); a test can still reopen it from a creature.
+  await expect(page.locator('#planning-dialog')).toBeVisible();
+  if (open) await page.locator(open).click();
+  await page.clock.pauseAt(new Date(Date.now() + 1500));
   const publish = async () => page.evaluate(() => window.notifyBattle());
   return { state, publish };
 }
@@ -123,7 +126,7 @@ test('switching recipients clears the old pick and confirmation names the new cr
 test('dead and already-picked creatures explain their state and empty offers; pass uses whole-team semantics', async ({ page }) => {
   // As the host sends it: the picks left are already capped at the one creature it can still offer a pick to.
   const h = await mount(page, { allies: [roster[0], { ...roster[1], isAlive: false }, roster[2]], picks: [{ creature: 3, tier: 'root0' }], remaining: 1 });
-  await expect(page.locator('#planning-help')).toContainText('1 team pick available');
+  await expect(page.locator('#planning-help')).toContainText('1 team pick remaining');
   await expect(page.locator('#planning-creatures [data-creature="2"]')).toHaveAccessibleName(/Defeated/); await expect(page.locator('#planning-creatures [data-creature="3"]')).toHaveAccessibleName(/Picked · hidden until reveal/);
   await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('[data-mutation]')).toHaveCount(0);
   await expect(page.locator('.mutation-empty')).toContainText('Choose another creature');
@@ -200,4 +203,32 @@ test('a creature tapped while the pick is being sent is inspected, not left dead
   await page.keyboard.press('Escape'); release();
   await expect.poll(() => h.state.writes).toEqual([{ kind: 'Evolution', creature: 2, tier: 'root0', asked: 11 }]);
   expect(h.state.errors).toEqual([]);
+});
+
+test('the mutation phase opens its tree by itself, once per asking', async ({ page }) => {
+  const h = await mount(page);
+  await expect(page.locator('#planning-open')).toBeHidden(); expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]);
+  await page.locator('#planning-close').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
+  await h.publish(); await page.clock.runFor(100);
+  await expect(page.locator('#planning-dialog')).toBeHidden(); await expect(page.locator('#planning-open')).toBeVisible();
+  await page.locator('#actor-layer [data-creature="1"]').click(); await expect(page.locator('#planning-dialog')).toBeVisible();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('a pick that leaves team picks keeps the tree open on the next creature with its remaining picks', async ({ page }) => {
+  const h = await mount(page);
+  await expect(page.locator('#planning-help')).toHaveText('2 team picks remaining');
+  h.state.next = view => ({ ...view, waitingAsked: 12, board: { ...view.board, evolutionChoices: [{ creature: 1, tier: 'root0' }] },
+    options: { evolution: { remainingPicks: 1, creatures: view.options.evolution.creatures.filter(one => one.creature !== 1) } } });
+  await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(page.locator('#planning-dialog')).toBeVisible();
+  await h.publish();
+  await expect(page.locator('#planning-help')).toHaveText('1 team pick remaining');
+  await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
+  await expect.poll(() => h.state.shown).toEqual(['11', '12']);
+  await expect(page.locator('#planning-dialog :focus')).toHaveCount(1);
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root0', asked: 11 }, { kind: 'Evolution', creature: 2, tier: 'root1', asked: 12 }]);
+  await expect(page.locator('#planning-dialog')).toBeHidden(); expect(h.state.errors).toEqual([]);
 });

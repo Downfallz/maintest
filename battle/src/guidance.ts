@@ -21,7 +21,9 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
   dialog.addEventListener('close', () => {
     onVisibility();
     const target = opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length ? opener : el('help-open');
-    if (model?.available && !dialog.open) target.focus({ preventScroll: true });
+    // Closing the tip can open what it was explaining (the mutation tree), which takes focus itself.
+    const moved = document.activeElement !== document.body && !dialog.contains(document.activeElement);
+    if (model?.available && !dialog.open && !moved) target.focus({ preventScroll: true });
     opener = null;
   });
   el('help-mute').addEventListener('change', event => {
@@ -58,5 +60,10 @@ export function guidanceControls(storage: Storage | null, beforeOpen: () => void
     // Callers only offer auto-help on the live, unobstructed board, after queued presentation has settled.
     if (!opening && !dialog.open && canAuto && preferences.shouldShow(next.topic)) open(el('help-open'));
   }
-  return { render };
+  // Whether a first-use tip is showing, opening, or still owed for the current subject: what opens by itself
+  // after the tip (the mutation tree) waits for it.
+  function pending() {
+    return opening || dialog.open || Boolean(model?.available && preferences.shouldShow(model.topic));
+  }
+  return { render, pending };
 }

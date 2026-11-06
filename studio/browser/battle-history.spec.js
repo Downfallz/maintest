@@ -44,7 +44,12 @@ async function mount(page, feed = [entry(10)]) {
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   // Freeze before connecting: advancing an active poll can leave a zero-delay owed refresh
   // suspended just as the fixture publishes its first notification.
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden();
+  // The mutation phase opens its tree by itself (ADR 0138). These journeys read the journal beside a covered
+  // question, so the player closes the tree first, and acknowledgements are counted from there.
+  await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('#planning-close').click();
+  await expect.poll(() => state.shown).toEqual(['11']); state.shown.length = 0;
+  await expect(page.locator('#connection')).toHaveText('LIVE');
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
@@ -263,7 +268,8 @@ test('reload makes earlier rounds available through an explicit seat history rea
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(0);
   h.state.historyFeed = [old, recent]; await page.locator('#history-earlier').click();
-  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
+  // The reloaded page opened the mutation tree again (ADR 0138); the history reads acknowledged nothing.
+  await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 test('unread counts stay reachable in the closed journal launcher and clear when it is opened', async ({ page }) => {
   const h = await mount(page);

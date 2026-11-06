@@ -79,7 +79,8 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await expect(page.locator('#upkeep-body')).toContainText('+2 energy · 0 → 2');
   expect(state.shown).toEqual([]); await keyboardActivate(page, '#upkeep-close');
   await expect(page.locator('#help-title')).toHaveText('What is a mutation?');
-  await keyboardActivate(page, '#help-close'); await keyboardActivate(page, '#planning-open');
+  // Closing the tip opens the mutation tree by itself (ADR 0138).
+  await keyboardActivate(page, '#help-close'); await expect(page.locator('#planning-dialog')).toBeVisible();
   await keyboardActivate(page, '[data-mutation="Predator"]');
   await keyboardActivate(page, '.mutation-details summary');
   await expect(page.locator('.mutation-details')).toContainText('Strike · 2 energy');
@@ -130,7 +131,7 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     await page.setViewportSize(size); const state = await mount(page);
     await fitsViewport(page, '#upkeep-close'); await page.locator('#upkeep-close').click();
     await fitsViewport(page, '#help-close'); await page.locator('#help-close').click();
-    await page.locator('#planning-open').click(); await page.locator('[data-mutation="Warped"]').click();
+    await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="Warped"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close');
     await expect(page.locator('[data-mutation="Warped"]')).toBeInViewport();
     await page.locator('#planning-confirm').click(); await page.locator('#help-close').click();

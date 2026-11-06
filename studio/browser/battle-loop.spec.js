@@ -41,7 +41,8 @@ async function mount(page, { kind = 'Evolution', replay = false, over = false } 
   await expect(page.locator('#loading')).toBeHidden(); return state;
 }
 test('an offered branch previews before it is confirmed, beside a read-only full tree', async ({ page }, info) => {
-  const h = await mount(page); expect(h.shown).toEqual([]); await page.locator('#planning-open').click();
+  // The mutation phase opens its tree by itself, which acknowledges the asking (ADR 0138).
+  const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible();
   await expect.poll(() => h.shown).toEqual([11]); await expect(page.locator('#mutation-preview-region')).toBeHidden();
   await page.locator('#mutation-tree > summary').click();
   await page.getByText('Guardian · Stage 2', { exact: false }).click(); await expect(page.locator('[data-mutation="future"]')).toHaveCount(0);
@@ -54,7 +55,7 @@ test('an offered branch previews before it is confirmed, beside a read-only full
   await expect(page.locator('#planning-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 test('switching creatures drops a mutation picked for the previous one', async ({ page }) => {
-  const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Warden'); await expect(page.locator('#planning-confirm')).toBeEnabled();
   await page.locator('#planning-creatures [data-creature="2"]').click();
   await expect(page.locator('#planning-selection')).toHaveText('Select a choice'); await expect(page.locator('#planning-confirm')).toBeDisabled();
@@ -93,7 +94,7 @@ test('a session replay link reads only that recording and preserves perspective'
   expect([...new Set(h.reads)].sort()).toEqual(['/api/me', '/api/sessions/finished/replay']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) test(`planning confirmation fits ${viewport.width}x${viewport.height}`, async ({ page }) => {
-  await page.setViewportSize(viewport); const h = await mount(page); await page.locator('#planning-open').click(); await page.locator('[data-mutation="root"]').click();
+  await page.setViewportSize(viewport); const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="root"]').click();
   await fitsViewport(page, '#planning-close, #planning-confirm'); await page.locator('#planning-confirm').click(); await expect.poll(() => h.writes.length).toBe(1); expect(h.errors).toEqual([]);
 });
 

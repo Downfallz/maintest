@@ -37,15 +37,19 @@ test('the real host supplies the battle and external decisions update it without
     await expect(battle.locator(`[data-creature="${one.id}"] .creature-stats`)).toContainText(`${one.health}/${one.maxHealth} HP`);
   }
   await battle.screenshot({ path: info.outputPath('real-live-board.jpg'), type: 'jpeg', quality: 85 });
-  // The driver acts through another client. The battle itself owns no command or shown acknowledgement.
+  // The driver acts through another client. The battle sends no command; the only acknowledgement it owns is
+  // the mutation tree it opens by itself on an Evolution asking (ADR 0138).
+  const evolutions = new Set();
   for (let attempt = 0; attempt < 4; attempt++) {
     const current = await (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();
     if (current.waitingFor !== 'Evolution') break;
+    evolutions.add(current.waitingAsked);
     const result = await context.request.post(`${origin}/api/seat/player1/decision`, { headers, data: { kind: 'Evolution', pass: true, asked: current.waitingAsked } });
     expect(result.status()).toBe(204);
   }
   await expect(battle.locator('#actor-meta')).toHaveText('Tempo', { timeout: 15000 });
   expect(requests.filter(one => one.method !== 'GET').map(one => new URL(one.url).pathname)).toEqual(['/api/lobby/resume']);
-  expect(requests.some(one => new URL(one.url).searchParams.has('shown'))).toBe(false);
+  const shown = requests.map(one => new URL(one.url).searchParams.get('shown')).filter(Boolean).map(Number);
+  expect(shown.filter(asked => !evolutions.has(asked))).toEqual([]);
   await battle.close();
 });

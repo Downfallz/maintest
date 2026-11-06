@@ -329,12 +329,12 @@ function render() {
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !upkeep.model().pending);
   helpUI.render(guide, canAuto() && !upkeep.model().pending && !orderReveal.model().pending);
   // The mutation phase opens its tree by itself once the board is unobstructed: after the upkeep receipt, the
-  // turn order and a first-use tip, never over another dialog or playback. Once per asking: a player who
+  // turn order and a first-use tip, never in the waiting room or over another dialog or playback. Once per asking: a player who
   // closes it reopens it from the battlefield or the dock (ADR 0138).
   const asked = planning.model();
   if (asked.opened) mutationOpened = asked.question;
-  else if (asked.available && asked.latest?.waitingFor === 'Evolution' && mutationOpened !== asked.question
-    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending) { mutationOpened = asked.question; planning.open(); }
+  else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
+    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
 }
 
 function choose(choice: Choice) {
