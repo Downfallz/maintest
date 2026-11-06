@@ -28,10 +28,11 @@ a viewpoint before either private board is read.
 | Friends | Dialog with requests, friend list, add/remove and Invite | Signed-in players |
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Notifications | Dialog with the existing device controls or an unavailable explanation | Signed-in players |
+| Game settings | Dialog for the reading pace, speed, phase tips and less motion every new game starts from (ADR 0140) | Signed-out visitors; signed-in players find it in the account menu |
 | Your data | Dialog explaining retained account, friendship and game data | Everyone |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
 | Admin | Existing `/admin` page | Existing operator check |
-| Account avatar/name | Confirm sign-out on this device or everywhere, or type the player name to delete the account | Signed-in players |
+| Account avatar/name | Game settings, kept with the account; confirm sign-out on this device or everywhere, or type the player name to delete the account | Signed-in players |
 
 At 1240 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA

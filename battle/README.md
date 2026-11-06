@@ -335,8 +335,8 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 Match settings (the gear in the header) select **Step** (default) or **Auto**; the choice
 is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
-settings** (the menu; kept with the account when signed in, in the browser otherwise; Step, 1×, tips on by
-default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
+settings** (under the player's name in the account menu, or in the main menu when signed out; kept with the
+account when signed in, in the browser otherwise; Step, 1×, tips on by default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
 **Skip all** is offered while two or more results remain, never while an incoming action waits for its OK
 ([ADR 0141](../docs/adr/0141-never-hold-the-player-s-own-cast.md)).
 Every incoming action, in either pace, animates and then holds its exact applied frame until the player's

@@ -69,6 +69,11 @@ async function openPanel(page, name) {
   await openNavigation(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name }).click();
 }
+// A signed-in player's game settings are under their name (the account chip), not in the menu.
+async function openAccountSettings(page) {
+  await page.locator('#account-menu summary').click();
+  await page.locator('#account-menu').getByRole('button', { name: 'Game settings' }).click();
+}
 async function noOverflow(page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
@@ -102,8 +107,10 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
 
 test('a signed-in player keeps game settings with the account, starting from step, 1x and tips on', async ({ page }) => {
   const state = await home(page);
+  await openNavigation(page);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Game settings' })).toBeHidden();
 
-  await openPanel(page, 'Game settings');
+  await openAccountSettings(page);
 
   const dialog = page.getByRole('dialog', { name: 'Game settings' });
   await expect(dialog).toBeVisible();
@@ -117,6 +124,8 @@ test('a signed-in player keeps game settings with the account, starting from ste
   await dialog.getByLabel('Playback speed').selectOption('1.5');
   await expect.poll(() => state.saved?.speed).toBe(1.5);
   await noOverflow(page);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#account-menu summary')).toBeFocused();
   expect(state.errors).toEqual([]);
 });
 
@@ -125,7 +134,7 @@ test('game settings cannot be changed until the account has said what they are',
   let release; state.holdPreferences = new Promise(resolve => { release = resolve; });
   state.saved = { pace: 'auto', speed: 2, help: true, reducedMotion: false };
 
-  await openPanel(page, 'Game settings');
+  await openAccountSettings(page);
 
   await expect(page.getByLabel('Playback speed')).toBeDisabled();
   release();
@@ -314,7 +323,7 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#account-name')).toHaveText(player.username);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Game settings', 'Your data', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Play', /Friends/, 'Leaderboard', 'Notifications', 'Your data', 'Join with a code']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);

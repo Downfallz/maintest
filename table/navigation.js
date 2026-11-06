@@ -17,7 +17,7 @@ const headerContent = `
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
     </nav>
-    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button><button id="delete-account" type="button" class="danger">Delete account…</button><p id="account-problem" role="alert" hidden></p></div></details></div>
+    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="account-game-settings" type="button" data-home-dialog="game-settings-dialog">Game settings</button><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button><button id="delete-account" type="button" class="danger">Delete account…</button><p id="account-problem" role="alert" hidden></p></div></details></div>
 `;
 const panels = `<div class="navigation-panels lobby-page home-page">
   <dialog id="friends-dialog" class="home-dialog" aria-labelledby="friends-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your circle</p><h2 id="friends-dialog-title">Friends</h2></div><button type="button" data-home-close aria-label="Close friends">×</button></div><div class="home-dialog-body"><section id="friends-panel" class="lobby-panel friends-panel" aria-labelledby="friends-heading" hidden>
@@ -102,7 +102,8 @@ function mountHomeNavigation(doc, win = globalThis) {
     panel.addEventListener('close', () => {
       const opener = openers.get(panel);
       openers.delete(panel);
-      const target = narrow.matches ? toggle : opener;
+      // An opener inside the account menu is gone with the menu: the account chip takes the focus back.
+      const target = el('account').contains(opener) ? el('account-menu').querySelector('summary') : narrow.matches ? toggle : opener;
       if (opener && target?.getClientRects().length) target.focus();
     });
   }
@@ -124,6 +125,8 @@ function mountHomeNavigation(doc, win = globalThis) {
       el('join-open').hidden = !playable;
       el('friends-open').hidden = !account;
       el('notifications-open').hidden = !account;
+      // A signed-in player finds their game settings under their name; a visitor, who has no name yet, in the menu.
+      el('game-settings-open').hidden = Boolean(account);
       el('leaderboard-link').hidden = mode === 'off';
       if (identity !== (account?.id ?? null)) {
         closePanels(false);
