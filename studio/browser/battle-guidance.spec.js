@@ -112,11 +112,10 @@ test('a next-round tip waits for the closing action and never shows its budget o
   await page.locator('#playback-skip').click(); await expect(page.locator('#help-dialog')).toBeVisible();
   await expect(page.locator('#help-round')).toHaveText('Round 3 of 12'); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
-for (const reason of ['revoked', 'hidden', 'seat']) test(`${reason} clears guide text and stale focus`, async ({ page }) => {
+for (const reason of ['revoked', 'hidden']) test(`${reason} clears guide text and stale focus`, async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#help-dialog')).toBeVisible();
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  if (reason === 'seat') { await close(page); await page.locator('#switch-seat').click(); }
   await expect(page.locator('#help-dialog')).toBeHidden(); await expect(page.locator('#help-objective')).toBeEmpty();
   await expect(page.locator('#help-context')).toBeEmpty(); await expect(page.locator('#help-open')).toBeDisabled();
   expect(h.state.errors).toEqual([]);

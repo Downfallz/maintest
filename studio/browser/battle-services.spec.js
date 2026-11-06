@@ -74,9 +74,6 @@ test('one accepted seat resumes without selection or a shown acknowledgement; sw
   const h = await mount(page); await expect(page.locator('#seat-choices')).toBeEmpty();
   expect(await page.evaluate(() => window.accessPanelShown)).toBe(false);
   expect(h.reads.filter(one => one.path.startsWith('/api/seat/')).every(one => one.token === 'first' && !one.query.includes('shown='))).toBe(true);
-  await page.locator('#switch-seat').click(); await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#seat-choices button')).toHaveCount(1);
-  await expect(page.locator('#load-title')).toHaveText('Choose your viewpoint');
-  await expect(page.locator('#noted')).toBeEmpty(); await expect(page.locator('#match-stats')).toBeEmpty();
 });
 test('two accepted seats stay behind explicit selection and suppress notification controls', async ({ page }) => {
   const h = await mount(page, { both: true }); await expect(page.locator('#seat-choices button')).toHaveCount(2);

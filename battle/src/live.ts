@@ -79,7 +79,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createBattleUpkeep(tabStorage);
@@ -95,7 +95,7 @@ const passOver = () => playback.skip({ dismissUpkeep: true });
 const controls = combatControls(combat, name, passOver);
 const planningUI = planningControls(planning, name, passOver);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, () => playback.skip());
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); });
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
@@ -121,7 +121,6 @@ function status(state: string) {
   const messages: Record<string, string> = { live: 'LIVE', connecting: 'Connecting…',
     stale: 'Connection interrupted · retrying', signin: 'Sign in to continue', revoked: 'Seat access is no longer valid' };
   text('connection', messages[state] ?? state);
-  if (state === 'live') text('updated', `Updated ${new Date().toLocaleTimeString()}`);
   if ((state === 'signin' || state === 'revoked') && replayOf(location.search)) {
     // A recording is read with the operator token the admin panel holds; no account sign-in grants it.
     text('load-title', 'This recording needs the operator');
@@ -130,8 +129,7 @@ function status(state: string) {
     $('retry').hidden = false;
   } else if (state === 'signin' || state === 'revoked') {
     selected = null;
-    $('play-link').hidden = true;
-    text('perspective', 'YOUR VIEWPOINT');
+    text('perspective', 'YOUR TEAM');
     text('load-title', messages[state]);
     text('load-detail', state === 'signin' ? 'Sign in with the account that holds this seat.' : 'Return to the tables to find a current seat.');
     $<HTMLAnchorElement>('access-link').href = state === 'signin' ? signInPath(location.pathname + location.search) : '/';
@@ -222,13 +220,13 @@ function render() {
   text('playback-skip', `Skip to present (${playbackState.remaining})`);
   // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
   // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.
-  $('playback-pacing').hidden = !view || replay.active || targeting;
-  $<HTMLSelectElement>('playback-mode').value = playbackState.mode;
   $<HTMLSelectElement>('playback-preference').value = playbackState.mode;
   $('playback-next').hidden = !playbackState.active || playbackState.mode !== 'step';
   // Not disabled: a focused button that becomes disabled drops focus between two results.
   $('playback-next').setAttribute('aria-disabled', String(!playbackState.canNext));
   text('playback-next', playbackState.remaining > 1 ? 'Next result' : 'Return to present');
+  // The reading preference lives in the settings; the row only holds Next and Skip while results play.
+  $('playback-pacing').hidden = !view || replay.active || targeting || ($('playback-next').hidden && $('playback-skip').hidden);
   receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
   $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
   $('playback-result').hidden = !playbackState.summary;
@@ -292,10 +290,8 @@ function render() {
   text('instruction', !view ? '' : playbackState.active ? `${playbackState.mode === 'step' ? 'Read each result, then choose Next.' : 'Results advance automatically.'} Skip to present or open your next choice at any time.` : guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
-  if (!view) {
-    inspected = null; renderInspection();
-    text('updated', 'No board loaded');
-  } else renderInspection();
+  if (!view) inspected = null;
+  renderInspection();
   $('battle').dataset.rate = String(playbackState.rate);
 
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
@@ -320,8 +316,7 @@ function choose(choice: Choice) {
   selected = choice;
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
-  text('perspective', `${seatName(choice.seat).toUpperCase()} · YOUR VIEWPOINT`);
-  $<HTMLAnchorElement>('play-link').href = seatPath('/play', choice, storage); $('play-link').hidden = false;
+  text('perspective', seatName(choice.seat).toUpperCase());
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
@@ -334,14 +329,13 @@ async function discover(autoResume = true) {
   const ticket = ++discovering;
   $('loading').hidden = true;
   connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
-  $('play-link').hidden = true; $('retry').hidden = true; $('seat-choices').replaceChildren();
-  text('perspective', 'YOUR VIEWPOINT'); text('connection', 'Connecting…');
+  $('retry').hidden = true; $('seat-choices').replaceChildren();
+  text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
   text('access-link', 'Open tables'); $<HTMLAnchorElement>('access-link').href = '/';
   const recorded = replayOf(location.search);
   if (recorded) {
     text('perspective', `${seatName(recorded.seat).toUpperCase()} · RECORDED MATCH`);
-    $('switch-seat').hidden = true;
     match.reset(recorded.seat);
     connection.start(replayTransport(recorded.id, recorded.seat, operatorToken(storage), request));
     return;
@@ -352,7 +346,7 @@ async function discover(autoResume = true) {
     heldSeats = result.held;
     if (autoResume && result.choices.length === 1 && !result.invitations.length && result.held.filter((one: Choice) => one.table.id === result.choices[0].table.id).length === 1) { choose(result.choices[0]); return; }
     $('loading').hidden = false;
-    text('load-title', result.choices.length ? 'Choose your viewpoint' : 'No seat available');
+    text('load-title', result.choices.length ? 'Choose your seat' : 'No seat available');
     text('connection', result.choices.length ? 'Choose a seat' : 'No active seat');
     text('load-detail', result.choices.length ? 'Only the selected seat will be loaded. Choose who is holding this device.' : 'No accepted seat was found for this link or browser.');
     for (const choice of result.choices as Choice[]) {
@@ -388,7 +382,6 @@ function failRenderer() {
   }
   text('retry', 'Reload scene'); $('retry').hidden = false;
 }
-$('switch-seat').addEventListener('click', () => { void discover(false); });
 $('retry').addEventListener('click', () => { if (rendererFailed) location.reload(); else if (selected) void connection.refresh(); else void discover(); });
 scene.onCancel = () => audio.silence();
 scene.onImpact = () => {
@@ -402,7 +395,6 @@ function motionChanged() { playback.setReduced(reduced()); render(); }
 $('reduce-motion').addEventListener('change', motionChanged); motion.addEventListener('change', motionChanged);
 playback.setReduced(reduced());
 $('playback-preference').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-preference').value));
-$('playback-mode').addEventListener('change', () => playback.setMode($<HTMLSelectElement>('playback-mode').value));
 $('playback-next').addEventListener('click', () => {
   playback.advance();
   if (!playback.model().active && !document.querySelector('dialog[open]'))
@@ -426,7 +418,7 @@ try {
 } catch { failRenderer(); }
 void discover();
 
-for (const id of ['inspect-dialog', 'settings-dialog', 'result-dialog', 'round-dialog', 'match-dialog', 'concede-dialog']) {
+for (const id of ['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog']) {
   $(id).addEventListener('close', () => render());
 }
 // A receipt that became current under the inspection removed the creature it opened from: focus goes to the

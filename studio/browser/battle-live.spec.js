@@ -44,8 +44,8 @@ async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
   await expect(page.locator('#connection')).toHaveText('LIVE'); await expect(page.locator('#loading')).toBeHidden();
 }
-const fits = page => fitsViewport(page, '.creature, #switch-seat, #settings, #play-link');
-test('no seat is read before a viewpoint is chosen, and only the chosen one after', async ({ page }) => {
+const fits = page => fitsViewport(page, '.creature, #help-open, #settings');
+test('no seat is read before a seat is chosen, and only the chosen one after', async ({ page }) => {
   const state = await mount(page);
   expect(state.requests.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
   await choose(page, 2);
@@ -114,15 +114,10 @@ for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the fiel
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(async () => (await page.locator('.creature.ally').first().boundingBox()).x).toBeLessThan(422); await fits(page);
 });
-test('switching viewpoint clears inspection before fetching another seat', async ({ page }) => {
-  const state = await mount(page); await choose(page); await page.locator('[data-creature="1"]').click(); await page.keyboard.press('Escape');
-  await page.locator('#switch-seat').click(); await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#inspect-name')).toBeEmpty();
-  expect(state.requests.some(one => one.path.includes('player2'))).toBe(false); await choose(page, 2); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
-});
 for (const status of [401, 403]) test(`${status} clears private display and offers recovery`, async ({ page }) => {
   const state = await mount(page); await choose(page); await page.locator('[data-creature="1"]').click(); state.status = status;
   await expect(page.locator('.creature')).toHaveCount(0, { timeout: 10000 }); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
-  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#play-link')).toBeHidden(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Open tables');
+  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Open tables');
 });
 test('network failures mark the retained board stale and recover with a new snapshot', async ({ page }) => {
   const state = await mount(page); await choose(page); state.status = 503;
@@ -143,7 +138,8 @@ test('a refused discovery sends the player to sign in, and back here afterwards'
 test('blocked storage still opens a linked seat, and the way back to the table keeps its token', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }));
   await mount(page, { saved: false, search: '?player1=first' }); await choose(page);
-  await expect(page.locator('#play-link')).toHaveAttribute('href', '/play?table=table-a&seat=player1&player1=first');
+  await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?table=table-a&seat=player1&player1=first');
 });
 test('missing art retains usable labelled figures', async ({ page }) => {
   await page.route('**/battle-art/*', route => route.abort()); await mount(page); await choose(page);
@@ -318,10 +314,9 @@ test('mixed builds keep their targets inside the viewport and say their appearan
 
 test('a failed renderer retains a usable link to the same seat at the table', async ({ page }) => {
   await mount(page); await choose(page, 2);
-  const fallback = await page.locator('#play-link').getAttribute('href');
   await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
   await expect(page.locator('#load-title')).toHaveText('The renderer was interrupted');
-  await expect(page.locator('#access-link')).toHaveAttribute('href', fallback);
+  await expect(page.locator('#access-link')).toHaveAttribute('href', /^\/play\?table=table-a&seat=player2/);
   await expect(page.locator('#access-link')).toHaveText('Continue at table');
   await fitsViewport(page, '#access-link, #retry');
 });
@@ -329,7 +324,7 @@ test('a failed renderer retains a usable link to the same seat at the table', as
 test('keyboard inspection and settings return focus and fit a short viewport', async ({ page }, info) => {
   await mount(page); await choose(page);
   await page.setViewportSize({ width: 720, height: 500 }); // CSS viewport of a 1440×1000 desktop at 200% zoom.
-  await fitsViewport(page, '.creature, #settings, #play-link'); await fitsBattlefield(page);
+  await fitsViewport(page, '.creature, #help-open, #settings'); await fitsBattlefield(page);
   const target = page.locator('.creature').first(); await target.focus(); await page.keyboard.press('Enter');
   await expect(page.locator('#inspect-dialog')).toBeVisible(); await page.keyboard.press('Escape'); await expect(target).toBeFocused();
   await page.locator('#settings').focus(); await page.keyboard.press('Enter');

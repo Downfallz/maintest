@@ -79,9 +79,8 @@ test('reduced motion shows applied results immediately and resize cancels playba
   await page.setViewportSize({ width: 844, height: 390 }); await page.clock.runFor(100);
   await expect(page.locator('#playback-skip')).toBeHidden(); await fits(page); expect(h.errors).toEqual([]);
 });
-for (const reason of ['seat', 'hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
+for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
-  if (reason === 'seat') await page.locator('#switch-seat').click();
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
@@ -316,12 +315,6 @@ test('a hidden page cuts the tone that was playing', async ({ page }) => {
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await sounding(page, h, 12);
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
-});
-test('switching seats cuts the tone that was playing', async ({ page }) => {
-  await probeAudio(page); const h = await mount(page); await soundOn(page);
-  await sounding(page, h, 12);
-  await page.locator('#switch-seat').click();
   expect((await probe(page)).stops).toBeGreaterThan(0); expect(h.errors).toEqual([]);
 });
 test('a seat revoked while sound is being turned on leaves it off', async ({ page }) => {

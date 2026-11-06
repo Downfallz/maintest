@@ -130,7 +130,6 @@ async function reviewAndReplay(page, latest, info, actions) {
     await expect(page.locator(`#history-list [data-sequence="${last.sequence}"]`)).toHaveCount(1);
   }
   await page.locator('#history-close').click();
-  await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Aftermath'); await page.keyboard.press('Escape');
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
   let title = 'Draw';
   if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';

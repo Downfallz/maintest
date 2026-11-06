@@ -78,7 +78,7 @@ test('concession can be cancelled and displays the host result after confirmatio
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toHaveText('You conceded · Player 2 wins.'); expect(h.concessions).toBe(1); expect(h.errors).toEqual([]);
 });
 test('finished matches replay before and after frames, then return to result', async ({ page }, info) => {
-  const h = await mount(page, { over: true }); await page.locator('#round-review').click(); await expect(page.locator('#round-notes')).toContainText('Ongoing damage −2'); await page.keyboard.press('Escape');
+  const h = await mount(page, { over: true }); 
   await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText('round cap'); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-note')).toContainText('Reference:'); await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
   await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
