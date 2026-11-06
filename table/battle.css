@@ -706,5 +706,5 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 @media (max-width: 759px) and (orientation: portrait) {
   body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(71dvh,calc(100dvh - 252px),660px); }
   body:has(#planning-dialog.expanded-tree[open]) #battle-zone { grid-row-start: 2; }
-  body:has(#planning-dialog.expanded-tree[open]) .timeline-wrap { visibility: hidden; }
+  body:has(#planning-dialog.expanded-tree[open]) .timeline-wrap { display: none; }
 }

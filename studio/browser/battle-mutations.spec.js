@@ -97,7 +97,10 @@ test('the phone tree leaves the whole battlefield visible and enables switching 
   const scene = await page.locator('#battle-zone').boundingBox(), dock = await page.locator('#planning-dialog').boundingBox();
   expect(scene.y + scene.height).toBeLessThanOrEqual(dock.y + 1);
   await page.locator('#mutation-expand').click();
-  expect((await page.locator('#planning-dialog').boundingBox()).height).toBeGreaterThan(dock.height);
+  const expanded = await page.locator('#planning-dialog').boundingBox();
+  expect(expanded.height).toBeGreaterThan(dock.height);
+  const field = await page.locator('#battle-zone').boundingBox();
+  expect(Math.abs(field.y + field.height - expanded.y)).toBeLessThan(2);
   await page.locator('#mutation-expand').click();
   expect(h.state.writes).toEqual([]);
   const boxes = await page.locator('[data-mutation]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().y));
