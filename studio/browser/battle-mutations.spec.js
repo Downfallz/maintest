@@ -55,7 +55,8 @@ test('a battlefield creature opens three branches and only explicit confirmation
   await expect(nodes).toHaveCount(3); await expect(page.locator('#atlas-dialog')).toBeHidden();
   await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
   await expect(page.locator('#planning-confirm')).toBeDisabled();
-  await expect(page.locator('.mutation-links path')).toHaveCount(3);
+  // The links are drawn on the frame after the tree is laid out (onNextFrame); the paused clock gives it one.
+  await page.clock.runFor(50); await expect(page.locator('.mutation-links path')).toHaveCount(3);
   expect(new Set(await page.locator('.mutation-node').evaluateAll(nodes => nodes.map(node => node.style.getPropertyValue('--mutation-colour')))).size).toBe(3);
   for (let i = 0; i < 3; i++) {
     await nodes.nth(i).click(); await expect(page.locator('.mutation-preview')).toContainText(`+${i} initiative`);
