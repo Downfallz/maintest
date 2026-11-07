@@ -310,6 +310,11 @@ See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation
 
 ## AU9: compact grouped spellbook
 
+The spell choice opens by itself on the player's turn, once per asking and only on an unobstructed board, and docks
+beside the field as the mutation choice does: a sheet under it on a phone, a panel at its side on a wider screen
+([ADR 0149](../docs/adr/0149-open-the-spell-choice-with-the-players-turn.md)). Closing it leaves **Choose spell** in
+the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first).
+
 Combat choices group the current creature's known/offered spells by the served card type, with family
 accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
 and availability. Current question guidance supplies current chances and unavailable reasons when present;

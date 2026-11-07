@@ -38,7 +38,7 @@ async function mount(page, overrides = {}) {
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 10000));
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   // Freeze before the first connection so a started poll cannot owe a paused zero-delay refresh.
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   const publish = async extra => { state.view = { ...state.view, ...extra }; await page.evaluate(() => window.notifyOrder()); };
   return { state, publish };
 }

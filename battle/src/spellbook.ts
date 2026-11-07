@@ -107,7 +107,13 @@ export function spellbookControls(controller: Controller) {
   }
   // A fresh question starts at the top; returning from the field keeps the place and the card in hand.
   function opened() {
-    if (resetPosition) { scroll.scrollTop = 0; resetPosition = false; return; }
+    // The docked choice is not modal: the browser would focus its close button, so a fresh question starts on the
+    // first spell that can be cast, as the mutation choice starts on its first offer.
+    if (resetPosition) {
+      scroll.scrollTop = 0; resetPosition = false;
+      [...buttons.values()].find(node => !node.disabled)?.focus({ preventScroll: true });
+      return;
+    }
     if (lastChosen) buttons.get(lastChosen)?.focus({ preventScroll: true });
   }
   return { render, clear, opened };

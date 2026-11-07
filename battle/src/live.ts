@@ -82,7 +82,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active,
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().target && !planning.model().opened && !match.model().active,
         // A page opened again plays what happened while it was closed, from the last result this browser showed.
         since: seenGame ? seenSince(storage, seenGame) : null });
   } finally { receiving = false; }
@@ -231,7 +231,8 @@ function announceRound(round: number | null) {
   }
   announcedRound = round;
 }
-let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
+let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', spellOpened = '', orderShown = false;
+let dockShape = '', dockMoved = false;
 
 function render() {
   if (receiving) return;
@@ -283,9 +284,17 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  const showGrowth = visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened;
+  // The docked spell choice leaves the field in view, so a reveal stays on it while a spell is chosen; targets are
+  // chosen on the field itself, which the reveal leaves to them.
+  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !planning.model().opened;
   growthUI.render(view, catalogue, showGrowth);
-  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  // The docked spell choice steps aside, its draft kept, for whatever the field has to show first: results being read,
+  // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
+  const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
+  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
+  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && $('planning-dialog').dataset.kind === 'Evolution'}`;
+  if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
+  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
@@ -400,7 +409,7 @@ function render() {
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
-    !playbackState.active && !replay.active && !action.opened && !action.sending &&
+    !playbackState.active && !replay.active && !action.target && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
@@ -445,11 +454,18 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+  // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
+  // after whatever the board still had to show. Closing it leaves Choose spell in the dock.
+  const fight = combat.model();
+  if (fight.opened) spellOpened = fight.question;
+  // A refusal the host gave is read first, in the dock: opening the choice would clear it.
+  else if (fight.available && !fight.error && ['Action', 'Intent', 'Target'].includes(fight.waitingFor) && spellOpened !== fight.question
+    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { spellOpened = fight.question; combat.open(); }
   // The match's end is one moment: once its last result is read, the result opens by itself, once per seat.
   const seatKey = selected ? `${selected.table.id}:${selected.seat}` : '';
   if (view?.over && seatKey && matchShown !== seatKey && !replay.active && !match.model().active && canAuto()) { matchShown = seatKey; matchUI.open(); }
   // An opponent's action that arrived under a dialog waited, unplayed; once the field is in view it plays.
-  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().opened && !planning.model().opened && !match.model().active)
+  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().target && !planning.model().opened && !match.model().active)
     queueMicrotask(() => playback.resume());
 }
 
@@ -687,7 +703,9 @@ $('reading-open').addEventListener('click', () => {
   else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
 });
 $('order-continue').addEventListener('click', () => orderUI.finish());
-scene.onResizeDuringPlayback = () => playback.skip();
+// A docked choice opening or closing beside the field resizes it; that re-lays out the cast being shown rather than
+// passing over it, which a rotation or a resized window still does.
+scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; return; } playback.skip(); };
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
 matchMedia('(orientation: portrait)').addEventListener('change', () => { if (playback.model().active) playback.skip(); });

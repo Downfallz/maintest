@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { audioModule, probeAudio } from './battle-audio-probe.js';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/battle-playback.js';
@@ -32,15 +33,15 @@ test('the next choice is withdrawn while results are read, and skip settles to t
   const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
   // An opponent's action offers OK alone, never Skip, and the next choice waits for it.
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
-  await expect(page.locator('#combat-open')).toBeHidden();
+  await expect(page.locator('#combat-dialog')).toBeHidden();
   // Past the incoming impact's timers (windup and impact): a held action has none left to wait for.
-  await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200); await expect(page.locator('#combat-dialog')).toBeHidden();
   await page.locator('#playback-next').click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200);
   await page.locator('#playback-next').click();
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-open')).toBeVisible();
-  await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-open')).toBeHidden();
-  await page.clock.runFor(3200); await expect(page.locator('#combat-open')).toBeVisible();
-  await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-dialog')).toBeVisible();
+  await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.clock.runFor(3200); await expect(page.locator('#combat-dialog')).toBeVisible();
+  await openSpells(page); await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
 });
 test('an incoming last action holds for its OK however long; the next round and its mutation wait for it', async ({ page }) => {
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
@@ -83,6 +84,8 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
     outcomes: kind === 'support' ? [{ kind: 'HealOutcome', target: 1, amount: 3 }, { kind: 'EnergyOutcome', target: 1, amount: 2 }] : undefined })]);
   // While it plays, the reading card opens the full result; a legacy cast, which settles at once, the dock's result.
   const opener = page.locator(kind === 'legacy' ? '#playback-result' : '#reading-open');
+  // A legacy cast settles at once, and the spell choice opens by itself (ADR 0149): the dock's result is under it.
+  if (kind === 'legacy') { await expect(page.locator('#combat-dialog')).toBeVisible(); await page.locator('#combat-dialog-close').click(); }
   await expect(opener).toBeVisible();
   await page.clock.runFor(860); await opener.click();
   await expect(page.locator('#result-text')).toContainText(kind === 'fizzle' ? 'fizzled: Not enough energy' : kind === 'support' ? 'Heal 3' : 'Damage 7');
@@ -93,6 +96,8 @@ test('the dock\'s instruction is back once the last action has settled', async (
   const h = await mount(page); await h.publish([entry(10)]);
   await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   await page.clock.runFor(3200); await expect(page.locator('#playback-skip')).toBeHidden();
+  // The spell choice is back by itself (ADR 0149); closed, it leaves the dock's instruction and last result.
+  await expect(page.locator('#combat-dialog')).toBeVisible(); await page.locator('#combat-dialog-close').click();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
   await expect(page.locator('#instruction')).toContainText('choose a spell, then targets');
@@ -438,13 +443,13 @@ test('a page opened again plays the opponent\'s actions it missed before the pla
   h.state.view = { ...h.state.view, feed: [entry(10, { actor: 4, targets: [1] })], feedNext: 11, waitingAsked: 6 };
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
-  await expect(page.locator('#reading-kind')).toContainText("Opponent's action"); await expect(page.locator('#combat-open')).toBeHidden();
+  await expect(page.locator('#reading-kind')).toContainText("Opponent's action"); await expect(page.locator('#combat-dialog')).toBeHidden();
   await page.clock.runFor(4000); await expect(page.locator('#playback-next')).toHaveText('OK');
   await page.locator('#playback-next').click();
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#combat-open')).toBeVisible();
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('downfall.battle.seen.v1'))).toContain('"sequence":10');
   // Opened again with nothing new, the board is as it is.
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#combat-open')).toBeVisible(); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
+  await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
   expect(h.errors).toEqual([]);
 });

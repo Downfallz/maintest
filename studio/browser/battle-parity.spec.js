@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 
 // Cross-feature presentation acceptance. These are declared fixture responses, not a second game engine.
@@ -102,7 +103,8 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   expect(state.writes.length).toBe(1); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#planning-dialog')).toBeHidden();
   expect(state.writes.slice(1).map(one => one.speed)).toEqual(['Quick', 'Standard', 'Standard']);
-  await combat(page, state); await keyboardActivate(page, '#combat-open');
+  // The spell choice opens by itself on the player's turn (ADR 0149).
+  await combat(page, state); await expect(page.locator('#combat-dialog')).toBeVisible();
   await keyboardActivate(page, '#combat-details-mode');
   await keyboardActivate(page, '[data-spell="strike"]');
   await keyboardActivate(page, '[data-creature="4"]');
@@ -143,7 +145,7 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     for (let i = 0; i < 3; i++) await page.locator('[data-speed="Standard"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close'); await page.locator('#planning-confirm').click();
     await expect(page.locator('#planning-dialog')).toBeHidden();
-    await combat(page, state); await page.locator('#combat-open').click(); await page.locator('#combat-details-mode').click();
+    await combat(page, state); await openSpells(page); await page.locator('#combat-details-mode').click();
     const last = page.locator('[data-spell="spell-17"]'); await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
     await fitsViewport(page, '#combat-dialog-close, #combat-details-mode'); await page.keyboard.press('Escape');
     await page.locator('#settings').click(); await page.locator('#concede-open').scrollIntoViewIfNeeded();

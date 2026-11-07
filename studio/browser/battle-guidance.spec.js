@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
@@ -37,7 +38,7 @@ async function mount(page, { waiting = null, mode = 'AtActivation', kind = 'Evol
   });
   await page.clock.pauseAt(new Date(Date.now() + 1000));
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   // Discovery POSTs the saved capabilities to resume; measure guide writes after this baseline.
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
@@ -153,7 +154,7 @@ test('Help preserves a spell and selected field target without another acknowled
     waitingFor: 'Action', waitingAsked: 12, options: { action: { creature: 1,
       spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
   await expect(page.locator('#help-dialog')).toBeVisible(); await close(page);
-  await page.locator('#combat-open').click(); await page.locator('[data-spell="strike"]').click();
+  await openSpells(page); await page.locator('[data-spell="strike"]').click();
   await page.locator('[data-creature="4"]').click(); await expect(page.locator('#combat-confirm')).toBeEnabled();
   await page.locator('#help-open').click(); await expect(page.locator('#combat-confirm')).toBeDisabled();
   await h.publish([]); await close(page);

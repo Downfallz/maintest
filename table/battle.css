@@ -962,3 +962,35 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
   .opponent-avatar { width: 28px; height: 28px; font-size: 14px; }
   #opponent-name { max-width: 130px; font-size: 14px; }
 }
+
+/* The spell choice opens by itself on the player's turn and docks beside the field as the mutation choice does
+   (ADR 0149): a sheet under the field on a phone, a panel at its side on a wider screen. The field gives up that
+   room rather than sitting behind it, so the board stays readable while a spell is chosen. */
+body:has(#combat-dialog[open]) { --spell-height: clamp(300px, 54dvh, 490px); --spell-width: clamp(330px, 40vw, 540px); }
+#combat-dialog {
+  position: fixed; z-index: 12; inset: auto 0 0; margin: 0; width: 100%; max-width: none;
+  height: var(--spell-height); max-height: none; padding: 12px 14px; border: 0; border-top: 2px solid var(--gold);
+  border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
+}
+body:has(#combat-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--spell-height); }
+body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, footer) { display: none; }
+#combat-dialog .combat-spell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#combat-dialog #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
+  #combat-dialog { inset: 0 0 0 auto; width: var(--spell-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#combat-dialog[open]) #battle-zone { margin: 0 var(--spell-width) 0 0; }
+  body:has(#combat-dialog[open]) #battle :is(.hud-top, .timeline-wrap) { margin-right: var(--spell-width); }
+}
+/* A short screen keeps its room for the spells: the sentence the tips and Help already say gives way first. */
+@media (max-height: 700px) {
+  #combat-dialog #combat-help { display: none; }
+  #combat-dialog h2 { font-size: 17px; }
+}
+@media (max-height: 700px) and (orientation: portrait) {
+  body:has(#combat-dialog[open]) { --spell-height: min(62dvh, 490px); }
+}
+/* Enlarged text in a narrow docked panel can outgrow it: the panel then scrolls as a whole, the spells keep a
+   readable height of their own, and the footer that declares stays pinned at its bottom edge. */
+#combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
+#combat-dialog #combat-browser { min-height: 120px; }
+#combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
