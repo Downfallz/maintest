@@ -17,7 +17,7 @@ const headerContent = `
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
     </nav>
-    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button><button id="delete-account" type="button" class="danger">Delete account…</button><p id="account-problem" role="alert" hidden></p></div></details></div>
+    <div id="account" class="account" hidden><details id="account-menu"><summary class="account-chip" aria-label="Your account"><span id="account-initial" class="account-initial" aria-hidden="true"></span><span id="account-name"></span></summary><div class="account-menu"><button id="account-game-settings" type="button" data-home-dialog="game-settings-dialog">Game settings</button><button id="sign-out" type="button">Sign out</button><button id="sign-out-everywhere" type="button">Sign out everywhere</button><button id="delete-account" type="button" class="danger">Delete account…</button><p id="account-problem" role="alert" hidden></p></div></details></div>
 `;
 const panels = `<div class="navigation-panels lobby-page home-page">
   <dialog id="friends-dialog" class="home-dialog" aria-labelledby="friends-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your circle</p><h2 id="friends-dialog-title">Friends</h2></div><button type="button" data-home-close aria-label="Close friends">×</button></div><div class="home-dialog-body"><section id="friends-panel" class="lobby-panel friends-panel" aria-labelledby="friends-heading" hidden>
@@ -32,9 +32,9 @@ const panels = `<div class="navigation-panels lobby-page home-page">
         </section></div></dialog>
   <dialog id="notifications-dialog" class="home-dialog" aria-labelledby="notifications-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Stay in the game</p><h2 id="notifications-dialog-title">Notifications</h2></div><button type="button" data-home-close aria-label="Close notifications">×</button></div><div class="home-dialog-body"><section id="device-panel" class="lobby-panel device-panel" aria-labelledby="device-heading" hidden><h2 id="device-heading">Be told on this device</h2><p id="device-hint" class="muted"></p><div class="device-actions"><button id="device-toggle" type="button" class="primary"></button><button id="device-test" type="button" class="secondary" hidden>Send a test</button></div><p id="device-problem" class="problem" role="alert" hidden></p><output id="device-result" class="muted" hidden></output></section><p id="device-unavailable" class="muted">Notifications are not available right now. Your games and invitations are always available here.</p></div></dialog>
   <dialog id="game-settings-dialog" class="home-dialog" aria-labelledby="game-settings-title"><div class="dialog-heading"><div><p class="eyebrow">Every new game</p><h2 id="game-settings-title">Game settings</h2></div><button type="button" data-home-close aria-label="Close game settings">×</button></div><div class="home-dialog-body"><form id="game-settings" class="lobby-panel game-settings-panel"><fieldset id="game-settings-fields">
-    <label for="game-settings-pace"><span>Read confirmed results<small>Step waits for Next on everything · Auto plays your own casts and the turnover; opponent actions always wait for your OK</small></span><select id="game-settings-pace"><option value="step">Step</option><option value="auto">Auto</option></select></label>
+    <label for="game-settings-pace"><span>Read confirmed results<small>Opponent actions always wait for your OK, your own never do · Step also waits for Next on the end-of-round summaries, Auto plays them</small></span><select id="game-settings-pace"><option value="step">Step</option><option value="auto">Auto</option></select></label>
     <label for="game-settings-speed"><span>Playback speed</span><select id="game-settings-speed"><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
-    <label for="game-settings-help"><span>Phase tips<small>Explain each phase the first time it comes</small></span><input id="game-settings-help" type="checkbox"></label>
+    <label for="game-settings-help"><span>Phase tips<small>Explain each phase the first time it comes in each game</small></span><input id="game-settings-help" type="checkbox"></label>
     <label for="game-settings-motion"><span>Less motion<small>Keep the scene still</small></span><input id="game-settings-motion" type="checkbox"></label>
     </fieldset><p id="game-settings-where" class="muted"></p><p id="game-settings-problem" class="problem" role="alert" hidden></p></form></div></dialog>
   <dialog id="data-dialog" class="home-dialog" aria-labelledby="data-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your account, your choice</p><h2 id="data-dialog-title">Your data</h2></div><button type="button" data-home-close aria-label="Close your data">×</button></div><div class="home-dialog-body"><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and the number Google gives your account, so you are you when you come back. Not your email, your real name or your photo.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you ask to be notified on a device, where to reach that browser, until you stop it or sign out everywhere.</p><p>Your game settings (reading pace, speed, phase tips, less motion), until you change them or delete your account.</p><p>The games your seats play are recorded under the internal id, to replay them and to improve the bots.</p><p>Delete your account any time from your name at the top: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p></section></div></dialog>
@@ -102,7 +102,8 @@ function mountHomeNavigation(doc, win = globalThis) {
     panel.addEventListener('close', () => {
       const opener = openers.get(panel);
       openers.delete(panel);
-      const target = narrow.matches ? toggle : opener;
+      // An opener inside the account menu is gone with the menu: the account chip takes the focus back.
+      const target = el('account').contains(opener) ? el('account-menu').querySelector('summary') : narrow.matches ? toggle : opener;
       if (opener && target?.getClientRects().length) target.focus();
     });
   }
@@ -124,6 +125,8 @@ function mountHomeNavigation(doc, win = globalThis) {
       el('join-open').hidden = !playable;
       el('friends-open').hidden = !account;
       el('notifications-open').hidden = !account;
+      // A signed-in player finds their game settings under their name; a visitor, who has no name yet, in the menu.
+      el('game-settings-open').hidden = Boolean(account);
       el('leaderboard-link').hidden = mode === 'off';
       if (identity !== (account?.id ?? null)) {
         closePanels(false);

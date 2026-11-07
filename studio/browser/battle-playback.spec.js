@@ -38,7 +38,7 @@ test('the next choice is withdrawn while results are read, and skip settles to t
   await page.locator('#playback-next').click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS + 200);
   await page.locator('#playback-next').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision'); await expect(page.locator('#combat-open')).toBeVisible();
-  await h.publish([entry(12)]); await expect(page.locator('#playback-skip')).toBeVisible(); await expect(page.locator('#combat-open')).toBeHidden();
+  await h.publish([entry(12)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-open')).toBeHidden();
   await page.clock.runFor(3200); await expect(page.locator('#combat-open')).toBeVisible();
   await page.locator('#combat-open').click(); await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
 });
@@ -81,15 +81,17 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
   const h = await mount(page);
   await h.publish([entry(10, { fizzled: kind === 'fizzle', legacy: kind === 'legacy', targets: kind === 'support' ? [] : [4],
     outcomes: kind === 'support' ? [{ kind: 'HealOutcome', target: 1, amount: 3 }, { kind: 'EnergyOutcome', target: 1, amount: 2 }] : undefined })]);
-  await expect(page.locator('#playback-result')).toBeVisible();
-  await page.clock.runFor(860); await page.locator('#playback-result').click();
+  // While it plays, the reading card opens the full result; a legacy cast, which settles at once, the dock's result.
+  const opener = page.locator(kind === 'legacy' ? '#playback-result' : '#reading-open');
+  await expect(opener).toBeVisible();
+  await page.clock.runFor(860); await opener.click();
   await expect(page.locator('#result-text')).toContainText(kind === 'fizzle' ? 'fizzled: Not enough energy' : kind === 'support' ? 'Heal 3' : 'Damage 7');
   if (kind === 'legacy') await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.errors).toEqual([]);
 });
 test('the dock\'s instruction is back once the last action has settled', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(10)]);
-  await expect(page.locator('#playback-skip')).toBeVisible();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   await page.clock.runFor(3200); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#playback-result')).toBeVisible();
   await expect(page.locator('#instruction')).toBeVisible();
@@ -103,7 +105,7 @@ test('reduced motion shows applied results immediately and resize cancels playba
   await expect(page.locator('#playback-skip')).toBeHidden(); await fits(page); expect(h.errors).toEqual([]);
 });
 for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playback and fences its pending callbacks`, async ({ page }) => {
-  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   if (reason === 'hidden') await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   if (reason === 'revoked') { h.state.status = 403; await page.evaluate(() => window.notifyBattle()); }
   await expect(page.locator('#result-text')).toBeEmpty(); await expect(page.locator('.creature')).toHaveCount(0);
@@ -119,7 +121,7 @@ for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playb
 });
 
 test('transient connection loss settles playback and repeated events stay consumed on recovery', async ({ page }) => {
-  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#playback-skip')).toBeVisible();
+  const h = await mount(page); await h.publish([entry(10)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   h.state.status = 503; await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale');
   await expect(page.locator('#playback-skip')).toBeHidden();
@@ -132,7 +134,8 @@ test('confirmed results and commands fit short portrait and landscape', async ({
   const h = await mount(page);
   for (const [index, size] of [{ width: 320, height: 568 }, { width: 844, height: 390 }].entries()) {
     await page.setViewportSize(size); await page.clock.runFor(150);
-    await h.publish([entry(10 + index)]); await expect(page.locator('#playback-skip')).toBeVisible();
+    // Two results, so Skip all is offered (ADR 0141).
+    await h.publish([entry(10 + 2 * index), entry(11 + 2 * index)]); await expect(page.locator('#playback-skip')).toBeVisible();
     await fits(page); await page.locator('#playback-skip').click(); await fits(page);
     // Settled, the dock holds the result, the instruction and the next action together, inside its own bounds.
     await expect.poll(() => page.evaluate(() => {
@@ -255,7 +258,8 @@ test('live playback shows the necromantic recipients apart from the caster blood
   await expect(page.locator('[data-creature="5"] .creature-effect')).toContainText('Bleed 2');
   await expect(page.locator('[data-creature="6"] .creature-effect')).toBeEmpty();
   await fits(page); await page.screenshot({ path: info.outputPath('art4-live-necromancy.png') });
-  await page.locator('#playback-skip').click();
+  // The player's own cast plays out and moves on by itself (ADR 0141).
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS + SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
   expect(h.errors).toEqual([]);
 });
@@ -314,7 +318,8 @@ async function soundOn(page) {
 }
 const probe = page => page.evaluate(() => window.audioProbe);
 async function sounding(page, h, sequence) {
-  await h.publish([entry(sequence)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
+  // A second result behind it, so Skip all is offered while the first one sounds.
+  await h.publish([entry(sequence), entry(sequence + 1)]); await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(860); await expect.poll(() => probe(page).then(one => one.starts)).toBe(1);
 }
 test('no audio context exists before the player turns sound on', async ({ page }) => {

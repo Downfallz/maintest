@@ -19,6 +19,7 @@ apocalyptic battle; the words carry that fantasy and stay short, plain and easy 
 | `Speed.Quick` | Quick | **Instinct** | **Instinct** |
 | `Speed.Standard` | Standard | **Precision** | **Précision** |
 | A Creature's known Spells (the hand) | Spellbook | **Spellbook** | **Grimoire** |
+| The base creature definition (`creature:main:v1`, named `Main`) | Main | **Creature**, numbered by id (Creature 4) | **Créature** (Créature 4) |
 
 Use the words naturally in a sentence rather than as literal substitutions:
 

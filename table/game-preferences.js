@@ -91,7 +91,7 @@ export function settingsWhere(account) {
 }
 
 /**
- * The menu's Game settings panel: it reads the settings when it opens and saves each change at once. Nothing
+ * The Game settings panel, opened from the account menu (or the main menu when signed out): it reads the settings when it opens and saves each change at once. Nothing
  * can be changed while a read is out: the read decides both what is shown and where a change is kept, and a
  * read that started before a save waits for it, so neither can overwrite the other.
  */
@@ -115,7 +115,7 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
     account = answer.account; show(answer.settings);
     el('game-settings-fields').disabled = false;
   }
-  el('game-settings-open').addEventListener('click', () => { problem(null); void refresh(); });
+  for (const opener of doc.querySelectorAll('[data-home-dialog="game-settings-dialog"]')) opener.addEventListener('click', () => { problem(null); void refresh(); });
   el('game-settings').addEventListener('submit', event => event.preventDefault());
   el('game-settings').addEventListener('change', () => {
     const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked };

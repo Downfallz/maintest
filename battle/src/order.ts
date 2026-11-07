@@ -69,6 +69,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
         text('p', row.roll || 'No d20 roll recorded', 'order-roll')); return item;
     }));
   }
+  let shownTurn = '';
   function render(model: Model, enabled: boolean, canAuto: boolean) {
     available = enabled; openers.forEach(button => { button.disabled = !enabled; });
     if (!enabled) { opener = null; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }
@@ -79,6 +80,14 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       const parent = active?.closest('#timeline') ? 'timeline' : 'order-list';
       const scroll = el('order-body').scrollTop;
       draw(model); key = next; el('order-body').scrollTop = scroll;
+      // The creature acting is brought into the strip's view when the turn moves, never while the player scrolls it.
+      const current = el('timeline').querySelector<HTMLElement>('[aria-current="step"]');
+      const turn = current?.querySelector<HTMLElement>('[data-order-creature]')?.dataset.orderCreature ?? '';
+      if (current && turn !== shownTurn) {
+        const strip = el('timeline');
+        strip.scrollLeft = Math.max(0, current.offsetLeft - (strip.clientWidth - current.offsetWidth) / 2);
+      }
+      shownTurn = turn;
       if (focus) el(parent).querySelector<HTMLButtonElement>(`[data-order-creature="${focus}"]`)?.focus({ preventScroll: true });
     }
     if (canAuto && reveal.model().pending) show(true);

@@ -237,8 +237,9 @@ function render() {
   $('battle').dataset.reading = String(playbackState.active);
   $('battle').dataset.sequence = String(playbackState.sequence ?? '');
   // An opponent's action is read, never skipped: it offers OK alone (ADR 0139).
-  $('playback-skip').hidden = !playbackState.active || playbackState.incoming;
-  text('playback-skip', `Skip to present (${playbackState.remaining})`);
+  // One result left is read with its own OK, or plays out by itself: Skip all is for two or more.
+  $('playback-skip').hidden = !playbackState.active || playbackState.incoming || playbackState.remaining < 2;
+  text('playback-skip', `Skip all (${playbackState.remaining})`);
   // Choosing targets settles playback and the host waits for this seat, so the row has nothing to pace there;
   // its height belongs to the estimate and the fixed confirmation. Settings keeps the preference.
   $<HTMLSelectElement>('playback-preference').value = playbackState.mode;
@@ -253,10 +254,19 @@ function render() {
   if (playbackState.asks && playbackState.canNext && !nextWasUsable && !document.querySelector('dialog:modal')
     && (!focused || focused === document.body || !focused.getClientRects().length)) $('playback-next').focus({ preventScroll: true });
   text('playback-next', playbackState.remaining > 1 ? 'Next' : 'OK');
-  // The reading preference lives in the settings; the row only holds Next and Skip while results play.
-  $('playback-pacing').hidden = !view || replay.active || targeting || ($('playback-next').hidden && $('playback-skip').hidden);
-  receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
-  $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
+  // While results are read the dock is one card: whose action, what it did, and the OK beside it.
+  $('playback-pacing').hidden = !view || replay.active || targeting || !playbackState.active;
+  const reading = playbackState.reading;
+  $('playback-pacing').dataset.kind = reading?.kind ?? '';
+  const more = playbackState.remaining > 1 ? ` · ${playbackState.remaining - 1} more` : '';
+  text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
+  text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
+  $('reading-detail').hidden = !reading?.detail;
+  $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
+  // A paced turnover (upkeep, aftermath) reads on the field and in the card; only the match result covers the field.
+  const covering = playbackState.paced ? null : playbackState.receipt;
+  receiptShown = Boolean(covering); renderReceipt(covering, board.round);
+  $('battle').dataset.receipt = String(Boolean(covering));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
@@ -269,14 +279,14 @@ function render() {
   growthUI.render(view, catalogue, showGrowth);
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
-  // seen what led to it (ADR 0139). Skip to present remains the deliberate way out.
+  // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
   const plan = planning.model();
   const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
   frame = mutation.frame;
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
-  if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING CONFIRMED EVENTS' : connectionText(replay.active, action.opened));
+  if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));
   const ids = new Set(creatures.map(one => one.id));
   for (const [id, node] of nodes) if (!ids.has(id)) { node.remove(); nodes.delete(id); }
   for (const one of creatures) {
@@ -314,7 +324,7 @@ function render() {
     effect.hidden = effects.length === 0;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
-    node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
+    statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
     // Initiative, defense when it is above zero, and one icon per kind of condition, on every screen: the numbers
     // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
     node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
@@ -346,7 +356,7 @@ function render() {
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
-  text('instruction', !view ? '' : playbackState.active ? `${playbackState.asks ? 'Read the result, then choose OK.' : 'Results are playing.'} Your next choice follows; Skip to present at any time.` : mutation.prompt ?? guide.objective);
+  text('instruction', !view ? '' : playbackState.active ? playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.' : mutation.prompt ?? guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   if (!view) inspected = null;
@@ -361,8 +371,8 @@ function render() {
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
-  const markers = replay.active ? undefined : playbackState.upkeep?.markers ?? liveMarkers;
-  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.upkeep), round: board.round } };
+  const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
+  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.paced) && !board.creatures.length, round: board.round } };
   // The reveal's crests stand on the battlefield while its receipt is up, on the live board only.
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
@@ -390,6 +400,20 @@ function render() {
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
 }
 
+// Health and energy as chips beside the badges, a heart and a bolt before each number. The units and the
+// separator stay in the text, unseen, so the caption still reads "20/20 HP · 5 EN" to a screen reader.
+function statChips(stats: HTMLElement, health: number, maxHealth: number, energy: number) {
+  const key = `${health}/${maxHealth}/${energy}`;
+  if (stats.dataset.value === key) return;
+  stats.dataset.value = key;
+  const unseen = (value: string) => { const span = document.createElement('span'); span.className = 'unseen'; span.textContent = value; return span; };
+  const chip = (kind: string, icon: string, value: string, unit: string) => {
+    const span = document.createElement('span'); span.className = `stat stat-${kind}`;
+    span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
+  };
+  stats.replaceChildren(chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP'), unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
+}
+
 function choose(choice: Choice) {
   audio.stop();
   if (rendererFailed) return;
@@ -399,7 +423,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
-  applySettings();
+  helpUI.setGame(choice.table.id); applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
   connection.start(transport, catalogue);
   services.reset(transport, heldSeats.filter(one => one.table.id === choice.table.id).map(one => httpTransport(one.seat, one.token, request)), `${choice.table.id}:${choice.seat}`);
@@ -410,7 +434,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; view = null; catalogue = null; render();
+  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -507,6 +531,7 @@ $('playback-next').addEventListener('click', () => {
 });
 $('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
+$('reading-open').addEventListener('click', () => { if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal(); });
 scene.onResizeDuringPlayback = () => playback.skip();
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
@@ -533,5 +558,5 @@ $('inspect-dialog').addEventListener('close', () => {
   const focused = document.activeElement;
   if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
   const node = inspected === null ? undefined : nodes.get(inspected);
-  (node ?? (receiptShown ? $('playback-receipt') : undefined))?.focus({ preventScroll: true });
+  (node ?? (receiptShown ? $('playback-receipt') : !$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
 });

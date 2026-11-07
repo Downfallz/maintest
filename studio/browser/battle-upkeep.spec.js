@@ -116,7 +116,8 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(WINDUP_MS + IMPACT_MS);
-  await page.locator('#playback-next').click(); await expect(page.locator('#playback-receipt')).toContainText('+5 energy');
+  await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Upkeep');
+  await expect(page.locator('#result-text')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
@@ -133,7 +134,7 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
-  await expect(page.locator('#playback-receipt')).toBeVisible(); await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   // The tree opened once before the reload and once after; neither receipt acknowledged anything.
   expect(h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);

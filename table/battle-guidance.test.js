@@ -81,11 +81,37 @@ function store(initial) {
   const writes = []; let data = initial;
   return { writes, getItem: () => data, setItem: (key, value) => { assert.equal(key, HELP_PREFERENCE_KEY); writes.push(value); data = value; } };
 }
-test('tips are once per subject across creatures, rounds and reloads', () => {
-  const storage = store(null), p = helpPreferences(storage);
+test('tips are once per subject in a game, across creatures, rounds and reloads', () => {
+  const storage = store(null), p = helpPreferences(storage); p.setGame('table-a');
   assert.equal(p.shouldShow('mutation'), true); p.markSeen('mutation'); p.markSeen('mutation');
   assert.equal(p.shouldShow('mutation'), false); assert.equal(p.shouldShow('tempo'), true);
-  assert.equal(storage.writes.length, 1); assert.equal(helpPreferences(storage).shouldShow('mutation'), false);
+  const reloaded = helpPreferences(storage); reloaded.setGame('table-a');
+  assert.equal(storage.writes.length, 1); assert.equal(reloaded.shouldShow('mutation'), false);
+});
+test('every game teaches its phases again', () => {
+  const storage = store(null), p = helpPreferences(storage); p.setGame('table-a'); p.markSeen('mutation');
+
+  p.setGame('table-b');
+
+  assert.equal(p.shouldShow('mutation'), true);
+  p.setGame('table-a'); assert.equal(p.shouldShow('mutation'), false);
+});
+test('a browser that read every tip once before still mutes them if it chose to, and is taught again if not', () => {
+  const read = store(JSON.stringify({ version: 1, muted: false, seen: ['mutation', 'tempo'] }));
+  const muted = store(JSON.stringify({ version: 1, muted: true, seen: [] }));
+
+  const p = helpPreferences(read); p.setGame('table-a');
+
+  assert.equal(p.shouldShow('mutation'), true);
+  assert.equal(helpPreferences(muted).muted(), true);
+});
+test('only the latest games keep the tips they read', () => {
+  const storage = store(null), p = helpPreferences(storage);
+  for (let game = 0; game < 25; game++) { p.setGame(`table-${game}`); p.markSeen('tempo'); }
+
+  const kept = JSON.parse(storage.writes.at(-1)).games;
+
+  assert.equal(kept.length, 20); assert.equal(kept[0].game, 'table-24');
 });
 test('muting only instructional tips leaves reopening Help independent of the preference', () => {
   const storage = store(null), p = helpPreferences(storage); p.setMuted(true);
@@ -94,9 +120,10 @@ test('muting only instructional tips leaves reopening Help independent of the pr
   p.setMuted(false); assert.equal(p.shouldShow('tempo'), true);
 });
 test('stored values are bounded generic preferences, never arbitrary identities or payloads', () => {
-  const storage = store(JSON.stringify({ version: 1, seen: ['SECRET', 'mutation', 'mutation'], muted: 'true', token: 'SECRET' }));
-  const p = helpPreferences(storage); p.markSeen('tempo'); p.markSeen('SECRET');
-  assert.deepEqual(JSON.parse(storage.writes.at(-1)), { version: 1, muted: false, seen: ['mutation', 'tempo'] });
+  const storage = store(JSON.stringify({ version: 2, muted: 'true', token: 'SECRET',
+    games: [{ game: 'table-a', seen: ['SECRET', 'mutation', 'mutation'], token: 'SECRET' }, { game: '../x', seen: ['tempo'] }] }));
+  const p = helpPreferences(storage); p.setGame('table-a'); p.markSeen('tempo'); p.markSeen('SECRET');
+  assert.deepEqual(JSON.parse(storage.writes.at(-1)), { version: 2, muted: false, games: [{ game: 'table-a', seen: ['mutation', 'tempo'] }] });
 });
 test('blocked, malformed and older preference versions keep Help usable in memory', () => {
   for (const storage of [null, store('broken'), store('{"version":0,"muted":true}'), { getItem() { throw Error(); }, setItem() { throw Error(); } }]) {

@@ -254,23 +254,25 @@ const energyEvent = sequence => upkeepEvent(sequence, 'RoundEnergyGranted', { gr
 const cleanupEvent = sequence => ({ sequence, event: { kind: 'ConditionsExpired', roundId: 2,
   expired: { 1: [{ effect: { kind: 'DefenseBuff', amount: 2 } }] } } });
 
-test('Step holds the exact applied frame until an explicit Next, with received, presented and read positions separate', () => {
-  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([event(4), event(5)]);
+// An action the other team's creature took: the board's allies are creature 1 only.
+const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: true },
+  appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7, critical: true }] });
+test('an incoming action holds its exact applied frame until an explicit Next, with received, presented and read positions separate', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([incoming(4), incoming(5)]);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 4); // not during a windup
   h.drain(); assert.equal(h.queue.model().stage, 'resolved'); assert.equal(h.queue.model().sequence, 4);
   assert.equal(h.queue.model().read, null); assert.equal(h.queue.model().presented, 4);
   h.queue.advance(); assert.equal(h.queue.model().sequence, 5); assert.equal(h.queue.model().read, 4);
   h.drain(); h.queue.advance(); assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().read, 5);
 });
-const incoming = (sequence, extras = {}) => event(sequence, { ...extras, resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: true },
-  appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 7, critical: true }] });
-test('the player\'s own cast moves on by itself in Auto; Step still waits for Next on it', () => {
+test('the player\'s own cast moves on by itself, in Step as in Auto', () => {
   const h = harness(); h.receive([]); h.receive([event(4), event(5)]); h.tick(); h.tick();
   assert.equal(h.queue.model().asks, false); assert.equal([...h.timers.values()][0].ms, SETTLE);
   assert.equal(h.queue.model().incoming, false);
   h.tick(); assert.equal(h.queue.model().sequence, 5);
-  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.tick(); step.tick();
-  assert.equal(step.queue.model().asks, true); assert.equal(step.timers.size, 0);
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4), event(5)]); step.tick(); step.tick();
+  assert.equal(step.queue.model().asks, false); assert.equal([...step.timers.values()][0].ms, SETTLE);
+  step.tick(); assert.equal(step.queue.model().sequence, 5);
 });
 test('in Auto as in Step an incoming action holds for the OK; switching pace never moves past it', () => {
   const h = harness(); h.receive([]); h.receive([incoming(4), incoming(5)]); h.tick(); h.tick();
@@ -294,9 +296,13 @@ test('the own closing cast, meaningful aftermath and combined next upkeep are re
   h.receive([event(4), cleanupEvent(5), energyEvent(6), upkeepEvent(7)], { board: latest });
   assert.equal(h.queue.model().board.round, 2); assert.equal(h.queue.model().board.creatures[0].energy, 5);
   assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
-  h.drain(); h.queue.advance();
-  assert.equal(h.queue.model().receipt.category, 'Aftermath'); assert.equal(h.queue.model().board.round, 2);
-  assert.equal(h.queue.model().board.phase, 'EndOfRound'); assert.deepEqual(h.queue.model().board.creatures, []);
+  h.drain();
+  assert.equal(h.queue.model().receipt.category, 'Aftermath', 'the own cast moved on by itself; Step holds the aftermath'); assert.equal(h.queue.model().board.round, 2);
+  assert.equal(h.queue.model().board.phase, 'EndOfRound');
+  // On the round's last action frame, nothing of the next round's board: creature 2 as the strike left it.
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 13);
+  assert.equal(h.queue.model().board.creatures[0].energy, 5); assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
+  assert.deepEqual(h.queue.model().paced.markers.map(one => [one.id, one.lines.map(line => line.text)]), [['1', ['Defense Buff ends']]]);
   h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
   assert.match(h.queue.model().summary, /\+2 energy.*1 → 3/); assert.match(h.queue.model().summary, /No ongoing ticks/);
   assert.doesNotMatch(h.queue.model().summary, /unknown|not recorded/); assert.equal(h.queue.model().receipt.sections.length, 2);
@@ -366,8 +372,8 @@ test('rotation, motion, speed and connection settles leave an unshown upkeep to 
     settle(h.queue); assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
   }
 });
-test('what arrives under a dialog queues behind a held Step, while Auto settles it', () => {
-  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([event(4)]); step.drain();
+test('what arrives under a dialog queues behind a receipt held in Step, while Auto settles it', () => {
+  const step = harness(); step.queue.setMode('step'); step.receive([]); step.receive([cleanupEvent(4)]); step.drain();
   step.receive([event(5), energyEvent(6)], {}, { animate: false });
   assert.equal(step.queue.model().sequence, 4); assert.equal(step.queue.model().remaining, 3); assert.deepEqual(step.handled, []);
   const auto = harness(); auto.receive([]); auto.receive([event(4)]);
@@ -380,8 +386,9 @@ test('a catch-up that never shows its upkeep leaves it to the upkeep notice', ()
   assert.equal(h.queue.model().active, false); assert.deepEqual(h.handled, []);
 });
 test('reduced motion retains Step pacing and resetting clears every receipt', () => {
-  const h = harness(); h.queue.setMode('step'); h.queue.setReduced(true); h.receive([]); h.receive([event(4), energyEvent(5)]);
+  const h = harness(); h.queue.setMode('step'); h.queue.setReduced(true); h.receive([]); h.receive([incoming(4), energyEvent(5)]);
   h.drain(); assert.equal(h.queue.model().sequence, 4); h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  h.drain(); assert.equal(h.queue.model().receipt.category, 'Upkeep', 'Step holds the upkeep');
   h.queue.reset(); assert.equal(h.queue.model().receipt, null); assert.equal(h.queue.model().presented, null); assert.equal(h.queue.model().read, null);
   h.receive([energyEvent(5)]); assert.equal(h.queue.model().active, false);
 });
@@ -435,5 +442,52 @@ test('an upkeep that arrives once its round\'s combat has begun draws no borrowe
   h.receive([energyEvent(4), upkeepEvent(5)], { board: { ...view().board, roundNumber: 3 } });
 
   assert.equal(h.queue.model().receipt.category, 'Upkeep');
+  assert.deepEqual(h.queue.model().board.creatures, []);
+});
+test('the reading card says whose action it is, what was cast and what came of it, in the board\'s names', () => {
+  const h = harness(); h.receive([]);
+  h.receive([incoming(4)], { board: { ...view().board, allies: [{ ...creature(1), name: 'Main' }], enemies: [{ ...creature(2, 13), name: 'Main' }, creature(3)] } });
+
+  const card = h.queue.model().reading;
+
+  assert.equal(card.kind, 'incoming'); assert.equal(card.title, 'Creature 2 · Strike');
+  assert.match(card.detail, /^Critical · .+ → Creature 1$/);
+});
+test('the reading card marks the player\'s own cast, a fizzle and a round summary', () => {
+  const own = harness(); own.receive([]); own.receive([event(4)]);
+  assert.equal(own.queue.model().reading.kind, 'own');
+  const fizzle = harness(); fizzle.receive([]);
+  fizzle.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, fizzled: true, fizzleReason: { message: 'Not enough energy' } }, appliedOutcomes: [] })]);
+  assert.match(fizzle.queue.model().reading.detail, /^Fizzled: /);
+  const summary = harness(); summary.queue.setMode('step'); summary.receive([]); summary.receive([cleanupEvent(4)]);
+  assert.deepEqual(summary.queue.model().reading, { kind: 'summary', title: 'Aftermath', detail: '1 condition ended' });
+});
+test('an aftermath with no recorded action frame in its round reads by its plaques alone', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([cleanupEvent(4)]);
+
+  assert.deepEqual(h.queue.model().board.creatures, []);
+  assert.equal(h.queue.model().paced.title, 'Aftermath'); assert.equal(h.queue.model().paced.markers.length, 1);
+});
+test('an aftermath reads on the round\'s latest action frame, even one settled without playing', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const deeper = event(5); deeper.event.frame = { ...deeper.event.frame, after: [creature(1), creature(2, 6), creature(3)] };
+
+  h.receive([deeper], {}, { animate: false });
+  h.receive([cleanupEvent(6)]);
+
+  assert.equal(h.queue.model().receipt.category, 'Aftermath');
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 6, 'not the earlier cast\'s 13');
+});
+test('an aftermath after an unframed action draws no board rather than an older one', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const legacy = event(5); delete legacy.event.frame;
+
+  h.receive([legacy]);
+  h.receive([cleanupEvent(6)]);
+
   assert.deepEqual(h.queue.model().board.creatures, []);
 });

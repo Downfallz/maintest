@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Placement, SceneFrame, UpkeepMarker } from './types';
 
-const toneColors: Record<string, string> = { energy: '#b9e2ff', recovery: '#ace0bf', harm: '#ffb9a8' };
+const toneColors: Record<string, string> = { energy: '#b9e2ff', recovery: '#ace0bf', harm: '#ffb9a8', condition: '#eac88e' };
 
 // One anchored plaque per recipient. Keep objects across polls and recompute only positions
 // on resize. Historical receipts lay out identities alone; they never borrow a later board.

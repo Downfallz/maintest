@@ -148,10 +148,11 @@ The **Help** button opens the current explanation and a four-phase round guide. 
 opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
 a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
 
-Each instructional subject opens automatically once, after playback and other dialogs have settled.
-**Do not show phase tips again** mutes future automatic tips; Help remains available from the timeline,
-planning/combat choices and settings. Generic seen-subject/mute preferences use
-`downfall.arena.help.v1`; no seat, token, match, question or choice is persisted. Denied storage falls
+Each instructional subject opens automatically once in each game, after playback and other dialogs have settled
+([ADR 0142](../docs/adr/0142-teach-each-phase-once-per-game.md)). **Phase tips** in Game settings turns them on
+or off for every new game; **Do not show phase tips in this game** mutes them for this game only (ADR 0140).
+Help remains available from the timeline, planning/combat choices and settings. The subjects read are kept
+per game, for the latest twenty games, under `downfall.arena.help.v1`; no seat, token, question or choice is persisted. Denied storage falls
 back to the current page's memory. Opening Help preserves drafts, restores focus on close and never
 acknowledges a question or sends a command. Access loss clears its text.
 
@@ -335,16 +336,20 @@ journeys continue exercising the same decision protocol. AU10 adds selected-targ
 
 Match settings (the gear in the header) select **Step** (default) or **Auto**; the choice
 is independent of Help, reduced motion and animation speed. A new game starts from the player's **Game
-settings** (the menu; kept with the account when signed in, in the browser otherwise; Step, 1×, tips on by
-default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
-**Skip to present** is not offered while an incoming action waits for its OK.
+settings** (under the player's name in the account menu, or in the main menu when signed out; kept with the
+account when signed in, in the browser otherwise; Step, 1×, tips on by default), and the match settings change that game alone ([ADR 0140](../docs/adr/0140-keep-game-settings-with-the-account.md)).
+**Skip all** is offered while two or more results remain, never while an incoming action waits for its OK
+([ADR 0141](../docs/adr/0141-never-hold-the-player-s-own-cast.md)).
 Every incoming action, in either pace, animates and then holds its exact applied frame until the player's
 **OK** (**Next** while more follows); only then comes the next action, the turnover or the live board
-([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). In Auto the player's own
-casts and the turnover receipts move on by themselves; Step waits for **Next** on every item. While results remain, the action, mutation and
-result entries are withdrawn and nothing opens by itself. **Skip to present**, rotation (an orientation change, not every resize), a motion/speed change or
-connection loss immediately restores the authoritative board. In Step, results that arrive while a
-dialog covers the board queue behind the held one; in Auto they settle rather than play unseen. These presentation controls never submit or
+([ADR 0139](../docs/adr/0139-confirm-every-action-before-the-next-choice.md)). The player's own casts
+move on by themselves in either pace; Step holds the turnover receipts (aftermath, upkeep, result) for **Next**,
+Auto plays them by itself. While results remain, the action, mutation and
+result entries are withdrawn and nothing opens by itself. **Skip all**, rotation (an orientation change, not every resize), a motion/speed change or
+connection loss immediately restores the authoritative board. Results that arrive while a dialog
+covers the board queue behind a held item (an incoming action, or a receipt in Step); otherwise they settle rather than play unseen. While results are read the dock is one card, in the dock's own row so the field never resizes: whose action
+it was (opponent's, the player's own, or a round summary, with how many more follow), what was cast, what came of
+it, and **OK**/**Next** and **Skip all** beside it. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
@@ -354,9 +359,11 @@ remain recorded facts. A missing ordinary-energy record is explicitly unknown. R
 arrival-gated introductory receipt.
 
 Action frames supply their own round, phase, creatures, resources, known spells and timeline. Turnover
-records do not contain an exact battlefield: the scene shows a labelled text receipt with **no creature stats
-or spellbook** instead of borrowing future values. The next command may be opened at any time; this first
-skips the historical display. The journal and round notes retain all received facts.
+records do not contain an exact battlefield, so they read on a recorded one, never a later board
+([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
+an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
+what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
+plaques stand by name alone. Only the match result covers the field with a text receipt. The journal and round notes retain all received facts.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the

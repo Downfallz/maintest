@@ -146,3 +146,6 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0138](0138-open-the-mutation-tree-with-the-mutation-phase.md) | Open the mutation tree with the mutation phase | Accepted for the opt-in battle view |
 | [0139](0139-confirm-every-action-before-the-next-choice.md) | Confirm every incoming action before the next choice | Accepted for the opt-in battle view |
 | [0140](0140-keep-game-settings-with-the-account.md) | Keep game settings with the account, override them per game | Accepted for the opt-in battle view |
+| [0141](0141-never-hold-the-player-s-own-cast.md) | Never hold the player's own cast; Skip all from two results | Accepted for the opt-in battle view |
+| [0142](0142-teach-each-phase-once-per-game.md) | Teach each phase once per game | Accepted for the opt-in battle view |
+| [0143](0143-read-the-turnover-on-the-field.md) | Read the round turnover on the field | Accepted for the opt-in battle view |

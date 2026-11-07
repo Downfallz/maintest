@@ -3,15 +3,66 @@ import { missingRoundEnergy, upkeepReceipt, upkeepDisplay } from './battle-upkee
 import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
-import { livePresentation } from './battle-live.js';
+import { creatureLabel, livePresentation } from './battle-live.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
   : [lastResolvedText(action), ...(action.dropped ?? []).map(text => `Dropped: ${text}`)].join(' · ');
 
+// What the reading bar says of the item being read: whose it is, what was cast, and what came of it, in the
+// names the board uses. A receipt says only its title: the receipt itself is on the field.
+export function readingCard(item, board, theirs) {
+  if (!item) return null;
+  if (item.receipt) {
+    const paced = item.upkeep ?? item.aftermath;
+    return { kind: 'summary', title: paced?.title ?? item.receipt.title, detail: paced?.summary ?? '' };
+  }
+  const name = id => creatureLabel(board, id);
+  const outcome = item.status === 'Fizzled' ? [`Fizzled: ${item.reason}`]
+    : [...(item.status === 'Critical' ? ['Critical'] : []),
+      ...(item.effects?.length ? item.effects.map(effect => `${effect.text} → ${name(effect.target?.id)}`) : ['No effect'])];
+  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · ') };
+}
+
+// A paced turnover is read on the field: a plaque on each creature it touched, and one line in the reading
+// card. Its full text stays one tap away, in the result details.
 function pacedUpkeep(entries, board, round, ordinaryRounds) {
   const receipt = upkeepReceipt(entries, round, board);
-  return receipt ? upkeepDisplay(receipt.energy, receipt.ongoing, ordinaryRounds.has(round) ? '' : receipt.energyNote) : null;
+  return receipt ? { title: 'Upkeep', ...upkeepDisplay(receipt.energy, receipt.ongoing, ordinaryRounds.has(round) ? '' : receipt.energyNote) } : null;
+}
+const words = value => String(value ?? 'Condition').replace(/([a-z])([A-Z])/g, '$1 $2');
+function pacedAftermath(entries, board) {
+  const markers = new Map();
+  const mark = (id, text) => {
+    const key = String(id);
+    if (!markers.has(key)) markers.set(key, { id: key, name: creatureLabel(board, id),
+      side: board?.allies?.some(one => one.id === id) ? 'Your team' : 'Opponent', lines: [] });
+    markers.get(key).lines.push({ text, tone: 'condition' });
+  };
+  let ended = 0, immune = 0;
+  for (const entry of entries) {
+    if (entry.event?.kind === 'ConditionsExpired') {
+      for (const [id, conditions] of Object.entries(entry.event.expired ?? {})) {
+        for (const condition of conditions ?? []) { ended++; mark(Number(id), `${words(condition?.effect?.kind)} ends`); }
+      }
+    }
+    if (entry.event?.kind === 'StunImmunityGained') for (const id of entry.event.creatures ?? []) { immune++; mark(id, 'Immune to stun'); }
+  }
+  const summary = [ended ? `${ended} condition${ended === 1 ? '' : 's'} ended` : '', immune ? `${immune} immune to stun` : ''].filter(Boolean).join(' · ');
+  return { title: 'Aftermath', summary, markers: [...markers.values()] };
+}
+// The aftermath reads on the field as the round's last recorded action left it: conditions end after that
+// frame, and nothing later is borrowed.
+function aftermathView(view, action) {
+  const after = action?.frame?.after;
+  if (!Array.isArray(after) || !after.length) return null;
+  const known = new Map([...(view.board?.allies ?? []), ...(view.board?.enemies ?? [])].map(one => [one.id, one]));
+  const allies = new Set((view.board?.allies ?? []).map(one => one.id));
+  // Only the name is borrowed from the latest board: its stats, spells and mutations may already be later ones.
+  const shown = one => ({ ...one, name: one.name ?? known.get(one.id)?.name });
+  // The round's own order stays on the strip, every turn taken.
+  return { ...view, board: { ...view.board, roundNumber: action.round, timeline: action.frame.timeline ?? [], rollOffs: action.frame.rollOffs ?? [],
+    allies: after.filter(one => allies.has(one.id)).map(shown), enemies: after.filter(one => !allies.has(one.id)).map(shown) } };
 }
 
 // Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred.
@@ -24,9 +75,11 @@ function receipts(entries, board, ordinaryRounds) {
     if (!row || (row.category === 'Aftermath' && !row.details.length)) return [];
     if (entry.event.kind === 'OngoingEffectsApplied' && !ordinaryRounds.has(row.round)) row.details.push({ text: missingRoundEnergy, tone: 'neutral' });
     const upkeepEvents = row.category === 'Upkeep' ? [entry] : [];
+    const aftermathEvents = row.category === 'Aftermath' ? [entry] : [];
     return [{
       sequence: row.sequence, round: row.round || board?.roundNumber,
       upkeepEvents, upkeep: upkeepEvents.length ? pacedUpkeep(upkeepEvents, board, row.round, ordinaryRounds) : null,
+      aftermathEvents, aftermath: aftermathEvents.length ? pacedAftermath(aftermathEvents, board) : null,
       receipt: { title: row.title, category: row.category, sections: [{ title: row.title, items: row.details }] },
     }];
   });
@@ -74,7 +127,7 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
 export function createBattlePlayback({ onChange, schedule = setTimeout, cancel = clearTimeout, limit = 12, onUpkeepHandled = (_round) => {} }) {
   let latest = null, queue = [], current = null, stage = 'decision', summary = '';
-  let mode = 'auto', presented = null, read = null, ordinaryRounds = new Set();
+  let mode = 'auto', presented = null, read = null, ordinaryRounds = new Set(), lastFramed = null;
   let seen = null, timer = null, generation = 0, reduced = false, rate = 1, catalogue = new Map(), harmful = new Set(), bought = new Map();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
@@ -89,19 +142,22 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     presented = current.sequence;
     if (current.receipt?.category === 'Upkeep') onUpkeepHandled(current.round);
     summary = resultText(current);
-    if (current.receipt) { stage = 'resolved'; emit(); if (mode === 'auto') later(next, 3500, false); return; }
+    if (current.receipt) { stage = 'resolved'; emit(); if (!waits(current)) later(next, 3500, false); return; }
     stage = reduced ? 'impact' : 'windup'; emit();
     if (reduced) later(finish, REDUCED_MS, false);
     else later(() => { stage = 'impact'; emit(); later(finish, IMPACT_MS); }, WINDUP_MS);
   }
   // An incoming action, one the other team's creature took, waits for the player's OK in Auto as in Step:
   // nothing after it, a next action, the turnover or the live question, shows before it is read (ADR 0139).
-  // The player's own casts, which they chose, and the turnover receipts move on by themselves in Auto.
+  // The player's own casts, which they chose, never wait (ADR 0141); the turnover receipts wait in Step only.
   function incoming(item) {
     return Boolean(item && !item.receipt && !latest?.board?.allies?.some(one => String(one.id) === String(item.actor?.id)));
   }
+  function waits(item) {
+    return incoming(item) || (mode === 'step' && Boolean(item?.receipt));
+  }
   function finish() {
-    stage = 'resolved'; emit(); if (mode === 'auto' && !incoming(current)) later(next, SETTLE_MS);
+    stage = 'resolved'; emit(); if (!waits(current)) later(next, SETTLE_MS);
   }
   // Settling shows the latest board with one result to read, whichever the caller names. An upkeep already
   // presented was handled when it was shown; one still queued is handled only when the player chose to skip
@@ -115,7 +171,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     settle(queue.length ? resultText(queue.at(-1)) : summary, dismissUpkeep);
   }
   function reset() {
-    cancelTimer(); latest = null; queue = []; current = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
+    cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
   }
   function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]), packages = new Map() } = {}) {
     if (!view) { reset(); return; }
@@ -134,11 +190,14 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // Legacy events have text but no trustworthy intermediate board. A long catch-up (one read bringing more
     // than the limit or crossing several rounds, a reconnection's worth) must not keep a decision behind old pictures either. Both settle
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
-    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. A held Step,
-    // or an incoming action waiting for its OK in Auto too (ADR 0139), keeps what arrives under a dialog queued
-    // behind it; anything else would play unseen in Auto, so it settles.
-    const held = current !== null && (mode === 'step' || incoming(current));
+    // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. An incoming
+    // action waiting for its OK (ADR 0139), or a receipt held in Step, keeps what arrives under a dialog queued
+    // behind it; anything else would play unseen, so it settles.
+    const held = current !== null && waits(current);
     if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
+      // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.
+      const newest = actions.at(-1);
+      if (newest) lastFramed = framed(newest) ? newest : null;
       settle(resultText(arriving.at(-1))); return;
     }
     // An upkeep keeps the board it arrived with, when that board is still its own round before combat: what
@@ -146,16 +205,20 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const before = view.board?.roundNumber !== undefined && !COMBAT_BEGUN.includes(view.board.subPhase);
     for (const item of arriving) {
       if (item.receipt?.category === 'Upkeep') item.snapshot = before && view.board.roundNumber === item.round ? view : null;
+      if (item.receipt?.category === 'Aftermath') item.snapshot = lastFramed?.round === item.round ? aftermathView(view, lastFramed) : null;
+      if (!item.receipt && framed(item)) lastFramed = item;
       const previous = queue.at(-1) ?? current;
-      if (item.receipt?.category === 'Upkeep' && previous?.receipt?.category === 'Upkeep' && previous.round === item.round) {
-        previous.upkeepEvents.push(...item.upkeepEvents);
-        previous.upkeep = pacedUpkeep(previous.upkeepEvents, view.board, previous.round, ordinaryRounds);
+      const category = item.receipt?.category;
+      if (['Upkeep', 'Aftermath'].includes(category) && previous?.receipt?.category === category && previous.round === item.round) {
+        previous.upkeepEvents.push(...item.upkeepEvents); previous.aftermathEvents.push(...item.aftermathEvents);
+        if (category === 'Upkeep') previous.upkeep = pacedUpkeep(previous.upkeepEvents, view.board, previous.round, ordinaryRounds);
+        else previous.aftermath = pacedAftermath(previous.aftermathEvents, view.board);
         previous.receipt.sections.push(...item.receipt.sections); previous.sequence = item.sequence;
         // A split upkeep reads on the board that brought its last part, while that is still before combat.
         previous.snapshot = item.snapshot ?? previous.snapshot;
         if (previous === current) {
           presented = item.sequence; summary = resultText(previous);
-          cancelTimer(); if (mode === 'auto') later(next, 3500, false);
+          cancelTimer(); if (!waits(current)) later(next, 3500, false);
         }
       } else queue.push(item);
     }
@@ -164,10 +227,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function model() {
     const action = current && !current.receipt ? current : null;
     const replay = action ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
-    // An upkeep read on the board it arrived with shows that round's creatures under its markers, as the
-    // opening upkeep does; any other receipt, or an upkeep that arrived with a later board, draws none.
-    const own = current?.receipt?.category === 'Upkeep' ? current.snapshot : null;
-    const display = own ? { ...own, board: { ...own.board, phase: 'StartOfRound', subPhase: 'OngoingEffects', timeline: [] } }
+    // A turnover reads on a recorded board under its plaques: an upkeep on the board it arrived with, an aftermath
+    // on its round's last action frame. Any other receipt, or one without such a board, draws none.
+    const own = current?.receipt ? current.snapshot : null;
+    const step = current?.receipt?.category === 'Aftermath' ? { phase: 'EndOfRound', subPhase: 'Cleanup' } : { phase: 'StartOfRound', subPhase: 'OngoingEffects' };
+    const display = own ? { ...own, board: { ...own.board, ...step, timeline: current.receipt.category === 'Aftermath' ? own.board.timeline : [] } }
       : current?.receipt ? { board: { roundNumber: current.round,
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
@@ -178,9 +242,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
+      paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),
       // Next is offered for every incoming action, whatever the pace, and for everything when the player steps.
-      asks: Boolean(current && (mode === 'step' || incoming(current))), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
+      asks: Boolean(current && waits(current)), reading: readingCard(current, latest?.board, incoming(current)), incoming: incoming(current), label: current?.receipt?.title ?? (current ? `${current.spell} · ${current.status}` : ''), remaining: queue.length + (current ? 1 : 0), cue };
   }
   function setReduced(value) {
     if (value === reduced) return;
@@ -199,7 +264,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (mode === nextMode) return;
     mode = nextMode;
     if (current && stage === 'resolved' && !incoming(current)) {
-      cancelTimer(); if (mode === 'auto') later(next, current.receipt ? 3500 : SETTLE_MS, !current.receipt);
+      cancelTimer(); if (!waits(current)) later(next, current.receipt ? 3500 : SETTLE_MS, !current.receipt);
     }
     emit();
   }

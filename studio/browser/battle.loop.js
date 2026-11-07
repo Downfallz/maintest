@@ -78,9 +78,11 @@ async function answerCombat(page, view, capture) {
 // standalone notice. A round can reach the page in either shape, depending on response timing.
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
 async function readTurnover(page, round, info) {
-  const paced = page.locator('#playback-receipt'), notice = page.locator('#upkeep-dialog');
-  // The closing actions wait for their OK before the turnover reads (ADR 0139).
-  await acknowledge(page, async () => await paced.isVisible() || await notice.isVisible());
+  const paced = page.locator('#playback-pacing'), notice = page.locator('#upkeep-dialog');
+  // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
+  // default, the aftermath before the upkeep waits for its Next (ADR 0141).
+  const title = page.locator('#reading-title');
+  await acknowledge(page, async () => (await paced.isVisible() && await title.textContent() === 'Upkeep') || await notice.isVisible());
   if (await notice.isVisible()) {
     await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
@@ -89,10 +91,10 @@ async function readTurnover(page, round, info) {
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
     await page.locator('#upkeep-close').click();
   } else {
-    await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
+    await expect(page.locator('#reading-title')).toHaveText('Upkeep', { timeout: 20000 });
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
-    await expect(page.locator('#receipt-sections')).toContainText('energy');
-    await expect(page.locator('.command-dock')).toBeHidden();
+    await expect(page.locator('#result-text')).toContainText('energy');
+    await expect(page.locator('#actor-name')).toBeHidden();
     await expect(notice).toBeHidden();
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
     await readResults(page);
@@ -240,6 +242,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#order-list [data-order-creature]')).toHaveText(view.board.timeline.map(slot => {
           const creatures = [...view.board.allies, ...view.board.enemies], one = creatures.find(one => one.id === slot.creature);
+          // The base creature reads as a numbered creature (player-terminology.md); other namesakes take their id.
+          if (one.name === 'Main') return `Creature ${one.id}`;
           return creatures.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name;
         }));
         for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);

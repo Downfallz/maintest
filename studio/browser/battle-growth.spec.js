@@ -192,7 +192,8 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   const before = structuredClone([...h.view.board.allies, ...h.view.board.enemies]);
   unlock(h); h.view.feed[0].sequence = 21; h.view.feedNext = 22;
   h.view.feed.unshift({ sequence: 20, event: { kind: 'CombatActionResolved', roundId: 2,
-    resolution: { action: { actor: 1, spell: 'focus', targets: [1] } }, appliedOutcomes: [],
+    // The opponent's closing cast: it holds for its OK, where the player's own would move on (ADR 0141).
+    resolution: { action: { actor: 4, spell: 'focus', targets: [4] } }, appliedOutcomes: [],
     frame: { before, after: before, timeline: [], rollOffs: [] } } });
   spellChoice(h, 22); await h.publish();
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '20');
@@ -202,7 +203,7 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   await expect(page.locator('#inspect-spells')).not.toContainText('Devour');
   await page.getByRole('button', { name: 'Close inspection' }).click();
   expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
-  await page.locator('#playback-skip').click();
+  await page.locator('#playback-next').click();
   await expect(page.locator('#growth-receipt')).toBeVisible();
   await expect(page.locator('#growth-announcement')).toContainText('Devour');
   await page.locator('#combat-open').click();
