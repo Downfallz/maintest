@@ -114,8 +114,9 @@ for (const reason of ['hidden', 'revoked']) test(`${reason} clears private playb
   if (reason === 'hidden') {
     h.state.view.feed = [entry(10), entry(11)]; h.state.view.feedNext = 12;
     await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-    await expect(page.locator('.creature')).toHaveCount(6); await expect(page.locator('#playback-skip')).toBeHidden();
-    await expect(page.locator('#result-text')).toBeEmpty();
+    // Back in view, the cast cut short and the one that came while hidden play from the last result shown (ADR 0148).
+    await expect(page.locator('.creature')).toHaveCount(6); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
+    await expect(page.locator('#playback-skip')).toHaveText('Skip all (2)');
   }
   expect(h.errors).toEqual([]);
 });
@@ -428,4 +429,22 @@ test('reduced motion shows the result with no effect drawn', async ({ page }) =>
   await mountSpellScene(page); const frame = wardFrame();
   await presentSpell(page, frame, 'decision'); await presentSpell(page, frame, 'impact', true);
   expect(await renderedEffects(page)).toEqual([]);
+});
+test('a page opened again plays the opponent\'s actions it missed before the player\'s own turn', async ({ page }) => {
+  test.setTimeout(60000);
+  const h = await mount(page);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('downfall.battle.seen.v1'))).toContain('"sequence":9');
+  // The page is closed while the opponent plays its slot; it is now this seat's turn.
+  h.state.view = { ...h.state.view, feed: [entry(10, { actor: 4, targets: [1] })], feedNext: 11, waitingAsked: 6 };
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
+  await expect(page.locator('#reading-kind')).toContainText("Opponent's action"); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.clock.runFor(4000); await expect(page.locator('#playback-next')).toHaveText('OK');
+  await page.locator('#playback-next').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#combat-open')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('downfall.battle.seen.v1'))).toContain('"sequence":10');
+  // Opened again with nothing new, the board is as it is.
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#combat-open')).toBeVisible(); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
+  expect(h.errors).toEqual([]);
 });

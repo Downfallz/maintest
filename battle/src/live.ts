@@ -15,6 +15,7 @@ import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
+import { saveSeen, seenSince } from '../../table/battle-seen.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
@@ -65,6 +66,8 @@ let frame: SceneFrame = { stage: 'decision', target: null, actor: null, targets:
 let discovering = 0;
 let heldSeats: Choice[] = [];
 let rendererFailed = false;
+// The seat being shown, as this browser remembers what it saw of it, and the last mark kept for it.
+let seenGame: string | null = null, seenKept: number | null = null;
 const nodes = new Map<string, HTMLButtonElement>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
@@ -76,7 +79,9 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active });
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active,
+        // A page opened again plays what happened while it was closed, from the last result this browser showed.
+        since: seenGame ? seenSince(storage, seenGame) : null });
   } finally { receiving = false; }
   render();
 } });
@@ -381,6 +386,10 @@ function render() {
   text('instruction', !view ? '' : playbackState.active ? playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.' : mutation.prompt ?? guide.objective);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
+  // What this seat has been shown so far, kept for the next time the page opens on it.
+  if (seenGame && view && !replay.active && playbackState.watermark !== null && playbackState.watermark !== seenKept) {
+    seenKept = playbackState.watermark; saveSeen(storage, seenGame, seenKept);
+  }
   if (!view) inspected = null;
   renderInspection();
   $('battle').dataset.rate = String(playbackState.rate);
@@ -489,6 +498,7 @@ function choose(choice: Choice) {
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
+  seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
@@ -501,7 +511,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');

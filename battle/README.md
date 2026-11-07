@@ -384,8 +384,11 @@ Received sequence, presented sequence and the last explicit **Next** are separat
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
 duplicate automatic upkeep modal (the existing tab-local marker); a rotation, a motion/speed change, a lost
 connection or a catch-up never showed it, so its upkeep modal still opens; receipts that arrive under an open draft/reference remain available
-through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. First reads/reconnects
-baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
+through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. A first read baselines
+existing events, unless this browser showed the seat before: it keeps the last sequence shown per table and seat
+(`table/battle-seen.js`, the twenty newest games), and a page opened or brought back after that plays what came
+after it, the opponent's actions held for their OK, before the player's own choice
+([ADR 0148](../docs/adr/0148-play-what-a-closed-page-missed.md)). More than twelve new casts, more than two rounds in one response, or more than
 sixty queued new items fall back to the latest board and summary; History remains the reading surface for
 that backlog. An unframed legacy cast also falls back to confirmed text, without invented animation.
 AU8 unlock receipts stay hidden during paced history; opening a live spell choice after Skip retains its new-spell badge.
