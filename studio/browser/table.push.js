@@ -100,7 +100,6 @@ test('a seat page on a host with keys registers the worker and offers the notice
   await page.locator('#settings').click();
   await expect(page.locator('#notices-toggle')).toHaveText(/Notify me when it's my turn|Notifications are blocked|Stop notifying me/);
   await expect(page.locator('#notices-problem')).toBeEmpty();
-  await expect(page.locator('#playtest-open')).toBeHidden();
   // An already opted-in endpoint may be rebound; subscriptions/test requests are never automatic.
   expect(battleWrites.every(method => method === 'PUT')).toBe(true);
 

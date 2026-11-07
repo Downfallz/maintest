@@ -620,16 +620,11 @@
 #match-stats h3 { font-size: 13px; color: #b8c9bd; margin: 0 0 10px; }
 #match-stats strong { font-size: 16px; overflow-wrap: anywhere; }
 .match-footer { font-size: 14px; letter-spacing: 0; flex: 0 0 auto; justify-content: flex-start; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-top: 1px solid #82958255; }
-#notes-dialog, #settings-dialog { max-height: calc(100dvh - 24px); overflow-y: auto; }
-#notes-dialog { width: min(520px,calc(100vw - 24px)); }
-#note-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-#comment-form { margin-top: 16px; }
-#comment-form label { display: block; margin-bottom: 8px; }
-#end-comment { box-sizing: border-box; width: 100%; background: #102027; color: #f1eddf; padding: 10px; border: 1px solid #829582; font: inherit; }
+#settings-dialog { max-height: calc(100dvh - 24px); overflow-y: auto; }
 #notices-tools { border-top: 1px solid #82958255; margin-top: 16px; }
 @media (max-height: 500px) { .match-header { padding: 10px 16px; } .match-header h2 { font-size: 26px; } .match-body, .match-footer { padding: 8px 16px; } }
 
-#match-replay-error, #noted, #notices-problem { display: block; margin: 1em 0; }
+#match-replay-error, #notices-problem { display: block; margin: 1em 0; }
 
 /* Keep the battlefield inside the viewport when the signed-in header is present. */
 .battle-page { display: flex; flex-direction: column; }

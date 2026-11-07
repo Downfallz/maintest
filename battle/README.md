@@ -363,13 +363,13 @@ records do not contain an exact battlefield, so they read on a recorded one, nev
 ([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
 an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
 what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
-plaques stand by name alone. Only the match result covers the field with a text receipt.
+plaques stand by name alone. Only the match result covers the field with a text receipt. The journal and round notes retain all received facts.
 
 Every effect on a creature is one chip (`table/effect-chips.js`, drawn by `chipElement`): the icon of what moved
 and the amount, a drop for damage with a CRIT mark when critical, a heart for healing, a bolt for energy, a
 condition's own icon for a condition applied, the same dimmed for one ending. Spell outcomes at impact, upkeep
 ticks and aftermath ends all use it, above the creature and in the reading card, where they gather by the
-creature they landed on. The engine's words stay in each chip, unseen, for screen readers and History. The journal and round notes retain all received facts.
+creature they landed on. The engine's words stay in each chip, unseen, for screen readers and History.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
@@ -546,20 +546,18 @@ subscription is rebound to every held seat of the selected table so the host's s
 still applies; no other seat's board is fetched. Unsupported/denied browsers explain the limitation.
 Late service replies cannot repaint or submit additional requests for a replaced seat.
 
-Playtest notes use `notes.js` and the authenticated `/api/notes` route: Lookup/Misplay during recorded play,
-with a comment box after the match. Unrecorded sessions and operator replay show no note controls. Double
-clicks are fenced; failures are visible. An unsaved comment survives same-seat suspension/reconnection;
-it clears for another table/seat, revoked access or a loaded unrecorded view.
+The battle view no longer offers playtest notes (Lookup, Misplay) or the end-of-match comment: nobody used
+them. The classic table and the host's `/api/notes` route keep them.
 
 One verified accepted seat resumes directly. Two held seats still require viewpoint selection; explicitly
 switching viewpoints always clears the board and asks. Linked invitations still go to classic acceptance,
 and existing account sign-in and revocation remain authoritative. A8 #437 is still open: its rollout
 preference, refined renderer recovery and asset-budget enforcement are not yet on main.
 
-`battle-services.spec.js` covers result variants, empty replay, seat selection/privacy, recording-only notes,
+`battle-services.spec.js` covers result variants, empty replay, seat selection/privacy, the absence of notes,
 notification availability/opt-in/testing, haptics, access loss and short viewports. Controller tests cover
 late service replies and shared-device endpoint rebinding. The real-host complete-match journeys compare
-the final scorecard and replay frame to the engine, save notes to `notes.jsonl`, and exercise operator replay.
+the final scorecard and replay frame to the engine and exercise operator replay.
 
 Captures: [desktop result (browser fixture)](../docs/tabletop/images/battle-services/desktop-fixture.jpg) ·
 [phone result (real engine, at-activation)](../docs/tabletop/images/battle-services/phone-real-host.jpg).
@@ -588,7 +586,7 @@ and the physical-device checks still pending.
 ## Header and dock simplification
 
 The live view keeps its header to the round, its phase beside it, History, Help (`?`) and one gear for every
-match setting: motion, sound, reading mode, playback speed, vibration, notifications, notes and concede.
+match setting: motion, sound, reading mode, playback speed, vibration, notifications and concede.
 The "choose viewpoint" switch, the upkeep-and-aftermath review overlay, the dock's link back to the table and the
 "provisional artwork" footer are gone; the seat is named in the dock without the word viewpoint. **Next result** and
 **Skip** float over the bottom of the battlefield only while results play, because a row appearing in the grid would

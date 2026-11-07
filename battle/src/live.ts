@@ -82,7 +82,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createBattleUpkeep(tabStorage);
@@ -402,6 +402,9 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+  // An opponent's action that arrived under a dialog waited, unplayed; once the field is in view it plays.
+  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().opened && !planning.model().opened && !match.model().active)
+    queueMicrotask(() => playback.resume());
 }
 
 // Health and energy as chips beside the badges, a heart and a bolt before each number. The units and the

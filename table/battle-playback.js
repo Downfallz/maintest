@@ -199,9 +199,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
     // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. An incoming
     // action waiting for its OK (ADR 0139), or a receipt held in Step, keeps what arrives under a dialog queued
-    // behind it; anything else would play unseen, so it settles.
+    // behind it; anything else would play unseen, so it settles. An opponent's action is never passed over
+    // unseen: arriving under a dialog (the turn order, a tip), it waits, queued and unplayed, for the field.
     const held = current !== null && waits(current);
-    if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
+    const theirs = actions.some(action => incoming(action));
+    if ((!animate && !held && !theirs) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.
       const newest = actions.at(-1);
       if (newest) lastFramed = framed(newest) ? newest : null;
@@ -229,7 +231,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
         }
       } else queue.push(item);
     }
-    if (!current) next(); else emit();
+    if (!current && animate) next(); else emit();
+  }
+  // The field is in view again: what waited under a dialog plays now.
+  function resume() {
+    if (!current && queue.length) next();
   }
   function model() {
     const action = current && !current.receipt ? current : null;
@@ -247,7 +253,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const cue = action ? actionCue(action, catalogue, harmful) : null;
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
-    return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
+    return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),
@@ -279,5 +285,5 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (!current || stage !== 'resolved') return;
     read = current.sequence; cancelTimer(); next();
   }
-  return { receive, model, skip, reset, setReduced, setRate, setMode, advance };
+  return { receive, model, skip, reset, setReduced, setRate, setMode, advance, resume };
 }

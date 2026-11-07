@@ -82,20 +82,11 @@ test('two accepted seats stay behind explicit selection and suppress notificatio
   await expect(page.locator('#notices-toggle')).toHaveText('No notices with both seats here'); await expect(page.locator('#notices-toggle')).toBeDisabled();
   expect(h.writes).toEqual([]);
 });
-test('recorded notes and end comment use the seat note route without decisions', async ({ page }) => {
-  const h = await mount(page, { over: false }); await page.locator('#settings').click(); await page.locator('#playtest-open').click();
-  await expect(page.locator('#comment-form')).toBeHidden(); await page.getByRole('button', { name: 'I had to look this up', exact: true }).click();
-  await expect(page.locator('#noted')).toHaveText('Noted: you looked a rule up.');
-  await page.getByRole('button', { name: 'That was a misplay', exact: true }).click(); await expect(page.locator('#noted')).toHaveText('Noted: a misplay.');
-  h.view.over = true; await page.evaluate(() => window.notifyBattle()); await expect(page.locator('#comment-form')).toBeVisible();
-  await page.locator('#end-comment').fill('The final round was close.'); await page.locator('#comment-save').click();
-  await expect(page.locator('#noted')).toHaveText('Comment saved with the session.'); await expect(page.locator('#end-comment')).toBeEmpty();
-  expect(h.writes.map(one => [one.path, one.token, one.body.kind])).toEqual([['/api/notes', 'first', 'Lookup'], ['/api/notes', 'first', 'Misplay'], ['/api/notes', 'first', 'Comment']]);
-  expect(h.reads.some(one => one.query.includes('shown='))).toBe(false); expect(h.errors).toEqual([]);
-});
-test('unrecorded sessions hide every note entry point', async ({ page }) => {
-  await mount(page, { recording: false }); await page.locator('#settings').click(); await expect(page.locator('#playtest-open')).toBeHidden();
-  await page.keyboard.press('Escape'); await page.locator('#match-open').click(); await expect(page.locator('#match-notes')).toBeHidden();
+test('the battle view offers no playtest notes, misplay marks or end comment', async ({ page }) => {
+  await mount(page); await page.locator('#settings').click();
+  await expect(page.getByRole('button', { name: /Playtest notes|misplay/i })).toHaveCount(0);
+  await page.keyboard.press('Escape'); await page.locator('#match-open').click();
+  await expect(page.getByRole('button', { name: /End comment/i })).toHaveCount(0); await expect(page.locator('#notes-dialog')).toHaveCount(0);
 });
 for (const options of [{ permission: 'denied' }, { unsupported: true }]) test(`notifications explain ${JSON.stringify(options)}`, async ({ page }) => {
   const h = await mount(page, options); await page.locator('#settings').click(); await expect(page.locator('#notices-toggle')).toBeDisabled();
@@ -112,24 +103,15 @@ test('notification opt-in, diagnostic and selection haptic are explicit user act
   expect(await page.evaluate(() => window.serviceCalls)).toContain('vibrate');
   await expect(page.locator('#sound')).not.toBeChecked(); expect(h.errors).toEqual([]);
 });
-test('an end comment being written survives leaving the page and coming back to the same seat', async ({ page }) => {
-  const h = await mount(page); await page.locator('#match-open').click(); await page.locator('#match-notes').click();
-  await page.locator('#end-comment').fill('Half a thought about round seven');
-  const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
-  await visibility(true); await visibility(false);
-  await expect(page.locator('#comment-form')).toBeVisible(); await expect(page.locator('#notes-dialog')).toBeVisible();
-  await expect(page.locator('#end-comment')).toHaveValue('Half a thought about round seven');
-  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
-});
-test('revoked access clears an unsaved note and the entire result', async ({ page }) => {
-  const h = await mount(page); await page.locator('#match-open').click(); await page.locator('#match-notes').click(); await page.locator('#end-comment').fill('Private draft');
-  h.status = 403; await page.evaluate(() => window.notifyBattle()); await expect(page.locator('#notes-dialog')).toBeHidden(); await expect(page.locator('#match-dialog')).toBeHidden();
-  await expect(page.locator('#end-comment')).toBeEmpty(); await expect(page.locator('#match-stats')).toBeEmpty(); await expect(page.locator('#noted')).toBeEmpty();
+test('revoked access clears the entire result', async ({ page }) => {
+  const h = await mount(page); await page.locator('#match-open').click();
+  h.status = 403; await page.evaluate(() => window.notifyBattle()); await expect(page.locator('#match-dialog')).toBeHidden();
+  await expect(page.locator('#match-stats')).toBeEmpty();
 });
 test('final actions fit short landscape and portrait with readable stats', async ({ page }) => {
   await mount(page); await page.locator('#match-open').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(viewport); await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"], #match-notes');
+    await page.setViewportSize(viewport); await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"]');
   }
 });
 

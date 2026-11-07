@@ -143,10 +143,6 @@ async function reviewAndReplay(page, latest, info, actions) {
   await expect(page.locator('#match-title')).toHaveText(title);
   await Promise.all([latest.board.allies, latest.board.enemies].map(team => expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`)));
   await page.screenshot({ path: info.outputPath('final-result-real-host.jpg'), type: 'jpeg', quality: 85 });
-  await page.locator('#match-notes').click();
-  await page.getByRole('button', { name: 'I had to look this up', exact: true }).click(); await expect(page.locator('#noted')).toHaveText('Noted: you looked a rule up.');
-  await page.locator('#end-comment').fill('AU13 real-host final comment'); await page.locator('#comment-save').click();
-  await expect(page.locator('#noted')).toHaveText('Comment saved with the session.'); await page.keyboard.press('Escape');
   await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
   for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();

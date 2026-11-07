@@ -491,3 +491,20 @@ test('an aftermath after an unframed action draws no board rather than an older 
 
   assert.deepEqual(h.queue.model().board.creatures, []);
 });
+test('an opponent\'s action arriving under a dialog waits unplayed, and plays for its OK once the field is in view', () => {
+  const h = harness(); h.receive([]);
+
+  h.receive([incoming(4)], {}, { animate: false });
+
+  assert.equal(h.queue.model().active, true, 'results remain to be read');
+  assert.equal(h.queue.model().sequence, null, 'nothing plays under the dialog'); assert.equal(h.timers.size, 0);
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+  h.tick(); h.tick(); assert.equal(h.queue.model().asks, true, 'it waits for its OK');
+});
+test('the player\'s own action arriving under a dialog still settles, as before', () => {
+  const h = harness(); h.receive([]);
+
+  h.receive([event(4)], {}, { animate: false });
+
+  assert.equal(h.queue.model().active, false);
+});
