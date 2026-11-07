@@ -666,8 +666,10 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #playback-pacing[data-kind="incoming"] { --reading-accent: #d98b6f; }
 #playback-pacing[data-kind="own"] { --reading-accent: #8cc7ad; }
 #playback-pacing[data-kind="summary"] { --reading-accent: var(--gold); }
-.reading-text { flex: 1; min-width: 0; }
-.reading-text p { margin: 0; }
+.reading-text { flex: 1; min-width: 0; display: block; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.reading-text > span { display: block; }
+/* Long multi-target results stay in two lines; the card opens the full result. */
+#reading-detail { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 #reading-kind { color: var(--reading-accent, #8cb4a0); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 #reading-title { margin-top: 3px; color: #f2eee2; font: 400 19px/1.25 Georgia, serif; overflow-wrap: anywhere; }
 #reading-detail { margin-top: 3px; color: #c4d0c7; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }

@@ -81,8 +81,10 @@ for (const kind of ['fizzle', 'support', 'legacy']) test(`${kind} keeps the real
   const h = await mount(page);
   await h.publish([entry(10, { fizzled: kind === 'fizzle', legacy: kind === 'legacy', targets: kind === 'support' ? [] : [4],
     outcomes: kind === 'support' ? [{ kind: 'HealOutcome', target: 1, amount: 3 }, { kind: 'EnergyOutcome', target: 1, amount: 2 }] : undefined })]);
-  await expect(page.locator('#playback-result')).toBeVisible();
-  await page.clock.runFor(860); await page.locator('#playback-result').click();
+  // While it plays, the reading card opens the full result; a legacy cast, which settles at once, the dock's result.
+  const opener = page.locator(kind === 'legacy' ? '#playback-result' : '#reading-open');
+  await expect(opener).toBeVisible();
+  await page.clock.runFor(860); await opener.click();
   await expect(page.locator('#result-text')).toContainText(kind === 'fizzle' ? 'fizzled: Not enough energy' : kind === 'support' ? 'Heal 3' : 'Damage 7');
   if (kind === 'legacy') await expect(page.locator('#playback-skip')).toBeHidden();
   expect(h.errors).toEqual([]);

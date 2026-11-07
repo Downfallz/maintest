@@ -262,6 +262,7 @@ function render() {
   text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
   text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
   $('reading-detail').hidden = !reading?.detail;
+  $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
   receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
   $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
   $('playback-result').hidden = !playbackState.summary;
@@ -514,6 +515,7 @@ $('playback-next').addEventListener('click', () => {
 });
 $('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
+$('reading-open').addEventListener('click', () => { if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal(); });
 scene.onResizeDuringPlayback = () => playback.skip();
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
