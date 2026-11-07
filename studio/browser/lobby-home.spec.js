@@ -42,6 +42,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     const pageOf = /^\/api\/lobby\/finished\/(bots|players)\/(\d+)$/.exec(path);
     if (pageOf) {
       state.finishedReads.push(`${pageOf[1]}/${pageOf[2]}`);
+      if (state.failFinished > 0) { state.failFinished -= 1; return route.fulfill({ status: 503, json: { message: 'The results are out for a moment.' } }); }
       const all = finished[pageOf[1]], pages = Math.max(1, Math.ceil(all.length / 6)), at = Math.min(Number(pageOf[2]), pages);
       return json({ total: all.length, pages, page: at, items: all.slice((at - 1) * 6, at * 6) });
     }
@@ -393,3 +394,28 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#opponent').selectOption('person'); await expect(page.locator('#create-submit')).toBeEnabled();
   expect(state.errors).toEqual([]);
 });
+
+test('a finished page that failed is read again on the next poll, and the three polls after a game ends read again', async ({ page }) => {
+  const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
+  const games = [{ table: { ...battle, id: 'live', seats: [battle.seats[0], bot] }, seats: [{ seat: 'player1', token: 'live-token' }] }];
+  const won = { match: 'm1', table: 'done', finishedAt: '2026-11-07T20:00:00Z', format: '3v3', rounds: 4, outcome: 'won', you: ['player1'],
+    opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/done' };
+  const finished = { bots: [], players: [] };
+  const state = await home(page, { games, finished });
+  state.failFinished = 0;
+  const poll = async () => { const before = state.mineReads; await page.evaluate(() => window.dispatchEvent(new Event('online'))); await expect.poll(() => state.mineReads).toBeGreaterThan(before); };
+  await expect.poll(() => state.finishedReads.length).toBe(2);
+
+  // The game ends, and its result is not written yet when the lobby first hears of it, nor can the host read it once.
+  games[0].table = { ...games[0].table, over: true }; state.failFinished = 1;
+  await poll(); await expect.poll(() => state.finishedReads.length).toBe(4);
+  finished.bots.push(won);
+  await poll(); await expect.poll(() => state.finishedReads.length).toBe(6);
+  await page.locator('#mine-finished').click();
+  await expect(page.locator('.mine-group.bots .game-card')).toHaveCount(1);
+  await poll(); await expect.poll(() => state.finishedReads.length).toBe(8);
+  await poll(); await poll();
+  expect(state.finishedReads.length).toBe(8);
+  expect(state.errors).toEqual([]);
+});
+

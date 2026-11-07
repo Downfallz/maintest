@@ -162,7 +162,7 @@ export function mountLobby(doc, location, storage) {
   let mine = [], mineTab = 'ongoing', limit = null;
   // Each kind's finished page, read from the host a page at a time (ADR 0147); `seen` is what the last read was of.
   const finished = { players: { page: 0, data: null }, bots: { page: 0, data: null } };
-  let finishedSeen = null;
+  let finishedSeen = null, finishedReads = 0;
   let invitations = [];
   let friends = [];
   let reinviting = null;
@@ -346,15 +346,20 @@ export function mountLobby(doc, location, storage) {
       if (reading !== revision || wanted !== finished[kind].page) return;
       finished[kind].data = data; finished[kind].page = data.page - 1;
     } catch (error) {
-      if (reading === revision) problem(error.message || 'Could not read your finished games. Try again.');
+      // Read again on the next poll: a page that failed once is not given up on.
+      if (reading === revision) { finishedReads = Math.max(finishedReads, 1); problem(error.message || 'Could not read your finished games. Try again.'); }
     }
     if (listing) render();
   }
-  // Read again when a game of this player's finished, or who is signed in changed: never on every poll.
+  // Read on the first poll, and again when a game of this player's finished or who is signed in changed: never on
+  // every poll. A game the host says is over may still be having its result written, so the three polls after a
+  // finish read again, which is a bounded wait rather than a page that misses it until the next reload.
   function maybeLoadFinished() {
+    if (signInFirst()) return;
     const seen = JSON.stringify([account?.id ?? null, mine.filter(entry => entry.table.over).map(entry => entry.table.id)]);
-    if (seen === finishedSeen || signInFirst()) return;
-    finishedSeen = seen;
+    if (seen !== finishedSeen) { finishedReads = finishedSeen === null ? 1 : 3; finishedSeen = seen; }
+    if (finishedReads <= 0) return;
+    finishedReads -= 1;
     for (const [kind] of KINDS) void loadFinished(kind);
   }
   function render() {
@@ -536,7 +541,7 @@ export function mountLobby(doc, location, storage) {
       account = next;
       mode = nextMode;
       if (changed) {
-        revision += 1; adopted = false; mine = []; invitations = []; limit = null; finishedSeen = null;
+        revision += 1; adopted = false; mine = []; invitations = []; limit = null; finishedSeen = null; finishedReads = 0;
         for (const [kind] of KINDS) finished[kind] = { page: 0, data: null };
         if (dialog.open) dialog.close();
         problem();
