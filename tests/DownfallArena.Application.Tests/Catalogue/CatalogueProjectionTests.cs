@@ -353,6 +353,15 @@ public sealed class CatalogueProjectionTests
     }
 
     [Fact]
+    public void The_spell_types_are_served_in_the_order_the_domain_declares_them_attacks_first()
+    {
+        var view = View;
+
+        view.SpellTypes.ShouldBe(Enum.GetNames<SpellType>());
+        view.SpellTypes.ShouldNotBeNull()[0].ShouldBe(nameof(SpellType.Offensive));
+    }
+
+    [Fact]
     public void Each_effect_line_is_marked_with_its_kind_in_print_order_caster_lines_last()
     {
         var spell = Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy), casterEffects: [Heal.Of(2)]);

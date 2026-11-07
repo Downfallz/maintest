@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { mount, entry, before } from './battle-playback-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { WINDUP_MS, IMPACT_MS, SETTLE_MS } from '../../table/battle-timing.js';
@@ -58,37 +59,38 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await page.clock.runFor(300);
   await page.screenshot({ path: info.outputPath('paced-upkeep.jpg'), type: 'jpeg', quality: 85 });
   // Nothing of the new asking is acknowledged while the turnover is still being read.
-  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
+  expect(h.state.requests.filter(one => one.query.includes('shown=6'))).toEqual([]);
   await page.locator('#playback-next').click();
   await expect(page.locator('#round-phase')).toHaveText('COMMAND'); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('7 EN');
   // Once the reading ends, the mutation phase opens its tree by itself and acknowledges the asking (ADR 0138).
   await expect(page.locator('#planning-dialog')).toBeVisible();
-  await expect.poll(() => h.state.requests.filter(one => one.query.includes('shown=')).map(one => new URLSearchParams(one.query).get('shown'))).toEqual(['6']);
+  await expect.poll(() => h.state.requests.filter(one => one.query.includes('shown=')).map(one => new URLSearchParams(one.query).get('shown')).filter(asked => asked === '6')).toEqual(['6']);
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test('Auto continues held results; an incoming one offers OK, not Skip, and returns the live command without acknowledging it', async ({ page }) => {
+test('Auto continues held results; an incoming one offers OK, not Skip, and returns the live choice without acknowledging it again', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), entry(11, { actor: 4 })]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await finishCast(page); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'auto'); await page.getByRole('button', { name: 'Close settings' }).click(); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
   await expect(page.locator('#playback-skip')).toBeHidden(); await finishCast(page, 11);
   await page.locator('#playback-next').click(); await expect(page.locator('#playback-next')).toBeHidden();
-  await expect(page.locator('#combat-open')).toBeEnabled();
+  // The spell choice is back once the results are read, and its asking was acknowledged once, when it first opened.
+  await expect(page.locator('#combat-dialog')).toBeVisible();
   await h.publish([entry(10), entry(11, { actor: 4 })]); await expect(page.locator('#playback-skip')).toBeHidden();
-  expect(h.state.requests.filter(one => one.query.includes('shown='))).toEqual([]);
+  expect(h.state.requests.filter(one => one.query.includes('shown=')).length).toBe(1);
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume')).toEqual([]); expect(h.errors).toEqual([]);
 });
 
 test('the next choice waits for the reading, and skipping it passes unread receipts without a second upkeep modal', async ({ page }) => {
   const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
-  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-open')).toBeHidden();
-  await page.locator('#playback-skip').click(); await page.locator('#combat-open').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#playback-skip').click(); await openSpells(page);
   await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect(page.locator('#combat-context')).toContainText('7 energy');
   await page.getByRole('button', { name: 'Close spell choices' }).click(); await h.publish([]);
-  await expect(page.locator('#connection')).toHaveText('LIVE'); await page.clock.runFor(500);
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await page.clock.runFor(500);
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 
@@ -183,7 +185,7 @@ test('in Auto the own cast moves on by itself and an incoming one waits for its 
   await page.locator('[data-creature="2"]').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
   await finishCast(page, 11); await page.clock.runFor(5000);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
-  await page.keyboard.press('Escape'); await expect(page.locator('#combat-open')).toBeHidden();
+  await page.keyboard.press('Escape'); await expect(page.locator('#combat-dialog')).toBeHidden();
   await expect(page.locator('#playback-next')).toHaveText('Next'); await page.locator('#playback-next').click();
   await expect(page.locator('#reading-title')).toHaveText('Aftermath'); expect(h.errors).toEqual([]);
 });

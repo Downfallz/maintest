@@ -37,7 +37,7 @@ async function mount(page) {
   // next SSE notification never reaches the view until a test happens to advance the clock.
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 10000)));
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   const publish = async (entries, extra = {}) => {
     state.view = { ...state.view, ...extra, feed: entries, feedNext: Math.max(state.view.feedNext, ...entries.map(one => one.sequence + 1)) };
     await page.evaluate(() => window.notifyBattle());

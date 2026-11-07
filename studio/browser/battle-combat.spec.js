@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
@@ -7,8 +8,8 @@ test.describe.configure({ mode: 'default' });
 const legal = (candidates, minTargets = 1, maxTargets = 1) => ({ candidates, minTargets, maxTargets });
 const creature = id => ({ id, name: `Creature ${id}`, health: 21, maxHealth: 30, energy: 5, totalDefense: 2,
   currentInitiative: 7, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['bolt', 'ward', 'locked'], conditions: [] });
-async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]) } = {}) {
-  const state = { writes: [], shown: [], status: 204, seatStatus: 200, shownStatus: 200, message: '', wait: null, view: {
+async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]), shownStatus = 200 } = {}) {
+  const state = { writes: [], shown: [], status: 204, seatStatus: 200, shownStatus, message: '', wait: null, view: {
     waitingFor: kind, waitingAsked: 11, waitingCreature: 1, feedNext: 83, over: false,
     board: { slot: 'Player1', roundNumber: 4, phase: 'Combat', subPhase: kind === 'Intent' ? 'Intent' : 'Activation', activationCursor: 0,
       allies: [1, 2, 3].map(creature), enemies: [4, 5, 6].map(creature), timeline: [{ creature: 1, owner: 'Player1', speed: 'Quick' }] },
@@ -39,10 +40,10 @@ async function mount(page, { kind = 'Action', targets = legal([4, 5, 6]) } = {})
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#loading')).toBeHidden(); return state;
 }
-async function bolt(page) { await page.locator('#combat-open').click(); await page.locator('[data-spell="bolt"]').click(); }
+async function bolt(page) { await openSpells(page); await page.locator('[data-spell="bolt"]').click(); }
 
-test('opening combat shows host card text and only then acknowledges the question', async ({ page }) => {
-  const state = await mount(page); expect(state.shown).toEqual([]); await page.locator('#combat-open').click();
+test('the spell choice opens by itself with the host card text and acknowledges the question once', async ({ page }) => {
+  const state = await mount(page); await openSpells(page);
   await expect(page.locator('[data-spell="bolt"]')).toContainText('Host effect text'); await expect(page.locator('[data-spell="bolt"]')).toContainText('0 energy');
   await expect(page.locator('[data-spell="locked"]')).toBeDisabled(); await expect.poll(() => state.shown).toEqual([11]); expect(state.writes).toEqual([]);
 });
@@ -76,7 +77,7 @@ test('hidden intent warns of unaffordable plans and declares without binding tar
   await page.locator('#combat-declare').click(); await expect.poll(() => state.writes).toEqual([{ kind: 'Intent', creature: 1, spell: 'bolt', asked: 11 }]);
 });
 test('a revealed intent asks only for targets', async ({ page }) => {
-  const state = await mount(page, { kind: 'Target' }); await page.locator('#combat-open').click(); await expect(page.locator('#combat-back')).toBeHidden();
+  const state = await mount(page, { kind: 'Target' }); await openSpells(page); await expect(page.locator('#combat-back')).toBeHidden();
   await page.locator('[data-creature="4"]').click(); await page.locator('#combat-confirm').click(); await expect.poll(() => state.writes).toEqual([{ kind: 'Target', targets: [4], asked: 11 }]);
 });
 test('a pending command disables confirmation and target changes', async ({ page }) => {
@@ -92,11 +93,12 @@ test('host rejection stays readable after the draft closes and the next asking a
   // The refresh the write triggered has delivered the new asking by now: the message is still there to read.
   await expect(page.locator('#combat-open')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#combat-error')).toHaveText(state.message);
-  await page.locator('#combat-open').click();
+  await openSpells(page);
   await expect(page.locator('#combat-error')).toBeHidden();
 });
 test('keyboard users can leave the spell dialog and confirm a field target', async ({ page }) => {
-  const state = await mount(page); await page.locator('#combat-open').focus(); await page.keyboard.press('Enter');
+  // The spell choice opens by itself with the focus on its first castable spell (ADR 0149).
+  const state = await mount(page); await openSpells(page); await expect(page.locator('#combat-spells .combat-spell:not(:disabled)').first()).toBeFocused();
   await page.locator('[data-spell="bolt"]').focus(); await page.keyboard.press('Enter');
   await expect(page.locator('[data-creature="4"]')).toBeFocused(); await page.keyboard.press('Enter');
   await page.locator('#combat-confirm').focus(); await page.keyboard.press('Enter'); await expect.poll(() => state.writes.length).toBe(1);
@@ -118,7 +120,7 @@ test('a changed asking clears the open draft before it can be confirmed', async 
   await bolt(page); await expect(page.locator('#combat-confirm')).toBeDisabled();
 });
 test('access revocation clears the open spell dialog and its private text', async ({ page }) => {
-  const state = await mount(page); await page.locator('#combat-open').click(); state.seatStatus = 403;
+  const state = await mount(page); await openSpells(page); state.seatStatus = 403;
   await expect(page.locator('#combat-dialog')).toBeHidden({ timeout: 10000 });
   await expect(page.locator('#combat-heading')).toBeEmpty(); await expect(page.locator('#combat-spells')).toBeEmpty();
   await expect(page.locator('#combat-open')).toBeHidden(); expect(state.writes).toEqual([]);
@@ -133,7 +135,8 @@ test('hiding a page cancels targeting and resuming does not acknowledge unseen c
 });
 
 test('failed acknowledgement disables choices and asks for an explicit reopen', async ({ page }) => {
-  const state = await mount(page); state.shownStatus = 503; await page.locator('#combat-open').click();
+  // The choice opens, and asks to be acknowledged, as soon as the question arrives (ADR 0149): the host refuses from the start.
+  const state = await mount(page, { shownStatus: 503 }); await openSpells(page);
   await expect(page.locator('#combat-dialog-error')).toContainText('Close and reopen');
   await expect(page.locator('[data-spell="bolt"]')).toBeDisabled(); expect(state.writes).toEqual([]);
   state.shownStatus = 200; await page.locator('#combat-dialog-close').click(); await bolt(page);

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 test.beforeEach(returningBattlePlayer);
@@ -40,7 +41,7 @@ async function mount(page, kind = 'Action') {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#combat-open').click(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await openSpells(page); return state;
 }
 const notify = page => page.evaluate(() => window.notifyBattle());
 const target = (page, id) => page.locator(`.creature[data-creature="${id}"]`);

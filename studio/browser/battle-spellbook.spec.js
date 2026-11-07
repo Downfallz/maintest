@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
@@ -40,7 +41,7 @@ async function mount(page, kind = 'Intent') {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#combat-open').click(); return state;
+  await expect(page.locator('#loading')).toBeHidden(); await openSpells(page); return state;
 }
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
 const notify = page => page.evaluate(() => window.notifyBattle());
@@ -94,8 +95,8 @@ test('an offered energy plan and repeated taps never declare without the explici
 test('a changed creature clears reference position, details mode and the previous draft', async ({ page }) => {
   const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
   h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2; await notify(page);
-  await expect(page.locator('#combat-dialog')).toBeHidden(); await page.locator('#combat-open').click();
-  await expect(page.locator('#combat-heading')).toContainText('Creature 2');
+  // The old creature's choice closes and the new one's opens by itself at once (ADR 0149), fresh.
+  await openSpells(page); await expect(page.locator('#combat-heading')).toContainText('Creature 2');
   await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'false');
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
   await expect(page.locator('#combat-declare')).toBeDisabled(); expect(h.writes).toEqual([]);

@@ -26,10 +26,15 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
   dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
   document.addEventListener('keydown', event => {
     if ((event.target as Element | null)?.closest?.('.home-header, .navigation-panels')) return;
-    if (event.key === 'Escape' && controller.model().target && !document.querySelector('dialog[open]')) { event.preventDefault(); controller.close(); }
+    if (event.key !== 'Escape' || document.querySelector('dialog:modal')) return;
+    // The docked spell choice is not modal, so Escape is heard here rather than as its dialog's cancel.
+    if (controller.model().target && !document.querySelector('dialog[open]')) { event.preventDefault(); controller.close(); }
+    else if (dialog.open) { event.preventDefault(); controller.close(); }
   });
 
-  function render(model: Model, catalogue: SpellCatalogue | null, newSpells: string[] = []) {
+  // `held`: results are being read on the field. The docked choice steps aside, its draft kept, and comes back
+  // once they are read: no command is offered while results are still to be read (ADR 0139).
+  function render(model: Model, catalogue: SpellCatalogue | null, newSpells: string[] = [], held = false) {
     const cards = cardsById(catalogue);
     const targeting = model.opened && Boolean(model.target);
     const choosing = model.opened && !targeting;
@@ -57,7 +62,9 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
       const confirm = el<HTMLButtonElement>('combat-declare');
       confirm.hidden = model.waitingFor !== 'Intent'; confirm.disabled = !model.canSubmit;
       confirm.textContent = model.sending ? 'Sending…' : model.chosen ? `Declare ${cardTitle(cards.get(model.chosen)) || model.chosen}${model.short.includes(model.chosen) ? ' · may fizzle' : ''}` : 'Select a spell';
-      if (!dialog.open) { dialog.showModal(); spellbook.opened(); }
+      // Docked beside the field, as the mutation choice is (ADR 0149): the board stays in view while a spell is chosen.
+      if (held) { if (dialog.open) dialog.close(); }
+      else if (!dialog.open) { dialog.show(); spellbook.opened(); }
     } else if (dialog.open) dialog.close();
     if (targeting) {
       const legal = model.target.legalTargets;

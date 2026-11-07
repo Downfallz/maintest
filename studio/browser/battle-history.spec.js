@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
@@ -50,7 +51,7 @@ async function mount(page, feed = [entry(10)]) {
   // question, so the player closes the tree first, and acknowledgements are counted from there.
   await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('#planning-close').click();
   await expect.poll(() => state.shown).toEqual(['11']); state.shown.length = 0;
-  await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   // Discovery POSTs the saved capabilities to resume; measure journal writes after this baseline.
   state.writes.length = 0;
   const publish = async (feed, extra = {}) => {
@@ -137,7 +138,7 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await h.publish([], { board: { ...h.state.view.board, phase: 'Combat', subPhase: 'Activation' },
     waitingFor: 'Action', waitingAsked: 12, options: { action: { creature: 1,
       spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
-  await page.locator('#combat-open').click(); await page.locator('[data-spell="strike"]').click();
+  await openSpells(page); await page.locator('[data-spell="strike"]').click();
   await page.locator('[data-creature="4"]').click(); await expect(page.locator('#combat-confirm')).toBeEnabled();
   await page.locator('#history-open').click(); await expect(page.locator('#combat-confirm')).toBeDisabled();
   await h.publish([entry(10)]); await page.locator('#history-close').click();

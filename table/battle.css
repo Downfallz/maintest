@@ -927,3 +927,70 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 .planning-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .planning-action { min-height: 44px; padding: 8px 14px; border: 1px solid #52695e; border-radius: 999px; background: #172a30; color: #dfe7df; font-size: 13px; }
 .planning-action.atlas-open { border-color: var(--gold); color: #f6e7c4; }
+
+/* The opponent, named at the top of the field over its team, where the field said "Opponent": who it is, its place
+   on the ladder or that it is a bot, and a heart for a friend. Its card opens from there with the rank in full and
+   the friend action. */
+.opponent-chip { position: absolute; z-index: 4; top: 8px; right: 10px; display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: min(320px, 70%); min-height: 44px; padding: 4px 12px 4px 4px; box-shadow: 0 4px 14px #0008; border: 1px solid #d98b6f66; border-radius: 999px; background: linear-gradient(90deg, #2a2320, #172429); color: #f2eee2; font: inherit; cursor: pointer; }
+.opponent-chip[hidden] { display: none; }
+.opponent-avatar { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f0b48a, #a2533a); color: #1a1d1a; font: 700 15px/1 Georgia, serif; }
+:is(.opponent-chip, #opponent-dialog)[data-kind="bot"] .opponent-avatar { background: radial-gradient(circle at 35% 30%, #8ea79c, #3c4d47); color: #e6f0ea; font-family: system-ui, sans-serif; }
+:is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar { background: #24343a; color: #aebbb4; }
+.opponent-text { display: grid; min-width: 0; line-height: 1.1; text-align: left; }
+.opponent-vs { color: #d98b6f; font: 800 8px/1.2 system-ui, sans-serif; letter-spacing: .18em; }
+#opponent-name { overflow: hidden; max-width: 140px; font: 15px/1.2 Georgia, serif; white-space: nowrap; text-overflow: ellipsis; }
+.opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; color: #f6e7c4; font: 800 10px/1.5 system-ui, sans-serif; }
+.opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
+.opponent-chip[data-kind="bot"] .opponent-badge { border-color: #7f948a; color: #cfe0d7; }
+.opponent-heart { flex: none; color: #ef7a6c; font-size: 15px; line-height: 1; }
+#opponent-dialog { width: min(360px, calc(100vw - 32px)); padding: 18px; border: 1px solid #d98b6f66; border-radius: 14px; background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
+#opponent-dialog::backdrop { background: #050b0db3; }
+.opponent-head { display: flex; align-items: center; gap: 12px; }
+.opponent-head .eyebrow { margin: 0; color: #d98b6f; font-size: 10px; letter-spacing: .16em; }
+.opponent-head h2 { margin: 2px 0 0; font: 24px/1.15 Georgia, serif; overflow-wrap: anywhere; }
+#opponent-close { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: #c4d0c7; font-size: 22px; }
+.opponent-avatar.large { width: 48px; height: 48px; font-size: 22px; }
+.opponent-rank { margin: 14px 0 0; color: #e6c88c; font-size: 14px; }
+.opponent-note { margin: 10px 0 0; color: #c4d0c7; font-size: 13px; }
+.opponent-note[hidden], .opponent-rank[hidden], #opponent-friend[hidden], #opponent-problem[hidden] { display: none; }
+#opponent-friend { width: 100%; min-height: 46px; margin-top: 14px; }
+#opponent-problem { margin: 10px 0 0; color: #ffb3a7; font-size: 13px; }
+.opponent-ladder { display: inline-block; margin-top: 14px; color: var(--gold); font-size: 13px; }
+#battle-zone:has(#opponent-open:not([hidden])) #enemy-label { display: none; }
+@media (max-width: 619px) {
+  .opponent-chip { top: 6px; right: 6px; gap: 6px; padding: 3px 10px 3px 3px; }
+  .opponent-avatar { width: 28px; height: 28px; font-size: 14px; }
+  #opponent-name { max-width: 130px; font-size: 14px; }
+}
+
+/* The spell choice opens by itself on the player's turn and docks beside the field as the mutation choice does
+   (ADR 0149): a sheet under the field on a phone, a panel at its side on a wider screen. The field gives up that
+   room rather than sitting behind it, so the board stays readable while a spell is chosen. */
+body:has(#combat-dialog[open]) { --spell-height: clamp(300px, 54dvh, 490px); --spell-width: clamp(330px, 40vw, 540px); }
+#combat-dialog {
+  position: fixed; z-index: 12; inset: auto 0 0; margin: 0; width: 100%; max-width: none;
+  height: var(--spell-height); max-height: none; padding: 12px 14px; border: 0; border-top: 2px solid var(--gold);
+  border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
+}
+body:has(#combat-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--spell-height); }
+body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, footer) { display: none; }
+#combat-dialog .combat-spell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#combat-dialog #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
+  #combat-dialog { inset: 0 0 0 auto; width: var(--spell-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#combat-dialog[open]) #battle-zone { margin: 0 var(--spell-width) 0 0; }
+  body:has(#combat-dialog[open]) #battle :is(.hud-top, .timeline-wrap) { margin-right: var(--spell-width); }
+}
+/* A short screen keeps its room for the spells: the sentence the tips and Help already say gives way first. */
+@media (max-height: 700px) {
+  #combat-dialog #combat-help { display: none; }
+  #combat-dialog h2 { font-size: 17px; }
+}
+@media (max-height: 700px) and (orientation: portrait) {
+  body:has(#combat-dialog[open]) { --spell-height: min(62dvh, 490px); }
+}
+/* Enlarged text in a narrow docked panel can outgrow it: the panel then scrolls as a whole, the spells keep a
+   readable height of their own, and the footer that declares stays pinned at its bottom edge. */
+#combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
+#combat-dialog #combat-browser { min-height: 120px; }
+#combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }

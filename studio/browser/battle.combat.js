@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer, readResults } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 test.beforeEach(returningBattlePlayer);
@@ -68,10 +69,13 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         const beforeShown = shown.length, beforeSent = sent.length;
         await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
         await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
-        expect(shown.length).toBe(beforeShown); expect(sent.length).toBe(beforeSent);
+        // The field it held is free again, so the spell choice opens and acknowledges this asking (ADR 0149): that
+        // is the one thing said to the host, and nothing is sent.
+        expect(shown.slice(beforeShown).every(asked => Number(asked) === view.waitingAsked)).toBe(true);
+        expect(shown.length - beforeShown).toBeLessThanOrEqual(1); expect(sent.length).toBe(beforeSent);
       };
       await readResults(page, readOrder); await readOrder();
-      await page.locator('#combat-open').click();
+      await openSpells(page);
       let spell = null;
       if (view.waitingFor !== 'Target') {
         const options = view.waitingFor === 'Action' ? view.options.action.spells.map(one => one.spell)

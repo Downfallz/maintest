@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
@@ -141,11 +142,12 @@ test('a reveal reads as one line and crests on the field, opens on cards by side
   await page.locator('#growth-dismiss').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
-test('crests leave the field while a choice or history covers it', async ({ page }) => {
+test('crests stay beside the docked spell choice and leave the field to its targets or to history', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); spellChoice(h); await h.publish();
-  await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
-  await page.locator('#combat-open').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
-  await page.locator('#combat-dialog-close').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  // The spell choice opens by itself, docked: the field and its crests stay in view (ADR 0149).
+  await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
+  await page.locator('[data-spell="devour"]').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  await page.locator('#combat-cancel').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
   await page.locator('#history-open').click(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
   expect(h.errors).toEqual([]);
 });
@@ -153,21 +155,22 @@ test('public unlock receipt and new spell badge appear once; reload is a silent 
   const h = await mount(page); unlock(h); spellChoice(h); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await page.locator('#growth-dismiss').click();
   await h.publish(); await expect(page.locator('#growth-receipt')).toBeHidden();
-  await page.locator('#combat-open').click(); await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
+  await openSpells(page); await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/); await expect(page.locator('[data-spell="focus"]')).not.toHaveClass(/spell-new/);
   await expect(page.locator('[data-spell="focus"]')).not.toContainText('New');
-  await page.locator('#combat-dialog-close').click(); await page.locator('#combat-open').click();
+  await page.locator('#combat-dialog-close').click(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).toContainText('New · Available');
-  spellChoice(h, 22); await h.publish(); await page.locator('#combat-open').click();
+  spellChoice(h, 22); await h.publish(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New');
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
-  await expect(page.locator('#growth-receipt')).toBeHidden(); await page.locator('#combat-open').click();
+  await expect(page.locator('#growth-receipt')).toBeHidden(); await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).not.toContainText('New'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('a pending acknowledgement cannot send through the reference and the target draft survives', async ({ page }) => {
-  const input = initial(); const h = await mount(page, input); unlock(h); spellChoice(h); await h.publish();
-  let release; h.ack = new Promise(resolve => { release = resolve; });
-  await page.locator('#combat-open').click(); await page.locator('[data-spell="devour"]').click();
+  // The choice opens, and is acknowledged, as soon as the question arrives (ADR 0149): the acknowledgement is held from then.
+  const input = initial(); const h = await mount(page, input); unlock(h); spellChoice(h);
+  let release; h.ack = new Promise(resolve => { release = resolve; }); await h.publish();
+  await openSpells(page); await page.locator('[data-spell="devour"]').click();
   await page.locator('.is-targetable').click(); await page.locator('#combat-confirm').click();
   await h.reference(); release(); await page.clock.runFor(50);
   expect(h.writes).toEqual([]); await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
@@ -213,7 +216,7 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   await page.locator('#playback-next').click();
   await expect(page.locator('#growth-receipt')).toBeVisible();
   await expect(page.locator('#growth-announcement')).toContainText('Devour');
-  await page.locator('#combat-open').click();
+  await openSpells(page);
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
   expect(h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

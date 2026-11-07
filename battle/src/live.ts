@@ -16,6 +16,7 @@ import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
 import { saveSeen, seenSince } from '../../table/battle-seen.js';
+import { friendAction, opponentCard, opponentOf } from '../../table/battle-opponent.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
@@ -38,7 +39,7 @@ import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel } from '../../table/terms.js';
 
-interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string }[] } }
+interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
@@ -73,13 +74,15 @@ const name = (id: unknown) => creatures.find(one => one.id === String(id))?.labe
 const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
   receiving = true;
+  // The match begins once everyone is seated: an opponent who took an open seat is named from then on.
+  if (view?.waiting && next && !next.waiting) void loadOpponent(true);
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
     history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
-      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().opened && !planning.model().opened && !match.model().active,
+      { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().target && !planning.model().opened && !match.model().active,
         // A page opened again plays what happened while it was closed, from the last result this browser showed.
         since: seenGame ? seenSince(storage, seenGame) : null });
   } finally { receiving = false; }
@@ -87,7 +90,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -228,7 +231,8 @@ function announceRound(round: number | null) {
   }
   announcedRound = round;
 }
-let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
+let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', spellOpened = '', orderShown = false;
+let dockShape = '', dockMoved = false;
 
 function render() {
   if (receiving) return;
@@ -280,9 +284,17 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  const showGrowth = visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened;
+  // The docked spell choice leaves the field in view, so a reveal stays on it while a spell is chosen; targets are
+  // chosen on the field itself, which the reveal leaves to them.
+  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !planning.model().opened;
   growthUI.render(view, catalogue, showGrowth);
-  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  // The docked spell choice steps aside, its draft kept, for whatever the field has to show first: results being read,
+  // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
+  const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
+  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
+  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && $('planning-dialog').dataset.kind === 'Evolution'}`;
+  if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
+  else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
@@ -349,7 +361,7 @@ function render() {
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null);
   text('round-phase', phaseLabel(board.phase).toUpperCase());
-  text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
+  text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
   const orderReading = orderUI.isReading() && !replay.active;
@@ -397,7 +409,7 @@ function render() {
   if (targeting && !wasTargeting) (document.querySelector<HTMLButtonElement>('.is-targetable:not(:disabled)') ?? $<HTMLButtonElement>('combat-confirm')).focus({ preventScroll: true });
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
-    !playbackState.active && !replay.active && !action.opened && !action.sending &&
+    !playbackState.active && !replay.active && !action.target && !action.sending &&
     !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
@@ -442,11 +454,18 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+  // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
+  // after whatever the board still had to show. Closing it leaves Choose spell in the dock.
+  const fight = combat.model();
+  if (fight.opened) spellOpened = fight.question;
+  // A refusal the host gave is read first, in the dock: opening the choice would clear it.
+  else if (fight.available && !fight.error && ['Action', 'Intent', 'Target'].includes(fight.waitingFor) && spellOpened !== fight.question
+    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { spellOpened = fight.question; combat.open(); }
   // The match's end is one moment: once its last result is read, the result opens by itself, once per seat.
   const seatKey = selected ? `${selected.table.id}:${selected.seat}` : '';
   if (view?.over && seatKey && matchShown !== seatKey && !replay.active && !match.model().active && canAuto()) { matchShown = seatKey; matchUI.open(); }
   // An opponent's action that arrived under a dialog waited, unplayed; once the field is in view it plays.
-  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().opened && !planning.model().opened && !match.model().active)
+  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().target && !planning.model().opened && !match.model().active)
     queueMicrotask(() => playback.resume());
 }
 
@@ -490,6 +509,77 @@ function effectChips(node: HTMLElement, chips: EffectChip[]) {
   holder.replaceChildren(...chips.map(chip => chipElement(chip, catalogue?.effects ?? [])));
 }
 
+// Who the player is up against: the other seat as the table names it, its place on the ladder and whether it is a
+// friend. Read when a seat is chosen, again when the opponent takes an open seat, and whenever its card opens.
+type Ladder = Parameters<typeof opponentCard>[1];
+type FriendLists = Parameters<typeof opponentCard>[2];
+let opponent: { seat: ReturnType<typeof opponentOf>; ladder: Ladder; friends: FriendLists } = { seat: null, ladder: null, friends: null };
+async function readJson(path: string) {
+  try { const response = await request(path); return response.ok ? await response.json() : null; } catch { return null; }
+}
+// Loads overlap (the card opening while the match begins), so the seats a refresh reads are kept on the choice as
+// soon as they arrive, each load draws from the choice as it stands when it ends, and only the latest load draws.
+let opponentLoad = 0;
+async function loadOpponent(refreshSeats = false) {
+  const choice = selected, load = ++opponentLoad;
+  if (!choice) return;
+  if (refreshSeats) {
+    try {
+      const response = await request('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens: [choice.token] }) });
+      const answer = response.ok ? await response.json() : null;
+      const table = answer?.tables?.find((one: { table: Choice['table'] }) => one.table.id === choice.table.id)?.table;
+      if (table) { choice.table = table; if (selected === choice) { opponent = { ...opponent, seat: opponentOf(table, choice.seat) }; drawOpponent(); } }
+    } catch { /* The seats the page opened with still name the opponent. */ }
+  }
+  const [ladder, friends] = await Promise.all([readJson('/api/leaderboard'), readJson('/api/friends')]);
+  if (selected !== choice || load !== opponentLoad) return;
+  opponent = { seat: opponentOf(choice.table, choice.seat), ladder, friends };
+  drawOpponent();
+}
+const avatarOf = (card: ReturnType<typeof opponentCard>) => card.kind === 'bot' ? '⚙' : card.kind === 'waiting' ? '…' : (card.name.trim()[0] ?? '?').toUpperCase();
+function opponentLabel() {
+  const card = opponentCard(opponent.seat, opponent.ladder, opponent.friends);
+  return card.kind === 'person' || card.kind === 'bot' ? `OPPONENT · ${card.name.toUpperCase()}` : 'OPPONENT';
+}
+function drawOpponent() {
+  const card = opponentCard(opponent.seat, opponent.ladder, opponent.friends);
+  const chip = $<HTMLButtonElement>('opponent-open');
+  chip.hidden = !selected || card.kind === 'unknown';
+  chip.dataset.kind = card.kind;
+  text('opponent-avatar', avatarOf(card)); text('opponent-name', card.name);
+  $('opponent-badge').hidden = !card.badge; text('opponent-badge', card.badge);
+  $('opponent-heart').hidden = card.friend !== 'friend';
+  chip.setAttribute('aria-label', `Opponent: ${card.name}${card.badge ? `, ${card.badge === 'BOT' ? 'a bot' : `rank ${card.badge}`}` : ''}${card.friend === 'friend' ? ', your friend' : ''}. Open details.`);
+  text('enemy-label', view ? opponentLabel() : '');
+  // The card, open or not, says the same.
+  $('opponent-dialog').dataset.kind = card.kind;
+  text('opponent-dialog-avatar', avatarOf(card)); text('opponent-title', card.name);
+  text('opponent-kind', card.kind === 'bot' ? 'OPPONENT · BOT' : card.kind === 'waiting' ? 'OPPONENT · NOT SEATED' : 'OPPONENT · PLAYER');
+  text('opponent-rank', card.rankText); $('opponent-rank').hidden = !card.rankText;
+  const action = friendAction(card.friend);
+  $('opponent-note').hidden = !action?.note; text('opponent-note', action?.note ?? '');
+  $('opponent-friend').hidden = !action?.label; text('opponent-friend', action?.label ?? '');
+}
+$('opponent-open').addEventListener('click', () => {
+  $('opponent-problem').hidden = true;
+  $<HTMLDialogElement>('opponent-dialog').showModal(); render(); void loadOpponent();
+});
+$('opponent-close').addEventListener('click', () => $<HTMLDialogElement>('opponent-dialog').close());
+$('opponent-dialog').addEventListener('close', () => { render(); $('opponent-open').focus({ preventScroll: true }); });
+// Asking, or accepting by asking back (ADR 0129): the same request, by the opponent's player name.
+$('opponent-friend').addEventListener('click', async () => {
+  const button = $<HTMLButtonElement>('opponent-friend'), name = opponent.seat?.name;
+  if (!name) return;
+  button.disabled = true; $('opponent-problem').hidden = true;
+  try {
+    const response = await request('/api/friends/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: name }) });
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.message ?? 'The host did not answer. Try again.');
+    await loadOpponent();
+  } catch (error) {
+    text('opponent-problem', (error as Error).message); $('opponent-problem').hidden = false;
+  } finally { button.disabled = false; }
+});
+
 function choose(choice: Choice) {
   audio.stop();
   if (rendererFailed) return;
@@ -499,6 +589,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
+  opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
@@ -511,7 +602,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
@@ -614,7 +705,9 @@ $('reading-open').addEventListener('click', () => {
   else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
 });
 $('order-continue').addEventListener('click', () => orderUI.finish());
-scene.onResizeDuringPlayback = () => playback.skip();
+// A docked choice opening or closing beside the field resizes it; that re-lays out the cast being shown rather than
+// passing over it, which a rotation or a resized window still does.
+scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; return; } playback.skip(); };
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
 matchMedia('(orientation: portrait)').addEventListener('change', () => { if (playback.model().active) playback.skip(); });

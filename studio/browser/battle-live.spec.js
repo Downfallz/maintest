@@ -42,7 +42,7 @@ async function mount(page, { size = 3, saved = true, search = '', resumeStatus =
 }
 async function choose(page, seat = 1) {
   await page.locator('#seat-choices button').filter({ hasText: `Player ${seat}` }).click();
-  await expect(page.locator('#connection')).toHaveText('LIVE'); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await expect(page.locator('#loading')).toBeHidden();
 }
 const fits = page => fitsViewport(page, '.creature, #help-open, #settings');
 test('a new player reads in Step at 1x with tips, and a change in Match settings lasts for that game alone', async ({ page }) => {
@@ -115,6 +115,62 @@ test('while the other side plays, the dock says whom it waits for, which creatur
   await page.reload(); await choose(page, 2);
   await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', ''); await expect(page.locator('#playback-pacing')).toBeHidden();
 });
+test('the header names the opponent with its rank and friendship, and its card adds a friend', async ({ page }, info) => {
+  const state = await mount(page); const asked = [];
+  let friends = { friends: [], incoming: [], outgoing: [] };
+  const seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } }));
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { players: [{ rank: 3, username: 'bastien', rating: 1532, wins: 5, losses: 4, draws: 1, provisional: false }] } }));
+  await page.route('**/api/friends', route => route.fulfill({ json: friends }));
+  await page.route('**/api/friends/requests', route => { asked.push(route.request().postDataJSON()); friends = { ...friends, outgoing: [{ id: 'acct_bastien' }] }; return route.fulfill({ json: { accepted: false } }); });
+  await page.reload(); await choose(page, 1);
+  const chip = page.locator('#opponent-open');
+  await expect(chip).toBeVisible(); await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-heart')).toBeHidden();
+  await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN');
+  await fitsViewport(page, '#opponent-open, #history-open, #help-open, #settings');
+  await page.screenshot({ path: info.outputPath('opponent-header.png') });
+  await chip.click(); await expect(page.locator('#opponent-dialog')).toBeVisible();
+  await expect(page.locator('#opponent-rank')).toHaveText('#3 · 1532 rating · 5W 4L 1D');
+  await page.screenshot({ path: info.outputPath('opponent-card.png') });
+  await page.locator('#opponent-friend').click();
+  await expect(page.locator('#opponent-note')).toHaveText('Friend request sent'); await expect(page.locator('#opponent-friend')).toBeHidden();
+  expect(asked).toEqual([{ username: 'bastien' }]);
+  await page.keyboard.press('Escape'); await expect(chip).toBeFocused();
+  // A friend wears a heart in the header.
+  friends = { friends: [{ id: 'acct_bastien' }], incoming: [], outgoing: [] };
+  await chip.click(); await expect(page.locator('#opponent-note')).toHaveText('Your friend');
+  await page.keyboard.press('Escape'); await expect(page.locator('#opponent-heart')).toBeVisible();
+  expect(state.requests.filter(one => one.path.endsWith('/decision'))).toEqual([]);
+});
+test('a bot opponent is named as a bot, with no rank and no friend action', async ({ page }) => {
+  await mount(page);
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3',
+    seats: [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#opponent-name')).toHaveText('Lookahead'); await expect(page.locator('#opponent-badge')).toHaveText('BOT');
+  await page.locator('#opponent-open').click();
+  await expect(page.locator('#opponent-kind')).toHaveText('OPPONENT · BOT'); await expect(page.locator('#opponent-rank')).toHaveText('A bot · bots are not ranked');
+  await expect(page.locator('#opponent-friend')).toBeHidden();
+});
+test('an opponent who takes the open seat stays named when an older read of the ladder answers last', async ({ page }) => {
+  const state = await mount(page); state.first.waiting = true;
+  let seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'open' }];
+  const held = [];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  // The read made when the seat is chosen hangs on the ladder until the match has begun.
+  await page.route('**/api/leaderboard', route => { if (held.length === 0) held.push(route); else return route.fulfill({ json: { players: [] } }); });
+  await page.route('**/api/friends', route => route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await expect(page.locator('#loading')).toBeHidden();
+  await expect(page.locator('#opponent-name')).toHaveText('Open seat'); await expect.poll(() => held.length).toBe(1);
+  seats = [seats[0], { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }]; state.first.waiting = false;
+  await expect(page.locator('#opponent-name')).toHaveText('bastien', { timeout: 15000 });
+  await held[0].fulfill({ json: { players: [] } });
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 200)));
+  await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await page.locator('#opponent-open').click(); await expect(page.locator('#opponent-rank')).toHaveText(/Unranked/);
+});
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
@@ -129,10 +185,12 @@ test('the real host fields fit the viewport without a page error', async ({ page
   expect(errors).toEqual([]);
 });
 
-test('the preview writes nothing but the seat discovery, and never says a question was shown', async ({ page }) => {
+test('the page writes nothing but the seat discovery, and says the question was shown once, as its choice opens', async ({ page }) => {
   const state = await mount(page); await choose(page);
   await expect.poll(() => state.requests.filter(one => one.path.startsWith('/api/seat/')).length).toBeGreaterThan(0);
-  expect(state.requests.some(one => one.query.includes('shown='))).toBe(false);
+  // The spell choice opens by itself on the player's turn, which is the one acknowledgement (ADR 0149).
+  await expect(page.locator('#combat-dialog')).toBeVisible();
+  await expect.poll(() => state.requests.filter(one => one.query.includes('shown=')).map(one => one.query)).toEqual(['?since=83&shown=11']);
   expect(state.requests.filter(one => one.method !== 'GET').map(one => one.path)).toEqual(['/api/lobby/resume']);
 });
 
@@ -176,7 +234,7 @@ test('network failures mark the retained board stale and recover with a new snap
   const state = await mount(page); await choose(page); state.status = 503;
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale', { timeout: 10000 }); await expect(page.locator('.creature')).toHaveCount(6);
   state.status = 200; state.first.board.roundNumber = 5;
-  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#round-number')).toHaveText('05', { timeout: 10000 }); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
 });
 test('an invitation is reviewed at the table and never claimed here', async ({ page }) => {
   const state = await mount(page, { saved: false, invitation: true, search: '?player1=invite' });
@@ -206,11 +264,12 @@ test('a hidden page clears inspection and reloads a fresh viewpoint on return', 
   await expect(page.locator('.creature')).toHaveCount(0); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
   state.first.board.allies[0].health = 10;
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('10/30'); await expect(page.locator('#connection')).toHaveText(/^LIVE/);
 });
 
 test('the live dock and all six inspection targets fit short portrait and landscape', async ({ page }) => {
-  await mount(page); await choose(page);
+  // The dock shows once the self-opened spell choice is closed (ADR 0149).
+  await mount(page); await choose(page); await page.locator('#combat-dialog-close').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 900, height: 700 }]) {
     await page.setViewportSize(viewport);
     await expect.poll(async () => Math.round((await page.locator('#phaser-mount canvas').boundingBox()).width)).toBe(viewport.width);

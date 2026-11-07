@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSpells } from './battle-spells-fixture.js';
 import { returningBattlePlayer, mutationTree, acknowledge, readResults, matchResult } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
@@ -67,8 +68,11 @@ async function answerCombat(page, view, capture) {
   const kind = view.waitingFor;
   // Whatever still waits (an opponent's OK, a turn order that revealed after the step looked for it) is read
   // until the command is offered.
-  const command = page.locator('#combat-open');
-  await acknowledge(page, async () => await command.isVisible()); await command.click(); let spell;
+  // The choice opens by itself once the field is clear (ADR 0149); a command left in the dock opens it.
+  const command = page.locator('#combat-open'), battle = page.locator('#battle');
+  await acknowledge(page, async () => await page.locator('#combat-dialog').isVisible() || (await battle.getAttribute('data-combat')) === 'targets' || await command.isVisible());
+  await openSpells(page);
+  let spell;
   if (capture && kind !== 'Target') await capture('late-spellbook');
   if (kind !== 'Target') { spell = castable(view).find(id => id.includes('heavy_strike')) ?? castable(view)[0]; await page.locator(`[data-spell="${spell}"]`).click(); }
   if (kind !== 'Intent') {

@@ -30,9 +30,11 @@ function paletteOf(catalogue, cards) {
   if (!palettes.has(catalogue)) palettes.set(catalogue, talentPalette(catalogue, cards));
   return palettes.get(catalogue);
 }
-// Groups follow the catalogue's own order of types, so every creature reads them the same way; unknown last.
+// Groups follow the order the host gives its spell types in (the domain's own: attacks first, then defences), then
+// any other type in the catalogue's order, so every creature reads them the same way; unknown last. The page names
+// no type itself.
 function typeRank(catalogue) {
-  const order = [...new Set((catalogue?.cards ?? []).map(card => card.type).filter(Boolean))];
+  const order = [...new Set([...(catalogue?.spellTypes ?? []), ...(catalogue?.cards ?? []).map(card => card.type).filter(Boolean)])];
   return type => type === OTHER ? Infinity : order.indexOf(type);
 }
 

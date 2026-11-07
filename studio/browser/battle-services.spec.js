@@ -138,7 +138,7 @@ test('a signed-in player can read a menu panel and return to the same live match
   await expect(page.getByRole('heading', { name: 'What we keep' })).toBeVisible();
   await page.keyboard.press('Escape');
   expect(await board.boundingBox()).toEqual(before);
-  await expect(page.locator('#connection')).toHaveText('LIVE');
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/);
   await fitsViewport(page, '#home-menu-toggle, #settings, #order-open');
   await page.screenshot({ path: info.outputPath('signed-in-battle-landscape.jpg'), type: 'jpeg' });
 });
