@@ -115,6 +115,44 @@ test('while the other side plays, the dock says whom it waits for, which creatur
   await page.reload(); await choose(page, 2);
   await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', ''); await expect(page.locator('#playback-pacing')).toBeHidden();
 });
+test('the header names the opponent with its rank and friendship, and its card adds a friend', async ({ page }, info) => {
+  const state = await mount(page); const asked = [];
+  let friends = { friends: [], incoming: [], outgoing: [] };
+  const seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } }));
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { players: [{ rank: 3, username: 'bastien', rating: 1532, wins: 5, losses: 4, draws: 1, provisional: false }] } }));
+  await page.route('**/api/friends', route => route.fulfill({ json: friends }));
+  await page.route('**/api/friends/requests', route => { asked.push(route.request().postDataJSON()); friends = { ...friends, outgoing: [{ id: 'acct_bastien' }] }; return route.fulfill({ json: { accepted: false } }); });
+  await page.reload(); await choose(page, 1);
+  const chip = page.locator('#opponent-open');
+  await expect(chip).toBeVisible(); await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-heart')).toBeHidden();
+  await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN');
+  await fitsViewport(page, '#opponent-open, #history-open, #help-open, #settings');
+  await page.screenshot({ path: info.outputPath('opponent-header.png') });
+  await chip.click(); await expect(page.locator('#opponent-dialog')).toBeVisible();
+  await expect(page.locator('#opponent-rank')).toHaveText('#3 · 1532 rating · 5W 4L 1D');
+  await page.screenshot({ path: info.outputPath('opponent-card.png') });
+  await page.locator('#opponent-friend').click();
+  await expect(page.locator('#opponent-note')).toHaveText('Friend request sent'); await expect(page.locator('#opponent-friend')).toBeHidden();
+  expect(asked).toEqual([{ username: 'bastien' }]);
+  await page.keyboard.press('Escape'); await expect(chip).toBeFocused();
+  // A friend wears a heart in the header.
+  friends = { friends: [{ id: 'acct_bastien' }], incoming: [], outgoing: [] };
+  await chip.click(); await expect(page.locator('#opponent-note')).toHaveText('Your friend');
+  await page.keyboard.press('Escape'); await expect(page.locator('#opponent-heart')).toBeVisible();
+  expect(state.requests.filter(one => one.path.endsWith('/decision'))).toEqual([]);
+});
+test('a bot opponent is named as a bot, with no rank and no friend action', async ({ page }) => {
+  await mount(page);
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3',
+    seats: [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#opponent-name')).toHaveText('Lookahead'); await expect(page.locator('#opponent-badge')).toHaveText('BOT');
+  await page.locator('#opponent-open').click();
+  await expect(page.locator('#opponent-kind')).toHaveText('OPPONENT · BOT'); await expect(page.locator('#opponent-rank')).toHaveText('A bot · bots are not ranked');
+  await expect(page.locator('#opponent-friend')).toBeHidden();
+});
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();

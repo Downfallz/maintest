@@ -54,7 +54,8 @@ public static class CatalogueProjection
             [.. resources.Tiers.Select(Package).OrderBy(package => package.Level).ThenBy(package => package.Id.Value, StringComparer.Ordinal)],
             bands,
             Round(),
-            Effects());
+            Effects(),
+            Enum.GetNames<SpellType>());
     }
 
     /// <summary>

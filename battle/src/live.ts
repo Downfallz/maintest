@@ -16,6 +16,7 @@ import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
 import { saveSeen, seenSince } from '../../table/battle-seen.js';
+import { friendAction, opponentCard, opponentOf } from '../../table/battle-opponent.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
@@ -38,7 +39,7 @@ import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel } from '../../table/terms.js';
 
-interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string }[] } }
+interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
@@ -73,6 +74,8 @@ const name = (id: unknown) => creatures.find(one => one.id === String(id))?.labe
 const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
   receiving = true;
+  // The match begins once everyone is seated: an opponent who took an open seat is named from then on.
+  if (view?.waiting && next && !next.waiting) void loadOpponent(true);
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
@@ -87,7 +90,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog', 'opponent-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -349,7 +352,7 @@ function render() {
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null);
   text('round-phase', phaseLabel(board.phase).toUpperCase());
-  text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
+  text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
   const orderReading = orderUI.isReading() && !replay.active;
@@ -490,6 +493,75 @@ function effectChips(node: HTMLElement, chips: EffectChip[]) {
   holder.replaceChildren(...chips.map(chip => chipElement(chip, catalogue?.effects ?? [])));
 }
 
+// Who the player is up against: the other seat as the table names it, its place on the ladder and whether it is a
+// friend. Read when a seat is chosen, again when the opponent takes an open seat, and whenever its card opens.
+type Ladder = Parameters<typeof opponentCard>[1];
+type FriendLists = Parameters<typeof opponentCard>[2];
+let opponent: { seat: ReturnType<typeof opponentOf>; ladder: Ladder; friends: FriendLists } = { seat: null, ladder: null, friends: null };
+async function readJson(path: string) {
+  try { const response = await request(path); return response.ok ? await response.json() : null; } catch { return null; }
+}
+async function loadOpponent(refreshSeats = false) {
+  const choice = selected;
+  if (!choice) return;
+  let table = choice.table;
+  if (refreshSeats) {
+    try {
+      const response = await request('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens: [choice.token] }) });
+      const answer = response.ok ? await response.json() : null;
+      table = answer?.tables?.find((one: { table: Choice['table'] }) => one.table.id === choice.table.id)?.table ?? table;
+    } catch { /* The seats the page opened with still name the opponent. */ }
+  }
+  const [ladder, friends] = await Promise.all([readJson('/api/leaderboard'), readJson('/api/friends')]);
+  if (selected !== choice) return;
+  choice.table = table;
+  opponent = { seat: opponentOf(table, choice.seat), ladder, friends };
+  drawOpponent();
+}
+const avatarOf = (card: ReturnType<typeof opponentCard>) => card.kind === 'bot' ? '⚙' : card.kind === 'waiting' ? '…' : (card.name.trim()[0] ?? '?').toUpperCase();
+function opponentLabel() {
+  const card = opponentCard(opponent.seat, opponent.ladder, opponent.friends);
+  return card.kind === 'person' || card.kind === 'bot' ? `OPPONENT · ${card.name.toUpperCase()}` : 'OPPONENT';
+}
+function drawOpponent() {
+  const card = opponentCard(opponent.seat, opponent.ladder, opponent.friends);
+  const chip = $<HTMLButtonElement>('opponent-open');
+  chip.hidden = !selected || card.kind === 'unknown';
+  chip.dataset.kind = card.kind;
+  text('opponent-avatar', avatarOf(card)); text('opponent-name', card.name);
+  $('opponent-badge').hidden = !card.badge; text('opponent-badge', card.badge);
+  $('opponent-heart').hidden = card.friend !== 'friend';
+  chip.setAttribute('aria-label', `Opponent: ${card.name}${card.badge ? `, ${card.badge === 'BOT' ? 'a bot' : `rank ${card.badge}`}` : ''}${card.friend === 'friend' ? ', your friend' : ''}. Open details.`);
+  text('enemy-label', view ? opponentLabel() : '');
+  // The card, open or not, says the same.
+  $('opponent-dialog').dataset.kind = card.kind;
+  text('opponent-dialog-avatar', avatarOf(card)); text('opponent-title', card.name);
+  text('opponent-kind', card.kind === 'bot' ? 'OPPONENT · BOT' : card.kind === 'waiting' ? 'OPPONENT · NOT SEATED' : 'OPPONENT · PLAYER');
+  text('opponent-rank', card.rankText); $('opponent-rank').hidden = !card.rankText;
+  const action = friendAction(card.friend);
+  $('opponent-note').hidden = !action?.note; text('opponent-note', action?.note ?? '');
+  $('opponent-friend').hidden = !action?.label; text('opponent-friend', action?.label ?? '');
+}
+$('opponent-open').addEventListener('click', () => {
+  $('opponent-problem').hidden = true;
+  $<HTMLDialogElement>('opponent-dialog').showModal(); render(); void loadOpponent();
+});
+$('opponent-close').addEventListener('click', () => $<HTMLDialogElement>('opponent-dialog').close());
+$('opponent-dialog').addEventListener('close', () => { render(); $('opponent-open').focus({ preventScroll: true }); });
+// Asking, or accepting by asking back (ADR 0129): the same request, by the opponent's player name.
+$('opponent-friend').addEventListener('click', async () => {
+  const button = $<HTMLButtonElement>('opponent-friend'), name = opponent.seat?.name;
+  if (!name) return;
+  button.disabled = true; $('opponent-problem').hidden = true;
+  try {
+    const response = await request('/api/friends/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: name }) });
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.message ?? 'The host did not answer. Try again.');
+    await loadOpponent();
+  } catch (error) {
+    text('opponent-problem', (error as Error).message); $('opponent-problem').hidden = false;
+  } finally { button.disabled = false; }
+});
+
 function choose(choice: Choice) {
   audio.stop();
   if (rendererFailed) return;
@@ -499,6 +571,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
+  opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
   helpUI.setGame(choice.table.id); applySettings();
   const transport = httpTransport(choice.seat, choice.token, request);
@@ -511,7 +584,7 @@ async function discover(autoResume = true) {
   if (rendererFailed) return;
   const ticket = ++discovering;
   $('loading').hidden = true;
-  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; helpUI.setGame(null); view = null; catalogue = null; render();
+  connection.stop(); services.reset(); upkeep.clear(); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(); planning.reset(); match.reset(); selected = null; seenGame = null; opponent = { seat: null, ladder: null, friends: null }; drawOpponent(); helpUI.setGame(null); view = null; catalogue = null; render();
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');

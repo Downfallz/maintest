@@ -71,3 +71,7 @@ test('a change of offers keeps the known spells where they were and adds new off
   const before = rows(); const after = rows(model({ spells: ['costly', 'free', 'new'], short: ['costly'] }));
   assert.deepEqual(after.slice(0, 4).map(one => one.id), before.map(one => one.id)); assert.equal(after[4].id, 'new');
 });
+test('groups follow the host\'s order of spell types, whatever order the catalogue lists its cards in', () => {
+  const defensiveFirst = { cards: [catalogue.cards[1], catalogue.cards[2], catalogue.cards[0]], spellTypes: ['Offensive', 'Defensive', 'Passive'] };
+  assert.deepEqual(battleSpellbook(model(), defensiveFirst).map(one => one.type), ['Offensive', 'Defensive', 'Passive', 'Other spells']);
+});
