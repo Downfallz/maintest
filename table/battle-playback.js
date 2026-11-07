@@ -195,6 +195,9 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // behind it; anything else would play unseen, so it settles.
     const held = current !== null && waits(current);
     if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
+      // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.
+      const newest = actions.at(-1);
+      if (newest) lastFramed = framed(newest) ? newest : null;
       settle(resultText(arriving.at(-1))); return;
     }
     // An upkeep keeps the board it arrived with, when that board is still its own round before combat: what

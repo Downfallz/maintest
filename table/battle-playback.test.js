@@ -470,3 +470,24 @@ test('an aftermath with no recorded action frame in its round reads by its plaqu
   assert.deepEqual(h.queue.model().board.creatures, []);
   assert.equal(h.queue.model().paced.title, 'Aftermath'); assert.equal(h.queue.model().paced.markers.length, 1);
 });
+test('an aftermath reads on the round\'s latest action frame, even one settled without playing', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const deeper = event(5); deeper.event.frame = { ...deeper.event.frame, after: [creature(1), creature(2, 6), creature(3)] };
+
+  h.receive([deeper], {}, { animate: false });
+  h.receive([cleanupEvent(6)]);
+
+  assert.equal(h.queue.model().receipt.category, 'Aftermath');
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 6, 'not the earlier cast\'s 13');
+});
+test('an aftermath after an unframed action draws no board rather than an older one', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+  h.receive([event(4)]); h.drain();
+  const legacy = event(5); delete legacy.event.frame;
+
+  h.receive([legacy]);
+  h.receive([cleanupEvent(6)]);
+
+  assert.deepEqual(h.queue.model().board.creatures, []);
+});
