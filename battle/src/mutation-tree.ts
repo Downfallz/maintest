@@ -1,8 +1,8 @@
 import { mutationChoices } from '../../table/battle-mutations.js';
 import { cardsById } from '../../table/card.js';
-import { classColour, familyRoot, requirementLine, talentPalette } from '../../table/mat.js';
+import { classColour, familyRoot, talentPalette } from '../../table/mat.js';
 import { stageLabel } from '../../table/terms.js';
-import { mutationBranches } from './mutations';
+import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 import { onNextFrame } from './next-frame';
 
@@ -25,29 +25,19 @@ function sigil(family: string) {
   svg.append(path); return svg;
 }
 
-function preview(face: Face, packages: Pack[], recipient: string) {
+// The offer in hand, as the chooser shows it under the graph: the same spell cards as the full tree, compact.
+function preview(face: Face, packages: Pack[], recipient: string, catalogue: Catalogue | null) {
   const section = node('section', '', 'mutation-preview');
   section.style.setProperty('--mutation-colour', face.colour);
   section.append(node('div', `${recipient} · ${face.name}`, 'preview-name'), node('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
-  for (const spell of face.spells) {
-    const row = node('div', '', 'mutation-spell');
-    row.append(node('strong', spell.name, ''), node('span', spell.preview || 'Spell details unavailable.', '')); section.append(row);
-  }
+  const cards = cardsById(catalogue);
+  for (const spell of face.spells) section.append(spellCard(cards.get(spell.id), spell.id, catalogue?.effects ?? [], { compact: true }));
   for (const passive of face.passives) section.append(node('p', passive, 'mutation-passive'));
   if (face.missing) section.append(node('p', 'Catalogue details unavailable for this offer.', 'mutation-passive'));
-  const details = document.createElement('details'); details.className = 'mutation-details';
-  details.append(node('summary', 'Spell & path details', ''));
-  if (face.requirement) details.append(node('p', face.requirement, ''));
-  for (const spell of face.spells) {
-    details.append(node('h4', `${spell.name} · ${spell.cost ?? 'Unknown'} energy`, ''), ...spell.lines.map((line: string) => node('p', line, '')));
-  }
+  if (face.requirement) section.append(node('p', face.requirement, 'mutation-future'));
   const next = packages.filter(pack => parents(pack).includes(face.id));
-  if (next.length) {
-    section.append(node('small', `Further paths · ${next.map(pack => pack.name).join(' / ')}`, 'mutation-future'));
-    details.append(node('h4', 'Further mutations', ''), ...next.map(pack => node('p',
-      `${pack.name} · ${requirementLine(pack, id => packages.find(one => one.id === id)?.name ?? id)}`, '')));
-  }
-  section.append(details); return section;
+  if (next.length) section.append(node('small', `Opens · ${next.map(pack => pack.name).join(' / ')}`, 'mutation-future'));
+  return section;
 }
 
 // Only offers become buttons. Existing paths and connectors come from the authored prerequisites,
@@ -85,11 +75,6 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
   }
   if (!faces.size) graph.append(node('p', 'No mutation offered. Choose another creature or pass all remaining picks.', 'mutation-empty'));
   const pane = node('div', '', 'mutation-preview-slot');
-  const tree = document.createElement('details'); tree.id = 'mutation-tree';
-  tree.append(node('summary', 'Full mutation tree', ''));
-  tree.addEventListener('toggle', () => {
-    if (tree.open && tree.children.length === 1) tree.append(...mutationBranches(packages, catalogue));
-  });
   let active: string | null = null;
   function draw() {
     const bounds = graph.getBoundingClientRect();
@@ -113,10 +98,10 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
   const redraw = onNextFrame(draw);
   const observer = new ResizeObserver(redraw); observer.observe(graph);
   anchors.forEach(el => observer.observe(el));
-  return { graph, pane, tree, dispose: () => { observer.disconnect(); redraw.cancel(); }, select(id: string | null) {
+  return { graph, pane, dispose: () => { observer.disconnect(); redraw.cancel(); }, select(id: string | null) {
     if (active === id) return;
     active = id; const face = id ? faces.get(id) : null;
-    pane.replaceChildren(...(face ? [preview(face, packages, subject?.name ?? 'Creature')] : [])); draw();
+    pane.replaceChildren(...(face ? [preview(face, packages, subject?.name ?? 'Creature', catalogue)] : [])); draw();
     // Opening the preview takes space from the graph. Keep the chosen node in its own scroll
     // region without moving the page, and leave a player's subsequent scroll alone on polls.
     const selected = id && anchors.get(id), scroller = graph.parentElement;

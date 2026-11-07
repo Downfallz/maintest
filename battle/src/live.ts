@@ -8,6 +8,7 @@ import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.j
 import { orderControls } from './order';
 import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
+import { atlasControls } from './mutation-atlas';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
 import { createBattlePlayback } from '../../table/battle-playback.js';
@@ -81,7 +82,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'atlas-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
   // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
   !orderUI.isReading();
 let tabStorage: Storage | null = null;
@@ -97,14 +98,16 @@ const playback = createBattlePlayback({ onChange: () => render(), onUpkeepHandle
 // Opening a live choice or the result is the player's skip: what was still queued, upkeep included, is passed over.
 const passOver = () => playback.skip({ dismissUpkeep: true });
 const controls = combatControls(combat, name, passOver);
-const planningUI = planningControls(planning, name, passOver, inspectCreature);
+// The full mutation tree, one view for the chooser, the public reference and a revealed mutation's path.
+const atlasUI = atlasControls(() => render());
+const planningUI = planningControls(planning, name, passOver, inspectCreature, atlasUI);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); });
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
-const growthUI = growthControls(growth, () => playback.skip(), () => render());
+const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
   inspected = id; renderInspection(); $<HTMLDialogElement>('inspect-dialog').showModal();
@@ -274,7 +277,7 @@ function render() {
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
   const showGrowth = visible() && !playbackState.active && !replay.active && !action.opened && !planning.model().opened;
   growthUI.render(view, catalogue, showGrowth);
-  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
+  controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active)); planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;

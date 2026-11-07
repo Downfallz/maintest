@@ -8,7 +8,10 @@ const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, vi
   { id: 'future', name: 'Ironhide', level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
   { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the side'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
-  targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: '0%' })) };
+  targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
+  criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A natural 18 or more doubles the damage.' : null,
+  marks: [{ kind: 'DamageEffect', onCaster: false }, { kind: 'EnergyEffect', onCaster: true }] })),
+effects: [{ kind: 'DamageEffect', glyph: '♥', harmful: true }, { kind: 'EnergyEffect', glyph: 'ϟ', harmful: false }] };
 async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = null } = {}) {
   const state = { errors: [], writes: [], shown: [], status: 200, view: {
     board: { slot: 'Player1', roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', allies, enemies: [], evolutionChoices: picks, timeline: [] },
@@ -49,7 +52,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
 test('a battlefield creature opens three branches and only explicit confirmation submits the named pick', async ({ page }, info) => {
   const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });
   const nodes = page.locator('[data-mutation]');
-  await expect(nodes).toHaveCount(3); await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
+  await expect(nodes).toHaveCount(3); await expect(page.locator('#atlas-dialog')).toBeHidden();
   await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
   await expect(page.locator('#planning-confirm')).toBeDisabled();
   await expect(page.locator('.mutation-links path')).toHaveCount(3);
@@ -57,9 +60,10 @@ test('a battlefield creature opens three branches and only explicit confirmation
   for (let i = 0; i < 3; i++) {
     await nodes.nth(i).click(); await expect(page.locator('.mutation-preview')).toContainText(`+${i} initiative`);
   }
-  await nodes.first().click(); await page.locator('.mutation-details summary').click();
-  await expect(page.locator('.mutation-details')).toContainText('Strike · 0 energy');
-  await expect(page.locator('.mutation-details')).toContainText('Recorded caster effect');
+  await nodes.first().click(); const card = page.locator('.mutation-preview .spell-card');
+  await expect(card.locator('.spell-card-name')).toHaveText('Strike'); await expect(card.locator('.spell-chip-cost')).toHaveText('0 energy');
+  await expect(card.locator('.spell-chip-crit')).toHaveCount(0);
+  await expect(card.locator('.spell-card-effect[data-caster="true"]')).toHaveText('Recorded caster effect');
   await nodes.nth(1).click(); await expect(page.locator('.mutation-preview')).toContainText('Devour');
   await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-form', 'base-creature');
   await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-preview-form', 'predator');
@@ -75,13 +79,13 @@ test('a battlefield creature opens three branches and only explicit confirmation
   expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 2, tier: 'root1', asked: 11 }); expect(h.state.errors).toEqual([]);
 });
 test('polls and selection preserve detail nodes, focus and deliberate scroll', async ({ page }) => {
-  const h = await mount(page); await page.locator('[data-mutation="root2"]').click(); const summary = page.locator('.mutation-details summary').last();
-  await summary.click(); await summary.evaluate(node => { node.dataset.sentinel = 'kept'; node.focus(); });
+  const h = await mount(page); const offer = page.locator('[data-mutation="root2"]');
+  await offer.click(); await offer.evaluate(node => { node.dataset.sentinel = 'kept'; node.focus(); });
   const scroll = await page.locator('#planning-choices').evaluate(node => node.scrollTop);
   await h.publish(); await page.clock.runFor(50);
-  await expect(summary).toBeFocused(); await expect(summary).toHaveAttribute('data-sentinel', 'kept');
+  await expect(offer).toBeFocused(); await expect(offer).toHaveAttribute('data-sentinel', 'kept');
   expect(await page.locator('#planning-choices').evaluate(node => node.scrollTop)).toBe(scroll);
-  await page.locator('[data-mutation="root2"]').click(); await expect(summary.locator('..')).toHaveAttribute('open');
+  await expect(page.locator('.mutation-preview .spell-card')).toHaveAttribute('data-spell', 'spell2');
   await h.publish(); await expect(page.locator('[data-mutation="root2"]')).toHaveAttribute('aria-pressed', 'true');
   expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
@@ -130,7 +134,9 @@ test('dead and already-picked creatures explain their state and empty offers; pa
   await expect(page.locator('#planning-creatures [data-creature="2"]')).toHaveAccessibleName(/Defeated/); await expect(page.locator('#planning-creatures [data-creature="3"]')).toHaveAccessibleName(/Picked · hidden until reveal/);
   await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('[data-mutation]')).toHaveCount(0);
   await expect(page.locator('.mutation-empty')).toContainText('Choose another creature');
-  await page.locator('#mutation-tree > summary').click(); await expect(page.locator('#mutation-tree')).toContainText('Brute · Stage 1 · Picked');
+  await page.locator('#mutation-atlas-open').click();
+  await expect(page.locator('#atlas-board [data-package="root0"]')).toHaveAttribute('data-status', 'picked');
+  await expect(page.locator('#atlas-board [data-package="root0"]')).toContainText('Picked'); await page.locator('#atlas-close').click();
   await page.locator('#planning-pass').click(); await expect(page.locator('#planning-confirm')).toHaveText('Pass all remaining picks');
   await page.locator('#planning-confirm').click(); await expect.poll(() => h.state.writes.length).toBe(1);
   expect(h.state.writes[0]).toEqual({ kind: 'Evolution', pass: true, asked: 11 }); expect(h.state.errors).toEqual([]);
@@ -138,10 +144,18 @@ test('dead and already-picked creatures explain their state and empty offers; pa
 test('capstones preserve shared passives, no fake tags or spells, and the tree remains read-only', async ({ page }) => {
   const h = await mount(page, { ids: ['cap'], allies: [{ ...roster[0], acquiredTiers: ['root0', 'future'] }] });
   await expect(page.locator('[data-mutation]')).toHaveCount(1); await page.locator('[data-mutation="cap"]').click();
-  await expect(page.locator('.mutation-spell')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the side');
-  await page.locator('#mutation-tree > summary').click(); await expect(page.locator('#mutation-tree')).toContainText('Brute · Stage 1 · Acquired');
-  await expect(page.locator('#mutation-tree button')).toHaveCount(0); expect(h.state.writes).toEqual([]);
-  await page.locator('[data-mutation="cap"]').click(); await expect(page.locator('#planning-confirm')).toBeEnabled(); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('.mutation-preview .spell-card')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the side');
+  // The full tree reads what is held without offering it; only the offer is chosen, and only from its card.
+  await page.locator('#mutation-atlas-open').click(); const tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
+  await expect(tree.locator('[data-package="cap"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(tree.locator('[data-package="cap"]')).toHaveAttribute('data-path', 'true');
+  await expect(tree.locator('[data-package="root0"]')).toHaveAttribute('data-path', 'true');
+  await tree.locator('[data-package="root0"]').click(); await expect(detail).toContainText('Acquired');
+  await expect(detail.locator('.atlas-choose')).toHaveCount(0); expect(h.state.writes).toEqual([]);
+  await detail.getByRole('button', { name: 'Ironhide' }).click(); await expect(detail.locator('.atlas-card-name')).toHaveText('Ironhide');
+  await detail.getByRole('button', { name: 'Shared capstone' }).click(); await detail.getByRole('button', { name: 'Choose Shared capstone' }).click();
+  await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#planning-confirm')).toBeEnabled();
+  await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Shared capstone'); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('later offers compare multiple upgrades and multiclass roots without forcing three cards', async ({ page }, info) => {
   const content = structuredClone(catalogue);
@@ -181,8 +195,8 @@ test('long names and 200 percent text retain reachable confirmation in short por
     await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#planning-confirm, #planning-close, #planning-creatures');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '.mutation-select, .mutation-spell > span, .mutation-passive, .mutation-details { font-size: 26px !important; }' });
-  await page.locator('.mutation-details summary').last().scrollIntoViewIfNeeded(); await expect(page.locator('.mutation-details summary').last()).toBeInViewport();
+  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '.mutation-select, .mutation-passive, .spell-card, .planning-action { font-size: 26px !important; }' });
+  await page.locator('#mutation-atlas-open').scrollIntoViewIfNeeded(); await expect(page.locator('#mutation-atlas-open')).toBeInViewport();
   await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.state.errors).toEqual([]);
 });
 
@@ -231,4 +245,39 @@ test('a pick that leaves team picks keeps the tree open on the next creature wit
   await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
   await expect.poll(() => h.state.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root0', asked: 11 }, { kind: 'Evolution', creature: 2, tier: 'root1', asked: 12 }]);
   await expect(page.locator('#planning-dialog')).toBeHidden(); expect(h.state.errors).toEqual([]);
+});
+
+test('the full mutation tree opens over the pick on its offer, shows each spell as a card and chooses only from that card', async ({ page }, info) => {
+  const h = await mount(page); await page.locator('[data-mutation="root1"]').click();
+  await page.locator('#mutation-atlas-open').click();
+  const dialog = page.locator('#atlas-dialog'), tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
+  await expect(dialog).toBeVisible(); await expect(page.locator('#atlas-creature')).toHaveValue('1');
+  await expect(tree.locator('.atlas-family')).toHaveCount(3);
+  await expect(tree.locator('[data-package="root1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(tree.locator('[data-status="available"]')).toHaveCount(3); await expect(tree.locator('[data-package="future"]')).toHaveAttribute('data-status', 'future');
+  const card = detail.locator('.spell-card');
+  await expect(card.locator('.spell-card-name')).toHaveText('Devour'); await expect(card.locator('.spell-chip-cost')).toHaveText('1 energy');
+  await expect(card.locator('.spell-chip-crit')).toContainText('15%'); await expect(card.locator('.spell-chip-crit')).toContainText('d20 18+');
+  await expect(card.locator('.spell-card-effect').first()).toHaveAttribute('data-cue', 'health-loss');
+  await expect(card.locator('.spell-card-effect').last()).toHaveAttribute('data-cue', 'energy-gain');
+  await expect(card.locator('.spell-card-note')).toHaveText('A natural 18 or more doubles the damage.');
+  await expect(detail.locator('.atlas-chip-init')).toHaveText('+1 initiative');
+  await fitsViewport(page, '#atlas-close, #atlas-creature'); await page.clock.runFor(150);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('mutation-atlas.jpg'), type: 'jpeg', quality: 90 });
+  // Another creature's tree is read without changing the recipient; choosing there switches to it.
+  await page.locator('#atlas-creature').selectOption('2'); await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
+  await tree.locator('[data-package="root2"]').click(); await detail.getByRole('button', { name: 'Choose Warped' }).click();
+  await expect(dialog).toBeHidden(); await expect(page.locator('#mutation-atlas-open')).toBeFocused();
+  await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
+  await expect(page.locator('#planning-selection')).toHaveText('Creature 2 · Warped'); expect(h.state.writes).toEqual([]);
+  await page.locator('#planning-confirm').click(); await expect.poll(() => h.state.writes.length).toBe(1);
+  expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 2, tier: 'root2', asked: 11 }); expect(h.state.errors).toEqual([]);
+});
+
+test('the full mutation tree closes when the question it chose for is gone', async ({ page }) => {
+  const h = await mount(page); await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  h.state.view = { ...h.state.view, waitingFor: null, waitingAsked: null, options: {} }; await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#atlas-board')).toBeEmpty();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
