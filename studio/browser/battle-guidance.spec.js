@@ -141,7 +141,7 @@ test('tips, primary choices and round guide fit short portrait, landscape and 20
   await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '.help-body, .help-body p, .help-footer label { font-size: 28px !important; }' });
   await fitsViewport(page, '#help-close, .help-footer label');
   expect(await page.locator('.help-body').evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
-  await page.locator('#help-flow li').last().scrollIntoViewIfNeeded();
+  await page.locator('#help-round-guide summary').click(); await page.locator('#help-flow li').last().scrollIntoViewIfNeeded();
   await expect(page.locator('#help-flow li').last()).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await close(page); expect(h.state.errors).toEqual([]);
