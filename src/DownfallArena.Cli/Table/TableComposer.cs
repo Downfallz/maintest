@@ -526,7 +526,8 @@ internal sealed class TableComposer
             outcome.Winner is { } winner ? TableSeat.NameOf(winner) : null,
             [.. table.Seats.Select((seat, index) => seat.Person is null
                 ? new ResultSeat(seat.Name, null, table.Session.Seat(seat.Slot).Seated.Name)
-                : new ResultSeat(seat.Name, accounts[index], null))]);
+                : new ResultSeat(seat.Name, accounts[index], null))],
+            table.Id);
     }
 
     /// <summary>

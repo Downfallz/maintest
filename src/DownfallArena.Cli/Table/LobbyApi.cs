@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Studio;
@@ -30,8 +31,17 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>The friendships (ADR 0129), when this host has accounts: who a table may be opened for.</summary>
     public Friends? Friends { get; set; }
 
+    /// <summary>Where finished games are kept (ADR 0147), the composer's own unless given: what the Finished tab reads.</summary>
+    public Application.Accounts.Ports.IMatchResults? Results { get; set; }
+
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotices? Notices { get; set; }
+
+    /// <summary>
+    /// How many games an account may have in progress against bots, and how many against players (ADR 0147). A sixth
+    /// is refused until one ends, so a player's lobby stays a list they can read.
+    /// </summary>
+    public const int OngoingPerKind = 5;
 
     /// <summary>How long a seat is kept for a friend (ADR 0129): past this, the invitation counts as declined.</summary>
     public static readonly TimeSpan InvitationFor = TimeSpan.FromHours(24);
@@ -65,6 +75,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 // signed in, and a page told nothing would forget it instead of sending them to sign in.
                 ("POST", Prefix + "/resume") => SignInRequired(account) ?? await ResumeAsync(body, account),
                 ("GET", Prefix + "/mine") => await MineAsync(account),
+                ("GET", _) when FinishedRoute(path) is { } finished => SignInRequired(account) ?? await FinishedAsync(finished.AgainstBots, finished.Page, account),
                 ("POST", Prefix + "/adopt") => await AdoptAsync(body, account),
                 ("POST", Prefix + "/tables") => SignInRequired(account) ?? await OpenAsync(body, account),
                 ("POST", Prefix + "/leave") => await LeaveAsync(token, account),
@@ -90,6 +101,23 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             return Problem(400, "The request is not valid JSON.");
         }
+    }
+
+    /// <summary>
+    /// The kind and page of <c>/api/lobby/finished/bots/&lt;page&gt;</c> or <c>/api/lobby/finished/players/&lt;page&gt;</c>,
+    /// pages counted from 1; null for any other path.
+    /// </summary>
+    private static (bool AgainstBots, int Page)? FinishedRoute(string path)
+    {
+        const string finished = Prefix + "/finished/";
+        if (!path.StartsWith(finished, StringComparison.Ordinal) || path[finished.Length..].Split('/') is not [var kind, var page])
+        {
+            return null;
+        }
+
+        return kind is "bots" or "players" && int.TryParse(page, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number) && number >= 1
+            ? (kind == "bots", number - 1)
+            : null;
     }
 
     /// <summary>The table id of <c>/api/lobby/tables/&lt;id&gt;&lt;suffix&gt;</c>, or null for any other path, an empty id among them.</summary>
@@ -173,6 +201,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             if (opponent == "friend" && await FriendRefusalAsync(account, friend) is { } refused)
             {
                 return refused;
+            }
+
+            if (TooManyOngoing(account, againstBot: opponent == "bot") is { } crowded)
+            {
+                return crowded;
             }
 
             using var reservation = registry.Reserve();
@@ -355,6 +388,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 await LetGoAsync(table, seat, declinedBy: null);
                 return Problem(404, "Lobby.NotInvited", "This invitation is no longer open: you are no longer friends.");
+            }
+
+            if (TooManyOngoing(me, AgainstBot(table)) is { } crowded)
+            {
+                return crowded;
             }
 
             if (!await TakeAsync(table, [seat], me))
@@ -660,6 +698,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "You already play at this table. Open it from Your games.");
             }
 
+            if (TooManyOngoing(account, AgainstBot(table)) is { } crowded)
+            {
+                return crowded;
+            }
+
             // The place is handed over under a fresh token, and its invitation and code are spent: they are in a
             // link and on the admin panel, and whoever holds those must not reach a seat someone else took.
             if (!await TakeAsync(table, [seat], account))
@@ -941,6 +984,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(409, "Lobby.KeptForFriend", "This seat is kept for a friend of the player who opened the table.");
             }
 
+            if (!table.Seats.Any(held => held.Account is not null && held.Account == account) && TooManyOngoing(account, AgainstBot(table)) is { } crowded)
+            {
+                return crowded;
+            }
+
             if (!await TakeAsync(table, seats, account))
             {
                 return Problem(409, "This table is no longer available: it was closed.");
@@ -1114,9 +1162,72 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             ? StudioResponse.OfJson(new { error = "Account.SignInRequired", message = "Sign in to play: open the home page and continue with Google." }, ArtifactJson.LineOptions, 401)
             : null;
 
+    /// <summary>Whether a bot holds a seat at the table: the lobby lists and counts these apart (ADR 0147).</summary>
+    internal static bool AgainstBot(PlayedTable table) => table.Seats.Any(seat => seat.Person is null);
+
+    /// <summary>
+    /// The refusal of a sixth game in progress of one kind (ADR 0147), checked under the claim gate so two requests
+    /// cannot both take the fifth place; null where the account may go on, and always on a host without accounts.
+    /// </summary>
+    private StudioResponse? TooManyOngoing(AccountId? account, bool againstBot)
+    {
+        if (account is null)
+        {
+            return null;
+        }
+
+        var ongoing = registry.All().Count(table => !table.IsOver && AgainstBot(table) == againstBot && table.Seats.Any(seat => seat.Account == account));
+        return ongoing < OngoingPerKind
+            ? null
+            : Problem(409, "Lobby.TooManyGames", againstBot
+                ? $"You already have {OngoingPerKind} games against bots in progress. Finish or concede one to start another."
+                : $"You already have {OngoingPerKind} games against players in progress. Finish one, or close one nobody has joined, to start another.");
+    }
+
+    /// <summary>
+    /// One page of a signed-in player's finished games of one kind (ADR 0147), newest first, from the kept results:
+    /// who played whom, how it ended, and how to see it again. A table the host still holds opens with the seats this
+    /// account had there; any other opens its recorded session, when the result says which one it was.
+    /// </summary>
+    private async Task<StudioResponse> FinishedAsync(bool againstBots, int page, AccountId? account)
+    {
+        if (account is not { } me || (Results ?? composer.Results) is not { } results)
+        {
+            return Json(new { total = 0, pages = 1, page = 1, items = Array.Empty<object>() });
+        }
+
+        var shown = FinishedGames.Page(await results.ListAsync(), me, againstBots, page);
+        var items = new List<object>();
+        foreach (var result in shown.Items)
+        {
+            var mine = result.Seats.Where(seat => seat.Account == me).Select(seat => seat.Seat).ToArray();
+            var other = result.Seats.FirstOrDefault(seat => seat.Account != me);
+            var held = result.Table is { } id && registry.ById(id) is { IsOver: true } table ? table : null;
+            items.Add(new
+            {
+                match = result.MatchId,
+                table = result.Table,
+                finishedAt = result.FinishedAt,
+                format = result.Format,
+                rounds = result.Rounds,
+                // Both seats on one device: there is no side to have won or lost.
+                outcome = mine.Length > 1 ? "both" : result.Winner is null ? "draw" : mine.Contains(result.Winner) ? "won" : "lost",
+                you = mine,
+                opponent = other is null ? new { kind = "self", name = "Shared device" }
+                    : other.Agent is { } spec ? new { kind = "bot", name = BotName(composer.Agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec) }
+                    : new { kind = "person", name = other.Account is { } opponent ? await NameAsync(opponent) : "Player" },
+                seats = held?.Seats.Where(seat => seat.Account == me).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
+                session = held is null && result.Table is { } recorded ? $"/session/{Uri.EscapeDataString(recorded)}" : null,
+            });
+        }
+
+        return Json(new { total = shown.Total, pages = shown.Pages, page = shown.Page + 1, items });
+    }
+
     /// <summary>
     /// The tables a signed-in player has seats at, on any device (ADR 0122): what "Your games" lists, with the
-    /// tokens this browser plays them by. Finished ones are kept for the hour a host keeps them, as on a browser.
+    /// tokens this browser plays them by. Finished ones are kept for the hour a host keeps them, as on a browser;
+    /// the Finished tab reads every finished game from the kept results instead (ADR 0147).
     /// </summary>
     private async Task<StudioResponse> MineAsync(AccountId? account)
     {
@@ -1159,7 +1270,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                     sentAt = seat.InvitedAt,
                 };
             }));
-        return Json(new { tables, invitations });
+        return Json(new { tables, invitations, ongoingPerKind = OngoingPerKind });
     }
 
     /// <summary>

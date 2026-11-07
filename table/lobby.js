@@ -54,16 +54,49 @@ export function turnOf(table, held = []) {
 }
 
 export const GAMES_PER_PAGE = 6;
-/**
- * The player's own games, as the lobby's two tabs show them: ongoing (the ones waiting for this player first,
- * the others in the host's order) or finished, a page at a time. A page past the end shows the last one.
- */
-export function myGames(mine, tab, page = 0, size = GAMES_PER_PAGE) {
-  const ongoing = mine.filter(entry => !entry.table.over), finished = mine.filter(entry => entry.table.over);
+/** The two kinds of game the lobby lists apart (ADR 0147), in the order it shows them. */
+export const KINDS = Object.freeze([['players', 'Against players'], ['bots', 'Against bots']]);
+
+/** Whether a table is played against a bot or between people (a shared device among them), by who sits. */
+export function gameKind(table) {
+  return (table?.seats ?? []).some(seat => seat.kind === 'bot') ? 'bots' : 'players';
+}
+
+/** The player's games in progress, by kind: in each, the ones waiting for this player first, then the host's order. */
+export function ongoingGames(mine) {
+  const ongoing = mine.filter(entry => !entry.table.over);
   const waiting = entry => turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === true;
-  const list = tab === 'finished' ? finished : [...ongoing.filter(waiting), ...ongoing.filter(entry => !waiting(entry))];
+  const ordered = [...ongoing.filter(waiting), ...ongoing.filter(entry => !waiting(entry))];
+  return { players: ordered.filter(entry => gameKind(entry.table) === 'players'), bots: ordered.filter(entry => gameKind(entry.table) === 'bots') };
+}
+
+/**
+ * One page of finished games of one kind where the host keeps no results (a host without accounts): the finished
+ * tables this browser's seats reach, in the shape the host's pages have. A page past the end shows the last one.
+ */
+export function localFinished(mine, kind, page = 0, size = GAMES_PER_PAGE) {
+  const list = mine.filter(entry => entry.table.over && gameKind(entry.table) === kind).map(entry => {
+    const held = (entry.seats ?? []).map(one => one.seat), other = versus(entry.table).find(side => !held.includes(side.seat));
+    return { table: entry.table.id, format: entry.table.format, finishedAt: null, rounds: entry.table.round ?? null, outcome: null,
+      opponent: other ? { kind: other.kind, name: other.name } : { kind: 'self', name: 'Shared device' }, seats: entry.seats, session: null };
+  });
   const pages = Math.max(1, Math.ceil(list.length / size)), at = Math.min(Math.max(0, page), pages - 1);
-  return { ongoing: ongoing.length, finished: finished.length, pages, page: at, items: list.slice(at * size, (at + 1) * size) };
+  return { total: list.length, pages, page: at + 1, items: list.slice(at * size, (at + 1) * size) };
+}
+
+const OUTCOMES = Object.freeze({ won: 'Victory', lost: 'Defeat', draw: 'Draw', both: 'Shared device' });
+/** What a finished game's card says: the result as a tag, who it was against, and how long it ran. */
+export function finishedSummary(item) {
+  return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished',
+    against: item.opponent?.name ?? 'Unknown', bot: item.opponent?.kind === 'bot',
+    detail: Number.isInteger(item.rounds) && item.rounds > 0 ? `${item.rounds} round${item.rounds === 1 ? '' : 's'}` : '',
+    action: item.seats?.length ? 'View game →' : item.session ? 'Watch the replay →' : null };
+}
+
+/** What a group of games in progress says of its limit (ADR 0147): how many of how many, and whether it is full. */
+export function ongoingLimit(count, limit) {
+  if (!Number.isInteger(limit)) return { text: String(count), full: false };
+  return { text: `${count} / ${limit}`, full: count >= limit };
 }
 
 function cardAction(table, entry) {
@@ -126,7 +159,10 @@ export function mountLobby(doc, location, storage) {
     chooser.addEventListener('change', () => { presentation = chooser.value; savePresentation(storage, presentation); });
   }
   let listing = null;
-  let mine = [], mineTab = 'ongoing', minePage = 0;
+  let mine = [], mineTab = 'ongoing', limit = null;
+  // Each kind's finished page, read from the host a page at a time (ADR 0147); `seen` is what the last read was of.
+  const finished = { players: { page: 0, data: null }, bots: { page: 0, data: null } };
+  let finishedSeen = null;
   let invitations = [];
   let friends = [];
   let reinviting = null;
@@ -240,8 +276,89 @@ export function mountLobby(doc, location, storage) {
     root.append(ways);
     return root;
   }
+  function group(kind, label, count) {
+    const root = node('section', '', `mine-group ${kind}`);
+    root.dataset.kind = kind; root.setAttribute('aria-label', label);
+    const head = node('header', '', 'mine-group-head');
+    head.append(node('h3', label), node('span', count.text, `lobby-count${count.full ? ' full' : ''}`));
+    root.append(head);
+    return root;
+  }
+  // A kind's games in progress: all of them, since the host keeps at most a few of each (ADR 0147).
+  function ongoingGroup(kind, label, entries) {
+    const count = ongoingLimit(entries.length, limit), root = group(kind, label, count);
+    const cards = node('div', '', 'lobby-grid');
+    cards.append(...(entries.length ? entries.map(entry => card(entry.table, entry)) : [node('p', `No games ${label.toLowerCase()} in progress.`, 'empty-state')]));
+    root.append(cards);
+    if (count.full) root.append(node('p', `That is the most at once: finish one to start another ${kind === 'bots' ? 'against a bot' : 'against a player'}.`, 'mine-limit'));
+    return root;
+  }
+  // A finished game, as the kept results tell it: the result, who it was against, and the way back to it.
+  function finishedCard(item) {
+    const summary = finishedSummary(item);
+    const root = node('article', '', `game-card mine finished ${summary.tone}`);
+    const top = node('div', '', 'game-card-top');
+    top.append(node('h3', summary.title), node('span', summary.tag, `status-tag outcome ${summary.tone}`));
+    const line = node('div', '', 'versus');
+    const who = node('span', '', 'side');
+    who.append(node('span', `vs ${summary.against}`, `who ${item.opponent?.kind ?? 'person'}`));
+    if (summary.bot) who.append(node('span', 'bot', 'bot-tag'));
+    line.append(who);
+    const when = item.finishedAt ? new Date(item.finishedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    root.append(top, line, node('p', [when, summary.detail].filter(Boolean).join(' · ') || ' ', 'game-turn'));
+    if (summary.action && item.seats?.length) {
+      const button = node('button', summary.action, 'primary'); button.type = 'button';
+      button.addEventListener('click', () => enter({ seats: item.seats }));
+      root.append(button);
+    } else if (summary.action) {
+      const link = node('a', summary.action, 'button-link'); link.href = item.session;
+      root.append(link);
+    }
+    return root;
+  }
+  // A kind's finished games, a page at a time from the host, with that kind's own pages.
+  function finishedGroup(kind, label) {
+    const shown = finished[kind].data;
+    const root = group(kind, label, { text: shown ? String(shown.total) : '…', full: false });
+    const cards = node('div', '', 'lobby-grid');
+    if (!shown) cards.append(node('p', 'Finding your finished games…', 'empty-state'));
+    else cards.append(...(shown.items.length ? shown.items.map(finishedCard) : [node('p', `No finished games ${label.toLowerCase()} yet.`, 'empty-state')]));
+    root.append(cards);
+    if (shown && shown.pages > 1) {
+      const pages = node('nav', '', 'lobby-pages'); pages.setAttribute('aria-label', `Pages of your finished games ${label.toLowerCase()}`);
+      const previous = node('button', '← Previous'), next = node('button', 'Next →');
+      for (const [button, step] of [[previous, -1], [next, 1]]) {
+        button.type = 'button'; button.dataset.page = String(step);
+        button.addEventListener('click', () => { finished[kind].page = shown.page - 1 + step; void loadFinished(kind); root.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); });
+      }
+      previous.disabled = shown.page <= 1; next.disabled = shown.page >= shown.pages;
+      const at = node('span', `Page ${shown.page} of ${shown.pages}`); at.setAttribute('aria-live', 'polite');
+      pages.append(previous, at, next);
+      root.append(pages);
+    }
+    return root;
+  }
+  // Signed in, a kind's finished page is the host's (ADR 0147); elsewhere, the finished tables this browser reaches.
+  async function loadFinished(kind) {
+    const wanted = finished[kind].page, reading = revision;
+    try {
+      const data = account ? await lobbyRequest(`/api/lobby/finished/${kind}/${wanted + 1}`) : localFinished(mine, kind, wanted);
+      if (reading !== revision || wanted !== finished[kind].page) return;
+      finished[kind].data = data; finished[kind].page = data.page - 1;
+    } catch (error) {
+      if (reading === revision) problem(error.message || 'Could not read your finished games. Try again.');
+    }
+    if (listing) render();
+  }
+  // Read again when a game of this player's finished, or who is signed in changed: never on every poll.
+  function maybeLoadFinished() {
+    const seen = JSON.stringify([account?.id ?? null, mine.filter(entry => entry.table.over).map(entry => entry.table.id)]);
+    if (seen === finishedSeen || signInFirst()) return;
+    finishedSeen = seen;
+    for (const [kind] of KINDS) void loadFinished(kind);
+  }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, minePage]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit]);
     if (key === drawn) return;
     drawn = key;
     const available = visibleTables(listing.tables, mine, showAll);
@@ -249,17 +366,16 @@ export function mountLobby(doc, location, storage) {
     el('invitations-count').textContent = invitations.length || '';
     el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
     onOutstanding(mine.some(entry => invitedState(entry.invited)?.waiting));
-    el('mine-count').textContent = mine.length;
-    const games = myGames(mine, mineTab, minePage); minePage = games.page;
-    el('ongoing-count').textContent = games.ongoing ? `· ${games.ongoing}` : '';
-    el('finished-count').textContent = games.finished ? `· ${games.finished}` : '';
-    el('mine-pages').hidden = games.pages <= 1;
-    el('mine-page').textContent = `Page ${games.page + 1} of ${games.pages}`;
-    el('mine-previous').disabled = games.page === 0; el('mine-next').disabled = games.page >= games.pages - 1;
+    const ongoing = ongoingGames(mine);
+    const finishedTotal = KINDS.reduce((sum, [kind]) => sum + (finished[kind].data?.total ?? 0), 0);
+    const loaded = KINDS.every(([kind]) => finished[kind].data);
+    el('mine-count').textContent = ongoing.players.length + ongoing.bots.length + finishedTotal;
+    el('ongoing-count').textContent = ongoing.players.length + ongoing.bots.length ? `· ${ongoing.players.length + ongoing.bots.length}` : '';
+    el('finished-count').textContent = loaded && finishedTotal ? `· ${finishedTotal}` : '';
     el('tables-count').textContent = available.length;
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
-    const empty = mine.length && mineTab === 'finished' ? 'No finished games yet.' : mine.length ? 'No games in progress. Your finished ones are under Finished.' : none;
-    el('my-tables').replaceChildren(...(games.items.length ? games.items.map(entry => card(entry.table, entry)) : [node('p', empty, 'empty-state')]));
+    if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(node('p', none, 'empty-state'));
+    else el('my-tables').replaceChildren(...KINDS.map(([kind, label]) => mineTab === 'ongoing' ? ongoingGroup(kind, label, ongoing[kind]) : finishedGroup(kind, label)));
     el('open-tables').replaceChildren(...(available.length ? available.map(table => card(table)) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
     el('new-table').disabled = !listing.recording;
     el('lobby-status').textContent = statusText(listing);
@@ -280,7 +396,9 @@ export function mountLobby(doc, location, storage) {
       listing = publicTables;
       mine = saved.tables;
       invitations = saved.invitations ?? [];
+      limit = Number.isInteger(saved.ongoingPerKind) ? saved.ongoingPerKind : null;
       render();
+      maybeLoadFinished();
       el('lobby-status').textContent = statusText(listing);
       maybeRematch();
     } catch (error) {
@@ -303,14 +421,10 @@ export function mountLobby(doc, location, storage) {
     return signInFirst() ? { tables: [] } : lobbyRequest('/api/lobby/resume', { tokens });
   }
   for (const [id, tab] of [['mine-ongoing', 'ongoing'], ['mine-finished', 'finished']]) el(id).addEventListener('click', () => {
-    mineTab = tab; minePage = 0;
+    mineTab = tab;
     el('mine-ongoing').setAttribute('aria-pressed', String(tab === 'ongoing'));
     el('mine-finished').setAttribute('aria-pressed', String(tab === 'finished'));
     if (listing) render();
-  });
-  for (const [id, step] of [['mine-previous', -1], ['mine-next', 1]]) el(id).addEventListener('click', () => {
-    minePage += step; if (listing) render();
-    el('my-games-section').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
   for (const [id, all] of [['filter-open', false], ['filter-all', true]]) el(id).addEventListener('click', () => {
     showAll = all;
@@ -339,8 +453,11 @@ export function mountLobby(doc, location, storage) {
       ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
       : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
     el('friend-row').hidden = value !== 'friend';
+    // At the most games of that kind at once (ADR 0147), the host would refuse: say so before the player asks.
+    const kind = value === 'bot' ? 'bots' : 'players', full = !reinviting && Number.isInteger(limit) && ongoingGames(mine)[kind].length >= limit;
+    if (full) el('create-help').textContent = `You already have ${limit} games ${kind === 'bots' ? 'against bots' : 'against players'} in progress, the most at once. Finish one to start another.`;
     // No friend chosen, nothing to send: a seat is kept for the friend the player picked, never for a default.
-    el('create-submit').disabled = value === 'friend' && !el('friend').value;
+    el('create-submit').disabled = full || (value === 'friend' && !el('friend').value);
   }
   el('friend').addEventListener('change', showOpponent);
   function openCreate({ friend = null, reinvite = null, opponent = null, format = null } = {}) {
@@ -419,7 +536,8 @@ export function mountLobby(doc, location, storage) {
       account = next;
       mode = nextMode;
       if (changed) {
-        revision += 1; adopted = false; mine = []; invitations = [];
+        revision += 1; adopted = false; mine = []; invitations = []; limit = null; finishedSeen = null;
+        for (const [kind] of KINDS) finished[kind] = { page: 0, data: null };
         if (dialog.open) dialog.close();
         problem();
         if (listing) render();

@@ -45,6 +45,20 @@ public abstract class MatchResultsContract
     }
 
     [Fact]
+    public async Task A_result_keeps_the_table_it_was_played_at_and_one_kept_before_that_reads_without_it()
+    {
+        var results = await ResultsAsync();
+        var at = new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero);
+        var played = Finished(at) with { Table = "table-1" };
+        var older = Finished(at.AddMinutes(1));
+
+        await results.RecordAsync(played, Cancel);
+        await results.RecordAsync(older, Cancel);
+
+        (await results.ListAsync(Cancel)).Select(result => result.Table).ShouldBe(["table-1", null]);
+    }
+
+    [Fact]
     public async Task A_store_nothing_was_recorded_in_lists_nothing()
     {
         (await (await ResultsAsync()).ListAsync(Cancel)).ShouldBeEmpty();

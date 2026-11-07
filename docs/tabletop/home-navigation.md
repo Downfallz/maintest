@@ -11,6 +11,8 @@ HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
   device settings. The developer host still uses its typed-name sign-in.
 - **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
   behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
+  Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in
+  progress; Finished pages the kept results six at a time ([ADR 0147](../adr/0147-list-every-finished-game-and-cap-the-ones-in-progress.md)).
 - **Accounts off:** the playable local lobby still resumes held seats and creates games. It does not show
   account-only menu entries or a sign-in invitation.
 

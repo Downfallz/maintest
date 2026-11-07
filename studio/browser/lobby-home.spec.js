@@ -9,8 +9,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null } = {}) {
-  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, privateReads: [], release: null,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] } } = {}) {
+  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -37,7 +37,13 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.privateReads.push(path); state.mineReads++;
       const tables = state.account || state.mode === 'off' ? games ?? [held] : [];
       if (delayMine && state.mineReads === 1) await new Promise(resolve => { state.release = resolve; });
-      return json({ tables, invitations: [] });
+      return json({ tables, invitations: [], ongoingPerKind: state.account ? 5 : undefined });
+    }
+    const pageOf = /^\/api\/lobby\/finished\/(bots|players)\/(\d+)$/.exec(path);
+    if (pageOf) {
+      state.finishedReads.push(`${pageOf[1]}/${pageOf[2]}`);
+      const all = finished[pageOf[1]], pages = Math.max(1, Math.ceil(all.length / 6)), at = Math.min(Number(pageOf[2]), pages);
+      return json({ total: all.length, pages, page: at, items: all.slice((at - 1) * 6, at * 6) });
     }
     if (path === `/api/friends/${friend.id}` && route.request().method() === 'DELETE') {
       state.removals = (state.removals ?? 0) + 1;
@@ -347,22 +353,43 @@ test('an account host that cannot be reached says so instead of offering a sign-
   expect(state.errors).toEqual([]);
 });
 
-test('your games split into ongoing and finished tabs, your turn first, six to a page', async ({ page }) => {
-  const game = (id, { over = false, turn = false } = {}) => ({ table: { ...battle, id, over,
-    seats: [{ ...battle.seats[0], turn: !over && turn }, { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
-  const games = [game('waiting-on-them'), game('done-1', { over: true }), game('your-move', { turn: true }),
-    ...Array.from({ length: 7 }, (_, index) => game(`done-${index + 2}`, { over: true }))];
-  const state = await home(page, { games });
-  const cards = page.locator('#my-tables .game-card');
-  await expect(cards).toHaveCount(2); await expect(page.locator('#mine-ongoing')).toHaveAttribute('aria-pressed', 'true');
-  await expect(cards.first()).toContainText('your-move'); await expect(cards.first()).toContainText('Your turn');
-  await expect(page.locator('#ongoing-count')).toHaveText('· 2'); await expect(page.locator('#finished-count')).toHaveText('· 8');
-  await expect(page.locator('#mine-pages')).toBeHidden();
+test('your games are grouped against players and against bots, at most five of each in progress, finished ones read a page at a time', async ({ page }, info) => {
+  const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
+  const game = (id, { turn = false, against = 'bot' } = {}) => ({ table: { ...battle, id, over: false,
+    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+  const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
+  const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
+    outcome, you: ['player1'], opponent, seats: null, session: `/session/t${index}` });
+  const finished = { bots: Array.from({ length: 8 }, (_, index) => result(index, 'won', { kind: 'bot', name: 'Lookahead' })),
+    players: [result(20, 'lost', { kind: 'person', name: 'bastien' })] };
+  const state = await home(page, { games, finished });
+  const players = page.locator('.mine-group.players'), bots = page.locator('.mine-group.bots');
+
+  await expect(page.locator('#mine-ongoing')).toHaveAttribute('aria-pressed', 'true');
+  await expect(players.locator('.game-card')).toHaveCount(1); await expect(bots.locator('.game-card')).toHaveCount(5);
+  await expect(bots.locator('.game-card').first()).toContainText('Your turn');
+  await expect(players.locator('.mine-group-head .lobby-count')).toHaveText('1 / 5');
+  await expect(bots.locator('.mine-group-head .lobby-count')).toHaveText('5 / 5'); await expect(bots.locator('.mine-limit')).toBeVisible();
+  await expect(page.locator('#ongoing-count')).toHaveText('· 6'); await expect(page.locator('#finished-count')).toHaveText('· 9');
+  expect(state.finishedReads.sort()).toEqual(['bots/1', 'players/1']);
+  await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-ongoing.png') });
+
   await page.locator('#mine-finished').click();
-  await expect(cards).toHaveCount(6); await expect(cards.first()).toContainText('View game');
-  await expect(page.locator('#mine-page')).toHaveText('Page 1 of 2'); await expect(page.locator('#mine-previous')).toBeDisabled();
-  await page.locator('#mine-next').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-page')).toHaveText('Page 2 of 2');
-  await expect(page.locator('#mine-next')).toBeDisabled();
-  await page.locator('#mine-ongoing').click(); await expect(cards).toHaveCount(2); await expect(page.locator('#mine-pages')).toBeHidden();
-  await noOverflow(page); expect(state.errors).toEqual([]);
+  await expect(bots.locator('.game-card')).toHaveCount(6); await expect(bots.locator('.game-card').first()).toContainText('Victory');
+  await expect(bots.locator('.game-card').first()).toContainText('vs Lookahead');
+  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/session/t0');
+  await expect(players.locator('.game-card')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
+  await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
+  await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
+  await bots.getByRole('button', { name: 'Next →' }).click();
+  await expect(bots.locator('.game-card')).toHaveCount(2); await expect(bots.locator('.lobby-pages span')).toHaveText('Page 2 of 2');
+  await expect(bots.getByRole('button', { name: 'Next →' })).toBeDisabled();
+  expect(state.finishedReads.filter(read => read.startsWith('players'))).toEqual(['players/1']);
+  await noOverflow(page);
+
+  // At five games against bots, a sixth is turned down before it is asked for.
+  await page.locator('#new-table').click(); await page.locator('#opponent').selectOption('bot');
+  await expect(page.locator('#create-help')).toContainText('the most at once'); await expect(page.locator('#create-submit')).toBeDisabled();
+  await page.locator('#opponent').selectOption('person'); await expect(page.locator('#create-submit')).toBeEnabled();
+  expect(state.errors).toEqual([]);
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, friendChoice, invitationLine, invitedState, lobbyRequest, myGames, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { codePath, finishedSummary, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -109,17 +109,48 @@ test('the create dialog starts on the friend asked for, and on nobody when they 
   assert.deepEqual(friendChoice([], 'acct_mark'), { value: '', missing: true });
 });
 
-test('your games split into ongoing and finished, your turn first, six to a page', () => {
-  const seats = turn => [{ seat: 'player1', kind: 'person', name: 'You', turn }, { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false }];
-  const game = (id, { over = false, turn = false } = {}) => ({ table: { id, over, seats: seats(turn) }, seats: [{ seat: 'player1' }] });
-  const mine = [game('a'), game('b', { over: true }), game('c', { turn: true }), ...Array.from({ length: 7 }, (_, i) => game(`f${i}`, { over: true }))];
-  const ongoing = myGames(mine, 'ongoing');
-  assert.deepEqual([ongoing.ongoing, ongoing.finished, ongoing.pages, ongoing.page], [2, 8, 1, 0]);
-  assert.deepEqual(ongoing.items.map(entry => entry.table.id), ['c', 'a'], 'the game waiting for you comes first, the rest keep their order');
-  const finished = myGames(mine, 'finished');
-  assert.deepEqual([finished.pages, finished.items.length], [2, 6]);
-  assert.deepEqual(finished.items.map(entry => entry.table.id).slice(0, 2), ['b', 'f0']);
-  const last = myGames(mine, 'finished', 1); assert.deepEqual(last.items.map(entry => entry.table.id), ['f5', 'f6']);
-  assert.equal(myGames(mine, 'finished', 9).page, 1, 'a page past the end shows the last one');
-  assert.deepEqual(myGames([], 'ongoing'), { ongoing: 0, finished: 0, pages: 1, page: 0, items: [] });
+const opponent = kind => kind === 'bot' ? { seat: 'player2', kind: 'bot', name: 'Greedy', turn: false } : { seat: 'player2', kind: 'person', name: 'bastien', turn: false };
+const game = (id, { over = false, turn = false, against = 'bot' } = {}) => ({ table: { id, over, format: '3v3',
+  seats: [{ seat: 'player1', kind: 'person', name: 'You', turn }, opponent(against)] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+
+test('a game is against bots when a bot sits at it, and against players otherwise, a shared device included', () => {
+  assert.equal(gameKind(game('a').table), 'bots');
+  assert.equal(gameKind(game('b', { against: 'person' }).table), 'players');
+  assert.equal(gameKind({ seats: [{ kind: 'person' }, { kind: 'person' }] }), 'players');
+});
+
+test('games in progress are grouped by kind, each with the ones waiting for you first', () => {
+  const mine = [game('a'), game('b', { over: true }), game('c', { turn: true }), game('d', { against: 'person' }), game('e', { against: 'person', turn: true })];
+
+  const ongoing = ongoingGames(mine);
+
+  assert.deepEqual(ongoing.bots.map(entry => entry.table.id), ['c', 'a']);
+  assert.deepEqual(ongoing.players.map(entry => entry.table.id), ['e', 'd']);
+});
+
+test('a group in progress says how many of the most at once, and whether it is full', () => {
+  assert.deepEqual(ongoingLimit(3, 5), { text: '3 / 5', full: false });
+  assert.deepEqual(ongoingLimit(5, 5), { text: '5 / 5', full: true });
+  assert.deepEqual(ongoingLimit(2, null), { text: '2', full: false }, 'a host without accounts sets no limit');
+});
+
+test('without kept results, a kind\'s finished games are the finished tables this browser reaches, six to a page', () => {
+  const mine = [...Array.from({ length: 7 }, (_, i) => game(`f${i}`, { over: true })), game('p', { over: true, against: 'person' }), game('live')];
+
+  const first = localFinished(mine, 'bots'), last = localFinished(mine, 'bots', 9);
+
+  assert.deepEqual([first.total, first.pages, first.page, first.items.length], [7, 2, 1, 6]);
+  assert.deepEqual([last.page, last.items.map(item => item.table)], [2, ['f6']], 'a page past the end shows the last one');
+  assert.deepEqual(localFinished(mine, 'players').items[0].opponent, { kind: 'person', name: 'bastien' });
+  assert.deepEqual(localFinished(mine, 'players').items[0].seats, [{ seat: 'player1', token: 'p-token' }]);
+});
+
+test('a finished card leads with the result, names who it was against, and opens the game or its replay', () => {
+  const kept = { format: '3v3', rounds: 9, outcome: 'won', opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/t1' };
+
+  assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
+  assert.equal(finishedSummary({ ...kept, outcome: 'lost', seats: [{ seat: 'player1', token: 't' }] }).action, 'View game →');
+  assert.equal(finishedSummary({ ...kept, outcome: 'draw', session: null }).action, null, 'a result kept before tables were named opens nothing');
+  assert.equal(finishedSummary({ ...kept, outcome: 'both' }).tag, 'Shared device');
+  assert.equal(finishedSummary({ ...kept, outcome: null, rounds: 1 }).detail, '1 round');
 });
