@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 test.beforeEach(returningBattlePlayer);
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 4, totalDefense: 2,
   isAlive: true, conditions: [], knownSpells: [], acquiredTiers: [] });
@@ -88,7 +89,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await h.publish({ board: { ...board, subPhase: 'IntentSelection', timeline: [slot(2), slot(4), slot(1), ...timeline.slice(3)] },
     waitingFor: null, waitingAsked: null, options: {}, feed: [reveal(12, 'TiesOrdered', [slot(2), slot(4), slot(1), ...timeline.slice(3)])] });
   // The manual reference already consumed this reveal; it must not interrupt the next question again.
-  await expect(page.locator('#order-dialog')).toBeHidden();
+  await expect(page.locator('#order-dialog')).toBeHidden(); await expect(page.locator('#order-continue')).toBeHidden();
   await page.locator('#history-open').click();
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('d20 11 → 18');
@@ -101,10 +102,33 @@ test('a fresh reveal waits until tie ordering ends, opens once and never acknowl
   await h.publish({ board: { ...board, subPhase: 'TieOrder' }, waitingFor: 'TieOrder', waitingAsked: 20, options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
   await expect(page.locator('#planning-open')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
   await h.publish({ board: { ...board, subPhase: 'IntentSelection' }, waitingFor: 'Intent', waitingAsked: 21, options: {}, feed: [reveal(12, 'TiesOrdered')] });
-  await expect(page.locator('#order-dialog')).toBeVisible(); await expect(page.locator('#order-summary')).toContainText('Your team: 2 Instinct');
-  expect(h.state.shown).toEqual([]); await page.locator('#order-close').click();
+  // The order reads on the field, a numbered badge per creature, and in the card (ADR 0144); no dialog covers it.
+  await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
+  await expect(page.locator('#reading-detail')).toContainText('Your team: 2 Instinct');
+  await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"]')).toContainText('2');
+  expect(h.state.shown).toEqual([]); await page.locator('#order-continue').click();
+  await expect(page.locator('#actor-layer .effect-chip[data-kind="order"]')).toHaveCount(0);
   await h.publish({ feed: [reveal(11), reveal(12, 'TiesOrdered')] });
-  await expect(page.locator('#order-dialog')).toBeHidden(); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#order-continue')).toBeHidden(); expect(h.state.errors).toEqual([]);
+});
+test('an opponent\'s action arriving while the order is read waits for Continue, then plays for its OK', async ({ page }) => {
+  // Full frames rendered across a paced action outlast 30 s on a busy runner, as in the pacing spec.
+  test.setTimeout(60000);
+  const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
+  await h.publish({ board: { ...board, subPhase: 'IntentSelection', activationCursor: -1 }, feed: [reveal(11)] });
+  await expect(page.locator('#order-continue')).toBeVisible();
+  const action = { sequence: 12, event: { kind: 'CombatActionResolved', roundId: 2, resolution: { action: { actor: 4, spell: 'strike', targets: [1] } },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 5 }],
+    frame: { before: roster, after: roster.map(one => one.id === 1 ? { ...one, health: 15 } : one), timeline, rollOffs } } };
+
+  await h.publish({ board: { ...board, activationCursor: 2 }, feed: [reveal(11), action] });
+  await expect.poll(() => h.state.view.feed.length).toBe(2); await page.clock.runFor(1500);
+
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#order-continue')).toBeVisible();
+  await page.locator('#order-continue').click();
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '12');
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS); await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
+  expect(h.state.errors).toEqual([]);
 });
 test('polls preserve focus and scrolling while progress marks completed, current, stunned and defeated slots', async ({ page }) => {
   const h = await mount(page); await page.locator('#order-open').click();

@@ -322,6 +322,8 @@ function recapAction(entry, board, cards) {
       tone: outcomeTone(outcome.kind),
       kind: outcome.kind,
       effect: outcome.effect,
+      amount: Number.isInteger(outcome.amount) ? outcome.amount : null,
+      critical: outcome.critical === true,
       onCaster: outcome.onCaster === true,
     })),
     dropped: (resolution.droppedTargets ?? []).map(failure =>

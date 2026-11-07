@@ -1,7 +1,6 @@
-import { commentNote, tappedNote, notesAreKept, commentIsOpen, noted, NOTHING_TO_RECORD } from './notes.js';
 import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testReading, TAG } from './push.js';
 
-// Notes and optional notices use the existing seat endpoints, never the decision/acknowledgement path.
+// Optional notices use the existing seat endpoints, never the decision/acknowledgement path.
 // Each asynchronous continuation belongs to one selected seat and can only update that seat's UI.
 export function createBattleServices({ onChange, scope = globalThis }) {
   let current = null, view = null, online = false;
@@ -9,7 +8,7 @@ export function createBattleServices({ onChange, scope = globalThis }) {
   const valid = context => context === current && online;
   /** @param {any} transport @param {any[]} held @param {string | null} key the table and seat it belongs to */
   function reset(transport = null, held = [], key = null) {
-    current = transport ? { transport, held, key, noteBusy: false, noteText: '', started: false,
+    current = transport ? { transport, held, key, started: false,
       push: { supported: pushSupported(scope.navigator, scope), keyed: false, permission: scope.Notification?.permission ?? 'default',
         subscribed: false, busy: false, hotseat: held.length > 1,
         ios: /iPad|iPhone|iPod/.test(scope.navigator?.userAgent ?? ''), secure: scope.isSecureContext !== false },
@@ -111,28 +110,9 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     } catch { if (valid(context)) context.message = 'Could not reach the host. Try again.'; }
     finally { context.push.busy = false; emit(context); }
   }
-  async function note(kind, text = '') {
-    const context = current;
-    if (!context || !valid(context) || !model().canNote || (kind === 'Comment' && !commentIsOpen(view))) return false;
-    const body = kind === 'Comment' ? commentNote(text) : tappedNote(kind);
-    if (!body) { context.noteText = NOTHING_TO_RECORD; emit(context); return false; }
-    context.noteBusy = true; context.noteText = 'Saving…'; emit(context);
-    try {
-      const answer = await context.transport.note(body);
-      if (!valid(context)) return false;
-      context.noteText = answer.ok ? noted(kind) : answer.body?.message ?? `The host answered ${answer.status}.`;
-      return answer.ok;
-    } catch {
-      if (valid(context)) context.noteText = 'Could not save the note. Check your connection and try again.';
-      return false;
-    }
-    finally { context.noteBusy = false; emit(context); }
-  }
   function model() {
-    const notes = Boolean(current && notesAreKept(view) && !view?.replay);
     const notice = noticeButton(current?.push ?? {});
-    return { owner: current?.key ?? null, loaded: Boolean(view), notes, comment: notes && commentIsOpen(view), canNote: notes && online && !current.noteBusy,
-      noteText: current?.noteText ?? '', notice: { ...notice, disabled: notice.disabled || !online || !current?.registration },
+    return { owner: current?.key ?? null, loaded: Boolean(view), notice: { ...notice, disabled: notice.disabled || !online || !current?.registration },
       testShown: Boolean(current?.push.subscribed && notice.offered),
       canTest: Boolean(online && current?.push.subscribed && notice.offered && !current.push.busy), message: current?.message ?? '' };
   }
@@ -141,5 +121,5 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     const context = current;
     if (context?.registration && valid(context)) void refreshHeld(context).then(() => emit(context)).catch(() => {});
   });
-  return { reset, receive, setOnline, model, toggle, test, note };
+  return { reset, receive, setOnline, model, toggle, test };
 }

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer, mutationTree, acknowledge, readResults } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree, acknowledge, readResults, matchResult } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -77,6 +77,7 @@ async function answerCombat(page, view, capture) {
 // Auto settles events received under a command dialog; their upkeep remains readable in the
 // standalone notice. A round can reach the page in either shape, depending on response timing.
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
+const upkeepShowing = async page => await page.locator('#playback-pacing').isVisible() && await page.locator('#reading-title').textContent() === 'Upkeep';
 async function readTurnover(page, round, info) {
   const paced = page.locator('#playback-pacing'), notice = page.locator('#upkeep-dialog');
   // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
@@ -114,6 +115,8 @@ function expectWritesFenced(writes) {
 async function reviewAndReplay(page, latest, info, actions) {
   // The last actions wait for their OK under reduced motion, as every action does (ADR 0139).
   await readResults(page);
+  // The result opened by itself once the last result was read (ADR 0145); the journal is read from behind it.
+  await matchResult(page); await page.keyboard.press('Escape');
   await page.locator('#history-open').click();
   const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
   expect(recent.length).toBeGreaterThan(1);
@@ -137,16 +140,12 @@ async function reviewAndReplay(page, latest, info, actions) {
     await expect(page.locator(`#history-list [data-sequence="${last.sequence}"]`)).toHaveCount(1);
   }
   await page.locator('#history-close').click();
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
+  await matchResult(page); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
   let title = 'Draw';
   if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';
   await expect(page.locator('#match-title')).toHaveText(title);
   await Promise.all([latest.board.allies, latest.board.enemies].map(team => expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`)));
   await page.screenshot({ path: info.outputPath('final-result-real-host.jpg'), type: 'jpeg', quality: 85 });
-  await page.locator('#match-notes').click();
-  await page.getByRole('button', { name: 'I had to look this up', exact: true }).click(); await expect(page.locator('#noted')).toHaveText('Noted: you looked a rule up.');
-  await page.locator('#end-comment').fill('AU13 real-host final comment'); await page.locator('#comment-save').click();
-  await expect(page.locator('#noted')).toHaveText('Comment saved with the session.'); await page.keyboard.press('Escape');
   await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
   for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();
@@ -175,7 +174,7 @@ async function expectRecordedPerspective(page, context, origin, hostInfo) {
   const adminToken = new URL(hostInfo.admin).searchParams.get('token');
   await page.evaluate(token => localStorage.setItem('downfall.table.operator', token), adminToken);
   const recorded = await context.request.get(`${origin}/api/sessions/${hostInfo.session}/replay`, { headers: { 'X-Seat-Token': adminToken } }); expect(recorded.ok()).toBe(true);
-  await page.goto(`${origin}/battle?replay=${hostInfo.session}&seat=player2`); await page.locator('#match-open').click(); await page.locator('#match-replay').click();
+  await page.goto(`${origin}/battle?replay=${hostInfo.session}&seat=player2`); await matchResult(page); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await expect(page.locator('#perspective')).toContainText('PLAYER 2');
   const board = (await recorded.json()).boards.player2;
   for (const one of board.allies) await expect(page.locator(`[data-creature="${one.id}"]`)).toHaveClass(/ally/);
@@ -236,10 +235,14 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await readTurnover(page, view.board.roundNumber, info);
         upkeepRound = view.board.roundNumber;
       }
-      await readResults(page);
-      if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
+      // The round's order may reveal while results are read, or after them; either way it is read once.
+      const readOrder = async () => {
+        if (!view.board.timeline.length || view.board.subPhase === 'TieOrder' || orderRounds.has(view.board.roundNumber)) return;
         const beforeShown = [...shown], beforeWrites = writes.length;
-        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
+        // The revealed order reads on the field and in the card (ADR 0144); the card opens the full order.
+        await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
+        if (!orderRounds.size) await page.screenshot({ path: info.outputPath('order-real-host.jpg'), type: 'jpeg', quality: 85 });
+        await page.locator('#reading-open').click(); await expect(page.locator('#order-dialog')).toBeVisible();
         await expect(page.locator('#order-list [data-order-creature]')).toHaveText(view.board.timeline.map(slot => {
           const creatures = [...view.board.allies, ...view.board.enemies], one = creatures.find(one => one.id === slot.creature);
           // The base creature reads as a numbered creature (player-terminology.md); other namesakes take their id.
@@ -248,9 +251,12 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         }));
         for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);
         expect(shown).toEqual(beforeShown); expect(writes.length).toBe(beforeWrites);
-        if (!orderRounds.size) await page.screenshot({ path: info.outputPath('order-real-host.jpg'), type: 'jpeg', quality: 85 });
-        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
-      }
+        await page.locator('#order-close').click(); await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
+      };
+      // Reading stops at a next round's upkeep: the turnover check reads it, on the next step.
+      await acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true' || await upkeepShowing(page), 45000, readOrder);
+      if (await upkeepShowing(page)) continue;
+      await readOrder();
       if (!taught.has(view.waitingFor)) {
         await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#help-objective')).not.toBeEmpty();
@@ -279,8 +285,6 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     expect(taught.has(declaration === 'at-activation' ? 'Action' : 'Intent')).toBe(true);
     if (declaration === 'hidden-intent') expect(taught.has('Target')).toBe(true);
     await reviewAndReplay(page, latest, info, actions);
-    const savedNotes = await readFile(pathJoin(directory, 'sessions', hostInfo.session, 'notes.jsonl'), 'utf8');
-    expect(savedNotes).toContain('AU13 real-host final comment');
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
     expect(writes.filter(one => one.command.kind === 'Speed').length).toBeGreaterThanOrEqual(3);
@@ -344,7 +348,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
     expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
     expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
     await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-    await other.locator('#match-open').click(); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
+    await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
     await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
   } finally { await otherContext.close(); await page.close(); await stopHost(hostInfo.host); }
 });

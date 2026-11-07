@@ -49,5 +49,7 @@ export function matchControls(controller: Controller, beforeOpen: () => void) {
     }
     el<HTMLSelectElement>('replay-round').value = String(model.round);
   }
-  return { render };
+  // The result, once: when the match ends and its last result has been read.
+  function open() { if (controller.model().over && !result.open) result.showModal(); }
+  return { render, open };
 }

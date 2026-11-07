@@ -1,7 +1,7 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
-import { conditionIcons, iconElement } from './condition-icons';
+import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.js';
@@ -10,7 +10,6 @@ import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
-import { renderReceipt } from './playback-receipt';
 import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
@@ -82,7 +81,9 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog', 'notes-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
+  !orderUI.isReading();
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createBattleUpkeep(tabStorage);
@@ -162,7 +163,7 @@ function renderInspection() {
   const one = creatures.find(one => one.id === inspected);
   // A receipt has no exact board. Keep an already open reference explicitly pinned to its last
   // recorded frame; never substitute future stats, or dismiss a reader because playback advanced.
-  if (!one && view && receiptShown && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
+  if (!one && view && playback.model().receipt && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
     const held = inspectionSnapshot;
     inspectionUI.render(held.model, `Pinned reference · ${held.context.label}`, true,
       held.action ? `Round ${held.action.round} · ${held.action.summary}` : '');
@@ -219,7 +220,7 @@ function announceRound(round: number | null) {
   }
   announcedRound = round;
 }
-let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
+let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
 
 function render() {
   if (receiving) return;
@@ -260,13 +261,9 @@ function render() {
   $('playback-pacing').dataset.kind = reading?.kind ?? '';
   const more = playbackState.remaining > 1 ? ` · ${playbackState.remaining - 1} more` : '';
   text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
-  text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
+  text('reading-title', reading?.title ?? ''); readingDetail(reading);
   $('reading-detail').hidden = !reading?.detail;
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
-  // A paced turnover (upkeep, aftermath) reads on the field and in the card; only the match result covers the field.
-  const covering = playbackState.paced ? null : playbackState.receipt;
-  receiptShown = Boolean(covering); renderReceipt(covering, board.round);
-  $('battle').dataset.receipt = String(Boolean(covering));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
@@ -316,12 +313,6 @@ function render() {
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
     const condition = mutation.tag(one.id) ?? targetTag?.tag ?? tagOf(one);
-    let effect = node.querySelector<HTMLElement>('.creature-effect');
-    if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
-    const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
-      ? playbackState.cue?.effects.filter((item: { creature: string }) => item.creature === one.id) ?? [] : [];
-    effect.textContent = effects.map((item: { text: string }) => item.text).join(' · ');
-    effect.hidden = effects.length === 0;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -353,6 +344,18 @@ function render() {
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
+  const orderReading = orderUI.isReading() && !replay.active;
+  $('battle').dataset.orderReading = String(orderReading);
+  $('order-continue').hidden = !orderReading;
+  if (orderReading) {
+    $('playback-pacing').hidden = false; $('playback-pacing').dataset.kind = 'order';
+    $('playback-next').hidden = true; $('playback-skip').hidden = true;
+    text('reading-kind', 'Turn order'); text('reading-title', `Round ${order.round ?? '—'}`);
+    readingDetail({ detail: [...order.summary, order.hasRolls ? 'Ties broken by d20' : ''].filter(Boolean).join(' · ') });
+    $('reading-detail').hidden = false; $('reading-open').setAttribute('aria-label', 'Turn order details');
+    if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
+  }
+  orderShown = orderReading;
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
@@ -367,12 +370,25 @@ function render() {
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
-    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening();
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
   const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
-  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.paced) && !board.creatures.length, round: board.round } };
+  // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
+  // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.
+  const impact = Boolean(playbackState.cue) && (playbackState.stage === 'impact' || playbackState.stage === 'resolved');
+  type OrderRow = { id: string; position: number; tempo: string; speed: string; roll: string };
+  const orderRows = new Map<string, OrderRow>(orderUI.isReading() && !replay.active ? (order.rows as OrderRow[]).map(row => [row.id, row]) : []);
+  for (const one of creatures) {
+    const node = nodes.get(one.id); if (!node) continue;
+    const place = orderRows.get(one.id);
+    const chips: EffectChip[] = place ? [{ kind: 'order', value: String(place.position), label: place.tempo, tempo: place.speed, text: `Turn ${place.position} · ${place.tempo}${place.roll ? ` · ${place.roll}` : ''}` }] : impact
+      ? (playbackState.cue?.effects ?? []).filter((item: { creature: string }) => item.creature === one.id).map((item: { chip: EffectChip }) => item.chip)
+      : (markers ?? []).filter((marker: { id: string }) => marker.id === one.id).flatMap((marker: { lines: { chip?: EffectChip; text: string }[] }) => marker.lines.map(line => line.chip ?? { kind: 'other', value: line.text, text: line.text }));
+    effectChips(node, chips);
+  }
+  if (markers && board.round != null && !board.creatures.length) frame = { ...frame, upkeep: { markers, recorded: true, round: board.round } };
   // The reveal's crests stand on the battlefield while its receipt is up, on the live board only.
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
@@ -398,6 +414,12 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+  // The match's end is one moment: once its last result is read, the result opens by itself, once per seat.
+  const seatKey = selected ? `${selected.table.id}:${selected.seat}` : '';
+  if (view?.over && seatKey && matchShown !== seatKey && !replay.active && !match.model().active && canAuto()) { matchShown = seatKey; matchUI.open(); }
+  // An opponent's action that arrived under a dialog waited, unplayed; once the field is in view it plays.
+  if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().opened && !planning.model().opened && !match.model().active)
+    queueMicrotask(() => playback.resume());
 }
 
 // Health and energy as chips beside the badges, a heart and a bolt before each number. The units and the
@@ -412,6 +434,32 @@ function statChips(stats: HTMLElement, health: number, maxHealth: number, energy
     span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
   };
   stats.replaceChildren(chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP'), unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
+}
+
+// An action's outcomes read as chips beside the creature each landed on; its words stay for screen readers.
+function readingDetail(reading: { detail: string; groups?: { target: string; chips: EffectChip[] }[] } | null) {
+  const detail = $('reading-detail'), key = JSON.stringify(reading ? [reading.detail, reading.groups] : null);
+  if (detail.dataset.key === key) return;
+  detail.dataset.key = key;
+  if (!reading?.groups?.length) { detail.textContent = reading?.detail ?? ''; return; }
+  const unseen = document.createElement('span'); unseen.className = 'unseen'; unseen.textContent = reading.detail;
+  detail.replaceChildren(unseen, ...reading.groups.map(group => {
+    const row = document.createElement('span'); row.className = 'reading-group'; row.setAttribute('aria-hidden', 'true');
+    const target = document.createElement('span'); target.className = 'reading-target'; target.textContent = group.target;
+    row.append(...group.chips.map(chip => chipElement(chip, catalogue?.effects ?? [])), target);
+    return row;
+  }));
+}
+
+function effectChips(node: HTMLElement, chips: EffectChip[]) {
+  // Above the caption, which is centred under the figure: the hit area around it is taller than the creature.
+  let holder = node.querySelector<HTMLElement>('.creature-effect');
+  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.querySelector('.caption')!.prepend(holder); }
+  const key = JSON.stringify(chips);
+  holder.hidden = chips.length === 0;
+  if (holder.dataset.chips === key) return;
+  holder.dataset.chips = key;
+  holder.replaceChildren(...chips.map(chip => chipElement(chip, catalogue?.effects ?? [])));
 }
 
 function choose(choice: Choice) {
@@ -506,7 +554,7 @@ function applySettings() {
   if (game && settingsKnown && Object.keys(kept).length < Object.keys(chosen).length) saveGameOverride(storage, game, chosen);
   $<HTMLSelectElement>('playback-preference').value = chosen.pace; playback.setMode(chosen.pace);
   $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
-  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced());
+  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced());
   helpUI.setHelp(chosen.help);
 }
 function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
@@ -516,7 +564,7 @@ $('playback-speed').addEventListener('change', () => {
   playback.setRate(speed); keepForGame({ speed });
 });
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
-function motionChanged() { playback.setReduced(reduced()); render(); }
+function motionChanged() { playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced()); render(); }
 $('reduce-motion').addEventListener('change', () => { keepForGame({ reducedMotion: $<HTMLInputElement>('reduce-motion').checked }); motionChanged(); });
 motion.addEventListener('change', motionChanged);
 applySettings();
@@ -531,7 +579,11 @@ $('playback-next').addEventListener('click', () => {
 });
 $('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
-$('reading-open').addEventListener('click', () => { if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal(); });
+$('reading-open').addEventListener('click', () => {
+  if (orderUI.isReading()) orderUI.details();
+  else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
+});
+$('order-continue').addEventListener('click', () => orderUI.finish());
 scene.onResizeDuringPlayback = () => playback.skip();
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.
@@ -558,5 +610,5 @@ $('inspect-dialog').addEventListener('close', () => {
   const focused = document.activeElement;
   if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
   const node = inspected === null ? undefined : nodes.get(inspected);
-  (node ?? (receiptShown ? $('playback-receipt') : !$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
+  (node ?? (!$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
 });

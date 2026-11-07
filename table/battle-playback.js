@@ -4,6 +4,7 @@ import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { creatureLabel, livePresentation } from './battle-live.js';
+import { endedChip, immuneChip, outcomeChip } from './effect-chips.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
@@ -21,7 +22,14 @@ export function readingCard(item, board, theirs) {
   const outcome = item.status === 'Fizzled' ? [`Fizzled: ${item.reason}`]
     : [...(item.status === 'Critical' ? ['Critical'] : []),
       ...(item.effects?.length ? item.effects.map(effect => `${effect.text} → ${name(effect.target?.id)}`) : ['No effect'])];
-  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · ') };
+  // The same outcomes as chips, gathered by the creature they landed on, for the card to draw.
+  const groups = [];
+  if (item.status !== 'Fizzled') for (const effect of item.effects ?? []) {
+    const target = name(effect.target?.id);
+    const group = groups.find(one => one.target === target) ?? (groups.push({ target, chips: [] }), groups.at(-1));
+    group.chips.push(outcomeChip(effect));
+  }
+  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · '), groups };
 }
 
 // A paced turnover is read on the field: a plaque on each creature it touched, and one line in the reading
@@ -30,23 +38,22 @@ function pacedUpkeep(entries, board, round, ordinaryRounds) {
   const receipt = upkeepReceipt(entries, round, board);
   return receipt ? { title: 'Upkeep', ...upkeepDisplay(receipt.energy, receipt.ongoing, ordinaryRounds.has(round) ? '' : receipt.energyNote) } : null;
 }
-const words = value => String(value ?? 'Condition').replace(/([a-z])([A-Z])/g, '$1 $2');
 function pacedAftermath(entries, board) {
   const markers = new Map();
-  const mark = (id, text) => {
+  const mark = (id, chip) => {
     const key = String(id);
     if (!markers.has(key)) markers.set(key, { id: key, name: creatureLabel(board, id),
       side: board?.allies?.some(one => one.id === id) ? 'Your team' : 'Opponent', lines: [] });
-    markers.get(key).lines.push({ text, tone: 'condition' });
+    markers.get(key).lines.push({ text: chip.value, tone: 'condition', chip });
   };
   let ended = 0, immune = 0;
   for (const entry of entries) {
     if (entry.event?.kind === 'ConditionsExpired') {
       for (const [id, conditions] of Object.entries(entry.event.expired ?? {})) {
-        for (const condition of conditions ?? []) { ended++; mark(Number(id), `${words(condition?.effect?.kind)} ends`); }
+        for (const condition of conditions ?? []) { ended++; mark(Number(id), endedChip(condition?.effect?.kind)); }
       }
     }
-    if (entry.event?.kind === 'StunImmunityGained') for (const id of entry.event.creatures ?? []) { immune++; mark(id, 'Immune to stun'); }
+    if (entry.event?.kind === 'StunImmunityGained') for (const id of entry.event.creatures ?? []) { immune++; mark(id, immuneChip()); }
   }
   const summary = [ended ? `${ended} condition${ended === 1 ? '' : 's'} ended` : '', immune ? `${immune} immune to stun` : ''].filter(Boolean).join(' · ');
   return { title: 'Aftermath', summary, markers: [...markers.values()] };
@@ -65,10 +72,11 @@ function aftermathView(view, action) {
     allies: after.filter(one => allies.has(one.id)).map(shown), enemies: after.filter(one => !allies.has(one.id)).map(shown) } };
 }
 
-// Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred.
+// Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred. The match's end
+// is not read here: the match result opens by itself once the last result is read.
 function receipts(entries, board, ordinaryRounds) {
   return entries.flatMap(entry => {
-    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied', 'MatchEnded'].includes(entry.event?.kind)) return [];
+    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)) return [];
     const row = historyEntry(entry, board);
     // The opening receipt still belongs to AU3b's arrival-gated introduction.
     if (row?.category === 'Upkeep' && row.round === 1) return [];
@@ -109,7 +117,7 @@ const isWound = (effect, action, harmful) => effect.target.id === action.actor?.
 
 // A motif describes confirmed outcomes, never a spell's predicted damage or target legality.
 export function actionCue(action, cards = new Map(), harmful = new Set()) {
-  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone, wound: isWound(effect, action, harmful) }));
+  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone, wound: isWound(effect, action, harmful), chip: outcomeChip(effect) }));
   const struck = [...new Set(action.effects.filter(effect => effect.tone === 'harm').map(effect => String(effect.target.id)))];
   const changes = framed(action) ? combatChanges(
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];
@@ -192,9 +200,12 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // on the latest snapshot with the last real result. What is already queued or playing is never dropped
     // for what arrives at the game's own pace: a round brings a handful of actions, not a backlog. An incoming
     // action waiting for its OK (ADR 0139), or a receipt held in Step, keeps what arrives under a dialog queued
-    // behind it; anything else would play unseen, so it settles.
-    const held = current !== null && waits(current);
-    if ((!animate && !held) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
+    // behind it; anything else would play unseen, so it settles. An opponent's action is never passed over
+    // unseen: arriving under a dialog (the turn order, a tip), it waits, queued and unplayed, for the field.
+    // An opponent's action already waiting, unplayed, holds what comes after it just as one being read does.
+    const held = (current !== null && waits(current)) || queue.some(item => incoming(item));
+    const theirs = actions.some(action => incoming(action));
+    if ((!animate && !held && !theirs) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.
       const newest = actions.at(-1);
       if (newest) lastFramed = framed(newest) ? newest : null;
@@ -222,7 +233,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
         }
       } else queue.push(item);
     }
-    if (!current) next(); else emit();
+    if (!current && animate) next(); else emit();
+  }
+  // The field is in view again: what waited under a dialog plays now.
+  function resume() {
+    if (!current && queue.length) next();
   }
   function model() {
     const action = current && !current.receipt ? current : null;
@@ -240,7 +255,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const cue = action ? actionCue(action, catalogue, harmful) : null;
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
-    return { board, frame, summary, active: Boolean(current), sequence: current?.sequence ?? null,
+    return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),
@@ -272,5 +287,5 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (!current || stage !== 'resolved') return;
     read = current.sequence; cancelTimer(); next();
   }
-  return { receive, model, skip, reset, setReduced, setRate, setMode, advance };
+  return { receive, model, skip, reset, setReduced, setRate, setMode, advance, resume };
 }
