@@ -359,9 +359,11 @@ remain recorded facts. A missing ordinary-energy record is explicitly unknown. R
 arrival-gated introductory receipt.
 
 Action frames supply their own round, phase, creatures, resources, known spells and timeline. Turnover
-records do not contain an exact battlefield: the scene shows a labelled text receipt with **no creature stats
-or spellbook** instead of borrowing future values. The next command may be opened at any time; this first
-skips the historical display. The journal and round notes retain all received facts.
+records do not contain an exact battlefield, so they read on a recorded one, never a later board
+([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
+an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
+what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
+plaques stand by name alone. Only the match result covers the field with a text receipt. The journal and round notes retain all received facts.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the

@@ -78,10 +78,10 @@ async function answerCombat(page, view, capture) {
 // standalone notice. A round can reach the page in either shape, depending on response timing.
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
 async function readTurnover(page, round, info) {
-  const paced = page.locator('#playback-receipt'), notice = page.locator('#upkeep-dialog');
+  const paced = page.locator('#playback-pacing'), notice = page.locator('#upkeep-dialog');
   // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
   // default, the aftermath before the upkeep waits for its Next (ADR 0141).
-  const title = page.locator('#receipt-title');
+  const title = page.locator('#reading-title');
   await acknowledge(page, async () => (await paced.isVisible() && await title.textContent() === 'Upkeep') || await notice.isVisible());
   if (await notice.isVisible()) {
     await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
@@ -91,9 +91,9 @@ async function readTurnover(page, round, info) {
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
     await page.locator('#upkeep-close').click();
   } else {
-    await expect(page.locator('#receipt-title')).toHaveText('Upkeep', { timeout: 20000 });
+    await expect(page.locator('#reading-title')).toHaveText('Upkeep', { timeout: 20000 });
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
-    await expect(page.locator('#receipt-sections')).toContainText('energy');
+    await expect(page.locator('#result-text')).toContainText('energy');
     await expect(page.locator('#actor-name')).toBeHidden();
     await expect(notice).toBeHidden();
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });

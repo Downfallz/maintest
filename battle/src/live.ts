@@ -263,8 +263,10 @@ function render() {
   text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
   $('reading-detail').hidden = !reading?.detail;
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
-  receiptShown = Boolean(playbackState.receipt); renderReceipt(playbackState.receipt, board.round, playbackState.upkeep?.summary);
-  $('battle').dataset.receipt = String(Boolean(playbackState.receipt));
+  // A paced turnover (upkeep, aftermath) reads on the field and in the card; only the match result covers the field.
+  const covering = playbackState.paced ? null : playbackState.receipt;
+  receiptShown = Boolean(covering); renderReceipt(covering, board.round);
+  $('battle').dataset.receipt = String(Boolean(covering));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
@@ -369,8 +371,8 @@ function render() {
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
-  const markers = replay.active ? undefined : playbackState.upkeep?.markers ?? liveMarkers;
-  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.upkeep), round: board.round } };
+  const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
+  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.paced) && !board.creatures.length, round: board.round } };
   // The reveal's crests stand on the battlefield while its receipt is up, on the live board only.
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
@@ -556,5 +558,5 @@ $('inspect-dialog').addEventListener('close', () => {
   const focused = document.activeElement;
   if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
   const node = inspected === null ? undefined : nodes.get(inspected);
-  (node ?? (receiptShown ? $('playback-receipt') : undefined))?.focus({ preventScroll: true });
+  (node ?? (receiptShown ? $('playback-receipt') : !$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
 });

@@ -298,7 +298,11 @@ test('the own closing cast, meaningful aftermath and combined next upkeep are re
   assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
   h.drain();
   assert.equal(h.queue.model().receipt.category, 'Aftermath', 'the own cast moved on by itself; Step holds the aftermath'); assert.equal(h.queue.model().board.round, 2);
-  assert.equal(h.queue.model().board.phase, 'EndOfRound'); assert.deepEqual(h.queue.model().board.creatures, []);
+  assert.equal(h.queue.model().board.phase, 'EndOfRound');
+  // On the round's last action frame, nothing of the next round's board: creature 2 as the strike left it.
+  assert.equal(h.queue.model().board.creatures.find(one => one.id === '2').health, 13);
+  assert.equal(h.queue.model().board.creatures[0].energy, 5); assert.equal(h.queue.model().board.creatures[0].knownSpells, undefined);
+  assert.deepEqual(h.queue.model().paced.markers.map(one => [one.id, one.lines.map(line => line.text)]), [['1', ['Defense Buff ends']]]);
   h.queue.advance(); assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.equal(h.queue.model().board.round, 3);
   assert.match(h.queue.model().summary, /\+2 energy.*1 → 3/); assert.match(h.queue.model().summary, /No ongoing ticks/);
   assert.doesNotMatch(h.queue.model().summary, /unknown|not recorded/); assert.equal(h.queue.model().receipt.sections.length, 2);
@@ -456,5 +460,13 @@ test('the reading card marks the player\'s own cast, a fizzle and a round summar
   fizzle.receive([event(4, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, fizzled: true, fizzleReason: { message: 'Not enough energy' } }, appliedOutcomes: [] })]);
   assert.match(fizzle.queue.model().reading.detail, /^Fizzled: /);
   const summary = harness(); summary.queue.setMode('step'); summary.receive([]); summary.receive([cleanupEvent(4)]);
-  assert.deepEqual(summary.queue.model().reading, { kind: 'summary', title: summary.queue.model().receipt.title, detail: '' });
+  assert.deepEqual(summary.queue.model().reading, { kind: 'summary', title: 'Aftermath', detail: '1 condition ended' });
+});
+test('an aftermath with no recorded action frame in its round reads by its plaques alone', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]);
+
+  h.receive([cleanupEvent(4)]);
+
+  assert.deepEqual(h.queue.model().board.creatures, []);
+  assert.equal(h.queue.model().paced.title, 'Aftermath'); assert.equal(h.queue.model().paced.markers.length, 1);
 });
