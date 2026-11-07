@@ -202,7 +202,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // action waiting for its OK (ADR 0139), or a receipt held in Step, keeps what arrives under a dialog queued
     // behind it; anything else would play unseen, so it settles. An opponent's action is never passed over
     // unseen: arriving under a dialog (the turn order, a tip), it waits, queued and unplayed, for the field.
-    const held = current !== null && waits(current);
+    // An opponent's action already waiting, unplayed, holds what comes after it just as one being read does.
+    const held = (current !== null && waits(current)) || queue.some(item => incoming(item));
     const theirs = actions.some(action => incoming(action));
     if ((!animate && !held && !theirs) || actions.some(action => !framed(action)) || actions.length > limit || new Set(arriving.map(item => item.round)).size > 2 || arriving.length + queue.length > limit * 5) {
       // A settled action is still the round's latest: a later aftermath reads on its frame, or on none.

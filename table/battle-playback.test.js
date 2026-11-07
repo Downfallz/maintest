@@ -507,3 +507,12 @@ test('the player\'s own action arriving under a dialog still settles, as before'
 
   assert.equal(h.queue.model().active, false);
 });
+test('a turnover arriving later under the same dialog stays behind an opponent\'s action still waiting to play', () => {
+  const h = harness(); h.receive([]);
+  h.receive([incoming(4)], {}, { animate: false });
+
+  h.receive([cleanupEvent(5)], {}, { animate: false });
+
+  assert.equal(h.queue.model().remaining, 2, 'neither was settled');
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+});
