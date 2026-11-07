@@ -153,6 +153,23 @@ test('a bot opponent is named as a bot, with no rank and no friend action', asyn
   await expect(page.locator('#opponent-kind')).toHaveText('OPPONENT · BOT'); await expect(page.locator('#opponent-rank')).toHaveText('A bot · bots are not ranked');
   await expect(page.locator('#opponent-friend')).toBeHidden();
 });
+test('an opponent who takes the open seat stays named when an older read of the ladder answers last', async ({ page }) => {
+  const state = await mount(page); state.first.waiting = true;
+  let seats = [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'open' }];
+  const held = [];
+  await page.route('**/api/lobby/resume', route => route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3', seats }, seats: [{ seat: 'player1', token: 'first' }] }] } }));
+  // The read made when the seat is chosen hangs on the ladder until the match has begun.
+  await page.route('**/api/leaderboard', route => { if (held.length === 0) held.push(route); else return route.fulfill({ json: { players: [] } }); });
+  await page.route('**/api/friends', route => route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } }));
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#opponent-name')).toHaveText('Open seat'); await expect.poll(() => held.length).toBe(1);
+  seats = [seats[0], { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }]; state.first.waiting = false;
+  await expect(page.locator('#opponent-name')).toHaveText('bastien', { timeout: 15000 });
+  await held[0].fulfill({ json: { players: [] } });
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 200)));
+  await expect(page.locator('#opponent-name')).toHaveText('bastien');
+  await page.locator('#opponent-open').click(); await expect(page.locator('#opponent-rank')).toHaveText(/Unranked/);
+});
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();

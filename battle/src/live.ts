@@ -517,21 +517,23 @@ let opponent: { seat: ReturnType<typeof opponentOf>; ladder: Ladder; friends: Fr
 async function readJson(path: string) {
   try { const response = await request(path); return response.ok ? await response.json() : null; } catch { return null; }
 }
+// Loads overlap (the card opening while the match begins), so the seats a refresh reads are kept on the choice as
+// soon as they arrive, each load draws from the choice as it stands when it ends, and only the latest load draws.
+let opponentLoad = 0;
 async function loadOpponent(refreshSeats = false) {
-  const choice = selected;
+  const choice = selected, load = ++opponentLoad;
   if (!choice) return;
-  let table = choice.table;
   if (refreshSeats) {
     try {
       const response = await request('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens: [choice.token] }) });
       const answer = response.ok ? await response.json() : null;
-      table = answer?.tables?.find((one: { table: Choice['table'] }) => one.table.id === choice.table.id)?.table ?? table;
+      const table = answer?.tables?.find((one: { table: Choice['table'] }) => one.table.id === choice.table.id)?.table;
+      if (table) { choice.table = table; if (selected === choice) { opponent = { ...opponent, seat: opponentOf(table, choice.seat) }; drawOpponent(); } }
     } catch { /* The seats the page opened with still name the opponent. */ }
   }
   const [ladder, friends] = await Promise.all([readJson('/api/leaderboard'), readJson('/api/friends')]);
-  if (selected !== choice) return;
-  choice.table = table;
-  opponent = { seat: opponentOf(table, choice.seat), ladder, friends };
+  if (selected !== choice || load !== opponentLoad) return;
+  opponent = { seat: opponentOf(choice.table, choice.seat), ladder, friends };
   drawOpponent();
 }
 const avatarOf = (card: ReturnType<typeof opponentCard>) => card.kind === 'bot' ? '⚙' : card.kind === 'waiting' ? '…' : (card.name.trim()[0] ?? '?').toUpperCase();
