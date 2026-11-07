@@ -564,3 +564,10 @@ test('what a page closed now would resume after is the last result shown in full
   h.receive([event(4), event(6)]); assert.equal(h.queue.model().watermark, 3, 'the action playing is not yet seen');
   h.drain(); assert.equal(h.queue.model().watermark, 6);
 });
+test('a page closed on a held upkeep that took in a later part resumes from its first part', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([energyEvent(4)]);
+  h.receive([upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 3 }] })]);
+
+  assert.equal(h.queue.model().sequence, 5, 'one receipt holds both parts');
+  assert.equal(h.queue.model().watermark, 3, 'neither part is read yet');
+});

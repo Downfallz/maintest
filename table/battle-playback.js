@@ -107,7 +107,9 @@ function receipts(entries, board, ordinaryRounds) {
     const upkeepEvents = row.category === 'Upkeep' ? [entry] : [];
     const aftermathEvents = row.category === 'Aftermath' ? [entry] : [];
     return [{
-      sequence: row.sequence, round: row.round || board?.roundNumber,
+      // A receipt takes in later parts of its turnover and its sequence moves to the last; `first` stays on the
+      // earliest, which is what a page closed before it was read resumes from.
+      sequence: row.sequence, first: row.sequence, round: row.round || board?.roundNumber,
       upkeepEvents, upkeep: upkeepEvents.length ? pacedUpkeep(upkeepEvents, board, row.round, ordinaryRounds) : null,
       aftermathEvents, aftermath: aftermathEvents.length ? pacedAftermath(aftermathEvents, board) : null,
       receipt: { title: row.title, category: row.category, sections: [{ title: row.title, items: row.details }] },
@@ -286,7 +288,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
     // The last sequence the player has been shown in full: what a page closed now would resume after.
-    const unread = [current?.sequence, queue[0]?.sequence].filter(Number.isInteger);
+    const unread = [current?.first ?? current?.sequence, queue[0]?.first ?? queue[0]?.sequence].filter(Number.isInteger);
     const watermark = seen === null ? null : unread.length ? Math.min(...unread) - 1 : seen;
     return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null, watermark,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
