@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { onNextFrame } from './next-frame';
 
 // Limit supersampling on large displays. A phone-sized battlefield can use its native 2×–3× density.
 function renderSize(mount: HTMLElement) {
@@ -21,7 +22,8 @@ export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLo
     const { width, height } = renderSize(mount);
     if (game.scale.width !== width || game.scale.height !== height) game.scale.resize(width, height);
   };
-  const observer = new ResizeObserver(resize);
+  const nextResize = onNextFrame(resize);
+  const observer = new ResizeObserver(nextResize);
   // Moving to another display or changing browser zoom can change density at the same CSS size.
   let densityQuery: MediaQueryList;
   function observeDensity() {
@@ -30,7 +32,7 @@ export function bootScene(scene: Phaser.Scene, mount: HTMLElement, { onContextLo
     resize();
   }
   game.events.once(Phaser.Core.Events.DESTROY, () => {
-    observer.disconnect();
+    observer.disconnect(); nextResize.cancel();
     densityQuery?.removeEventListener('change', observeDensity);
   });
   game.events.once(Phaser.Core.Events.READY, () => {

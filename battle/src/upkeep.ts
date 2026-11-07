@@ -1,5 +1,6 @@
 import { createBattleUpkeep, upkeepDisplay } from '../../table/battle-upkeep.js';
 import { receiptDetails } from './receipt-details';
+import { onNextFrame } from './next-frame';
 
 type Controller = ReturnType<typeof createBattleUpkeep>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -15,9 +16,9 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
   // Reserve only the compact dock. Opening Details may cover more of the scene on request.
   const header = dialog.querySelector<HTMLElement>('.upkeep-header')!;
   const tools = dialog.querySelector<HTMLElement>('.upkeep-tools')!;
-  const reserve = new ResizeObserver(() => {
+  const reserve = new ResizeObserver(onNextFrame(() => {
     if (dialog.open) el('battle').style.setProperty('--upkeep-dock-height', `${header.offsetHeight + tools.offsetHeight + 12}px`);
-  });
+  }));
   reserve.observe(header); reserve.observe(tools);
   let display: ReturnType<typeof upkeepDisplay> | null = null;
   const { expand } = receiptDetails(details, body);

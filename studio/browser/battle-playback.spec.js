@@ -27,8 +27,8 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   expect(h.errors).toEqual([]);
 });
 test('the next choice is withdrawn while results are read, and skip settles to the latest board', async ({ page }) => {
-  // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
-  test.setTimeout(60000);
+  // Three casts of full-size frames on a frozen clock: about 31 s on a quiet desktop, past a minute on a busy two-worker runner.
+  test.setTimeout(120000);
   const h = await mount(page); await h.publish([entry(10, { actor: 4, targets: [1] }), entry(11, { actor: 5, targets: [1] })]);
   // An opponent's action offers OK alone, never Skip, and the next choice waits for it.
   await expect(page.locator('#playback-next')).toBeVisible(); await expect(page.locator('#playback-skip')).toBeHidden();

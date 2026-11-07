@@ -4,6 +4,7 @@ import { classColour, familyRoot, requirementLine, talentPalette } from '../../t
 import { stageLabel } from '../../table/terms.js';
 import { mutationBranches } from './mutations';
 import type { Catalogue, Package } from './planning';
+import { onNextFrame } from './next-frame';
 
 type Model = ReturnType<typeof mutationChoices>;
 type Face = Model['faces'][number];
@@ -109,9 +110,10 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
     }
     svg.replaceChildren(...paths);
   }
-  const observer = new ResizeObserver(draw); observer.observe(graph);
+  const redraw = onNextFrame(draw);
+  const observer = new ResizeObserver(redraw); observer.observe(graph);
   anchors.forEach(el => observer.observe(el));
-  return { graph, pane, tree, dispose: () => observer.disconnect(), select(id: string | null) {
+  return { graph, pane, tree, dispose: () => { observer.disconnect(); redraw.cancel(); }, select(id: string | null) {
     if (active === id) return;
     active = id; const face = id ? faces.get(id) : null;
     pane.replaceChildren(...(face ? [preview(face, packages, subject?.name ?? 'Creature')] : [])); draw();
