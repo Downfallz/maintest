@@ -519,15 +519,19 @@ round during match replay. Captures in `docs/tabletop/images/battle-order/` iden
 Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
 
 
-## The opponent at the top of the field
+## The opponent on the round's line
 
-Where the field said "Opponent", a chip names who the player is up against: a person by their player name with
+Beside the round number in the header, a chip names who the player is up against (it sat over the field at first,
+and hid a creature in landscape): a person by their player name with
 their place on the ladder (ADR 0124) and a heart when they are a friend (ADR 0129), a bot by its name with **BOT**.
 It opens a card with the rank in full (place, rating and record, or unranked, or provisional), whether they are a
 friend, and **Add friend** (or **Accept friend request**, which is asking back) when they are not. The chip reads
 the table's seat summaries, `GET /api/leaderboard` and `GET /api/friends`, when a seat is chosen, again when the
 opponent takes an open seat, and when its card opens; a page that cannot read the ladder or the friends says
-nothing about them rather than guessing. `table/battle-opponent.js` decides what it says.
+nothing about them rather than guessing. `table/battle-opponent.js` decides what it says. Where the header is narrow (a
+phone held upright, or the spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank
+and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
+phase gives up its place, since the command dock names it too.
 
 ## AU12: public creature inspection
 

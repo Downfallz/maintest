@@ -18,14 +18,14 @@
   <main id="battle" class="battle-shell" data-ready="false">
     <header class="hud-top">
       <a class="brand" href="/" aria-label="Downfall Instinct — back to lobby"><span aria-hidden="true">◈</span><div>DOWNFALL <b>INSTINCT</b><small>BATTLE VIEW · PREVIEW</small></div></a>
-      <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div>
+      <div class="round"><span>ROUND <b id="round-number">—</b></span><small id="round-phase"></small></div><button id="opponent-open" class="opponent-chip" type="button" aria-haspopup="dialog" hidden><span class="opponent-avatar" id="opponent-avatar" aria-hidden="true"></span><span class="opponent-text"><span class="opponent-vs">VS</span><strong id="opponent-name"></strong></span><span id="opponent-badge" class="opponent-badge" hidden></span><span id="opponent-heart" class="opponent-heart" title="Your friend" hidden>♥</span></button>
       <div class="tools"><button id="history-open" type="button" data-history-open aria-label="Open match history" aria-describedby="history-preview history-unread" disabled><span>History<span id="history-unread"></span></span><small id="history-preview">No match loaded</small></button><button id="help-open" type="button" data-help-open aria-label="Help and round guide" disabled>?</button><button id="settings" type="button" title="Match settings" aria-label="Open match settings">⚙</button></div>
     </header>
     <nav class="timeline-wrap" aria-label="Activation order"><button id="order-open" data-order-open type="button" aria-label="Inspect turn order" disabled>Order ↗</button><ol id="timeline"></ol><span id="no-timeline">Waiting for a board</span></nav>
     <section id="battle-zone" aria-label="Battlefield">
       <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow">NEW ROUND</span><strong id="round-toast-number"></strong></div>
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
-      <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span><button id="opponent-open" class="opponent-chip" type="button" aria-haspopup="dialog" hidden><span class="opponent-avatar" id="opponent-avatar" aria-hidden="true"></span><span class="opponent-text"><span class="opponent-vs">VS</span><strong id="opponent-name"></strong></span><span id="opponent-badge" class="opponent-badge" hidden></span><span id="opponent-heart" class="opponent-heart" title="Your friend" hidden>♥</span></button>
+      <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
       <aside id="growth-receipt" hidden aria-label="Mutations revealed"><span class="growth-receipt-mark" aria-hidden="true"></span><p class="growth-receipt-text"><strong>Mutations revealed</strong><span id="growth-receipt-summary"></span></p><button type="button" data-growth-open data-growth-mode="reveal" aria-describedby="growth-announcement">See</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button" aria-label="Dismiss mutation reveal">×</button></aside>
       <div id="actor-layer" aria-label="Inspect creatures"></div>
       

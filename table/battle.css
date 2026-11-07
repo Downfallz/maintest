@@ -928,21 +928,44 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 .planning-action { min-height: 44px; padding: 8px 14px; border: 1px solid #52695e; border-radius: 999px; background: #172a30; color: #dfe7df; font-size: 13px; }
 .planning-action.atlas-open { border-color: var(--gold); color: #f6e7c4; }
 
-/* The opponent, named at the top of the field over its team, where the field said "Opponent": who it is, its place
-   on the ladder or that it is a bot, and a heart for a friend. Its card opens from there with the rank in full and
-   the friend action. */
-.opponent-chip { position: absolute; z-index: 4; top: 8px; right: 10px; display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: min(320px, 70%); min-height: 44px; padding: 4px 12px 4px 4px; box-shadow: 0 4px 14px #0008; border: 1px solid #d98b6f66; border-radius: 999px; background: linear-gradient(90deg, #2a2320, #172429); color: #f2eee2; font: inherit; cursor: pointer; }
+/* The opponent, named on the header's line beside the round rather than over the field, where it hid a creature in
+   landscape: who it is, its place on the ladder or that it is a bot, and a heart for a friend. Its card opens from
+   there with the rank in full and the friend action. Where the header is narrow (a phone held upright, or the
+   spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank and heart, and the
+   field's team label still names them. */
+#battle .hud-top { container: hud / inline-size; }
+#battle .hud-top:has(#opponent-open:not([hidden])) .round { margin-right: 0; }
+.opponent-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: 300px; min-height: 40px; margin: 0 auto 0 14px; padding: 3px 12px 3px 3px; border: 1px solid #d98b6f55; border-radius: 999px; background: linear-gradient(90deg, #d98b6f26, #d98b6f08 70%); color: #f2eee2; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.opponent-chip:hover { border-color: #d98b6faa; background: linear-gradient(90deg, #d98b6f3a, #d98b6f12 70%); }
+.opponent-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .opponent-chip[hidden] { display: none; }
-.opponent-avatar { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f0b48a, #a2533a); color: #1a1d1a; font: 700 15px/1 Georgia, serif; }
-:is(.opponent-chip, #opponent-dialog)[data-kind="bot"] .opponent-avatar { background: radial-gradient(circle at 35% 30%, #8ea79c, #3c4d47); color: #e6f0ea; font-family: system-ui, sans-serif; }
-:is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar { background: #24343a; color: #aebbb4; }
+.opponent-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #d98b6f88; background: radial-gradient(circle at 35% 30%, #f0b48a, #a2533a); color: #1a1d1a; font: 700 15px/1 Georgia, serif; }
+:is(.opponent-chip, #opponent-dialog)[data-kind="bot"] .opponent-avatar { box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #7f948a; background: radial-gradient(circle at 35% 30%, #8ea79c, #3c4d47); color: #e6f0ea; font-family: system-ui, sans-serif; }
+:is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar { box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #52695e; background: #24343a; color: #aebbb4; }
 .opponent-text { display: grid; min-width: 0; line-height: 1.1; text-align: left; }
-.opponent-vs { color: #d98b6f; font: 800 8px/1.2 system-ui, sans-serif; letter-spacing: .18em; }
-#opponent-name { overflow: hidden; max-width: 140px; font: 15px/1.2 Georgia, serif; white-space: nowrap; text-overflow: ellipsis; }
-.opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; color: #f6e7c4; font: 800 10px/1.5 system-ui, sans-serif; }
+.opponent-vs { color: #d98b6f; font: 800 8px/1.2 system-ui, sans-serif; letter-spacing: .2em; }
+#opponent-name { overflow: hidden; max-width: 170px; font: 15px/1.2 Georgia, serif; white-space: nowrap; text-overflow: ellipsis; }
+.opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: #0c181ccc; color: #f6e7c4; font: 800 10px/1.5 system-ui, sans-serif; }
 .opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
 .opponent-chip[data-kind="bot"] .opponent-badge { border-color: #7f948a; color: #cfe0d7; }
-.opponent-heart { flex: none; color: #ef7a6c; font-size: 15px; line-height: 1; }
+.opponent-heart { flex: none; color: #ef7a6c; font-size: 15px; line-height: 1; text-shadow: 0 0 6px #ef7a6c66; }
+@container hud (max-width: 760px) {
+  .opponent-chip { gap: 6px; margin-left: 10px; padding-right: 10px; }
+  #opponent-name { max-width: 110px; font-size: 14px; }
+}
+@container hud (max-width: 560px) {
+  /* The medallion alone, the rank pinned under it and the heart on its shoulder. */
+  .opponent-chip { justify-content: center; gap: 0; min-width: 44px; min-height: 44px; margin-left: 6px; padding: 0; border: 0; background: none; }
+  .opponent-chip:hover { background: none; }
+  .opponent-text { display: none; }
+  .opponent-avatar { width: 30px; height: 30px; font-size: 14px; }
+  .opponent-badge { position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); padding: 0 5px; font-size: 8px; line-height: 1.4; white-space: nowrap; }
+  .opponent-heart { position: absolute; top: 1px; right: -1px; font-size: 12px; }
+}
+@container hud (max-width: 340px) {
+  /* The smallest phones keep the round's number whole; the phase is still named in the command dock below. */
+  #battle .round:has(~ #opponent-open:not([hidden])) small { display: none; }
+}
 #opponent-dialog { width: min(360px, calc(100vw - 32px)); padding: 18px; border: 1px solid #d98b6f66; border-radius: 14px; background: #13232a; color: #f2eee2; box-shadow: 0 18px 40px #000a; }
 #opponent-dialog::backdrop { background: #050b0db3; }
 .opponent-head { display: flex; align-items: center; gap: 12px; }
@@ -956,12 +979,6 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 #opponent-friend { width: 100%; min-height: 46px; margin-top: 14px; }
 #opponent-problem { margin: 10px 0 0; color: #ffb3a7; font-size: 13px; }
 .opponent-ladder { display: inline-block; margin-top: 14px; color: var(--gold); font-size: 13px; }
-#battle-zone:has(#opponent-open:not([hidden])) #enemy-label { display: none; }
-@media (max-width: 619px) {
-  .opponent-chip { top: 6px; right: 6px; gap: 6px; padding: 3px 10px 3px 3px; }
-  .opponent-avatar { width: 28px; height: 28px; font-size: 14px; }
-  #opponent-name { max-width: 130px; font-size: 14px; }
-}
 
 /* The spell choice opens by itself on the player's turn and docks beside the field as the mutation choice does
    (ADR 0149): a sheet under the field on a phone, a panel at its side on a wider screen. The field gives up that
