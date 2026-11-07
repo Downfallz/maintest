@@ -506,6 +506,7 @@
 .target-crit { display: inline-flex; align-items: center; gap: 4px; }
 .target-crit-label { color: #f2d76b; font: 700 10px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .target-none { color: #b5c6bd; }
+.target-preview .chip-lasting { margin-left: 4px; font: 600 10px/1 system-ui, sans-serif; opacity: .8; white-space: nowrap; }
 .target-caster { color: #bddfb8; }
 #intent-preview { height: 104px; margin-bottom: 6px; }
 #battle[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr) minmax(280px,1fr); grid-template-rows: minmax(0,1fr); gap: 16px; }

@@ -8,12 +8,24 @@ type Cue = { kind: string; glyph?: string; harmful: boolean };
 const line = (tag: string, value: string, className = '') => {
   const node = document.createElement(tag); node.textContent = value; node.className = className; return node;
 };
-// A host outcome as the field's chip: its icon and amount, with the engine's words kept for screen readers.
+type Outcome = { effect?: { amount?: number; amountPerRound?: number; duration?: { rounds?: number; isPermanent?: boolean } } };
+/** How long an outcome lasts, as the chip shows it beside its amount: "2 rds", "/ rd", "perm."; empty when it is at once. */
+export function lasting(outcome: Outcome) {
+  const effect = outcome?.effect, duration = effect?.duration;
+  const perRound = Number.isInteger(effect?.amountPerRound) && !Number.isInteger(effect?.amount) ? '/ rd' : '';
+  const span = duration?.isPermanent === true ? 'perm.' : Number.isInteger(duration?.rounds) ? `${duration!.rounds} rd${duration!.rounds === 1 ? '' : 's'}` : '';
+  return [perRound, span].filter(Boolean).join(' · ');
+}
+// A host outcome as the field's chip: its icon and amount, how long it lasts beside them, and the engine's words
+// kept for screen readers. An estimate is read before a cast is confirmed, so a lasting condition shows its turns.
 function chips(outcomes: unknown[], effects: Cue[]) {
   const row = line('span', '', 'preview-chips');
   row.append(...outcomes.map(outcome => {
     const chip = outcomeChip(outcome) as EffectChip;
-    return chipElement({ ...chip, text: chip.text || recapEffectText(outcome) }, effects);
+    const node = chipElement({ ...chip, text: chip.text || recapEffectText(outcome) }, effects);
+    const span = lasting(outcome as Outcome);
+    if (span) { const tail = line('span', span, 'chip-lasting'); tail.setAttribute('aria-hidden', 'true'); node.querySelector('.unseen')!.before(tail); }
+    return node;
   }));
   return row;
 }

@@ -74,6 +74,17 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await expect.poll(() => h.writes).toEqual([{ kind: 'Action', creature: 1, spell: 'spell-0', targets: [4, 5], asked: 21 }]);
   await expect(page.locator('#playback-pacing')).toBeHidden();
 });
+test('a lasting condition shows how long it lasts on its chip, a ticking one per round too', async ({ page }) => {
+  const h = await mount(page);
+  h.view.guidance[0].targets = [4, 5, 6].map(target => ({ target, critical: [],
+    plain: [{ kind: 'ConditionOutcome', effect: { kind: 'InitiativeDebuff', amount: 3, duration: { rounds: 2 } } },
+      { kind: 'ConditionOutcome', effect: { kind: 'Bleed', amountPerRound: 2, duration: { rounds: 3 } } }] }));
+  await notify(page); await choose(page); await target(page, 4).click();
+  const lasting = preview(page).locator('.target-estimate').first().locator('.chip-lasting');
+  await expect(lasting).toHaveText(['2 rds', '/ rd · 3 rds']); await expect(lasting.first()).toBeVisible();
+  await expect(preview(page).locator('.target-estimate').first()).toContainText('Initiative Debuff 3 · 2 rounds');
+  expect(h.writes).toEqual([]);
+});
 test('a stunned legal target keeps its stun visible and spoken while targets are chosen', async ({ page }) => {
   const h = await mount(page); h.view.board.enemies[1].isStunned = true; await notify(page);
   await expect(target(page, 5)).toContainText('STUNNED'); await choose(page);
