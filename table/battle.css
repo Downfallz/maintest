@@ -663,6 +663,18 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #playback-pacing[data-kind="own"] { --reading-accent: #8cc7ad; }
 #playback-pacing[data-kind="summary"], #playback-pacing[data-kind="order"] { --reading-accent: var(--gold); }
 #battle[data-order-reading="true"] .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
+/* Waiting on the other side: the dock is one card too, whom for and on what, with a quiet "thinking" pulse. */
+#battle:is([data-awaiting="action"], [data-awaiting="choice"]) .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
+#playback-pacing[data-kind="waiting"] { --reading-accent: #d98b6f; background: linear-gradient(90deg, #2a2320, #172429 70%); }
+#battle[data-awaiting="choice"] #playback-pacing[data-kind="waiting"] { --reading-accent: var(--gold); }
+.reading-dots { flex: none; display: inline-flex; gap: 6px; align-items: center; padding: 0 4px; }
+.reading-dots[hidden] { display: none; }
+.reading-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--reading-accent, #d98b6f); opacity: .35; animation: reading-dot 1.2s ease-in-out infinite; }
+.reading-dots i:nth-child(2) { animation-delay: .2s; } .reading-dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes reading-dot { 0%, 80%, 100% { opacity: .3; transform: translateY(0) scale(.85); } 40% { opacity: 1; transform: translateY(-4px) scale(1); } }
+#waiting-last { min-height: 44px; padding: 8px 14px; border: 1px solid #607568; border-radius: 8px; background: transparent; color: #e6c88c; font-size: 13px; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .reading-dots i { animation: none; opacity: .7; } }
+#battle[data-reduced-motion="true"] .reading-dots i { animation: none; opacity: .7; }
 .reading-text { flex: 1; min-width: 0; display: block; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .reading-text > span { display: block; }
 /* Long multi-target results stay in two lines; the card opens the full result. */

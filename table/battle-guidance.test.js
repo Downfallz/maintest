@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleGuidance, helpPreferences, HELP_PREFERENCE_KEY } from './battle-guidance.js';
+import { battleGuidance, helpPreferences, HELP_PREFERENCE_KEY, waitingOn } from './battle-guidance.js';
 const catalogue = { rules: { roundCap: 17, combatDeclaration: 'AtActivation' } };
 const view = (kind = 'Evolution', extras = {}) => ({ board: { roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', slot: 'Player1', nextEvolutionRound: 1, allies: [{ id: 1, name: 'First' }], enemies: [], timeline: [] }, waitingFor: kind, waitingAsked: 12, waitingCreature: 1,
   options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, ...extras });
@@ -55,7 +55,7 @@ test('opponent turns use public order without reading unrevealed plans', () => {
   input.board.timeline = [{ creature: 4, owner: 'Player2' }]; input.board.activationCursor = 0;
   input.board.intents = [{ spell: 'SECRET' }]; input.board.evolutionChoices = [{ tier: 'SECRET' }];
   const g = battleGuidance(input, catalogue);
-  assert.equal(g.topic, null); assert.match(g.objective, /Creature 4 \(opponent\)/); assert.doesNotMatch(text(g), /SECRET/);
+  assert.equal(g.topic, null); assert.match(g.objective, /Waiting for your opponent: Creature 4 is choosing its action/); assert.doesNotMatch(text(g), /SECRET/);
 });
 test('historical playback never carries the next live purchase budget or round into its help', () => {
   const g = battleGuidance(view(), catalogue, { historical: true });
@@ -130,3 +130,39 @@ test('blocked, malformed and older preference versions keep Help usable in memor
     const p = helpPreferences(storage); assert.equal(p.shouldShow('action'), true); p.markSeen('action'); assert.equal(p.shouldShow('action'), false); p.setMuted(true); assert.equal(p.muted(), true);
   }
 });
+
+// A live round in combat where the opponent's creature 4 holds the slot and this seat's creature 2 comes later.
+const combat = (cursor = 1, extras = {}) => ({ board: { roundNumber: 2, phase: 'Combat', subPhase: 'Activation', slot: 'Player1', activationCursor: cursor,
+  allies: [{ id: 1, name: 'Creature 1' }, { id: 2, name: 'Creature 2' }], enemies: [{ id: 4, name: 'Creature 4' }, { id: 5, name: 'Creature 5' }],
+  timeline: [{ creature: 1, owner: 'Player1' }, { creature: 4, owner: 'Player2' }, { creature: 5, owner: 'Player2' }, { creature: 2, owner: 'Player1' }] },
+waitingFor: null, waitingAsked: null, ...extras });
+
+test('while the opponent\'s creature takes its slot, the seat is told whom it waits for, on which creature, and its own next', () => {
+  assert.deepEqual(waitingOn(combat(), { opponent: 'bastien' }), { kind: 'action', eyebrow: "Opponent's turn", title: 'Waiting for bastien',
+    detail: 'Creature 4 is choosing its action · your Creature 2 plays next', creature: 4 });
+  assert.equal(waitingOn(combat(), { opponent: 'Lookahead', bot: true }).title, 'Lookahead is thinking');
+  assert.equal(waitingOn(combat()).title, 'Waiting for your opponent', 'a seat whose opponent has no name yet');
+  const last = combat(2, { board: { ...combat().board, activationCursor: 2, timeline: combat().board.timeline.slice(0, 3) } });
+  assert.match(waitingOn(last).detail, /your team has acted this round$/);
+});
+
+test('nothing is waited on during this seat\'s own slot, its own question, before the start or after the end', () => {
+  assert.equal(waitingOn(combat(0)), null);
+  assert.equal(waitingOn(combat(1, { waitingFor: 'Action', waitingAsked: 9 })), null);
+  assert.equal(waitingOn(combat(1, { waiting: true })), null);
+  assert.equal(waitingOn(combat(1, { over: true })), null);
+  assert.equal(waitingOn({ ...combat(), board: { ...combat().board, subPhase: 'Cleanup' } }), null, 'the host resolves cleanup by itself');
+});
+
+test('once this seat\'s command is sent, it is told what the other side is still choosing', () => {
+  const planning = view('Evolution');
+
+  assert.equal(waitingOn(planning), null, 'its own mutation question is still open');
+  assert.deepEqual(waitingOn(planning, { accepted: true, opponent: 'bastien' }), { kind: 'choice', eyebrow: 'Your choice is in', title: 'Waiting for bastien', detail: 'Choosing their mutations', creature: null });
+  assert.equal(waitingOn({ ...view('Speed'), waitingFor: null, waitingAsked: null, board: { ...planning.board, subPhase: 'Speed' } }).detail, 'Setting their tempos');
+});
+
+test('the dock says whom it waits for in plain words instead of sending the player to History', () => {
+  assert.equal(battleGuidance(combat(), catalogue).objective, 'Waiting for your opponent: Creature 4 is choosing its action.');
+});
+

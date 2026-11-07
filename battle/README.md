@@ -353,6 +353,13 @@ it was (opponent's, the player's own, or a round summary, with how many more fol
 it, and **OK**/**Next** and **Skip all** beside it. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
+When nothing is asked of the seat because the other side is playing, the dock is that same card, in the
+opponent's accent with a quiet "thinking" pulse: **Waiting for** the other player by name (a bot "is
+thinking"), which of their creatures is choosing its action and which of the player's own plays next; or,
+once the player's command is sent, what the other side is still choosing (mutations, tempos, tie order,
+hidden spells). **Last result** stays one tap away on it. `waitingOn` in `table/battle-guidance.js` decides it
+from the public board alone.
+
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
 ongoing effects and the match result. Adjacent energy/ongoing records for the same round share a receipt,
 including when they arrive in separate responses. Empty cleanup is omitted; zero healing and zero energy

@@ -14,7 +14,7 @@ import { upkeepControls } from './upkeep';
 import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
-import { battleGuidance } from '../../table/battle-guidance.js';
+import { battleGuidance, waitingOn } from '../../table/battle-guidance.js';
 import { guidanceControls } from './guidance';
 import { effectiveSettings, gameOverride, loadSettings, localSettings, saveGameOverride } from '../../table/game-preferences.js';
 import { BattleAudio, soundControl } from './audio';
@@ -37,7 +37,7 @@ import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel } from '../../table/terms.js';
 
-interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string }[] } }
+interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
   knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
@@ -359,6 +359,22 @@ function render() {
     if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
   }
   orderShown = orderReading;
+  // Nothing asked of this seat while the other side plays or chooses: the dock says so, whom for and on what,
+  // in the reading card's place, rather than a line of status text.
+  const other = selected?.table.seats?.find(one => one.seat !== selected?.seat);
+  const awaiting = view && visible() && !playbackState.active && !orderReading && !replay.active && !targeting && !action.opened && !planning.model().opened && !rendererFailed
+    ? waitingOn(view, { accepted: action.accepted || planning.model().accepted, opponent: other && other.kind !== 'open' && other.name !== 'Player' ? other.name : null, bot: other?.kind === 'bot' })
+    : null;
+  $('battle').dataset.awaiting = awaiting?.kind ?? '';
+  $('reading-dots').hidden = !awaiting;
+  $('waiting-last').hidden = !awaiting || !playbackState.summary;
+  if (awaiting) {
+    $('playback-pacing').hidden = false; $('playback-pacing').dataset.kind = 'waiting';
+    $('playback-next').hidden = true; $('playback-skip').hidden = true;
+    text('reading-kind', awaiting.eyebrow); text('reading-title', awaiting.title);
+    readingDetail({ detail: awaiting.detail }); $('reading-detail').hidden = false;
+    $('reading-open').setAttribute('aria-label', `${awaiting.title}. ${awaiting.detail}`);
+  }
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
@@ -582,6 +598,7 @@ $('playback-next').addEventListener('click', () => {
 });
 $('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
+$('waiting-last').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
 $('reading-open').addEventListener('click', () => {
   if (orderUI.isReading()) orderUI.details();
   else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
