@@ -545,3 +545,29 @@ test('an aftermath is read on the creatures standing at it, not on a later death
 
   assert.equal(h.queue.model().remaining, 3, 'the cast, the aftermath on creature 3 while it stood, and the lethal cast');
 });
+
+test('a page opened again plays what came after the last result it showed, and a first visit starts from the board', () => {
+  const missed = [event(4), event(6, { resolution: { action: { actor: 2, spell: 'hit', targets: [1] } } })];
+  const fresh = harness(); fresh.queue.receive(view([event(2), ...missed]), cards);
+  assert.equal(fresh.queue.model().active, false, 'nothing remembered: the first read is the baseline');
+
+  const back = harness(); back.queue.receive(view([event(2), ...missed]), cards, { since: 2 });
+  assert.deepEqual([back.queue.model().sequence, back.queue.model().remaining], [4, 2], 'the two actions after the last one shown play as they would have live');
+
+  const ahead = harness(); ahead.queue.receive(view([event(2), ...missed]), cards, { since: 6 });
+  assert.equal(ahead.queue.model().active, false, 'a mark at or past the feed\'s end is the baseline');
+});
+test('what a page closed now would resume after is the last result shown in full', () => {
+  const h = harness(); h.queue.setMode('step');
+  assert.equal(h.queue.model().watermark, null, 'nothing read yet');
+  h.receive([event(2)], { feedNext: 3 }); assert.equal(h.queue.model().watermark, 2);
+  h.receive([event(4), event(6)]); assert.equal(h.queue.model().watermark, 3, 'the action playing is not yet seen');
+  h.drain(); assert.equal(h.queue.model().watermark, 6);
+});
+test('a page closed on a held upkeep that took in a later part resumes from its first part', () => {
+  const h = harness(); h.queue.setMode('step'); h.receive([]); h.receive([energyEvent(4)]);
+  h.receive([upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 3 }] })]);
+
+  assert.equal(h.queue.model().sequence, 5, 'one receipt holds both parts');
+  assert.equal(h.queue.model().watermark, 3, 'neither part is read yet');
+});

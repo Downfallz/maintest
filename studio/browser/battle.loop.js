@@ -185,8 +185,9 @@ async function expectRecordedPerspective(page, context, origin, hostInfo) {
 
 for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaration}: a complete 3v3 battle match and its recorded session`, async ({ page, context }, info) => {
   // Twelve rounds read the way a player reads them (Step, every opponent's OK, each turn order's Continue)
-  // take three to four minutes, more on the emulated phones; the budget leaves them room.
-  test.setTimeout(360000);
+  // take three to four minutes. The emulated phones of the release profiles take three minutes on a quiet
+  // machine and twice that on CI's runner, where they ran out of six minutes in the last replay steps.
+  test.setTimeout(/^release-(android|ios)$/.test(info.project.name) ? 600000 : 360000);
   const directory = await mkdtemp(pathJoin(tmpdir(), 'battle-loop-'));
   const rules = pathJoin(directory, 'rules.json'); await writeFile(rules, JSON.stringify({ roundCap: declaration === 'at-activation' ? 12 : 2, combatDeclaration: declaration }));
   const hostInfo = await startHost(declaration, ['--rules', rules, '--record', pathJoin(directory, 'sessions')]);

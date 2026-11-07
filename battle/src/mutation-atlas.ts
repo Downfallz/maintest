@@ -1,5 +1,5 @@
 import { cardsById } from '../../table/card.js';
-import { classColour, familyRoot, requirementLine, talentPalette } from '../../table/mat.js';
+import { classColour, familyRoot, requirementLine, stageRows, talentPalette } from '../../table/mat.js';
 import { stageLabel } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
@@ -109,10 +109,10 @@ export function atlasControls(onVisibility: () => void) {
       head.append(sigil(root.visual?.family ?? root.name.toLowerCase()), node('strong', root.name), node('small', held ? `Stage ${held} held` : 'Not started'));
       const links = document.createElementNS(svgNS, 'svg'); links.classList.add('atlas-links'); links.setAttribute('aria-hidden', 'true');
       column.append(links, head);
-      const levels = [...new Set(members.map(pack => pack.level))].sort((a, b) => a - b);
-      for (const level of levels) {
+      // One line per stage, each mutation under the ones it grows from, so its links run straight down.
+      for (const { level, packs } of stageRows(members) as { level: number; packs: AtlasPack[] }[]) {
         const row = node('div', '', 'atlas-stage'); row.dataset.stage = String(level);
-        for (const pack of members.filter(one => one.level === level).sort((a, b) => a.id.localeCompare(b.id))) {
+        for (const pack of packs) {
           const tile = node('button', '', 'atlas-node') as HTMLButtonElement; tile.type = 'button';
           tile.dataset.package = pack.id; tile.dataset.status = pack.status;
           if (lit.has(pack.id)) tile.dataset.path = 'true';

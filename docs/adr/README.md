@@ -153,3 +153,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0145](0145-end-the-match-in-one-moment.md) | End the match in one moment | Accepted for the opt-in battle view |
 | [0146](0146-one-full-mutation-tree.md) | One full mutation tree, with spells as cards | Accepted for the opt-in battle view |
 | [0147](0147-list-every-finished-game-and-cap-the-ones-in-progress.md) | List every finished game, and at most five of each kind in progress | Accepted |
+| [0148](0148-play-what-a-closed-page-missed.md) | Play what a closed page missed | Accepted for the opt-in battle view |

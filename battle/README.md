@@ -353,6 +353,13 @@ it was (opponent's, the player's own, or a round summary, with how many more fol
 it, and **OK**/**Next** and **Skip all** beside it. These presentation controls never submit or
 acknowledge a question. Selecting a live command still explicitly opens and acknowledges that command.
 
+When nothing is asked of the seat because the other side is playing, the dock is that same card, in the
+opponent's accent with a quiet "thinking" pulse: **Waiting for** the other player by name (a bot "is
+thinking"), which of their creatures is choosing its action and which of the player's own plays next; or,
+once the player's command is sent, what the other side is still choosing (mutations, tempos, tie order,
+hidden spells). **Last result** stays one tap away on it. `waitingOn` in `table/battle-guidance.js` decides it
+from the public board alone.
+
 The same ordered queue now contains closing casts, meaningful condition expiry/immunity, ordinary energy,
 ongoing effects and the match result. Adjacent energy/ongoing records for the same round share a receipt,
 including when they arrive in separate responses. Empty cleanup is omitted; zero healing and zero energy
@@ -377,8 +384,11 @@ Received sequence, presented sequence and the last explicit **Next** are separat
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the
 duplicate automatic upkeep modal (the existing tab-local marker); a rotation, a motion/speed change, a lost
 connection or a catch-up never showed it, so its upkeep modal still opens; receipts that arrive under an open draft/reference remain available
-through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. First reads/reconnects
-baseline existing events. More than twelve new casts, more than two rounds in one response, or more than
+through the deferred upkeep notice. No receipt facts, frames or drafts are persisted. A first read baselines
+existing events, unless this browser showed the seat before: it keeps the last sequence shown per table and seat
+(`table/battle-seen.js`, the twenty newest games), and a page opened or brought back after that plays what came
+after it, the opponent's actions held for their OK, before the player's own choice
+([ADR 0148](../docs/adr/0148-play-what-a-closed-page-missed.md)). More than twelve new casts, more than two rounds in one response, or more than
 sixty queued new items fall back to the latest board and summary; History remains the reading surface for
 that backlog. An unframed legacy cast also falls back to confirmed text, without invented animation.
 AU8 unlock receipts stay hidden during paced history; opening a live spell choice after Skip retains its new-spell badge.

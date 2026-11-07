@@ -118,7 +118,7 @@ function objective(view, topic) {
     default: {
       if (view.playedByBot) return 'Your team is controlled by a bot. Follow its actions in History.';
       const turn = view.board.subPhase === 'Activation' ? activeTurn(view.board) : null;
-      if (turn && turn.slot.owner !== view.board.slot) return `${creatureLabel(view.board, turn.slot.creature)} (opponent) is acting. Follow History.`;
+      if (turn && turn.slot.owner !== view.board.slot) return `Waiting for your opponent: ${creatureLabel(view.board, turn.slot.creature)} is choosing its action.`;
       return 'Waiting for the next decision or the other team. History stays available.';
     }
   }
@@ -148,3 +148,37 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
     context: waiting || historical ? '' : [phaseLabel(board.phase), actor].filter(Boolean).join(' · '),
     next, phase: waiting || historical || view.over ? '' : board.phase, flow: roundFlow(mode) };
 }
+
+// What the other side is choosing while this seat has nothing to answer, by the step the round is at.
+const THEIR_CHOICE = Object.freeze({
+  Evolution: 'Choosing their mutations', Speed: 'Setting their tempos', TieOrder: 'Ordering their tied creatures',
+  IntentSelection: 'Declaring their spells',
+});
+
+/**
+ * Whom this seat is waiting for, and on what, when the match is live and nothing is asked of it: the other
+ * player's creature taking its slot in combat, or the other player's command after this seat's is sent. Null
+ * while this seat has a question, before the match starts, once it is over, and between steps the host resolves
+ * by itself. `opponent` is the other seat's name as the table lists it; a bot "thinks", a person "chooses".
+ * @param {{ accepted?: boolean, opponent?: string | null, bot?: boolean }} [options]
+ */
+export function waitingOn(view, options = {}) {
+  const { accepted = false, opponent = null, bot = false } = options;
+  const board = view?.board;
+  if (!board || view.over || view.waiting || view.replay || view.playedByBot) return null;
+  if (question(view) && !accepted) return null;
+  const who = opponent || 'your opponent';
+  const title = bot ? `${opponent || 'The bot'} is thinking` : `Waiting for ${who}`;
+  if (board.subPhase === 'Activation') {
+    const turn = activeTurn(board);
+    if (!turn || turn.slot.owner === board.slot) return null;
+    const mine = (board.timeline ?? []).slice(turn.position).find(slot => slot.owner === board.slot);
+    return { kind: 'action', eyebrow: "Opponent's turn", title,
+      detail: [`${creatureLabel(board, turn.slot.creature)} is choosing its action`, mine ? `your ${creatureLabel(board, mine.creature)} plays next` : 'your team has acted this round'].join(' · '),
+      creature: turn.slot.creature };
+  }
+  const choosing = THEIR_CHOICE[board.subPhase];
+  if (!choosing) return null;
+  return { kind: 'choice', eyebrow: accepted ? 'Your choice is in' : 'Their move', title, detail: choosing, creature: null };
+}
+

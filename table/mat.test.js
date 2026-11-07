@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { drawn, matBands } from './mat.js';
+import { drawn, matBands, stageRows } from './mat.js';
 
 const catalogue = {
   trees: [
@@ -226,4 +226,18 @@ test('a package with no spell takes its family colour', async () => {
   const palette = talentPalette(catalogue, cards);
   assert.equal(palette.get('titan'), palette.get('brute'));
   assert.match(palette.get('lonely'), /^hsl\(/);
+});
+
+test('a family\'s rows put each mutation under its parents, so its links run straight down', () => {
+  const pack = (id, level, prerequisites = [], anyOf = []) => ({ id, level, prerequisites, anyOf });
+  // Ids chosen so the catalogue's own order crosses every link.
+  const members = [pack('root', 1), pack('a-left', 2, ['root']), pack('b-right', 2, ['root']),
+    pack('c-under-right', 3, ['b-right']), pack('d-under-left', 3, ['a-left']), pack('cap', 4, [], ['c-under-right', 'd-under-left'])];
+
+  const rows = stageRows(members).map(row => row.packs.map(one => one.id));
+
+  assert.deepEqual(rows[0], ['root']);
+  assert.equal(rows[1].indexOf('a-left') < rows[1].indexOf('b-right'), rows[2].indexOf('d-under-left') < rows[2].indexOf('c-under-right'),
+    'each stage-3 mutation sits on the side of its own parent');
+  assert.deepEqual(rows.map(row => row.length), [1, 2, 2, 1]);
 });

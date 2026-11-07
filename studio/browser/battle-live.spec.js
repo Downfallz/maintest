@@ -100,6 +100,21 @@ test('the board is drawn from the chosen seat: its side, its round, its cursor',
   await expect(page.locator('#timeline [aria-current="step"]')).toContainText('Creature 2');
 });
 
+test('while the other side plays, the dock says whom it waits for, which creature is choosing and which of its own is next', async ({ page }, info) => {
+  const state = await mount(page); Object.assign(state.second, { waitingFor: null, waitingAsked: null });
+  await choose(page, 2);
+  await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', 'action');
+  await expect(page.locator('#playback-pacing')).toHaveAttribute('data-kind', 'waiting'); await expect(page.locator('#playback-pacing')).toBeVisible();
+  await expect(page.locator('#reading-kind')).toHaveText("Opponent's turn"); await expect(page.locator('#reading-title')).toHaveText('Waiting for your opponent');
+  await expect(page.locator('#reading-detail')).toHaveText('Creature 2 is choosing its action · your Creature 4 plays next');
+  await expect(page.locator('#reading-dots')).toBeVisible(); await expect(page.locator('.command-dock .actor-summary')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('waiting-on-opponent.png') });
+  // Its own question puts the dock back to the command.
+  Object.assign(state.second, { waitingFor: 'Action', waitingAsked: 12, board: { ...state.second.board, activationCursor: 3 } });
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.reload(); await choose(page, 2);
+  await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', ''); await expect(page.locator('#playback-pacing')).toBeHidden();
+});
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
