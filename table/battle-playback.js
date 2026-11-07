@@ -74,9 +74,21 @@ function aftermathView(view, action) {
 
 // Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred. The match's end
 // is not read here: the match result opens by itself once the last result is read.
+// A defeated creature takes no further part: a condition ending on it, or a stun immunity it gains, is not
+// read on the field. History keeps the engine's full record.
+function living(entry, board) {
+  const defeated = new Set([...(board?.allies ?? []), ...(board?.enemies ?? [])].filter(one => one.isAlive === false).map(one => String(one.id)));
+  if (!defeated.size) return entry;
+  if (entry.event?.kind === 'ConditionsExpired') return { ...entry, event: { ...entry.event,
+    expired: Object.fromEntries(Object.entries(entry.event.expired ?? {}).filter(([id]) => !defeated.has(String(id)))) } };
+  if (entry.event?.kind === 'StunImmunityGained') return { ...entry, event: { ...entry.event,
+    creatures: (entry.event.creatures ?? []).filter(id => !defeated.has(String(id))) } };
+  return entry;
+}
 function receipts(entries, board, ordinaryRounds) {
-  return entries.flatMap(entry => {
-    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)) return [];
+  return entries.flatMap(recorded => {
+    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(recorded.event?.kind)) return [];
+    const entry = living(recorded, board);
     const row = historyEntry(entry, board);
     // The opening receipt still belongs to AU3b's arrival-gated introduction.
     if (row?.category === 'Upkeep' && row.round === 1) return [];

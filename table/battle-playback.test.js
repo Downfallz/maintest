@@ -516,3 +516,24 @@ test('a turnover arriving later under the same dialog stays behind an opponent\'
   assert.equal(h.queue.model().remaining, 2, 'neither was settled');
   h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
 });
+
+// Creature 3 has fallen: what ends on it, or what it gains, is not read on the field (History keeps it).
+const fallen = feed => ({ ...view(feed), board: { ...view().board, enemies: [creature(2, 13), creature(3, 0)] } });
+const ending = (sequence, expired) => ({ sequence, event: { kind: 'ConditionsExpired', roundId: 2, expired } });
+test('an aftermath reads only the creatures still standing', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+
+  h.queue.receive(fallen([ending(4, { 1: [{ effect: { kind: 'Bleed', amount: 1 } }], 3: [{ effect: { kind: 'Bleed', amount: 2 } }] })]), cards);
+
+  const model = h.queue.model();
+  assert.deepEqual(model.paced.markers.map(marker => marker.id), ['1']); assert.equal(model.paced.summary, '1 condition ended');
+  assert.equal(model.receipt.sections[0].items.length, 1);
+});
+test('an aftermath only on fallen creatures is not read at all', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+
+  h.queue.receive(fallen([ending(4, { 3: [{ effect: { kind: 'Bleed', amount: 2 } }] }),
+    { sequence: 5, event: { kind: 'StunImmunityGained', roundId: 2, creatures: [3] } }]), cards);
+
+  assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().receipt, null);
+});
