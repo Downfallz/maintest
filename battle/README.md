@@ -322,6 +322,11 @@ when offered. Actor, round, phase, tempo and energy stay beside the scrollable l
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
 
+Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button: the
+name with cost and crit-chance chips (the current tempo's chance when the host's guide gives one, the
+catalogue's with its tempo and d20 face otherwise), the targeting line, and in Full details the effect lines
+with the icon of the stat each moves.
+
 `table/battle-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
 update existing nodes, preserving focus, scroll, details mode and card positions. The same asking retains
 browsing when returning from field targets. A new asking, creature, seat, hidden page or access loss clears
@@ -451,6 +456,9 @@ The target dock keeps the creature/spell, legal count, change/cancel controls an
 fixed beside a keyboard-scrollable estimate. Only this asking's host guidance supplies cost, energy after
 cost, plain/critical outcomes and caster effects. Selected legal targets with equal outcomes group together;
 caster effects appear once. Zero critical chance at the selected tempo suppresses impossible critical rows.
+The estimate wears the spell card's design: the spell's name with a cost chip (and the energy left) and the
+crit chance at this tempo, then each target's outcomes as the field's effect chips, its crit outcomes beside
+them, and the caster's once.
 Hidden intentions show the cost and explain that targeting happens at resolution; they never bind targets.
 
 Missing guidance, missing target outcomes and targetless caster previews have explicit unavailable messages;

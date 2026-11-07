@@ -19,10 +19,10 @@ test('a free spell shows a zero cost rather than none', () => {
   assert.equal(row('free').cost, '0');
 });
 test('a spell that never crits shows no critical badge', () => {
-  assert.equal(row('free').critical, '');
+  assert.equal(row('free').crit, null);
 });
 test('the catalogue critical names its tempo and the face of the d20', () => {
-  assert.equal(row('costly').critical, '20% crit · Precision only · d20 17+ · catalogue');
+  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue' });
 });
 test('full details list the target, the effects and the caster effects in card order', () => {
   assert.deepEqual(row('free').details, [{ role: 'target', text: 'Self' }, { role: 'caster', text: 'Gain energy' }]);
@@ -49,11 +49,11 @@ test('with neither a guide nor a cost the plan is a warning, not a guessed numbe
 });
 test('the current guide\'s critical chance replaces the catalogue\'s, for the chosen tempo', () => {
   const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', quickCriticalChance: 0, standardCriticalChance: .5 }] } });
-  assert.equal(row('costly', m).critical, '50% crit · current');
+  assert.deepEqual(row('costly', m).crit, { value: '50%', hint: 'at this tempo' });
 });
 test('a current critical chance of zero hides the badge, even when the catalogue has one', () => {
   const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Quick', quickCriticalChance: 0, standardCriticalChance: .5 }] } });
-  assert.equal(row('costly', m).critical, '');
+  assert.equal(row('costly', m).crit, null);
 });
 test('the host\'s guide gives the cost of an offered spell the catalogue does not carry', () => {
   const m = model({ spells: ['unknown'], reference: { guidance: [{ spell: 'unknown', cost: 3 }] } });
@@ -65,7 +65,7 @@ test('without a catalogue a spell keeps its raw identity and stays playable', ()
 });
 test('without a catalogue no cost, critical or effect is invented', () => {
   const data = row('free', model(), null);
-  assert.equal(data.cost, ''); assert.equal(data.critical, ''); assert.deepEqual(data.details, []);
+  assert.equal(data.cost, ''); assert.equal(data.crit, null); assert.deepEqual(data.details, []);
 });
 test('a change of offers keeps the known spells where they were and adds new offers after them', () => {
   const before = rows(); const after = rows(model({ spells: ['costly', 'free', 'new'], short: ['costly'] }));

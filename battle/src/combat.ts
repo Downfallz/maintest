@@ -7,7 +7,7 @@ import { spellbookControls } from './spellbook';
 
 type Controller = ReturnType<typeof createBattleCombat>;
 type Model = ReturnType<Controller['model']>;
-export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string; marks?: { kind: string; onCaster: boolean }[] }[] }
+export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string; marks?: { kind: string; onCaster: boolean }[] }[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.
@@ -39,8 +39,9 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     el('combat-open').textContent = model.waitingFor === 'Target' ? 'Choose targets' : 'Choose spell';
     el('combat-targets').hidden = !targeting;
     const preview = battleTargetPreview(model);
-    targetPreview.render(targeting ? preview : null);
-    intentPreview.render(choosing && model.waitingFor === 'Intent' ? preview : null);
+    const about = { name: preview ? cardTitle(cards.get(preview.spell)) || '' : '', effects: catalogue?.effects ?? [] };
+    targetPreview.render(targeting ? preview : null, about);
+    intentPreview.render(choosing && model.waitingFor === 'Intent' ? preview : null, about);
     el('combat-error').textContent = model.error; el('combat-error').hidden = !model.error || choosing;
     el('combat-dialog-error').textContent = model.error; el('combat-dialog-error').hidden = !model.error;
     el<HTMLButtonElement>('combat-dialog-close').disabled = model.sending;

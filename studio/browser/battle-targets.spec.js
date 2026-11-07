@@ -48,7 +48,7 @@ const preview = page => page.locator('#combat-preview');
 const choose = page => page.locator('[data-spell="spell-0"]').click();
 test('selected effects and cost stay beside a fixed explicit confirmation', async ({ page }, info) => {
   const h = await mount(page); await choose(page);
-  await expect(preview(page)).toContainText('2 energy → 1 after cost');
+  await expect(preview(page)).toContainText('2 energy → 1 left');
   await expect(preview(page)).not.toContainText('Damage 3');
   await expect(target(page, 1)).toHaveAttribute('data-target-state', 'unavailable');
   await expect(target(page, 1)).toHaveCSS('opacity', '1');
@@ -57,8 +57,13 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await expect(page.locator('#playback-pacing')).toBeHidden();
   const box = await page.locator('#combat-confirm').boundingBox();
   await target(page, 4).click();
-  await expect(preview(page)).toContainText('Plain: Damage 3'); await expect(preview(page)).toContainText('Critical: Damage 6');
-  await expect(preview(page)).toContainText('25% critical'); await expect(preview(page)).toContainText('On caster, once: Heal 2');
+  // The estimate is the spell card's design: the target's chips, plain and on a crit, and the caster's once.
+  const estimate = preview(page).locator('.target-estimate').first();
+  await expect(estimate.locator('.target-name')).toHaveText('Creature 4');
+  await expect(estimate.locator('.preview-chips').first().locator('.effect-chip[data-kind="damage"]')).toContainText('Damage 3');
+  await expect(estimate.locator('.target-crit .effect-chip[data-kind="damage"]')).toContainText('Damage 6');
+  await expect(preview(page).locator('.spell-chip-crit')).toContainText('25%');
+  await expect(preview(page).locator('.target-caster .effect-chip[data-kind="heal"]')).toContainText('Heal 2');
   await target(page, 5).click(); await expect(target(page, 6)).toContainText('Selection full');
   await expect(target(page, 6)).toBeDisabled(); await expect(target(page, 4)).toContainText('✓ Selected');
   expect(await page.locator('#combat-confirm').boundingBox()).toEqual(box);
@@ -83,14 +88,14 @@ test('same-question changes replace cost, remove dead targets and erase missing 
   const h = await mount(page); await choose(page); await target(page, 4).click();
   h.view.guidance[0].energyAfterCost = 0; h.view.options.action.spells[0].legalTargets = { candidates: [5, 6], minTargets: 1, maxTargets: 2 };
   h.view.board.enemies[0].isAlive = false; await notify(page);
-  await expect(preview(page)).toContainText('2 energy → 0 after cost'); await expect(page.locator('#combat-confirm')).toBeDisabled();
+  await expect(preview(page)).toContainText('2 energy → 0 left'); await expect(page.locator('#combat-confirm')).toBeDisabled();
   await expect(preview(page)).not.toContainText('Damage 3'); await expect(target(page, 4)).toBeDisabled();
   h.view.guidance = []; await notify(page); await expect(preview(page)).toContainText('Preview unavailable for this question');
-  await expect(preview(page)).not.toContainText('after cost'); expect(h.writes).toEqual([]);
+  await expect(preview(page)).not.toContainText(' left'); expect(h.writes).toEqual([]);
 });
 test('hidden intent displays its host cost without binding or revealing targets', async ({ page }) => {
   const h = await mount(page, 'Intent'); await choose(page);
-  await expect(page.locator('#intent-preview')).toContainText('2 energy → 1 after cost');
+  await expect(page.locator('#intent-preview')).toContainText('2 energy → 1 left');
   await expect(page.locator('#intent-preview')).toContainText('Targets are chosen when this hidden spell resolves');
   await expect(page.locator('#intent-preview')).not.toContainText('Damage 3');
   await fitsViewport(page, '#combat-declare, #combat-dialog-close'); expect(h.writes).toEqual([]);
@@ -120,6 +125,6 @@ test('an interrupted connection stays visible beside the estimate and prevents c
   await expect(page.locator('#combat-confirm')).toBeDisabled(); expect(h.writes).toEqual([]);
   h.seatStatus = 200; h.view.guidance[0].energyAfterCost = 0; await notify(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
-  await expect(preview(page)).toContainText('2 energy → 0 after cost');
+  await expect(preview(page)).toContainText('2 energy → 0 left');
   await expect(page.locator('#combat-confirm')).toBeEnabled(); expect(h.writes).toEqual([]);
 });
