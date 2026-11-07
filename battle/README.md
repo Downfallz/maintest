@@ -363,7 +363,8 @@ records do not contain an exact battlefield, so they read on a recorded one, nev
 ([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
 an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
 what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
-plaques stand by name alone. Only the match result covers the field with a text receipt. The journal and round notes retain all received facts.
+plaques stand by name alone. The match's end adds no step of its own: once its last result is read, the match
+result opens by itself, once per seat ([ADR 0145](../docs/adr/0145-end-the-match-in-one-moment.md)). The journal and round notes retain all received facts.
 
 Every effect on a creature is one chip (`table/effect-chips.js`, drawn by `chipElement`): the icon of what moved
 and the amount, a drop for damage with a CRIT mark when critical, a heart for healing, a bolt for energy, a

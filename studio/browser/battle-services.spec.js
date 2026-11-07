@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, matchResult } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
@@ -48,7 +48,7 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
 }
 for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['player2', 'Concession', 'Defeat'], [null, 'RoundCap', 'Draw']]) {
   test(`final ${title} uses the host reason and public survivors`, async ({ page }, info) => {
-    const h = await mount(page, { outcome: { winner, reason } }); await page.locator('#match-open').click();
+    const h = await mount(page, { outcome: { winner, reason } }); await matchResult(page);
     await expect(page.locator('#match-title')).toHaveText(title); await expect(page.locator('#match-stats')).toContainText('2/3 standing · 21 HP');
     await expect(page.locator('#match-stats')).toContainText('0/3 standing · 0 HP');
     await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"]');
@@ -58,7 +58,7 @@ for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['
   });
 }
 test('empty replay keeps an explicit message on the result and a legacy outcome stays unknown', async ({ page }) => {
-  await mount(page, { outcome: null }); await page.locator('#match-open').click(); await expect(page.locator('#match-title')).toHaveText('Match complete');
+  await mount(page, { outcome: null }); await matchResult(page); await expect(page.locator('#match-title')).toHaveText('Match complete');
   await page.locator('#match-replay').click(); await expect(page.locator('#match-replay-error')).toContainText('Nothing was recorded');
   await expect(page.locator('#match-dialog')).toBeVisible(); await expect(page.locator('#replay-controls')).toBeHidden();
 });
@@ -85,7 +85,7 @@ test('two accepted seats stay behind explicit selection and suppress notificatio
 test('the battle view offers no playtest notes, misplay marks or end comment', async ({ page }) => {
   await mount(page); await page.locator('#settings').click();
   await expect(page.getByRole('button', { name: /Playtest notes|misplay/i })).toHaveCount(0);
-  await page.keyboard.press('Escape'); await page.locator('#match-open').click();
+  await page.keyboard.press('Escape'); await matchResult(page);
   await expect(page.getByRole('button', { name: /End comment/i })).toHaveCount(0); await expect(page.locator('#notes-dialog')).toHaveCount(0);
 });
 for (const options of [{ permission: 'denied' }, { unsupported: true }]) test(`notifications explain ${JSON.stringify(options)}`, async ({ page }) => {
@@ -104,12 +104,12 @@ test('notification opt-in, diagnostic and selection haptic are explicit user act
   await expect(page.locator('#sound')).not.toBeChecked(); expect(h.errors).toEqual([]);
 });
 test('revoked access clears the entire result', async ({ page }) => {
-  const h = await mount(page); await page.locator('#match-open').click();
+  const h = await mount(page); await matchResult(page);
   h.status = 403; await page.evaluate(() => window.notifyBattle()); await expect(page.locator('#match-dialog')).toBeHidden();
   await expect(page.locator('#match-stats')).toBeEmpty();
 });
 test('final actions fit short landscape and portrait with readable stats', async ({ page }) => {
-  await mount(page); await page.locator('#match-open').click();
+  await mount(page); await matchResult(page);
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport); await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"]');
   }

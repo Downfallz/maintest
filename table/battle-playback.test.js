@@ -326,13 +326,12 @@ test('legacy upkeep says the ordinary energy is unknown, not zero', () => {
   assert.match(h.queue.model().summary, /Ordinary round energy was not recorded/);
   assert.match(h.queue.model().summary, /No ongoing ticks/); assert.deepEqual(h.queue.model().board.creatures, []);
 });
-test('lethal upkeep precedes the match result even without another command', () => {
+test('lethal upkeep is read, and the match\'s end adds no step of its own: the result opens after it', () => {
   const h = harness(); h.queue.setMode('step'); h.receive([]);
   h.receive([energyEvent(4), upkeepEvent(5, 'OngoingEffectsApplied', { bleedTicks: [{ creature: 2, damage: 13 }] }),
     upkeepEvent(6, 'MatchEnded', { outcome: { winner: 'Player1', reason: 'Elimination' } })], { over: true });
   assert.equal(h.queue.model().receipt.category, 'Upkeep'); assert.match(h.queue.model().summary, /−13 HP/);
-  assert.equal(h.queue.model().cue, null); h.queue.advance();
-  assert.equal(h.queue.model().receipt.category, 'Result'); assert.equal(h.queue.model().board.phase, 'Match complete');
+  assert.equal(h.queue.model().cue, null); assert.equal(h.queue.model().remaining, 1);
   h.queue.advance(); assert.equal(h.queue.model().active, false);
 });
 test('empty cleanup has no pace step; immunity alone does', () => {

@@ -10,7 +10,6 @@ import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
-import { renderReceipt } from './playback-receipt';
 import { createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
@@ -164,7 +163,7 @@ function renderInspection() {
   const one = creatures.find(one => one.id === inspected);
   // A receipt has no exact board. Keep an already open reference explicitly pinned to its last
   // recorded frame; never substitute future stats, or dismiss a reader because playback advanced.
-  if (!one && view && receiptShown && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
+  if (!one && view && playback.model().receipt && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
     const held = inspectionSnapshot;
     inspectionUI.render(held.model, `Pinned reference · ${held.context.label}`, true,
       held.action ? `Round ${held.action.round} · ${held.action.summary}` : '');
@@ -221,7 +220,7 @@ function announceRound(round: number | null) {
   }
   announcedRound = round;
 }
-let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
+let matchShown = '', lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
 
 function render() {
   if (receiving) return;
@@ -265,10 +264,6 @@ function render() {
   text('reading-title', reading?.title ?? ''); readingDetail(reading);
   $('reading-detail').hidden = !reading?.detail;
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
-  // A paced turnover (upkeep, aftermath) reads on the field and in the card; only the match result covers the field.
-  const covering = playbackState.paced ? null : playbackState.receipt;
-  receiptShown = Boolean(covering); renderReceipt(covering, board.round);
-  $('battle').dataset.receipt = String(Boolean(covering));
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
@@ -419,6 +414,9 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+  // The match's end is one moment: once its last result is read, the result opens by itself, once per seat.
+  const seatKey = selected ? `${selected.table.id}:${selected.seat}` : '';
+  if (view?.over && seatKey && matchShown !== seatKey && !replay.active && !match.model().active && canAuto()) { matchShown = seatKey; matchUI.open(); }
   // An opponent's action that arrived under a dialog waited, unplayed; once the field is in view it plays.
   if (playbackState.active && playbackState.sequence === null && visible() && !combat.model().opened && !planning.model().opened && !match.model().active)
     queueMicrotask(() => playback.resume());
@@ -612,5 +610,5 @@ $('inspect-dialog').addEventListener('close', () => {
   const focused = document.activeElement;
   if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
   const node = inspected === null ? undefined : nodes.get(inspected);
-  (node ?? (receiptShown ? $('playback-receipt') : !$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
+  (node ?? (!$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
 });

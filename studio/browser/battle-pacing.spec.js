@@ -41,7 +41,7 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   // The aftermath reads on the field (ADR 0143): the round's last frame, a plaque on what ended, one line in the card.
   await expect(page.locator('#round-phase')).toHaveText('AFTERMATH');
   await expect(page.locator('#reading-title')).toHaveText('Aftermath'); await expect(page.locator('#reading-detail')).toHaveText('1 condition ended');
-  await expect(page.locator('#result-text')).toContainText('DefenseBuff ends'); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#result-text')).toContainText('DefenseBuff ends');
   await expect(page.locator('#actor-layer .creature')).toHaveCount(6);
   await page.locator('#playback-next').click();
   await expect(page.locator('#round-number')).toHaveText('03'); await expect(page.locator('#round-phase')).toHaveText('UPKEEP');
@@ -85,7 +85,7 @@ test('the next choice waits for the reading, and skipping it passes unread recei
   const h = await mount(page); await step(page); await h.publish([entry(10), energy, ongoing], { board: nextRound(h) });
   await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-open')).toBeHidden();
   await page.locator('#playback-skip').click(); await page.locator('#combat-open').click();
-  await expect(page.locator('#combat-dialog')).toBeVisible(); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#combat-dialog')).toBeVisible();
   await expect(page.locator('#combat-context')).toContainText('7 energy');
   await page.getByRole('button', { name: 'Close spell choices' }).click(); await h.publish([]);
   await expect(page.locator('#connection')).toHaveText('LIVE'); await page.clock.runFor(500);
@@ -98,7 +98,7 @@ test('rotation and reduced motion invalidate Step callbacks and keep the current
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await finishCast(page); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden(); await page.clock.fastForward(5000); await fits(page);
-  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', ''); await expect(page.locator('#playback-receipt')).toBeHidden();
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
   await expect(page.locator('#round-number')).toHaveText('02'); await expect(page.locator('#round-phase')).toHaveText('COMBAT');
   await h.publish([entry(14)]); await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true');
   await page.locator('#settings').click(); await page.locator('#reduce-motion').check();
@@ -119,11 +119,12 @@ test('the last result after lethal upkeep is read even when there is no next com
   await h.publish([energy, ongoing, { sequence: 14, event: { kind: 'MatchEnded', roundId: 3, outcome: { winner: 'Player1', reason: 'Elimination' } } }],
     { board: nextRound(h), waitingFor: null, over: true, outcome: { winner: 'player1', reason: 'Elimination' } });
   await expect(page.locator('#result-text')).toContainText('Ongoing damage');
-  // The match result alone still covers the field.
-  await page.locator('#playback-next').click(); await expect(page.locator('#receipt-title')).toHaveText('Match complete');
-  await expect(page.locator('#playback-receipt')).toBeVisible();
-  await expect(page.locator('#round-phase')).toHaveText('MATCH COMPLETE');
-  await page.locator('#playback-next').click(); await expect(page.locator('#match-open')).toBeVisible(); expect(h.errors).toEqual([]);
+  // The match's end is one moment: once the last result is read, the result opens by itself, with no step of its own.
+  await expect(page.locator('#playback-next')).toHaveText('OK'); await page.locator('#playback-next').click();
+  await expect(page.locator('#match-dialog')).toBeVisible(); await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('#match-dialog .eyebrow')).toHaveText('MATCH COMPLETE');
+  await page.keyboard.press('Escape'); await expect(page.locator('#match-open')).toBeVisible();
+  await page.clock.runFor(500); await expect(page.locator('#match-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 
 test('rotation passes over a queued upkeep without hiding it: the upkeep notice still opens', async ({ page }) => {

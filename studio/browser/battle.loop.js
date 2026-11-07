@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer, mutationTree, acknowledge, readResults } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree, acknowledge, readResults, matchResult } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -137,7 +137,7 @@ async function reviewAndReplay(page, latest, info, actions) {
     await expect(page.locator(`#history-list [data-sequence="${last.sequence}"]`)).toHaveCount(1);
   }
   await page.locator('#history-close').click();
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
+  await matchResult(page); await expect(page.locator('#match-outcome')).toContainText(latest.outcome.reason === 'RoundCap' ? 'round cap' : 'last team standing');
   let title = 'Draw';
   if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';
   await expect(page.locator('#match-title')).toHaveText(title);
@@ -171,7 +171,7 @@ async function expectRecordedPerspective(page, context, origin, hostInfo) {
   const adminToken = new URL(hostInfo.admin).searchParams.get('token');
   await page.evaluate(token => localStorage.setItem('downfall.table.operator', token), adminToken);
   const recorded = await context.request.get(`${origin}/api/sessions/${hostInfo.session}/replay`, { headers: { 'X-Seat-Token': adminToken } }); expect(recorded.ok()).toBe(true);
-  await page.goto(`${origin}/battle?replay=${hostInfo.session}&seat=player2`); await page.locator('#match-open').click(); await page.locator('#match-replay').click();
+  await page.goto(`${origin}/battle?replay=${hostInfo.session}&seat=player2`); await matchResult(page); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await expect(page.locator('#perspective')).toContainText('PLAYER 2');
   const board = (await recorded.json()).boards.player2;
   for (const one of board.allies) await expect(page.locator(`[data-creature="${one.id}"]`)).toHaveClass(/ally/);
@@ -342,7 +342,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
     expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
     expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
     await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-    await other.locator('#match-open').click(); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
+    await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
     await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
   } finally { await otherContext.close(); await page.close(); await stopHost(hostInfo.host); }
 });

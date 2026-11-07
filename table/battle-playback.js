@@ -72,10 +72,11 @@ function aftermathView(view, action) {
     allies: after.filter(one => allies.has(one.id)).map(shown), enemies: after.filter(one => !allies.has(one.id)).map(shown) } };
 }
 
-// Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred.
+// Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred. The match's end
+// is not read here: the match result opens by itself once the last result is read.
 function receipts(entries, board, ordinaryRounds) {
   return entries.flatMap(entry => {
-    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied', 'MatchEnded'].includes(entry.event?.kind)) return [];
+    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)) return [];
     const row = historyEntry(entry, board);
     // The opening receipt still belongs to AU3b's arrival-gated introduction.
     if (row?.category === 'Upkeep' && row.round === 1) return [];

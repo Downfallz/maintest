@@ -32,3 +32,12 @@ export async function acknowledge(page, until, timeout = 45000) {
   }
 }
 export const readResults = page => acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true');
+
+// The match result opens by itself once a finished match's last result is read; a journey reaches it whether it
+// already opened or still waits behind its button.
+export async function matchResult(page) {
+  const dialog = page.locator('#match-dialog'), button = page.locator('#match-open');
+  await expect.poll(async () => await dialog.isVisible() || await button.isVisible()).toBe(true);
+  if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});
+  await expect(dialog).toBeVisible();
+}

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer } from './battle-help-fixture.js';
+import { returningBattlePlayer, matchResult } from './battle-help-fixture.js';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 test.describe.configure({ mode: 'default' });
@@ -79,18 +79,18 @@ test('ties require a complete order within their group', async ({ page }) => {
 test('concession can be cancelled and displays the host result after confirmation', async ({ page }) => {
   const h = await mount(page); await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-cancel').click(); expect(h.concessions).toBe(0);
   await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toHaveText('You conceded · Player 2 wins.'); expect(h.concessions).toBe(1); expect(h.errors).toEqual([]);
+  await matchResult(page); await expect(page.locator('#match-outcome')).toHaveText('You conceded · Player 2 wins.'); expect(h.concessions).toBe(1); expect(h.errors).toEqual([]);
 });
 test('finished matches replay before and after frames, then return to result', async ({ page }, info) => {
   const h = await mount(page, { over: true }); 
-  await page.locator('#match-open').click(); await expect(page.locator('#match-outcome')).toContainText('round cap'); await page.locator('#match-replay').click();
+  await matchResult(page); await expect(page.locator('#match-outcome')).toContainText('round cap'); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-note')).toContainText('Reference:'); await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('20/20');
   await page.locator('#replay-next').click(); await expect(page.locator('[data-creature="4"] .creature-tag')).toHaveText('DEFEATED');
   await fitsBattlefield(page); await fitsViewport(page, '.creature, #replay-next, #replay-previous, #replay-close'); await page.screenshot({ path: info.outputPath('match-replay.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#replay-close').click(); await fitsBattlefield(page); await expect(page.locator('#match-open')).toBeVisible(); expect(h.errors).toEqual([]);
 });
 test('a session replay link reads only that recording and preserves perspective', async ({ page }) => {
-  const h = await mount(page, { replay: true }); await page.locator('#match-open').click(); await page.locator('#match-replay').click(); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
+  const h = await mount(page, { replay: true }); await matchResult(page); await page.locator('#match-replay').click(); await expect(page.locator('[data-creature="4"]')).toHaveClass(/ally/);
   // The player's own game settings (ADR 0140) may be read as for any game; no seat is.
   expect([...new Set(h.reads)].filter(path => path !== '/api/account/preferences').sort()).toEqual(['/api/me', '/api/sessions/finished/replay']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
@@ -104,7 +104,7 @@ test('recorded zero ordinary energy stays visible in replay before ongoing effec
   h.view.feed = [{ sequence: 0, round: 1, event: { kind: 'RoundEnergyGranted', roundId: 1, grants: [
     { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },
   ] } }, ...feed];
-  await page.locator('#match-open').click(); await page.locator('#match-replay').click();
+  await matchResult(page); await page.locator('#match-replay').click();
   await expect(page.locator('#replay-text')).toHaveText('Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
   await page.locator('#replay-next').click(); await expect(page.locator('#replay-text')).toContainText('Ongoing damage');
   await page.locator('#replay-previous').click(); await expect(page.locator('#replay-text')).toContainText('+0 energy');
