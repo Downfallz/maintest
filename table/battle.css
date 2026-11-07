@@ -95,22 +95,24 @@
 #combat-spells { display: grid; gap: 16px; }
 .spell-group-title { margin: 0 0 7px; color: #bdcbbf; font-size: 12px; letter-spacing: .06em; }
 .combat-spell-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-.combat-spell { --spell-accent: #a7b6af; min-width: 0; text-align: left; display: grid; grid-template-rows: 42px 18px 26px 30px; gap: 3px; align-content: start; padding: 10px; border-top: 3px solid var(--spell-accent); }
+.combat-spell { --spell-accent: #a7b6af; min-width: 0; text-align: left; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; border: 1px solid #3f554d; border-top: 3px solid var(--spell-accent); border-radius: 10px; background: #172a30; }
+/* The spell card inside its button: the same face as the mutation tree's, sized to a grid cell. */
+.combat-spell > .spell-card { display: grid; gap: 4px; margin: 0; padding: 9px 10px 10px; border: 0; border-radius: 0; background: transparent; }
+.combat-spell .spell-card-head { flex-wrap: wrap; align-items: flex-start; row-gap: 4px; }
+.combat-spell .spell-card-name { flex: 1 1 8ch; min-width: 0; font-size: 16px; }
+.combat-spell .spell-card-target { display: block; margin: 0; }
+.combat-spell .spell-card-effects { margin: 0; }
+.combat-spell .spell-card-note { display: block; margin: 2px 0 0; }
 .combat-spell:disabled { opacity: .7; }
-.combat-spell strong { font: 17px/1.2 Georgia,serif; color: #f0e4c9; overflow-wrap: anywhere; }
 .combat-spell[aria-pressed="true"] { outline: 2px solid var(--gold); outline-offset: -2px; background: #433d2d; }
 /* The selection outline must not hide keyboard focus on the same card. */
 .combat-spell[aria-pressed="true"]:focus-visible { outline: 3px double #ffe2a6; outline-offset: 1px; }
-.spell-name, .spell-class, .spell-critical, .spell-availability { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
-.spell-name { align-self: start; max-height: 2.4em; }
-.spell-metadata { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
-.spell-cost { font-size: 12px; font-weight: 700; color: #e4d9ba; }
+.spell-critical, .spell-availability { display: block; overflow-wrap: anywhere; }
+.spell-critical:empty { display: none; }
 .spell-class { max-width: 50%; font-size: 11px; color: var(--spell-accent); -webkit-line-clamp: 1; }
 .spell-critical { font-size: 10px; color: #becfc0; line-height: 1.2; }
 .spell-availability { font-size: 11px; color: #e1c79c; line-height: 1.3; }
 .spell-detail { display: none; font-size: 12px; line-height: 1.5; color: #c2d0c5; }
-#combat-spells[data-details="full"] .combat-spell { grid-template-rows: auto; }
-#combat-spells[data-details="full"] :is(.spell-name, .spell-class, .spell-critical, .spell-availability) { display: block; max-height: none; overflow: visible; }
 #combat-spells[data-details="full"] .spell-detail { display: grid; gap: 6px; border-top: 1px solid #73817466; padding-top: 8px; }
 .spell-caster::before { content: 'Caster · '; color: #e1c79c; }
 .combat-dialog-footer { flex: 0 0 auto; background: #132228; padding: 8px 0 0; border-top: 1px solid #73817466; }
@@ -125,8 +127,8 @@
   #combat-context { font-size: 11px; }
   #combat-dialog-close { right: 12px; top: 12px; }
   #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: 1fr; }
-  .combat-spell { padding: 8px; }
-  .combat-spell strong { font-size: 15px; }
+  .combat-spell > .spell-card { padding: 8px; }
+  .combat-spell .spell-card-name { font-size: 15px; }
   #combat-help { font-size: 11px; }
   #combat-details-mode { flex-basis: 90px; }
   #battle[data-combat="targets"] .actor-summary { display: none; }
@@ -488,13 +490,23 @@
 }
 
 /* AU10: the estimate scrolls beside a fixed confirmation. Choosing another target cannot move Cast. */
-.target-preview { font-size: 12px; line-height: 1.45; overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 6px 10px; border-left: 2px solid #c9b57e; background: #0d1b20; overflow-wrap: anywhere; }
+.target-preview { position: relative; font-size: 12px; line-height: 1.45; overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 6px 10px; border-left: 2px solid #c9b57e; background: #0d1b20; overflow-wrap: anywhere; }
 .target-preview p { margin: 3px 0; }
 .target-cost { color: #f0dca9; }
 .target-reason { color: #ffc2ad; }
 .target-preview small { display: block; margin-top: 5px; color: #b5c6bd; font-size: 11px; }
-.target-estimate { margin-top: 7px; border-top: 1px solid #50665b; padding-top: 4px; }
-.target-estimate > strong { color: #e1e8da; }
+/* The estimate in the spell card's design: the card's head, then each target's chips on one line, crit beside. */
+.target-preview .target-head { margin-bottom: 4px; }
+.target-preview .target-head .spell-card-name { font-size: 15px; }
+.target-preview .spell-chip small { margin-left: 3px; font-weight: 600; opacity: .8; }
+.target-estimate { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px; border-top: 1px solid #50665b; padding-top: 6px; }
+.target-estimate > .target-name { color: #e1e8da; font-size: 12px; }
+.preview-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.target-preview .effect-chip { animation: none; font-size: 12px; padding: 2px 8px 2px 5px; box-shadow: none; }
+.target-crit { display: inline-flex; align-items: center; gap: 4px; }
+.target-crit-label { color: #f2d76b; font: 700 10px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.target-none { color: #b5c6bd; }
+.target-preview .chip-lasting { margin-left: 4px; font: 600 10px/1 system-ui, sans-serif; opacity: .8; white-space: nowrap; }
 .target-caster { color: #bddfb8; }
 #intent-preview { height: 104px; margin-bottom: 6px; }
 #battle[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr) minmax(280px,1fr); grid-template-rows: minmax(0,1fr); gap: 16px; }

@@ -92,7 +92,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       const guide = view.guidance?.find(one => one.spell === selectedSpell);
       const estimate = page.locator(view.waitingFor === 'Intent' ? '#intent-preview' : '#combat-preview');
       await expect(estimate).toContainText('Estimate');
-      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} after cost`);
+      if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} left`);
       else await expect(estimate).toContainText('Preview unavailable for this question');
       const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator(view.waitingFor === 'Intent' ? '#combat-declare' : '#combat-confirm').click();
