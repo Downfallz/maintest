@@ -537,3 +537,11 @@ test('an aftermath only on fallen creatures is not read at all', () => {
 
   assert.equal(h.queue.model().active, false); assert.equal(h.queue.model().receipt, null);
 });
+test('an aftermath is read on the creatures standing at it, not on a later death in the same batch', () => {
+  const h = harness(); h.queue.setMode('step'); h.queue.receive(fallen([]), cards);
+  const lethal = event(6, { frame: { before, after: [creature(1), creature(2, 13), creature(3, 0)], timeline } });
+
+  h.queue.receive(fallen([event(4), ending(5, { 3: [{ effect: { kind: 'Bleed', amount: 2 } }] }), lethal]), cards);
+
+  assert.equal(h.queue.model().remaining, 3, 'the cast, the aftermath on creature 3 while it stood, and the lethal cast');
+});
