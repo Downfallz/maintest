@@ -158,3 +158,32 @@ export function talentPalette(catalogue, cards) {
   }
   return palette;
 }
+
+/**
+ * One family's mutations, row by row (one row per stage), each row ordered so that a mutation sits under the
+ * mutations it grows from and over the ones it opens: links run straight down instead of crossing. Each mutation
+ * takes the mean position of its parents in the row above (positions spread over 0..1), then of its children in
+ * the row below, then of its parents again; ties keep the catalogue's order by id.
+ */
+export function stageRows(members) {
+  const parentsOf = pack => [...(pack.prerequisites ?? []), ...(pack.anyOf ?? [])];
+  const levels = [...new Set(members.map(pack => pack.level))].sort((a, b) => a - b);
+  const rows = levels.map(level => members.filter(pack => pack.level === level).sort((a, b) => a.id.localeCompare(b.id)));
+  const position = new Map();
+  const place = row => row.forEach((pack, index) => position.set(pack.id, row.length === 1 ? 0.5 : index / (row.length - 1)));
+  const childrenOf = id => members.filter(pack => parentsOf(pack).includes(id)).map(pack => pack.id);
+  const order = (row, linked) => {
+    const weight = pack => {
+      const known = linked(pack).filter(id => position.has(id));
+      return known.length ? known.reduce((sum, id) => sum + position.get(id), 0) / known.length : position.get(pack.id) ?? 0.5;
+    };
+    const weights = new Map(row.map(pack => [pack.id, weight(pack)]));
+    row.sort((a, b) => weights.get(a.id) - weights.get(b.id) || a.id.localeCompare(b.id));
+    place(row);
+  };
+  rows.forEach(place);
+  rows.forEach((row, index) => { if (index > 0) order(row, parentsOf); });
+  for (let index = rows.length - 2; index >= 0; index--) order(rows[index], pack => childrenOf(pack.id));
+  rows.forEach((row, index) => { if (index > 0) order(row, parentsOf); });
+  return rows.map((row, index) => ({ level: levels[index], packs: row }));
+}

@@ -203,7 +203,12 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function reset() {
     cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
   }
-  function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]), packages = new Map() } = {}) {
+  /**
+   * `since` is the last sequence this seat was shown before the page was closed or hidden: on the first read, what
+   * came after it is played as it would have been live instead of being taken as the baseline, within the same
+   * bounds as any catch-up. Without it, or when it is not behind the feed, the first read is the baseline.
+   */
+  function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]), packages = new Map(), since = /** @type {number | null} */ (null) } = {}) {
     if (!view) { reset(); return; }
     latest = view; catalogue = cards; harmful = new Set(effects.filter(effect => effect.harmful).map(effect => effect.kind)); bought = packages;
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
@@ -211,7 +216,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       Number.isInteger(view.feedNext) ? view.feedNext - 1 : -1);
     for (const entry of entries) if (entry.event?.kind === 'RoundEnergyGranted') ordinaryRounds.add(entry.event.roundId ?? entry.round);
     ordinaryRounds = new Set([...ordinaryRounds].sort((a, b) => b - a).slice(0, 4));
-    if (seen === null) { seen = end; emit(); return; }
+    if (seen === null) {
+      if (!Number.isInteger(since) || since >= end || since < -1) { seen = end; emit(); return; }
+      seen = since;
+    }
     const unique = [...new Map(entries.filter(entry => entry.sequence > seen).map(entry => [entry.sequence, entry])).values()];
     seen = Math.max(seen, end);
     const actions = resolvedSince(unique, undefined, view.board, cards);
@@ -277,7 +285,10 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const cue = action ? actionCue(action, catalogue, harmful) : null;
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;
-    return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null,
+    // The last sequence the player has been shown in full: what a page closed now would resume after.
+    const unread = [current?.sequence, queue[0]?.sequence].filter(Number.isInteger);
+    const watermark = seen === null ? null : unread.length ? Math.min(...unread) - 1 : seen;
+    return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null, watermark,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),
