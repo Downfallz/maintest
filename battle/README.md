@@ -363,7 +363,13 @@ records do not contain an exact battlefield, so they read on a recorded one, nev
 ([ADR 0143](../docs/adr/0143-read-the-turnover-on-the-field.md)): an aftermath on its round's last action frame,
 an upkeep on the board it arrived with while that board is still before combat. A plaque on each creature says
 what ended or changed, and the reading card gives one line, opening the full receipt. Without such a board the
-plaques stand by name alone. Only the match result covers the field with a text receipt. The journal and round notes retain all received facts.
+plaques stand by name alone. Only the match result covers the field with a text receipt.
+
+Every effect on a creature is one chip (`table/effect-chips.js`, drawn by `chipElement`): the icon of what moved
+and the amount, a drop for damage with a CRIT mark when critical, a heart for healing, a bolt for energy, a
+condition's own icon for a condition applied, the same dimmed for one ending. Spell outcomes at impact, upkeep
+ticks and aftermath ends all use it, above the creature and in the reading card, where they gather by the
+creature they landed on. The engine's words stay in each chip, unseen, for screen readers and History. The journal and round notes retain all received facts.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the

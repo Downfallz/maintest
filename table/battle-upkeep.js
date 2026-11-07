@@ -1,5 +1,6 @@
 import { roundEnergyGrants, upkeepTicks, upkeepText, retainRoundEvents } from './feed.js';
 import { creatureLabel } from './battle-live.js';
+import { tickChip } from './effect-chips.js';
 
 export const missingRoundEnergy = 'Ordinary round energy was not recorded. Its actual gain is unknown.';
 const roundOf = entry => entry.event?.roundId ?? entry.round;
@@ -82,7 +83,7 @@ export function upkeepDisplay(energy, ongoing, energyNote = '') {
   for (const row of [...energy, ...ongoing]) {
     const id = String(row.creature);
     if (!markers.has(id)) markers.set(id, { id, name: row.label, side: row.side, lines: [] });
-    markers.get(id).lines.push({ text: `${row.sign}${row.amount} ${row.unit === 'energy' ? 'EN' : 'HP'}`, tone: row.tone });
+    markers.get(id).lines.push({ text: `${row.sign}${row.amount} ${row.unit === 'energy' ? 'EN' : 'HP'}`, tone: row.tone, chip: tickChip(row) });
   }
   if (ongoing.length === 1) summary.push(`${ongoing[0].label} · ${ongoing[0].text}`);
   if (ongoing.length > 1) summary.push(`${ongoing.length} ongoing effects`);

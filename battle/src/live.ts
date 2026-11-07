@@ -1,7 +1,7 @@
 import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
 import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
-import { conditionIcons, iconElement } from './condition-icons';
+import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.js';
@@ -260,7 +260,7 @@ function render() {
   $('playback-pacing').dataset.kind = reading?.kind ?? '';
   const more = playbackState.remaining > 1 ? ` · ${playbackState.remaining - 1} more` : '';
   text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
-  text('reading-title', reading?.title ?? ''); text('reading-detail', reading?.detail ?? '');
+  text('reading-title', reading?.title ?? ''); readingDetail(reading);
   $('reading-detail').hidden = !reading?.detail;
   $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
   // A paced turnover (upkeep, aftermath) reads on the field and in the card; only the match result covers the field.
@@ -316,12 +316,6 @@ function render() {
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
     const condition = mutation.tag(one.id) ?? targetTag?.tag ?? tagOf(one);
-    let effect = node.querySelector<HTMLElement>('.creature-effect');
-    if (!effect) { effect = document.createElement('span'); effect.className = 'creature-effect'; node.append(effect); }
-    const effects = playbackState.stage === 'impact' || playbackState.stage === 'resolved'
-      ? playbackState.cue?.effects.filter((item: { creature: string }) => item.creature === one.id) ?? [] : [];
-    effect.textContent = effects.map((item: { text: string }) => item.text).join(' · ');
-    effect.hidden = effects.length === 0;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -372,7 +366,17 @@ function render() {
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
   const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
-  if (markers && board.round != null) frame = { ...frame, upkeep: { markers, recorded: Boolean(playbackState.paced) && !board.creatures.length, round: board.round } };
+  // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
+  // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.
+  const impact = Boolean(playbackState.cue) && (playbackState.stage === 'impact' || playbackState.stage === 'resolved');
+  for (const one of creatures) {
+    const node = nodes.get(one.id); if (!node) continue;
+    const chips: EffectChip[] = impact
+      ? (playbackState.cue?.effects ?? []).filter((item: { creature: string }) => item.creature === one.id).map((item: { chip: EffectChip }) => item.chip)
+      : (markers ?? []).filter((marker: { id: string }) => marker.id === one.id).flatMap((marker: { lines: { chip?: EffectChip; text: string }[] }) => marker.lines.map(line => line.chip ?? { kind: 'other', value: line.text, text: line.text }));
+    effectChips(node, chips);
+  }
+  if (markers && board.round != null && !board.creatures.length) frame = { ...frame, upkeep: { markers, recorded: true, round: board.round } };
   // The reveal's crests stand on the battlefield while its receipt is up, on the live board only.
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
@@ -412,6 +416,32 @@ function statChips(stats: HTMLElement, health: number, maxHealth: number, energy
     span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
   };
   stats.replaceChildren(chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP'), unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
+}
+
+// An action's outcomes read as chips beside the creature each landed on; its words stay for screen readers.
+function readingDetail(reading: { detail: string; groups?: { target: string; chips: EffectChip[] }[] } | null) {
+  const detail = $('reading-detail'), key = JSON.stringify(reading ? [reading.detail, reading.groups] : null);
+  if (detail.dataset.key === key) return;
+  detail.dataset.key = key;
+  if (!reading?.groups?.length) { detail.textContent = reading?.detail ?? ''; return; }
+  const unseen = document.createElement('span'); unseen.className = 'unseen'; unseen.textContent = reading.detail;
+  detail.replaceChildren(unseen, ...reading.groups.map(group => {
+    const row = document.createElement('span'); row.className = 'reading-group'; row.setAttribute('aria-hidden', 'true');
+    const target = document.createElement('span'); target.className = 'reading-target'; target.textContent = group.target;
+    row.append(...group.chips.map(chip => chipElement(chip, catalogue?.effects ?? [])), target);
+    return row;
+  }));
+}
+
+function effectChips(node: HTMLElement, chips: EffectChip[]) {
+  // Above the caption, which is centred under the figure: the hit area around it is taller than the creature.
+  let holder = node.querySelector<HTMLElement>('.creature-effect');
+  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.querySelector('.caption')!.prepend(holder); }
+  const key = JSON.stringify(chips);
+  holder.hidden = chips.length === 0;
+  if (holder.dataset.chips === key) return;
+  holder.dataset.chips = key;
+  holder.replaceChildren(...chips.map(chip => chipElement(chip, catalogue?.effects ?? [])));
 }
 
 function choose(choice: Choice) {
@@ -506,7 +536,7 @@ function applySettings() {
   if (game && settingsKnown && Object.keys(kept).length < Object.keys(chosen).length) saveGameOverride(storage, game, chosen);
   $<HTMLSelectElement>('playback-preference').value = chosen.pace; playback.setMode(chosen.pace);
   $<HTMLSelectElement>('playback-speed').value = String(chosen.speed); playback.setRate(chosen.speed);
-  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced());
+  $<HTMLInputElement>('reduce-motion').checked = chosen.reducedMotion; playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced());
   helpUI.setHelp(chosen.help);
 }
 function keepForGame(change: object) { const game = gameOf(); if (game) saveGameOverride(storage, game, change); }
@@ -516,7 +546,7 @@ $('playback-speed').addEventListener('change', () => {
   playback.setRate(speed); keepForGame({ speed });
 });
 $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dialog').showModal());
-function motionChanged() { playback.setReduced(reduced()); render(); }
+function motionChanged() { playback.setReduced(reduced()); $('battle').dataset.reducedMotion = String(reduced()); render(); }
 $('reduce-motion').addEventListener('change', () => { keepForGame({ reducedMotion: $<HTMLInputElement>('reduce-motion').checked }); motionChanged(); });
 motion.addEventListener('change', motionChanged);
 applySettings();

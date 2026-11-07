@@ -4,6 +4,7 @@ import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { creatureLabel, livePresentation } from './battle-live.js';
+import { endedChip, immuneChip, outcomeChip } from './effect-chips.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
 const resultText = action => action.receipt ? [action.receipt.title, ...action.receipt.sections.flatMap(section => section.items.map(row => row.text))].join(' · ')
@@ -21,7 +22,14 @@ export function readingCard(item, board, theirs) {
   const outcome = item.status === 'Fizzled' ? [`Fizzled: ${item.reason}`]
     : [...(item.status === 'Critical' ? ['Critical'] : []),
       ...(item.effects?.length ? item.effects.map(effect => `${effect.text} → ${name(effect.target?.id)}`) : ['No effect'])];
-  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · ') };
+  // The same outcomes as chips, gathered by the creature they landed on, for the card to draw.
+  const groups = [];
+  if (item.status !== 'Fizzled') for (const effect of item.effects ?? []) {
+    const target = name(effect.target?.id);
+    const group = groups.find(one => one.target === target) ?? (groups.push({ target, chips: [] }), groups.at(-1));
+    group.chips.push(outcomeChip(effect));
+  }
+  return { kind: theirs ? 'incoming' : 'own', title: `${name(item.actor?.id)} · ${item.spell}`, detail: outcome.join(' · '), groups };
 }
 
 // A paced turnover is read on the field: a plaque on each creature it touched, and one line in the reading
@@ -30,23 +38,22 @@ function pacedUpkeep(entries, board, round, ordinaryRounds) {
   const receipt = upkeepReceipt(entries, round, board);
   return receipt ? { title: 'Upkeep', ...upkeepDisplay(receipt.energy, receipt.ongoing, ordinaryRounds.has(round) ? '' : receipt.energyNote) } : null;
 }
-const words = value => String(value ?? 'Condition').replace(/([a-z])([A-Z])/g, '$1 $2');
 function pacedAftermath(entries, board) {
   const markers = new Map();
-  const mark = (id, text) => {
+  const mark = (id, chip) => {
     const key = String(id);
     if (!markers.has(key)) markers.set(key, { id: key, name: creatureLabel(board, id),
       side: board?.allies?.some(one => one.id === id) ? 'Your team' : 'Opponent', lines: [] });
-    markers.get(key).lines.push({ text, tone: 'condition' });
+    markers.get(key).lines.push({ text: chip.value, tone: 'condition', chip });
   };
   let ended = 0, immune = 0;
   for (const entry of entries) {
     if (entry.event?.kind === 'ConditionsExpired') {
       for (const [id, conditions] of Object.entries(entry.event.expired ?? {})) {
-        for (const condition of conditions ?? []) { ended++; mark(Number(id), `${words(condition?.effect?.kind)} ends`); }
+        for (const condition of conditions ?? []) { ended++; mark(Number(id), endedChip(condition?.effect?.kind)); }
       }
     }
-    if (entry.event?.kind === 'StunImmunityGained') for (const id of entry.event.creatures ?? []) { immune++; mark(id, 'Immune to stun'); }
+    if (entry.event?.kind === 'StunImmunityGained') for (const id of entry.event.creatures ?? []) { immune++; mark(id, immuneChip()); }
   }
   const summary = [ended ? `${ended} condition${ended === 1 ? '' : 's'} ended` : '', immune ? `${immune} immune to stun` : ''].filter(Boolean).join(' · ');
   return { title: 'Aftermath', summary, markers: [...markers.values()] };
@@ -109,7 +116,7 @@ const isWound = (effect, action, harmful) => effect.target.id === action.actor?.
 
 // A motif describes confirmed outcomes, never a spell's predicted damage or target legality.
 export function actionCue(action, cards = new Map(), harmful = new Set()) {
-  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone, wound: isWound(effect, action, harmful) }));
+  const effects = action.effects.map(effect => ({ creature: String(effect.target.id), text: effect.text, tone: effect.tone, wound: isWound(effect, action, harmful), chip: outcomeChip(effect) }));
   const struck = [...new Set(action.effects.filter(effect => effect.tone === 'harm').map(effect => String(effect.target.id)))];
   const changes = framed(action) ? combatChanges(
     combatSnapshot({ allies: action.frame.before }), combatSnapshot({ allies: action.frame.after })) : [];
