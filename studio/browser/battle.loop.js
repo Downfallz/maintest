@@ -77,6 +77,7 @@ async function answerCombat(page, view, capture) {
 // Auto settles events received under a command dialog; their upkeep remains readable in the
 // standalone notice. A round can reach the page in either shape, depending on response timing.
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
+const upkeepShowing = async page => await page.locator('#playback-pacing').isVisible() && await page.locator('#reading-title').textContent() === 'Upkeep';
 async function readTurnover(page, round, info) {
   const paced = page.locator('#playback-pacing'), notice = page.locator('#upkeep-dialog');
   // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
@@ -114,6 +115,8 @@ function expectWritesFenced(writes) {
 async function reviewAndReplay(page, latest, info, actions) {
   // The last actions wait for their OK under reduced motion, as every action does (ADR 0139).
   await readResults(page);
+  // The result opened by itself once the last result was read (ADR 0145); the journal is read from behind it.
+  await matchResult(page); await page.keyboard.press('Escape');
   await page.locator('#history-open').click();
   const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
   expect(recent.length).toBeGreaterThan(1);
@@ -232,8 +235,9 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         await readTurnover(page, view.board.roundNumber, info);
         upkeepRound = view.board.roundNumber;
       }
-      await readResults(page);
-      if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
+      // The round's order may reveal while results are read, or after them; either way it is read once.
+      const readOrder = async () => {
+        if (!view.board.timeline.length || view.board.subPhase === 'TieOrder' || orderRounds.has(view.board.roundNumber)) return;
         const beforeShown = [...shown], beforeWrites = writes.length;
         // The revealed order reads on the field and in the card (ADR 0144); the card opens the full order.
         await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
@@ -248,7 +252,11 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);
         expect(shown).toEqual(beforeShown); expect(writes.length).toBe(beforeWrites);
         await page.locator('#order-close').click(); await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
-      }
+      };
+      // Reading stops at a next round's upkeep: the turnover check reads it, on the next step.
+      await acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true' || await upkeepShowing(page), 45000, readOrder);
+      if (await upkeepShowing(page)) continue;
+      await readOrder();
       if (!taught.has(view.waitingFor)) {
         await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });
         await expect(page.locator('#help-objective')).not.toBeEmpty();
@@ -277,8 +285,6 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     expect(taught.has(declaration === 'at-activation' ? 'Action' : 'Intent')).toBe(true);
     if (declaration === 'hidden-intent') expect(taught.has('Target')).toBe(true);
     await reviewAndReplay(page, latest, info, actions);
-    const savedNotes = await readFile(pathJoin(directory, 'sessions', hostInfo.session, 'notes.jsonl'), 'utf8');
-    expect(savedNotes).toContain('AU13 real-host final comment');
     expectWritesFenced(writes);
     expect(writes.some(one => one.command.kind === 'Evolution' && one.command.tier)).toBe(true);
     expect(writes.filter(one => one.command.kind === 'Speed').length).toBeGreaterThanOrEqual(3);

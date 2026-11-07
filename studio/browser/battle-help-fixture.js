@@ -22,16 +22,25 @@ export async function mutationTree(page) {
 
 // The battle holds every confirmed action for the player's OK (ADR 0139). A journey reads them as a player
 // would: it presses OK whenever one is waiting, until the condition it is after holds.
-export async function acknowledge(page, until, timeout = 45000) {
-  const next = page.locator('#playback-next'), end = Date.now() + timeout;
+// A revealed turn order holds the field until Continue (ADR 0144): a journey reads it too, through `onOrder` when
+// it checks the order, then continues.
+export async function acknowledge(page, until, timeout = 45000, onOrder = null) {
+  const next = page.locator('#playback-next'), order = page.locator('#order-continue'), end = Date.now() + timeout;
   for (;;) {
     if (await until()) return;
     if (Date.now() > end) throw new Error('Timed out reading confirmed results');
-    if (await next.isVisible() && await next.getAttribute('aria-disabled') === 'false') await next.click({ timeout: 2000 }).catch(() => {});
+    if (await order.isVisible()) {
+      if (onOrder) await onOrder();
+      if (await order.isVisible()) await order.click({ timeout: 2000 }).catch(() => {});
+    } else if (await next.isVisible() && await next.getAttribute('aria-disabled') === 'false') {
+      // What is now waiting may be the very thing the journey stops at: look again before pressing.
+      if (await until()) return;
+      await next.click({ timeout: 2000 }).catch(() => {});
+    }
     else await page.waitForTimeout(100);
   }
 }
-export const readResults = page => acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true');
+export const readResults = (page, onOrder = null) => acknowledge(page, async () => await page.locator('#battle').getAttribute('data-reading') !== 'true', 45000, onOrder);
 
 // The match result opens by itself once a finished match's last result is read; a journey reaches it whether it
 // already opened or still waits behind its button.

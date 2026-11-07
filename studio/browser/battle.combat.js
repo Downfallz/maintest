@@ -63,13 +63,14 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
       // A round's public order is revealed once, before its first combat question, and holds the field
       // until Continue (AU11, ADR 0144). Reading it writes nothing.
-      await readResults(page);
-      if (!orderRounds.has(view.board.roundNumber)) {
+      const readOrder = async () => {
+        if (orderRounds.has(view.board.roundNumber)) return;
         const beforeShown = shown.length, beforeSent = sent.length;
         await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
         await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
         expect(shown.length).toBe(beforeShown); expect(sent.length).toBe(beforeSent);
-      }
+      };
+      await readResults(page, readOrder); await readOrder();
       await page.locator('#combat-open').click();
       let spell = null;
       if (view.waitingFor !== 'Target') {
