@@ -273,11 +273,12 @@ The graph docks below the scene on phones and beside it on wider screens. Expand
 space. Each selectable node corresponds to an offer from the host. Acquired paths and connections
 use catalogue prerequisites, including shared capstones. Unknown offers stay selectable by id.
 
-Selecting a branch previews its initiative, spells, passives and possible later paths. Phaser previews
+Selecting a branch previews its initiative, its spells as compact spell cards, passives and what it opens. Phaser previews
 available art only for that creature in the private command. Public inspection and replay keep their
 recorded forms. Confirm spends one team pick. Switching creatures clears the draft, and passing requires
-explicit confirmation for all remaining team picks. The full tree remains available as a read-only
-disclosure. AU8 also exposes a public reference outside this phase.
+explicit confirmation for all remaining team picks. **Full mutation tree** opens the whole tree full
+screen ([ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)), on the mutation in hand; an offer can be
+chosen from its card there. AU8 also exposes a public reference outside this phase.
 
 `table/battle-mutations.js` supplies the host-filtered offers. `src/mutation-tree.ts` draws the graph
 and `src/mutation-scene.ts` projects the private preview. The existing planning controller still owns acknowledgement,
@@ -393,7 +394,8 @@ are recorded-event browser fixtures, not real-match screenshots.
 
 ## AU8: growth reference and new abilities
 
-Help and creature inspection open a persistent **Mutation Tree** over the current draft. Inspection
+Help and creature inspection open the full-screen **mutation tree** (`src/mutation-atlas.ts`,
+[ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)) over the current draft. Inspection
 selects its creature; the reference can switch between both rosters. It reuses AU4's authored
 prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
@@ -403,10 +405,12 @@ not "next"; finished matches offer no further opportunity. Unknown content and s
 
 The standalone reference shows current **public** ownership. Pending own picks remain Picked only
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
-closing either reference does not acknowledge or submit a question. Native disclosures, a labelled
-creature select and fixed Close control work by keyboard and on small/short screens. Unchanged polls
-preserve expanded nodes, focus and scroll. Closing restores the covering Help/inspection and draft. Disclosures are kept across polls of the same
-creature, not carried to another one.
+closing either reference does not acknowledge or submit a question. Families are columns (swiped on a
+phone), stages are rows, and a node opens its card: status, initiative, requirement, passives, spell cards
+with cost, crit chance and effect icons, and the mutations it opens. On a phone the card is a bottom sheet
+that Escape folds back first. A labelled creature select and a fixed Close work by keyboard and on
+small/short screens. Polls keep the creature, the open card and focus; closing restores the covering
+Help/inspection and draft.
 
 `table/battle-growth.js` observes only new `PurchasesRevealed` feed events. The reveal is read in three
 depths. On the battlefield, `src/mutation-reveal.ts` stands a Phaser crest above each creature that
@@ -414,8 +418,8 @@ mutated: the mutation in its family's colour, the stage reached and its new spel
 the field is uncovered, below the floating receipt. That receipt is one dismissible line, "Mutations
 revealed" with the count per side, and the status line under it speaks every reveal in full. **See**
 opens the reveal sheet: one card per creature, grouped by side, with stage, initiative, new spells with
-their cost and targets, and passives. Each card leads to its creature's path in the reference tree,
-where the families it holds open first. During catch-up it retains the latest reveal; History retains all public events. Its first
+their cost and targets, and passives. Each card's **See its path** opens the full tree on that creature with
+the revealed mutation's path lit from its family root. During catch-up it retains the latest reveal; History retains all public events. Its first
 read is always a baseline, including reload, visibility return and seat switch, so historical unlocks
 never masquerade as new ones. No extra storage, request, engine rule or host acknowledgement is added.
 Private submission events and board changes alone cannot create a receipt. Access loss clears all facts.

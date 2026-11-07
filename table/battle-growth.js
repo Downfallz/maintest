@@ -70,7 +70,7 @@ export function createBattleGrowth() {
           // and what it bought this round. An unpublished tier keeps its id and claims nothing else.
           const root = pack ? familyRoot(pack, byId) : null;
           const cards = spells.map(id => catalogue?.cards?.find(card => card.id === id));
-          rows.push({ creature: choice.creature, name: creatureLabel(view.board, choice.creature),
+          rows.push({ creature: choice.creature, tier: choice.tier, name: creatureLabel(view.board, choice.creature),
             enemy: !view.board.allies?.some(one => one.id === choice.creature), mutation: pack?.name ?? choice.tier,
             spells: spells.map((id, i) => cards[i]?.name ?? id),
             stage: pack?.level ?? null, family: root?.name ?? null, colour: classColour(root?.id ?? choice.tier, palette),

@@ -352,6 +352,17 @@ public sealed class CatalogueProjectionTests
         Card(Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy))).Cues.ShouldNotBeNull().ShouldNotContain(cue => cue.Tone == "critical");
     }
 
+    [Fact]
+    public void Each_effect_line_is_marked_with_its_kind_in_print_order_caster_lines_last()
+    {
+        var spell = Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy), casterEffects: [Heal.Of(2)]);
+
+        var card = Card(spell);
+
+        card.Marks.ShouldNotBeNull().ShouldBe([new CardMark(nameof(Damage), OnCaster: false), new CardMark(nameof(Heal), OnCaster: true)]);
+        card.Marks.Count.ShouldBe(card.Effects.Count + card.CasterEffects.Count);
+    }
+
     /// <summary>
     /// One spell, through the projection: what the route would answer for it and nothing else. The creature and
     /// the tree are the smallest content the engine will accept around it.

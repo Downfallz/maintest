@@ -37,7 +37,7 @@ implementation PR for each row. Test paths are under `studio/browser/` unless st
 | Round turnover | Covered | `battle-pacing.spec.js`: closing casts → aftermath → upkeep; no future-round values under old actions; real-host turnover captures |
 | Activity console | Covered | `battle-history.spec.js`: historical paging, filters, reload, stale reads, kept focus and pinned events |
 | Mutation chooser | Covered | `battle-mutations.spec.js`: three roots, later offers, shared budget, depleted picks and keyboard selection; real-host mutation tree |
-| Mutation reference | Covered | `battle-growth.spec.js` / `battle.growth.js`: read-only tree, actual public reveal, ownership and hidden choices |
+| Mutation reference | Covered | `battle-growth.spec.js` / `battle.growth.js`: full-screen tree (ADR 0146), revealed paths lit, actual public reveal, ownership and hidden choices |
 | Team tempo draft | Covered | `battle-tempo.spec.js`: 1/2/3 eligible creatures, edit before one confirm, partial/lost responses and explicit continuation |
 | Tempo consequences | Covered | Current/catalogue critical values, cost/energy and Instinct/Precision labels; AU14 revisits the first draft with keyboard Home |
 | Initiative / ties | Covered | `battle-order.spec.js` and real-host loop: same-team order, rerolls, public reveal, historical order and defeated actors |

@@ -151,3 +151,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0143](0143-read-the-turnover-on-the-field.md) | Read the round turnover on the field | Accepted for the opt-in battle view |
 | [0144](0144-read-the-turn-order-on-the-field.md) | Read the turn order on the field, and hold play until it is read | Accepted for the opt-in battle view |
 | [0145](0145-end-the-match-in-one-moment.md) | End the match in one moment | Accepted for the opt-in battle view |
+| [0146](0146-one-full-mutation-tree.md) | One full mutation tree, with spells as cards | Accepted for the opt-in battle view |

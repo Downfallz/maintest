@@ -145,7 +145,9 @@ public static class CatalogueProjection
             Cues(spell),
             spell.Stats.CriticalChance.Value > 0
                 ? "Instinct cannot crit. At Precision, crits multiply only direct damage and healing on targets."
-                : null);
+                : null,
+            Marks: [.. spell.Effects.Select(effect => new CardMark(effect.GetType().Name, OnCaster: false)),
+                .. spell.CasterEffects.Select(effect => new CardMark(effect.GetType().Name, OnCaster: true))]);
 
     private static List<CardCue> Cues(Spell spell)
     {
