@@ -43,8 +43,13 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  if (!both) await expect(page.locator('#loading')).toBeHidden();
+  if (!both) { await expect(page.locator('#loading')).toBeHidden(); if (over) await closeResult(page); }
   return state;
+}
+// A finished match opens its result by itself once (ADR 0145); a test that wants the field closes it first.
+async function closeResult(page) {
+  await expect(page.locator('#match-dialog')).toBeVisible(); await page.keyboard.press('Escape');
+  await expect(page.locator('#match-dialog')).toBeHidden();
 }
 for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['player2', 'Concession', 'Defeat'], [null, 'RoundCap', 'Draw']]) {
   test(`final ${title} uses the host reason and public survivors`, async ({ page }, info) => {
@@ -78,7 +83,7 @@ test('one accepted seat resumes without selection or a shown acknowledgement; sw
 test('two accepted seats stay behind explicit selection and suppress notification controls', async ({ page }) => {
   const h = await mount(page, { both: true }); await expect(page.locator('#seat-choices button')).toHaveCount(2);
   expect(h.reads.some(one => one.path.startsWith('/api/seat/'))).toBe(false);
-  await page.locator('#seat-choices button').first().click(); await expect(page.locator('#loading')).toBeHidden(); await page.locator('#settings').click();
+  await page.locator('#seat-choices button').first().click(); await expect(page.locator('#loading')).toBeHidden(); await closeResult(page); await page.locator('#settings').click();
   await expect(page.locator('#notices-toggle')).toHaveText('No notices with both seats here'); await expect(page.locator('#notices-toggle')).toBeDisabled();
   expect(h.writes).toEqual([]);
 });

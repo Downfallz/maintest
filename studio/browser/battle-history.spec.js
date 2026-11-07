@@ -146,14 +146,14 @@ test('a selected spell and field target survive reading the journal', async ({ p
   await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual(['12']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
-test('actions arriving while the journal is open settle on the board and stay readable', async ({ page }) => {
+test('an opponent\'s actions arriving while the journal is open are written there, and wait to play until it closes', async ({ page }) => {
   const h = await mount(page); await page.locator('#history-open').click();
   await h.publish([entry(11), entry(12)]); await expect(rows(page)).toHaveCount(3);
-  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
-  await expect(page.locator('#playback-skip')).toBeHidden();
+  // Nothing plays under the journal (ADR 0144): the actions wait, unplayed, for the field.
+  await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '');
   await page.locator('#history-close').click();
-  await expect(page.locator('#playback-result')).toBeVisible();
-  await expect(page.locator('#result-text')).toContainText('Creature 4 (opponent) · Strike → Creature 1');
+  await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
+  await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
   expect(h.state.errors).toEqual([]);
 });
 test('the action result opens the journal over itself and takes the focus back', async ({ page }) => {
