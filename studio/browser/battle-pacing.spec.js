@@ -174,6 +174,9 @@ test('Next keeps the keyboard focus while the following result plays', async ({ 
 });
 
 test('in Auto the own cast moves on by itself and an incoming one waits for its OK, an inspection over it included', async ({ page }) => {
+  // Two casts and five paced seconds of full-size desktop frames on a frozen clock: about 35 s on a quiet machine,
+  // past a minute on a busy two-worker runner.
+  test.setTimeout(120000);
   const h = await mount(page); await h.publish([entry(10), entry(11, { actor: 4, targets: [1] }), { ...cleanup, sequence: 12 }]);
   await expect(page.locator('#playback-next')).toBeHidden(); await finishCast(page); await page.clock.runFor(SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11');
