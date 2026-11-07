@@ -44,12 +44,14 @@ test('an offered branch previews before it is confirmed, beside a read-only full
   // The mutation phase opens its tree by itself, which acknowledges the asking (ADR 0138).
   const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible();
   await expect.poll(() => h.shown).toEqual([11]); await expect(page.locator('#mutation-preview-region')).toBeHidden();
-  await page.locator('#mutation-tree > summary').click();
-  await page.getByText('Guardian · Stage 2', { exact: false }).click(); await expect(page.locator('[data-mutation="future"]')).toHaveCount(0);
-  await expect(page.locator('#planning-choices')).toContainText('Requires: Warden'); await page.locator('[data-mutation="root"]').click(); expect(h.writes).toEqual([]);
+  await expect(page.locator('[data-mutation="future"]')).toHaveCount(0);
+  await page.locator('#mutation-atlas-open').click(); await page.locator('#atlas-board [data-package="future"]').click();
+  await expect(page.locator('#atlas-detail-body')).toContainText('Requires: Warden');
+  await expect(page.locator('#atlas-detail-body .atlas-choose')).toHaveCount(0); await page.locator('#atlas-close').click();
+  await page.locator('[data-mutation="root"]').click(); expect(h.writes).toEqual([]);
   // The passive and the further path are what the player reads before spending the pick.
   await expect(page.locator('#mutation-preview-region')).toContainText('Host passive');
-  await expect(page.locator('#mutation-preview-region')).toContainText('Further paths · Guardian');
+  await expect(page.locator('#mutation-preview-region')).toContainText('Opens · Guardian');
   await fitsViewport(page, '#planning-confirm, #planning-close'); await page.screenshot({ path: info.outputPath('mutation-tree.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#planning-confirm').click(); await expect.poll(() => h.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root', asked: 11 }]);
   await expect(page.locator('#planning-dialog')).toBeHidden(); expect(h.errors).toEqual([]);

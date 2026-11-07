@@ -26,7 +26,7 @@ async function answerEvolution(page, view, capture) {
   await node.click();
   if (capture) {
     await expect(page.locator('[data-mutation]')).toHaveCount(offer.availableTiers.length);
-    await expect(page.locator('#mutation-tree')).not.toHaveAttribute('open');
+    await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#mutation-atlas-open')).toBeVisible();
     for (const card of await page.locator('.mutation-node[data-status="available"]').all()) {
       await expect(card.locator('.mutation-name')).not.toBeEmpty();
       await expect(card.locator('.mutation-tags')).toBeVisible();

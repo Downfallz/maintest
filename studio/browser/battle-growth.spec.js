@@ -59,31 +59,29 @@ function spellChoice(h, asked = 21) {
   Object.assign(h.view, { waitingFor: 'Action', waitingAsked: asked, waitingCreature: 1,
     options: { action: { spells: ['focus', 'devour'].map(spell => ({ spell, legalTargets: { candidates: [3], minTargets: 1, maxTargets: 1 } })) } } });
 }
-test('Help reference is read-only, keyboard navigable and excludes private pending picks', async ({ page }, info) => {
+test('Help reference opens the full mutation tree: read-only, keyboard navigable and without private pending picks', async ({ page }, info) => {
   const h = await mount(page); await h.reference();
-  await expect(page.locator('#growth-dialog')).toBeVisible(); await expect(page.locator('#growth-next')).toHaveText('Next mutation opportunity · Round 7');
-  await expect(page.locator('#growth-tree [data-package="predator"] > summary')).toContainText('Available');
-  await page.locator('#growth-creature').selectOption('2');
-  await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
-  await expect(page.locator('#growth-tree')).not.toContainText('Picked');
-  const root = page.locator('#growth-tree [data-package="predator"] > summary');
-  const branch = page.locator('#growth-tree [data-package="predator"]');
-  await root.focus(); await page.keyboard.press('Enter'); await expect(branch).not.toHaveAttribute('open');
-  await page.keyboard.press('Enter'); await expect(branch).toHaveAttribute('open');
-  await page.locator('#growth-tree [data-package="upgrade"] > summary').click();
-  await page.locator('#growth-tree [data-package="cap"] > summary').first().click();
-  await expect(page.locator('#growth-tree')).toContainText('Requires one of: Stalker / Blighted');
-  await expect(page.locator('#growth-tree')).toContainText('For every creature of the side');
-  await fitsViewport(page, '#growth-close, #growth-creature');
-  await h.publish(); await expect(page.locator('#growth-tree [data-package="cap"]').first()).toHaveAttribute('open');
-  const cap = page.locator('#growth-tree [data-package="cap"]').first();
-  await cap.locator(':scope > summary').focus(); h.view.board.nextEvolutionRound = 8; await h.publish();
-  await expect(page.locator('#growth-next')).toHaveText('Next mutation opportunity · Round 8');
-  await expect(cap).toHaveAttribute('open'); await expect(cap.locator(':scope > summary')).toBeFocused();
-  await expect(page.locator('#growth-tree [data-package="cap"]').last()).not.toHaveAttribute('open');
+  const board = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body'), progress = page.locator('#atlas-progress');
+  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(progress).toContainText('Next mutation opportunity · Round 7');
+  await expect(board.locator('[data-package="predator"]')).toHaveAttribute('data-status', 'available');
+  await page.locator('#atlas-creature').selectOption('2');
+  await expect(progress).toContainText('No revealed mutations yet');
+  await expect(board.locator('[data-package="warped"]')).toHaveAttribute('data-status', 'future');
+  await expect(board).not.toContainText('Picked'); await expect(board.locator('[data-status="available"]')).toHaveCount(0);
+  const cap = board.locator('[data-package="cap"]');
+  await cap.focus(); await page.keyboard.press('Enter'); await expect(cap).toHaveAttribute('aria-pressed', 'true');
+  await expect(detail).toContainText('Requires one of: Stalker / Blighted');
+  await expect(detail).toContainText('For every creature of the side');
+  await fitsViewport(page, '#atlas-close, #atlas-creature');
+  // A poll keeps the creature, the open card and the focused mutation.
+  h.view.board.nextEvolutionRound = 8; await h.publish();
+  await expect(progress).toContainText('Next mutation opportunity · Round 8'); await expect(page.locator('#atlas-creature')).toHaveValue('2');
+  await expect(cap).toHaveAttribute('aria-pressed', 'true'); await expect(cap).toBeFocused(); await expect(detail).toContainText('Shared capstone');
   expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.screenshot({ path: info.outputPath('mutation-reference.png') });
-  await page.keyboard.press('Escape'); await expect(page.locator('#help-dialog [data-growth-open]')).toBeFocused();
+  if (info.project.name !== 'desktop') { await page.keyboard.press('Escape'); await expect(page.locator('#atlas-detail')).toBeHidden(); }
+  await page.keyboard.press('Escape'); await expect(page.locator('#atlas-dialog')).toBeHidden();
+  await expect(page.locator('#help-dialog [data-growth-open]')).toBeFocused();
   expect(h.errors).toEqual([]);
 });
 test('reference over a mutation draft preserves its selection and does not acknowledge again', async ({ page }) => {
@@ -97,11 +95,12 @@ test('reference over a mutation draft preserves its selection and does not ackno
 });
 test('inspection selects the opponent and reveals its progress only after public purchase', async ({ page }) => {
   const h = await mount(page); await page.locator('.creature.enemy').click(); await page.locator('#inspect-growth').click();
-  await expect(page.locator('#growth-creature')).toHaveValue('3'); await expect(page.locator('#growth-progress')).toHaveText('No revealed mutations yet');
-  await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Not acquired');
-  await expect(page.locator('#growth-tree')).not.toContainText('Not offered this pick');
-  unlock(h); await h.publish(); await expect(page.locator('#growth-progress')).toHaveText('Brute · Stage 1');
-  await expect(page.locator('#growth-tree [data-package="brute"] > summary')).toContainText('Acquired');
+  const brute = page.locator('#atlas-board [data-package="brute"]');
+  await expect(page.locator('#atlas-creature')).toHaveValue('3'); await expect(page.locator('#atlas-progress')).toContainText('No revealed mutations yet');
+  await expect(brute).toHaveAttribute('data-status', 'future');
+  await expect(page.locator('#atlas-board [data-status="available"]')).toHaveCount(0);
+  unlock(h); await h.publish(); await expect(page.locator('#atlas-progress')).toContainText('Brute · Stage 1');
+  await expect(brute).toHaveAttribute('data-status', 'known');
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape'); await expect(page.locator('#growth-receipt')).toBeVisible();
   await page.locator('#growth-receipt [data-growth-open]').click();
@@ -116,8 +115,7 @@ test('a reveal reads as one line and crests on the field, opens on cards by side
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
   await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
   await page.locator('#growth-receipt [data-growth-open]').click();
-  await expect(page.locator('#growth-dialog')).toHaveAttribute('data-mode', 'reveal'); await expect(page.locator('#growth-title')).toHaveText('Mutations revealed');
-  await expect(page.locator('#growth-creature')).toBeHidden();
+  await expect(page.locator('#growth-title')).toHaveText('Mutations revealed');
   const [own, rival] = [page.locator('.reveal-group').first(), page.locator('.reveal-group').last()];
   await expect(own.locator('h3')).toHaveText('Your team'); await expect(rival.locator('h3')).toHaveText('Opponent');
   await expect(own.locator('.reveal-mutation')).toHaveText('Predator'); await expect(own.locator('.reveal-stage')).toHaveText('Stage 1');
@@ -125,14 +123,22 @@ test('a reveal reads as one line and crests on the field, opens on cards by side
   await expect(own.locator('.reveal-meta')).toHaveText('+1 initiative');
   await expect(rival.locator('.reveal-passive')).toHaveText('No new spell this time.');
   await page.screenshot({ path: info.outputPath('mutation-reveal.jpg'), type: 'jpeg', quality: 85 });
+  // Each card's path opens the full mutation tree on that creature, the mutation in hand and its path lit.
   await rival.getByRole('button', { name: "See Rival's mutation path" }).click();
-  await expect(page.locator('#growth-dialog')).toHaveAttribute('data-mode', 'tree'); await expect(page.locator('#growth-creature')).toHaveValue('3');
-  await expect(page.locator('#growth-creature')).toBeFocused();
-  await expect(page.locator('#growth-tree [data-package="brute"]')).toHaveAttribute('open');
-  await expect(page.locator('#growth-tree [data-package="predator"]')).not.toHaveAttribute('open');
-  await page.locator('#growth-close').click(); await page.locator('#growth-receipt [data-growth-open]').click();
-  await page.locator('#growth-explore').click(); await expect(page.locator('#growth-creature')).toHaveValue('1');
-  await page.keyboard.press('Escape'); await page.locator('#growth-dismiss').click();
+  await expect(page.locator('#growth-dialog')).toBeHidden(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  await expect(page.locator('#atlas-creature')).toHaveValue('3');
+  const tree = page.locator('#atlas-board');
+  await expect(tree.locator('[data-package="brute"]')).toHaveAttribute('data-path', 'true');
+  await expect(tree.locator('[data-package="brute"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(tree.locator('[data-package="predator"]')).not.toHaveAttribute('data-path', 'true');
+  await expect(page.locator('#atlas-detail-body .atlas-card-name')).toHaveText('Brute');
+  await expect(page.locator('#atlas-detail-body .spell-card')).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('mutation-path.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#atlas-close').click(); await page.locator('#growth-receipt [data-growth-open]').click();
+  await page.locator('#growth-explore').click(); await expect(page.locator('#atlas-creature')).toHaveValue('1');
+  await expect(tree.locator('[data-package="predator"]')).toHaveAttribute('data-path', 'true');
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await page.locator('#growth-dismiss').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('crests leave the field while a choice or history covers it', async ({ page }) => {
@@ -170,22 +176,23 @@ test('a pending acknowledgement cannot send through the reference and the target
 });
 test('seat access loss clears open reference, pending receipts and private command context', async ({ page }) => {
   const h = await mount(page); unlock(h); await h.publish(); await h.reference();
-  h.status = 403; await h.publish(); await expect(page.locator('#growth-dialog')).not.toBeVisible();
-  await expect(page.locator('#growth-tree')).toBeEmpty(); await expect(page.locator('#growth-reveals')).toBeEmpty();
+  await expect(page.locator('#atlas-dialog')).toBeVisible();
+  h.status = 403; await h.publish(); await expect(page.locator('#atlas-dialog')).not.toBeVisible();
+  await expect(page.locator('#atlas-board')).toBeEmpty(); await expect(page.locator('#atlas-detail-body')).toBeEmpty(); await expect(page.locator('#growth-reveals')).toBeEmpty();
   await expect(page.locator('#growth-receipt')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 test('multiclass reference keeps close and creature selection reachable in short screens and large text', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
   const input = initial(); input.board.allies[0].acquiredTiers = ['predator', 'brute', 'upgrade', 'cap'];
-  const h = await mount(page, input); await h.reference(); await expect(page.locator('#growth-progress')).toHaveText('Multiclass · Predator · Stage 4 / Brute · Stage 1');
+  const h = await mount(page, input); await h.reference(); await expect(page.locator('#atlas-progress')).toContainText('Multiclass · Predator · Stage 4 / Brute · Stage 1');
   for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#growth-close, #growth-creature');
+    await page.setViewportSize(size); await page.clock.runFor(150); await fitsViewport(page, '#atlas-close, #atlas-creature');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '#growth-body { font-size: 28px; }' });
-  await page.locator('#growth-tree > details').last().locator(':scope > summary').scrollIntoViewIfNeeded();
-  await expect(page.locator('#growth-tree > details').last().locator(':scope > summary')).toBeInViewport();
-  await fitsViewport(page, '#growth-close, #growth-creature'); expect(h.errors).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.addStyleTag({ content: '#atlas-dialog { font-size: 28px; }' });
+  const last = page.locator('#atlas-board .atlas-node').last();
+  await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
+  await fitsViewport(page, '#atlas-close, #atlas-creature'); expect(h.errors).toEqual([]);
 });
 test('a future unlock waits behind a held closing cast and keeps its badge for the live spell choice', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-close').click(); await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();

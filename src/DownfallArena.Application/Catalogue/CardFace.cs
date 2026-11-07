@@ -19,6 +19,7 @@ namespace DownfallArena.Application.Catalogue;
 /// </param>
 /// <param name="Tree">The talent tree the spell is authored under, which is where the packages are derived from.</param>
 /// <param name="Visual">How a confirmed cast is drawn, where the builder published the spell art (ADR 0131); <c>null</c> for a spell nobody drew.</param>
+/// <param name="Marks">The kind of each effect line, in print order, so a screen can mark it with its stat's icon.</param>
 /// <remarks>
 /// <para>
 /// What it takes to acquire the spell is deliberately absent. A card used to carry the depth of its talent
@@ -42,4 +43,5 @@ public sealed record CardFace(
     string? Tree,
     IReadOnlyList<CardCue>? Cues = null,
     string? CriticalNote = null,
-    SpellVisual? Visual = null);
+    SpellVisual? Visual = null,
+    IReadOnlyList<CardMark>? Marks = null);

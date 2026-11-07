@@ -74,9 +74,31 @@ function aftermathView(view, action) {
 
 // Only public, meaningful turnover enters the paced sequence. No intermediate board is inferred. The match's end
 // is not read here: the match result opens by itself once the last result is read.
+// A defeated creature takes no further part: a condition ending on it, or a stun immunity it gains, is not
+// read on the field. History keeps the engine's full record. Who had fallen is read as of that turnover: the
+// frame after the last recorded action before it, else the frame before the first one after it, else the
+// latest board, which nothing recorded comes after.
+function fallenAt(entry, entries, board) {
+  const framedActions = entries.filter(one => one.event?.kind === 'CombatActionResolved' && Array.isArray(one.event.frame?.after))
+    .sort((left, right) => left.sequence - right.sequence);
+  const before = framedActions.filter(one => one.sequence < entry.sequence).at(-1)?.event.frame.after;
+  const after = framedActions.find(one => one.sequence > entry.sequence)?.event.frame.before;
+  const creatures = before ?? after ?? [...(board?.allies ?? []), ...(board?.enemies ?? [])];
+  return new Set(creatures.filter(one => one.isAlive === false).map(one => String(one.id)));
+}
+function living(entry, entries, board) {
+  const defeated = fallenAt(entry, entries, board);
+  if (!defeated.size) return entry;
+  if (entry.event?.kind === 'ConditionsExpired') return { ...entry, event: { ...entry.event,
+    expired: Object.fromEntries(Object.entries(entry.event.expired ?? {}).filter(([id]) => !defeated.has(String(id)))) } };
+  if (entry.event?.kind === 'StunImmunityGained') return { ...entry, event: { ...entry.event,
+    creatures: (entry.event.creatures ?? []).filter(id => !defeated.has(String(id))) } };
+  return entry;
+}
 function receipts(entries, board, ordinaryRounds) {
-  return entries.flatMap(entry => {
-    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(entry.event?.kind)) return [];
+  return entries.flatMap(recorded => {
+    if (!['ConditionsExpired', 'StunImmunityGained', 'RoundEnergyGranted', 'OngoingEffectsApplied'].includes(recorded.event?.kind)) return [];
+    const entry = living(recorded, entries, board);
     const row = historyEntry(entry, board);
     // The opening receipt still belongs to AU3b's arrival-gated introduction.
     if (row?.category === 'Upkeep' && row.round === 1) return [];

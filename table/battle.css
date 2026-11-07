@@ -197,9 +197,6 @@
 .tempo-reference summary { cursor: pointer; }
 .tempo-accepted { color: #d6eb9a; }
 @media (max-width: 480px) { .tempo-options { grid-template-columns: 1fr; } }
-.mutation-branch { margin: 10px 0; border-left: 2px solid #527069; padding-left: 12px; }
-.mutation-branch > summary { padding: 12px 4px; cursor: pointer; min-height: 44px; }
-.mutation-branch .mutation-branch { margin-left: 8px; }
 .mutation-face { padding: 0 8px 10px; font-size: 14px; color: #c5d2cc; }
 .mutation-face p { margin: 8px 0; }
 .mutation-face summary { padding: 12px 0; min-height: 44px; cursor: pointer; }
@@ -220,7 +217,6 @@
   #planning-dialog { padding: 18px 14px; }
   #planning-creatures { top: -18px; }
   .planning-footer { bottom: -18px; }
-  .mutation-branch { padding-left: 6px; }
   #battle[data-replay="true"] { grid-template-rows: 60px 52px minmax(0, 1fr) minmax(150px, 30vh); }
   #replay-controls { padding: 10px 14px; }
 }
@@ -414,7 +410,6 @@
 #planning-dialog-error { grid-column: 1 / -1; }
 #planning-dialog-error:empty { display: none; }
 #planning-confirm { max-width: 260px; overflow-wrap: anywhere; }
-#mutation-tree { margin: 16px 0; border: 1px solid #52695e; border-radius: 5px; padding: 0 14px; font-size: 13px; }
 .mutation-empty { grid-column: 1 / -1; color: #c7d5cd; }
 @media (max-width: 759px) {
   .planning-header { padding: 12px 12px 0; }
@@ -447,18 +442,6 @@
 .growth-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex: none; padding: 16px 20px; border-bottom: 1px solid #52695e; }
 .growth-header .eyebrow { margin: 0 0 5px; }
 #growth-title { margin: 0; font: 28px Georgia,serif; }
-.growth-picker { display: flex; align-items: center; gap: 12px; padding: 12px 20px; flex: none; }
-#growth-creature { flex: 1; min-width: 0; max-width: 100%; padding: 10px; background: #192b30; color: #edf0e8; border: 1px solid #7d9689; border-radius: 4px; }
-#growth-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 20px 20px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
-#growth-progress { color: #e6d4a8; font-weight: 650; }
-#growth-tree { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; align-items: start; margin-top: 16px; }
-#growth-tree > .mutation-branch { border: 1px solid #52695e; border-radius: 5px; padding: 8px; background: #172a30; min-width: 0; border-top: 3px solid var(--mutation-colour); }
-#growth-tree .mutation-branch .mutation-branch { border-left: 2px solid var(--mutation-colour); margin: 8px 0; padding-left: 8px; }
-#growth-tree summary { cursor: pointer; padding: 10px 2px; min-height: 44px; }
-#growth-tree [data-status="known"] > summary { color: #c3e5ad; }
-#growth-tree [data-status="available"] > summary { color: #f1d7a2; }
-#growth-tree p { margin: 6px 0; color: #c7d5cd; }
-#growth-tree h4 { margin: 12px 0 4px; }
 /* The reveal: one readable line over the field (each creature's crest is drawn in the scene), then cards. */
 #growth-receipt {
   position: absolute; z-index: 5; top: 8px; left: 50%; transform: translateX(-50%); width: min(460px,calc(100% - 16px));
@@ -473,7 +456,6 @@
 #growth-receipt [data-growth-open] { min-height: 44px; padding: 0 16px; border: 1px solid #b79868; border-radius: 8px; background: #2a3b33; color: #f1d7a2; font-weight: 600; }
 #growth-dismiss { min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: #c7d5cd; font-size: 20px; }
 #growth-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#growth-dialog:not([data-mode="reveal"]) #growth-reveal, #growth-dialog[data-mode="reveal"] :is(.growth-picker,#growth-body) { display: none; }
 #growth-reveal { display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 14px 20px 20px; }
 .reveal-group h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .reveal-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,240px),1fr)); gap: 10px; }
@@ -497,14 +479,12 @@
 .combat-spell.spell-new { border-color: #d3bd85; border-top-color: var(--spell-accent); }
 .combat-spell.spell-new .spell-availability { color: #f1d7a2; }
 @media (max-width: 759px) {
-  #growth-tree { grid-template-columns: 1fr; }
-  .growth-header, .growth-picker { padding: 10px 12px; }
-  #growth-body { padding: 0 12px 12px; }
+  .growth-header { padding: 10px 12px; }
   #growth-reveal { padding: 12px 12px 16px; }
   #growth-title { font-size: 23px; }
 }
 @media (max-height: 520px) {
-  .growth-header, .growth-picker { padding-top: 6px; padding-bottom: 6px; }
+  .growth-header { padding-top: 6px; padding-bottom: 6px; }
 }
 
 /* AU10: the estimate scrolls beside a fixed confirmation. Choosing another target cannot move Cast. */
@@ -753,9 +733,6 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 }
 #planning-dialog[data-kind="Evolution"] #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #planning-dialog[data-kind="Evolution"] #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
-#planning-dialog[data-kind="Evolution"] #planning-pass, #mutation-inspect { border: 0; background: transparent; color: var(--muted); font-size: 12px; }
-#planning-dialog[data-kind="Evolution"] #mutation-tree { margin: 6px 0 0; padding: 0; border: 0; }
-#mutation-tree > summary, .mutation-details > summary { min-height: 44px; padding: 12px 0; color: var(--gold); cursor: pointer; }
 .mutation-graph { position: relative; isolation: isolate; display: grid; gap: 12px; }
 .mutation-origin { justify-self: center; font: 15px/12px Georgia,serif; color: var(--gold); }
 .mutation-links { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -779,10 +756,6 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 .mutation-preview { margin: 0 12px 4px; padding: 6px 10px 0; border-left: 2px solid var(--mutation-colour); background: var(--raised); font-size: 13px; overflow-wrap: anywhere; }
 .preview-name { display: inline; font: 17px Georgia,serif; }
 .mutation-initiative { margin-left: 8px; color: var(--muted); font-size: 12px; }
-.mutation-spell { margin-top: 4px; line-height: 1.45; }
-.mutation-spell strong { margin-right: 7px; }
-.mutation-details > summary { font-size: 12px; }
-.mutation-details p,.mutation-details h4,.mutation-passive { margin: 6px 0; }
 .mutation-future { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
 .mutation-entry #planning-open { flex: 1; min-width: 0; min-height: 44px; padding: 6px 10px; color: var(--gold); border-color: var(--line); background: var(--panel); }
 .creature[data-mutation-recipient="true"] .creature-tag { color: var(--gold); }
@@ -825,3 +798,101 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
   #round-toast.showing { animation: round-toast 2600ms ease both; }
   @keyframes round-toast { 0% { opacity: 0; transform: translate(-50%,-8px); } 12%, 78% { opacity: 1; transform: translate(-50%,0); } 100% { opacity: 0; transform: translate(-50%,-4px); } }
 }
+
+
+/* The full mutation tree (mutation-atlas.ts): one screen on a phone, a large sheet on desktop. A column per
+   family, a row per stage, the links behind; the card of the mutation in hand beside the tree on a wide
+   screen, rising from the bottom on a narrow one. */
+#atlas-dialog { padding: 0; width: min(1240px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: none; overflow: hidden; background: #0f1c21; border: 1px solid #5b7064; }
+#atlas-dialog[open] { display: flex; flex-direction: column; }
+.atlas-header { display: flex; align-items: center; gap: 12px; flex: none; padding: 14px 18px; border-bottom: 1px solid #3f554d; background: linear-gradient(#162a30, #11211f); }
+.atlas-header > div { flex: 1; min-width: 0; }
+.atlas-header .eyebrow { margin: 0 0 4px; }
+#atlas-title { margin: 0; font: 24px/1.2 Georgia, serif; }
+#atlas-progress { margin: 4px 0 0; color: #c9b88f; font-size: 12px; }
+#atlas-creature { max-width: 42%; min-height: 44px; padding: 8px 10px; background: #192b30; color: #edf0e8; border: 1px solid #7d9689; border-radius: 8px; }
+#atlas-close { min-height: 44px; }
+.atlas-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; position: relative; }
+#atlas-board { min-height: 0; overflow: auto; overscroll-behavior: contain; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; padding: 16px; align-items: start; }
+.atlas-family { --mutation-colour: #aabdb1; position: relative; display: flex; flex-direction: column; gap: 22px; padding: 12px 10px 18px; border: 1px solid #34483f; border-top: 3px solid var(--mutation-colour); border-radius: 12px; background: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--mutation-colour) 14%, transparent), transparent 70%), #13242a; }
+.atlas-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.atlas-links path { fill: none; stroke: #4c6159; stroke-width: 1.6; }
+.atlas-links path.held { stroke: color-mix(in srgb, var(--mutation-colour) 70%, #4c6159); stroke-width: 2.2; }
+.atlas-links path.lit { stroke: var(--mutation-colour); stroke-width: 3; filter: drop-shadow(0 0 4px var(--mutation-colour)); }
+.atlas-family-head { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; }
+.atlas-family-head .atlas-sigil { grid-row: 1 / 3; width: 28px; height: 28px; fill: none; stroke: var(--mutation-colour); stroke-width: 1.6; }
+.atlas-family-head strong { font: 18px Georgia, serif; color: var(--mutation-colour); }
+.atlas-family-head small { color: var(--muted); font-size: 11px; }
+.atlas-stage { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.atlas-node { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; max-width: 100%; padding: 6px 12px 6px 6px; border: 1px solid #4c6159; border-radius: 999px; background: #182b31; color: #9fb0a6; font-size: 13px; text-align: left; cursor: pointer; }
+.atlas-node-stage { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1px solid currentColor; font: 800 11px/1 system-ui, sans-serif; }
+.atlas-node-name { overflow-wrap: anywhere; font-weight: 650; }
+.atlas-node-flag { padding: 1px 6px; border-radius: 6px; background: var(--gold); color: #1a1d1a; font: 800 9px/1.4 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.atlas-node[data-status="known"] { border-color: var(--mutation-colour); background: color-mix(in srgb, var(--mutation-colour) 22%, #182b31); color: #f2eee2; }
+.atlas-node[data-status="known"] .atlas-node-stage { background: var(--mutation-colour); border-color: var(--mutation-colour); color: #142126; }
+.atlas-node[data-status="picked"] { border-style: dashed; border-color: var(--mutation-colour); color: #e9e2cf; }
+.atlas-node[data-status="available"] { border-color: var(--gold); color: #f6e7c4; box-shadow: 0 0 0 1px #eac88e55, 0 0 14px #eac88e33; }
+.atlas-node[data-status="future"] { opacity: .78; }
+.atlas-node[data-path="true"] { box-shadow: 0 0 0 2px var(--mutation-colour), 0 0 16px color-mix(in srgb, var(--mutation-colour) 55%, transparent); opacity: 1; }
+.atlas-node[aria-pressed="true"] { outline: 2px solid #f8df94; outline-offset: 2px; }
+.atlas-empty { color: var(--muted); }
+#atlas-detail { --mutation-colour: #aabdb1; position: relative; width: 380px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border-left: 1px solid #3f554d; background: #12232a; }
+#atlas-detail[hidden] { display: none; }
+#atlas-detail-close { position: absolute; top: 8px; right: 8px; z-index: 1; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 20px; }
+#atlas-detail-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px 18px 20px; }
+.atlas-card-head { padding: 0 34px 10px 12px; border-left: 4px solid var(--mutation-colour); }
+.atlas-card-family { margin: 0; color: var(--mutation-colour); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.atlas-card-name { margin: 2px 0 8px; font: 24px/1.15 Georgia, serif; color: #f2eee2; }
+.atlas-card-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.atlas-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border: 1px solid #52695e; border-radius: 999px; font: 700 11px/1.5 system-ui, sans-serif; color: #dfe7df; background: #172a30; }
+.atlas-chip .cue-icon { width: 12px; height: 12px; color: #d2b6f2; }
+.atlas-chip-status { border-color: var(--mutation-colour); }
+.atlas-card-requirement { margin: 12px 0 0; color: #c4d0c7; font-size: 13px; }
+#atlas-detail-body h4 { margin: 16px 0 8px; color: var(--muted); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.atlas-card-passives { margin: 0; padding-left: 18px; color: #e8dfc4; font-size: 13px; line-height: 1.5; }
+.atlas-card-next { display: flex; flex-wrap: wrap; gap: 6px; }
+.atlas-card-next h4 { flex-basis: 100%; }
+.atlas-next { min-height: 36px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
+.atlas-choose { width: 100%; margin-top: 18px; min-height: 48px; }
+@media (max-width: 819px) {
+  #atlas-dialog { width: 100vw; height: 100dvh; max-width: none; margin: 0; border: 0; border-radius: 0; }
+  .atlas-header { padding: 10px 12px; flex-wrap: wrap; }
+  #atlas-title { font-size: 20px; }
+  #atlas-creature { order: 3; flex-basis: 100%; max-width: none; }
+  .atlas-main { grid-template-columns: minmax(0, 1fr); }
+  #atlas-board { grid-auto-columns: min(86vw, 340px); padding: 12px; scroll-snap-type: x mandatory; }
+  .atlas-family { scroll-snap-align: center; }
+  #atlas-detail { position: absolute; left: 0; right: 0; bottom: 0; width: auto; max-height: 72%; border-left: 0; border-top: 1px solid #5b7064; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px #000a; }
+}
+
+/* One spell as a card (spell-card.ts): name, cost and crit chance in the head, then who it hits and what
+   each effect does, each line marked with the icon of the stat it moves. */
+.spell-card-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.spell-card { margin: 8px 0; padding: 10px 12px; border: 1px solid #3f554d; border-radius: 10px; background: #172a30; }
+.spell-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spell-card-name { font: 16px/1.2 Georgia, serif; color: #f0e4c9; overflow-wrap: anywhere; }
+.spell-card-chips { display: inline-flex; flex: none; gap: 5px; }
+.spell-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px 1px 5px; border: 1px solid; border-radius: 999px; font: 800 11px/1.5 system-ui, sans-serif; white-space: nowrap; }
+.spell-chip .cue-icon { width: 11px; height: 11px; }
+.spell-chip-cost { border-color: #8edcf080; color: #d6f1f8; }
+.spell-chip-cost .cue-icon { color: #8edcf0; }
+.spell-chip-crit { border-color: #f2d76b99; color: #f8e8b0; }
+.spell-crit-mark { color: #f2d76b; }
+.spell-chip-crit small { margin-left: 3px; font-weight: 600; opacity: .8; }
+.spell-card-target { margin: 6px 0 0; color: #aebbb4; font-size: 12px; }
+.spell-card-effects { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.spell-card-effect { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #e9e5da; }
+.spell-card-effect .cue-icon { flex: none; width: 15px; height: 15px; padding: 3px; border-radius: 50%; background: #0f1c21; border: 1px solid #ffffff1f; }
+.spell-card-effect[data-caster="true"] { color: #c4d0c7; font-size: 12px; }
+.spell-card-note { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.spell-card.compact { padding: 8px 10px; }
+.spell-card.compact .spell-card-name { font-size: 15px; }
+.spell-card-effect[data-cue="health-loss"] .cue-icon { color: #ef7a6c; } .spell-card-effect[data-cue="health-gain"] .cue-icon { color: #86d897; }
+.spell-card-effect[data-cue^="energy"] .cue-icon { color: #8edcf0; } .spell-card-effect[data-cue="defense-gain"] .cue-icon { color: #8fc3ef; }
+.spell-card-effect[data-cue="defense-loss"] .cue-icon { color: #e8a76f; } .spell-card-effect[data-cue="stun"] .cue-icon { color: #f2d76b; }
+.spell-card-effect[data-cue^="initiative"] .cue-icon { color: #d2b6f2; } .spell-card-effect[data-cue^="damage"] .cue-icon { color: #f0b48a; }
+
+/* The chooser's own actions, as buttons in a row under the graph rather than bare links. */
+.planning-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.planning-action { min-height: 44px; padding: 8px 14px; border: 1px solid #52695e; border-radius: 999px; background: #172a30; color: #dfe7df; font-size: 13px; }
+.planning-action.atlas-open { border-color: var(--gold); color: #f6e7c4; }

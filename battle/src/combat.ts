@@ -7,7 +7,7 @@ import { spellbookControls } from './spellbook';
 
 type Controller = ReturnType<typeof createBattleCombat>;
 type Model = ReturnType<Controller['model']>;
-export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string }[] }
+export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string; marks?: { kind: string; onCaster: boolean }[] }[] }
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.

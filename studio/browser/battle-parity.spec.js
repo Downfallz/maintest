@@ -82,8 +82,12 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   // Closing the tip opens the mutation tree by itself (ADR 0138).
   await keyboardActivate(page, '#help-close'); await expect(page.locator('#planning-dialog')).toBeVisible();
   await keyboardActivate(page, '[data-mutation="Predator"]');
-  await keyboardActivate(page, '.mutation-details summary');
-  await expect(page.locator('.mutation-details')).toContainText('Strike · 2 energy');
+  await expect(page.locator('.mutation-preview .spell-card[data-spell]').first()).toContainText('Strike');
+  await expect(page.locator('.mutation-preview .spell-chip-cost').first()).toHaveText('2 energy');
+  await keyboardActivate(page, '#mutation-atlas-open'); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  // On a phone the first Escape folds the open card back into the tree, the next one closes it.
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#mutation-atlas-open')).toBeFocused();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   expect(state.writes).toEqual([]); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');

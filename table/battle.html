@@ -66,11 +66,14 @@
     <div class="help-body"><p id="help-context"></p><p id="help-objective"></p><div id="help-explanation"></div><p id="help-next"></p><button type="button" data-growth-open>Explore Mutation Tree</button><details id="help-round-guide"><summary>The round, phase by phase</summary><ol id="help-flow" aria-label="Round phases"></ol></details></div>
     <footer class="help-footer"><label><input id="help-mute" type="checkbox"> Do not show phase tips in this game</label><p>Help stays available. History keeps your match events.</p></footer>
   </dialog>
+  <dialog id="atlas-dialog" aria-labelledby="atlas-title">
+    <header class="atlas-header"><div><p class="eyebrow" id="atlas-eyebrow">MUTATION TREE</p><h2 id="atlas-title">Mutation tree</h2><p id="atlas-progress" hidden></p></div><select id="atlas-creature" aria-label="Creature" hidden></select><button id="atlas-close" type="button">Close</button></header>
+    <div class="atlas-main"><div id="atlas-board" aria-label="Mutation families"></div>
+    <aside id="atlas-detail" aria-label="Mutation details" hidden><button id="atlas-detail-close" type="button" aria-label="Back to the tree">×</button><div id="atlas-detail-body"></div></aside></div>
+  </dialog>
   <dialog id="growth-dialog" aria-labelledby="growth-title">
-    <header class="growth-header"><div><p class="eyebrow" id="growth-eyebrow">PUBLIC GROWTH · REFERENCE</p><h2 id="growth-title">Mutation Tree</h2></div><button id="growth-close" type="button" autofocus>Close</button></header>
+    <header class="growth-header"><div><p class="eyebrow" id="growth-eyebrow">PUBLIC REVEAL</p><h2 id="growth-title">Mutations revealed</h2></div><button id="growth-close" type="button" autofocus>Close</button></header>
     <section id="growth-reveal" aria-label="Revealed mutations"><div id="growth-reveals"></div><button id="growth-explore" type="button">Explore the Mutation Tree</button></section>
-    <div class="growth-picker"><label for="growth-creature">Creature</label><select id="growth-creature"></select></div>
-    <div id="growth-body"><p id="growth-progress"></p><p id="growth-next"></p><p class="dialog-note">Revealed progress only. Exploring never spends a pick.</p><div id="growth-tree"></div></div>
   </dialog>
   <dialog id="history-dialog" aria-labelledby="history-title">
     <header class="history-header"><div><p class="eyebrow">MATCH JOURNAL</p><h2 id="history-title">History</h2><p id="history-range"></p></div><button id="history-close" type="button" autofocus>Close</button></header>
