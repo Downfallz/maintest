@@ -322,7 +322,7 @@ function render() {
     effect.hidden = effects.length === 0;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
-    node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP · ${one.energy} EN`;
+    statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
     // Initiative, defense when it is above zero, and one icon per kind of condition, on every screen: the numbers
     // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
     node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
@@ -396,6 +396,20 @@ function render() {
   if (asked.opened) mutationOpened = asked.question;
   else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+}
+
+// Health and energy as chips beside the badges, a heart and a bolt before each number. The units and the
+// separator stay in the text, unseen, so the caption still reads "20/20 HP · 5 EN" to a screen reader.
+function statChips(stats: HTMLElement, health: number, maxHealth: number, energy: number) {
+  const key = `${health}/${maxHealth}/${energy}`;
+  if (stats.dataset.value === key) return;
+  stats.dataset.value = key;
+  const unseen = (value: string) => { const span = document.createElement('span'); span.className = 'unseen'; span.textContent = value; return span; };
+  const chip = (kind: string, icon: string, value: string, unit: string) => {
+    const span = document.createElement('span'); span.className = `stat stat-${kind}`;
+    span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
+  };
+  stats.replaceChildren(chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP'), unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
 }
 
 function choose(choice: Choice) {

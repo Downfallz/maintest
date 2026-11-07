@@ -548,6 +548,16 @@
 .creature-defense { padding-left: 3px; border-color: #8fc3ef99; color: #d6e9fb; }
 .creature-defense .cue-icon { width: 11px; height: 11px; }
 .creature-conditions { display: inline-flex; gap: 2px; }
+/* Health and energy in the same chips as the badges: a heart and a bolt, the numbers in the badge type. */
+#battle .creature-stats { display: flex; justify-content: center; gap: 3px; margin-top: 3px; font-size: inherit; }
+#battle .stat { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px 1px 4px; border: 1px solid; border-radius: 9px;
+  background: #101e24d9; font: 700 9px/1.45 system-ui,sans-serif; letter-spacing: .04em; white-space: nowrap; text-shadow: none; font-variant-numeric: tabular-nums; }
+#battle .stat-health { border-color: #ef8a7c80; color: #f6dcd6; }
+#battle .stat-health .cue-icon { color: #ef8a7c; }
+#battle .stat-energy { border-color: #8edcf080; color: #d6f1f8; }
+#battle .stat-energy .cue-icon { color: #8edcf0; }
+#battle .stat .cue-icon { width: 10px; height: 10px; }
+#battle .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .creature-conditions .cue { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: #101e24e0; border: 1px solid #ffffff26; }
 .cue-icon { width: 11px; height: 11px; fill: currentColor; }
 .cue-icon path.stroked { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
@@ -556,7 +566,8 @@
 .cue-stun { color: #f2d76b; } .cue-energy-gain, .cue-energy-loss { color: #8edcf0; }
 .cue-initiative-gain, .cue-initiative-loss { color: #d2b6f2; } .cue-damage-gain, .cue-damage-loss { color: #f0b48a; } .cue-other { color: #c7d5cd; }
 @media (min-width: 760px) and (min-height: 600px) {
-  .creature-init, .creature-defense { font-size: 10px; }
+  .creature-init, .creature-defense, #battle .stat { font-size: 10px; }
+  #battle .stat .cue-icon { width: 12px; height: 12px; }
   .creature-conditions .cue { width: 20px; height: 20px; }
   .creature-conditions .cue-icon, .creature-defense .cue-icon { width: 13px; height: 13px; }
 }
