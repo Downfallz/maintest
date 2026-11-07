@@ -162,6 +162,7 @@ test('an opponent who takes the open seat stays named when an older read of the 
   await page.route('**/api/leaderboard', route => { if (held.length === 0) held.push(route); else return route.fulfill({ json: { players: [] } }); });
   await page.route('**/api/friends', route => route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } }));
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#connection')).toHaveText(/^LIVE/); await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#opponent-name')).toHaveText('Open seat'); await expect.poll(() => held.length).toBe(1);
   seats = [seats[0], { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }]; state.first.waiting = false;
   await expect(page.locator('#opponent-name')).toHaveText('bastien', { timeout: 15000 });
