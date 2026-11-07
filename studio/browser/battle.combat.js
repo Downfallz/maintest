@@ -61,13 +61,13 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (await planning(view)) continue;
       expect(['Action', 'Intent', 'Target']).toContain(view.waitingFor);
       await expect.poll(() => snapshots.at(-1), { timeout: 10000 }).toBe(view.waitingAsked);
-      // A round's public order is revealed once, before its first combat question, and covers the board
-      // until it is read (AU11). Reading it writes nothing.
+      // A round's public order is revealed once, before its first combat question, and holds the field
+      // until Continue (AU11, ADR 0144). Reading it writes nothing.
       await readResults(page);
       if (!orderRounds.has(view.board.roundNumber)) {
         const beforeShown = shown.length, beforeSent = sent.length;
-        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
-        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
+        await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
+        await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
         expect(shown.length).toBe(beforeShown); expect(sent.length).toBe(beforeSent);
       }
       await page.locator('#combat-open').click();

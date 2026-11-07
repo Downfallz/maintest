@@ -82,7 +82,9 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
 } });
 const visible = () => ready && !rendererFailed && !document.hidden &&
   !document.querySelector('.navigation-panels dialog[open]') &&
-  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open);
+  !['inspect-dialog', 'settings-dialog', 'result-dialog', 'match-dialog', 'concede-dialog', 'history-dialog', 'help-dialog', 'upkeep-dialog', 'order-dialog', 'growth-dialog'].some(id => $<HTMLDialogElement>(id).open) &&
+  // A revealed turn order holds the field until Continue: what arrives meanwhile waits for it.
+  !orderUI.isReading();
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createBattleUpkeep(tabStorage);
@@ -219,7 +221,7 @@ function announceRound(round: number | null) {
   }
   announcedRound = round;
 }
-let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '';
+let receiptShown = false, lastMutationReveal: number | null = null, mutationOpened = '', orderShown = false;
 
 function render() {
   if (receiving) return;
@@ -347,6 +349,18 @@ function render() {
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? 'OPPONENT' : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false);
+  const orderReading = orderUI.isReading() && !replay.active;
+  $('battle').dataset.orderReading = String(orderReading);
+  $('order-continue').hidden = !orderReading;
+  if (orderReading) {
+    $('playback-pacing').hidden = false; $('playback-pacing').dataset.kind = 'order';
+    $('playback-next').hidden = true; $('playback-skip').hidden = true;
+    text('reading-kind', 'Turn order'); text('reading-title', `Round ${order.round ?? '—'}`);
+    readingDetail({ detail: [...order.summary, order.hasRolls ? 'Ties broken by d20' : ''].filter(Boolean).join(' · ') });
+    $('reading-detail').hidden = false; $('reading-open').setAttribute('aria-label', 'Turn order details');
+    if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
+  }
+  orderShown = orderReading;
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
@@ -361,7 +375,7 @@ function render() {
   wasTargeting = targeting;
   const canAuto = () => ready && !rendererFailed && !document.hidden && $('battle').dataset.connection === 'live' &&
     !playbackState.active && !replay.active && !action.opened && !action.sending &&
-    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening();
+    !planning.model().opened && !planning.model().sending && !document.querySelector('dialog[open]') && !orderUI.isOpening() && !orderUI.isReading();
   upkeepUI.render(canAuto());
   const liveMarkers = upkeepUI.markers(board.round);
   if (liveMarkers) text('round-phase', 'UPKEEP');
@@ -369,9 +383,12 @@ function render() {
   // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
   // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.
   const impact = Boolean(playbackState.cue) && (playbackState.stage === 'impact' || playbackState.stage === 'resolved');
+  type OrderRow = { id: string; position: number; tempo: string; speed: string; roll: string };
+  const orderRows = new Map<string, OrderRow>(orderUI.isReading() && !replay.active ? (order.rows as OrderRow[]).map(row => [row.id, row]) : []);
   for (const one of creatures) {
     const node = nodes.get(one.id); if (!node) continue;
-    const chips: EffectChip[] = impact
+    const place = orderRows.get(one.id);
+    const chips: EffectChip[] = place ? [{ kind: 'order', value: String(place.position), label: place.tempo, tempo: place.speed, text: `Turn ${place.position} · ${place.tempo}${place.roll ? ` · ${place.roll}` : ''}` }] : impact
       ? (playbackState.cue?.effects ?? []).filter((item: { creature: string }) => item.creature === one.id).map((item: { chip: EffectChip }) => item.chip)
       : (markers ?? []).filter((marker: { id: string }) => marker.id === one.id).flatMap((marker: { lines: { chip?: EffectChip; text: string }[] }) => marker.lines.map(line => line.chip ?? { kind: 'other', value: line.text, text: line.text }));
     effectChips(node, chips);
@@ -564,7 +581,11 @@ $('playback-next').addEventListener('click', () => {
 });
 $('playback-skip').addEventListener('click', () => playback.skip({ dismissUpkeep: true }));
 $('playback-result').addEventListener('click', () => $<HTMLDialogElement>('result-dialog').showModal());
-$('reading-open').addEventListener('click', () => { if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal(); });
+$('reading-open').addEventListener('click', () => {
+  if (orderUI.isReading()) orderUI.details();
+  else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
+});
+$('order-continue').addEventListener('click', () => orderUI.finish());
 scene.onResizeDuringPlayback = () => playback.skip();
 // A held Step or a text receipt has no running Phaser tween, but rotation still cancels it. A resize that
 // keeps the orientation (a browser bar, a dragged window) re-lays out the held frame and keeps it.

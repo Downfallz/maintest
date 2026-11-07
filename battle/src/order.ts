@@ -70,9 +70,14 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     }));
   }
   let shownTurn = '';
+  // A newly revealed order is read on the field (a numbered badge on each creature) and in the dock's card,
+  // never in a dialog over the field; the full order, rules and rolls stay one tap away. Everything waits for
+  // Continue, an opponent's action included.
+  let reading = false;
+  function finish() { if (!reading) return; reading = false; onVisibility(); }
   function render(model: Model, enabled: boolean, canAuto: boolean) {
     available = enabled; openers.forEach(button => { button.disabled = !enabled; });
-    if (!enabled) { opener = null; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }
+    if (!enabled) { opener = null; reading = false; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }
     const next = JSON.stringify([model, enabled]);
     if (key !== next) {
       const active = document.activeElement as HTMLElement | null;
@@ -90,7 +95,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       shownTurn = turn;
       if (focus) el(parent).querySelector<HTMLButtonElement>(`[data-order-creature="${focus}"]`)?.focus({ preventScroll: true });
     }
-    if (canAuto && reveal.model().pending) show(true);
+    if (canAuto && reveal.model().pending && !reading) { reveal.presented(); reading = true; onVisibility(); }
   }
-  return { render, isOpening: () => opening };
+  return { render, isOpening: () => opening, isReading: () => reading, finish, details: () => show(true) };
 }

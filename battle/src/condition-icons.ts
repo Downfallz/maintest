@@ -53,7 +53,7 @@ export function iconElement(key: string, title = '') {
   return svg;
 }
 
-export interface EffectChip { kind: string; value: string; text?: string; condition?: string | null; critical?: boolean }
+export interface EffectChip { kind: string; value: string; text?: string; condition?: string | null; critical?: boolean; label?: string; tempo?: string }
 // One chip per effect, everywhere an effect lands on a creature: the icon of what moved, the amount, and the
 // engine's words kept unseen for screen readers. Damage is a drop, healing a heart, energy a bolt, a condition
 // its own icon; a condition ending is its icon dimmed.
@@ -61,6 +61,14 @@ const CHIP_ICONS: Record<string, string> = { damage: 'health-loss', heal: 'healt
 export function chipElement(chip: EffectChip, effects: Cue[] = []) {
   const node = document.createElement('span');
   node.className = 'effect-chip'; node.dataset.kind = chip.kind;
+  // A place in the turn order: its number large, its tempo beside it.
+  if (chip.kind === 'order') {
+    node.dataset.tempo = chip.tempo ?? '';
+    const number = document.createElement('span'); number.className = 'order-number'; number.textContent = chip.value; number.setAttribute('aria-hidden', 'true');
+    const tempo = document.createElement('span'); tempo.className = 'chip-label'; tempo.textContent = chip.label ?? ''; tempo.setAttribute('aria-hidden', 'true');
+    const words = document.createElement('span'); words.className = 'unseen'; words.textContent = chip.text || chip.value;
+    node.append(number, tempo, words); return node;
+  }
   const key = chip.kind === 'condition' || chip.kind === 'ends' ? conditionKey(chip.condition, effects) : CHIP_ICONS[chip.kind] ?? 'other';
   if (chip.kind === 'condition' || chip.kind === 'ends') node.dataset.cue = key;
   node.append(iconElement(key));

@@ -235,7 +235,10 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       await readResults(page);
       if (view.board.timeline.length && view.board.subPhase !== 'TieOrder' && !orderRounds.has(view.board.roundNumber)) {
         const beforeShown = [...shown], beforeWrites = writes.length;
-        await expect(page.locator('#order-dialog')).toBeVisible({ timeout: 20000 });
+        // The revealed order reads on the field and in the card (ADR 0144); the card opens the full order.
+        await expect(page.locator('#order-continue')).toBeVisible({ timeout: 20000 });
+        if (!orderRounds.size) await page.screenshot({ path: info.outputPath('order-real-host.jpg'), type: 'jpeg', quality: 85 });
+        await page.locator('#reading-open').click(); await expect(page.locator('#order-dialog')).toBeVisible();
         await expect(page.locator('#order-list [data-order-creature]')).toHaveText(view.board.timeline.map(slot => {
           const creatures = [...view.board.allies, ...view.board.enemies], one = creatures.find(one => one.id === slot.creature);
           // The base creature reads as a numbered creature (player-terminology.md); other namesakes take their id.
@@ -244,8 +247,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
         }));
         for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);
         expect(shown).toEqual(beforeShown); expect(writes.length).toBe(beforeWrites);
-        if (!orderRounds.size) await page.screenshot({ path: info.outputPath('order-real-host.jpg'), type: 'jpeg', quality: 85 });
-        await page.locator('#order-close').click(); orderRounds.add(view.board.roundNumber);
+        await page.locator('#order-close').click(); await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
       }
       if (!taught.has(view.waitingFor)) {
         await expect(page.locator('#help-dialog')).toBeVisible({ timeout: 20000 });

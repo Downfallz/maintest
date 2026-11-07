@@ -465,8 +465,12 @@ the presented board, so recorded replay retains its own round, order, rolls and 
 reference during live action playback explicitly settles that queue, like History. Missing initiatives
 or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
 
-A newly observed public TimelineBuilt event queues one reveal summary. It waits for both teams' tie
-ordering, action playback and open dialogs/drafts to finish, then appears before the next first-use tip.
+A newly observed public TimelineBuilt event queues one reveal. It waits for both teams' tie
+ordering, action playback and open dialogs/drafts to finish, then reads on the field before the next first-use
+tip ([ADR 0144](../docs/adr/0144-read-the-turn-order-on-the-field.md)): a numbered badge on each creature, gold
+for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a d20 broke a tie, and
+**Continue**. The card opens the full order. Until Continue nothing else plays: an opponent's action that
+arrives meanwhile waits, unplayed, then plays and holds for its OK.
 Reading Order manually consumes that pending reveal. Initial load, reload/reconnect and recorded sessions
 are baselines, not a new announcement; duplicate events do not repeat it. Advancing beyond the round or
 losing the seat clears it. No reveal preference or private data is persisted. The History entries for
