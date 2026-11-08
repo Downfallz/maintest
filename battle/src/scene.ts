@@ -116,7 +116,9 @@ export class BattleScene extends Phaser.Scene {
       const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      figure.image.setAlpha(!creature.isAlive ? .20 : state.mutationFocus && !selected ? .52 : 1);
+      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full.
+      const aside = state.stage === 'targeting' && !legal && !selected && !acting;
+      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : 1);
       figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
