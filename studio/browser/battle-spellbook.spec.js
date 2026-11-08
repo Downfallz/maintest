@@ -147,6 +147,12 @@ test('short landscape, small portrait and enlarged text keep the browser scrolla
   }
   await page.addStyleTag({ content: '#combat-dialog { font-size: 200%; } #combat-dialog * { font-size: inherit !important; }' });
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
+  // A chosen hidden intent adds its estimate under the spells: they keep a readable height, the panel scrolls as a
+  // fallback, and the declaration stays pinned in reach.
+  await spell(page, 'spell-2').click(); await expect(page.locator('#intent-preview')).toBeVisible();
+  expect(await page.locator('#combat-browser').evaluate(node => node.clientHeight)).toBeGreaterThanOrEqual(90);
+  await fitsViewport(page, '#combat-declare');
+  await expect(page.locator('#combat-declare')).toBeEnabled();
 });
 test('keyboard paging keeps unavailable spell references reachable without selecting or sending', async ({ page }) => {
   const h = await mount(page);

@@ -156,3 +156,9 @@ test('on a phone the field keeps its two rows beside the tempos and marks the cr
   await expect(page.locator('[data-speed="Quick"]')).toBeInViewport(); await expect(page.locator('[data-speed="Standard"]')).toBeInViewport();
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
+test('the team\'s tempos leave Help and History to the field\'s header', async ({ page }) => {
+  const h = await mount(page);
+  for (const node of await page.locator('#planning-dialog .history-reference').all()) await expect(node).toBeHidden();
+  await expect(page.locator('#help-open')).toBeVisible(); await expect(page.locator('#history-open')).toBeVisible();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});

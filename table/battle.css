@@ -1168,13 +1168,14 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 @media (max-height: 700px) and (orientation: portrait) {
   body:has(#combat-dialog[open]) { --spell-height: min(62dvh, 490px); }
 }
-/* One scroller: the spells scroll under a header that stays put, and the panel itself never does, so a swipe
-   cannot carry the creature's name and its chips out of sight. Enlarged text shrinks the spells' room, not the
-   header's or the footer's, and the footer that declares stays at the bottom edge. */
-#combat-dialog { overflow: hidden; padding-bottom: 0; }
+/* One scroller: the spells scroll under a header that stays put, so a swipe cannot carry the creature's name and
+   its chips out of sight. The panel scrolls only as a fallback, once its header, a hidden intent's estimate and the
+   footer leave the spells less than a readable height (enlarged text on a short screen): the spells keep that
+   height, and the footer that declares stays pinned at the bottom edge. */
+#combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
 #combat-dialog > :not(#combat-browser) { flex: 0 0 auto; }
-#combat-dialog #combat-browser { flex: 1 1 0; min-height: 0; }
-#combat-dialog .combat-dialog-footer { padding-bottom: 12px; background: var(--panel); }
+#combat-dialog #combat-browser { flex: 1 1 0; min-height: 96px; }
+#combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
 /* Choosing at the slot declares nothing here: an empty footer takes no room under the spells. */
 #combat-dialog .combat-dialog-footer:not(:has(> :not([hidden]))) { display: none; }
 
