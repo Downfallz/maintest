@@ -486,7 +486,7 @@
 .growth-receipt-text strong { font: 15px Georgia,serif; color: #f1d7a2; }
 #growth-receipt-summary { font-size: 12px; color: #c7d5cd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #growth-receipt [data-growth-open] { min-height: 44px; padding: 0 16px; border: 1px solid #b79868; border-radius: 8px; background: #2a3b33; color: #f1d7a2; font-weight: 600; }
-#growth-dismiss { min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: #c7d5cd; font-size: 20px; }
+#growth-dismiss { min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: #c7d5cd; font-size: 13px; font-weight: 600; }
 #growth-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #growth-reveal { display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 14px 20px 20px; }
 .reveal-group h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
@@ -1167,4 +1167,25 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   #battle[data-docked="true"] .team-label { display: none; }
   /* The others step back so the one the sheet is about reads first. */
   #battle[data-docked="true"] #actor-layer:has(.creature[data-sheet-focus="true"], .creature[data-mutation-focus="true"]) .creature:not([data-sheet-focus="true"]):not([data-mutation-focus="true"]) .caption { opacity: .62; }
+}
+
+/* The tempo sheet's top stays compact and pinned: the creature in hand and its two tempos never scroll away while
+   its spells are read beneath them. On a phone the rule line gives way, since each tempo card states it. */
+#planning-dialog[data-kind="Speed"] #planning-choices { padding-top: 0; }
+.tempo-pinned { position: sticky; top: 0; z-index: 3; margin: 0 -14px; padding: 6px 14px 8px; background: var(--panel); box-shadow: 0 6px 10px -8px #000c; }
+.tempo-pinned .tempo-head { margin: 0 0 6px; }
+.tempo-pinned .tempo-head h3 { font-size: 18px; }
+.tempo-pinned .actor-chip { min-height: 24px; }
+#planning-choices .tempo-pinned .tempo-option { min-height: 0; gap: 10px; padding: 8px 10px; border-radius: 12px; }
+.tempo-pinned .tempo-mark { width: 34px; height: 34px; font-size: 17px; }
+.tempo-pinned .tempo-words strong { font-size: 16px; }
+.tempo-pinned .tempo-words span { font-size: 11px; }
+@media (max-width: 619px) {
+  #planning-dialog[data-kind="Speed"] #planning-help { display: none; }
+  #planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] { min-height: 40px; padding: 2px; }
+  #planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] span { font-size: 14px; }
+  #planning-choices .tempo-pinned .tempo-option { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px; }
+  .tempo-pinned .tempo-mark { width: 30px; height: 30px; font-size: 15px; }
+  .tempo-pinned .tempo-words span { font-size: 10px; line-height: 1.25; }
+  .tempo-reference { margin-top: 8px; padding-top: 6px; }
 }

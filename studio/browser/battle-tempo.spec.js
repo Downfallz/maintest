@@ -151,5 +151,8 @@ test('on a phone the field keeps its two rows beside the tempos and marks the cr
   await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('⚡ INSTINCT');
   await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-sheet-focus', 'true');
   await page.screenshot({ path: info.outputPath('tempo-field.png') });
+  // The creature in hand and its two tempos stay pinned while its spells scroll beneath them.
+  await page.locator('#planning-choices').evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(page.locator('[data-speed="Quick"]')).toBeInViewport(); await expect(page.locator('[data-speed="Standard"]')).toBeInViewport();
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

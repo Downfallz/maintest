@@ -118,6 +118,9 @@ const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
+// The mutation reveal last read: opened with See and closed, or set aside with Continue.
+let revealRead: number | null = null;
+const revealUnread = () => { const receipt = growth.receipt() as { sequence: number } | null; return Boolean(receipt) && receipt!.sequence !== revealRead; };
 const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
@@ -481,8 +484,10 @@ function render() {
   const asked = planning.model();
   if (asked.opened) mutationOpened = asked.question;
   // The team's tempos open the same way, docked as well (ADR 0150).
+  // The tempos wait for a fresh mutation reveal to be read first (See, then closed, or Continue): the field shows who
+  // mutated into what, which the docked sheet would crowd. The dock's Team tempos opens them at any time.
   else if (asked.available && ['Evolution', 'Speed'].includes(asked.latest?.waitingFor) && !asked.latest.waiting && mutationOpened !== asked.question
-    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+    && (asked.latest.waitingFor !== 'Speed' || !revealUnread()) && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
   // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
   // after whatever the board still had to show. Closing it leaves Choose spell in the dock.
   const fight = combat.model();
@@ -735,6 +740,8 @@ $('reading-open').addEventListener('click', () => {
   else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
 });
 $('order-continue').addEventListener('click', () => orderUI.finish());
+// A mutation reveal is read once its sheet closes; Continue sets it aside, which reads it too.
+$('growth-dialog').addEventListener('close', () => { revealRead = (growth.receipt() as { sequence: number } | null)?.sequence ?? revealRead; render(); });
 // A docked choice opening or closing beside the field resizes it; that re-lays out the cast being shown rather than
 // passing over it, which a rotation or a resized window still does.
 scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; return; } playback.skip(); };

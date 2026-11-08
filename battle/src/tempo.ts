@@ -85,7 +85,9 @@ export function tempoControls(controller: Controller, name: (id: unknown) => str
       words.append(node('strong', tempoLabel(speed)), node('span', LINE[speed] ?? ''));
       button.append(mark, words); button.addEventListener('click', () => controller.choose({ speed })); buttons.append(button);
     }
-    choices.replaceChildren(head, buttons);
+    // The creature in hand and its two tempos stay pinned while its spells scroll beneath them.
+    const pinned = node('div', '', 'tempo-pinned'); pinned.append(head, buttons);
+    choices.replaceChildren(pinned);
     if (tempo.accepted.length) {
       const values = tempo.accepted.map((one: { creature: number; speed: string }) => `${name(one.creature)}: ${tempoLabel(one.speed)}`).join(' · ');
       choices.append(node('p', `Accepted · ${values}`, 'tempo-accepted'));
