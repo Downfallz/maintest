@@ -122,8 +122,11 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await page.locator('#help-close').click(); await page.locator('#playback-result').click();
-  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  // The tip read, the team's tempos open by themselves (ADR 0150) and acknowledge their asking; the last result is
+  // still a tap away once they are closed.
+  await page.locator('#help-close').click(); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+  await page.locator('#planning-close').click(); await page.locator('#playback-result').click();
+  await expect(page.locator('#result-text')).toContainText('base 3'); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });
 test('polls, hidden-tab reconnection and reload do not repeat the same receipt', async ({ page }) => {
   const h = await mount(page); await close(page); await h.publish([]);
