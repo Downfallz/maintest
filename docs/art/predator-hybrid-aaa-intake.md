@@ -11,7 +11,10 @@ WebP (`quality=88`, `method=6`, `alpha-quality=100`) and staged in
 | Blightweaver | 4 | `predator-blightweaver-09.webp` through `-12.webp` |
 
 These images are recorded in `table/battle-predator-hybrid-art.js` with stable
-relative paths and canvas dimensions. Variant numbers reflect the order in the
+relative paths and canvas dimensions, each naming the Stage 3 illustration it varies
+by its page id (`predator-stage3-soulreaver`, ...): the page ships no content id, and
+`data/presentation/mutation-art.json` already maps each Stage 3 tier to that id. The
+host serves the module like every module beside the page. Variant numbers reflect the order in the
 approved art batch; they **do not imply a particular secondary tier**. A
 secondary-tier-to-variant mapping must be approved before any image is selected
 by purchased mutation IDs.

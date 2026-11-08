@@ -58,10 +58,16 @@ async function mount(page) {
   return state;
 }
 
-// Find controls with real Tab navigation: no locator.focus(), synthetic clicks, or pointer actions.
+// Find controls with real Tab navigation: no locator.focus(), synthetic clicks, or pointer actions. A control behind the
+// focus in the page's order is reached with Shift+Tab, as a person would, rather than by tabbing round the whole page.
 async function keyboardActivate(page, selector) {
   const target = page.locator(selector); await expect(target).toBeVisible(); await expect(target).toBeEnabled();
-  for (let n = 0; n < 100 && !await target.evaluate(node => node === document.activeElement); n++) await page.keyboard.press('Tab');
+  const behind = await target.evaluate(node => {
+    const active = document.activeElement;
+    return Boolean(active && active !== document.body && node.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  const key = behind ? 'Shift+Tab' : 'Tab';
+  for (let n = 0; n < 100 && !await target.evaluate(node => node === document.activeElement); n++) await page.keyboard.press(key);
   await expect(target).toBeFocused(); await expect(target).toBeInViewport();
   await page.keyboard.press('Enter');
 }
@@ -76,7 +82,8 @@ async function combat(page, state) {
 }
 
 test('keyboard journey reads energy, compares a mutation, edits every tempo and reopens applied damage', async ({ page }, info) => {
-  test.setTimeout(120000);
+  // Every Tab repaints a desktop canvas rendered in software: a CI runner takes over twice the 45s a laptop does.
+  test.setTimeout(180000);
   const state = await mount(page);
   await expect(page.locator('#upkeep-body')).toContainText('+2 energy · 0 → 2');
   expect(state.shown).toEqual([]); await keyboardActivate(page, '#upkeep-close');
@@ -100,15 +107,14 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await keyboardActivate(page, '[data-tempo-tab="3"]');
   await page.keyboard.press('Home'); await expect(page.locator('[data-tempo-tab="1"]')).toBeFocused();
   await keyboardActivate(page, '[data-speed="Quick"]');
-  await keyboardActivate(page, '#planning-dialog [data-help-open]'); await page.keyboard.press('Escape');
-  await expect(page.locator('#planning-dialog [data-help-open]')).toBeFocused();
+  await keyboardActivate(page, '#help-open'); await page.keyboard.press('Escape');
+  await expect(page.locator('#help-open')).toBeFocused();
   await expect(page.locator('[data-tempo-tab="1"]')).toContainText('Instinct');
   expect(state.writes.length).toBe(1); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#planning-dialog')).toBeHidden();
   expect(state.writes.slice(1).map(one => one.speed)).toEqual(['Quick', 'Standard', 'Standard']);
   // The spell choice opens by itself on the player's turn (ADR 0149).
   await combat(page, state); await expect(page.locator('#combat-dialog')).toBeVisible();
-  await keyboardActivate(page, '#combat-details-mode');
   await keyboardActivate(page, '[data-spell="strike"]');
   await keyboardActivate(page, '[data-creature="4"]');
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
@@ -149,9 +155,9 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     for (let i = 0; i < 3; i++) await page.locator('[data-speed="Standard"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close'); await page.locator('#planning-confirm').click();
     await expect(page.locator('#planning-dialog')).toBeHidden();
-    await combat(page, state); await openSpells(page); await page.locator('#combat-details-mode').click();
+    await combat(page, state); await openSpells(page);
     const last = page.locator('[data-spell="spell-17"]'); await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
-    await fitsViewport(page, '#combat-dialog-close, #combat-details-mode'); await page.keyboard.press('Escape');
+    await fitsViewport(page, '#combat-dialog-close'); await page.keyboard.press('Escape');
     await page.locator('#settings').click(); await page.locator('#concede-open').scrollIntoViewIfNeeded();
     await expect(page.locator('#concede-open')).toBeInViewport(); await page.keyboard.press('Escape');
     await page.locator('[data-creature="4"]').click();

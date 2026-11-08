@@ -26,12 +26,6 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   let tree: ReturnType<typeof mutationTree> | null = null;
   const tempos = tempoControls(controller, name);
   let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null, question = '';
-  const expand = el<HTMLButtonElement>('mutation-expand');
-  function expandTree(value: boolean) {
-    dialog.classList.toggle('expanded-tree', value);
-    expand.setAttribute('aria-expanded', String(value)); expand.textContent = value ? 'Compact' : 'Expand';
-  }
-  expand.addEventListener('click', () => expandTree(!dialog.classList.contains('expanded-tree')));
   el('planning-open').addEventListener('click', () => { beforeOpen(); controller.open(); });
   el('planning-close').addEventListener('click', () => controller.close());
   el('planning-confirm').addEventListener('click', () => { void controller.submit(); });
@@ -79,15 +73,16 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
         creature: String(shown.selected), focus: (now.choice?.creature === shown.selected ? now.choice?.tier : null) ?? shown.faces[0]?.id ?? null,
         choose: now.available && !now.sending ? tier => { selectCreature(shown.selected); controller.choose({ creature: shown.selected, tier }); } : undefined };
     };
-    const actions = document.createElement('div'); actions.className = 'planning-actions';
+    // The sheet's own header holds what the whole pick is about: the full tree to read, and passing what is left.
     const full = button('Full mutation tree', () => { const shown = view(creature); if (shown) atlas.open(shown, catalogue, full, next => view(Number(next))); }); full.id = 'mutation-atlas-open'; full.className = 'planning-action atlas-open';
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; pass.className = 'planning-action';
-    actions.append(full, pass);
+    el('planning-tools').replaceChildren(full, pass);
     if (creature != null) {
+      const actions = document.createElement('div'); actions.className = 'planning-actions';
       const inspectButton = button('Inspect creature', () => inspect(String(creature)));
       inspectButton.id = 'mutation-inspect'; inspectButton.className = 'planning-action'; actions.append(inspectButton);
+      el('planning-choices').append(actions);
     }
-    el('planning-choices').append(actions);
   }
   type Assignment = { id: number; position: number | null };
   type Fixed = { position: number; label: string; roll: string };
@@ -121,7 +116,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   function closeChoices() {
     if (!tree && !dialog.open && !rendered) return;
     tree?.dispose(); tree = null;
-    expandTree(false); el('mutation-preview-region').replaceChildren(); el('mutation-preview-region').hidden = true;
+    el('planning-tools').replaceChildren(); el('mutation-preview-region').replaceChildren(); el('mutation-preview-region').hidden = true;
     if (dialog.open) dialog.close();
     rendered = ''; creature = null; question = '';
     el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
@@ -206,7 +201,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
-    expand.hidden = model.latest.waitingFor !== 'Evolution';
+    if (model.latest.waitingFor !== 'Evolution') el('planning-tools').replaceChildren();
     el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
     // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing
     // left to offer, so the next creature with offers is shown, and a keyboard starts there again.
@@ -214,7 +209,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (continued && !mutationChoices(model.latest, catalogue, creature).faces.length) creature = null;
     question = model.question;
     rebuild(model, catalogue);
-    for (const node of Array.from(el('planning-choices').querySelectorAll<HTMLButtonElement>('button'))) {
+    for (const node of [...el('planning-tools').querySelectorAll<HTMLButtonElement>('button'), ...el('planning-choices').querySelectorAll<HTMLButtonElement>('button')]) {
       // Inspecting and reading the full tree never edit the draft, so they stay available while sending.
       const reading = node.id === 'mutation-inspect' || node.id === 'mutation-atlas-open';
       node.disabled = !reading && (!model.canEdit || node.dataset.offered === 'false');

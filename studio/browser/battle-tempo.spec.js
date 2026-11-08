@@ -96,7 +96,7 @@ test('keyboard tabs and short landscapes keep the footer reachable without losin
   await page.setViewportSize({ width: 844, height: 390 }); const h = await mount(page);
   await page.locator('[data-tempo-tab="1"]').focus(); await page.keyboard.press('ArrowRight');
   await expect(page.locator('[data-tempo-tab="2"]')).toHaveAttribute('aria-selected', 'true');
-  await page.locator('[data-speed="Quick"]').click(); await page.locator('#planning-dialog [data-help-open]').click();
+  await page.locator('[data-speed="Quick"]').click(); await page.locator('#help-open').click();
   await page.locator('#help-close').click(); await expect(page.locator('[data-tempo-tab="2"]')).toContainText('Instinct');
   await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
@@ -154,5 +154,11 @@ test('on a phone the field keeps its two rows beside the tempos and marks the cr
   // The creature in hand and its two tempos stay pinned while its spells scroll beneath them.
   await page.locator('#planning-choices').evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect(page.locator('[data-speed="Quick"]')).toBeInViewport(); await expect(page.locator('[data-speed="Standard"]')).toBeInViewport();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('the team\'s tempos leave Help and History to the field\'s header', async ({ page }) => {
+  const h = await mount(page);
+  for (const node of await page.locator('#planning-dialog .history-reference').all()) await expect(node).toBeHidden();
+  await expect(page.locator('#help-open')).toBeVisible(); await expect(page.locator('#history-open')).toBeVisible();
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

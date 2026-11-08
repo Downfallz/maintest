@@ -98,18 +98,22 @@ test('a keyboard switch of creature keeps focus on the tab that was chosen', asy
   await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Enter');
   await expect(page.locator('#planning-creatures [data-creature="1"]')).toBeFocused(); expect(h.state.errors).toEqual([]);
 });
-test('the phone tree leaves the whole battlefield visible and enables switching recipients directly on it', async ({ page }, info) => {
+test('the phone tree opens expanded beside the whole battlefield, its tools in its header, and switches recipients on the field', async ({ page }, info) => {
   test.skip(info.project.name === 'desktop', 'Phone layout.');
   const h = await mount(page);
   await page.clock.runFor(150);
+  // Always at its full height: no Expand or Compact; the field ends where the sheet begins.
   const scene = await page.locator('#battle-zone').boundingBox(), dock = await page.locator('#planning-dialog').boundingBox();
-  expect(scene.y + scene.height).toBeLessThanOrEqual(dock.y + 1);
-  await page.locator('#mutation-expand').click();
-  const expanded = await page.locator('#planning-dialog').boundingBox();
-  expect(expanded.height).toBeGreaterThan(dock.height);
-  const field = await page.locator('#battle-zone').boundingBox();
-  expect(Math.abs(field.y + field.height - expanded.y)).toBeLessThan(2);
-  await page.locator('#mutation-expand').click();
+  await expect(page.locator('#mutation-expand')).toHaveCount(0);
+  expect(Math.abs(scene.y + scene.height - dock.y)).toBeLessThan(2);
+  expect(dock.height).toBeGreaterThan(page.viewportSize().height * 0.45);
+  // The header holds the full tree and the pass, in place of Help and History the field's header already offers.
+  const header = await page.locator('#planning-dialog .planning-header').boundingBox();
+  for (const id of ['#mutation-atlas-open', '#planning-pass']) {
+    const box = await page.locator(id).boundingBox();
+    expect(box.y).toBeGreaterThanOrEqual(header.y); expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height + 1);
+  }
+  for (const node of await page.locator('#planning-dialog .history-reference').all()) await expect(node).toBeHidden();
   expect(h.state.writes).toEqual([]);
   const boxes = await page.locator('[data-mutation]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().y));
   expect(new Set(boxes).size).toBe(1);
