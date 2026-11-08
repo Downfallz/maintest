@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { figureGeometry, CREATURE_ART } from './battle-art.js';
-import { BASE_EVOLUTION_ART, EVOLUTION_ART, CAPSTONE_EFFECTS, capstoneEffect, composeCapstones, createEvolutionRegistry, EVOLUTION_REGISTRY } from './battle-evolution-art.js';
+import { BASE_EVOLUTION_ART, EVOLUTION_ART, HYBRID_ART, CAPSTONE_EFFECTS, capstoneEffect, composeCapstones, createEvolutionRegistry, EVOLUTION_REGISTRY } from './battle-evolution-art.js';
 
 const tiersRoot = new URL('../data/Tiers/', import.meta.url);
 const tiers = readdirSync(tiersRoot).filter(name => name.endsWith('.json')).map(name => JSON.parse(readFileSync(new URL(name, tiersRoot), 'utf8')));
@@ -25,8 +25,30 @@ test('every registered illustration is a WebP file of the folder', () => {
     assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WEBP');
   }
 });
+test('every hybrid is a WebP file of the hybrids folder, and every file there is a registered hybrid', () => {
+  assert.deepEqual(readdirSync(new URL('battle-art/evolutions/hybrids/', import.meta.url)).filter(name => name.endsWith('.webp')).sort((a, b) => a.localeCompare(b)),
+    HYBRID_ART.map(asset => asset.file.replace('evolutions/hybrids/', '')).sort((a, b) => a.localeCompare(b)));
+  for (const asset of HYBRID_ART) {
+    const bytes = readFileSync(new URL(`battle-art/${asset.file}`, import.meta.url));
+    assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WEBP');
+    assert.equal(EVOLUTION_REGISTRY.art(asset.id), asset);
+  }
+});
+test('every hybrid varies a registered Stage 3 for an influence of real illustrations or families, one Ultimate each', () => {
+  const families = new Set(EVOLUTION_ART.map(asset => asset.family));
+  for (const asset of HYBRID_ART) {
+    assert.equal(EVOLUTION_REGISTRY.art(asset.dominant)?.stage, 3, asset.id);
+    if (asset.ultimate) { assert.equal(asset.influence, null, asset.id); continue; }
+    if (asset.influence.artworks) for (const id of asset.influence.artworks) assert.equal(EVOLUTION_REGISTRY.art(id)?.stage, 2, `${asset.id} ${id}`);
+    else assert.ok(families.has(asset.influence.family) && asset.influence.family !== EVOLUTION_REGISTRY.art(asset.dominant).family, asset.id);
+  }
+  for (const dominant of new Set(HYBRID_ART.map(asset => asset.dominant))) {
+    assert.equal(HYBRID_ART.filter(asset => asset.dominant === dominant && asset.ultimate).length, 1, dominant);
+    assert.equal(EVOLUTION_REGISTRY.influences(dominant).length, 3, dominant);
+  }
+});
 test('every image carries a silhouette inside its canvas and stands at its bottom centre', () => {
-  for (const asset of EVOLUTION_ART) {
+  for (const asset of [...EVOLUTION_ART, ...HYBRID_ART]) {
     const [left, top, right, bottom] = asset.bounds;
     assert.ok(left >= 0 && top >= 0 && right <= asset.width && bottom <= asset.height && left < right && top < bottom, asset.id);
     assert.deepEqual([...asset.ground], [(left + right) / 2, bottom], asset.id);
@@ -39,7 +61,7 @@ test('a hybrid is one registered entry, found by the two illustrations it combin
   assert.equal(registry.art('transcendent-necrotic').hybrid, 'warped-stage2-necrotic');
   assert.equal(registry.hybrid('warped-stage2-necrotic', 'warped-stage3-transcendent'), null);
   assert.equal(registry.art('warped-stage3-transcendent').stage, 3);
-  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic'), null);
+  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic', 'warped'), null);
 });
 test('every capstone lends one registered effect, and effects compose in their fixed layer order', () => {
   const capstones = tiers.filter(tier => tier.level >= 4);
@@ -49,7 +71,7 @@ test('every capstone lends one registered effect, and effects compose in their f
 });
 test('every illustration is drawn to the same box as the audited sprites, so no stage looks smaller than the one before', () => {
   const home = { x: 0, y: 0, size: 180, hitWidth: 200 };
-  for (const asset of [...EVOLUTION_ART, ...CREATURE_ART]) {
+  for (const asset of [...EVOLUTION_ART, ...HYBRID_ART, ...CREATURE_ART]) {
     const { scale } = figureGeometry(asset, home, false);
     const [left, top, right, bottom] = asset.bounds;
     const width = (right - left) * scale, height = (bottom - top) * scale;

@@ -157,3 +157,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0149](0149-open-the-spell-choice-with-the-players-turn.md) | Open the spell choice with the player's turn, docked beside the field | Accepted for the opt-in battle view |
 | [0150](0150-open-the-team-tempos-with-their-phase.md) | Open the team's tempos with their phase, docked beside the field | Accepted for the opt-in battle view |
 | [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view |
+| [0152](0152-choose-a-stage-3-hybrid-by-influence.md) | Choose a Stage 3's hybrid by the influences of the creature's other mutations | Accepted for the opt-in battle view |
