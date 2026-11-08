@@ -18,6 +18,27 @@ export function rematchLink(table, held) {
   return `/lobby?${params}`;
 }
 
+/**
+ * What the battle's end card offers to play again (ADR 0153): the same kind of game, in one tap where it can be.
+ * Against a bot or on a shared device it opens the same table again (`request`, POST /api/lobby/tables). Against
+ * a friend it keeps their seat, the friend's invitation. Against a player who is not a friend, or whose
+ * friendship this page could not read, it opens the lobby on them (`link`), which says what is missing. Null when
+ * there is nobody to play again: a replay, a page holding no seat, an opponent with no account.
+ * @param {any} table
+ * @param {string[]} held
+ * @param {string | null} [friendship] how the opponent stands to this player: 'friend', 'asked', 'asking', 'none'
+ */
+export function rematchPlan(table, held, friendship = null) {
+  const link = rematchLink(table, held);
+  if (!link) return null;
+  const theirs = table.seats.find(seat => !held.includes(seat.seat));
+  const format = table.format || undefined;
+  if (!theirs) return { label: 'Rematch', request: { opponent: 'hotseat', format } };
+  if (theirs.kind === 'bot') return { label: 'Rematch', request: { opponent: 'bot', format } };
+  if (friendship === 'friend') return { label: 'Invite to rematch', request: { opponent: 'friend', friend: theirs.account, format } };
+  return { label: 'Invite to rematch', link };
+}
+
 // How the match ended, for the seat reading it: who won and why, off the outcome the host serves. A page on
 // an older host that serves none says only that it is over. The table and the battle say it in the same words.
 export function outcomeText(view, seat) {
@@ -49,9 +70,14 @@ function teamResult(label, creatures) {
   const complete = Array.isArray(creatures) && creatures.length > 0;
   const alive = complete && creatures.every(one => typeof one.isAlive === 'boolean')
     ? `${creatures.filter(one => one.isAlive).length}/${creatures.length} standing` : 'Survivors unavailable';
-  const health = complete && creatures.every(one => Number.isFinite(one.health))
-    ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
-  return { label, text: `${alive} · ${health}` };
+  const counted = complete && creatures.every(one => Number.isFinite(one.health));
+  const health = counted ? `${creatures.reduce((sum, one) => sum + one.health, 0)} HP` : 'HP unavailable';
+  // The numbers the card draws, each null when the host did not serve it.
+  const standing = complete && creatures.every(one => typeof one.isAlive === 'boolean') ? creatures.filter(one => one.isAlive).length : null;
+  const hp = counted ? creatures.reduce((sum, one) => sum + Math.max(0, one.health), 0) : null;
+  const maxHp = counted && creatures.every(one => Number.isFinite(one.maxHealth) && one.maxHealth > 0)
+    ? creatures.reduce((sum, one) => sum + one.maxHealth, 0) : null;
+  return { label, text: `${alive} · ${health}`, standing, total: complete ? creatures.length : null, hp, maxHp };
 }
 
 // A result never elects its own winner from health. Missing legacy fields stay unavailable.

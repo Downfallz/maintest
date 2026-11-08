@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { outcomeText, rematchLink } from './outcome.js';
+import { matchResultSummary, outcomeText, rematchLink, rematchPlan } from './outcome.js';
 
 test('a host that serves no outcome only says the match is over', () => {
   assert.equal(outcomeText({ over: true }, 'player1'), 'The match is over.');
@@ -40,4 +40,32 @@ test('the final card trusts the host outcome even when the losing team has more 
   assert.equal(matchResultSummary({ ...view, outcome: null }, 'player1').title, 'Match complete');
   assert.equal(matchResultSummary({ ...view, over: false }, 'player1'), null);
   assert.match(matchResultSummary({ over: true }, 'player1').teams[0].text, /unavailable/);
+});
+
+test('the end card plays the same game again in one tap against a bot or on a shared device', () => {
+  const bot = { format: '1v1', seats: [{ seat: 'player1', kind: 'person', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Lookahead' }] };
+  assert.deepEqual(rematchPlan(bot, ['player1']), { label: 'Rematch', request: { opponent: 'bot', format: '1v1' } });
+  const shared = { format: '3v3', seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'person' }] };
+  assert.deepEqual(rematchPlan(shared, ['player1', 'player2']), { label: 'Rematch', request: { opponent: 'hotseat', format: '3v3' } });
+});
+test('against a player, the end card invites a friend at once and opens the lobby on anyone else', () => {
+  const table = { format: '2v2', seats: [{ seat: 'player1', kind: 'person', account: 'acct_mark' }, { seat: 'player2', kind: 'person', account: 'acct_bastien' }] };
+  assert.deepEqual(rematchPlan(table, ['player1'], 'friend'), { label: 'Invite to rematch', request: { opponent: 'friend', friend: 'acct_bastien', format: '2v2' } });
+  for (const friendship of ['none', 'asked', 'asking', null]) {
+    assert.deepEqual(rematchPlan(table, ['player1'], friendship), { label: 'Invite to rematch', link: '/lobby?rematch=acct_bastien&format=2v2' }, String(friendship));
+  }
+});
+test('the end card offers no rematch when there is nobody to play again', () => {
+  assert.equal(rematchPlan({ seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'person', name: 'Player' }] }, ['player1'], 'friend'), null);
+  assert.equal(rematchPlan(null, ['player1']), null);
+});
+test('each team of the result carries the numbers its card draws, null where the host served none', () => {
+  const creature = (health, isAlive) => ({ health, maxHealth: 30, isAlive });
+  const view = { over: true, outcome: { winner: 'player2', reason: 'Elimination' }, board: { roundNumber: 6,
+    allies: [creature(0, false), creature(-3, false)], enemies: [creature(12, true), creature(30, true)] } };
+  const [ours, theirs] = matchResultSummary(view, 'player1').teams;
+  assert.deepEqual({ ...ours }, { label: 'Your team', text: '0/2 standing · -3 HP', standing: 0, total: 2, hp: 0, maxHp: 60 });
+  assert.deepEqual({ ...theirs }, { label: 'Opponent', text: '2/2 standing · 42 HP', standing: 2, total: 2, hp: 42, maxHp: 60 });
+  const legacy = matchResultSummary({ over: true, board: { allies: [{}], enemies: [] } }, 'player1').teams;
+  assert.deepEqual({ ...legacy[0] }, { label: 'Your team', text: 'Survivors unavailable · HP unavailable', standing: null, total: 1, hp: null, maxHp: null });
 });

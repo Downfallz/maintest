@@ -29,6 +29,7 @@ import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { planningControls, type Catalogue } from './planning';
 import { matchControls } from './match';
+import { rematchPlan } from '../../table/outcome.js';
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { createBattleMatch } from '../../table/battle-match.js';
 import { replayOf, operatorToken } from '../../table/session.js';
@@ -113,7 +114,14 @@ const controls = combatControls(combat, name, passOver);
 const atlasUI = atlasControls(() => render());
 const planningUI = planningControls(planning, name, passOver, inspectCreature, atlasUI);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); });
+// The end card plays the same game again (ADR 0153): against this table's opponent, with the seats this browser holds
+// at it. A recording is nobody's game to play again.
+const rematchOf = () => {
+  if (!selected || (view as { replay?: unknown } | null)?.replay) return null;
+  const held = heldSeats.filter(one => one.table.id === selected!.table.id).map(one => one.seat);
+  return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
+};
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf);
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
@@ -678,6 +686,7 @@ async function discover(autoResume = true) {
 }
 
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
