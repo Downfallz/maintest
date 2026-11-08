@@ -8,7 +8,7 @@ const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">Tactical creature combat</span><h1>Downfall Instinct</h1></div></a>
     <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation"><span aria-hidden="true">☰</span><span>Menu</span></button>
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
-      <a id="play-link-home" href="/">Play</a>
+      <a id="play-link-home" href="/">Lobby</a>
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
       <a id="leaderboard-link" href="/leaderboard" hidden>Leaderboard</a>
       <button id="notifications-open" type="button" data-home-dialog="notifications-dialog" hidden>Notifications</button>

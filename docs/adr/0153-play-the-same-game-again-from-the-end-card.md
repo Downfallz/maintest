@@ -2,8 +2,8 @@
 
 Date: 2026-11-08
 
-Status: Accepted for the opt-in battle view. Builds on [ADR 0129](0129-friends-and-inviting-one-to-a-table.md)
-(stage 4's Rematch link) and [ADR 0145](0145-open-the-result-once-the-last-action-is-read.md).
+Status: Accepted for the opt-in battle view. Builds on [ADR 0129](0129-a-player-keeps-friends-and-invites-one-of-them-to-a-table.md)
+(stage 4's Rematch link) and [ADR 0145](0145-end-the-match-in-one-moment.md).
 
 ## Context
 

@@ -100,9 +100,9 @@
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
   </dialog>
   <dialog id="match-dialog" aria-labelledby="match-title">
-    <header class="match-header"><div><p class="eyebrow">MATCH COMPLETE</p><h2 id="match-title">Match complete</h2></div><form method="dialog"><button aria-label="Close match result">Close</button></form></header>
-    <div class="match-body"><p id="match-outcome"></p><div id="match-stats"></div><output id="match-replay-error"></output></div>
-    <footer class="match-footer"><button class="primary" id="match-replay" type="button">Replay the match</button><button type="button" data-history-open>Console · History</button><a href="/">Back to tables</a></footer>
+    <header class="match-header"><span class="match-crest" aria-hidden="true"></span><div><p class="eyebrow" id="match-eyebrow">MATCH COMPLETE</p><h2 id="match-title">Match complete</h2><p id="match-outcome"></p></div><form method="dialog"><button class="match-close" aria-label="Close match result">×</button></form></header>
+    <div class="match-body"><div id="match-stats"></div><output id="match-replay-error"></output></div>
+    <footer class="match-footer"><button class="primary" id="match-rematch" type="button" hidden>Rematch</button><button id="match-replay" type="button">Replay the match</button><a id="match-lobby" href="/">Lobby</a></footer>
   </dialog>
   
   <dialog id="concede-dialog" aria-labelledby="concede-title"><h2 id="concede-title">Concede this match?</h2><p>Your opponent wins immediately. This cannot be undone.</p><button id="concede-confirm" type="button">Concede match</button><form method="dialog"><button id="concede-cancel" type="submit" autofocus>Keep playing</button></form><p id="concede-error"></p></dialog>

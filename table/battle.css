@@ -741,24 +741,25 @@
 .battle-page .home-header .brand-mark { display: grid; place-items: center; width: 32px; height: 38px; border: 1px solid var(--brand-ember); border-radius: 10px 3px; font: 26px Georgia, serif; }
 .battle-page .navigation-panels dialog { margin: auto; }
 
-/* On short landscape screens the menu occupies the former brand slot in the match toolbar. */
+/* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
+   lobby keeps them. */
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 1240px) {
   .battle-page[data-home="member"] .home-header {
-    position: absolute; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
+    position: absolute; top: env(safe-area-inset-top); left: auto; right: env(safe-area-inset-right);
     width: auto; height: 46px; min-height: 0; background: transparent; border: 0;
   }
   .battle-page .home-header .brand, .battle-page .home-menu-toggle > span:last-child,
   .battle-page .home-header #account-name { display: none; }
-  .battle-page .home-header .home-navigation { left: 0; right: auto; width: min(360px, calc(100vw - 24px)); }
-  .battle-page .home-header .account-menu { left: 0; right: auto; }
-  .battle-page[data-home="member"] .hud-top { padding-left: 140px; }
+  .battle-page .home-header .home-navigation { left: auto; right: 0; width: min(360px, calc(100vw - 24px)); }
+  .battle-page .home-header .account-menu { left: auto; right: 0; }
+  .battle-page[data-home="member"] .hud-top { padding-right: 104px; }
 }
 
 /* A phone held upright has room for one header: the round's. The site's menu and the player's own button fold into
-   its left end, as on a short landscape screen, and History becomes a clock with its count of new entries. */
+   its right end, where the lobby keeps them, and History becomes a clock with its count of new entries. */
 @media (max-width: 619px) and (orientation: portrait) {
   .battle-page[data-home="member"] .home-header {
-    position: absolute; z-index: 6; top: env(safe-area-inset-top); left: 4px; width: auto; height: 48px; min-height: 0;
+    position: absolute; z-index: 6; top: env(safe-area-inset-top); left: auto; right: 4px; width: auto; height: 48px; min-height: 0;
     gap: 2px; padding: 0; background: transparent; border: 0;
   }
   .battle-page[data-home="member"] .home-header .brand, .battle-page[data-home="member"] .home-menu-toggle > span:last-child,
@@ -766,9 +767,9 @@
   .battle-page[data-home="member"] .home-menu-toggle { order: -1; margin: 0; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; border: 0; }
   .battle-page[data-home="member"] .home-header .account-chip { min-width: 44px; min-height: 44px; padding: 4px; border: 0; }
   .battle-page[data-home="member"] .home-header .account-initial { width: 30px; height: 30px; font-size: 15px; }
-  .battle-page[data-home="member"] .home-header .home-navigation { top: 48px; left: 0; right: auto; width: min(360px, calc(100vw - 16px)); border-radius: 0 0 12px 12px; }
-  .battle-page[data-home="member"] .home-header .account-menu { position: fixed; top: 52px; left: 8px; right: auto; }
-  .battle-page[data-home="member"] #battle .hud-top { padding-left: 98px; }
+  .battle-page[data-home="member"] .home-header .home-navigation { top: 48px; left: auto; right: 0; width: min(360px, calc(100vw - 16px)); border-radius: 0 0 12px 12px; }
+  .battle-page[data-home="member"] .home-header .account-menu { position: fixed; top: 52px; left: auto; right: 8px; }
+  .battle-page[data-home="member"] #battle .hud-top { padding-left: 8px; padding-right: 98px; }
   #battle #history-open { position: relative; width: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
   #battle #history-open::before {
     content: ''; width: 22px; height: 22px; background: currentColor;
@@ -1262,3 +1263,47 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   #battle #instruction { -webkit-line-clamp: 1; line-clamp: 1; }
   #battle .battle-actions :is(#planning-open, #combat-open, #match-open) { min-height: 44px; padding: 6px 16px; }
 }
+
+/* The end card reads like the other sheets (ADR 0153): a crest in the result's colour, the round in the eyebrow, each
+   team a card of who stands and the health it kept, and one row of pills: play again, replay, the lobby. */
+#match-dialog { --tone: #e7d19b; border: 0; border-top: 2px solid var(--tone); border-radius: 14px; background: var(--panel); box-shadow: 0 18px 60px #000a; }
+#match-dialog[data-tone="victory"] { --tone: #b9dd8a; }
+#match-dialog[data-tone="defeat"] { --tone: #ff9f88; }
+#match-dialog .match-header { align-items: center; gap: 14px; padding: 18px 18px 14px; border-bottom: 0;
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 60%); }
+#match-dialog .match-header > div { flex: 1; min-width: 0; }
+.match-crest { flex: none; width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--tone);
+  background: radial-gradient(circle, color-mix(in srgb, var(--tone) 18%, transparent), #132228 70%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--tone) 35%, transparent); }
+.match-crest { display: grid; place-items: center; color: var(--tone); font: 24px/1 Georgia, serif; }
+.match-crest::before { content: '='; }
+#match-dialog[data-tone="victory"] .match-crest::before { content: '✦'; }
+#match-dialog[data-tone="defeat"] .match-crest::before { content: '✕'; }
+#match-dialog .match-header h2 { font: clamp(30px, 7vw, 42px)/1.05 Georgia, serif; color: var(--tone); }
+#match-dialog .match-header .eyebrow { margin: 0 0 4px; color: color-mix(in srgb, var(--tone) 75%, var(--ink)); letter-spacing: 2px; }
+#match-outcome { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+#match-dialog .match-close { align-self: start; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 24px; }
+#match-dialog .match-body { padding: 4px 18px 14px; }
+#match-stats { gap: 10px; }
+#match-stats .match-team { --side: #8cc7ad; padding: 12px 14px; border: 1px solid #3f554d; border-left: 3px solid var(--side); border-radius: 10px;
+  background: linear-gradient(180deg, #17303a, #132429); }
+#match-stats .match-team[data-side="enemy"] { --side: #d98b6f; }
+#match-stats .match-team h3 { margin: 0 0 6px; color: #b8c9bd; font-size: 12px; font-weight: 600; letter-spacing: .4px; }
+.match-team-standing { display: flex; align-items: baseline; gap: 4px; margin: 0; }
+#match-stats .match-team-standing strong { font: 34px/1 Georgia, serif; color: var(--ink); }
+.match-team-standing span { color: var(--muted); font-size: 13px; }
+.match-team-bar { height: 6px; margin: 10px 0 6px; border-radius: 999px; background: #0c171b; overflow: hidden; }
+.match-team-bar span { display: block; height: 100%; border-radius: inherit; background: var(--side); }
+.match-team-hp { margin: 0; color: #c9d4cb; font-size: 12px; font-variant-numeric: tabular-nums; }
+#match-dialog .match-footer { align-items: center; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid #82958233; }
+#match-dialog .match-footer :is(button, a) { min-height: 46px; padding: 10px 14px; white-space: nowrap; border-radius: 999px; font-size: 14px; font-weight: 600; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; }
+#match-dialog .match-footer #match-rematch { flex: 1 1 100%; }
+#match-dialog .match-footer #match-replay, #match-dialog .match-footer #match-lobby { flex: 1 1 0; border: 1px solid var(--line); background: #172a30; color: var(--ink); }
+#match-dialog .match-footer #match-rematch[hidden] { display: none; }
+@media (min-width: 560px) { #match-dialog .match-footer #match-rematch { flex: 1.4 1 0; } }
+/* A creature's effects (upkeep ticks, a spell's outcomes, its place in the order) read above its head, not over its
+   body; a stage squeezed under a docked sheet keeps them at the top of the head, inside the field. */
+#battle .creature > .creature-effect { left: -24px; right: -24px; top: 0; bottom: auto; padding-bottom: 0; transform: translateY(-100%); }
+#battle[data-docked="true"] .creature > .creature-effect { transform: translateY(-35%); }
+@media (max-height: 500px) { .match-crest { width: 40px; height: 40px; } .match-team-standing strong { font-size: 26px; } #match-dialog .match-footer :is(button, a) { min-height: 44px; } }

@@ -234,7 +234,7 @@ for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the fiel
 for (const status of [401, 403]) test(`${status} clears private display and offers recovery`, async ({ page }) => {
   const state = await mount(page); await choose(page); await page.locator('[data-creature="1"]').click(); state.status = status;
   await expect(page.locator('.creature')).toHaveCount(0, { timeout: 10000 }); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-name')).toBeEmpty();
-  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Open tables');
+  await expect(page.locator('#timeline')).toBeEmpty(); await expect(page.locator('#access-link')).toHaveText(status === 401 ? 'Sign in' : 'Lobby');
 });
 test('network failures mark the retained board stale and recover with a new snapshot', async ({ page }) => {
   const state = await mount(page); await choose(page); state.status = 503;

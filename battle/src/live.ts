@@ -161,9 +161,9 @@ function status(state: string) {
     selected = null;
     text('perspective', 'YOUR TEAM');
     text('load-title', messages[state]);
-    text('load-detail', state === 'signin' ? 'Sign in with the account that holds this seat.' : 'Return to the tables to find a current seat.');
+    text('load-detail', state === 'signin' ? 'Sign in with the account that holds this seat.' : 'Return to the lobby to find a current seat.');
     $<HTMLAnchorElement>('access-link').href = state === 'signin' ? signInPath(location.pathname + location.search) : '/';
-    text('access-link', state === 'signin' ? 'Sign in' : 'Open tables');
+    text('access-link', state === 'signin' ? 'Sign in' : 'Lobby');
     $('retry').hidden = false;
   } else if (!view) {
     text('load-title', state === 'stale' ? 'Waiting for the connection' : 'Opening your board');
@@ -648,7 +648,7 @@ async function discover(autoResume = true) {
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
-  text('access-link', 'Open tables'); $<HTMLAnchorElement>('access-link').href = '/';
+  text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   const recorded = replayOf(location.search);
   if (recorded) {
     text('perspective', `${seatName(recorded.seat).toUpperCase()} · RECORDED MATCH`);

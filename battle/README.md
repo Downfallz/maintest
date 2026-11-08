@@ -279,8 +279,8 @@ Selecting a branch previews its initiative, its spells as compact spell cards, p
 available art only for that creature in the private command. Public inspection and replay keep their
 recorded forms. Confirm spends one team pick. Switching creatures clears the draft, and passing requires
 explicit confirmation for all remaining team picks. **Full mutation tree** opens the whole tree full
-screen ([ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)), on the mutation in hand; an offer can be
-chosen from its card there. AU8 also exposes a public reference outside this phase.
+screen ([ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)), on the mutation in hand when one is drafted,
+with nothing selected otherwise; an offer can be chosen from its card there. AU8 also exposes a public reference outside this phase.
 
 `table/battle-mutations.js` supplies the host-filtered offers. `src/mutation-tree.ts` draws the graph
 and `src/mutation-scene.ts` projects the private preview. The existing planning controller still owns acknowledgement,
@@ -647,7 +647,15 @@ Captures: [desktop reference (recorded-event fixture)](../docs/tabletop/images/b
 
 The Match result card says Victory, Defeat or Draw from the host's outcome, its reason and each side's
 final survivors and HP. Unknown legacy fields stay unavailable; health never determines the winner in the
-client. Console opens the shared History. Match replay now reaches the host's final public snapshot after
+client. It reads like the other sheets ([ADR 0153](../docs/adr/0153-play-the-same-game-again-from-the-end-card.md)):
+- a crest in the result's colour, and the round in the eyebrow;
+- each team a card of how many stand and the health it kept as a bar, whose whole line is its accessible name;
+- one row of pills.
+
+The first pill plays the same game again (`rematchPlan`, `table/outcome.js`). **Rematch** against the bot or on a
+shared device opens the same table at once. **Invite to rematch** keeps a friend's seat, or opens the lobby on a
+player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
+Match replay now reaches the host's final public snapshot after
 all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
 legacy frameless events remain text-only. Recorded-session replay still requires the operator token.
 
@@ -705,4 +713,11 @@ already showing whose seat it is. At rest the dock reads as a docked sheet: the 
 top, the phase in their serif with its step as a chip, a quiet dot for a live connection (the word Live is kept for
 assistive technology), at most two lines of instruction and one pill for the next step. **Next result** and
 **Skip** float over the bottom of the battlefield only while results play, because a row appearing in the grid would
-resize the scene, and a resize cancels playback. On a phone the header is 48px (44px on short screens).
+resize the scene, and a resize cancels playback. On a phone the header is 48px (44px on short screens), and the
+site's menu and the player's button sit at its right end, where the lobby keeps them.
+
+Each figure stands above its caption (`placements` lifts it by up to 34px, as the stage has room), so the name,
+badges and stats hang under its feet, not over its body. A creature's effect chips (upkeep ticks, a spell's
+outcomes, its place in the order) sit above its head. The acting creature carries a soft gold halo, an aura behind
+it and a pool of light at its feet (`src/acting-halo.ts`), breathing slowly and still under reduced motion;
+`#battle[data-halo]` names it.

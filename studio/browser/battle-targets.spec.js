@@ -49,6 +49,11 @@ const preview = page => page.locator('#combat-preview');
 const choose = page => page.locator('[data-spell="spell-0"]').click();
 test('selected effects and cost stay beside a fixed explicit confirmation', async ({ page }, info) => {
   const h = await mount(page); await choose(page);
+  // The caster carries the acting halo, without a word: the scene lights the creature whose slot it is.
+  await expect(page.locator('#battle')).toHaveAttribute('data-halo', '1');
+  // Every figure stands above its caption: the name hangs under the feet, not over the body.
+  const lift = await page.evaluate(() => [...document.querySelectorAll('#actor-layer .creature')].map(node => node.offsetHeight - node.querySelector('.caption').offsetHeight));
+  expect(lift.every(height => height > 40)).toBe(true);
   await expect(preview(page)).toContainText('2 energy → 1 left');
   await expect(preview(page)).not.toContainText('Damage 3');
   await expect(target(page, 1)).toHaveAttribute('data-target-state', 'unavailable');
