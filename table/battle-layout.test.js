@@ -79,11 +79,23 @@ test('an overlapping or very close target never sends the attacker backwards pas
 
 test('portrait rows never overlap their hit targets, even on the short stage a mutation sheet leaves', () => {
   // The hit target spans the figure and the caption under it, as placeHitTargets lays it out.
-  const span = one => { const top = Math.max(0, one.y - one.size); return [top, top + Math.max(44, one.size + 42)]; };
+  const span = one => { const top = Math.max(0, one.y - one.size); return [top, top + Math.max(44, one.size + (one.caption ?? 42))]; };
   for (const [width, height] of [sizes.phone, sizes.narrow, [320, 255], [390, 260], [320, 208], [360, 300]]) {
     const placed = placements(width, height, 3, 3, true);
     const [allyTop] = span(placed[0]), [, enemyBottom] = span(placed[3]);
     assert.ok(enemyBottom <= allyTop + 1e-6, `${width}x${height}: enemy targets end at ${enemyBottom}, allies start at ${allyTop}`);
     assert.ok(placed.every(one => one.size > 0 && one.hitWidth >= 44), `${width}x${height}: visible figures, reachable targets`);
   }
+});
+
+test('every figure stands above its caption by as much as the stage has room for, its caption where it always hung', () => {
+  for (const [name, [width, height]] of Object.entries(sizes)) {
+    for (const one of placements(width, height)) {
+      assert.ok(one.lift >= 0 && one.lift <= 34, `${name}: a bounded lift`);
+      assert.equal(one.caption, 42 + one.lift, `${name}: the caption keeps its place under the original feet`);
+      assert.ok(one.y - one.size >= -1e-6, `${name}: a lifted figure stays inside the stage`);
+    }
+  }
+  // A phone held upright has the room: every figure rises clear of its name.
+  assert.ok(placements(...sizes.phone).every(one => one.lift > 20));
 });

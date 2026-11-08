@@ -5,6 +5,14 @@
 // least 44px wide, the smallest a finger reliably lands on.
 
 const MIN_HIT = 44;
+// The caption under a figure is taller than the 42px its hit target always kept for it: a name, a row of badges, the
+// health bar and the stats. Each figure therefore stands this much higher than where its caption hangs, so the name
+// and the badges sit under its feet rather than over its body. A figure only rises into room the stage has.
+const CAPTION = 42, LIFT = 34;
+const lifted = (one, room) => {
+  const lift = Math.max(0, Math.min(LIFT, one.size * .24, room));
+  return { ...one, y: one.y - lift, lift, caption: CAPTION + lift };
+};
 
 // Whether a stage this size reads as a phone held upright: two rows rather than two opposing formations.
 export function isPortrait(width, height) {
@@ -18,12 +26,15 @@ export function placements(width, height, allies = 3, enemies = 3, portrait = is
     // that much figure without the lower row's targets covering the upper row's captions. Only a
     // short stage reaches that cap: the one a mutation sheet leaves above itself on a phone.
     const size = Math.max(1, Math.min(width * .30, floor * .40, floor * .50 - 42));
-    const row = (y, count) => (count === 3 ? [.17, .5, .83] : Array.from({ length: count }, (_, index) => (index + .5) / count)).map(x => ({ x: width * x, y, size, hitWidth: Math.max(MIN_HIT, width * .29) }));
-    return [...row(floor * .95, allies), ...row(floor * .45, enemies)];
+    const row = (y, count, room) => (count === 3 ? [.17, .5, .83] : Array.from({ length: count }, (_, index) => (index + .5) / count))
+      .map(x => lifted({ x: width * x, y, size, hitWidth: Math.max(MIN_HIT, width * .29) }, room));
+    // Allies rise only into the gap above them, never over the enemies' captions; enemies only into the sky.
+    return [...row(floor * .95, allies, floor * .5 - size - CAPTION), ...row(floor * .45, enemies, floor * .45 - size)];
   }
   const size = Math.min(width * .205, floor * .58);
   const coords = [[.36, .90, 1], [.12, .78, .84], [.23, .47, .76], [.64, .90, 1], [.88, .78, .84], [.77, .47, .76]];
-  return [...coords.slice(0, allies), ...coords.slice(3, 3 + enemies)].map(([x, y, scale]) => ({ x: width * x, y: floor * y, size: size * scale, hitWidth: Math.max(MIN_HIT, size * scale * .80) }));
+  return [...coords.slice(0, allies), ...coords.slice(3, 3 + enemies)]
+    .map(([x, y, scale]) => lifted({ x: width * x, y: floor * y, size: size * scale, hitWidth: Math.max(MIN_HIT, size * scale * .80) }, floor * y - size * scale));
 }
 
 // Approach along the line between the figures. Portrait opponents stand above each other: a fixed

@@ -13,7 +13,7 @@ export interface LabState {
     timeline: { creature: string; owner: string; speed: string }[]; slot: string };
   changes: { creature: string; health?: number; energy?: number; defeated?: boolean }[];
 }
-export interface Placement { x: number; y: number; size: number; hitWidth: number; }
+export interface Placement { x: number; y: number; size: number; hitWidth: number; lift?: number; caption?: number; }
 export interface SpellVisual { family: string; motif: string; delivery: string; }
 export const creaturesOf = (state: LabState) => [...state.board.allies, ...state.board.enemies];
 export const isEnemy = (state: LabState, id: string) => state.board.enemies.some(one => one.id === id);

@@ -15,7 +15,8 @@ export function creatureButton(id: string) {
   return node;
 }
 
-// Buttons in the board's order, which is the layout's order too; the caption hangs 42px below the feet.
+// Buttons in the board's order, which is the layout's order too; the caption hangs below the feet, as far as the
+// layout lifted the figure above it (42px at least).
 export function placeHitTargets(buttons: HTMLButtonElement[], positions: Placement[]) {
   for (const [index, node] of buttons.entries()) {
     const position = positions[index];
@@ -23,7 +24,7 @@ export function placeHitTargets(buttons: HTMLButtonElement[], positions: Placeme
     node.style.left = `${position.x - position.hitWidth / 2}px`;
     node.style.top = `${Math.max(0, position.y - position.size)}px`;
     node.style.width = `${position.hitWidth}px`;
-    node.style.height = `${Math.max(44, position.size + 42)}px`;
+    node.style.height = `${Math.max(44, position.size + (position.caption ?? 42))}px`;
     node.style.zIndex = String(Math.round(position.y));
   }
 }
