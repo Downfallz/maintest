@@ -151,7 +151,7 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     await page.locator('#settings').click(); await page.locator('#concede-open').scrollIntoViewIfNeeded();
     await expect(page.locator('#concede-open')).toBeInViewport(); await page.keyboard.press('Escape');
     await page.locator('[data-creature="4"]').click();
-    await page.locator('#inspect-spells details').last().locator('summary').click();
+    const known = page.locator('#inspect-spells .inspect-spell').last(); await known.scrollIntoViewIfNeeded(); await expect(known).toBeInViewport();
     await fitsViewport(page, '#inspect-close'); await page.keyboard.press('Escape');
     expect(state.errors).toEqual([]);
   });

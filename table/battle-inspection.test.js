@@ -24,7 +24,7 @@ test('full spell faces retain zero costs, targeting, caster effects, crit and ca
   const spell = creatureInspection(one, [one], catalogue).spells[0];
   assert.equal(spell.cost, '0'); assert.match(spell.critical, /20%.*Precision only.*d20 17\+.*catalogue/);
   assert.deepEqual(spell.details, [{ role: 'target', text: 'One enemy' }, { role: 'effect', text: 'Damage 4' }, { role: 'caster', text: 'Gain 1 energy' }]);
-  assert.equal(spell.criticalNote, 'Double damage');
+  assert.equal(spell.criticalNote, 'Double damage'); assert.match(spell.crit.hint, /Precision only.*d20 17\+/); assert.equal(spell.crit.value, '20%');
 });
 test('defeated opponents and new, permanent, expiring conditions keep named sources and immunity', () => {
   const creature = { ...one, enemy: true, isAlive: false, isStunImmune: true, conditions: [
@@ -57,4 +57,18 @@ test('a stunned creature is said to be stunned once, whatever repeats it', () =>
 });
 test('a creature with no cue and no tag adds nothing to what is spoken', () => {
   assert.equal(spokenCues('', ''), ''); assert.equal(spokenCues('', 'ACTING'), 'ACTING');
+});
+test('the inspection sheet carries each stat, each status and each condition apart, for tiles and cards', () => {
+  const creature = { ...one, form: 'brute', isStunned: true, isStunImmune: false, conditions: [
+    { effect: { kind: 'Bleed', amountPerRound: 3 }, remainingRounds: 2, source: { caster: 2, spell: 'strike' } }] };
+  const model = creatureInspection(creature, [one, { id: '2', label: 'Beast · 2' }], catalogue);
+  assert.deepEqual(model.sheet, { health: 9, maxHealth: 20, energy: 2, defense: 4, initiative: 7 });
+  assert.deepEqual(model.statuses, [{ key: 'stun', text: 'Stunned' }]);
+  assert.deepEqual(model.conditions, [{ kind: 'Bleed', name: 'Bleed 3', duration: '2 rounds', source: 'from Beast · 2 · Strike' }]);
+  assert.equal(model.form, 'brute'); assert.equal(model.enemy, false);
+});
+test('a defeated, immune creature wears both, and an unknown stat stays unknown rather than zero', () => {
+  const model = creatureInspection({ id: 4, isAlive: false, isStunImmune: true }, [], catalogue);
+  assert.deepEqual(model.statuses, [{ key: 'defeated', text: 'Defeated' }, { key: 'immune', text: 'Immune to stun' }]);
+  assert.equal(model.sheet.health, null); assert.equal(model.conditionsRecorded, false);
 });

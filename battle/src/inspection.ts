@@ -1,25 +1,80 @@
 import { creatureInspection } from '../../table/battle-inspection.js';
+import { cardsById } from '../../table/card.js';
+import { conditionKey, iconElement } from './condition-icons';
+import type { SpellCatalogue } from './combat';
+import { spellCard } from './spell-card';
 
 type Inspection = NonNullable<ReturnType<typeof creatureInspection>>;
+type Cue = { kind: string; glyph?: string; harmful: boolean };
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if (el(id).textContent !== value) el(id).textContent = value; };
-const node = (tag: string, value: string) => { const item = document.createElement(tag); item.textContent = value; return item; };
+const node = (tag: string, value = '', className = '') => {
+  const item = document.createElement(tag); if (value) item.textContent = value; if (className) item.className = className; return item;
+};
 
-// Each disclosure is keyed independently: HP polls must not collapse a spell, reset scroll or steal focus.
+// The creature at a glance: health with its bar, then energy, defense and initiative, each with the icon the
+// field and the spell cards use for that stat. A screen reader hears the same as one sentence (#inspect-stats).
+function sheetTiles(sheet: Inspection['sheet']) {
+  const value = (one: number | null) => one === null ? '—' : String(one);
+  const tile = (stat: string, icon: string, label: string, shown: string) => {
+    const item = node('div', '', 'inspect-tile'); item.dataset.stat = stat;
+    item.append(iconElement(icon), node('span', label, 'inspect-tile-label'), node('strong', shown, 'inspect-tile-value'));
+    return item;
+  };
+  const health = tile('health', 'health-gain', 'Health', `${value(sheet.health)}/${value(sheet.maxHealth)}`);
+  const share = sheet.health !== null && sheet.maxHealth ? Math.max(0, Math.min(1, sheet.health / sheet.maxHealth)) : 0;
+  const bar = node('span', '', 'inspect-tile-bar'); const fill = node('span'); fill.style.width = `${Math.round(share * 100)}%`; bar.append(fill);
+  health.append(bar);
+  return [health, tile('energy', 'energy-gain', 'Energy', value(sheet.energy)),
+    tile('defense', 'defense-gain', 'Defense', value(sheet.defense)), tile('initiative', 'initiative-gain', 'Initiative', value(sheet.initiative))];
+}
+
+// A status or a condition as a card: its icon in a medallion coloured by what it moves, its name, how long it
+// lasts and who put it there.
+function conditionCard(key: string, name: string, duration = '', source = '') {
+  const item = node('li', '', 'inspect-condition'); item.dataset.cue = key;
+  const medallion = node('span', '', 'inspect-condition-icon'); medallion.append(iconElement(key));
+  const words = node('span', '', 'inspect-condition-text');
+  words.append(node('strong', name));
+  if (duration) words.append(node('span', ` · ${duration}`, 'inspect-condition-duration'));
+  if (source) words.append(node('small', ` · ${source}`));
+  item.append(medallion, words);
+  return item;
+}
+const STATUS_ICONS: Record<string, string> = { defeated: 'health-loss', stun: 'stun', immune: 'stun' };
+
+// Each disclosure is keyed independently: HP polls must not rebuild a card, reset scroll or steal focus.
 export function inspectionControls() {
-  let identity = '', mutationsKey = '', spellsKey = '';
+  let identity = '', mutationsKey = '', spellsKey = '', conditionsKey = '';
   const dialog = el<HTMLDialogElement>('inspect-dialog');
   function clear() {
-    identity = ''; mutationsKey = ''; spellsKey = '';
+    identity = ''; mutationsKey = ''; spellsKey = ''; conditionsKey = '';
     dialog.close();
-    for (const id of ['inspect-name', 'inspect-side', 'inspect-context', 'inspect-stats', 'inspect-appearance', 'inspect-effects', 'inspect-mutations', 'inspect-spells', 'inspect-last-action']) el(id).replaceChildren();
+    for (const id of ['inspect-name', 'inspect-side', 'inspect-context', 'inspect-stats', 'inspect-sheet', 'inspect-appearance', 'inspect-effects', 'inspect-mutations', 'inspect-spells', 'inspect-last-action']) el(id).replaceChildren();
+    el('inspect-portrait').style.backgroundImage = '';
+    // The tiles are gone with the rest, so their key goes too: the same stats seen again must draw them again.
+    delete el('inspect-sheet').dataset.content;
     el('inspect-history').hidden = true; el('inspect-growth').hidden = true;
   }
-  function render(model: Inspection | null, context: string, historical: boolean, lastAction: string) {
+  function render(model: Inspection | null, context: string, historical: boolean, lastAction: string, catalogue: SpellCatalogue | null = null) {
     if (!model) { clear(); return; }
-    if (identity !== model.id) { mutationsKey = ''; spellsKey = ''; el('inspect-body').scrollTop = 0; identity = model.id; }
+    if (identity !== model.id) { mutationsKey = ''; spellsKey = ''; conditionsKey = ''; el('inspect-body').scrollTop = 0; identity = model.id; }
+    const cues: Cue[] = catalogue?.effects ?? [];
     text('inspect-name', model.name); text('inspect-side', model.side); text('inspect-context', context);
-    text('inspect-stats', model.stats); text('inspect-effects', model.effects);
+    const portrait = el('inspect-portrait');
+    portrait.style.backgroundImage = model.form ? `url("battle-art/${model.form}.webp")` : '';
+    portrait.dataset.side = model.enemy ? 'enemy' : 'ally'; portrait.dataset.defeated = String(model.statuses.some((one: { key: string }) => one.key === 'defeated'));
+    text('inspect-stats', model.stats);
+    const sheetKey = JSON.stringify(model.sheet);
+    if (el('inspect-sheet').dataset.content !== sheetKey) { el('inspect-sheet').replaceChildren(...sheetTiles(model.sheet)); el('inspect-sheet').dataset.content = sheetKey; }
+    const nextConditions = JSON.stringify([model.statuses, model.conditions, model.conditionsRecorded, cues.length]);
+    if (nextConditions !== conditionsKey) {
+      const cards = [...model.statuses.map(one => conditionCard(STATUS_ICONS[one.key] ?? one.key, one.text)),
+        ...model.conditions.map((one: { kind: string | null; name: string; duration: string; source: string }) => conditionCard(conditionKey(one.kind, cues), one.name, one.duration, one.source))];
+      if (!cards.length) cards.push(node('li', model.conditionsRecorded ? 'No ongoing effects' : 'Conditions not recorded', 'inspect-empty'));
+      el('inspect-effects').replaceChildren(...cards);
+      conditionsKey = nextConditions;
+    }
     text('inspect-appearance', model.description ? `Appearance: ${model.description}` : 'Artwork unavailable · identity comes from the recorded creature');
     el('inspect-growth').dataset.growthCreature = model.id;
     el('inspect-growth').hidden = historical;
@@ -29,38 +84,38 @@ export function inspectionControls() {
     const nextMutations = JSON.stringify([model.mutations, model.mutationsRecorded]);
     if (nextMutations !== mutationsKey) {
       el('inspect-mutations').replaceChildren(...model.mutations.map(pack => {
-        const item = node('li', ''); item.dataset.inspectMutation = String(pack.id);
-        item.append(node('strong', pack.name), node('p', ['Acquired', pack.stage == null ? '' : `Stage ${pack.stage}`,
-          pack.initiative == null ? 'Initiative bonus unavailable' : `Initiative bonus ${pack.initiative >= 0 ? '+' : ''}${pack.initiative}`].filter(Boolean).join(' · ')));
-        if (pack.tags.length) item.append(node('p', pack.tags.join(' · ')));
-        for (const passive of pack.passives) item.append(node('p', passive));
-        if (pack.missing) item.append(node('p', 'Mutation details unavailable.'));
+        const item = node('li', '', 'inspect-mutation'); item.dataset.inspectMutation = String(pack.id);
+        const head = node('div', '', 'inspect-mutation-head'); head.append(node('strong', pack.name));
+        const chips = node('span', '', 'inspect-mutation-chips');
+        if (pack.stage != null) chips.append(node('span', `Stage ${pack.stage}`, 'inspect-chip stage'));
+        const initiative = node('span', '', 'inspect-chip initiative');
+        initiative.append(iconElement('initiative-gain'), document.createTextNode(pack.initiative == null ? 'Initiative unavailable' : `Initiative ${pack.initiative >= 0 ? '+' : ''}${pack.initiative}`));
+        chips.append(initiative); head.append(chips); item.append(head);
+        if (pack.tags.length) { const tags = node('p', '', 'inspect-tags'); tags.append(...pack.tags.map((tag: string) => node('span', tag))); item.append(tags); }
+        for (const passive of pack.passives) item.append(node('p', passive, 'inspect-passive'));
+        if (pack.missing) item.append(node('p', 'Mutation details unavailable.', 'inspect-missing'));
         return item;
       }));
-      if (!model.mutations.length) el('inspect-mutations').append(node('li', model.mutationsRecorded ? 'No publicly acquired mutations.' : 'Mutation ownership not recorded.'));
+      if (!model.mutations.length) el('inspect-mutations').append(node('li', model.mutationsRecorded ? 'No publicly acquired mutations.' : 'Mutation ownership not recorded.', 'inspect-empty'));
       mutationsKey = nextMutations;
     }
-    const nextSpells = JSON.stringify([model.spells, model.spellsRecorded]);
+    // Known spells are the same cards as the spell choice and the mutation tree: name, cost and crit chips, who
+    // it hits, its effect lines with their icons, then the mutation that taught it.
+    const nextSpells = JSON.stringify([model.spells, model.spellsRecorded, cues.length]);
     if (nextSpells !== spellsKey) {
-      const list = el('inspect-spells'), old = new Map(Array.from(list.querySelectorAll<HTMLDetailsElement>('details')).map(item => [item.dataset.inspectSpell, item]));
-      const wanted = new Set(model.spells.map(spell => String(spell.id)));
-      for (const [id, item] of old) if (!wanted.has(id!)) item.remove();
-      list.querySelector('[data-empty]')?.remove();
-      for (const spell of model.spells) {
-        const key = JSON.stringify(spell);
-        let item = old.get(String(spell.id));
-        if (!item) { item = document.createElement('details'); item.dataset.inspectSpell = String(spell.id); list.append(item); }
-        if (item.dataset.content === key) continue;
-        const summary = item.querySelector('summary') ?? document.createElement('summary');
-        summary.textContent = `${spell.name}${spell.cost ? ` · ${spell.cost} energy` : ''}`;
-        item.replaceChildren(summary, node('p', [spell.type, spell.critical].filter(Boolean).join(' · ')));
-        for (const detail of spell.details) item.append(node('p', `${detail.role === 'caster' ? 'Caster: ' : ''}${detail.text}`));
-        if (spell.criticalNote) item.append(node('p', spell.criticalNote));
-        if (spell.missing) item.append(node('p', 'Spell details unavailable.'));
-        item.append(node('p', spell.sources.length ? `Acquired through: ${spell.sources.join(', ')}` : 'Known spell · no acquired mutation source recorded.'));
-        item.dataset.content = key;
-      }
-      if (!model.spells.length) { const empty = node('p', model.spellsRecorded ? 'No known spells.' : 'Known spells not recorded.'); empty.dataset.empty = ''; list.append(empty); }
+      const cards = cardsById(catalogue);
+      const list = el('inspect-spells');
+      list.replaceChildren(...model.spells.map(spell => {
+        const item = node('article', '', 'inspect-spell'); item.dataset.inspectSpell = String(spell.id);
+        if (spell.colour) item.style.setProperty('--spell-accent', spell.colour);
+        // The crit chip names its tempo and the d20's face, as the catalogue does.
+        const face = spellCard(cards.get(String(spell.id)), String(spell.id), cues, { crit: spell.crit });
+        // The spell choice answers [data-spell]; a reference card in a closed dialog must not.
+        delete face.dataset.spell;
+        item.append(face, node('p', spell.sources.length ? `Learned from ${spell.sources.join(', ')}` : 'Known spell · no acquired mutation source recorded.', 'inspect-spell-source'));
+        return item;
+      }));
+      if (!model.spells.length) list.append(node('p', model.spellsRecorded ? 'No known spells.' : 'Known spells not recorded.', 'inspect-empty'));
       spellsKey = nextSpells;
     }
   }

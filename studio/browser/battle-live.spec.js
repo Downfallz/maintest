@@ -127,7 +127,13 @@ test('the header names the opponent with its rank and friendship, and its card a
   const chip = page.locator('#opponent-open');
   await expect(chip).toBeVisible(); await expect(page.locator('#opponent-name')).toHaveText('bastien');
   await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-heart')).toBeHidden();
-  await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN');
+  await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN'); await expect(page.locator('#enemy-label')).toBeVisible();
+  // On the round's line, never over the field, where it hid a creature in landscape.
+  const [chipBox, roundBox, field] = await Promise.all(['#opponent-open', '#battle .round', '#battle-zone'].map(one => page.locator(one).boundingBox()));
+  expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(field.y); expect(Math.abs((chipBox.y + chipBox.height / 2) - (roundBox.y + roundBox.height / 2))).toBeLessThan(6);
+  // A narrow header folds the chip to its medallion, the rank and the heart still on it; the field's label names them.
+  await expect(page.locator('#opponent-name')).toBeVisible({ visible: page.viewportSize().width > 560 });
+  expect(await page.locator('#battle .round').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
   await fitsViewport(page, '#opponent-open, #history-open, #help-open, #settings');
   await page.screenshot({ path: info.outputPath('opponent-header.png') });
   await chip.click(); await expect(page.locator('#opponent-dialog')).toBeVisible();
@@ -174,7 +180,7 @@ test('an opponent who takes the open seat stays named when an older read of the 
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
-  await expect(page.locator('#inspect-spells summary')).toHaveText('Host spell name');
+  await expect(page.locator('#inspect-spells .spell-card-name')).toHaveText('Host spell name');
   await expect(page.locator('#inspect-stats')).toContainText('21/30 HP · 5 energy · 2 defense');
 });
 

@@ -313,7 +313,9 @@ See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation
 The spell choice opens by itself on the player's turn, once per asking and only on an unobstructed board, and docks
 beside the field as the mutation choice does: a sheet under it on a phone, a panel at its side on a wider screen
 ([ADR 0149](../docs/adr/0149-open-the-spell-choice-with-the-players-turn.md)). Closing it leaves **Choose spell** in
-the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first).
+the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first). Right under
+the acting creature's name, three chips say what it plays with: its place in the turn order, its tempo (Instinct or
+Precision, with the rule in its title) and the energy it has to spend; the line under them keeps the round and phase.
 
 Combat choices group the current creature's known/offered spells by the served card type, with family
 accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
@@ -421,7 +423,9 @@ prerequisite forest, including every all-of/any-of edge, spell details, initiati
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
 current host Evolution offer marks a mutation Available; the next opportunity is the host's
 `nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
-not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit.
+not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit. On a phone the
+tree shows one family at a time: a slim tab with a triangle stands at each side that still has families, nudging the
+way a swipe goes, and a tap moves one family over; it steps aside while a mutation's card is open.
 
 The standalone reference shows current **public** ownership. Pending own picks remain Picked only
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or
@@ -519,15 +523,19 @@ round during match replay. Captures in `docs/tabletop/images/battle-order/` iden
 Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
 
 
-## The opponent at the top of the field
+## The opponent on the round's line
 
-Where the field said "Opponent", a chip names who the player is up against: a person by their player name with
+Beside the round number in the header, a chip names who the player is up against (it sat over the field at first,
+and hid a creature in landscape): a person by their player name with
 their place on the ladder (ADR 0124) and a heart when they are a friend (ADR 0129), a bot by its name with **BOT**.
 It opens a card with the rank in full (place, rating and record, or unranked, or provisional), whether they are a
 friend, and **Add friend** (or **Accept friend request**, which is asking back) when they are not. The chip reads
 the table's seat summaries, `GET /api/leaderboard` and `GET /api/friends`, when a seat is chosen, again when the
 opponent takes an open seat, and when its card opens; a page that cannot read the ladder or the friends says
-nothing about them rather than guessing. `table/battle-opponent.js` decides what it says.
+nothing about them rather than guessing. `table/battle-opponent.js` decides what it says. Where the header is narrow (a
+phone held upright, or the spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank
+and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
+phase gives up its place, since the command dock names it too.
 
 ## AU12: public creature inspection
 
@@ -542,10 +550,18 @@ numbers and the engine's words are in each badge's title, the accessible label a
 status tag above is placed from the caption's measured height. A new round seen live is announced by a
 short banner at the top of the field that fades by itself.
 
+The reference reads as a sheet, in the same visual language as the mutation tree and the spell choice: the
+creature's figure and name, its stats as four tiles (health with its bar, energy, defense, initiative) wearing
+the field's icons, and each status and condition as a card with its icon in a medallion coloured by what it
+moves, its duration and its source. A screen reader hears the stats as one sentence. It covers the field, full
+screen on a phone: nothing is chosen from it.
+
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
-Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell
-disclosures show cost, targeting, target/caster effects and catalogue critical details, with acquired sources
-where recorded. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
+Stage and initiative bonus as chips, authored tags as pills, and exact passive wording, including shared
+capstones. Known spells are dealt as the spell choice's own cards (`src/spell-card.ts`), in its order, attacks
+first: cost and crit chips (the crit naming its tempo and d20 face), targeting, effect lines with their icons,
+then the mutation that taught it where recorded. They answer `[data-inspect-spell]`, never the spell choice's
+`[data-spell]`. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
 entries keep their identifiers and explicitly unavailable detail. Aggregate passive badges reuse `board.js`.
 
 **Read action in History** opens the exact last public cast made by that creature, including fizzles and
@@ -555,9 +571,9 @@ Historical references label their latest loaded cast and filter by the displayed
 claim a complete search across unloaded history or show a future action. An unavailable
 historical cast stays unlinked. Private submissions cannot populate this cache, and losing the seat clears it.
 
-`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable disclosures and
-a bounded scrollable body with fixed identity/stats and Close. Ordinary polls retain focus, open spells and
-reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
+`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable cards and
+a bounded scrollable body with fixed identity and Close. Ordinary polls retain focus, the cards already dealt
+and reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
 available on current inspections; historical inspections display recorded ownership instead of opening a
 current-state tree. If a text-only turnover arrives while the inspection is open, its last recorded frame
 stays explicitly labelled **Pinned reference** until closed. No unrecorded stats or spellbook are supplied.

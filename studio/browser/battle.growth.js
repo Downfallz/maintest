@@ -69,13 +69,10 @@ test('the real catalogue tree follows public purchases without acknowledging the
       await expect(page.locator('#inspect-stats')).toHaveText(`${creature.health}/${creature.maxHealth} HP · ${creature.energy} energy · ${creature.totalDefense} defense · ${creature.currentInitiative} initiative`);
       await expect(page.locator('#inspect-context')).toHaveText(`Round ${revealed.board.roundNumber} · Current state`);
       for (const tier of creature.acquiredTiers) await expect(page.locator('#inspect-mutations')).toContainText(catalogue.packages.find(pack => pack.id === tier).name);
-      await expect(page.locator('#inspect-spells details')).toHaveCount(creature.knownSpells.length);
-      for (const spell of creature.knownSpells) await expect(page.locator(`#inspect-spells [data-inspect-spell="${spell}"] summary`)).toContainText(catalogue.cards.find(card => card.id === spell).name);
+      await expect(page.locator('#inspect-spells .inspect-spell')).toHaveCount(creature.knownSpells.length);
+      for (const spell of creature.knownSpells) await expect(page.locator(`#inspect-spells [data-inspect-spell="${spell}"] .spell-card-name`)).toHaveText(catalogue.cards.find(card => card.id === spell).name);
       const first = creature.knownSpells[0];
-      if (first) {
-        await page.locator(`#inspect-spells [data-inspect-spell="${first}"] summary`).click();
-        await expect(page.locator(`#inspect-spells [data-inspect-spell="${first}"]`)).toContainText(catalogue.cards.find(card => card.id === first).targeting);
-      }
+      if (catalogue.cards.find(card => card.id === first)?.targeting) await expect(page.locator(`#inspect-spells [data-inspect-spell="${first}"] .spell-card-target`)).toHaveText(catalogue.cards.find(card => card.id === first).targeting);
       await fitsViewport(page, '#inspect-close');
       if (creature.id === offer.creature) await page.screenshot({ path: info.outputPath('creature-inspection-real-host.jpg'), type: 'jpeg', quality: 85 });
       await page.keyboard.press('Escape');

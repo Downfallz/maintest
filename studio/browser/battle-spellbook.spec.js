@@ -55,7 +55,9 @@ async function browseTo(page, id) {
 test('the spellbook groups the served types and shows truthful compact stats and full details', async ({ page }, info) => {
   const h = await mount(page);
   await expect(page.locator('.combat-spell-group')).toHaveCount(4);
-  await expect(page.locator('#combat-context')).toContainText('Round 9 · Combat · Turn 1 · Precision · 3 energy');
+  await expect(page.locator('#combat-context')).toHaveText('Round 9 · Combat');
+  // Under the acting creature's name: its place in the order, its tempo and its energy.
+  await expect(page.locator('#combat-actor .actor-chip')).toHaveText(['1 in turn order', '✦ Precision', '3 energy']);
   await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('20%');
   await expect(spell(page, 'spell-3').locator('.spell-critical')).toHaveText('Precision only · d20 17+ · catalogue');
   await expect(spell(page, 'spell-0')).toContainText('0 energy');
@@ -81,7 +83,7 @@ test('selection and same-question polls preserve card geometry, keyboard focus, 
   const scroll = await scrollOf(page), reads = h.reads;
   h.view.board.allies[0].energy = 4; await notify(page);
   await expect.poll(() => h.reads).toBeGreaterThan(reads);
-  await expect(page.locator('#combat-context')).toContainText('4 energy');
+  await expect(page.locator('#combat-actor [data-kind="energy"]')).toHaveText('4 energy');
   await expect(node).toBeFocused(); expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(scroll);
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

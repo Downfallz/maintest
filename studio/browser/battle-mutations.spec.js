@@ -276,6 +276,23 @@ test('the full mutation tree opens over the pick on its offer, shows each spell 
   expect(h.state.writes[0]).toEqual({ kind: 'Evolution', creature: 2, tier: 'root2', asked: 11 }); expect(h.state.errors).toEqual([]);
 });
 
+test('on a phone the tree shows a triangle on each side that still has families, and a tap moves one family over', async ({ page }, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const h = await mount(page); await page.locator('#mutation-atlas-open').click();
+  const tree = page.locator('#atlas-board'), prev = page.locator('#atlas-prev'), next = page.locator('#atlas-next');
+  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(tree.locator('.atlas-family')).toHaveCount(3);
+  if (page.viewportSize().width >= 820) { await expect(prev).toBeHidden(); await expect(next).toBeHidden(); return; }
+  await page.locator('#atlas-detail-close').click(); await expect(page.locator('#atlas-detail')).toBeHidden();
+  await tree.evaluate(node => { node.scrollLeft = 0; }); await page.clock.runFor(50);
+  await expect(prev).toBeHidden(); await expect(next).toBeVisible();
+  await page.screenshot({ path: info.outputPath('mutation-atlas-swipe.png') });
+  await next.click(); await expect.poll(() => tree.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(prev).toBeVisible();
+  await next.click(); await expect(next).toBeHidden(); await expect(prev).toBeVisible();
+  await prev.click(); await expect(next).toBeVisible();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
 test('the full mutation tree closes when the question it chose for is gone', async ({ page }) => {
   const h = await mount(page); await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
   h.state.view = { ...h.state.view, waitingFor: null, waitingAsked: null, options: {} }; await h.publish(); await page.clock.runFor(50);

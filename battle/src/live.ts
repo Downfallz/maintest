@@ -177,7 +177,7 @@ function renderInspection() {
   if (!one && view && playback.model().receipt && inspectionSnapshot && $<HTMLDialogElement>('inspect-dialog').open) {
     const held = inspectionSnapshot;
     inspectionUI.render(held.model, `Pinned reference · ${held.context.label}`, true,
-      held.action ? `Round ${held.action.round} · ${held.action.summary}` : '');
+      held.action ? `Round ${held.action.round} · ${held.action.summary}` : '', catalogue);
     return;
   }
   const context = inspectionContext();
@@ -185,7 +185,7 @@ function renderInspection() {
   const model = creatureInspection(one, creatures, catalogue);
   inspectionSnapshot = model ? { model, context, action } : null;
   inspectionUI.render(model, context.label, context.historical,
-    action ? `Round ${action.round} · ${action.summary}` : '');
+    action ? `Round ${action.round} · ${action.summary}` : '', catalogue);
 }
 $('inspect-history').addEventListener('click', () => {
   const action = inspectionSnapshot?.action;

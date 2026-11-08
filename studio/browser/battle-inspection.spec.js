@@ -64,15 +64,25 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   await expect(page.locator('#inspect-name')).toHaveText('Skullbeast · 1');
   await expect(page.locator('#inspect-context')).toHaveText('Round 3 · Current state');
   await expect(page.locator('#inspect-stats')).toContainText('3 defense · 8 initiative');
-  await expect(page.locator('#inspect-effects')).toContainText('Immune to stun / Bleed 2 · new · first countdown pending · from Skullbeast · 3 · Strike');
-  await expect(page.locator('#inspect-effects')).toContainText('permanent'); await expect(page.locator('#inspect-effects')).toContainText(/\b1 round(?!s)/);
-  await expect(page.locator('#inspect-mutations')).toContainText('Acquired · Stage 4 · Initiative bonus +0');
-  await expect(page.locator('#inspect-mutations')).toContainText('For every creature of the side');
-  await page.locator('#inspect-spells [data-inspect-spell="strike"] summary').click();
-  await expect(page.locator('#inspect-spells')).toContainText('One enemy');
-  await expect(page.locator('#inspect-spells')).toContainText('Caster: Gain 1 energy');
-  await expect(page.locator('#inspect-spells')).toContainText('20% crit · Precision only · d20 17+ · catalogue');
-  await expect(page.locator('#inspect-spells')).toContainText('Focus · 0 energy');
+  // The stats as tiles with the field's icons.
+  await expect(page.locator('#inspect-sheet [data-stat="health"] .inspect-tile-value')).toHaveText('20/25');
+  await expect(page.locator('#inspect-sheet [data-stat="defense"] .inspect-tile-value')).toHaveText('3');
+  await expect(page.locator('#inspect-sheet [data-stat="initiative"] .inspect-tile-value')).toHaveText('8');
+  // Each status and condition a card wearing the icon of what it moves, with its duration and its source.
+  const conditions = page.locator('#inspect-effects .inspect-condition');
+  await expect(conditions).toHaveText(['Immune to stun', 'Bleed 2 · new · first countdown pending · from Skullbeast · 3 · Strike', 'DefenseBuff 2 · permanent', 'Regeneration 1 · 1 round']);
+  expect(await conditions.evaluateAll(nodes => nodes.map(node => node.dataset.cue))).toEqual(['stun', 'health-loss', 'other', 'health-gain']);
+  const shared = page.locator('#inspect-mutations [data-inspect-mutation="cap"]');
+  await expect(shared.locator('.inspect-chip')).toHaveText(['Stage 4', 'Initiative +0']);
+  await expect(shared).toContainText('For every creature of the side');
+  // Known spells are the spell choice's cards: cost and crit chips, targeting, effect lines, and their teacher.
+  const strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');
+  await expect(strike.locator('.spell-card-name')).toHaveText('Strike'); await expect(strike.locator('.spell-card-target')).toHaveText('One enemy');
+  await expect(strike.locator('.spell-card-effect[data-caster="true"]')).toHaveText('Gain 1 energy');
+  await expect(strike.locator('.spell-chip-crit')).toContainText('20%'); await expect(strike.locator('.spell-chip-crit small')).toHaveText('Precision only · d20 17+');
+  await expect(strike.locator('.inspect-spell-source')).toHaveText('Learned from Brute');
+  await expect(page.locator('#inspect-spells [data-inspect-spell="focus"] .spell-cost-value')).toHaveText('0');
+  await expect(page.locator('#inspect-dialog [data-spell]')).toHaveCount(0);
   await expect(page.locator('#inspect-dialog')).not.toContainText('PRIVATE');
   await fitsViewport(page, '#inspect-close');
   await page.screenshot({ path: info.outputPath('inspection-fixture.jpg'), type: 'jpeg', quality: 85 });
@@ -83,18 +93,19 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   expect(h.shown).toEqual([]); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test('same-creature polls preserve expanded spell, keyboard focus and reading position', async ({ page }) => {
+test('same-creature polls keep the spell cards, keyboard focus and reading position', async ({ page }) => {
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
-  const summary = page.locator('#inspect-spells [data-inspect-spell="strike"] summary');
-  await summary.focus(); await page.keyboard.press('Enter');
-  const scroll = await page.locator('#inspect-body').evaluate(node => { node.scrollTop = 170; return node.scrollTop; });
+  const body = page.locator('#inspect-body'), strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');
+  await body.focus(); await strike.evaluate(node => { node.dataset.kept = 'yes'; });
+  const scroll = await body.evaluate(node => { node.scrollTop = 170; return node.scrollTop; });
   h.view.board.allies[0].health = 17; await h.publish();
   await expect(page.locator('#inspect-stats')).toContainText('17/25 HP');
-  await expect(summary).toBeFocused(); await expect(summary.locator('..')).toHaveAttribute('open');
-  expect(await page.locator('#inspect-body').evaluate(node => node.scrollTop)).toBe(scroll);
-  // Even adding a known spell leaves the existing focused disclosure intact.
+  await expect(page.locator('#inspect-sheet [data-stat="health"] .inspect-tile-value')).toHaveText('17/25');
+  await expect(body).toBeFocused(); await expect(strike).toHaveAttribute('data-kept', 'yes');
+  expect(await body.evaluate(node => node.scrollTop)).toBe(scroll);
+  // A newly known spell is dealt as a card; the reader keeps their place.
   h.view.board.allies[0].knownSpells.push('new-missing'); await h.publish();
-  await expect(page.locator('#inspect-spells')).toContainText('new-missing'); await expect(summary).toBeFocused();
+  await expect(page.locator('#inspect-spells [data-inspect-spell="new-missing"]')).toContainText('Spell details unavailable'); await expect(body).toBeFocused();
   expect(h.errors).toEqual([]);
 });
 
@@ -119,7 +130,8 @@ test('defeated opponents and missing art or catalogue remain inspectable with ex
   await expect(page.locator('#inspect-effects')).toContainText('Defeated');
   await expect(page.locator('#inspect-mutations')).toContainText('unknown');
   await expect(page.locator('#inspect-mutations')).toContainText('Mutation details unavailable');
-  await page.locator('#inspect-spells summary').click(); await expect(page.locator('#inspect-spells')).toContainText('Spell details unavailable');
+  await expect(page.locator('#inspect-spells .inspect-spell')).toHaveCount(1); await expect(page.locator('#inspect-spells')).toContainText('Spell details unavailable');
+  await expect(page.locator('#inspect-portrait')).toHaveAttribute('data-defeated', 'true');
   await expect(page.locator('#inspect-history')).toBeHidden();
   expect(h.errors).toEqual([]);
 });
@@ -143,20 +155,32 @@ test('revocation erases every reference and pending history link', async ({ page
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click(); await page.locator('#inspect-history').click();
   h.status = 403; await h.publish(); await expect(page.locator('#inspect-dialog')).toBeHidden();
   await expect(page.locator('#history-dialog')).toBeHidden();
-  for (const id of ['inspect-mutations', 'inspect-spells', 'inspect-stats', 'inspect-last-action']) await expect(page.locator(`#${id}`)).toBeEmpty();
+  for (const id of ['inspect-mutations', 'inspect-spells', 'inspect-stats', 'inspect-sheet', 'inspect-effects', 'inspect-last-action']) await expect(page.locator(`#${id}`)).toBeEmpty();
   await expect(page.locator('#inspect-history')).toBeHidden(); expect(h.errors).toEqual([]);
+});
+
+test('a hidden tab clears the inspection, and the same creature reopened shows its stat tiles again', async ({ page }) => {
+  await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
+  await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
+  const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
+  await visibility(true); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-sheet')).toBeEmpty();
+  await visibility(false); await expect(page.locator('#loading')).toBeHidden();
+  await page.locator('#actor-layer [data-creature="1"]').click();
+  await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
+  await expect(page.locator('#inspect-sheet [data-stat="health"] .inspect-tile-value')).toHaveText('20/25');
 });
 
 test('short portrait, landscape and enlarged text retain internal scrolling and reachable close', async ({ page }) => {
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
-    await page.addStyleTag({ content: '#inspect-dialog p, #inspect-dialog summary { font-size: 24px !important; }' });
+    await page.addStyleTag({ content: '#inspect-dialog p, #inspect-dialog li, #inspect-dialog strong { font-size: 24px !important; }' });
     await fitsViewport(page, '#inspect-close');
     expect(await page.locator('#inspect-body').evaluate(node => node.clientHeight)).toBeGreaterThan(40);
-    await page.locator('#inspect-spells [data-inspect-spell="focus"] summary').click();
-    await expect(page.locator('#inspect-spells [data-inspect-spell="focus"]')).toHaveAttribute('open');
-    await page.locator('#inspect-spells [data-inspect-spell="focus"] summary').click();
+    // The last card is reached by scrolling the body, never by losing the close button.
+    const last = page.locator('#inspect-spells [data-inspect-spell="focus"]');
+    await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
+    await fitsViewport(page, '#inspect-close');
   }
   expect(h.errors).toEqual([]);
 });
