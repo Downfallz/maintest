@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLiveConnection, creatureLabel, livePresentation } from './battle-live.js';
+import { purchaseLog } from './battle-chronology.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const pending = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -201,4 +202,15 @@ test('finished history reads the selected seat from zero and a seat replacement 
 test('recorded transports need no live notification channel', async () => {
   const h = harness(); delete h.transport.events; h.connection.start(h.transport); await tick();
   assert.equal(h.states.at(-1), 'live'); assert.deepEqual([...h.jobs.values()].map(job => job.delay), [5000]); h.connection.stop();
+});
+
+test('each creature carries the illustration its purchases resolve to, from what the board says it owns', () => {
+  const packages = new Map([['tier:brute:v1', { level: 1, visual: { family: 'brute', artwork: 'brute-base' } }], ['tier:prowler:v1', { level: 1, visual: { family: 'predator', artwork: 'predator-base' } }]]);
+  const log = purchaseLog();
+  log.receive([{ sequence: 4, event: { kind: 'PurchasesRevealed', choices: [{ creature: 1, tier: 'tier:prowler:v1' }] } },
+    { sequence: 9, event: { kind: 'PurchasesRevealed', choices: [{ creature: 1, tier: 'tier:brute:v1' }] } }]);
+  const view = { board: { slot: 'Player1', allies: [{ id: 1, name: 'A', acquiredTiers: ['tier:brute:v1', 'tier:prowler:v1'] }], enemies: [] } };
+  assert.equal(livePresentation(view, packages, { log }).creatures[0].evolution.artworkId, 'brute-base');
+  assert.equal(livePresentation({ board: { ...view.board, allies: [{ id: 1, name: 'A', acquiredTiers: ['tier:prowler:v1'] }] } }, packages, { log }).creatures[0].evolution.artworkId, 'predator-base');
+  assert.equal(livePresentation(view).creatures[0].evolution.artworkId, 'base-creature');
 });

@@ -42,7 +42,8 @@ import { phaseLabel, stepLabel } from '../../table/terms.js';
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
   totalDefense: number; currentInitiative: number; isAlive: boolean; isStunned: boolean; isStunImmune: boolean;
-  knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[] }
+  knownSpells?: string[]; conditions: { effect: { kind?: string; $type?: string; amount?: number }; remainingRounds: number | null }[];
+  evolution?: { artworkId: string | null; artworkFile: string | null; capstoneEffectIds: string[] } }
 interface View { board: object; over: boolean; waiting: unknown; waitingFor: string | null;
   outcome?: { winner?: string; reason?: string } }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -70,6 +71,8 @@ let rendererFailed = false;
 // The seat being shown, as this browser remembers what it saw of it, and the last mark kept for it.
 let seenGame: string | null = null, seenKept: number | null = null;
 const nodes = new Map<string, HTMLButtonElement>();
+// What the scene drew for a creature whose button the page has not made yet.
+const shownArt = new Map<string, string>();
 const name = (id: unknown) => creatures.find(one => one.id === String(id))?.label ?? `Creature ${id}`;
 const seatName = (seat: string): string => seatLabel(seat);
 const connection = createLiveConnection({ onState: status, onView: (next: View | null, content: Catalogue | null) => {
@@ -284,9 +287,10 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  // The docked spell choice leaves the field in view, so a reveal stays on it while a spell is chosen; targets are
-  // chosen on the field itself, which the reveal leaves to them.
-  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !planning.model().opened;
+  // The docked spell and tempo choices leave the field in view, so a reveal stays on it while they are made; targets
+  // are chosen on the field itself, and the mutation sheet lights its own crests there, which the reveal leaves to them.
+  const sheet = planning.model();
+  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !(sheet.opened && sheet.latest?.waitingFor !== 'Speed');
   growthUI.render(view, catalogue, showGrowth);
   // The docked spell choice steps aside, its draft kept, for whatever the field has to show first: results being read,
   // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
@@ -310,6 +314,7 @@ function render() {
     let node = nodes.get(one.id);
     if (!node) {
       node = creatureButton(one.id);
+      if (shownArt.has(one.id)) { node.dataset.artworkShown = shownArt.get(one.id)!; shownArt.delete(one.id); }
       node.addEventListener('click', event => {
         if (controls.target(one.id)) return;
         if ((event.currentTarget as HTMLElement).dataset.mutationRecipient === 'true') planningUI.openCreature(Number(one.id));
@@ -323,6 +328,10 @@ function render() {
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
     node.dataset.form = one.form;
+    // The illustration and capstone effects the creature's purchases resolve to (ADR 0151); the scene says which
+    // image it actually draws in data-artwork-shown, the audited sprite until the illustration has loaded.
+    node.dataset.artwork = one.evolution?.artworkId ?? '';
+    node.dataset.capstones = (one.evolution?.capstoneEffectIds ?? []).join(' ');
     node.className = `creature ${one.enemy ? 'enemy' : 'ally'}${one.isAlive ? '' : ' is-defeated'}`;
     const targetState = battleTargetState(action, one.id);
     const targetable = Boolean(targetState?.selectable);
@@ -645,6 +654,7 @@ async function discover(autoResume = true) {
 }
 
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {
   audio.stop();

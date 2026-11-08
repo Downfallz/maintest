@@ -1,30 +1,32 @@
-# Evolution WebP library — staged intake
+# Evolution WebP library
 
 The owner-approved polished references are stored under `table/battle-art/evolutions/` as
 WebP files. Most are 1536×1024; three Predator references have wider original canvases,
-recorded explicitly in `table/battle-evolution-art.js` alongside stable tier IDs.
-There is one registered image for each of the 21 stage-1-to-stage-3 tier IDs, plus
-the ancestral Stage 0 creature (`base-creature.webp`) with no purchased tier ID.
+recorded explicitly in `table/battle-evolution-art.js` under stable illustration ids.
+There is one registered image for each of the 21 Stage 1 to Stage 3 packages, plus
+the ancestral Stage 0 creature (`base-creature.webp`), which no purchase draws.
 
-These are **staged assets, not yet eagerly loaded combat sprites**. The current
-`table/battle-art.js` manifest and its four audited runtime sprite hashes, geometry,
-fallbacks, and initial payload budgets are intentionally unchanged. Before activating
-these images, verify edge transparency and silhouette anchors against the actual
-battlefield. Loading every evolution texture at scene boot would exceed the initial
-asset budget; a subsequent integration must fetch only active roster variants and
-fall back to audited base art while an optional texture is unavailable.
+They are live in the battle view since ADR 0151, as **lazily loaded illustrations**. The
+four audited sprites of `table/battle-art.js` are still loaded eagerly and stay the fallback: a creature shows
+its sprite until its illustration has loaded, and for good if it never does. The scene fetches only the
+illustrations that creatures on the field resolve to.
+
+Which package draws which illustration is authored beside the content, in `data/presentation/mutation-art.json`
+(`artwork`, and `effect` for a capstone). It is not in the page, which names no package. Each registry entry in
+`table/battle-evolution-art.js` records its canvas, its silhouette bounds (alpha >= 128, measured from the file)
+and its ground anchor (the bottom centre of those bounds), so every stage is drawn to the same box.
 
 ## Adding visual hybridizations
 
 - The dominant shape remains the Stage 3 tier's standalone image.
-- Register only hand-approved variant pairs, e.g. `transcendent + necrotic`; do not
-  generate the Cartesian product of all purchased tiers.
-- A missing pair resolves to the primary Stage 3 art. Mutations can exist and
+- Register only hand-approved variant pairs, e.g. `transcendent + necrotic`: one entry in `hybrids`, naming the
+  two illustrations it combines (`dominant`, `hybrid`), its file under `evolutions/hybrids/`, its canvas and its
+  measured bounds. Do not generate the Cartesian product of all purchased tiers. Serve the new file in
+  `TableFiles.cs`.
+- A missing pair resolves to the next eligible hybrid, then to the primary Stage 3 art. Mutations exist and
   function mechanically without a matching image.
-- Derive the pair choice from historical acquired tier IDs in a deterministic,
-  replay-safe way. Do not assume the acquired-tier array retains purchase order.
-- Keep hybrid selection separate from the current ART-5 body precedence and
-  bounded mutation cue overlays until its gameplay UX is reviewed.
+- Which hybrid shows, and in which order, is decided by `table/battle-evolution.js` from the purchase log, never
+  from the acquired-tier set's order (ADR 0151).
 
 ## Quality and provenance
 

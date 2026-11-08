@@ -24,6 +24,19 @@ internal sealed class TableFiles
 
     private const string Webp = "image/webp";
 
+    // The evolution illustrations (table/battle-evolution-art.js, ADR 0151), named here one by one like every other
+    // route: the page asks for the one a creature on the field resolves to, and nothing else is read.
+    private static readonly string[] EvolutionArt =
+    [
+        "base-creature", "brute-base", "predator-base", "warped-base",
+        "brute-stage2-oppressor", "brute-stage2-frenzied", "brute-stage2-ironhide",
+        "predator-stage2-scythe", "predator-stage2-blighted", "predator-stage2-open-maw",
+        "warped-stage2-stormborn", "warped-stage2-necrotic", "warped-stage2-ethereal",
+        "brute-stage3-oppressor", "brute-stage3-colossus", "brute-stage3-ravager",
+        "predator-stage3-soulreaver", "predator-stage3-blightweaver", "predator-stage3-deathstalker",
+        "warped-stage3-cataclysm", "warped-stage3-revenant", "warped-stage3-transcendent",
+    ];
+
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
 
     public TableFiles(string tableDirectory)
@@ -129,6 +142,9 @@ internal sealed class TableFiles
             ["/battle-live.js"] = (Path.Combine(tableDirectory, "battle-live.js"), JavaScript),
             ["/battle-seats.js"] = (Path.Combine(tableDirectory, "battle-seats.js"), JavaScript),
             ["/battle-art.js"] = (Path.Combine(tableDirectory, "battle-art.js"), JavaScript),
+            ["/battle-evolution-art.js"] = (Path.Combine(tableDirectory, "battle-evolution-art.js"), JavaScript),
+            ["/battle-evolution.js"] = (Path.Combine(tableDirectory, "battle-evolution.js"), JavaScript),
+            ["/battle-chronology.js"] = (Path.Combine(tableDirectory, "battle-chronology.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
             ["/battle-timing.js"] = (Path.Combine(tableDirectory, "battle-timing.js"), JavaScript),
             ["/battle-build/live.js"] = (Path.Combine(tableDirectory, "battle-build", "live.js"), JavaScript),
@@ -148,6 +164,11 @@ internal sealed class TableFiles
             ["/admin.css"] = (Path.Combine(tableDirectory, "admin.css"), Css),
             ["/admin.js"] = (Path.Combine(tableDirectory, "admin.js"), JavaScript),
         };
+
+        foreach (var art in EvolutionArt)
+        {
+            _routes[$"/battle-art/evolutions/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "evolutions", $"{art}.webp"), Webp);
+        }
     }
 
     /// <summary>The routes this host serves, so a test can hold them against what the page actually imports.</summary>

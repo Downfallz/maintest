@@ -2,6 +2,7 @@ import { upkeepReceipt, missingRoundEnergy } from './battle-upkeep.js';
 import { retainRoundEvents, matchReplay, turnoverSteps, turnoverText, lastResolvedText } from './feed.js';
 import { playbackBoard } from './replay.js';
 import { livePresentation } from './battle-live.js';
+import { purchaseLog } from './battle-chronology.js';
 import { outcomeText, matchResultSummary } from './outcome.js';
 
 export function roundNotes(entries, board) {
@@ -48,10 +49,12 @@ function replayNote(action, stage) {
 
 // A frameless event shows an empty battlefield, never a guessed one, so the scene replaces nothing.
 const packagesOf = catalogue => new Map((catalogue?.packages ?? []).map(pack => [pack.id, pack]));
-function replayBoard(action, actions, index, stage, latest, catalogue) {
+function replayBoard(action, actions, index, stage, latest, catalogue, purchases) {
   if (!action) return null;
-  if (action.final) return livePresentation({ board: action.board }, packagesOf(catalogue));
-  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue));
+  if (action.final) return livePresentation({ board: action.board }, packagesOf(catalogue), { log: purchases });
+  // Each recorded frame shows the purchases it owns, ordered by when they were made (ADR 0151); an interlude that
+  // borrows a later frame of its round is ordered the same way.
+  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue), { log: purchases });
   board.round = action.round;
   if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
   if (action.interlude === 'aftermath') board.phase = 'EndOfRound';
@@ -63,6 +66,8 @@ function replayBoard(action, actions, index, stage, latest, catalogue) {
 export function createBattleMatch({ connection, onChange }) {
   let latest = null, catalogue = null, seat = null, entries = [], actions = [], index = -1, stage = 'before';
   let generation = 0, busy = false, error = '', cached = null, conceded = false;
+  // The replay reads the seat's whole feed again; its reveals say when each creature bought what it shows.
+  const purchases = purchaseLog();
   const emit = () => { cached = null; onChange(); };
   function reset(nextSeat) { generation++; latest = null; catalogue = null; seat = nextSeat; entries = []; actions = []; index = -1; busy = false; error = ''; conceded = false; emit(); }
   function receive(view, cards) {
@@ -79,6 +84,7 @@ export function createBattleMatch({ connection, onChange }) {
       if (context !== generation) return;
       if (!answer?.ok || !answer.body?.over) { error = answer?.body?.message ?? 'Could not load the finished match. Try again.'; return; }
       const view = answer.body, feed = view.feed ?? [];
+      purchases.reset(); purchases.receive(feed);
       const casts = matchReplay(feed, view.board, new Map((catalogue?.cards ?? []).map(card => [card.id, card])));
       const rounds = [...new Set(feed.map(entry => entry.event?.roundId ?? entry.round))];
       const aftermath = rounds.flatMap(round => {
@@ -126,7 +132,7 @@ export function createBattleMatch({ connection, onChange }) {
     if (cached) return cached;
     const action = actions[index], active = Boolean(action);
     const twoFrames = active && !action.interlude && Boolean(action.frame);
-    cached = { active, sequence: action?.sequence, board: replayBoard(action, actions, index, stage, latest, catalogue), stage, index, count: actions.length, round: action?.round,
+    cached = { active, sequence: action?.sequence, board: replayBoard(action, actions, index, stage, latest, catalogue, purchases), stage, index, count: actions.length, round: action?.round,
       rounds: [...new Set(actions.map(one => one.round))], summary: active ? replayText(action, catalogue) : '',
       note: replayNote(action, stage),
       previous: active && (index > 0 || (twoFrames && stage === 'after')),

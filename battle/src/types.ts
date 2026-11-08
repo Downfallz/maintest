@@ -34,7 +34,10 @@ export interface SceneFrame {
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];
     changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[] };
-  creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean }[];
+  // `evolution` is the illustration and capstone effects the creature's purchases resolve to (ADR 0151); a frame
+  // without it (the lab's samples) draws the audited sprites as before.
+  creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean;
+    evolution?: { artworkId: string | null; capstoneEffectIds: string[] } }[];
 }
 export const labSceneFrame = (state: LabState): SceneFrame => ({
   stage: state.stage, target: state.target, actor: state.action.actor, targets: state.action.targets,

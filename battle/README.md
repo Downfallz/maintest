@@ -75,7 +75,7 @@ performance still require release measurement.
 node --test studio/*.test.js table/*.test.js
 npm --prefix studio/browser ci --ignore-scripts
 npm --prefix studio/browser exec -- playwright install chromium
-npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
+npm --prefix studio/browser test -- battle-lab.spec.js battle-live.spec.js battle-combat.spec.js battle-playback.spec.js battle-loop.spec.js battle-history.spec.js battle-guidance.spec.js battle-upkeep.spec.js battle-spellbook.spec.js battle-mutations.spec.js battle-evolution.spec.js battle-tempo.spec.js battle-pacing.spec.js battle-growth.spec.js battle-order.spec.js battle-targets.spec.js battle-inspection.spec.js battle-services.spec.js battle-parity.spec.js
 dotnet build
 dotnet test --no-build
 dotnet format --verify-no-changes
@@ -541,6 +541,42 @@ nothing about them rather than guessing. `table/battle-opponent.js` decides what
 phone held upright, or the spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank
 and heart, and the field's team label ("OPPONENT · NAME") still names them; on the smallest phones the round's
 phase gives up its place, since the command dock names it too.
+
+## Evolution illustrations and capstone effects
+
+Each creature is drawn as the evolution its purchases resolve to
+([ADR 0151](../docs/adr/0151-show-each-creature-as-its-evolution.md)). The pieces:
+
+- **Resolver** (`table/battle-evolution.js`), pure.
+  - Stage 0 shows the ancestral creature.
+  - With Stage 1 only, the latest Stage 1 shows.
+  - With Stage 2, the family holding the most mutations shows its latest Stage 2.
+  - The first Stage 3 bought is the identity for good.
+  - A registered hybrid of that Stage 3 may show instead: own-family Stage 2, then another family's Stage 2,
+    then another family's Stage 1, the latest bought first within each.
+  - Capstones never change the image.
+- **Purchase log** (`table/battle-chronology.js`). It keeps the feed's `PurchasesRevealed` picks in order, so
+  every frame, live or replayed, orders what it says the creature owns by when each purchase was made. The
+  acquired-tier set's order is never used.
+- **Registry** (`table/battle-evolution-art.js`). Each illustration's file, canvas, silhouette bounds and ground
+  anchor; the approved hybrids, none yet; the capstone effects and their composition order. Which package draws
+  which illustration comes with the catalogue's packages (`visual.artwork`, `visual.effect`), authored in
+  `data/presentation/mutation-art.json`.
+- **Scene.**
+  - It loads an illustration only when a creature on the field asks for one, and keeps the audited sprite until
+    it arrives, or for good if it fails.
+  - The ancestral Stage 0 is the audited base sprite already loaded at boot; its twin in `evolutions/` is not
+    fetched.
+  - It fades a changed image out over the new one, except under reduced motion.
+  - It draws capstone effects (`src/capstone-effects.ts`) around whatever image shows, still under reduced
+    motion.
+  - Each creature button carries `data-artwork` (resolved), `data-artwork-shown` (drawn) and `data-capstones`.
+- **Inspection.** The portrait shows the same illustration once it has loaded.
+
+`battle-evolution.test.js`, `battle-chronology.test.js` and `battle-evolution-art.test.js` cover the precedence
+rules, hybrids, capstones, replay sequences, missing chronology, the registry and silhouette scaling.
+`battle-evolution.spec.js` covers lazy loading, the fallback for an image that fails, a purchase changing the
+image in place, and capstone effects with and without reduced motion.
 
 ## AU12: public creature inspection
 

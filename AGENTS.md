@@ -141,7 +141,7 @@ Run build, tests, and format check before declaring any task done; when `learnin
 ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`;
 when `battle/` or `table/battle-*` changes, rebuild the bundle (`npm --prefix battle run build`) and run the browser suite's
 `battle-lab.spec.js`, `battle-live.spec.js`, `battle-combat.spec.js`, `battle-playback.spec.js`, `battle-loop.spec.js`,
-`battle-history.spec.js`, `battle-guidance.spec.js`, `battle-upkeep.spec.js`, `battle-mutations.spec.js`, `battle-tempo.spec.js`, `battle-spellbook.spec.js`, `battle-pacing.spec.js`, `battle-growth.spec.js`, `battle-order.spec.js`, `battle-targets.spec.js`, `battle-inspection.spec.js`, `battle-services.spec.js`, `battle-parity.spec.js` and `battle-release.spec.js` (battle/README.md). CI runs these, then sends the build and the coverage
+`battle-history.spec.js`, `battle-guidance.spec.js`, `battle-upkeep.spec.js`, `battle-mutations.spec.js`, `battle-evolution.spec.js`, `battle-tempo.spec.js`, `battle-spellbook.spec.js`, `battle-pacing.spec.js`, `battle-growth.spec.js`, `battle-order.spec.js`, `battle-targets.spec.js`, `battle-inspection.spec.js`, `battle-services.spec.js`, `battle-parity.spec.js` and `battle-release.spec.js` (battle/README.md). CI runs these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

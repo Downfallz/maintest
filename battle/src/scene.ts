@@ -6,15 +6,25 @@ import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
 import { MutationReveal } from './mutation-reveal';
 import { MutationCues } from './mutation-cues';
+import { CapstoneEffects } from './capstone-effects';
+import { EVOLUTION_REGISTRY } from '../../table/battle-evolution-art.js';
 import { SpellEffects, type EffectAnchor } from './spell-effects';
 
 const playing = (state: SceneFrame) => state.stage === 'windup' || state.stage === 'impact';
 
+// What a figure draws: an audited sprite (battle-art.js) or an evolution illustration (battle-evolution-art.js).
+// Both carry their canvas, silhouette and ground anchor, which is all the geometry reads.
+interface Art { key: string; width: number; height: number; bounds: readonly number[]; ground: readonly number[]; form?: string; id?: string }
+type SceneCreature = SceneFrame['creatures'][number];
+
 interface Figure {
+  id: string;
   image: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; ring: Phaser.GameObjects.Ellipse;
-  cues: MutationCues; home: Placement; art: ReturnType<typeof figureArt>; enemy: boolean;
+  cues: MutationCues; home: Placement; art: Art; enemy: boolean; alive: boolean;
   // The form the creature asked for: when the art drew another, the accents shaped for the asked one stay hidden.
   form: string;
+  // The evolution illustration it asked for (ADR 0151), its capstone effects, and the appearance they were made for.
+  wanted: string | null; effects: CapstoneEffects; look: string; cueKey: string;
 }
 
 const GOLD = 0xeac88e;
@@ -44,14 +54,23 @@ export class BattleScene extends Phaser.Scene {
   onResizeDuringPlayback: () => void = () => {};
   onImpact: () => void = () => {};
   onCancel: () => void = () => {};
+  // Which image a creature now shows: an evolution illustration's id, or `form:<form>` for an audited sprite.
+  onArtwork: (id: string, shown: string) => void = () => {};
   assetFailed = false;
+  // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
+  // fails stays failed for the page, and the figure keeps its audited sprite.
+  private loadingArt = new Set<string>();
+  private failedArt = new Set<string>();
 
   constructor(private assetRoot: string) { super('battle'); }
 
   preload() {
     this.load.image('battle-floor', `${this.assetRoot}eclipse-battle.webp`);
     for (const asset of CREATURE_ART) this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
-    this.load.on('loaderror', () => { this.assetFailed = true; });
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      if (!String(file.key).startsWith('evolution-')) { this.assetFailed = true; return; }
+      this.loadingArt.delete(String(file.key)); this.failedArt.add(String(file.key));
+    });
   }
 
   create() {
@@ -77,15 +96,17 @@ export class BattleScene extends Phaser.Scene {
     this.reduced = reduced;
     this.rate = playbackRate(rate);
     if (!this.ready) return;
-    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.form, one.enemy, one.layers]));
+    // The roster is who stands where; what each one looks like changes in place, so a purchase can be seen to happen.
+    const roster = JSON.stringify(state.creatures.map(one => [one.id, one.enemy]));
     const rosterChanged = roster !== this.roster;
     if (rosterChanged) {
       this.clearMotion();
-      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
+      for (const figure of this.figures.values()) { figure.cues.destroy(); figure.effects.destroy(); figure.image.destroy(); figure.shadow.destroy(); figure.ring.destroy(); }
       this.figures.clear();
       this.roster = roster;
       this.makeFigures();
     }
+    for (const creature of state.creatures) this.dress(this.figures.get(creature.id)!, creature, !rosterChanged);
     const changed = state.stage !== this.previous;
     if (changed && (state.stage === 'decision' || state.stage === 'resolved')) this.clearMotion();
     this.arrange(rosterChanged);
@@ -96,6 +117,7 @@ export class BattleScene extends Phaser.Scene {
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
       figure.image.setAlpha(!creature.isAlive ? .20 : state.mutationFocus && !selected ? .52 : 1);
+      figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
     }
@@ -123,8 +145,67 @@ export class BattleScene extends Phaser.Scene {
       const image = this.add.image(0, 0, art.key).setFlipX(enemy);
       // Team identity remains in labels, formation and targeting; preserve the approved art palette.
       const cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form);
-      this.figures.set(creature.id, { image, shadow, ring, art, enemy, cues, form: creature.form, home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
+      this.figures.set(creature.id, { id: creature.id, image, shadow, ring, art, enemy, cues, form: creature.form, alive: creature.isAlive,
+        wanted: null, effects: new CapstoneEffects(this, []), look: '', cueKey: '', home: { x: 0, y: 0, size: 0, hitWidth: 0 } });
     }
+  }
+
+  // A creature's appearance: its ART-5 accents, the evolution illustration it resolved to and its capstone effects
+  // (ADR 0151). Only what changed is rebuilt; a change of illustration fades the old one out over the new one.
+  private dress(figure: Figure, creature: SceneCreature, animate: boolean) {
+    const effects = creature.evolution?.capstoneEffectIds ?? [];
+    const look = JSON.stringify([creature.form, creature.layers ?? [], creature.evolution?.artworkId ?? null, effects]);
+    if (look === figure.look) return;
+    figure.look = look;
+    const cueKey = JSON.stringify([creature.form, creature.layers ?? []]);
+    if (cueKey !== figure.cueKey) {
+      if (figure.cueKey) { figure.cues.destroy(); figure.cues = new MutationCues(this, creature.layers ?? [], creature.id, creature.form); }
+      figure.cueKey = cueKey;
+    }
+    figure.form = creature.form;
+    if (JSON.stringify(figure.effects.ids) !== JSON.stringify(effects)) { figure.effects.destroy(); figure.effects = new CapstoneEffects(this, effects); }
+    figure.wanted = creature.evolution?.artworkId ?? null;
+    this.showArt(figure, animate);
+  }
+
+  // The illustration the figure asked for once it is loaded; until then, or if it never loads, the audited sprite of
+  // its form, which is always there. Geometry follows whichever image is drawn, by its own silhouette.
+  private showArt(figure: Figure, animate: boolean) {
+    // The ancestral Stage 0 is the audited base sprite the scene loads at boot, the same drawing: fetching its
+    // re-encoded twin would add a cold download to every opening board for no change on screen.
+    const asked = figure.wanted ? EVOLUTION_REGISTRY.art(figure.wanted) : null;
+    const wanted = asked && asked.stage > 0 ? asked : null;
+    let art: Art;
+    if (wanted && this.textures.exists(wanted.key)) art = wanted;
+    else {
+      if (wanted && !this.failedArt.has(wanted.key)) this.request(wanted);
+      art = figureArt(figure.form, (key: string) => this.textures.exists(key));
+    }
+    if (art.key !== figure.image.texture.key) {
+      if (animate && !this.reduced && figure.image.visible) {
+        const old = figure.image;
+        const ghost = this.add.image(old.x, old.y, old.texture.key).setOrigin(old.originX, old.originY).setScale(old.scaleX, old.scaleY)
+          .setFlipX(old.flipX).setAlpha(old.alpha).setDepth(old.depth + .0001);
+        this.effects.push(ghost);
+        this.tweens.add({ targets: ghost, alpha: 0, duration: 420, ease: 'Sine.Out', onComplete: () => ghost.destroy() });
+      }
+      figure.image.setTexture(art.key);
+    }
+    figure.art = art;
+    this.onArtwork(figure.id, art === wanted ? wanted.id : `form:${art.form ?? figure.form}`);
+  }
+
+  private request(asset: NonNullable<ReturnType<typeof EVOLUTION_REGISTRY.art>>) {
+    if (this.loadingArt.has(asset.key)) return;
+    this.loadingArt.add(asset.key);
+    this.load.image(asset.key, `${this.assetRoot}${asset.file}`);
+    this.load.once(`filecomplete-image-${asset.key}`, () => {
+      this.loadingArt.delete(asset.key);
+      const waiting = [...this.figures.values()].filter(figure => figure.wanted === asset.id);
+      for (const figure of waiting) this.showArt(figure, true);
+      if (waiting.length) this.arrange();
+    });
+    if (!this.load.isLoading()) this.load.start();
   }
 
   // The framebuffer uses device pixels; all art, animation distances and DOM targets share CSS coordinates.
@@ -284,7 +365,10 @@ export class BattleScene extends Phaser.Scene {
   update(time: number) {
     if (!this.state) return;
     // Creatures stand still between actions: only a played action moves them.
-    for (const figure of this.figures.values()) this.followCues(figure);
+    for (const figure of this.figures.values()) {
+      this.followCues(figure);
+      figure.effects.follow(figure.image, figure.alive && figure.image.visible, time, this.reduced);
+    }
     const width = Math.max(1, this.cameras.main.displayWidth);
     const height = Math.max(1, this.cameras.main.displayHeight);
     const drift = this.reduced ? 0 : time * .007;

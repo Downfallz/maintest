@@ -156,3 +156,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0148](0148-play-what-a-closed-page-missed.md) | Play what a closed page missed | Accepted for the opt-in battle view |
 | [0149](0149-open-the-spell-choice-with-the-players-turn.md) | Open the spell choice with the player's turn, docked beside the field | Accepted for the opt-in battle view |
 | [0150](0150-open-the-team-tempos-with-their-phase.md) | Open the team's tempos with their phase, docked beside the field | Accepted for the opt-in battle view |
+| [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view |

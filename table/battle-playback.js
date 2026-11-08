@@ -4,6 +4,7 @@ import { historyEntry } from './battle-history.js';
 import { presentedView } from './presentation.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { creatureLabel, livePresentation } from './battle-live.js';
+import { purchaseLog } from './battle-chronology.js';
 import { endedChip, immuneChip, outcomeChip } from './effect-chips.js';
 import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 
@@ -161,6 +162,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   let latest = null, queue = [], current = null, stage = 'decision', summary = '';
   let mode = 'auto', presented = null, read = null, ordinaryRounds = new Set(), lastFramed = null;
   let seen = null, timer = null, generation = 0, reduced = false, rate = 1, catalogue = new Map(), harmful = new Set(), bought = new Map();
+  // When each creature bought what it shows, from the reveals this seat's feed brought (ADR 0151).
+  const purchases = purchaseLog();
   const emit = () => onChange();
   function cancelTimer() { generation++; cancel(timer); timer = null; }
   // Animation phases follow the playback speed; a reduced-motion receipt is reading time and does not.
@@ -203,7 +206,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     settle(queue.length ? resultText(queue.at(-1)) : summary, dismissUpkeep);
   }
   function reset() {
-    cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); emit();
+    cancelTimer(); latest = null; queue = []; current = null; lastFramed = null; stage = 'decision'; seen = null; presented = null; read = null; ordinaryRounds.clear(); summary = ''; catalogue = new Map(); harmful = new Set(); bought = new Map(); purchases.reset(); emit();
   }
   /**
    * `since` is the last sequence this seat was shown before the page was closed or hidden: on the first read, what
@@ -213,6 +216,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function receive(view, cards, { animate = true, effects = /** @type {{ kind: string, harmful: boolean }[]} */ ([]), packages = new Map(), since = /** @type {number | null} */ (null) } = {}) {
     if (!view) { reset(); return; }
     latest = view; catalogue = cards; harmful = new Set(effects.filter(effect => effect.harmful).map(effect => effect.kind)); bought = packages;
+    purchases.receive(view.feed);
     const entries = (view.feed ?? []).filter(entry => Number.isInteger(entry.sequence));
     const end = Math.max(-1, ...entries.map(entry => entry.sequence),
       Number.isInteger(view.feedNext) ? view.feedNext - 1 : -1);
@@ -283,7 +287,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
       : action ? presentedView(latest, replay) : latest;
-    const board = livePresentation(display, bought);
+    // Every frame, live or recorded, shows the purchases it owns, ordered by when they were made (ADR 0151).
+    const board = livePresentation(display, bought, { log: purchases });
     const cue = action ? actionCue(action, catalogue, harmful) : null;
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;

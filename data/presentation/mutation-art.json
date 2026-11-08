@@ -1,95 +1,119 @@
 {
   "tier:apex:v1": {
     "family": "predator",
-    "motif": "precision"
+    "motif": "precision",
+    "effect": "capstone-apex"
   },
   "tier:archmage:v1": {
     "family": "warped",
-    "motif": "circuit"
+    "motif": "circuit",
+    "effect": "capstone-archmage"
   },
   "tier:assassin:v1": {
     "family": "predator",
-    "motif": "talons"
+    "motif": "talons",
+    "artwork": "predator-stage2-scythe"
   },
   "tier:berserker:v1": {
     "family": "brute",
-    "motif": "fissures"
+    "motif": "fissures",
+    "artwork": "brute-stage2-frenzied"
   },
   "tier:blightweaver:v1": {
     "family": "predator",
-    "motif": "glands"
+    "motif": "glands",
+    "artwork": "predator-stage3-blightweaver"
   },
   "tier:brute:v1": {
-    "family": "brute"
+    "family": "brute",
+    "artwork": "brute-base"
   },
   "tier:deathstalker:v1": {
     "family": "predator",
-    "motif": "talons"
+    "motif": "talons",
+    "artwork": "predator-stage3-deathstalker"
   },
   "tier:dreadnought:v1": {
     "family": "brute",
-    "motif": "plates"
+    "motif": "plates",
+    "artwork": "brute-stage3-colossus"
   },
   "tier:elementalist:v1": {
     "family": "warped",
-    "motif": "shards"
+    "motif": "shards",
+    "artwork": "warped-stage2-stormborn"
   },
   "tier:harbinger:v1": {
     "family": "warped",
-    "motif": "shards"
+    "motif": "shards",
+    "artwork": "warped-stage3-cataclysm"
   },
   "tier:ironbound:v1": {
     "family": "brute",
-    "motif": "plates"
+    "motif": "plates",
+    "artwork": "brute-stage2-ironhide"
   },
   "tier:lich:v1": {
     "family": "warped",
-    "motif": "souls"
+    "motif": "souls",
+    "artwork": "warped-stage3-revenant"
   },
   "tier:marauder:v1": {
     "family": "brute",
-    "motif": "crown"
+    "motif": "crown",
+    "artwork": "brute-stage2-oppressor"
   },
   "tier:necromancer:v1": {
     "family": "warped",
-    "motif": "souls"
+    "motif": "souls",
+    "artwork": "warped-stage2-necrotic"
   },
   "tier:occultist:v1": {
-    "family": "warped"
+    "family": "warped",
+    "artwork": "warped-base"
   },
   "tier:parasite:v1": {
     "family": "predator",
-    "motif": "fangs"
+    "motif": "fangs",
+    "artwork": "predator-stage2-open-maw"
   },
   "tier:plague_doctor:v1": {
     "family": "predator",
-    "motif": "glands"
+    "motif": "glands",
+    "artwork": "predator-stage2-blighted"
   },
   "tier:prowler:v1": {
-    "family": "predator"
+    "family": "predator",
+    "artwork": "predator-base"
   },
   "tier:ravager:v1": {
     "family": "brute",
-    "motif": "fissures"
+    "motif": "fissures",
+    "artwork": "brute-stage3-ravager"
   },
   "tier:shaman:v1": {
     "family": "warped",
-    "motif": "astral"
+    "motif": "astral",
+    "artwork": "warped-stage2-ethereal"
   },
   "tier:soulreaver:v1": {
     "family": "predator",
-    "motif": "fangs"
+    "motif": "fangs",
+    "artwork": "predator-stage3-soulreaver"
   },
   "tier:spiritcaller:v1": {
     "family": "warped",
-    "motif": "astral"
+    "motif": "astral",
+    "artwork": "warped-stage3-transcendent"
   },
   "tier:titan:v1": {
     "family": "brute",
-    "motif": "reinforcement"
+    "motif": "reinforcement",
+    "effect": "capstone-titan"
   },
   "tier:warmonger:v1": {
     "family": "brute",
-    "motif": "crown"
+    "motif": "crown",
+    "artwork": "brute-stage3-oppressor"
   }
 }
