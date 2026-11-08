@@ -546,10 +546,18 @@ numbers and the engine's words are in each badge's title, the accessible label a
 status tag above is placed from the caption's measured height. A new round seen live is announced by a
 short banner at the top of the field that fades by itself.
 
+The reference reads as a sheet, in the same visual language as the mutation tree and the spell choice: the
+creature's figure and name, its stats as four tiles (health with its bar, energy, defense, initiative) wearing
+the field's icons, and each status and condition as a card with its icon in a medallion coloured by what it
+moves, its duration and its source. A screen reader hears the stats as one sentence. It covers the field, full
+screen on a phone: nothing is chosen from it.
+
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
-Stage, authored tags, initiative bonus and exact passive wording, including shared capstones. Known spell
-disclosures show cost, targeting, target/caster effects and catalogue critical details, with acquired sources
-where recorded. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
+Stage and initiative bonus as chips, authored tags as pills, and exact passive wording, including shared
+capstones. Known spells are dealt as the spell choice's own cards (`src/spell-card.ts`), in its order, attacks
+first: cost and crit chips (the crit naming its tempo and d20 face), targeting, effect lines with their icons,
+then the mutation that taught it where recorded. They answer `[data-inspect-spell]`, never the spell choice's
+`[data-spell]`. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
 entries keep their identifiers and explicitly unavailable detail. Aggregate passive badges reuse `board.js`.
 
 **Read action in History** opens the exact last public cast made by that creature, including fizzles and
@@ -559,9 +567,9 @@ Historical references label their latest loaded cast and filter by the displayed
 claim a complete search across unloaded history or show a future action. An unavailable
 historical cast stays unlinked. Private submissions cannot populate this cache, and losing the seat clears it.
 
-`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable disclosures and
-a bounded scrollable body with fixed identity/stats and Close. Ordinary polls retain focus, open spells and
-reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
+`table/battle-inspection.js` owns the pure reference, `battle/src/inspection.ts` owns stable cards and
+a bounded scrollable body with fixed identity and Close. Ordinary polls retain focus, the cards already dealt
+and reading position. Opening references never sends or acknowledges a decision. The Mutation Tree launcher is
 available on current inspections; historical inspections display recorded ownership instead of opening a
 current-state tree. If a text-only turnover arrives while the inspection is open, its last recorded frame
 stays explicitly labelled **Pinned reference** until closed. No unrecorded stats or spellbook are supplied.

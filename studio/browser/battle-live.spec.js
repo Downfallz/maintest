@@ -180,7 +180,7 @@ test('an opponent who takes the open seat stays named when an older read of the 
 test('inspecting a creature reads its stats and the catalogue\'s names for its spells', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('[data-creature="4"]').click();
-  await expect(page.locator('#inspect-spells summary')).toHaveText('Host spell name');
+  await expect(page.locator('#inspect-spells .spell-card-name')).toHaveText('Host spell name');
   await expect(page.locator('#inspect-stats')).toContainText('21/30 HP · 5 energy · 2 defense');
 });
 

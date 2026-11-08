@@ -117,13 +117,13 @@
     <div class="combat-dialog-footer"><section id="intent-preview" class="target-preview" tabindex="0" aria-label="Hidden intent estimate" hidden></section><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>
   </dialog>
   <dialog id="inspect-dialog" aria-labelledby="inspect-name">
-    <header class="inspect-header"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p><p id="inspect-stats"></p></header>
+    <header class="inspect-header"><div id="inspect-portrait" class="inspect-portrait" aria-hidden="true"></div><div class="inspect-title"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p></div></header>
     <div id="inspect-body" tabindex="0" aria-label="Creature details">
-      <h3>Conditions</h3><p id="inspect-effects"></p>
-      <h3>Acquired mutations</h3><ul id="inspect-mutations"></ul>
-      <button id="inspect-growth" type="button" data-growth-open>Explore Mutation Tree</button>
-      <h3>Known spells</h3><p class="dialog-note">Catalogue reference. Known spells do not reveal a planned spell or its targets.</p><div id="inspect-spells"></div>
-      <h3 id="inspect-action-heading">Last public action</h3><p id="inspect-last-action"></p><button id="inspect-history" type="button" hidden>Read action in History</button>
+      <p id="inspect-stats" class="unseen"></p><div id="inspect-sheet" class="inspect-sheet" aria-hidden="true"></div>
+      <section class="inspect-section"><h3>Conditions</h3><ul id="inspect-effects" class="inspect-conditions"></ul></section>
+      <section class="inspect-section"><h3>Acquired mutations</h3><ul id="inspect-mutations"></ul><button id="inspect-growth" type="button" data-growth-open>Explore Mutation Tree</button></section>
+      <section class="inspect-section"><h3>Known spells</h3><p class="dialog-note">Catalogue reference. Known spells do not reveal a planned spell or its targets.</p><div id="inspect-spells"></div></section>
+      <section class="inspect-section inspect-last"><h3 id="inspect-action-heading">Last public action</h3><p id="inspect-last-action"></p><button id="inspect-history" type="button" hidden>Read action in History</button></section>
       <p id="inspect-appearance" class="dialog-note"></p><p class="dialog-note">Artwork is provisional.</p>
     </div>
     <form method="dialog" class="inspect-footer"><button id="inspect-close" aria-label="Close inspection">Close</button></form>
