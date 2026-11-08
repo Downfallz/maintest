@@ -143,6 +143,7 @@ internal sealed class TableFiles
             ["/battle-seats.js"] = (Path.Combine(tableDirectory, "battle-seats.js"), JavaScript),
             ["/battle-art.js"] = (Path.Combine(tableDirectory, "battle-art.js"), JavaScript),
             ["/battle-evolution-art.js"] = (Path.Combine(tableDirectory, "battle-evolution-art.js"), JavaScript),
+            ["/battle-predator-hybrid-art.js"] = (Path.Combine(tableDirectory, "battle-predator-hybrid-art.js"), JavaScript),
             ["/battle-evolution.js"] = (Path.Combine(tableDirectory, "battle-evolution.js"), JavaScript),
             ["/battle-chronology.js"] = (Path.Combine(tableDirectory, "battle-chronology.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
