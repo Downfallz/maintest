@@ -27,6 +27,7 @@
     <Content Include="..\..\studio\*.js" Exclude="..\..\studio\*.test.js" Link="studio\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-build\*" Link="table\battle-build\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\*.webp" Link="table\battle-art\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\battle-art\evolutions\*.webp" Link="table\battle-art\evolutions\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.html" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.css" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.js" Exclude="..\..\table\*.test.js" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

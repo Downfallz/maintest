@@ -21,7 +21,9 @@ function bought(names, { creature = 1 } = {}) {
   return { creature: { id: String(creature), acquiredTiers: names.map(T).sort() }, history: { log } };
 }
 const resolve = (names, registry) => { const { creature, history } = bought(names); return resolveEvolution(creature, packages, history, registry); };
-const withHybrids = pairs => createEvolutionRegistry(pairs.map(([dominant, hybrid]) => ({ id: `${dominant}-${hybrid}`, dominantTierId: T(dominant), hybridTierId: T(hybrid),
+// Hybrids are registered by the two illustrations they combine, as the catalogue's packages name them.
+const artworkOf = name => packages.get(T(name)).visual.artwork;
+const withHybrids = pairs => createEvolutionRegistry(pairs.map(([dominant, hybrid]) => ({ id: `${dominant}-${hybrid}`, dominant: artworkOf(dominant), hybrid: artworkOf(hybrid),
   family: 'hybrid', stage: 3, file: `evolutions/hybrids/${dominant}-${hybrid}.webp`, bounds: [0, 0, 10, 10], ground: [5, 10] })));
 
 test('a creature that bought nothing shows the ancestral Stage 0', () => {
@@ -126,5 +128,11 @@ test('a package with no drawn family, or a catalogue that serves none, leaves th
   assert.equal(resolveEvolution(null, packages, null).artworkId, 'base-creature');
 });
 test('the default registry has no hybrid yet, so every Stage 3 shows its own image', () => {
-  assert.equal(EVOLUTION_REGISTRY.hybrid(T('spiritcaller'), T('necromancer')), null);
+  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic'), null);
+});
+test('a package whose illustration is not registered keeps its identity and draws no image of its own', () => {
+  const unknown = new Map(packages); unknown.set(T('lich'), { ...packages.get(T('lich')), visual: { ...packages.get(T('lich')).visual, artwork: 'not-drawn-yet' } });
+  const { creature, history } = bought(['occultist', 'necromancer', 'lich']);
+  const shown = resolveEvolution(creature, unknown, history);
+  assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.artworkId, null);
 });

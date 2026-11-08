@@ -52,7 +52,7 @@ export function creatureInspection(creature, roster, catalogue) {
   const status = statuses.map(one => one.text);
   const value = one => Number.isFinite(one) ? one : null;
   return { id: String(creature.id), name: creature.label ?? creature.name ?? `Creature ${creature.id}`,
-    side: creature.enemy ? 'OPPONENT' : 'YOUR TEAM', enemy: creature.enemy === true, form: creature.form ?? null, description: creature.description ?? '',
+    side: creature.enemy ? 'OPPONENT' : 'YOUR TEAM', enemy: creature.enemy === true, form: creature.form ?? null, artworkFile: creature.evolution?.artworkFile ?? null, description: creature.description ?? '',
     stats: `${number(creature.health)}/${number(creature.maxHealth)} HP · ${number(creature.energy)} energy · ${number(creature.totalDefense)} defense · ${number(creature.currentInitiative)} initiative`,
     sheet: { health: value(creature.health), maxHealth: value(creature.maxHealth), energy: value(creature.energy), defense: value(creature.totalDefense), initiative: value(creature.currentInitiative) },
     effects: [...status, ...conditions].join(' / ') || (Array.isArray(creature.conditions) ? 'No ongoing effects' : 'Conditions not recorded'),

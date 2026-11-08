@@ -51,7 +51,7 @@ export function inspectionControls() {
     identity = ''; mutationsKey = ''; spellsKey = ''; conditionsKey = '';
     dialog.close();
     for (const id of ['inspect-name', 'inspect-side', 'inspect-context', 'inspect-stats', 'inspect-sheet', 'inspect-appearance', 'inspect-effects', 'inspect-mutations', 'inspect-spells', 'inspect-last-action']) el(id).replaceChildren();
-    el('inspect-portrait').style.backgroundImage = '';
+    el('inspect-portrait').style.backgroundImage = ''; delete el('inspect-portrait').dataset.artwork;
     // The tiles are gone with the rest, so their key goes too: the same stats seen again must draw them again.
     delete el('inspect-sheet').dataset.content;
     el('inspect-history').hidden = true; el('inspect-growth').hidden = true;
@@ -62,7 +62,18 @@ export function inspectionControls() {
     const cues: Cue[] = catalogue?.effects ?? [];
     text('inspect-name', model.name); text('inspect-side', model.side); text('inspect-context', context);
     const portrait = el('inspect-portrait');
-    portrait.style.backgroundImage = model.form ? `url("battle-art/${model.form}.webp")` : '';
+    // The illustration the field shows (ADR 0151) once it has loaded; the audited sprite of its form until then,
+    // and for good if it never loads. One image at a time: their transparent parts would show each other.
+    const sprite = model.form ? `url("battle-art/${model.form}.webp")` : '';
+    if (portrait.dataset.artwork !== (model.artworkFile ?? '')) {
+      portrait.dataset.artwork = model.artworkFile ?? '';
+      portrait.style.backgroundImage = sprite;
+      if (model.artworkFile) {
+        const wanted = model.artworkFile, image = new Image();
+        image.onload = () => { if (portrait.dataset.artwork === wanted) portrait.style.backgroundImage = `url("battle-art/${wanted}")`; };
+        image.src = `battle-art/${wanted}`;
+      }
+    } else if (!model.artworkFile) portrait.style.backgroundImage = sprite;
     portrait.dataset.side = model.enemy ? 'enemy' : 'ally'; portrait.dataset.defeated = String(model.statuses.some((one: { key: string }) => one.key === 'defeated'));
     text('inspect-stats', model.stats);
     const sheetKey = JSON.stringify(model.sheet);

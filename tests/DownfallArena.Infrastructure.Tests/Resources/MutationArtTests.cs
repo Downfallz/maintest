@@ -19,8 +19,16 @@ public sealed class MutationArtTests
         { "id": "tier:ironbound:v1", "name": "Ironbound", "level": 2, "prerequisites": ["tier:brute:v1"], "spells": ["spell:guard"], "initiativeBonus": 1 }
         """;
 
+    private const string Bastion = """
+        { "id": "tier:bastion:v1", "name": "Bastion", "level": 3, "prerequisites": ["tier:ironbound:v1"], "spells": ["spell:guard"], "initiativeBonus": 0 }
+        """;
+
+    private const string Bulwark = """
+        { "id": "tier:bulwark:v1", "name": "Bulwark", "level": 4, "prerequisites": [], "anyOf": ["tier:bastion:v1"], "spells": ["spell:guard"], "initiativeBonus": 0 }
+        """;
+
     private static ContentDirectory Content() => new ContentDirectory().WithValidContent()
-        .WithFile("Tiers/brute.v1.json", Brute).WithFile("Tiers/ironbound.v1.json", Ironbound);
+        .WithFile("Tiers/brute.v1.json", Brute).WithFile("Tiers/ironbound.v1.json", Ironbound).WithFile("Tiers/bastion.v1.json", Bastion).WithFile("Tiers/bulwark.v1.json", Bulwark);
 
     [Fact]
     public void Art_is_published_beside_the_schema_and_read_back_by_package()
@@ -98,5 +106,38 @@ public sealed class MutationArtTests
         var refused = Should.Throw<InvalidGameContentException>(() => MutationArt.Publish(content.Path, Path.Combine(content.Path, "dst"), schema));
 
         refused.Problems.ShouldHaveSingleItem().ShouldContain("descends from 'tier:brute:v1', which is of the family 'brute'");
+    }
+
+    /// <summary>The illustration a package draws and the effect a capstone lends travel with its art (ADR 0151).</summary>
+    [Fact]
+    public void The_illustration_and_the_capstone_effect_are_published_with_the_art()
+    {
+        using var content = Content().WithFile("presentation/mutation-art.json",
+            """{ "tier:ironbound:v1": { "family": "brute", "motif": "plates", "artwork": "brute-stage2-ironhide" }, "tier:bulwark:v1": { "family": "brute", "motif": "reinforcement", "effect": "capstone-bulwark" } }""");
+        var output = Path.Combine(content.Path, "dst");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        GameSchemaBuilder.Write(schema, output);
+        MutationArt.Publish(content.Path, output, schema);
+        var read = MutationArt.ReadNextTo(Path.Combine(output, "game.schema.json"));
+
+        read.Of(TierId.Parse("tier:ironbound:v1")).ShouldBe(new Application.Catalogue.MutationVisual("brute", "plates", "brute-stage2-ironhide"));
+        read.Of(TierId.Parse("tier:bulwark:v1")).ShouldBe(new Application.Catalogue.MutationVisual("brute", "reinforcement", null, "capstone-bulwark"));
+    }
+
+    /// <summary>A capstone never changes the image, only a capstone lends an effect, and both name the page's ids.</summary>
+    [Fact]
+    public void A_capstone_illustration_a_branch_effect_and_a_content_id_are_refused()
+    {
+        using var content = Content().WithFile("presentation/mutation-art.json",
+            """{ "tier:ironbound:v1": { "family": "brute", "motif": "plates", "artwork": "tier:ironbound:v1", "effect": "glow" }, "tier:bulwark:v1": { "family": "brute", "motif": "reinforcement", "artwork": "colossus" } }""");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        var refused = Should.Throw<InvalidGameContentException>(() => MutationArt.Publish(content.Path, Path.Combine(content.Path, "dst"), schema));
+
+        refused.Problems.Count.ShouldBe(3);
+        refused.Problems.ShouldContain(problem => problem.Contains("is a capstone and draws 'colossus'", StringComparison.Ordinal));
+        refused.Problems.ShouldContain(problem => problem.Contains("lends the effect 'glow'; only a capstone", StringComparison.Ordinal));
+        refused.Problems.ShouldContain(problem => problem.Contains("names 'tier:ironbound:v1', which is not a page id", StringComparison.Ordinal));
     }
 }

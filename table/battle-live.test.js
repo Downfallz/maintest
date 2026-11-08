@@ -205,7 +205,7 @@ test('recorded transports need no live notification channel', async () => {
 });
 
 test('each creature carries the illustration its purchases resolve to, at the board\'s sequence', () => {
-  const packages = new Map([['tier:brute:v1', { level: 1, visual: { family: 'brute' } }], ['tier:prowler:v1', { level: 1, visual: { family: 'predator' } }]]);
+  const packages = new Map([['tier:brute:v1', { level: 1, visual: { family: 'brute', artwork: 'brute-base' } }], ['tier:prowler:v1', { level: 1, visual: { family: 'predator', artwork: 'predator-base' } }]]);
   const log = purchaseLog();
   log.receive([{ sequence: 4, event: { kind: 'PurchasesRevealed', choices: [{ creature: 1, tier: 'tier:prowler:v1' }] } },
     { sequence: 9, event: { kind: 'PurchasesRevealed', choices: [{ creature: 1, tier: 'tier:brute:v1' }] } }]);
