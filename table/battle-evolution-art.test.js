@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { figureGeometry, CREATURE_ART } from './battle-art.js';
 import { BASE_EVOLUTION_ART, EVOLUTION_ART, HYBRID_ART, CAPSTONE_EFFECTS, capstoneEffect, composeCapstones, createEvolutionRegistry, EVOLUTION_REGISTRY } from './battle-evolution-art.js';
+import { WARPED_HYBRID_ART } from './battle-warped-hybrid-art.js';
 
 const tiersRoot = new URL('../data/Tiers/', import.meta.url);
 const tiers = readdirSync(tiersRoot).filter(name => name.endsWith('.json')).map(name => JSON.parse(readFileSync(new URL(name, tiersRoot), 'utf8')));
@@ -25,13 +26,14 @@ test('every registered illustration is a WebP file of the folder', () => {
     assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WEBP');
   }
 });
-test('every hybrid is a WebP file of the hybrids folder, and every file there is a registered hybrid', () => {
+test('every active or staged hybrid is a WebP file of the hybrids folder', () => {
   assert.deepEqual(readdirSync(new URL('battle-art/evolutions/hybrids/', import.meta.url)).filter(name => name.endsWith('.webp')).sort((a, b) => a.localeCompare(b)),
-    HYBRID_ART.map(asset => asset.file.replace('evolutions/hybrids/', '')).sort((a, b) => a.localeCompare(b)));
-  for (const asset of HYBRID_ART) {
+    [...HYBRID_ART, ...WARPED_HYBRID_ART].map(asset => asset.file.replace('evolutions/hybrids/', '')).sort((a, b) => a.localeCompare(b)));
+  for (const asset of [...HYBRID_ART, ...WARPED_HYBRID_ART]) {
     const bytes = readFileSync(new URL(`battle-art/${asset.file}`, import.meta.url));
     assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WEBP');
-    assert.equal(EVOLUTION_REGISTRY.art(asset.id), asset);
+    if (asset.family === 'hybrid') assert.equal(EVOLUTION_REGISTRY.art(asset.id), asset);
+    else assert.equal(EVOLUTION_REGISTRY.art(asset.id), null); // staged only; no gameplay influence chosen yet
   }
 });
 test('every hybrid varies a registered Stage 3 for an influence of real illustrations or families, one Ultimate each', () => {

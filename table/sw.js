@@ -3,6 +3,7 @@
 // load, and a worker holding yesterday's page would stop that.
 
 const ICON = '/icon-192.png';
+const BADGE = '/notification-badge.png';
 
 const GAME = '/play';
 
@@ -53,7 +54,7 @@ async function onPush(notice) {
     body: notice.body ?? 'The match is asking you something.',
     tag: notice.tag ?? 'turn',
     icon: ICON,
-    badge: ICON,
+    badge: BADGE,
     renotify: true,
     data: { url: notice.url ?? '/play' },
   });

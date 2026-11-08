@@ -78,6 +78,7 @@ button, [role="button"] { touch-action: manipulation; }
 .masthead { max-width: 1500px; margin: auto; min-height: 108px; display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 15px; }
 .brand-mark, .pass-emblem { color: var(--gold); border: 1px solid var(--brand-ember); width: 43px; height: 49px; display: grid; place-items: center; font: 31px Georgia, serif; border-radius: 12px 3px; }
+.brand-mark { background: url('/icon.svg') center / contain no-repeat; border: 0; border-radius: 0; flex: 0 0 auto; }
 .brand .eyebrow { display: block; margin-bottom: 4px; }
 .session-state { margin-left: auto; text-align: right; }
 .waiting-room { margin: 10px 0 0; display: grid; gap: 8px; }

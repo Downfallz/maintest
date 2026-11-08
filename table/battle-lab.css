@@ -59,6 +59,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .hud-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px; background: linear-gradient(90deg,#0a151a,#1b2727,#0a151a); border-bottom: 1px solid #c1b38c36; }
 .brand { display: flex; align-items: center; gap: 12px; color: #ebe7d8; text-decoration: none; font: 19px Georgia, serif; letter-spacing: 3px; }
 .brand > span { color: var(--gold); font-size: 34px; }.brand b { font-weight: 400; color: var(--gold); }.brand small { display: block; font: 8px system-ui,sans-serif; letter-spacing: 4px; color: var(--muted); margin-top: 6px; }
+.brand > .battle-brand-mark { display: block; width: 36px; height: 38px; flex: 0 0 auto; background: url('/icon.svg') center / contain no-repeat; }
 .round { text-align: center; margin-left: auto; margin-right: auto; font-size: 10px; letter-spacing: 2px; }.round b { color: var(--gold); font: 25px Georgia,serif; margin-left: 7px; }.round small { display: block; color: #b4c3b7; font-size: 8px; letter-spacing: 3px; margin-top: 3px; }
 .tools { display: flex; gap: 7px; }.tools button { font-size: 22px; padding: 4px 9px; background: transparent; border-color: #b5b69840; }
 .eyebrow { color: var(--gold); font-size: 9px; letter-spacing: 2px; margin: 0 0 6px; }
