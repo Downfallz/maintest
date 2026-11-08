@@ -123,7 +123,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
       if (dialog.open) dialog.close();
       entries.clear(); list.replaceChildren(); detail.replaceChildren(); reviewKey = ''; el('history-review').hidden = true; filters(model); key = ''; opener = null;
       el('history-preview').textContent = 'No match loaded'; el('history-new').hidden = true;
-      el('history-open').removeAttribute('title'); el('history-unread').textContent = ''; el('history-load-error').textContent = '';
+      el('history-open').removeAttribute('title'); el('history-unread').textContent = ''; el('history-unread').dataset.count = ''; el('history-load-error').textContent = '';
       el('history-range').textContent = ''; el('history-empty').textContent = ''; el('history-limit').textContent = '';
       return;
     }
@@ -132,7 +132,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     el('history-earlier').textContent = model.loading ? 'Loading…' : model.oldest ? 'Beginning of available history' : 'Load earlier rounds';
     el('history-load-error').textContent = model.error;
     el('history-latest').textContent = model.browsing || model.review ? `Return to latest${model.unread ? ` (${model.unread} new)` : ''}` : 'Latest';
-    el('history-unread').textContent = model.unread ? ` · ${model.unread} new` : '';
+    el('history-unread').textContent = model.unread ? ` · ${model.unread} new` : ''; el('history-unread').dataset.count = model.unread ? String(model.unread) : '';
     el('history-new').hidden = model.unread === 0 || model.browsing || Boolean(model.review);
     el('history-latest').hidden = model.unread > 0 && !model.browsing && !model.review;
     el('history-new').textContent = `${model.unread} new ${model.unread === 1 ? 'event' : 'events'} · Latest`;
@@ -161,7 +161,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     });
     if (focused && !list.contains(document.activeElement)) el('history-close').focus({ preventScroll: true });
     if (dialog.open && following && !model.loading && !model.browsing && !model.review && !Object.values(model.filters).some(Boolean)) {
-      list.scrollTop = list.scrollHeight; controller.read(); el('history-new').hidden = true; el('history-latest').hidden = false; el('history-unread').textContent = '';
+      list.scrollTop = list.scrollHeight; controller.read(); el('history-new').hidden = true; el('history-latest').hidden = false; el('history-unread').textContent = ''; el('history-unread').dataset.count = '';
     } else list.scrollTop = scroll;
     key = nextKey;
 
