@@ -721,3 +721,8 @@ badges and stats hang under its feet, not over its body. A creature's effect chi
 outcomes, its place in the order) sit above its head. The acting creature carries a soft gold halo, an aura behind
 it and a pool of light at its feet (`src/acting-halo.ts`), breathing slowly and still under reduced motion;
 `#battle[data-halo]` names it.
+
+The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
+name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round
+under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
+as chips and its d20 roll in gold, and one Continue.

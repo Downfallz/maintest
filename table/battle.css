@@ -1316,3 +1316,52 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .inspect-zoom-picture { width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 12px; background: center / contain no-repeat; cursor: zoom-out; }
 .inspect-zoom-picture[data-side="enemy"] { transform: scaleX(-1); }
 .inspect-zoom-picture[data-defeated="true"] { filter: grayscale(1) brightness(.6); }
+
+/* The order strip: each place a badge in its tempo's colour (a tick once played), never a number run into the name,
+   and a quiet chevron between places, read left to right. */
+#timeline li > button { display: flex; align-items: center; gap: 8px; }
+#timeline li > button > .timeline-words { display: grid; min-width: 0; }
+#timeline li > button > .timeline-words > span { display: block; white-space: nowrap; }
+#timeline li > button > .timeline-rank { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: #8fc3ef; color: #142126; font: 800 12px/1 system-ui, sans-serif; }
+#timeline li > button > .timeline-rank[data-tempo="Quick"] { background: #eac88e; }
+#timeline li[data-state="Completed"] > button > .timeline-rank { background: transparent; color: #b8c9bd; box-shadow: inset 0 0 0 1.5px #b8c9bd88; }
+#battle #timeline li { display: flex; align-items: center; }
+#battle #timeline li + li::before { content: '›'; flex: none; padding: 0 2px; color: #b8c9bd88; font-size: 16px; }
+
+/* The order sheet reads like the other sheets: an eyebrow over the round, each tempo band a chip, each creature a card
+   with its place as the tempo's badge, its state as a chip, its facts as chips and its d20 roll in gold. */
+#order-dialog { border: 0; border-top: 2px solid var(--gold); border-radius: 14px; background: var(--panel); box-shadow: 0 18px 60px #000a; }
+#order-dialog .order-header { padding: 16px 18px 12px; background: radial-gradient(120% 140% at 0% 0%, #eac88e1f, transparent 60%); }
+#order-dialog .order-header .eyebrow { margin: 0 0 4px; color: var(--gold); letter-spacing: 2px; }
+#order-dialog .order-header h2 { margin: 0 0 6px; font: 30px/1.1 Georgia, serif; color: var(--ink); }
+#order-summary { color: var(--muted); }
+#order-dialog .order-band { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 2px; padding: 4px 12px; border: 1px solid #8fc3ef66;
+  border-radius: 999px; color: #8fc3ef; font: 700 12px/1.2 system-ui, sans-serif; letter-spacing: .6px; text-transform: uppercase; }
+#order-dialog .order-band::before { content: '✦'; }
+#order-dialog .order-band[data-tempo="Quick"] { border-color: #eac88e66; color: #eac88e; }
+#order-dialog .order-band[data-tempo="Quick"]::before { content: '⚡'; }
+#order-dialog .order-row { margin-top: 8px; padding: 0; border: 0; background: none; }
+#order-dialog .order-row[aria-current="step"] { outline: 0; }
+#order-dialog .order-card { padding: 10px 12px; border: 1px solid #3f554d; border-left: 3px solid #8cc7ad; border-radius: 10px;
+  background: linear-gradient(180deg, #17303a, #132429); }
+#order-dialog .order-row[data-team="Opponent"] .order-card { border-left-color: #d98b6f; }
+#order-dialog .order-row[aria-current="step"] .order-card { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 18px #eac88e33; }
+#order-dialog .order-row[data-state="Completed"] .order-card { opacity: .72; }
+#order-dialog .order-heading { gap: 10px; }
+#order-dialog .order-heading button { padding: 0; border: 0; background: none; color: var(--ink); font: 19px Georgia, serif; }
+#order-dialog .order-position { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: #8fc3ef; color: #142126; font: 800 15px/1 system-ui, sans-serif; }
+#order-dialog .order-position[data-tempo="Quick"] { background: #eac88e; }
+#order-dialog .order-row[data-state="Completed"] .order-position { background: transparent; color: #b8c9bd; box-shadow: inset 0 0 0 1.5px #b8c9bd88; }
+#order-dialog .order-state { flex: none; padding: 3px 10px; border: 1px solid #52695e; border-radius: 999px; color: #b8c9bd; font: 600 11px/1.2 system-ui, sans-serif; }
+#order-dialog .order-state[data-value="Now"] { border-color: var(--gold); color: var(--gold); }
+#order-dialog .order-facts { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+#order-dialog .order-fact { padding: 3px 10px; border: 1px solid #3f554d; border-radius: 999px; background: #0f1f24; color: #c9d4cb; font-size: 12px; }
+#order-dialog .order-row[data-team="Your team"] .order-team { border-color: #8cc7ad66; color: #a8dcc2; }
+#order-dialog .order-row[data-team="Opponent"] .order-team { border-color: #d98b6f66; color: #f0b39c; }
+#order-dialog .order-condition { border-color: #d98b6f55; }
+#order-dialog .order-roll { margin: 8px 0 0; color: #e2c998; font-size: 12px; }
+#order-dialog .order-roll-none { color: var(--muted); }
+#order-dialog .order-footer { justify-content: stretch; padding: 12px 18px 16px; border-top: 1px solid #82958233; background: transparent; }
+#order-dialog .order-footer #order-close { flex: 1; min-height: 46px; border-radius: 999px; font-weight: 600; }

@@ -155,7 +155,7 @@ async function reviewAndReplay(page, latest, info, actions) {
   await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
   for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();
-  await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2 · Turn order');
+  await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2');
   const displayed = await page.locator('#timeline [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature));
   expect(await page.locator('#order-list [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature))).toEqual(displayed);
   expect(displayed.length).toBeGreaterThan(0); await page.locator('#order-close').click();

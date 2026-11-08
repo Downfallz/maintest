@@ -43,14 +43,17 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       const item = document.createElement('li'); item.dataset.state = row.state;
       if (row.team === 'Opponent') item.className = 'enemy';
       if (row.state === 'Now') item.setAttribute('aria-current', 'step');
-      const button = creatureButton(row);
-      button.append(text('span', `${row.state === 'Completed' ? '✓ ' : ''}${row.position} ${row.label}`),
-        text('span', `${row.team === 'Your team' ? 'You' : row.team} · ${row.tempo}`, 'timeline-side'));
+      // The place is a badge in the tempo's colour, a tick once played, so the number never reads as part of the name.
+      const button = creatureButton(row), rank = text('span', row.state === 'Completed' ? '✓' : String(row.position), 'timeline-rank');
+      rank.dataset.tempo = row.speed; rank.setAttribute('aria-hidden', 'true');
+      const words = text('span', '', 'timeline-words');
+      words.append(text('span', row.label, 'timeline-name'), text('span', `${row.team === 'Your team' ? 'You' : row.team} · ${row.tempo}`, 'timeline-side'));
+      button.append(rank, words);
       item.append(button); return item;
     }));
     el('timeline').hidden = model.rows.length === 0; el('no-timeline').hidden = model.rows.length > 0;
     el('no-timeline').textContent = available ? 'Activation order has not been set' : 'Waiting for a board';
-    el('order-title').textContent = `Round ${model.round ?? '—'} · Turn order`;
+    el('order-title').textContent = `Round ${model.round ?? '—'}`;
     el('order-summary').textContent = model.rows.length ? model.summary.join(' / ') : model.empty;
     el('order-context').textContent = model.provisional ? 'Team positions fixed · creature order still being chosen' : 'Exact order · recorded dice';
     el('order-explanation').textContent = model.provisional
@@ -63,13 +66,21 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     el('order-list').replaceChildren(...model.rows.map((row: Row) => {
       const item = document.createElement('li'); item.className = 'order-row'; item.dataset.state = row.state; item.dataset.team = row.team;
       if (row.state === 'Now') item.setAttribute('aria-current', 'step');
-      if (row.speed !== previousSpeed) item.append(text('h3', row.tempo, 'order-band'));
+      item.dataset.speed = row.speed;
+      if (row.speed !== previousSpeed) { const band = text('h3', row.tempo, 'order-band'); band.dataset.tempo = row.speed; item.append(band); }
       previousSpeed = row.speed;
+      // A card per creature: its place as the tempo's badge, its name, where it stands in the round, and its facts as chips.
       const heading = document.createElement('div'); heading.className = 'order-heading';
       const button = creatureButton(row); button.textContent = row.label;
-      heading.append(text('span', String(row.position), 'order-position'), button, text('span', row.state, 'order-state'));
-      item.append(heading, text('p', [row.team, row.tempo, initiative(row), row.condition].filter(Boolean).join(' · ')),
-        text('p', row.roll || 'No d20 roll recorded', 'order-roll')); return item;
+      const position = text('span', row.state === 'Completed' ? '✓' : String(row.position), 'order-position'); position.dataset.tempo = row.speed;
+      const state = text('span', row.state, 'order-state'); state.dataset.value = row.state;
+      heading.append(position, button, state);
+      const facts = text('p', '', 'order-facts');
+      facts.append(...[[row.team, 'order-team'], [initiative(row), 'order-initiative'], [row.condition, 'order-condition']]
+        .filter(([value]) => value).map(([value, className]) => text('span', value as string, `order-fact ${className}`)));
+      const card = text('div', '', 'order-card');
+      card.append(heading, facts, text('p', row.roll || 'No d20 roll recorded', row.roll ? 'order-roll' : 'order-roll order-roll-none'));
+      item.append(card); return item;
     }));
   }
   let shownTurn = '';
