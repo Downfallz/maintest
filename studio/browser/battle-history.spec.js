@@ -75,6 +75,37 @@ test('initial history shows confirmed attacks with accessible details and no hid
   await page.keyboard.press('Escape'); await expect(page.locator('#history-open')).toBeFocused();
   expect(h.state.shown).toEqual([]); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('History opens on a summary of each round, and All events holds the full record', async ({ page }, info) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem('summary-test')) { sessionStorage.setItem('summary-test', '1'); localStorage.removeItem('downfall.battle.history-view.v1'); } });
+  const h = await mount(page, [entry(10), { ...entry(11), event: { ...entry(11).event, resolution: { action: { actor: 1, spell: 'strike', targets: [4] }, isCritical: false },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 4, amount: 5 }] } }, { sequence: 12, event: { kind: 'RoundStarted', roundId: 2 } }]);
+  await page.locator('#history-open').click();
+  const dialog = page.locator('#history-dialog');
+  await expect(dialog).toHaveAttribute('data-view', 'summary');
+  await expect(page.locator('#history-mode-summary')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#history-list')).toBeHidden(); await expect(page.locator('#history-filters')).toBeHidden();
+  const card = page.locator('.summary-round'); await expect(card).toHaveCount(1); await expect(card.locator('h3')).toHaveText('Round 2');
+  const casts = card.locator('.summary-casts > li'); await expect(casts).toHaveCount(2);
+  await expect(casts.nth(0)).toHaveAttribute('data-side', 'Opponent'); await expect(casts.nth(0)).toContainText('Creature 4');
+  await expect(casts.nth(0).locator('.summary-status')).toHaveText('Crit'); await expect(casts.nth(0)).toContainText('Damage 7');
+  await expect(casts.nth(1)).toHaveAttribute('data-side', 'Your team'); await expect(casts.nth(1).locator('.summary-status')).toHaveCount(0);
+  await fitsViewport(page, '#history-close');
+  await page.screenshot({ path: info.outputPath('history-summary.png') });
+  // A cast opens its own record, and Back returns to it in the summary.
+  await casts.nth(0).locator('.summary-cast').click();
+  await expect(dialog).toHaveAttribute('data-view', 'events'); await expect(page.locator('#history-detail')).toContainText('Applied effects');
+  await page.locator('#history-back').click();
+  await expect(dialog).toHaveAttribute('data-view', 'summary'); await expect(casts.nth(0).locator('.summary-cast')).toBeFocused();
+  // All events of a round is the full journal filtered to it, and the reader's choice is kept.
+  await card.getByRole('button', { name: 'All events of round 2' }).click();
+  await expect(dialog).toHaveAttribute('data-view', 'events'); await expect(page.locator('#history-filter-round')).toHaveValue('2');
+  await expect(rows(page)).toHaveCount(2); expect(h.state.writes).toEqual([]);
+  await page.locator('#history-close').click(); await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#history-open')).toBeEnabled(); await page.locator('#history-open').click();
+  await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'events');
+  await page.locator('#history-mode-summary').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  expect(h.state.errors).toEqual([]);
+});
 test('skip and duplicate polls keep every action without replaying it', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11), entry(12)]);
   // An opponent's actions offer no Skip (ADR 0139); opening History is the reader's own way past them.

@@ -129,6 +129,9 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#playback-skip')).toBeHidden({ timeout: 10000 });
   await keyboardActivate(page, '#history-open');
+  // History opens on its summary; the cast is a key away there, and All events holds the full record.
+  await expect(page.locator('#history-summary [data-sequence="10"]')).toContainText('Strike');
+  await keyboardActivate(page, '#history-mode-events');
   await keyboardActivate(page, '#history-list [data-sequence="10"] summary');
   await expect(page.locator('#history-list [data-sequence="10"]')).toContainText('7');
   await keyboardActivate(page, '#history-list [data-sequence="10"] .history-inspect');

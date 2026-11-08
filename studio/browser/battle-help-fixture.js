@@ -6,6 +6,8 @@ export async function returningBattlePlayer({ context }) {
   await context.addInitScript(() => {
     try {
       localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
+      // History opens on its summary; the journeys that read the full record start there.
+      localStorage.setItem('downfall.battle.history-view.v1', 'events');
       localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: false, reducedMotion: false }));
     } catch { /* Storage-denial fixtures remain meaningful. */ }
   });

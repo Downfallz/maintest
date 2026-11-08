@@ -280,6 +280,26 @@ test('live playback shows the necromantic recipients apart from the caster blood
   expect(h.errors).toEqual([]);
 });
 
+test('three effects on one creature stack over its head instead of running off the screen', async ({ page }, info) => {
+  const h = await mount(page);
+  const after = before.map(one => one.id === 6 ? { ...one, health: 13, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 },
+    { effect: { kind: 'Poison', amountPerRound: 1 }, remainingRounds: 2 }] } : one);
+  const action = entry(10, { targets: [6], after, outcomes: [{ kind: 'DamageOutcome', target: 6, amount: 7 },
+    { kind: 'ConditionOutcome', target: 6, effect: { kind: 'Bleed', amountPerRound: 2 } },
+    { kind: 'ConditionOutcome', target: 6, effect: { kind: 'Poison', amountPerRound: 1 } }] });
+  await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
+  await page.clock.runFor(900);
+  const holder = page.locator('[data-creature="6"] .creature-effect');
+  await expect(holder.locator(':scope > *')).toHaveCount(3);
+  await expect(holder).toHaveCSS('flex-direction', 'column');
+  const width = page.viewportSize().width;
+  for (const box of await holder.locator(':scope > *').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()))) {
+    expect(box.left).toBeGreaterThanOrEqual(0); expect(box.right).toBeLessThanOrEqual(width);
+  }
+  await page.screenshot({ path: info.outputPath('stacked-effects.png') });
+  expect(h.errors).toEqual([]);
+});
+
 // ART-6: one playback rate for the queue and the renderer, and an opt-in sound that stops with the action.
 async function atSpeed(page, h, speed) {
   await page.locator('#settings').click(); await page.selectOption('#playback-speed', speed);

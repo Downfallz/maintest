@@ -777,7 +777,8 @@
             mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   #battle #history-open > span { position: absolute; top: 4px; right: 2px; font-size: 0; }
-  #battle #history-open #history-unread[data-count]:not([data-count=""])::after { content: attr(data-count); display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: #142126; font: 800 9px/16px system-ui, sans-serif; }
+  /* A dot, not a count: two rounds hold fifty events, and a number that large says nothing a reader acts on. */
+  #battle #history-open #history-unread[data-count]:not([data-count=""])::after { content: ''; display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #142126; }
   #battle #history-open #history-preview { display: none; }
 }
 
@@ -1400,3 +1401,61 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .tie-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .tie-actions { margin-top: 2px; }
 #planning-dialog .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Three effects or more on one creature (a team-wide buff, say) stack over its head instead of running off the
+   screen's edge in a row; one or two still sit side by side, and on a phone two stack already. */
+#battle .creature > .creature-effect:has(> :nth-child(3)) { flex-direction: column; flex-wrap: nowrap; gap: 3px; }
+@media (max-width: 619px) { #battle .creature > .creature-effect:has(> :nth-child(2)) { flex-direction: column; flex-wrap: nowrap; gap: 3px; } }
+
+/* The round reads with its phase under it, the basic one (Upkeep, Command, Combat, Aftermath), on every screen. */
+#battle .round { flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
+#battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small { display: block; margin: 0; color: #c9b88f; font-size: 9px; letter-spacing: 1.5px; }
+@media (max-width: 619px) { #battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small { font-size: 8px; letter-spacing: 1px; } }
+
+/* History opens on its summary: a card a round, the latest first, with the mutations revealed, the spells in order
+   with what they did, and who fell. All events is the full journal, with its filters and recorded boundaries. */
+.history-modes { flex: none; display: flex; gap: 4px; margin: 10px 18px 0; padding: 3px; border: 1px solid #42594f; border-radius: 999px; background: #0c181d; align-self: flex-start; }
+.history-modes button { min-height: 36px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: #b7c9be; font-size: 13px; font-weight: 600; }
+.history-modes button[aria-pressed="true"] { background: #2c4249; color: #fff2c8; box-shadow: inset 0 0 0 1px #8d7958; }
+#history-dialog[data-review="true"] .history-modes { display: none; }
+#history-filters[hidden], #history-summary[hidden], #history-list[hidden] { display: none; }
+#history-summary { overflow: auto; overscroll-behavior: contain; min-height: 0; min-width: 0; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.summary-empty { margin: 6px; color: var(--muted); font-size: 14px; }
+.summary-round { flex: none; border: 1px solid #42594f; border-radius: 8px; background: #172a2f; padding: 12px; }
+.summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.summary-head h3 { display: inline; margin: 0 8px 0 0; font: 19px Georgia, serif; color: #fff2c8; }
+.summary-counts { color: #9fb4a9; font-size: 12px; }
+.summary-more { flex: none; min-height: 32px; padding: 4px 12px; font-size: 12px; border-radius: 999px; }
+.summary-result { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: #3a3220; color: #fff2c8; font-weight: 600; font-size: 14px; }
+.summary-round ul, .summary-round ol { list-style: none; margin: 0; padding: 0; }
+.summary-mutations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
+.summary-mutations li { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 10px; border-radius: 999px; border: 1px solid #55736a; background: #1d3439; font-size: 12px; }
+.summary-mutations li[data-side="Opponent"] { border-color: #8a5a4c; background: #33231f; }
+.summary-mutations .summary-what { color: #e6cf98; font-weight: 700; }
+.summary-casts { display: grid; gap: 6px; margin-top: 10px !important; counter-reset: cast; }
+.summary-casts > li { border-left: 3px solid #8dab9d; border-radius: 4px; background: #1d3236; }
+.summary-casts > li[data-side="Opponent"] { border-left-color: #e1a58c; background: #2c2523; }
+.summary-cast { width: 100%; min-height: 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 8px 10px; border: 0; background: transparent; color: inherit; text-align: left; font-size: 14px; cursor: pointer; }
+.summary-cast:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.summary-cast .summary-who { font-weight: 700; }
+.summary-cast .summary-what { color: #d8e2dc; }
+.summary-cast .summary-what::before { content: '→ '; color: #7f968b; }
+.summary-status { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.summary-casts > li[data-status="Critical"] .summary-status { background: #eac88e; color: #142126; }
+.summary-casts > li[data-status="Fizzled"] .summary-status { background: #44383a; color: #ffb9a8; border: 1px solid #8a5a4c; }
+.summary-effects { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px !important; }
+.summary-effects li { padding: 2px 8px; border-radius: 999px; background: #10201f; font-size: 11px; color: #c9d4cd; }
+.summary-effects [data-tone="harm"] { color: #ffb9a8; }
+.summary-effects [data-tone="recovery"] { color: #ace0bf; }
+.summary-effects [data-tone="energy"] { color: #a9d4f4; }
+.summary-effects [data-tone="condition"] { color: #d9bdf2; }
+.summary-effects .summary-extra { color: #9fb4a9; font-style: italic; }
+.summary-defeated { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
+.summary-defeated li { padding: 3px 10px; border-radius: 999px; background: #4a2420; color: #ffd6cb; font-size: 12px; font-weight: 700; }
+.summary-defeated li::before { content: '✕ '; }
+.summary-skipped { margin: 8px 0 0; color: #9fb4a9; font-size: 12px; }
+@media (max-width: 619px) {
+  .history-modes { margin: 8px 12px 0; }
+  #history-summary { padding: 10px; }
+  .summary-round { padding: 10px; }
+}

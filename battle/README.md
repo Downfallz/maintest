@@ -237,6 +237,15 @@ underneath continues to update; the inspection stays on its selected event until
 or returns to Latest. Closing returns focus and preserves the command draft. This is manual journal
 inspection; AU7 still owns playback pacing.
 
+**Summary** is the view History opens on: one card a round, the latest first, with the mutations revealed,
+each spell in order with its caster's side, a Crit or Fizzled mark and its applied effects (four, then a count),
+the creatures defeated, the turns skipped and the result. `historySummary` builds it from the same public rows,
+so it never says more than the journal. A cast opens its own inspection; a round's **All events** opens the full
+journal filtered to it. The reader's choice of view is kept on the device (`downfall.battle.history-view.v1`);
+an inspected event is always read in the full journal. While the summary is open every loaded round is on
+screen, so new events are read at once. On a phone the closed launcher marks unread events with a dot, not a
+count: two rounds hold fifty events.
+
 **Load earlier rounds** explicitly calls the existing selected-seat `history()` read from zero. Its
 response only replaces the reading page: it cannot rewind the live cursor, board, options or playback.
 Requests are single-flight and generation-fenced after close, Latest, viewpoint/access loss and hiding.
