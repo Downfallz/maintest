@@ -1307,3 +1307,12 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #battle .creature > .creature-effect { left: -24px; right: -24px; top: 0; bottom: auto; padding-bottom: 0; transform: translateY(-100%); }
 #battle[data-docked="true"] .creature > .creature-effect { transform: translateY(-35%); }
 @media (max-height: 500px) { .match-crest { width: 40px; height: 40px; } .match-team-standing strong { font-size: 26px; } #match-dialog .match-footer :is(button, a) { min-height: 44px; } }
+
+/* The inspection portrait zooms: a tap shows the illustration over the whole card, a tap on it gives the card back. */
+#inspect-dialog .inspect-portrait { position: relative; flex: none; padding: 0; border: 0; cursor: zoom-in; }
+#inspect-dialog .inspect-portrait:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.inspect-zoom { position: absolute; inset: 0; z-index: 5; display: grid; padding: 12px; background: radial-gradient(circle at 50% 60%, #1b3036, #071014f5 70%); }
+.inspect-zoom[hidden] { display: none; }
+.inspect-zoom-picture { width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 12px; background: center / contain no-repeat; cursor: zoom-out; }
+.inspect-zoom-picture[data-side="enemy"] { transform: scaleX(-1); }
+.inspect-zoom-picture[data-defeated="true"] { filter: grayscale(1) brightness(.6); }

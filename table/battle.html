@@ -117,7 +117,8 @@
     <div class="combat-dialog-footer"><section id="intent-preview" class="target-preview" tabindex="0" aria-label="Hidden intent estimate" hidden></section><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>
   </dialog>
   <dialog id="inspect-dialog" aria-labelledby="inspect-name">
-    <header class="inspect-header"><div id="inspect-portrait" class="inspect-portrait" aria-hidden="true"></div><div class="inspect-title"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p></div></header>
+    <header class="inspect-header"><button id="inspect-portrait" class="inspect-portrait" type="button" aria-label="Show the illustration large"></button><div class="inspect-title"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p></div></header>
+    <div id="inspect-zoom" class="inspect-zoom" hidden><button id="inspect-zoom-close" class="inspect-zoom-picture" type="button" aria-label="Back to the creature"></button></div>
     <div id="inspect-body" tabindex="0" aria-label="Creature details">
       <p id="inspect-stats" class="unseen"></p><div id="inspect-sheet" class="inspect-sheet" aria-hidden="true"></div>
       <section class="inspect-section"><h3>Conditions</h3><ul id="inspect-effects" class="inspect-conditions"></ul></section>

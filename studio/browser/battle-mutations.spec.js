@@ -286,7 +286,8 @@ test('on a phone the tree shows a triangle on each side that still has families,
   const tree = page.locator('#atlas-board'), prev = page.locator('#atlas-prev'), next = page.locator('#atlas-next');
   await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(tree.locator('.atlas-family')).toHaveCount(3);
   if (page.viewportSize().width >= 820) { await expect(prev).toBeHidden(); await expect(next).toBeHidden(); return; }
-  await page.locator('#atlas-detail-close').click(); await expect(page.locator('#atlas-detail')).toBeHidden();
+  // Nothing is selected on arrival: the tree opens whole, no card over it.
+  await expect(page.locator('#atlas-detail')).toBeHidden();
   await tree.evaluate(node => { node.scrollLeft = 0; }); await page.clock.runFor(50);
   await expect(prev).toBeHidden(); await expect(next).toBeVisible();
   await page.screenshot({ path: info.outputPath('mutation-atlas-swipe.png') });
