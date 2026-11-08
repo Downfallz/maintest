@@ -108,6 +108,11 @@ test('History opens on a summary of each round, and All events holds the full re
   await page.locator('#history-mode-summary').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
   await page.locator('.summary-cast').first().click();
   await expect(page.locator('#history-detail')).toContainText('Applied effects'); await expect(page.locator('#history-filter-kind')).toHaveValue('');
+  // A round's All events opens its whole journal, whatever kind was filtered before.
+  await page.locator('#history-back').click(); await page.locator('#history-mode-events').click();
+  await page.selectOption('#history-filter-kind', 'RoundStarted'); await page.locator('#history-mode-summary').click();
+  await page.getByRole('button', { name: 'All events of round 2' }).click();
+  await expect(page.locator('#history-filter-kind')).toHaveValue(''); await expect(rows(page)).toHaveCount(2);
   expect(h.state.errors).toEqual([]);
 });
 test('a new event keeps the keyboard focus on the summary cast being read', async ({ page }) => {
