@@ -163,3 +163,31 @@ test('order controls fit short landscape, small portrait and enlarged text witho
     await page.keyboard.press('Escape');
   }
 });
+test('the creature acting first waits for its turn order to be read before its spell choice opens', async ({ page }) => {
+  // The tempos are drafted and the seat waits; then the order is built and the first question is this seat's.
+  const waiting = { ...board, phase: 'Planning', subPhase: 'Speed', timeline: [], rollOffs: [], activationCursor: 0 };
+  const h = await mount(page, { board: waiting, feed: [], feedNext: 10, waitingFor: null });
+  await page.clock.runFor(100);
+  await h.publish({ board: { ...board, activationCursor: 0 }, feed: [reveal(10)], feedNext: 11, waitingFor: 'Action', waitingCreature: 1, waitingAsked: 12,
+    options: { action: { creature: 1, spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
+  await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.clock.runFor(2000);
+  await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#order-continue').click();
+  await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+for (const away of ['hidden', 'reload']) test(`a seat ${away === 'hidden' ? 'that hid its tab' : 'that reloaded'} while its order was built reads it before its spell choice`, async ({ page }) => {
+  // The tempos are drafted and the seat waits; it leaves, the order is built and its creature acts first.
+  const waiting = { ...board, phase: 'Planning', subPhase: 'Speed', timeline: [], rollOffs: [], activationCursor: 0 };
+  const h = await mount(page, { board: waiting, feed: [], feedNext: 10, waitingFor: null });
+  await page.clock.runFor(100);
+  const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
+  if (away === 'hidden') await visibility(true);
+  h.state.view = { ...h.state.view, board: { ...board, activationCursor: 0 }, feed: [reveal(10)], feedNext: 11, waitingFor: 'Action', waitingCreature: 1, waitingAsked: 12,
+    options: { action: { creature: 1, spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } };
+  if (away === 'hidden') await visibility(false);
+  else { await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); }
+  await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#order-continue').click();
+  await expect(page.locator('#combat-dialog')).toBeVisible(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

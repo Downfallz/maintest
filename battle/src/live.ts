@@ -82,7 +82,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
-    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
+    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame) : null }); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
       { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().target && !planning.model().opened && !match.model().active,
@@ -408,8 +408,11 @@ function render() {
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   // What this seat has been shown so far, kept for the next time the page opens on it.
-  if (seenGame && view && !replay.active && playbackState.watermark !== null && playbackState.watermark !== seenKept) {
-    seenKept = playbackState.watermark; saveSeen(storage, seenGame, seenKept);
+  // A turn order not yet read holds the mark below it, so a seat that leaves before Continue is shown it on return.
+  const unreadOrder = orderReveal.model().unread;
+  const watermark = playbackState.watermark === null ? null : Number.isInteger(unreadOrder) ? Math.min(playbackState.watermark, unreadOrder - 1) : playbackState.watermark;
+  if (seenGame && view && !replay.active && watermark !== null && watermark !== seenKept) {
+    seenKept = watermark; saveSeen(storage, seenGame, seenKept);
   }
   if (!view) inspected = null;
   renderInspection();

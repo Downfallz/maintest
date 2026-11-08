@@ -74,7 +74,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   // never in a dialog over the field; the full order, rules and rolls stay one tap away. Everything waits for
   // Continue, an opponent's action included.
   let reading = false;
-  function finish() { if (!reading) return; reading = false; onVisibility(); }
+  function finish() { if (!reading) return; reading = false; reveal.read(); onVisibility(); }
   function render(model: Model, enabled: boolean, canAuto: boolean) {
     available = enabled; openers.forEach(button => { button.disabled = !enabled; });
     if (!enabled) { opener = null; reading = false; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }

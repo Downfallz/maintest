@@ -108,3 +108,19 @@ test('a seat change is a fresh baseline', () => {
 test('a hidden tie submission is not a reveal', () => {
   assert.equal(pendingAfter(view({ feed: [] }), view({ feed: [{ sequence: 2, event: { kind: 'TieOrderSubmitted' } }] })), false);
 });
+test('a seat that comes back after its order was built is shown it, from the last sequence it was shown', () => {
+  const controller = createBattleOrderReveal();
+  controller.receive(view({ feed: [reveal(9)] }), { since: 8 });
+  assert.equal(controller.model().pending, true); assert.equal(controller.model().unread, 9);
+  const seen = createBattleOrderReveal(); seen.receive(view({ feed: [reveal(9)] }), { since: 9 });
+  assert.equal(seen.model().pending, false);
+  const fresh = createBattleOrderReveal(); fresh.receive(view({ feed: [reveal(9)] }));
+  assert.equal(fresh.model().pending, false);
+});
+test('an order being read stays unread until Continue', () => {
+  const controller = createBattleOrderReveal();
+  controller.receive(view({ feed: [] })); controller.receive(view({ feed: [reveal(5)] }));
+  controller.presented();
+  assert.equal(controller.model().pending, false); assert.equal(controller.model().unread, 5);
+  controller.read(); assert.equal(controller.model().unread, null);
+});

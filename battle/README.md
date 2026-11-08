@@ -502,7 +502,11 @@ the presented board, so recorded replay retains its own round, order, rolls and 
 reference during live action playback explicitly settles that queue, like History. Missing initiatives
 or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
 
-A newly observed public TimelineBuilt event queues one reveal. It waits for both teams' tie
+A newly observed public TimelineBuilt event queues one reveal. A seat that comes back to the page (a hidden tab
+shown again, a reload) counts as newly observed every order built after the last sequence it was shown
+(`battle-seen.js`, ADR 0148). That seat is often the one whose creature acts first: the one told it is its turn.
+An order not yet read holds that mark below it until Continue, so leaving mid-read shows it again. Its spell
+choice opens only once the order is read. It waits for both teams' tie
 ordering, action playback and open dialogs/drafts to finish, then reads on the field before the next first-use
 tip ([ADR 0144](../docs/adr/0144-read-the-turn-order-on-the-field.md)): a numbered badge on each creature, gold
 for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a d20 broke a tie, and
