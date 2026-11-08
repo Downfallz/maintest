@@ -1,4 +1,5 @@
 import { creatureAppearance } from './battle-art.js';
+import { resolveEvolution } from './battle-evolution.js';
 import { boardPresentation } from './presentation.js';
 import { creatureName } from './terms.js';
 
@@ -16,13 +17,16 @@ export function creatureLabel(board, id) {
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
 // The catalogue's packages say how an acquired tier shows on a creature; without them a creature is its base.
-export function livePresentation(view, packages = new Map()) {
+// `history` is the seat's purchase log and the feed sequence the board stands at (the present for the live board,
+// the recorded event's for a replayed frame): which illustration each creature shows (ADR 0151).
+export function livePresentation(view, packages = new Map(), history = null) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];
   const creatures = roster.map((one, index) => ({
     ...one, label: creatureLabel(board, one.id),
     id: String(one.id), enemy: index >= board.allies.length,
     ...creatureAppearance(one, packages),
+    evolution: resolveEvolution({ ...one, id: String(one.id) }, packages, history),
   }));
   return { ...board, creatures, frame: { creatures, stage: 'decision', target: null,
     actor: board.turn ? String(board.turn.slot.creature) : null, targets: [] } };
