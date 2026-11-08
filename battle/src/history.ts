@@ -34,6 +34,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     if (!active || dialog.open) return;
     opener = event.currentTarget as HTMLElement;
     beforeOpen(); controller.open(); dialog.showModal(); el('history-new').hidden = true;
+    if (view === 'summary') summary(controller.model());
     // Initial opening follows the latest entry; incoming entries never move a reader browsing above it.
     list.scrollTop = list.scrollHeight; digest.scrollTop = 0; onVisibility();
   }
@@ -229,7 +230,8 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     }
     filters(model); review(model);
     const shown = views(model);
-    if (shown === 'summary') summary(model);
+    // The cards are built for a reader: while the journal is closed, the live match does not rebuild them.
+    if (shown === 'summary' && dialog.open) summary(model);
     el<HTMLButtonElement>('history-earlier').disabled = model.loading || model.oldest || model.waiting;
     el('history-earlier').textContent = model.loading ? 'Loading…' : model.oldest ? 'Beginning of available history' : 'Load earlier rounds';
     el('history-load-error').textContent = model.error;
