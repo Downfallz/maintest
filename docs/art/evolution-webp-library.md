@@ -3,8 +3,8 @@
 The owner-approved polished references are stored under `table/battle-art/evolutions/` as
 WebP files. Most are 1536×1024; three Predator references have wider original canvases,
 recorded explicitly in `table/battle-evolution-art.js` alongside stable tier IDs.
-There is one registered image for each of the 21 stage-1-to-stage-3 tier IDs, plus one
-unassigned Predator stage-2 visual study retained without guessing its package identity.
+There is one registered image for each of the 21 stage-1-to-stage-3 tier IDs, plus
+the ancestral Stage 0 creature (`base-creature.webp`) with no purchased tier ID.
 
 These are **staged assets, not yet eagerly loaded combat sprites**. The current
 `table/battle-art.js` manifest and its four audited runtime sprite hashes, geometry,

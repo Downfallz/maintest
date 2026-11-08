@@ -9,6 +9,7 @@ const sourceDimensions = Object.freeze({
 });
 
 const entries = [
+  ['base-creature', 'base', 0, null],
   ['brute-base', 'brute', 1, 'tier:brute:v1'],
   ['predator-base', 'predator', 1, 'tier:prowler:v1'],
   ['warped-base', 'warped', 1, 'tier:occultist:v1'],
@@ -38,10 +39,9 @@ export const EVOLUTION_ART = Object.freeze(entries.map(([id, family, stage, tier
   height: (sourceDimensions[id] ?? [1536, 1024])[1],
 })));
 
-// This polished reference is retained for visual review, but it has no audited package mapping.
-export const EVOLUTION_UNASSIGNED = Object.freeze(['evolutions/predator-stage2-lean.webp']);
+export const BASE_EVOLUTION_ART = EVOLUTION_ART.find(asset => asset.stage === 0);
 
-const byTier = new Map(EVOLUTION_ART.map(asset => [asset.tier, asset]));
+const byTier = new Map(EVOLUTION_ART.filter(asset => asset.tier).map(asset => [asset.tier, asset]));
 const byHybrid = new Map();
 
 // Called with explicit art registrations. The base Stage 3 remains the dominant image;
