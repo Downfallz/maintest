@@ -26,3 +26,19 @@ test('each existing Warped Stage 3 illustration has four staged portraits', () =
     assert.equal(EVOLUTION_ART.find(art => art.id === id)?.stage, 3);
   }
 });
+
+// The canvas a WebP declares in its first chunk: lossy (VP8), lossless (VP8L) or extended (VP8X).
+function webpSize(bytes) {
+  const chunk = bytes.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') return [1 + bytes.readUIntLE(24, 3), 1 + bytes.readUIntLE(27, 3)];
+  if (chunk === 'VP8L') { const bits = bytes.readUInt32LE(21); return [(bits & 0x3fff) + 1, ((bits >>> 14) & 0x3fff) + 1]; }
+  if (chunk === 'VP8 ') return [bytes.readUInt16LE(26) & 0x3fff, bytes.readUInt16LE(28) & 0x3fff];
+  throw new Error(`Unknown WebP chunk ${chunk}`);
+}
+
+test('each staged portrait keeps the canvas size its catalog entry declares', () => {
+  for (const asset of WARPED_HYBRID_ART) {
+    const bytes = readFileSync(new URL(`battle-art/${asset.file}`, import.meta.url));
+    assert.deepEqual(webpSize(bytes), [asset.width, asset.height], asset.file);
+  }
+});
