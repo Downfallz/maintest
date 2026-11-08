@@ -110,6 +110,16 @@ test('History opens on a summary of each round, and All events holds the full re
   await expect(page.locator('#history-detail')).toContainText('Applied effects'); await expect(page.locator('#history-filter-kind')).toHaveValue('');
   expect(h.state.errors).toEqual([]);
 });
+test('a new event keeps the keyboard focus on the summary cast being read', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
+  const h = await mount(page, [entry(10)]);
+  await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  const cast = page.locator('#history-summary [data-sequence="10"]'); await cast.focus();
+  await h.publish([entry(10), entry(11)]); await expect(page.locator('.summary-casts > li')).toHaveCount(2);
+  await expect(cast).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(page.locator('#history-detail')).toContainText('event 10');
+  expect(h.state.errors).toEqual([]);
+});
 test('skip and duplicate polls keep every action without replaying it', async ({ page }) => {
   const h = await mount(page); await h.publish([entry(11), entry(12)]);
   // An opponent's actions offer no Skip (ADR 0139); opening History is the reader's own way past them.

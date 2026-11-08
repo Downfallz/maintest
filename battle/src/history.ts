@@ -192,9 +192,17 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const nextKey = model.all.map(row => row.sequence).join('/');
     if (nextKey === summaryKey) return;
     summaryKey = nextKey;
+    // The cards are rebuilt as a whole; a reader's focus and scroll come back to the same cast or round.
+    const focused = digest.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+    const sequence = focused?.dataset.sequence, label = focused?.getAttribute('aria-label'), scroll = digest.scrollTop;
     const rounds = historySummary(model.all);
     digest.replaceChildren(...(rounds.length ? rounds.map(roundCard)
       : [textNode('p', model.waiting ? 'The match begins when everyone is seated.' : 'No spells or mutations yet. All events lists every phase.', 'summary-empty')]));
+    digest.scrollTop = scroll;
+    if (!focused) return;
+    const again = sequence ? digest.querySelector<HTMLElement>(`[data-sequence="${sequence}"]`)
+      : Array.from(digest.querySelectorAll<HTMLElement>('button')).find(button => button.getAttribute('aria-label') === label);
+    (again ?? el('history-close')).focus({ preventScroll: true });
   }
   function views(model: Model) {
     const shown: View = model.review ? 'events' : view;
