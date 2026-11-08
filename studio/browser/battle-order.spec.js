@@ -110,8 +110,11 @@ test('a fresh reveal waits until tie ordering ends, opens once and never acknowl
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
   await expect(page.locator('#reading-detail')).toContainText('Your team: 2 Instinct');
   await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"]')).toContainText('2');
+  // Each creature that rolled for the tie shows its last throw on a d20 beside it (ADR 0154), gone with the reading.
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:18:roll 4:8:roll 2:2:roll');
   expect(h.state.shown).toEqual([]); await page.locator('#order-continue').click();
   await expect(page.locator('#actor-layer .effect-chip[data-kind="order"]')).toHaveCount(0);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./);
   await h.publish({ feed: [reveal(11), reveal(12, 'TiesOrdered')] });
   await expect(page.locator('#order-continue')).toBeHidden(); expect(h.state.errors).toEqual([]);
 });

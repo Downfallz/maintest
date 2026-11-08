@@ -10,6 +10,16 @@ import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 import { mount, entry, before, creature } from './battle-playback-fixture.js';
 const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
+test('a cast that tried to crit shows its d20 beside the caster as it lands, and the die leaves with the result', async ({ page }, info) => {
+  test.setTimeout(60000);
+  const h = await mount(page);
+  await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
+  await page.clock.runFor(860);
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit');
+  await page.screenshot({ path: info.outputPath('critical-die.jpg'), type: 'jpeg', quality: 85 });
+  await page.clock.runFor(4000);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./); expect(h.errors).toEqual([]);
+});
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
   test.setTimeout(60000);
@@ -267,6 +277,26 @@ test('live playback shows the necromantic recipients apart from the caster blood
   // The player's own cast plays out and moves on by itself (ADR 0141).
   await page.clock.runFor(WINDUP_MS + IMPACT_MS + SETTLE_MS);
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'decision');
+  expect(h.errors).toEqual([]);
+});
+
+test('three effects on one creature stack over its head instead of running off the screen', async ({ page }, info) => {
+  const h = await mount(page);
+  const after = before.map(one => one.id === 6 ? { ...one, health: 13, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 },
+    { effect: { kind: 'Poison', amountPerRound: 1 }, remainingRounds: 2 }] } : one);
+  const action = entry(10, { targets: [6], after, outcomes: [{ kind: 'DamageOutcome', target: 6, amount: 7 },
+    { kind: 'ConditionOutcome', target: 6, effect: { kind: 'Bleed', amountPerRound: 2 } },
+    { kind: 'ConditionOutcome', target: 6, effect: { kind: 'Poison', amountPerRound: 1 } }] });
+  await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
+  await page.clock.runFor(900);
+  const holder = page.locator('[data-creature="6"] .creature-effect');
+  await expect(holder.locator(':scope > *')).toHaveCount(3);
+  await expect(holder).toHaveCSS('flex-direction', 'column');
+  const width = page.viewportSize().width;
+  for (const box of await holder.locator(':scope > *').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()))) {
+    expect(box.left).toBeGreaterThanOrEqual(0); expect(box.right).toBeLessThanOrEqual(width);
+  }
+  await page.screenshot({ path: info.outputPath('stacked-effects.png') });
   expect(h.errors).toEqual([]);
 });
 

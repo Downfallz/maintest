@@ -19,7 +19,7 @@ studio's lime action colour. Keep the dark fantasy atmosphere, restrained accent
 | Slate panel | `#132228` | `--brand-panel` | Cards, dialogs, sheets |
 | Raised slate | `#1C2A2D` | `--brand-raised` | Controls, hover surfaces, layered panels |
 | Slate edge | `#52636B` | `--brand-line` | UI borders and separators |
-| Eclipse gold | `#E7C183` | `--brand-gold` | Primary action, selected tab, links, brand mark |
+| Eclipse gold | `#E7C183` | `--brand-gold` | Primary action, selected tab, links |
 | Eclipse light | `#FFE2A6` | `--brand-gold-bright` | Hover emphasis and keyboard focus |
 | Copper ember | `#D39C85` | `--brand-ember` | Secondary brand detail and ornamental edges |
 | Ivory | `#ECE9DC` | `--brand-ivory` | Main text on dark surfaces |
@@ -69,9 +69,14 @@ working without an extra request or a dependency on a live web server. The norma
 For page controls, use role variables instead of introducing another hexadecimal shade. Gameplay VFX,
 artwork, family palettes and chart series may have their own documented semantic colours.
 
-The browser `theme-color`, PWA manifest and SVG/PNG launcher icons mirror deep slate and eclipse gold.
-These non-CSS formats must be updated with any future palette change; the theme metadata is checked in
-`table/branding.test.js`.
+The browser `theme-color` and PWA manifest mirror deep slate. These non-CSS formats must be updated with any
+future palette change; the theme metadata is checked in `table/branding.test.js`.
+
+The brand mark is the bone-and-soot rune, not a colour of the palette. `table/icon.svg` draws it flat in bone
+(`#D8C7A7`) on deep slate, and is what every page's mark shows. `icon-192.png` and `icon-512.png` are its
+textured artwork, cracked bone on a soot ground a few shades darker than deep slate; they are artwork, so they
+are not regenerated from the SVG. `notification-badge.svg` and `.png` are the white silhouette Android masks
+into the status bar.
 
 ## Covered surfaces
 

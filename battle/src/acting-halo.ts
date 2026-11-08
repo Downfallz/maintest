@@ -1,32 +1,41 @@
 import Phaser from 'phaser';
 
-const GOLD = 0xeac88e;
+// A saturated gold: the pale UI gold reads as part of the bone-coloured illustrations.
+const GOLD = 0xffb938;
 const KEY = 'acting-glow';
 
-// The acting creature, at a glance and without a word: a warm light behind its body and a pool of it at its feet,
-// breathing slowly. It follows the figure through a strike and holds still under reduced motion.
+type Lit = { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number } };
+
+// The acting creature, at a glance and without a word: a gold rim around its own silhouette and a pool of light at
+// its feet, breathing slowly. The rim is the figure's own image filled with gold just behind it, a little larger, so
+// it hugs whatever illustration the creature shows; it follows the figure through a strike and holds still under
+// reduced motion.
 export class ActingHalo {
-  private aura: Phaser.GameObjects.Image;
+  private rims: Phaser.GameObjects.Image[];
   private pool: Phaser.GameObjects.Image;
-  private target: { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number } } | null = null;
+  private target: Lit | null = null;
 
   constructor(scene: Phaser.Scene) {
-    // A soft round glow drawn once: a radial gradient, so its edge fades instead of cutting.
+    // The pool is a round gold glow drawn once, its colour in the texture and its edge fading to nothing, blended
+    // normally: an additive blend lit the texture's transparent corners too, a faint square rather than a glow.
     if (!scene.textures.exists(KEY)) {
       const canvas = scene.textures.createCanvas(KEY, 128, 128)!;
       const context = canvas.getContext();
       const glow = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-      glow.addColorStop(0, 'rgba(255,255,255,1)'); glow.addColorStop(.45, 'rgba(255,255,255,.45)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+      glow.addColorStop(0, 'rgba(246,214,150,1)'); glow.addColorStop(.4, 'rgba(234,200,142,.55)'); glow.addColorStop(.75, 'rgba(234,200,142,.16)');
+      glow.addColorStop(1, 'rgba(234,200,142,0)');
       context.fillStyle = glow; context.fillRect(0, 0, 128, 128); canvas.refresh();
     }
-    this.aura = scene.add.image(0, 0, KEY).setTint(GOLD).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
-    this.pool = scene.add.image(0, 0, KEY).setTint(GOLD).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    // A tight bright rim and a wider faint one: together they read as a glow rather than a hard outline.
+    this.rims = [0, 1].map(() => scene.add.image(0, 0, KEY).setTint(GOLD).setTintMode(Phaser.TintModes.FILL).setVisible(false));
+    this.pool = scene.add.image(0, 0, KEY).setVisible(false);
   }
 
   /** The figure that acts now, or null; a fallen figure is never lit. */
-  show(target: { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number } } | null) {
+  show(target: Lit | null) {
     this.target = target;
-    this.aura.setVisible(Boolean(target)); this.pool.setVisible(Boolean(target));
+    for (const rim of this.rims) rim.setVisible(Boolean(target));
+    this.pool.setVisible(Boolean(target));
   }
 
   get visible() { return Boolean(this.target); }
@@ -36,12 +45,17 @@ export class ActingHalo {
     if (!target) return;
     const { image, home } = target;
     const breath = reduced ? 1 : .82 + .18 * Math.sin(time / 520);
-    const middle = image.getCenter();
-    this.aura.setPosition(image.x, middle.y ?? image.y).setDisplaySize(home.size * 1.15, home.size * .95)
-      .setAlpha(.20 * breath).setDepth(home.y - .9);
-    this.pool.setPosition(home.x, home.y - 2).setDisplaySize(home.size * 1.05, Math.max(18, home.size * .22))
-      .setAlpha(.42 * breath).setDepth(home.y - .8);
+    for (const [index, rim] of this.rims.entries()) {
+      if (rim.texture.key !== image.texture.key || rim.frame.name !== image.frame.name) rim.setTexture(image.texture.key, image.frame.name);
+      const grow = index === 0 ? 1.06 : 1.13;
+      rim.setOrigin(image.originX, image.originY).setFlipX(image.flipX).setAngle(image.angle)
+        .setScale(image.scaleX * grow, image.scaleY * grow).setPosition(image.x, image.y + (index === 0 ? 2 : 4))
+        .setAlpha((index === 0 ? 1 : .42) * breath * image.alpha).setDepth(image.depth - .0004 - index * .0001)
+        .setVisible(image.visible);
+    }
+    this.pool.setPosition(home.x, home.y - 2).setDisplaySize(home.size * 1.15, Math.max(22, home.size * .26))
+      .setAlpha(.85 * breath).setDepth(home.y - .8);
   }
 
-  destroy() { this.aura.destroy(); this.pool.destroy(); }
+  destroy() { for (const rim of this.rims) rim.destroy(); this.pool.destroy(); }
 }

@@ -89,7 +89,7 @@ export async function showOwnNotice(registration, scope = globalThis) {
   const permission = scope.Notification?.permission;
   if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
   try {
-    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png' });
+    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png', badge: '/notification-badge.png' });
   } catch (error) {
     return error?.message || String(error);
   }

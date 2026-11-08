@@ -112,7 +112,14 @@ const passOver = () => playback.skip({ dismissUpkeep: true });
 const controls = combatControls(combat, name, passOver);
 // The full mutation tree, one view for the chooser, the public reference and a revealed mutation's path.
 const atlasUI = atlasControls(() => render());
-const planningUI = planningControls(planning, name, passOver, inspectCreature, atlasUI);
+// Opening the team's tempos by hand reads the round's reveal, as Continue does: its receipt and crests leave the
+// field to the tempos.
+const beforePlanning = () => {
+  passOver();
+  const receipt = growth.receipt() as { sequence: number } | null;
+  if (receipt && planning.model().latest?.waitingFor === 'Speed') { revealRead = receipt.sequence; growth.dismiss(); }
+};
+const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 // The end card plays the same game again (ADR 0153): against this table's opponent, with the seats this browser holds
 // at it. A recording is nobody's game to play again.
@@ -307,7 +314,7 @@ function render() {
   // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
   const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
-  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')}`;
+  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')}`;
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
   else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
@@ -329,7 +336,7 @@ function render() {
     return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
   };
   // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
-  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')));
+  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
   if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));
@@ -477,6 +484,17 @@ function render() {
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
+  // The d20s beside the creatures that rolled them (ADR 0154): each roll-off's last throw while the revealed order is
+  // read, and a caster's critical roll as its action lands.
+  type Die = NonNullable<SceneFrame['dice']>[number];
+  const dice: Die[] = [];
+  if (orderReading) for (const rollOff of ((view?.board as { rollOffs?: { creature: number | string; rolls?: number[] }[] } | undefined)?.rollOffs ?? [])) {
+    const last = rollOff.rolls?.at(-1);
+    if (Number.isInteger(last)) dice.push({ id: String(rollOff.creature), value: last!, tone: 'roll', key: `order:${board.round}:${rollOff.creature}:${rollOff.rolls!.join('-')}` });
+  }
+  const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean } | null } | null)?.roll : null;
+  if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}` });
+  frame = { ...frame, dice };
   scene.present(frame, reduced(), playbackState.rate);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;
@@ -686,6 +704,7 @@ async function discover(autoResume = true) {
 }
 
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };

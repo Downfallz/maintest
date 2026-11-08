@@ -14056,6 +14056,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -14977,6 +14978,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -15963,6 +15965,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -17018,6 +17021,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -35179,6 +35183,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -36343,6 +36348,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -37580,6 +37586,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -38885,6 +38892,7 @@
           ],
           "droppedTargets": [],
           "isCritical": true,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -60492,6 +60500,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -61873,6 +61882,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -63256,6 +63266,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -64712,6 +64723,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -87547,6 +87559,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -89060,6 +89073,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -90641,6 +90655,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -92286,6 +92301,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -116434,6 +116450,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {
@@ -117889,6 +117906,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -119417,6 +119435,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 0,
           "outcomes": [
             {
@@ -121013,6 +121032,7 @@
           ],
           "droppedTargets": [],
           "isCritical": false,
+          "criticalRoll": null,
           "energySpent": 1,
           "outcomes": [
             {

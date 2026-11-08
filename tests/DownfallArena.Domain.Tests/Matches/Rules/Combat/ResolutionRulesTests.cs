@@ -165,6 +165,70 @@ public sealed class ResolutionRulesTests
     /// for anything that attacks and the hidden speed token decides nothing.
     /// </summary>
     [Fact]
+    public void A_standard_cast_records_the_d20_face_of_its_critical_roll_and_a_quick_one_rolls_none()
+    {
+        var spell = Content.Spell("spell:certain:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 1.0, Damage.Of(2));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Learn(spell.Id);
+        var creatures = Arena.Snapshots(living);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var standard = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit, Speed.Standard);
+        var quick = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit, Speed.Quick);
+
+        standard.CriticalRoll.ShouldBe(20);
+        quick.CriticalRoll.ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_fizzle_rolls_no_critical_face()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).Apply(Stun.For(1));
+        var creatures = Arena.Snapshots(living);
+
+        var stunned = Resolve(Strike(Arena.Ghoul), creatures, Crit);
+
+        stunned.Fizzled.ShouldBeTrue();
+        stunned.CriticalRoll.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A chance of k twentieths crits from the face 21 - k up (ADR 0100): 35% from 14. The face is the draw's
+    /// twentieth counted down from 20, and agrees with the critical even on a twentieth's edge.
+    /// </summary>
+    [Theory]
+    [InlineData(0.0, 0.35, true, 20)]
+    [InlineData(0.32, 0.35, true, 14)]
+    [InlineData(0.35, 0.35, false, 13)]
+    [InlineData(0.99, 0.35, false, 1)]
+    [InlineData(0.049, 0.05, true, 20)]
+    [InlineData(0.05, 0.05, false, 19)]
+    [InlineData(0.9999, 1.0, true, 1)]
+    public void The_critical_face_agrees_with_the_threshold_its_chance_prints(double draw, double chance, bool isCritical, int face)
+    {
+        ResolutionRules.CriticalFace(draw, chance, isCritical).ShouldBe(face);
+    }
+
+    [Fact]
+    public void A_draw_floating_point_puts_across_a_twentieth_still_shows_a_face_on_the_side_it_decided()
+    {
+        // 0.15 is not exact in binary: a draw just under it decides a critical, and its face is the threshold, 18.
+        var draw = Math.BitDecrement(0.15);
+
+        var face = ResolutionRules.CriticalFace(draw, 0.15, isCritical: draw < 0.15);
+
+        face.ShouldBe(18);
+    }
+
+    [Fact]
+    public void No_chance_to_crit_shows_no_face()
+    {
+        ResolutionRules.CriticalFace(0.0, 0.0, isCritical: false).ShouldBeNull();
+    }
+
+    [Fact]
     public void A_quick_creature_cannot_crit_however_certain_its_chance()
     {
         var spell = Content.Spell("spell:certain:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 1.0, Damage.Of(2));

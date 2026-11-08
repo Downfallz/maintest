@@ -28,12 +28,15 @@ export interface MutationRevealMarker {
 }
 export interface SceneFrame {
   mutationFocus?: string;
+  // The d20s the field shows beside the creatures that rolled them (ADR 0154).
+  dice?: { id: string; value: number; tone: 'crit' | 'miss' | 'roll'; key: string }[];
   reveal?: { round: number; inset?: number; markers: MutationRevealMarker[] };
   upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];
-    changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[] };
+    changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[];
+    roll?: { value: number; critical: boolean } | null };
   // `evolution` is the illustration and capstone effects the creature's purchases resolve to (ADR 0151); a frame
   // without it (the lab's samples) draws the audited sprites as before.
   creatures: { id: string; form: string; layers?: MutationLayer[]; isAlive: boolean; enemy: boolean;

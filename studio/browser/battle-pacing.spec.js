@@ -31,6 +31,10 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#round-phase')).toHaveText('COMBAT');
+  // The basic phase reads under the round on every screen, the phone's included.
+  await expect(page.locator('#round-phase')).toBeVisible();
+  const [number, phase] = await Promise.all(['#round-number', '#round-phase'].map(id => page.locator(id).evaluate(node => node.getBoundingClientRect().toJSON())));
+  expect(phase.top).toBeGreaterThanOrEqual(number.bottom - 1);
   await finishCast(page);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10');
   await expect(page.locator('[data-creature="1"] .creature-stats')).toContainText('5 EN');

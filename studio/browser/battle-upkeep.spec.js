@@ -85,7 +85,7 @@ test('inspection is current while receipt and journal retain historical zero hea
   await expect(rows).toHaveCount(3); await expect(rows.nth(0)).toContainText('Energy from effects +2');
   await expect(rows.nth(1)).toContainText('Healing over time +0'); await expect(rows.nth(2)).toContainText('Ongoing damage −7');
   await h.publish([]); await expect(rows).toHaveCount(3);
-  await page.locator('#upkeep-dialog [data-history-open]').click();
+  await page.locator('#upkeep-dialog [data-history-open]').click(); await page.locator('#history-mode-events').click();
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('Healing over time +0');
   // Closing the receipt opens the mutation tree (ADR 0138): that, not the receipt, acknowledges the asking.

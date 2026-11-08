@@ -36,6 +36,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
 | Spell stats | The numbers of a Spell: energy cost, Critical chance bonus. | decided |
+| Critical roll | The one roll that decides whether a cast is critical, recorded as the d20 face it showed: a chance of k twentieths crits from the face 21 - k (ADR 0100, ADR 0154). None when the cast had no chance to crit, a Quick creature's or a chance of zero. | decided |
 | Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. One roll decides the cast and multiplies what it puts on a target's health now -- Damage and a direct Heal (ADR 0033) -- never a lasting Effect, a Caster effect, or energy. | decided |
 | Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the bonus of every Tier it has bought this Match. It only ever grows. | decided |
 | Current initiative | The Base initiative plus the Creature's active initiative buffs and less its debuffs, floored at zero. This is what the Combat timeline orders on. | decided |

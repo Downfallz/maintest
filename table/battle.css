@@ -738,7 +738,9 @@
 .battle-page .home-header .brand { letter-spacing: normal; }
 .battle-page .home-header .brand h1 { margin: 0; font: 400 21px Georgia, serif; }
 .battle-page .home-header .eyebrow { display: block; text-transform: uppercase; margin: 0; }
-.battle-page .home-header .brand-mark { display: grid; place-items: center; width: 32px; height: 38px; border: 1px solid var(--brand-ember); border-radius: 10px 3px; font: 26px Georgia, serif; }
+/* The battle page does not load table.css, so the navigation header's mark draws the rune itself; the HUD's own mark
+   gets it from battle-lab.css. */
+.battle-page .home-header .brand-mark { display: block; width: 32px; height: 38px; flex: 0 0 auto; background: url('/icon.svg') center / contain no-repeat; }
 .battle-page .navigation-panels dialog { margin: auto; }
 
 /* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
@@ -777,7 +779,8 @@
             mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   #battle #history-open > span { position: absolute; top: 4px; right: 2px; font-size: 0; }
-  #battle #history-open #history-unread[data-count]:not([data-count=""])::after { content: attr(data-count); display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: #142126; font: 800 9px/16px system-ui, sans-serif; }
+  /* A dot, not a count: two rounds hold fifty events, and a number that large says nothing a reader acts on. */
+  #battle #history-open #history-unread[data-count]:not([data-count=""])::after { content: ''; display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #142126; }
   #battle #history-open #history-preview { display: none; }
 }
 
@@ -857,46 +860,46 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 
 /* Evolution and the team's tempos keep their private draft beside the battlefield. Reserve space in the actual
    scene so Phaser and the accessible creature targets keep the same coordinate system. */
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) {
   --mutation-height: clamp(295px,52dvh,470px); --mutation-width: clamp(310px,38vw,480px);
 }
 /* The mutation pick always opens at its full height: the tree, its preview and its header tools need the room. A side
    panel is full height already and keeps its width, so the field beside it keeps its room too. */
 body:has(#planning-dialog[data-kind="Evolution"][open]) { --mutation-height: min(74dvh,660px); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) {
   position: fixed; z-index: 12; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: none;
   height: var(--mutation-height); max-height: none; border: 0; border-top: 2px solid var(--gold);
   border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
 }
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header {
   padding: 4px 14px 0; display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto);
   grid-template-rows: minmax(48px,auto) auto; column-gap: 4px; align-items: center;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .eyebrow { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header .eyebrow { display: none; }
 /* Help and History are in the field's header already; a docked sheet's header keeps its own tools instead. */
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .history-reference { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header .history-reference { display: none; }
 .planning-tools:empty { display: none; }
 #planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 1 / 2 / auto / -1; display: flex; gap: 6px; justify-self: end; }
 #planning-dialog[data-kind="Evolution"] .planning-tools .planning-action {
   min-height: 44px; max-width: 108px; padding: 4px 12px; font-size: 12px; line-height: 1.15; text-wrap: balance;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures button {
   flex: 1 1 0; min-width: 0; min-height: 44px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-footer {
   padding: 5px 12px max(5px,env(safe-area-inset-bottom)); grid-template-columns: auto minmax(0,1fr);
   background: var(--panel); border-top: 1px solid var(--line);
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
 /* After the shared docking rules, which it overrides: the tempo rule is longer than a pick count: it takes its own row under the heading, the tabs under it. */
 #planning-dialog[data-kind="Speed"] .planning-header { grid-template-rows: minmax(44px, auto) auto auto; }
 #planning-dialog[data-kind="Speed"] #planning-heading { align-self: center; margin: 0; }
@@ -937,17 +940,17 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
 .creature[data-mutation-recipient="true"] .creature-tag { color: var(--gold); }
 .creature[data-mutation-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
 @media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
-  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
-  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .mutation-links path.lit { animation: mutation-ink 180ms ease-out; }
   @keyframes mutation-ink { from { opacity: .35; } to { opacity: 1; } }
 }
 @media (min-width: 760px) and (min-height: 600px) {
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer { margin-top: auto; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-footer { margin-top: auto; }
   #mutation-preview-region { max-height: 35dvh; }
 }
 /* On a phone the pick reaches into the timeline row and leaves enough stage height for two readable teams. */
@@ -1365,3 +1368,96 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #order-dialog .order-roll-none { color: var(--muted); }
 #order-dialog .order-footer { justify-content: stretch; padding: 12px 18px 16px; border-top: 1px solid #82958233; background: transparent; }
 #order-dialog .order-footer #order-close { flex: 1; min-height: 46px; border-radius: 999px; font-weight: 600; }
+
+/* The portrait says it zooms: a small magnifier in its corner. A flipped opponent's portrait flips the badge back, so it
+   always sits bottom right and reads the right way round. */
+.inspect-zoom-hint { position: absolute; right: 6px; bottom: 6px; width: 24px; height: 24px; border-radius: 50%;
+  background: #0b161acc; box-shadow: inset 0 0 0 1px #eac88e66; pointer-events: none; }
+.inspect-zoom-hint::before { content: ''; position: absolute; inset: 5px; background: var(--gold);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.inspect-portrait[data-side="enemy"] .inspect-zoom-hint { right: auto; left: 6px; transform: scaleX(-1); }
+#inspect-dialog .inspect-portrait:hover .inspect-zoom-hint { box-shadow: inset 0 0 0 1.5px var(--gold); }
+#inspect-zoom .inspect-zoom-picture { background-color: transparent; box-shadow: none; }
+
+/* The order of tied creatures docks like the other planning sheets: each tie a card with its shared places as the
+   order's gold badges and who takes each now, the creatures still to place as pills to tap in acting order, and the
+   dice and the opponent's fixed places in small type under them. History and Help stay in the field's header. */
+#planning-dialog[data-kind="TieOrder"] .planning-header { grid-template-rows: minmax(44px, auto) auto; }
+#planning-dialog[data-kind="TieOrder"] #planning-heading { align-self: center; margin: 0; }
+#planning-dialog[data-kind="TieOrder"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 6px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
+#planning-dialog[data-kind="TieOrder"] #planning-order { grid-area: 1 / 2 / auto / -1; justify-self: end; min-height: 44px; margin: 0; padding: 4px 14px;
+  border: 1px solid var(--gold); border-radius: 999px; background: #172a30; color: #f6e7c4; font-size: 12px; }
+#planning-dialog .tie-group { margin: 0 0 10px; padding: 12px 14px; border: 1px solid #3f554d; border-left: 3px solid #8cc7ad; border-radius: 10px;
+  background: linear-gradient(180deg, #17303a, #132429); }
+.tie-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tie-head h3 { margin: 0; font: 18px Georgia, serif; color: var(--ink); }
+.tie-roll { padding: 3px 10px; border: 1px solid #52695e; border-radius: 999px; color: #b8c9bd; font: 600 11px/1.2 system-ui, sans-serif; }
+.tie-roll[data-rolled="true"] { border-color: #eac88e66; color: #e2c998; }
+.tie-places { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.tie-place { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border: 1px solid #3f554d; border-radius: 999px; background: #0f1f24; color: var(--ink); font-size: 13px; }
+.tie-badge { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #eac88e; color: #142126; font: 800 12px/1 system-ui, sans-serif; }
+#planning-dialog .tie-group .tie-note { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+#planning-dialog .tie-group .tie-opponent { color: #f0b39c; }
+#planning-dialog .tie-group .tie-hint { margin: 10px 0 6px; color: #c9d4cb; font-size: 12px; }
+.tie-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.tie-actions { margin-top: 2px; }
+#planning-dialog .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Three effects or more on one creature (a team-wide buff, say) stack over its head instead of running off the
+   screen's edge in a row; one or two still sit side by side, and on a phone two stack already. */
+#battle .creature > .creature-effect:has(> :nth-child(3)) { flex-direction: column; flex-wrap: nowrap; gap: 3px; }
+@media (max-width: 619px) { #battle .creature > .creature-effect:has(> :nth-child(2)) { flex-direction: column; flex-wrap: nowrap; gap: 3px; } }
+
+/* The round reads with its phase under it, the basic one (Upkeep, Command, Combat, Aftermath), on every screen. */
+#battle .round { flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
+#battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small { display: block; margin: 0; color: #c9b88f; font-size: 9px; letter-spacing: 1.5px; }
+@media (max-width: 619px) { #battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small { font-size: 8px; letter-spacing: 1px; } }
+
+/* History opens on its summary: a card a round, the latest first, with the mutations revealed, the spells in order
+   with what they did, and who fell. All events is the full journal, with its filters and recorded boundaries. */
+.history-modes { flex: none; display: flex; gap: 4px; margin: 10px 18px 0; padding: 3px; border: 1px solid #42594f; border-radius: 999px; background: #0c181d; align-self: flex-start; }
+.history-modes button { min-height: 36px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: #b7c9be; font-size: 13px; font-weight: 600; }
+.history-modes button[aria-pressed="true"] { background: #2c4249; color: #fff2c8; box-shadow: inset 0 0 0 1px #8d7958; }
+#history-dialog[data-review="true"] .history-modes { display: none; }
+#history-filters[hidden], #history-summary[hidden], #history-list[hidden] { display: none; }
+#history-summary { overflow: auto; overscroll-behavior: contain; min-height: 0; min-width: 0; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.summary-empty { margin: 6px; color: var(--muted); font-size: 14px; }
+.summary-round { flex: none; border: 1px solid #42594f; border-radius: 8px; background: #172a2f; padding: 12px; }
+.summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.summary-head h3 { display: inline; margin: 0 8px 0 0; font: 19px Georgia, serif; color: #fff2c8; }
+.summary-counts { color: #9fb4a9; font-size: 12px; }
+.summary-more { flex: none; min-height: 32px; padding: 4px 12px; font-size: 12px; border-radius: 999px; }
+.summary-result { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: #3a3220; color: #fff2c8; font-weight: 600; font-size: 14px; }
+.summary-round ul, .summary-round ol { list-style: none; margin: 0; padding: 0; }
+.summary-mutations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
+.summary-mutations li { display: inline-flex; gap: 6px; align-items: baseline; padding: 4px 10px; border-radius: 999px; border: 1px solid #55736a; background: #1d3439; font-size: 12px; }
+.summary-mutations li[data-side="Opponent"] { border-color: #8a5a4c; background: #33231f; }
+.summary-mutations .summary-what { color: #e6cf98; font-weight: 700; }
+.summary-casts { display: grid; gap: 6px; margin-top: 10px !important; counter-reset: cast; }
+.summary-casts > li { border-left: 3px solid #8dab9d; border-radius: 4px; background: #1d3236; }
+.summary-casts > li[data-side="Opponent"] { border-left-color: #e1a58c; background: #2c2523; }
+.summary-cast { width: 100%; min-height: 40px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 8px 10px; border: 0; background: transparent; color: inherit; text-align: left; font-size: 14px; cursor: pointer; }
+.summary-cast:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.summary-cast .summary-who { font-weight: 700; }
+.summary-cast .summary-what { color: #d8e2dc; }
+.summary-cast .summary-what::before { content: '→ '; color: #7f968b; }
+.summary-status { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.summary-casts > li[data-status="Critical"] .summary-status { background: #eac88e; color: #142126; }
+.summary-casts > li[data-status="Fizzled"] .summary-status { background: #44383a; color: #ffb9a8; border: 1px solid #8a5a4c; }
+.summary-effects { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px !important; }
+.summary-effects li { padding: 2px 8px; border-radius: 999px; background: #10201f; font-size: 11px; color: #c9d4cd; }
+.summary-effects [data-tone="harm"] { color: #ffb9a8; }
+.summary-effects [data-tone="recovery"] { color: #ace0bf; }
+.summary-effects [data-tone="energy"] { color: #a9d4f4; }
+.summary-effects [data-tone="condition"] { color: #d9bdf2; }
+.summary-effects .summary-extra { color: #9fb4a9; font-style: italic; }
+.summary-defeated { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
+.summary-defeated li { padding: 3px 10px; border-radius: 999px; background: #4a2420; color: #ffd6cb; font-size: 12px; font-weight: 700; }
+.summary-defeated li::before { content: '✕ '; }
+.summary-skipped { margin: 8px 0 0; color: #9fb4a9; font-size: 12px; }
+@media (max-width: 619px) {
+  .history-modes { margin: 8px 12px 0; }
+  #history-summary { padding: 10px; }
+  .summary-round { padding: 10px; }
+}
