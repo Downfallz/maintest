@@ -93,6 +93,10 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await page.locator('#history-open').click();
   await page.locator('#history-list details').last().locator('summary').click();
   await expect(page.locator('#history-list')).toContainText('d20 11 → 18');
+  await page.keyboard.press('Escape');
+  // Read by hand, the order lets the seen mark pass it: coming back does not reveal it again.
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
+  await page.clock.runFor(500); await expect(page.locator('#order-continue')).toBeHidden();
   expect(h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
 });
 test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }) => {

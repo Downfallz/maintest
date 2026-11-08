@@ -25,6 +25,9 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   openers.forEach(button => button.addEventListener('click', () => show()));
   el('order-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
+    // A reference opened by hand is the order read: closing it lets the seen mark pass it. Opened for its details
+    // from the field's reading, the order is still read only at Continue.
+    if (!reading) reveal.read();
     if (available && opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length) opener.focus({ preventScroll: true });
     opener = null; onVisibility();
   });
