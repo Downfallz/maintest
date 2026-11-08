@@ -11,9 +11,11 @@ export async function returningBattlePlayer({ context }) {
   });
 }
 
-// The mutation phase opens its tree by itself (ADR 0138); a journey reaches it whether it opened, stayed open
-// after a previous pick, or was closed by the player and waits behind its button.
-export async function mutationTree(page) {
+// The mutation phase opens its tree by itself (ADR 0138), and the team's tempos their sheet (ADR 0150); a journey
+// reaches either whether it opened, stayed open after a previous pick, or was closed and waits behind its button.
+export async function mutationTree(page) { await planningSheet(page); }
+export async function teamTempos(page) { await planningSheet(page); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed'); }
+async function planningSheet(page) {
   const dialog = page.locator('#planning-dialog'), button = page.locator('#planning-open');
   await acknowledge(page, async () => await dialog.isVisible() || await button.isVisible());
   if (!await dialog.isVisible()) await button.click({ timeout: 2000 }).catch(() => {});

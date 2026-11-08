@@ -35,16 +35,29 @@ async function mount(page, ids = [1, 2, 3]) {
     return route.fulfill({ status: 500 });
   });
   await page.goto('/table/battle.html'); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#loading')).toBeHidden(); await page.locator('#planning-open').click();
+  await expect(page.locator('#loading')).toBeHidden(); await openTempos(page);
   return state;
+}
+// The team's tempos open by themselves, docked beside the field (ADR 0150); a journey reaches them whether they
+// opened, or were closed and wait behind the dock's button.
+async function openTempos(page) {
+  const dialog = page.locator('#planning-dialog'), button = page.locator('#planning-open');
+  await expect.poll(async () => {
+    if (await dialog.isVisible()) return true;
+    if (await button.isVisible()) await button.click({ timeout: 1000 }).catch(() => {});
+    return dialog.isVisible();
+  }, { timeout: 15000 }).toBe(true);
 }
 async function fill(page, count) { for (let i = 0; i < count; i++) await page.locator('[data-speed="Standard"]').click(); }
 for (const count of [1, 2, 3]) test(`${count} creature tabs keep an editable team draft and send once per asking`, async ({ page }, info) => {
   test.setTimeout(60000);
   const h = await mount(page, [1, 2, 3].slice(0, count));
-  await expect(page.locator('.tempo-reference')).toContainText('40% Precision crit · current');
+  // The creature's spells are the spell choice's cards, their crit chip at Precision with the host's current chance.
+  const strike = page.locator('.tempo-reference [data-reference-spell="strike"]');
+  await expect(strike.locator('.spell-chip-crit')).toContainText('40%'); await expect(strike.locator('.spell-chip-crit small')).toHaveText('Precision · current');
+  await expect(page.locator('#planning-dialog [data-spell]')).toHaveCount(0);
   await fill(page, count);
-  if (count > 1) await expect(page.locator('.tempo-reference')).toContainText('10% Precision crit · catalogue');
+  if (count > 1) await expect(strike.locator('.spell-chip-crit small')).toHaveText('Precision · catalogue');
   await page.locator('[data-tempo-tab="1"]').click(); await page.locator('[data-speed="Quick"]').click();
   expect(h.writes).toEqual([]); await expect(page.locator('#planning-confirm')).toHaveText(`Confirm tempos · ${count}/${count}`);
   await fitsViewport(page, '#planning-confirm, #planning-close');
@@ -75,7 +88,7 @@ test('backgrounding during a write clears the batch and reopening shows only aut
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
   release(); await expect(page.locator('#planning-dialog')).toBeHidden();
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); });
-  await page.locator('#planning-open').click(); await expect(page.locator('[data-tempo-tab]')).toHaveCount(2);
+  await openTempos(page); await expect(page.locator('[data-tempo-tab]')).toHaveCount(2);
   await expect(page.locator('#planning-confirm')).toBeDisabled(); expect(h.writes.length).toBe(1); expect(h.errors).toEqual([]);
 });
 test('keyboard tabs and short landscapes keep the footer reachable without losing drafts to Help', async ({ page }) => {
@@ -85,4 +98,27 @@ test('keyboard tabs and short landscapes keep the footer reachable without losin
   await page.locator('[data-speed="Quick"]').click(); await page.locator('#planning-dialog [data-help-open]').click();
   await page.locator('#help-close').click(); await expect(page.locator('[data-tempo-tab="2"]')).toContainText('Instinct');
   await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('the team\'s tempos open by themselves, docked beside a field that stays in view, each tab wearing its tempo', async ({ page }, info) => {
+  const h = await mount(page);
+  const dialog = page.locator('#planning-dialog');
+  await expect(dialog).toHaveAttribute('data-kind', 'Speed');
+  expect(await dialog.evaluate(node => node.matches(':modal'))).toBe(false);
+  await expect(page.locator('#planning-open')).toBeHidden();
+  // The field gives up the room the sheet takes rather than sitting behind it.
+  const [sheet, field] = await Promise.all([dialog.boundingBox(), page.locator('#battle-zone').boundingBox()]);
+  const beside = sheet.x >= field.x + field.width - 1, below = sheet.y >= field.y + field.height - 1;
+  expect(beside || below).toBe(true); expect(field.height).toBeGreaterThan(120);
+  await expect(page.locator('#planning-choices [data-speed="Quick"]')).toBeFocused();
+  await expect(page.locator('#planning-choices .actor-chip[data-kind="energy"]')).toHaveText('3 energy');
+  await page.locator('[data-speed="Quick"]').click();
+  await expect(page.locator('[data-tempo-tab="1"]')).toHaveAttribute('data-tempo', 'Quick');
+  await expect(page.locator('[data-tempo-tab="1"] .tempo-tab-value')).toHaveText('⚡ Instinct');
+  await expect(page.locator('[data-tempo-tab="2"] .tempo-tab-value')).toHaveText('Not chosen');
+  await fitsViewport(page, '#planning-confirm, #planning-close, [data-speed]');
+  await page.screenshot({ path: info.outputPath('tempo-docked.png') });
+  // Escape closes the docked sheet and keeps the draft; the dock's button opens it again, not by itself.
+  await page.keyboard.press('Escape'); await expect(dialog).toBeHidden(); await expect(page.locator('#planning-open')).toBeVisible();
+  await page.locator('#planning-open').click(); await expect(page.locator('[data-tempo-tab="1"]')).toHaveAttribute('data-tempo', 'Quick');
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

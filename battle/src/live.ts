@@ -292,7 +292,7 @@ function render() {
   // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
   const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
-  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && $('planning-dialog').dataset.kind === 'Evolution'}`;
+  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')}`;
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
   else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
@@ -452,7 +452,8 @@ function render() {
   // closes it reopens it from the battlefield or the dock (ADR 0138).
   const asked = planning.model();
   if (asked.opened) mutationOpened = asked.question;
-  else if (asked.available && asked.latest?.waitingFor === 'Evolution' && !asked.latest.waiting && mutationOpened !== asked.question
+  // The team's tempos open the same way, docked as well (ADR 0150).
+  else if (asked.available && ['Evolution', 'Speed'].includes(asked.latest?.waitingFor) && !asked.latest.waiting && mutationOpened !== asked.question
     && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
   // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
   // after whatever the board still had to show. Closing it leaves Choose spell in the dock.

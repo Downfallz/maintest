@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
-import { returningBattlePlayer, mutationTree, acknowledge, readResults, matchResult } from './battle-help-fixture.js';
+import { returningBattlePlayer, mutationTree, teamTempos, acknowledge, readResults, matchResult } from './battle-help-fixture.js';
 import { startHost, stopHost } from './host.js';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
@@ -41,7 +41,9 @@ async function answerEvolution(page, view, capture) {
   }
 }
 async function answerPlanning(page, view, capture) {
-  if (view.waitingFor === 'Evolution') await mutationTree(page); else await page.locator('#planning-open').click();
+  if (view.waitingFor === 'Evolution') await mutationTree(page);
+  else if (view.waitingFor === 'Speed') await teamTempos(page);
+  else await page.locator('#planning-open').click();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, capture);
   else if (view.waitingFor === 'Speed') {
     const count = await page.locator('[data-tempo-tab]').count();
@@ -339,7 +341,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
     // Interrupt after the first accepted creature, then reload. The host's own private receipts survive;
     // neither the draft nor the rest of the old confirmed batch resumes by itself.
     await page.route('**/decision', route => route.request().postDataJSON()?.kind === 'Speed' && tempos.length === 2 ? route.abort('failed') : route.continue());
-    await page.locator('#planning-open').click();
+    await teamTempos(page);
     for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
     expect(tempos).toEqual([]);
     await page.screenshot({ path: info.outputPath('au5-real-team-tempos.jpg'), type: 'jpeg', quality: 85 });
@@ -350,7 +352,7 @@ test('two battle seats plan simultaneously without revealing the other team choi
       waitingAsked: value.waitingAsked, waitingFor: value.waitingFor, waitingCreature: value.waitingCreature });
     expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
     await page.unroute('**/decision');
-    await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await page.locator('#planning-open').click();
+    await page.reload(); await expect(page.locator('#loading')).toBeHidden(); await teamTempos(page);
     await expect(page.locator('[data-tempo-tab]')).toHaveCount(2); await expect(page.locator('#planning-confirm')).toBeDisabled();
     expect(tempos).toHaveLength(2);
     await page.locator('[data-speed="Standard"]').click(); await page.locator('[data-speed="Quick"]').click();

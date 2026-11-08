@@ -93,7 +93,8 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
   await page.locator('#playback-next').click(); await expect(page.locator('#help-dialog')).toBeHidden();
   await page.locator('#history-open').click(); await expect(page.locator('#history-list details')).toHaveCount(1); await page.locator('#history-close').click();
   await page.locator('#help-open').click(); await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+  // With no tip to read first, the team's tempos opened by themselves and acknowledged their asking (ADR 0150).
+  await expect(page.locator('#help-mute')).toBeChecked(); expect(h.state.shown).toEqual(['11', '12']); expect(h.state.errors).toEqual([]);
 });
 test('manual Help preserves a mutation draft and fences a delayed acknowledgement', async ({ page }) => {
   const h = await mount(page); let release; h.state.ack = new Promise(resolve => { release = resolve; });

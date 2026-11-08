@@ -1,56 +1,61 @@
 import type { createBattlePlanning } from '../../table/battle-planning.js';
 import { SPEEDS, TEMPO_RULE, tempoLabel } from '../../table/terms.js';
-import { cardCost, cardsById, hasCritical, referenceLines } from '../../table/card.js';
+import { cardsById, hasCritical } from '../../table/card.js';
 import { chance } from '../../table/guidance.js';
+import { iconElement } from './condition-icons';
+import { spellCard } from './spell-card';
 import type { Catalogue } from './planning';
 
 type Controller = ReturnType<typeof createBattlePlanning>;
 const el = (id: string) => document.getElementById(id)!;
-const paragraph = (text: string) => { const node = document.createElement('p'); node.textContent = text; return node; };
+const node = (tag: string, text = '', className = '') => {
+  const item = document.createElement(tag); if (text) item.textContent = text; if (className) item.className = className; return item;
+};
 function nextTab(key: string, index: number, count: number) {
   if (key === 'Home') return 0;
   if (key === 'End') return count - 1;
   return (index + (key === 'ArrowRight' ? 1 : -1) + count) % count;
 }
+// Each tempo wears the mark the spell choice's tempo chip uses: a bolt for Instinct, a star for Precision.
+const GLYPH: Record<string, string> = { Quick: '⚡', Standard: '✦' };
+const LINE: Record<string, string> = { Quick: 'Acts before Precision · cannot crit', Standard: 'Acts after Instinct · can crit' };
 
-// The chance the host computed for the asked creature, or the catalogue's; neither when it is no chance at
-// all, the way the card face and the inspect panel print nothing for a spell that never crits.
-function criticalLabel(card: { critical?: string } | undefined, guide: { standardCriticalChance?: number } | null) {
-  if (guide?.standardCriticalChance != null) return guide.standardCriticalChance > 0 ? `${chance(guide.standardCriticalChance)} Precision crit · current` : null;
-  return hasCritical(card) ? `${card!.critical} Precision crit · catalogue` : null;
+// The chance the host computed for the asked creature, or the catalogue's; none when it is no chance at all,
+// the way the card face prints nothing for a spell that never crits. It is a Precision chance: Instinct never crits.
+function criticalChip(card: { critical?: string } | undefined, guide: { standardCriticalChance?: number } | null) {
+  if (guide?.standardCriticalChance != null) return guide.standardCriticalChance > 0 ? { value: chance(guide.standardCriticalChance), hint: 'Precision · current' } : null;
+  return hasCritical(card) ? { value: card!.critical!, hint: 'Precision · catalogue' } : null;
 }
 
-// A spell the player opened to read stays open while the panel is rebuilt around it, tab by tab.
-function spellReference(selected: { knownSpells?: string[] } | undefined, view: ReturnType<Controller['model']>['latest'], focus: number, catalogue: Catalogue | null, expanded: Set<string>) {
-  const reference = document.createElement('section'); reference.className = 'tempo-reference'; reference.setAttribute('aria-label', 'Spell reference');
-  reference.append(paragraph(focus === view.waitingCreature ? 'Spell reference · current creature values when available' : 'Catalogue reference · creature-specific modifiers are not included'));
-  const cards = cardsById(catalogue);
+// What the creature in hand could cast, as the spell choice deals it: the same cards, their crit chip at Precision.
+function spellReference(selected: { knownSpells?: string[] } | undefined, view: ReturnType<Controller['model']>['latest'], focus: number, catalogue: Catalogue | null) {
+  const reference = node('section', '', 'tempo-reference'); reference.setAttribute('aria-label', 'Spell reference');
+  reference.append(node('p', focus === view.waitingCreature ? 'Its spells · crit chances at Precision, current values' : 'Its spells · catalogue values, creature modifiers not included', 'tempo-reference-note'));
+  const cards = cardsById(catalogue), grid = node('div', '', 'tempo-spells');
   for (const id of selected?.knownSpells ?? []) {
     const card = cards.get(id), guide = focus === view.waitingCreature ? view.guidance?.find((one: { spell: string }) => one.spell === id) : null;
-    const details = document.createElement('details'), summary = document.createElement('summary'), key = `${focus}/${id}`;
-    summary.textContent = [card?.name ?? id, cardCost(card) === '' ? null : `${cardCost(card)} energy`,
-      criticalLabel(card, guide)].filter(Boolean).join(' · ');
-    details.append(summary, ...referenceLines(card, guide).map(paragraph));
-    details.open = expanded.has(key);
-    details.addEventListener('toggle', () => { if (details.open) expanded.add(key); else expanded.delete(key); });
-    reference.append(details);
+    const face = spellCard(card, id, catalogue?.effects ?? [], { compact: true, cost: Number.isInteger(guide?.cost) ? guide.cost : undefined, crit: criticalChip(card, guide) });
+    // The spell choice answers [data-spell]; a reference card must not.
+    delete face.dataset.spell; face.dataset.referenceSpell = id;
+    grid.append(face);
   }
-  if (!selected?.knownSpells?.length) reference.append(paragraph('No known spells recorded.'));
+  reference.append(selected?.knownSpells?.length ? grid : node('p', 'No known spells recorded.'));
   return reference;
 }
 
 export function tempoControls(controller: Controller, name: (id: unknown) => string) {
-  const expanded = new Set<string>();
   return (model: ReturnType<Controller['model']>, catalogue: Catalogue | null) => {
     const tempo = model.tempo!, view = model.latest, drafts = new Map<number, string>(tempo.drafts);
+    // A tab per creature still to draft, wearing the tempo drafted for it.
     const picker = el('planning-creatures'); picker.setAttribute('role', 'tablist'); picker.setAttribute('aria-label', 'Team tempos');
     picker.replaceChildren(...tempo.creatures.map((id: number, index: number) => {
       const tab = document.createElement('button'); tab.type = 'button'; tab.id = `tempo-tab-${id}`;
       tab.dataset.tempoTab = String(id); tab.setAttribute('role', 'tab'); tab.setAttribute('aria-controls', 'planning-choices');
       tab.setAttribute('aria-selected', String(id === tempo.focus)); tab.tabIndex = id === tempo.focus ? 0 : -1;
-      const identity = document.createElement('span'); identity.textContent = name(id);
-      const value = document.createElement('small'); value.textContent = drafts.has(id) ? tempoLabel(drafts.get(id)) : 'Not chosen';
-      tab.append(identity, value);
+      const drafted = drafts.get(id);
+      tab.dataset.tempo = drafted ?? '';
+      const value = node('small', drafted ? `${GLYPH[drafted] ?? ''} ${tempoLabel(drafted)}` : 'Not chosen', 'tempo-tab-value');
+      tab.append(node('span', name(id)), value);
       tab.addEventListener('click', () => controller.selectTempo(id));
       tab.addEventListener('keydown', event => {
         const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
@@ -63,26 +68,28 @@ export function tempoControls(controller: Controller, name: (id: unknown) => str
       return tab;
     }));
     const selected = view.board.allies.find((one: { id: number }) => one.id === tempo.focus);
-    el('planning-help').textContent = `${TEMPO_RULE} Draft every creature, then confirm once. Your choices stay private until both teams reveal.`;
+    el('planning-help').textContent = `${TEMPO_RULE} Draft each creature, confirm once: private until both teams reveal.`;
     const choices = el('planning-choices'); choices.setAttribute('role', 'tabpanel'); choices.setAttribute('aria-labelledby', `tempo-tab-${tempo.focus}`);
-    const energy = selected?.energy == null ? '' : ` · ${selected.energy} energy`;
-    const title = document.createElement('h3'); title.textContent = `${name(tempo.focus)}${energy}`;
-    const buttons = document.createElement('div'); buttons.className = 'tempo-options';
+    // The creature in hand, with the energy it will have to spend, as the spell choice heads its sheet.
+    const head = node('div', '', 'tempo-head');
+    const title = node('h3', name(tempo.focus));
+    const energy = node('span', '', 'actor-chip'); energy.dataset.kind = 'energy';
+    energy.append(iconElement('energy-gain'), selected?.energy == null ? 'Energy unavailable' : `${selected.energy} energy`);
+    head.append(title, energy);
+    // The two tempos as cards: the tempo's mark in a medallion, its name and what it does to the turn.
+    const buttons = node('div', '', 'tempo-options');
     for (const speed of SPEEDS) {
-      const button = document.createElement('button'); button.type = 'button'; button.dataset.speed = speed;
-      const label = document.createElement('strong'); label.textContent = tempoLabel(speed);
-      const detail = document.createElement('span'); detail.textContent = speed === 'Quick' ? 'Acts before Precision · cannot crit' : 'Acts after Instinct · can crit';
-      button.append(label, detail); button.addEventListener('click', () => controller.choose({ speed })); buttons.append(button);
+      const button = document.createElement('button'); button.type = 'button'; button.dataset.speed = speed; button.className = 'tempo-option';
+      const mark = node('span', GLYPH[speed] ?? '', 'tempo-mark'); mark.setAttribute('aria-hidden', 'true');
+      const words = node('span', '', 'tempo-words');
+      words.append(node('strong', tempoLabel(speed)), node('span', LINE[speed] ?? ''));
+      button.append(mark, words); button.addEventListener('click', () => controller.choose({ speed })); buttons.append(button);
     }
-    const reference = spellReference(selected, view, tempo.focus, catalogue, expanded);
-    const summary = paragraph(['Team draft', ...tempo.creatures.map((id: number) => `${name(id)}: ${drafts.has(id) ? tempoLabel(drafts.get(id)) : 'Not chosen'}`)].join(' · '));
-    summary.className = 'tempo-summary';
-    choices.replaceChildren(title, buttons, summary);
+    choices.replaceChildren(head, buttons);
     if (tempo.accepted.length) {
       const values = tempo.accepted.map((one: { creature: number; speed: string }) => `${name(one.creature)}: ${tempoLabel(one.speed)}`).join(' · ');
-      const accepted = paragraph(`Accepted · ${values}`);
-      accepted.className = 'tempo-accepted'; choices.append(accepted);
+      choices.append(node('p', `Accepted · ${values}`, 'tempo-accepted'));
     }
-    choices.append(reference);
+    choices.append(spellReference(selected, view, tempo.focus, catalogue));
   };
 }

@@ -199,14 +199,36 @@
 #planning-creatures [role="tab"] { min-width: 0; padding: 10px 8px; overflow-wrap: anywhere; }
 #planning-creatures [role="tab"] span, #planning-creatures [role="tab"] small { display: block; }
 #planning-creatures [role="tab"] small { margin-top: 5px; color: #b5c5ba; }
+/* The team's tempos, docked as the mutation choice is (ADR 0150): a tab per creature wearing its drafted tempo,
+   the creature in hand with its energy, the two tempos as cards with their mark, and its spells as the spell
+   choice deals them, crit chances at Precision. Instinct is gold and Precision blue, as their chips everywhere. */
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] { --tempo: #9fb3aa; display: grid; gap: 3px; justify-items: center; }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"][data-tempo="Quick"] { --tempo: #eac88e; }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"][data-tempo="Standard"] { --tempo: #8fc3ef; }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] span { font: 15px Georgia, serif; color: var(--ink); }
+#planning-dialog[data-kind="Speed"] #planning-creatures .tempo-tab-value { margin: 0; padding: 0 8px; border: 1px solid color-mix(in srgb, var(--tempo) 55%, transparent); border-radius: 999px; color: var(--tempo); font: 700 10px/1.6 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"]:not([data-tempo="Quick"]):not([data-tempo="Standard"]) .tempo-tab-value { border-style: dashed; letter-spacing: 0; text-transform: none; font-weight: 600; }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"][aria-selected="true"] { border-bottom-color: var(--gold); }
+#planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"][aria-selected="true"] span { color: var(--gold); }
+.tempo-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 10px; }
+.tempo-head h3 { margin: 0; font: 21px Georgia, serif; color: var(--gold); }
 .tempo-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.tempo-options button { display: grid; gap: 8px; text-align: left; padding: 14px; }
-.tempo-options span, .tempo-reference, .tempo-summary, .tempo-accepted { font-size: 13px; line-height: 1.5; }
-.tempo-reference { border-top: 1px solid #65766a; padding-top: 10px; }
-.tempo-reference details { margin: 8px 0; padding: 8px; background: #0b191e; border-radius: 6px; }
-.tempo-reference summary { cursor: pointer; }
-.tempo-accepted { color: #d6eb9a; }
-@media (max-width: 480px) { .tempo-options { grid-template-columns: 1fr; } }
+#planning-choices .tempo-option { --tempo: #8fc3ef; display: flex; align-items: center; gap: 12px; min-height: 72px; margin: 0; padding: 12px 14px 12px 10px; text-align: left; border: 1px solid color-mix(in srgb, var(--tempo) 45%, #3f554d); border-radius: 14px; background: linear-gradient(120deg, color-mix(in srgb, var(--tempo) 12%, #132429), #132429 70%); color: var(--ink); transition: border-color .15s, box-shadow .15s, background .15s; }
+#planning-choices .tempo-option[data-speed="Quick"] { --tempo: #eac88e; }
+#planning-choices .tempo-option[aria-pressed="true"] { border-color: var(--tempo); background: linear-gradient(120deg, color-mix(in srgb, var(--tempo) 26%, #132429), color-mix(in srgb, var(--tempo) 8%, #132429)); box-shadow: 0 0 0 1px var(--tempo), 0 0 18px color-mix(in srgb, var(--tempo) 35%, transparent); }
+.tempo-mark { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; background: #0f1c21; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tempo) 70%, transparent); color: var(--tempo); font-size: 21px; line-height: 1; }
+.tempo-option[aria-pressed="true"] .tempo-mark { background: var(--tempo); color: #142126; }
+.tempo-words { display: grid; gap: 3px; min-width: 0; }
+.tempo-words strong { font: 18px/1.15 Georgia, serif; color: var(--tempo); letter-spacing: .02em; }
+.tempo-words span { color: #c4d0c7; font-size: 12px; line-height: 1.35; }
+.tempo-accepted { margin: 10px 0 0; color: #d6eb9a; font-size: 13px; }
+.tempo-reference { margin-top: 14px; padding-top: 10px; border-top: 1px solid #3f554d; }
+.tempo-reference-note { margin: 0 0 8px; color: var(--muted); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.tempo-spells { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.tempo-spells .spell-card { margin: 0; }
+.tempo-spells .spell-card-head { flex-wrap: wrap; align-items: flex-start; row-gap: 4px; }
+.tempo-spells .spell-card-name { flex: 1 1 8ch; min-width: 0; }
+@media (max-width: 480px) { .tempo-options { grid-template-columns: 1fr 1fr; } #planning-choices .tempo-option { flex-direction: column; align-items: flex-start; gap: 8px; min-height: 0; padding: 10px; } }
 .mutation-face { padding: 0 8px 10px; font-size: 14px; color: #c5d2cc; }
 .mutation-face p { margin: 8px 0; }
 .mutation-face summary { padding: 12px 0; min-height: 44px; cursor: pointer; }
@@ -806,46 +828,51 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
   #playback-next, #order-continue { flex: none; min-width: 88px; min-height: 44px; padding: 6px 14px; }
 }
 
-/* Evolution keeps its private draft beside the battlefield. Reserve space in the actual
+/* Evolution and the team's tempos keep their private draft beside the battlefield. Reserve space in the actual
    scene so Phaser and the accessible creature targets keep the same coordinate system. */
-body:has(#planning-dialog[data-kind="Evolution"][open]) {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) {
   --mutation-height: clamp(295px,52dvh,470px); --mutation-width: clamp(310px,38vw,480px);
 }
 body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(74dvh,660px); --mutation-width: clamp(350px,48vw,650px); }
-#planning-dialog[data-kind="Evolution"] {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) {
   position: fixed; z-index: 12; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: none;
   height: var(--mutation-height); max-height: none; border: 0; border-top: 2px solid var(--gold);
   border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
 }
-body:has(#planning-dialog[data-kind="Evolution"][open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
-body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
-#planning-dialog[data-kind="Evolution"] .planning-header {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header {
   padding: 4px 14px 0; display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto);
   grid-template-rows: minmax(48px,auto) auto; column-gap: 4px; align-items: center;
 }
-#planning-dialog[data-kind="Evolution"] .planning-header .eyebrow { display: none; }
-#planning-dialog[data-kind="Evolution"] .planning-header :is(.history-reference,#mutation-expand) {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .eyebrow { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header :is(.history-reference,#mutation-expand) {
   grid-row: 1; min-height: 44px; min-width: 44px; padding: 3px; float: none; margin: 0;
   font-size: 12px; border: 0; background: none; color: var(--muted);
 }
 #planning-dialog[data-kind="Evolution"] #mutation-expand { grid-column: 2; color: var(--gold); }
-#planning-dialog[data-kind="Evolution"] [data-help-open] { grid-column: 3; }
-#planning-dialog[data-kind="Evolution"] [data-history-open] { grid-column: 4; }
-#planning-dialog[data-kind="Evolution"] #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
-#planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
-#planning-dialog[data-kind="Evolution"] #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
-#planning-dialog[data-kind="Evolution"] #planning-creatures button {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) [data-help-open] { grid-column: 3; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) [data-history-open] { grid-column: 4; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button {
   flex: 1 1 0; min-width: 0; min-height: 44px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px;
 }
-#planning-dialog[data-kind="Evolution"] #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
-#planning-dialog[data-kind="Evolution"] #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
-#planning-dialog[data-kind="Evolution"] #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
-#planning-dialog[data-kind="Evolution"] .planning-footer {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer {
   padding: 5px 12px max(5px,env(safe-area-inset-bottom)); grid-template-columns: auto minmax(0,1fr);
   background: var(--panel); border-top: 1px solid var(--line);
 }
-#planning-dialog[data-kind="Evolution"] #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#planning-dialog[data-kind="Evolution"] #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+/* After the shared docking rules, which it overrides: the tempo rule is longer than a pick count: it takes its own row under the heading, the tabs under it. */
+#planning-dialog[data-kind="Speed"] .planning-header { grid-template-rows: minmax(44px, auto) auto auto; }
+#planning-dialog[data-kind="Speed"] #planning-heading { align-self: center; margin: 0; }
+#planning-dialog[data-kind="Speed"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 4px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
+#planning-dialog[data-kind="Speed"] #planning-creatures { grid-area: 3 / 1 / auto / -1; }
 .mutation-graph { position: relative; isolation: isolate; display: grid; gap: 12px; }
 .mutation-origin { justify-self: center; font: 15px/12px Georgia,serif; color: var(--gold); }
 .mutation-links { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
@@ -874,9 +901,9 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
 .creature[data-mutation-recipient="true"] .creature-tag { color: var(--gold); }
 .creature[data-mutation-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
 @media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
-  #planning-dialog[data-kind="Evolution"] { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
-  body:has(#planning-dialog[data-kind="Evolution"][open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
-  body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
 }
 @media (orientation: portrait) and (max-height: 660px) {
   #planning-dialog[data-kind="Evolution"]:not(.expanded-tree) #planning-creatures { display: none; }
@@ -887,8 +914,8 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
   @keyframes mutation-ink { from { opacity: .35; } to { opacity: 1; } }
 }
 @media (min-width: 760px) and (min-height: 600px) {
-  #planning-dialog[data-kind="Evolution"] #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
-  #planning-dialog[data-kind="Evolution"] .planning-footer { margin-top: auto; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer { margin-top: auto; }
   #mutation-preview-region { max-height: 35dvh; }
 }
 /* Expand into the timeline row on a phone and leave enough stage height for two readable teams. */
