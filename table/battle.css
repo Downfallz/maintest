@@ -1037,8 +1037,9 @@ body:has(#planning-dialog[data-kind="Evolution"][open]) #battle :is(.command-doc
    spell choice docked beside it) the chip folds to the opponent's medallion wearing its rank and heart, and the
    field's team label still names them. */
 #battle .hud-top { container: hud / inline-size; }
-#battle .hud-top:has(#opponent-open:not([hidden])) .round { margin-right: 0; }
-.opponent-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: 300px; min-height: 40px; margin: 0 auto 0 14px; padding: 3px 12px 3px 3px; border: 1px solid #d98b6f55; border-radius: 999px; background: linear-gradient(90deg, #d98b6f26, #d98b6f08 70%); color: #f2eee2; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+/* The round never gives up its number to the chip: the chip's name shortens instead. */
+#battle .hud-top:has(#opponent-open:not([hidden])) .round { flex: none; margin-right: 0; }
+.opponent-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 44px; max-width: 300px; min-height: 44px; margin: 0 auto 0 14px; padding: 3px 12px 3px 3px; border: 1px solid #d98b6f55; border-radius: 999px; background: linear-gradient(90deg, #d98b6f26, #d98b6f08 70%); color: #f2eee2; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
 .opponent-chip:hover { border-color: #d98b6faa; background: linear-gradient(90deg, #d98b6f3a, #d98b6f12 70%); }
 .opponent-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .opponent-chip[hidden] { display: none; }
