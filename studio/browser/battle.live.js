@@ -48,6 +48,9 @@ test('the real host supplies the battle and external decisions update it without
     const result = await context.request.post(`${origin}/api/seat/player1/decision`, { headers, data: { kind: 'Evolution', pass: true, asked: current.waitingAsked } });
     expect(result.status()).toBe(204);
   }
+  // A round's mutations are revealed first, and the team's tempos wait until that reveal is read (ADR 0150).
+  await expect(battle.locator('#growth-receipt, #planning-dialog[data-kind="Speed"][open]').first()).toBeVisible({ timeout: 15000 });
+  if (await battle.locator('#growth-receipt').isVisible()) await battle.locator('#growth-dismiss').click();
   await expect(battle.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed', { timeout: 15000 });
   await expect(battle.locator('#planning-dialog')).toBeVisible();
   const speed = (await (await context.request.get(`${origin}/api/seat/player1`, { headers })).json()).waitingAsked;
