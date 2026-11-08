@@ -327,3 +327,10 @@ test('the summary reads a round for its main beats: mutations, each cast with it
 test('a round with nothing but markers is left out of the summary', () => {
   assert.deepEqual(historySummary([historyEntry(entry(4, 'RoundEnded', {}), board, catalogue)]), []);
 });
+test('the summary names the spell apart from a caster whose label carries its id', () => {
+  // Creatures 2 and 3 share a name, so each label carries its id: 'Other · 2'.
+  const theirs = entry(3, 'CombatActionResolved', { resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: false },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 4 }], frame: { before, after: before } });
+  const [round] = historySummary([historyEntry(theirs, board, catalogue)]);
+  assert.deepEqual(round.casts.map(one => [one.caster, one.side, one.spell]), [['Other · 2', 'Opponent', 'Strike']]);
+});

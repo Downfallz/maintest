@@ -55,7 +55,7 @@ function combatRow(entry, board, catalogue) {
   const status = action.status === 'Resolved' && resolution.isCritical === false ? 'No critical' : action.status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
-  return { actor: String(action.actor.id), title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
+  return { actor: String(action.actor.id), spell: action.spell, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
     summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
@@ -300,9 +300,10 @@ export function historySummary(rows) {
     } else if (row.kind === 'CombatActionResolved') {
       const effects = (row.sections.find(section => section.title === 'Applied effects')?.items ?? [])
         .filter(item => item.text !== 'No applied effects recorded.').map(item => ({ text: bare(item.text), tone: item.tone ?? '' }));
+      // The row keeps the caster and the spell apart: a label can hold ' · ' itself, so the title is never split.
       const caster = row.participants.find(one => one.id === String(row.actor));
-      round.casts.push({ sequence: row.sequence, caster: caster?.label ?? bare(row.title.split(' · ')[0]), side: sideOf(row, row.actor),
-        spell: row.title.split(' · ').slice(1).join(' · '), status: row.status ?? 'Resolved', effects });
+      round.casts.push({ sequence: row.sequence, caster: caster?.label ?? bare(row.title), side: sideOf(row, row.actor),
+        spell: row.spell, status: row.status ?? 'Resolved', effects });
       for (const item of row.sections.find(section => section.title === 'Recorded changes')?.items ?? []) {
         const defeated = /^(.*) · Defeated$/.exec(item.text);
         if (defeated) round.defeated.push({ creature: bare(defeated[1]), side: defeated[1].includes('(Your team)') ? 'Your team' : defeated[1].includes('(Opponent)') ? 'Opponent' : 'Unknown team' });
