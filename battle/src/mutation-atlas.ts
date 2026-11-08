@@ -48,7 +48,21 @@ export function atlasControls(onVisibility: () => void) {
   let view: AtlasView | null = null, catalogue: Catalogue | null = null, selected: string | null = null, opener: HTMLElement | null = null;
   let anchors = new Map<string, HTMLElement>(), columns: HTMLElement[] = [];
   let request: ((creature: string) => AtlasView | null) | null = null;
-  const redraw = onNextFrame(drawLinks);
+  // A phone shows one family at a time: a triangle on each side that still has families says the tree goes on,
+  // and a tap moves one family over, as a swipe does.
+  function swipeHints() {
+    const board = el('atlas-board'), room = board.scrollWidth - board.clientWidth;
+    el('atlas-prev').hidden = !dialog.open || board.scrollLeft <= 4;
+    el('atlas-next').hidden = !dialog.open || board.scrollLeft >= room - 4;
+  }
+  const step = (direction: number) => {
+    const board = el('atlas-board'), width = columns[0]?.getBoundingClientRect().width ?? board.clientWidth;
+    board.scrollBy({ left: direction * (width + 14), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  el('atlas-prev').addEventListener('click', () => step(-1));
+  el('atlas-next').addEventListener('click', () => step(1));
+  el('atlas-board').addEventListener('scroll', swipeHints, { passive: true });
+  const redraw = onNextFrame(() => { drawLinks(); swipeHints(); });
   const observer = new ResizeObserver(redraw);
 
   el('atlas-close').addEventListener('click', () => dialog.close());
@@ -56,7 +70,7 @@ export function atlasControls(onVisibility: () => void) {
   dialog.addEventListener('close', () => {
     // Nothing stays behind a closed atlas: a seat that lost access keeps no creature's tree in the page.
     observer.disconnect(); redraw.cancel(); view = null; request = null; selected = null; anchors = new Map(); columns = [];
-    el('atlas-board').replaceChildren(); el('atlas-detail-body').replaceChildren(); el('atlas-detail').hidden = true; onVisibility();
+    el('atlas-board').replaceChildren(); el('atlas-detail-body').replaceChildren(); el('atlas-detail').hidden = true; swipeHints(); onVisibility();
     // A choice re-renders the chooser under the atlas: its opener comes back as a new node with the same id.
     const back = opener?.isConnected ? opener : opener?.id ? document.getElementById(opener.id) : null;
     if (back?.getClientRects().length && !back.matches(':disabled')) back.focus({ preventScroll: true });

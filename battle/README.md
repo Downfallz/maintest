@@ -313,7 +313,9 @@ See [ADR 0135](../docs/adr/0135-draft-team-tempos-before-sequential-confirmation
 The spell choice opens by itself on the player's turn, once per asking and only on an unobstructed board, and docks
 beside the field as the mutation choice does: a sheet under it on a phone, a panel at its side on a wider screen
 ([ADR 0149](../docs/adr/0149-open-the-spell-choice-with-the-players-turn.md)). Closing it leaves **Choose spell** in
-the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first).
+the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first). Right under
+the acting creature's name, three chips say what it plays with: its place in the turn order, its tempo (Instinct or
+Precision, with the rule in its title) and the energy it has to spend; the line under them keeps the round and phase.
 
 Combat choices group the current creature's known/offered spells by the served card type, with family
 accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
@@ -421,7 +423,9 @@ prerequisite forest, including every all-of/any-of edge, spell details, initiati
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
 current host Evolution offer marks a mutation Available; the next opportunity is the host's
 `nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
-not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit.
+not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit. On a phone the
+tree shows one family at a time: a slim tab with a triangle stands at each side that still has families, nudging the
+way a swipe goes, and a tap moves one family over; it steps aside while a mutation's card is open.
 
 The standalone reference shows current **public** ownership. Pending own picks remain Picked only
 in AU4's private command tree; they never enter public progress or receipts. Opening, exploring or

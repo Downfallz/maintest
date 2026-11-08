@@ -88,7 +88,7 @@ test('the next choice waits for the reading, and skipping it passes unread recei
   await expect(page.locator('#battle')).toHaveAttribute('data-reading', 'true'); await expect(page.locator('#combat-dialog')).toBeHidden();
   await page.locator('#playback-skip').click(); await openSpells(page);
   await expect(page.locator('#combat-dialog')).toBeVisible();
-  await expect(page.locator('#combat-context')).toContainText('7 energy');
+  await expect(page.locator('#combat-actor [data-kind="energy"]')).toHaveText('7 energy');
   await page.getByRole('button', { name: 'Close spell choices' }).click(); await h.publish([]);
   await expect(page.locator('#connection')).toHaveText(/^LIVE/); await page.clock.runFor(500);
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); expect(h.errors).toEqual([]);

@@ -76,7 +76,7 @@
   </dialog>
   <dialog id="atlas-dialog" aria-labelledby="atlas-title">
     <header class="atlas-header"><div><p class="eyebrow" id="atlas-eyebrow">MUTATION TREE</p><h2 id="atlas-title">Mutation tree</h2><p id="atlas-progress" hidden></p></div><select id="atlas-creature" aria-label="Creature" hidden></select><button id="atlas-close" type="button">Close</button></header>
-    <div class="atlas-main"><div id="atlas-board" aria-label="Mutation families"></div>
+    <div class="atlas-main"><div id="atlas-board" aria-label="Mutation families"></div><button id="atlas-prev" class="atlas-swipe" data-direction="prev" type="button" aria-label="Previous mutation family" hidden></button><button id="atlas-next" class="atlas-swipe" data-direction="next" type="button" aria-label="Next mutation family" hidden></button>
     <aside id="atlas-detail" aria-label="Mutation details" hidden><button id="atlas-detail-close" type="button" aria-label="Back to the tree">×</button><div id="atlas-detail-body"></div></aside></div>
   </dialog>
   <dialog id="growth-dialog" aria-labelledby="growth-title">
@@ -110,6 +110,7 @@
   <dialog id="combat-dialog" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
     <button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMBAT CHOICE</p><h2 id="combat-heading">Choose a spell</h2>
+    <div id="combat-actor" class="combat-actor"></div>
     <p id="combat-context"></p>
     <div class="combat-browser-toolbar"><p id="combat-help"></p><button id="combat-details-mode" type="button" aria-pressed="false" aria-controls="combat-spells">Full details</button></div>
     <!-- Keyboard paging remains available even when every spell button is unavailable. -->
