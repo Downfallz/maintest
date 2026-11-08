@@ -52,6 +52,8 @@ export function inspectionControls() {
     dialog.close();
     for (const id of ['inspect-name', 'inspect-side', 'inspect-context', 'inspect-stats', 'inspect-sheet', 'inspect-appearance', 'inspect-effects', 'inspect-mutations', 'inspect-spells', 'inspect-last-action']) el(id).replaceChildren();
     el('inspect-portrait').style.backgroundImage = '';
+    // The tiles are gone with the rest, so their key goes too: the same stats seen again must draw them again.
+    delete el('inspect-sheet').dataset.content;
     el('inspect-history').hidden = true; el('inspect-growth').hidden = true;
   }
   function render(model: Inspection | null, context: string, historical: boolean, lastAction: string, catalogue: SpellCatalogue | null = null) {

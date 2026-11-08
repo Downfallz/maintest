@@ -159,6 +159,17 @@ test('revocation erases every reference and pending history link', async ({ page
   await expect(page.locator('#inspect-history')).toBeHidden(); expect(h.errors).toEqual([]);
 });
 
+test('a hidden tab clears the inspection, and the same creature reopened shows its stat tiles again', async ({ page }) => {
+  await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
+  await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
+  const visibility = hidden => page.evaluate(value => { Object.defineProperty(document, 'hidden', { configurable: true, value }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
+  await visibility(true); await expect(page.locator('#inspect-dialog')).toBeHidden(); await expect(page.locator('#inspect-sheet')).toBeEmpty();
+  await visibility(false); await expect(page.locator('#loading')).toBeHidden();
+  await page.locator('#actor-layer [data-creature="1"]').click();
+  await expect(page.locator('#inspect-sheet .inspect-tile')).toHaveCount(4);
+  await expect(page.locator('#inspect-sheet [data-stat="health"] .inspect-tile-value')).toHaveText('20/25');
+});
+
 test('short portrait, landscape and enlarged text retain internal scrolling and reachable close', async ({ page }) => {
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
