@@ -83,8 +83,6 @@
 #combat-dialog[open] { display: flex; flex-direction: column; gap: 8px; }
 #combat-dialog > .eyebrow { margin: 0; min-height: 40px; max-width: calc(100% - 220px); }
 #combat-dialog h2 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
-#combat-dialog > .history-reference { position: absolute; top: 14px; right: 72px; }
-#combat-dialog > .history-reference[data-history-open] { right: 140px; }
 #combat-dialog-close { position: absolute; right: 20px; top: 20px; margin: 0; }
 #combat-context { margin: 0; color: var(--gold); font-size: 13px; }
 /* The acting creature's place in the order, its tempo and its energy, right under its name. */
@@ -422,7 +420,7 @@
 @media (max-height: 520px) {
   #combat-dialog { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
   #combat-dialog > .eyebrow { min-height: 0; }
-  #combat-dialog h2 { padding-right: 210px; font-size: 18px; }
+  #combat-dialog h2 { padding-right: 56px; font-size: 18px; }
   #combat-context { font-size: 11px; }
   #combat-help { font-size: 10px; }
   #combat-declare { height: 44px; }
