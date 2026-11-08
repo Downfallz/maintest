@@ -124,7 +124,7 @@ test('the last result after lethal upkeep is read even when there is no next com
   // The match's end is one moment: once the last result is read, the result opens by itself, with no step of its own.
   await expect(page.locator('#playback-next')).toHaveText('OK'); await page.locator('#playback-next').click();
   await expect(page.locator('#match-dialog')).toBeVisible(); await expect(page.locator('#match-title')).toHaveText('Victory');
-  await expect(page.locator('#match-dialog .eyebrow')).toHaveText('MATCH COMPLETE');
+  await expect(page.locator('#match-dialog .eyebrow')).toHaveText('MATCH COMPLETE · ROUND 3');
   await page.keyboard.press('Escape'); await expect(page.locator('#match-open')).toBeVisible();
   await page.clock.runFor(500); await expect(page.locator('#match-dialog')).toBeHidden(); expect(h.errors).toEqual([]);
 });
