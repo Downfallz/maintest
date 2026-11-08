@@ -54,6 +54,8 @@ ids to illustrations.
 - **Rendering.**
   - The scene keeps the audited sprites as fallbacks.
   - It loads an illustration only when a creature on the field asks for one, and only that one.
+  - The ancestral Stage 0 is drawn by the audited base sprite loaded at boot. It is the same drawing, and its
+    re-encoded twin is never fetched, so an opening board costs no extra download.
   - An image that fails to load leaves the sprite of the creature's form and is not counted as a renderer
     failure.
   - Geometry follows the silhouette of whichever image is drawn, so every stage fills the same box.

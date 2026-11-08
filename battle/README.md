@@ -565,6 +565,8 @@ Each creature is drawn as the evolution its purchases resolve to
 - **Scene.**
   - It loads an illustration only when a creature on the field asks for one, and keeps the audited sprite until
     it arrives, or for good if it fails.
+  - The ancestral Stage 0 is the audited base sprite already loaded at boot; its twin in `evolutions/` is not
+    fetched.
   - It fades a changed image out over the new one, except under reduced motion.
   - It draws capstone effects (`src/capstone-effects.ts`) around whatever image shows, still under reduced
     motion.

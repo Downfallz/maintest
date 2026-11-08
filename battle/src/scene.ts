@@ -171,7 +171,10 @@ export class BattleScene extends Phaser.Scene {
   // The illustration the figure asked for once it is loaded; until then, or if it never loads, the audited sprite of
   // its form, which is always there. Geometry follows whichever image is drawn, by its own silhouette.
   private showArt(figure: Figure, animate: boolean) {
-    const wanted = figure.wanted ? EVOLUTION_REGISTRY.art(figure.wanted) : null;
+    // The ancestral Stage 0 is the audited base sprite the scene loads at boot, the same drawing: fetching its
+    // re-encoded twin would add a cold download to every opening board for no change on screen.
+    const asked = figure.wanted ? EVOLUTION_REGISTRY.art(figure.wanted) : null;
+    const wanted = asked && asked.stage > 0 ? asked : null;
     let art: Art;
     if (wanted && this.textures.exists(wanted.key)) art = wanted;
     else {

@@ -58,7 +58,9 @@ test('each creature shows the illustration its purchases resolve to, and only th
   await expect(figure(page, 1)).toHaveAttribute('data-artwork-shown', 'brute-stage2-frenzied');
   await expect(figure(page, 4)).toHaveAttribute('data-artwork-shown', 'warped-stage3-revenant');
   await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('evolution-field.png') });
-  expect([...new Set(h.requests)].sort()).toEqual(['base-creature.webp', 'brute-stage2-frenzied.webp', 'warped-stage3-revenant.webp']);
+  // The ancestral creature is the base sprite loaded at boot: only the two evolved illustrations are fetched.
+  await expect(figure(page, 2)).toHaveAttribute('data-artwork-shown', 'form:base-creature');
+  expect([...new Set(h.requests)].sort()).toEqual(['brute-stage2-frenzied.webp', 'warped-stage3-revenant.webp']);
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
 
