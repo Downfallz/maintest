@@ -10,6 +10,16 @@ import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 import { mount, entry, before, creature } from './battle-playback-fixture.js';
 const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
+test('a cast that tried to crit shows its d20 beside the caster as it lands, and the die leaves with the result', async ({ page }, info) => {
+  test.setTimeout(60000);
+  const h = await mount(page);
+  await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
+  await page.clock.runFor(860);
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit');
+  await page.screenshot({ path: info.outputPath('critical-die.jpg'), type: 'jpeg', quality: 85 });
+  await page.clock.runFor(4000);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./); expect(h.errors).toEqual([]);
+});
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
   test.setTimeout(60000);

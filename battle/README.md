@@ -718,10 +718,15 @@ site's menu and the player's button sit at its right end, where the lobby keeps 
 
 Each figure stands above its caption (`placements` lifts it by up to 34px, as the stage has room), so the name,
 badges and stats hang under its feet, not over its body. A creature's effect chips (upkeep ticks, a spell's
-outcomes, its place in the order) sit above its head. The acting creature carries a gold halo: a rim around its own
-silhouette (its image filled with gold just behind it) and a pool of light at its feet (`src/acting-halo.ts`), breathing
+outcomes, its place in the order) sit above its head. The acting creature carries a gold halo: a saturated gold rim around
+its own silhouette (its image filled with gold just behind it) and a pool of light at its feet (`src/acting-halo.ts`), breathing
 slowly and still under reduced motion;
 `#battle[data-halo]` names it.
+
+The field shows the dice ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md), `src/dice.ts`): a small
+hexagonal d20 beside a creature's head, with each roll-off's last throw while the revealed order is read (ivory) and a
+caster's critical roll as its action lands (gold when it crit, slate when it fell short). It tumbles in and settles,
+still under reduced motion, and leaves with the reading or the result; `#battle[data-dice]` names what stands.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
 name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round

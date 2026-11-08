@@ -56,7 +56,9 @@ public static class ResolutionRules
 
         // The roll is drawn whatever the speed, so that a Quick cast consumes the same randomness a Standard
         // one does: the choice changes the outcome, not the stream every later cast in the match reads from.
-        var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
+        var draw = random.NextDouble();
+        var chance = CriticalChanceOf(actor, spell, speed);
+        var isCritical = draw < chance;
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
         var damageBonus = actor.DamageBonus;
         var sunder = actor.Passive.Sunder;
@@ -81,7 +83,31 @@ public static class ResolutionRules
         // Marked, because the target alone cannot say: a Self-targeted spell puts ordinary outcomes here too.
         outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical, damageBonus: 0, sunder: 0) with { OnCaster = true }));
 
-        return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes);
+        return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes, CriticalFace(draw, chance, isCritical));
+    }
+
+    /// <summary>
+    /// The d20 face a Critical roll shows (ADR 0154), read off the same draw that decided it: the draw's twentieth,
+    /// counted down from 20, so a lower draw is a higher face. A chance of k twentieths crits from the face 21 - k up
+    /// (ADR 0100), which the face always agrees with: the draw alone decides the critical, and a draw on the edge of
+    /// a twentieth that floating point puts on the other side of the threshold shows the threshold's face, or the one
+    /// under it. Null when there was no chance to crit.
+    /// </summary>
+    public static int? CriticalFace(double draw, double chance, bool isCritical)
+    {
+        if (chance <= 0)
+        {
+            return null;
+        }
+
+        var needed = Math.Clamp(21 - (int)Math.Round(chance * 20, MidpointRounding.AwayFromZero), 1, 20);
+        var face = Math.Clamp(20 - (int)Math.Floor(draw * 20), 1, 20);
+        if (isCritical && face < needed)
+        {
+            return needed;
+        }
+
+        return !isCritical && face >= needed ? Math.Max(1, needed - 1) : face;
     }
 
     /// <summary>

@@ -484,6 +484,17 @@ function render() {
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
+  // The d20s beside the creatures that rolled them (ADR 0154): each roll-off's last throw while the revealed order is
+  // read, and a caster's critical roll as its action lands.
+  type Die = NonNullable<SceneFrame['dice']>[number];
+  const dice: Die[] = [];
+  if (orderReading) for (const rollOff of ((view?.board as { rollOffs?: { creature: number | string; rolls?: number[] }[] } | undefined)?.rollOffs ?? [])) {
+    const last = rollOff.rolls?.at(-1);
+    if (Number.isInteger(last)) dice.push({ id: String(rollOff.creature), value: last!, tone: 'roll', key: `order:${board.round}:${rollOff.creature}:${rollOff.rolls!.join('-')}` });
+  }
+  const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean } | null } | null)?.roll : null;
+  if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}` });
+  frame = { ...frame, dice };
   scene.present(frame, reduced(), playbackState.rate);
   const reveal = growth.receipt();
   if (!reveal) lastMutationReveal = null;
@@ -693,6 +704,7 @@ async function discover(autoResume = true) {
 }
 
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
