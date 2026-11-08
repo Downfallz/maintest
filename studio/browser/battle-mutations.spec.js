@@ -299,3 +299,13 @@ test('the full mutation tree closes when the question it chose for is gone', asy
   await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#atlas-board')).toBeEmpty();
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+test('a private preview draws the illustration the drafted mutation would give the creature', async ({ page }) => {
+  // The catalogue names each root's illustration (ADR 0151); a draft shows it on its recipient before any confirm.
+  const content = { ...catalogue, packages: catalogue.packages.map((pack, index) => index < 3 ? { ...pack, visual: { ...pack.visual, artwork: ['brute-base', 'predator-base', 'warped-base'][index] } } : pack) };
+  const h = await mount(page, { content });
+  await page.locator('[data-mutation="root1"]').click();
+  await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
+  await page.clock.runFor(200);
+  await expect(page.locator('#actor-layer [data-creature="1"]')).toHaveAttribute('data-artwork-shown', 'predator-base');
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

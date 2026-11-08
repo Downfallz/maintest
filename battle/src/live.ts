@@ -37,7 +37,7 @@ import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
-import { phaseLabel, stepLabel } from '../../table/terms.js';
+import { phaseLabel, stepLabel, tempoLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
@@ -303,8 +303,22 @@ function render() {
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
   const plan = planning.model();
-  const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
+  const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame, playback.purchases());
   frame = mutation.frame;
+  // The tempo sheet says on the field which creature it is about: the one in hand ringed in gold, the others dimmed,
+  // and each creature still to draft tagged with the tempo drafted for it.
+  const tempoSheet = plan.opened && plan.latest?.waitingFor === 'Speed' && plan.tempo ? plan.tempo : null;
+  const tempoFocus = tempoSheet?.focus != null ? String(tempoSheet.focus) : null;
+  if (tempoFocus) frame = { ...frame, mutationFocus: tempoFocus };
+  const tempoDrafts = new Map<string, string>((tempoSheet?.drafts ?? []).map(([id, speed]: [number, string]) => [String(id), speed]));
+  const tempoTag = (id: string) => {
+    if (!tempoSheet?.creatures.map(String).includes(id)) return null;
+    const drafted = tempoDrafts.get(id);
+    if (drafted) return `${drafted === 'Quick' ? '⚡' : '✦'} ${tempoLabel(drafted).toUpperCase()}`;
+    return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
+  };
+  // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
+  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
   if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));
@@ -325,6 +339,8 @@ function render() {
     const offered = mutation.eligible.has(one.id);
     node.dataset.mutationRecipient = String(offered);
     node.dataset.mutationFocus = String(mutation.recipient === one.id);
+    node.dataset.sheetFocus = String(tempoFocus === one.id);
+    if (tempoDrafts.has(one.id)) node.dataset.tempo = tempoDrafts.get(one.id)!; else delete node.dataset.tempo;
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
     node.dataset.form = one.form;
@@ -341,7 +357,7 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
-    const condition = mutation.tag(one.id) ?? targetTag?.tag ?? tagOf(one);
+    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? targetTag?.tag ?? tagOf(one);
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);

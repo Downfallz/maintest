@@ -136,3 +136,20 @@ test('confirming the last tempo leads to the turn order before the first spell c
   await page.locator('#order-continue').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
   expect(h.errors).toEqual([]);
 });
+test('on a phone the field keeps its two rows beside the tempos and marks the creature they are about', async ({ page }, info) => {
+  test.skip(page.viewportSize().width >= 620, 'a phone held upright');
+  const h = await mount(page);
+  await expect(page.locator('#battle')).toHaveAttribute('data-docked', 'true');
+  // Two rows: the team on one line, the opponent on another, never the wide screen's staggered formations.
+  const tops = await page.locator('#actor-layer .creature').evaluateAll(nodes => nodes.map(node => [node.classList.contains('enemy'), Math.round(node.getBoundingClientRect().top)]));
+  expect(new Set(tops.filter(([enemy]) => !enemy).map(([, top]) => top)).size).toBe(1);
+  expect(new Set(tops.filter(([enemy]) => enemy).map(([, top]) => top)).size).toBe(1);
+  await expect(page.locator('#actor-layer [data-creature="1"]')).toHaveAttribute('data-sheet-focus', 'true');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('CHOOSING TEMPO');
+  await expect(page.locator('#actor-layer [data-creature="2"] .creature-tag')).toHaveText('TEMPO ?');
+  await page.locator('[data-speed="Quick"]').click();
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('⚡ INSTINCT');
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-sheet-focus', 'true');
+  await page.screenshot({ path: info.outputPath('tempo-field.png') });
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});

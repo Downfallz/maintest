@@ -30,6 +30,12 @@ function purchaseOrder(acquired, known) {
 
 const latest = (tiers, rank) => [...tiers].sort((a, b) => rank.get(b) - rank.get(a));
 
+/**
+ * @param {{ id?: string | number, acquiredTiers?: string[] } | null} creature
+ * @param {Map<string, any>} [packages]
+ * @param {{ log?: { order: (creature: any) => string[] } } | null} [history]
+ * @param {ReturnType<typeof import('./battle-evolution-art.js').createEvolutionRegistry>} [registry]
+ */
 export function resolveEvolution(creature, packages = new Map(), history = null, registry = EVOLUTION_REGISTRY) {
   const acquired = new Map();
   for (const id of new Set(Array.isArray(creature?.acquiredTiers) ? creature.acquiredTiers : [])) {

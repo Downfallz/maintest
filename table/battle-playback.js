@@ -327,5 +327,6 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     if (!current || stage !== 'resolved') return;
     read = current.sequence; cancelTimer(); next();
   }
-  return { receive, model, skip, reset, setReduced, setRate, setMode, advance, resume };
+  // The seat's purchase log, for a private preview that adds a drafted purchase as the latest one (ADR 0151).
+  return { receive, model, skip, reset, setReduced, setRate, setMode, advance, resume, purchases: () => purchases };
 }

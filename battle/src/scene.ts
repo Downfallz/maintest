@@ -228,8 +228,9 @@ export class BattleScene extends Phaser.Scene {
       this.mutationReveal.present(undefined, new Map(), this.reduced);
       return;
     }
-    // A bottom sheet shortens a portrait board, but the two teams still need separate rows.
-    const portraitDraft = this.state.mutationFocus && width < 620 && matchMedia('(orientation: portrait)').matches;
+    // A docked sheet (a mutation, the tempos, a spell) shortens a phone's board, but a phone held upright keeps its
+    // two rows: the opposing formations of a wide screen would stack the captions on each other.
+    const portraitDraft = width < 620 && matchMedia('(orientation: portrait)').matches;
     const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length,
       this.state.creatures.filter(one => one.enemy).length, portraitDraft ? true : undefined);
     const inFlight = playing(this.state);

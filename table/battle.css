@@ -1142,3 +1142,29 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
 #combat-dialog #combat-browser { min-height: 120px; }
 #combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
+
+/* The creature a docked sheet is about: the tempo sheet's creature in hand wears the mutation sheet's gold underline,
+   and each creature still to draft wears its drafted tempo in its tag, gold for Instinct and blue for Precision. */
+.creature[data-sheet-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
+.creature[data-sheet-focus="true"] .creature-tag { color: var(--gold); }
+#battle .creature[data-tempo="Quick"] .creature-tag { color: #eac88e; }
+#battle .creature[data-tempo="Standard"] .creature-tag { color: #8fc3ef; }
+
+/* A sheet docked under a phone's field (a mutation, the tempos, a spell) leaves it short. The captions go compact so
+   the art stays in view: the name on one line, then initiative, defense, conditions, health and energy on one row,
+   with a thin health bar under them. The numbers are unchanged; their full words stay in titles and labels. */
+@media (max-width: 619px) and (orientation: portrait) {
+  #battle[data-docked="true"] .caption { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 2px; row-gap: 1px; left: -6px; right: -6px; }
+  #battle[data-docked="true"] .creature-name { flex-basis: 100%; overflow: hidden; font-size: 12px; line-height: 1.15; white-space: nowrap; text-overflow: ellipsis; }
+  #battle[data-docked="true"] .creature-badges, #battle[data-docked="true"] .creature-stats { display: contents; }
+  #battle[data-docked="true"] :is(.creature-init, .creature-defense, .stat) { padding: 0 4px; font-size: 8px; line-height: 1.5; }
+  #battle[data-docked="true"] .stat { padding-left: 2px; gap: 1px; }
+  #battle[data-docked="true"] .stat .cue-icon, #battle[data-docked="true"] .creature-defense .cue-icon { width: 8px; height: 8px; }
+  #battle[data-docked="true"] .creature-conditions .cue { width: 13px; height: 13px; }
+  #battle[data-docked="true"] .creature-conditions .cue-icon { width: 8px; height: 8px; }
+  #battle[data-docked="true"] .health-track { order: 9; flex-basis: 78%; height: 3px; margin: 2px auto 0; }
+  #battle[data-docked="true"] .creature-tag { font-size: 8px; letter-spacing: .04em; }
+  #battle[data-docked="true"] .team-label { display: none; }
+  /* The others step back so the one the sheet is about reads first. */
+  #battle[data-docked="true"] #actor-layer:has(.creature[data-sheet-focus="true"], .creature[data-mutation-focus="true"]) .creature:not([data-sheet-focus="true"]):not([data-mutation-focus="true"]) .caption { opacity: .62; }
+}
