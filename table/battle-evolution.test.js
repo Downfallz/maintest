@@ -137,8 +137,67 @@ test('a package with no drawn family, or a catalogue that serves none, leaves th
   assert.equal(resolveEvolution({ id: '1', acquiredTiers: [T('brute')] }, new Map(), null).artworkId, 'base-creature');
   assert.equal(resolveEvolution(null, packages, null).artworkId, 'base-creature');
 });
-test('the default registry has no hybrid yet, so every Stage 3 shows its own image', () => {
-  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic'), null);
+test('the default registry draws hybrids for the Predator Stage 3s only: any other Stage 3 shows its own image', () => {
+  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic', 'warped'), null);
+  assert.equal(resolve(['occultist', 'shaman', 'spiritcaller', 'prowler', 'parasite']).artworkId, 'warped-stage3-transcendent');
+});
+
+// The approved Predator hybrids (ADR 0152, docs/art/predator-hybrid-aaa-intake.md), each reached by a real path: the
+// Stage 1 and the Stage 2 that lead to the Stage 3, then the mutations that lend their traits.
+const soulreaver = ['prowler', 'parasite', 'soulreaver'], deathstalker = ['prowler', 'assassin', 'deathstalker'];
+const blightweaver = ['prowler', 'plague_doctor', 'blightweaver'];
+const warped = ['occultist', 'necromancer'], brute = ['brute', 'berserker'];
+test('each Predator Stage 3 with one influence shows the portrait approved for it', () => {
+  const approved = [
+    [[...soulreaver, 'plague_doctor'], 'predator-soulreaver-01'], [[...soulreaver, ...warped], 'predator-soulreaver-02'],
+    [[...soulreaver, ...brute], 'predator-soulreaver-03'],
+    [[...deathstalker, 'plague_doctor'], 'predator-deathstalker-05'], [[...deathstalker, 'parasite'], 'predator-deathstalker-05'],
+    [[...deathstalker, ...warped], 'predator-deathstalker-06'], [[...deathstalker, ...brute], 'predator-deathstalker-07'],
+    [[...blightweaver, 'parasite'], 'predator-blightweaver-09'], [[...blightweaver, ...brute], 'predator-blightweaver-10'],
+    [[...blightweaver, ...warped], 'predator-blightweaver-11'],
+  ];
+  for (const [names, id] of approved) {
+    const shown = resolve(names);
+    assert.equal(shown.artworkId, id, names.join(' ')); assert.equal(shown.artworkFile, `evolutions/hybrids/${id}.webp`);
+    assert.equal(shown.stage, 3); assert.equal(shown.dominantTierId, T(names[2])); assert.equal(shown.ultimate, false);
+  }
+  // A Stage 1 of another family lends its family's traits too, as the ranks of ADR 0151 already say.
+  assert.equal(resolve([...soulreaver, 'occultist']).artworkId, 'predator-soulreaver-02');
+});
+test('the Stage 2 that led to a Predator Stage 3, or a line no portrait was drawn for, leaves its own image', () => {
+  assert.equal(resolve(soulreaver).artworkId, 'predator-stage3-soulreaver');
+  assert.equal(resolve([...soulreaver, 'assassin']).artworkId, 'predator-stage3-soulreaver');
+  assert.equal(resolve([...blightweaver, 'assassin']).artworkId, 'predator-stage3-blightweaver');
+  assert.equal(resolve([...blightweaver, 'assassin']).hybridTierId, null);
+});
+test('the Ultimate shows once the creature holds a Stage 2 carrying each other influence drawn for its Stage 3', () => {
+  const ultimates = [
+    [[...soulreaver, 'plague_doctor', ...warped, ...brute], 'predator-soulreaver-04', ['plague_doctor', 'berserker', 'necromancer']],
+    [[...deathstalker, ...brute, 'parasite', ...warped], 'predator-deathstalker-08', ['parasite', 'necromancer', 'berserker']],
+    [[...blightweaver, ...warped, ...brute, 'parasite'], 'predator-blightweaver-12', ['parasite', 'berserker', 'necromancer']],
+  ];
+  for (const [names, id, lenders] of ultimates) {
+    const shown = resolve(names);
+    assert.equal(shown.artworkId, id); assert.equal(shown.ultimate, true); assert.equal(shown.dominantTierId, T(names[2]));
+    assert.deepEqual(shown.hybridTierIds, lenders.map(T));
+  }
+});
+test('the Ultimate takes a Stage 2 of every influence: a Stage 1 only lends its traits to a single hybrid', () => {
+  const shown = resolve([...soulreaver, 'plague_doctor', 'occultist', ...brute]);
+  assert.equal(shown.ultimate, false); assert.equal(shown.artworkId, 'predator-soulreaver-01');
+});
+test('two influences and no Ultimate show the first by rank, as no double hybrid is drawn', () => {
+  // Another Predator line ranks first, whatever was bought after it.
+  assert.equal(resolve([...soulreaver, 'plague_doctor', ...warped]).artworkId, 'predator-soulreaver-01');
+  // Between two other families, the latest Stage 2 bought.
+  assert.equal(resolve([...deathstalker, ...warped, ...brute]).artworkId, 'predator-deathstalker-07');
+  assert.equal(resolve([...deathstalker, ...brute, ...warped]).artworkId, 'predator-deathstalker-06');
+});
+test('the hybrid follows the mutations held, not the board\'s order: with no recorded order it is the same every time', () => {
+  const names = [...deathstalker, ...brute, 'parasite'];
+  const creature = { id: '1', acquiredTiers: names.map(T).sort((a, b) => a.localeCompare(b)) };
+  const once = resolveEvolution(creature, packages, null), again = resolveEvolution({ ...creature, acquiredTiers: [...creature.acquiredTiers].reverse() }, packages, null);
+  assert.equal(once.artworkId, 'predator-deathstalker-05'); assert.equal(again.artworkId, once.artworkId); assert.equal(once.chronology, 'none');
 });
 test('a package whose illustration is not registered keeps its identity and draws no image of its own', () => {
   const unknown = new Map(packages); unknown.set(T('lich'), { ...packages.get(T('lich')), visual: { ...packages.get(T('lich')).visual, artwork: 'not-drawn-yet' } });

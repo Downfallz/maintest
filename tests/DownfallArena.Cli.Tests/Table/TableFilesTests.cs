@@ -140,15 +140,17 @@ public sealed class TableFilesTests
 
     /// <summary>
     /// Every evolution illustration the page can ask for is served as the image it is, and none is left out: the
-    /// route table names each file of the folder (ADR 0151).
+    /// route table names each file of the folder and of its hybrids (ADR 0151, ADR 0152).
     /// </summary>
     [Fact]
     public void Every_evolution_illustration_is_served_as_webp_bytes()
     {
         var folder = Path.Combine(Directory, "battle-art", "evolutions");
-        var files = System.IO.Directory.GetFiles(folder, "*.webp").Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+        var files = System.IO.Directory.GetFiles(folder, "*.webp", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/')).Order(StringComparer.Ordinal).ToList();
 
-        var served = Files.Routes.Where(route => route.StartsWith("/battle-art/evolutions/", StringComparison.Ordinal)).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+        var served = Files.Routes.Where(route => route.StartsWith("/battle-art/evolutions/", StringComparison.Ordinal))
+            .Select(route => route["/battle-art/evolutions/".Length..]).Order(StringComparer.Ordinal).ToList();
 
         served.ShouldBe(files);
         files.ShouldAllBe(file => Encoding.ASCII.GetString(Files.Get($"/battle-art/evolutions/{file}").Body, 8, 4) == "WEBP");

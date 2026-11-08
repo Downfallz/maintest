@@ -35,6 +35,9 @@ internal sealed class TableFiles
         "brute-stage3-oppressor", "brute-stage3-colossus", "brute-stage3-ravager",
         "predator-stage3-soulreaver", "predator-stage3-blightweaver", "predator-stage3-deathstalker",
         "warped-stage3-cataclysm", "warped-stage3-revenant", "warped-stage3-transcendent",
+        "hybrids/predator-soulreaver-01", "hybrids/predator-soulreaver-02", "hybrids/predator-soulreaver-03", "hybrids/predator-soulreaver-04",
+        "hybrids/predator-deathstalker-05", "hybrids/predator-deathstalker-06", "hybrids/predator-deathstalker-07", "hybrids/predator-deathstalker-08",
+        "hybrids/predator-blightweaver-09", "hybrids/predator-blightweaver-10", "hybrids/predator-blightweaver-11", "hybrids/predator-blightweaver-12",
     ];
 
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
@@ -168,7 +171,7 @@ internal sealed class TableFiles
 
         foreach (var art in EvolutionArt)
         {
-            _routes[$"/battle-art/evolutions/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "evolutions", $"{art}.webp"), Webp);
+            _routes[$"/battle-art/evolutions/{art}.webp"] = (Path.Combine([tableDirectory, "battle-art", "evolutions", .. $"{art}.webp".Split('/')]), Webp);
         }
     }
 

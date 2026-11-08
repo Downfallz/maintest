@@ -64,6 +64,19 @@ test('each creature shows the illustration its purchases resolve to, and only th
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
 
+test('a Predator Stage 3 shows the hybrid portrait its other mutations call for, fetched only once it is needed', async ({ page }, info) => {
+  // A Soulreaver with Brute traits, and a Deathstalker holding every influence drawn for it: its Ultimate (ADR 0152).
+  const h = await mount(page, { purchases: [[1, 'prowler'], [1, 'parasite'], [1, 'soulreaver'], [1, 'brute'], [1, 'berserker'],
+    [4, 'prowler'], [4, 'assassin'], [4, 'deathstalker'], [4, 'plague_doctor'], [4, 'occultist'], [4, 'necromancer'], [4, 'brute'], [4, 'marauder']] });
+  await expect(figure(page, 1)).toHaveAttribute('data-artwork', 'predator-soulreaver-03');
+  await expect(figure(page, 4)).toHaveAttribute('data-artwork', 'predator-deathstalker-08');
+  await page.clock.runFor(100);
+  await expect(figure(page, 1)).toHaveAttribute('data-artwork-shown', 'predator-soulreaver-03');
+  await expect(figure(page, 4)).toHaveAttribute('data-artwork-shown', 'predator-deathstalker-08');
+  await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('predator-hybrids-field.png') });
+  expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(['predator-deathstalker-08.webp', 'predator-soulreaver-03.webp']);
+  await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
+});
 test('an illustration that cannot load leaves the audited sprite of its form, and the battle carries on', async ({ page }) => {
   const h = await mount(page, { purchases: [[1, 'brute'], [1, 'ironbound']], missing: ['brute-stage2-ironhide'] });
   await expect(figure(page, 1)).toHaveAttribute('data-artwork', 'brute-stage2-ironhide');

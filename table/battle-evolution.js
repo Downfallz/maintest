@@ -1,4 +1,4 @@
-import { EVOLUTION_REGISTRY, composeCapstones } from './battle-evolution-art.js';
+import { EVOLUTION_REGISTRY, carriesInfluence, composeCapstones } from './battle-evolution-art.js';
 
 // Which illustration a creature shows, from the mutations it bought and when it bought them. Presentation only: it
 // reads what the host says the creature owns and never changes what it owns, can buy or does (ADR 0151).
@@ -8,9 +8,11 @@ import { EVOLUTION_REGISTRY, composeCapstones } from './battle-evolution-art.js'
 //   Stage 2, no Stage 3: among the families holding a Stage 2, the one with the most mutations bought (Stage 1 and
 //     Stage 2 alike); a tie goes to the family whose latest Stage 2 is the most recent. Its latest Stage 2 shows.
 //   Stage 3: the first Stage 3 bought is the creature's identity for good; a later Stage 3 never replaces it. A
-//     hybrid of that Stage 3 may show instead, if one was drawn: first with another Stage 2 of its own family (not
-//     the one that led to it), then with a Stage 2 of another family, then with a Stage 1 of another family; within
-//     each, the latest bought first. A pair nobody drew is skipped; with none, the Stage 3's own image shows.
+//     hybrid of that Stage 3 may show instead (ADR 0152). Its Ultimate, when one was drawn, shows once the creature
+//     holds a Stage 2 carrying each of the other influences drawn for it. Otherwise one influence shows: first another
+//     Stage 2 of its own family (not the one that led to it), then a Stage 2 of another family, then a Stage 1 of
+//     another family; within each, the latest bought first. Two influences and no Ultimate show the first of them, as
+//     no double hybrid is drawn. An influence nobody drew is skipped; with none, the Stage 3's own image shows.
 //   Capstones (Stage 4) never change the image; each adds its effect.
 // Which illustration a package draws (`visual.artwork`) and which effect a capstone lends (`visual.effect`) come with
 // the catalogue's packages; a package without one draws nothing new, and the page names no package.
@@ -52,9 +54,10 @@ export function resolveEvolution(creature, packages = new Map(), history = null,
   const at = stage => order.filter(tier => acquired.get(tier).stage === stage);
   const capstoneEffectIds = composeCapstones(order.filter(tier => acquired.get(tier).stage >= 4).map(tier => acquired.get(tier).effect).filter(Boolean));
   const artOf = tier => acquired.get(tier)?.artwork ?? null;
-  const result = (stage, dominantTierId, artTier, hybridTierId = null, art = null) => {
+  const result = (stage, dominantTierId, artTier, hybridTierIds = [], art = null) => {
     const asset = art ?? (artTier ? registry.art(artOf(artTier)) : registry.base());
-    return { stage, family: dominantTierId ? acquired.get(dominantTierId).family : null, dominantTierId, hybridTierId,
+    return { stage, family: dominantTierId ? acquired.get(dominantTierId).family : null, dominantTierId,
+      hybridTierId: hybridTierIds[0] ?? null, hybridTierIds, ultimate: Boolean(art?.ultimate),
       artworkId: asset?.id ?? null, artworkFile: asset?.file ?? null, capstoneEffectIds, chronology };
   };
 
@@ -63,15 +66,20 @@ export function resolveEvolution(creature, packages = new Map(), history = null,
     const dominant = thirds[0], family = acquired.get(dominant).family;
     const leading = new Set(acquired.get(dominant).prerequisites.filter(tier => acquired.get(tier)?.stage === 2 && acquired.get(tier).family === family)
       .sort((a, b) => rank.get(a) - rank.get(b)).slice(0, 1));
-    const seconds = at(2), firsts = at(1);
-    const candidates = [
+    const seconds = at(2), firsts = at(1), identity = artOf(dominant);
+    const otherSeconds = [
       ...latest(seconds.filter(tier => acquired.get(tier).family === family && !leading.has(tier)), rank),
       ...latest(seconds.filter(tier => acquired.get(tier).family !== family), rank),
-      ...latest(firsts.filter(tier => acquired.get(tier).family !== family), rank),
     ];
-    for (const tier of candidates) {
-      const art = registry.hybrid(artOf(dominant), artOf(tier));
-      if (art) return result(3, dominant, null, tier, art);
+    const lends = tier => ({ artwork: artOf(tier), family: acquired.get(tier).family });
+    const ultimate = registry.ultimate(identity), influences = registry.influences(identity);
+    if (ultimate && influences.length) {
+      const held = influences.map(one => otherSeconds.find(tier => carriesInfluence(one.influence, lends(tier))));
+      if (held.every(Boolean)) return result(3, dominant, null, otherSeconds.filter(tier => held.includes(tier)), ultimate);
+    }
+    for (const tier of [...otherSeconds, ...latest(firsts.filter(tier => acquired.get(tier).family !== family), rank)]) {
+      const art = registry.hybrid(identity, artOf(tier), acquired.get(tier).family);
+      if (art) return result(3, dominant, null, [tier], art);
     }
     return result(3, dominant, dominant);
   }
