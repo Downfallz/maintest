@@ -4,6 +4,7 @@
 // and served with the catalogue's packages: the page names no package, and nothing is read off a filename.
 // Hybrid images are registered one approved pair at a time, never as the power set of mutations.
 import { PREDATOR_HYBRID_ART } from './battle-predator-hybrid-art.js';
+import { WARPED_HYBRID_ART } from './battle-warped-hybrid-art.js';
 
 const directory = 'evolutions/';
 
@@ -52,7 +53,7 @@ export const BASE_EVOLUTION_ART = EVOLUTION_ART.find(one => one.stage === 0);
 // of some illustrations (`influence.artworks`, or `hybrid` for exactly one) or any mutation of a family
 // (`influence.family`), or `ultimate`, every other influence drawn for that Stage 3 at once. Adding one is one entry,
 // its identity, file and silhouette; the resolver (battle-evolution.js) is never edited for it.
-const hybrids = PREDATOR_HYBRID_ART.map(({ id, primaryArtwork, influence, ultimate, file, width, height, bounds }) =>
+const hybrids = [...PREDATOR_HYBRID_ART, ...WARPED_HYBRID_ART].map(({ id, primaryArtwork, influence, ultimate, file, width, height, bounds }) =>
   ({ id, dominant: primaryArtwork, influence, ultimate, file, size: [width, height], bounds }));
 
 export const HYBRID_ART = Object.freeze(hybrids.map(one => asset({ ...one, family: 'hybrid', stage: 3 })));

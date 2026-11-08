@@ -38,6 +38,9 @@ internal sealed class TableFiles
         "hybrids/predator-soulreaver-01", "hybrids/predator-soulreaver-02", "hybrids/predator-soulreaver-03", "hybrids/predator-soulreaver-04",
         "hybrids/predator-deathstalker-05", "hybrids/predator-deathstalker-06", "hybrids/predator-deathstalker-07", "hybrids/predator-deathstalker-08",
         "hybrids/predator-blightweaver-09", "hybrids/predator-blightweaver-10", "hybrids/predator-blightweaver-11", "hybrids/predator-blightweaver-12",
+        "hybrids/warped-cataclysm-sibling", "hybrids/warped-cataclysm-predator", "hybrids/warped-cataclysm-brute", "hybrids/warped-cataclysm-ultimate",
+        "hybrids/warped-revenant-sibling", "hybrids/warped-revenant-predator", "hybrids/warped-revenant-brute", "hybrids/warped-revenant-ultimate",
+        "hybrids/warped-transcendent-sibling", "hybrids/warped-transcendent-predator", "hybrids/warped-transcendent-brute", "hybrids/warped-transcendent-ultimate",
     ];
 
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
@@ -147,6 +150,7 @@ internal sealed class TableFiles
             ["/battle-art.js"] = (Path.Combine(tableDirectory, "battle-art.js"), JavaScript),
             ["/battle-evolution-art.js"] = (Path.Combine(tableDirectory, "battle-evolution-art.js"), JavaScript),
             ["/battle-predator-hybrid-art.js"] = (Path.Combine(tableDirectory, "battle-predator-hybrid-art.js"), JavaScript),
+            ["/battle-warped-hybrid-art.js"] = (Path.Combine(tableDirectory, "battle-warped-hybrid-art.js"), JavaScript),
             ["/battle-evolution.js"] = (Path.Combine(tableDirectory, "battle-evolution.js"), JavaScript),
             ["/battle-chronology.js"] = (Path.Combine(tableDirectory, "battle-chronology.js"), JavaScript),
             ["/battle-layout.js"] = (Path.Combine(tableDirectory, "battle-layout.js"), JavaScript),
