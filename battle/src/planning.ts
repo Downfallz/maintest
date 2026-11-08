@@ -17,8 +17,9 @@ function button(label: string, action: () => void) {
 }
 function line(value: string) { const node = document.createElement('p'); node.textContent = value; return node; }
 
-// The mutation pick and the team's tempos dock beside the field (ADR 0138, ADR 0150); the dice order stays a modal.
-const docked = (kind: string | undefined) => kind === 'Evolution' || kind === 'Speed';
+// The mutation pick, the team's tempos and the order of tied creatures dock beside the field (ADR 0138, ADR 0150):
+// each is about creatures the field shows.
+const docked = (kind: string | undefined) => kind === 'Evolution' || kind === 'Speed' || kind === 'TieOrder';
 
 export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void, inspect: (id: string) => void,
   atlas: ReturnType<typeof atlasControls>) {
@@ -93,24 +94,46 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
     return `Opponent places stay fixed: ${detail.fixed.map(fixedText).join(' · ')}`;
   }
+  // Each tie a card: the places it shares as the order's badges with who takes each now, the creatures still to place
+  // as pills to tap in acting order, and what the dice and the opponent fixed, in small type under them.
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
-    el('planning-help').textContent = 'Your team keeps its allocated places. Choose which creature takes each place within a tie, then confirm. Opponent positions stay fixed; both teams reveal together.';
+    el('planning-help').textContent = 'Tap your tied creatures in the order they act. Your team keeps its places; the opponent keeps theirs, and both reveal together.';
     const groups = model.latest.options.tieOrder?.ties ?? [];
     const context = battleTieGroups(model.latest, model.tapped);
+    const note = (value: string, className: string) => { const node = line(value); node.className = className; return node; };
     const rows = untapped(groups, model.tapped).map((left: number[], index: number) => {
-      const row = document.createElement('section'); row.append(line(`Tie ${index + 1}: ${orderOf([groups[index]], model.tapped).map(name).join(' → ')}`));
-      row.className = 'tie-group';
+      const row = document.createElement('section'); row.className = 'tie-group';
       const detail = context[index];
-      row.append(line(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.'),
-        line(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.'),
-        line(detail.assignments.map(assignmentText).join(' · ')));
-      if (detail.fixed.length) row.append(line(opponentPlacesText(detail)));
-      if (left.length > 1) for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); row.append(node); }
+      const head = document.createElement('div'); head.className = 'tie-head';
+      const title = document.createElement('h3'); title.textContent = `Tie ${index + 1}`;
+      const roll = document.createElement('span'); roll.className = 'tie-roll'; roll.dataset.rolled = String(Boolean(detail.rolled));
+      roll.textContent = detail.rolled ? 'd20 rolled' : 'Same team';
+      head.append(title, roll);
+      const places = document.createElement('div'); places.className = 'tie-places';
+      places.append(...detail.assignments.map((one: Assignment) => {
+        const slot = document.createElement('span'); slot.className = 'tie-place';
+        const badge = document.createElement('span'); badge.className = 'tie-badge'; badge.textContent = one.position == null ? '?' : String(one.position);
+        const who = document.createElement('span'); who.textContent = name(one.id); slot.append(badge, who); return slot;
+      }));
+      // The same facts in words, for assistive technology and anyone reading closely.
+      row.append(head, places, note(detail.assignments.map(assignmentText).join(' · '), 'tie-assignments unseen'),
+        note(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.', 'tie-note'),
+        note(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.', 'tie-note'));
+      if (detail.fixed.length) row.append(note(opponentPlacesText(detail), 'tie-note tie-opponent'));
+      if (left.length > 1) {
+        const pills = document.createElement('div'); pills.className = 'tie-pills';
+        const hint = document.createElement('p'); hint.className = 'tie-hint'; hint.textContent = `Tap who acts first · ${orderOf([groups[index]], model.tapped).map(name).join(' → ')}`;
+        for (const id of left) { const node = button(name(id), () => controller.order(id)); node.dataset.tie = String(id); node.className = 'planning-action'; pills.append(node); }
+        row.append(hint, pills);
+      }
       return row;
     });
-    const keep = button('Keep current order', () => controller.choose({ keep: true })); keep.id = 'planning-keep';
-    el('planning-choices').replaceChildren(...rows, keep, button('Start again', () => controller.restart()));
+    const actions = document.createElement('div'); actions.className = 'planning-actions tie-actions';
+    const keep = button('Keep current order', () => controller.choose({ keep: true })); keep.id = 'planning-keep'; keep.className = 'planning-action';
+    const again = button('Start again', () => controller.restart()); again.className = 'planning-action';
+    actions.append(keep, again);
+    el('planning-choices').replaceChildren(...rows, actions);
   }
   const headings: Record<string, string> = { Evolution: 'Choose mutation', Speed: 'Team tempos', TieOrder: 'Order ties' };
   function closeChoices() {
@@ -228,7 +251,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (!dialog.open) {
       if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); }
       else if (model.latest.waitingFor === 'Speed') { dialog.show(); tempoStart(); }
-      else dialog.showModal();
+      else { dialog.show(); dialog.querySelector<HTMLElement>('#planning-choices [data-tie], #planning-keep')?.focus({ preventScroll: true }); }
     } else if (continued && (!dialog.contains(document.activeElement) || (document.activeElement as HTMLButtonElement).disabled)) focusStart();
   }
   return { render, openCreature, recipient: () => creature };

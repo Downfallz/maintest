@@ -307,7 +307,7 @@ function render() {
   // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.
   const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
-  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')}`;
+  const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')}`;
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
   else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has
@@ -329,7 +329,7 @@ function render() {
     return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
   };
   // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
-  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')));
+  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
   if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));

@@ -857,46 +857,46 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 
 /* Evolution and the team's tempos keep their private draft beside the battlefield. Reserve space in the actual
    scene so Phaser and the accessible creature targets keep the same coordinate system. */
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) {
   --mutation-height: clamp(295px,52dvh,470px); --mutation-width: clamp(310px,38vw,480px);
 }
 /* The mutation pick always opens at its full height: the tree, its preview and its header tools need the room. A side
    panel is full height already and keeps its width, so the field beside it keeps its room too. */
 body:has(#planning-dialog[data-kind="Evolution"][open]) { --mutation-height: min(74dvh,660px); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) {
   position: fixed; z-index: 12; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: none;
   height: var(--mutation-height); max-height: none; border: 0; border-top: 2px solid var(--gold);
   border-radius: 12px 12px 0 0; background: var(--panel); color: var(--ink); box-shadow: 0 -6px 22px #07101455;
 }
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
-body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header {
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--mutation-height); }
+body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle :is(.command-dock,#playback-pacing,footer) { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header {
   padding: 4px 14px 0; display: grid; grid-template-columns: minmax(0,1fr) repeat(3,auto);
   grid-template-rows: minmax(48px,auto) auto; column-gap: 4px; align-items: center;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .eyebrow { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header .eyebrow { display: none; }
 /* Help and History are in the field's header already; a docked sheet's header keeps its own tools instead. */
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .history-reference { display: none; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-header .history-reference { display: none; }
 .planning-tools:empty { display: none; }
 #planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 1 / 2 / auto / -1; display: flex; gap: 6px; justify-self: end; }
 #planning-dialog[data-kind="Evolution"] .planning-tools .planning-action {
   min-height: 44px; max-width: 108px; padding: 4px 12px; font-size: 12px; line-height: 1.15; text-wrap: balance;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures button {
   flex: 1 1 0; min-width: 0; min-height: 44px; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 4px 2px;
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer {
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures small { display: block; color: var(--muted); font-size: 11px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-creatures button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-choices { flex: 1; padding: 8px 14px; scrollbar-width: thin; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-footer {
   padding: 5px 12px max(5px,env(safe-area-inset-bottom)); grid-template-columns: auto minmax(0,1fr);
   background: var(--panel); border-top: 1px solid var(--line);
 }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
 /* After the shared docking rules, which it overrides: the tempo rule is longer than a pick count: it takes its own row under the heading, the tabs under it. */
 #planning-dialog[data-kind="Speed"] .planning-header { grid-template-rows: minmax(44px, auto) auto auto; }
 #planning-dialog[data-kind="Speed"] #planning-heading { align-self: center; margin: 0; }
@@ -937,17 +937,17 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
 .creature[data-mutation-recipient="true"] .creature-tag { color: var(--gold); }
 .creature[data-mutation-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
 @media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
-  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
-  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) { inset: 0 0 0 auto; width: var(--mutation-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
+  body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .mutation-links path.lit { animation: mutation-ink 180ms ease-out; }
   @keyframes mutation-ink { from { opacity: .35; } to { opacity: 1; } }
 }
 @media (min-width: 760px) and (min-height: 600px) {
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
-  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer { margin-top: auto; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-choices { flex: 0 1 auto; max-height: 48dvh; }
+  #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) .planning-footer { margin-top: auto; }
   #mutation-preview-region { max-height: 35dvh; }
 }
 /* On a phone the pick reaches into the timeline row and leaves enough stage height for two readable teams. */
@@ -1376,3 +1376,27 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 .inspect-portrait[data-side="enemy"] .inspect-zoom-hint { right: auto; left: 6px; transform: scaleX(-1); }
 #inspect-dialog .inspect-portrait:hover .inspect-zoom-hint { box-shadow: inset 0 0 0 1.5px var(--gold); }
 #inspect-zoom .inspect-zoom-picture { background-color: transparent; box-shadow: none; }
+
+/* The order of tied creatures docks like the other planning sheets: each tie a card with its shared places as the
+   order's gold badges and who takes each now, the creatures still to place as pills to tap in acting order, and the
+   dice and the opponent's fixed places in small type under them. History and Help stay in the field's header. */
+#planning-dialog[data-kind="TieOrder"] .planning-header { grid-template-rows: minmax(44px, auto) auto; }
+#planning-dialog[data-kind="TieOrder"] #planning-heading { align-self: center; margin: 0; }
+#planning-dialog[data-kind="TieOrder"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 6px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
+#planning-dialog[data-kind="TieOrder"] #planning-order { grid-area: 1 / 2 / auto / -1; justify-self: end; min-height: 44px; margin: 0; padding: 4px 14px;
+  border: 1px solid var(--gold); border-radius: 999px; background: #172a30; color: #f6e7c4; font-size: 12px; }
+#planning-dialog .tie-group { margin: 0 0 10px; padding: 12px 14px; border: 1px solid #3f554d; border-left: 3px solid #8cc7ad; border-radius: 10px;
+  background: linear-gradient(180deg, #17303a, #132429); }
+.tie-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tie-head h3 { margin: 0; font: 18px Georgia, serif; color: var(--ink); }
+.tie-roll { padding: 3px 10px; border: 1px solid #52695e; border-radius: 999px; color: #b8c9bd; font: 600 11px/1.2 system-ui, sans-serif; }
+.tie-roll[data-rolled="true"] { border-color: #eac88e66; color: #e2c998; }
+.tie-places { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.tie-place { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border: 1px solid #3f554d; border-radius: 999px; background: #0f1f24; color: var(--ink); font-size: 13px; }
+.tie-badge { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #eac88e; color: #142126; font: 800 12px/1 system-ui, sans-serif; }
+#planning-dialog .tie-group .tie-note { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+#planning-dialog .tie-group .tie-opponent { color: #f0b39c; }
+#planning-dialog .tie-group .tie-hint { margin: 10px 0 6px; color: #c9d4cb; font-size: 12px; }
+.tie-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.tie-actions { margin-top: 2px; }
+#planning-dialog .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

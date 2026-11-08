@@ -727,3 +727,8 @@ The order strip shows each place as a badge in its tempo's colour (a tick once p
 name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round
 under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
 as chips and its d20 roll in gold, and one Continue.
+
+The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
+with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting
+order, and the dice and the opponent's fixed places in small type. Keep current order and Start again are pills;
+**Inspect turn order** opens the order sheet. History and Help stay in the field's header.
