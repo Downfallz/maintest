@@ -150,12 +150,12 @@ async function reviewAndReplay(page, latest, info, actions) {
   let title = 'Draw';
   if (latest.outcome.winner) title = latest.outcome.winner === 'player1' ? 'Victory' : 'Defeat';
   await expect(page.locator('#match-title')).toHaveText(title);
-  await Promise.all([latest.board.allies, latest.board.enemies].map(team => expect(page.locator('#match-stats')).toContainText(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP`)));
+  await Promise.all([latest.board.allies, latest.board.enemies].map((team, index) => expect(page.locator(`#match-stats .match-team[data-side="${index ? 'enemy' : 'ally'}"]`)).toHaveAttribute('aria-label', new RegExp(`${team.filter(one => one.isAlive).length}/${team.length} standing · ${team.reduce((sum, one) => sum + one.health, 0)} HP$`))));
   await page.screenshot({ path: info.outputPath('final-result-real-host.jpg'), type: 'jpeg', quality: 85 });
   await page.locator('#match-replay').click();
   await expect(page.locator('#replay-controls')).toBeVisible(); await page.locator('#replay-round').selectOption('2'); await expect(page.locator('#replay-position')).toContainText('Round 2');
   for (let step = 0; step < 20 && !(await page.locator('#timeline li').count()) && await page.locator('#replay-next').isEnabled(); step++) await page.locator('#replay-next').click();
-  await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2 · Turn order');
+  await page.locator('#order-open').click(); await expect(page.locator('#order-title')).toHaveText('Round 2');
   const displayed = await page.locator('#timeline [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature));
   expect(await page.locator('#order-list [data-order-creature]').evaluateAll(nodes => nodes.map(node => node.dataset.orderCreature))).toEqual(displayed);
   expect(displayed.length).toBeGreaterThan(0); await page.locator('#order-close').click();

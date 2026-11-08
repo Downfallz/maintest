@@ -47,9 +47,28 @@ const STATUS_ICONS: Record<string, string> = { defeated: 'health-loss', stun: 's
 export function inspectionControls() {
   let identity = '', mutationsKey = '', spellsKey = '', conditionsKey = '';
   const dialog = el<HTMLDialogElement>('inspect-dialog');
+  // The portrait zooms: a tap shows the illustration large over the whole card, a tap anywhere on it or Escape
+  // gives the card back. It shows what the portrait shows, never another image.
+  const zoom = document.getElementById('inspect-zoom') ?? document.createElement('div');
+  const picture = (document.getElementById('inspect-zoom-close') ?? document.createElement('button')) as HTMLButtonElement;
+  zoom.hidden = true;
+  function unzoom(focus = true) {
+    if (zoom.hidden) return;
+    zoom.hidden = true; if (focus) el('inspect-portrait').focus({ preventScroll: true });
+  }
+  el('inspect-portrait').addEventListener('click', () => {
+    const portrait = el('inspect-portrait');
+    if (!portrait.style.backgroundImage) return;
+    picture.style.backgroundImage = portrait.style.backgroundImage; picture.dataset.side = portrait.dataset.side ?? 'ally';
+    picture.dataset.defeated = portrait.dataset.defeated ?? 'false';
+    zoom.hidden = false; picture.focus({ preventScroll: true });
+  });
+  picture.addEventListener('click', () => unzoom());
+  dialog.addEventListener('cancel', event => { if (!zoom.hidden) { event.preventDefault(); unzoom(); } });
+  dialog.addEventListener('close', () => unzoom(false));
   function clear() {
     identity = ''; mutationsKey = ''; spellsKey = ''; conditionsKey = '';
-    dialog.close();
+    unzoom(false); dialog.close();
     for (const id of ['inspect-name', 'inspect-side', 'inspect-context', 'inspect-stats', 'inspect-sheet', 'inspect-appearance', 'inspect-effects', 'inspect-mutations', 'inspect-spells', 'inspect-last-action']) el(id).replaceChildren();
     el('inspect-portrait').style.backgroundImage = ''; delete el('inspect-portrait').dataset.artwork;
     // The tiles are gone with the rest, so their key goes too: the same stats seen again must draw them again.
@@ -75,6 +94,9 @@ export function inspectionControls() {
       }
     } else if (!model.artworkFile) portrait.style.backgroundImage = sprite;
     portrait.dataset.side = model.enemy ? 'enemy' : 'ally'; portrait.dataset.defeated = String(model.statuses.some((one: { key: string }) => one.key === 'defeated'));
+    portrait.setAttribute('aria-label', `Show ${model.name} large`);
+    // A zoomed illustration follows the portrait when the image it loads arrives, or the creature changes.
+    if (!zoom.hidden) { picture.style.backgroundImage = portrait.style.backgroundImage; picture.dataset.side = portrait.dataset.side; }
     text('inspect-stats', model.stats);
     const sheetKey = JSON.stringify(model.sheet);
     if (el('inspect-sheet').dataset.content !== sheetKey) { el('inspect-sheet').replaceChildren(...sheetTiles(model.sheet)); el('inspect-sheet').dataset.content = sheetKey; }

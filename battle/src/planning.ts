@@ -70,7 +70,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       const subject = shown.roster.find((one: { id: number }) => one.id === shown.selected);
       return { title: `${subject?.name ?? 'Creature'} · Mutation tree`, eyebrow: 'MUTATION TREE · YOUR PICK', packages: shown.packages,
         roster: shown.roster.map((one: { id: number; name: string; context: string }) => ({ id: String(one.id), name: `${one.name} · ${one.context}` })),
-        creature: String(shown.selected), focus: (now.choice?.creature === shown.selected ? now.choice?.tier : null) ?? shown.faces[0]?.id ?? null,
+        creature: String(shown.selected), focus: now.choice?.creature === shown.selected ? now.choice?.tier ?? null : null,
         choose: now.available && !now.sending ? tier => { selectCreature(shown.selected); controller.choose({ creature: shown.selected, tier }); } : undefined };
     };
     // The sheet's own header holds what the whole pick is about: the full tree to read, and passing what is left.

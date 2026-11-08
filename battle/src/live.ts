@@ -29,6 +29,7 @@ import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { planningControls, type Catalogue } from './planning';
 import { matchControls } from './match';
+import { rematchPlan } from '../../table/outcome.js';
 import { createBattlePlanning } from '../../table/battle-planning.js';
 import { createBattleMatch } from '../../table/battle-match.js';
 import { replayOf, operatorToken } from '../../table/session.js';
@@ -113,7 +114,14 @@ const controls = combatControls(combat, name, passOver);
 const atlasUI = atlasControls(() => render());
 const planningUI = planningControls(planning, name, passOver, inspectCreature, atlasUI);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
-const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); });
+// The end card plays the same game again (ADR 0153): against this table's opponent, with the seats this browser holds
+// at it. A recording is nobody's game to play again.
+const rematchOf = () => {
+  if (!selected || (view as { replay?: unknown } | null)?.replay) return null;
+  const held = heldSeats.filter(one => one.table.id === selected!.table.id).map(one => one.seat);
+  return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
+};
+const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf);
 const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
@@ -153,9 +161,9 @@ function status(state: string) {
     selected = null;
     text('perspective', 'YOUR TEAM');
     text('load-title', messages[state]);
-    text('load-detail', state === 'signin' ? 'Sign in with the account that holds this seat.' : 'Return to the tables to find a current seat.');
+    text('load-detail', state === 'signin' ? 'Sign in with the account that holds this seat.' : 'Return to the lobby to find a current seat.');
     $<HTMLAnchorElement>('access-link').href = state === 'signin' ? signInPath(location.pathname + location.search) : '/';
-    text('access-link', state === 'signin' ? 'Sign in' : 'Open tables');
+    text('access-link', state === 'signin' ? 'Sign in' : 'Lobby');
     $('retry').hidden = false;
   } else if (!view) {
     text('load-title', state === 'stale' ? 'Waiting for the connection' : 'Opening your board');
@@ -533,9 +541,9 @@ function readingDetail(reading: { detail: string; groups?: { target: string; chi
 }
 
 function effectChips(node: HTMLElement, chips: EffectChip[]) {
-  // Above the caption, which is centred under the figure: the hit area around it is taller than the creature.
+  // Above the creature's head, where the hit area begins: never over its body, which the caption already shares.
   let holder = node.querySelector<HTMLElement>('.creature-effect');
-  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.querySelector('.caption')!.prepend(holder); }
+  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.prepend(holder); }
   const key = JSON.stringify(chips);
   holder.hidden = chips.length === 0;
   if (holder.dataset.chips === key) return;
@@ -640,7 +648,7 @@ async function discover(autoResume = true) {
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
-  text('access-link', 'Open tables'); $<HTMLAnchorElement>('access-link').href = '/';
+  text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   const recorded = replayOf(location.search);
   if (recorded) {
     text('perspective', `${seatName(recorded.seat).toUpperCase()} · RECORDED MATCH`);
@@ -678,6 +686,7 @@ async function discover(autoResume = true) {
 }
 
 scene.onLayout = positions => placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions);
+scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onArtwork = (id, shown) => { const node = nodes.get(id); if (node) node.dataset.artworkShown = shown; else shownArt.set(id, shown); };
 scene.onReady = () => { ready = true; $('battle').dataset.ready = 'true'; $('battle').dataset.assetFallback = String(scene.assetFailed); render(); };
 function failRenderer() {

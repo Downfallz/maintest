@@ -4,7 +4,8 @@ import { fitsViewport } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: health > 0, conditions: [], knownSpells: [], acquiredTiers: [] });
-async function mount(page, { over = true, recording = true, outcome = { winner: 'player1', reason: 'Elimination' }, both = false, account = null, permission = 'default', unsupported = false } = {}) {
+async function mount(page, { over = true, recording = true, outcome = { winner: 'player1', reason: 'Elimination' }, both = false, account = null, permission = 'default', unsupported = false,
+  opponent = undefined, friends = [], rematch = { status: 201, json: { seats: [{ seat: 'player1', token: 'next' }] } } } = {}) {
   const state = { status: 200, writes: [], reads: [], errors: [], view: { over, recording, outcome,
     waitingFor: null, feed: [], feedNext: 0, board: { slot: 'Player1', roundNumber: 7, phase: 'Combat', subPhase: 'Activation',
       allies: [creature(1, 17), creature(2, 4), creature(3, 0)], enemies: [creature(4, 0), creature(5, 0), creature(6, 0)], timeline: [] } } };
@@ -33,8 +34,11 @@ async function mount(page, { over = true, recording = true, outcome = { winner: 
     const req = route.request(), url = new URL(req.url()); state.reads.push({ path: url.pathname, query: url.search, token: req.headers()['x-seat-token'] });
     if (req.method() !== 'GET' && !url.pathname.endsWith('/resume')) state.writes.push({ path: url.pathname, method: req.method(), body: req.postDataJSON(), token: req.headers()['x-seat-token'] });
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account } });
-    if (url.pathname === '/api/friends') return route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } });
-    if (url.pathname.endsWith('/resume')) return route.fulfill({ json: { tables: [{ table: { id: 'one', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }, ...(both ? [{ seat: 'player2', token: 'second' }] : [])] }] } });
+    if (url.pathname === '/api/friends') return route.fulfill({ json: { friends, incoming: [], outgoing: [] } });
+    if (url.pathname === '/api/lobby/tables') return route.fulfill(rematch);
+    // The table as the lobby names its seats, when the test names an opponent (`null`: a shared device).
+    const named = opponent === undefined ? {} : { seats: [{ seat: 'player1', kind: 'person', name: 'Mark', account: 'acct_markmarkmarkmarkm' }, ...(opponent ? [opponent] : [{ seat: 'player2', kind: 'person', name: 'Mark' }])] };
+    if (url.pathname.endsWith('/resume')) return route.fulfill({ json: { tables: [{ table: { id: 'one', format: '3v3', ...named }, seats: [{ seat: 'player1', token: 'first' }, ...(both ? [{ seat: 'player2', token: 'second' }] : [])] }] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [] } });
     if (url.pathname === '/api/lobby/push') return route.fulfill({ json: { publicKey: 'AQID' } });
     if (url.pathname === '/api/lobby/push/test') return route.fulfill({ json: { message: 'Sent.' } });
@@ -54,11 +58,17 @@ async function closeResult(page) {
 for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['player2', 'Concession', 'Defeat'], [null, 'RoundCap', 'Draw']]) {
   test(`final ${title} uses the host reason and public survivors`, async ({ page }, info) => {
     const h = await mount(page, { outcome: { winner, reason } }); await matchResult(page);
-    await expect(page.locator('#match-title')).toHaveText(title); await expect(page.locator('#match-stats')).toContainText('2/3 standing · 21 HP');
-    await expect(page.locator('#match-stats')).toContainText('0/3 standing · 0 HP');
-    await fitsViewport(page, '#match-replay, #match-dialog [aria-label="Close match result"]');
+    await expect(page.locator('#match-title')).toHaveText(title); await expect(page.locator('#match-eyebrow')).toHaveText('MATCH COMPLETE · ROUND 7');
+    // Each team is a card of who stands and the health it kept; its whole line is the card's accessible name.
+    await expect(page.locator('#match-stats .match-team[data-side="ally"]')).toHaveAttribute('aria-label', 'Your team: 2/3 standing · 21 HP');
+    await expect(page.locator('#match-stats .match-team[data-side="enemy"]')).toHaveAttribute('aria-label', 'Opponent: 0/3 standing · 0 HP');
+    await expect(page.locator('#match-stats .match-team[data-side="ally"] .match-team-hp')).toHaveText('21 / 90 HP');
+    // History is the field's header's; the card ends on replay and the lobby, by that one name.
+    await expect(page.locator('#match-dialog [data-history-open]')).toHaveCount(0);
+    await expect(page.locator('#match-lobby')).toHaveText('Lobby'); await expect(page.locator('#match-lobby')).toHaveAttribute('href', '/');
+    await expect(page.locator('#match-rematch')).toBeHidden();
+    await fitsViewport(page, '#match-replay, #match-lobby, #match-dialog [aria-label="Close match result"]');
     await page.screenshot({ path: info.outputPath('final-result-fixture.jpg'), type: 'jpeg', quality: 85 });
-    await page.locator('#match-dialog [data-history-open]').click(); await expect(page.locator('#history-dialog')).toBeVisible();
     expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   });
 }
@@ -155,4 +165,32 @@ test('on a phone held upright the round\'s header is the only one: the menu and 
   await page.locator('#home-menu-toggle').click(); await expect(page.locator('#home-navigation')).toBeInViewport();
   await page.locator('#home-menu-toggle').click();
   await page.locator('.home-header .account-chip').click(); await expect(page.locator('.home-header .account-menu')).toBeInViewport();
+});
+
+test('Rematch against the bot opens the same game at once, on a new table', async ({ page }, info) => {
+  const h = await mount(page, { opponent: { seat: 'player2', kind: 'bot', name: 'Lookahead' } }); await matchResult(page);
+  await expect(page.locator('#match-rematch')).toHaveText('Rematch');
+  await fitsViewport(page, '#match-rematch, #match-replay, #match-lobby');
+  await page.screenshot({ path: info.outputPath('final-result-rematch.jpg'), type: 'jpeg', quality: 85 });
+  await page.locator('#match-rematch').click();
+  await page.waitForURL(/\/battle\?player1=next$/);
+  expect(h.writes).toEqual([{ path: '/api/lobby/tables', method: 'POST', body: { opponent: 'bot', format: '3v3' }, token: undefined }]);
+});
+test('a rematch the host refuses stays on the card in its own words', async ({ page }) => {
+  const h = await mount(page, { opponent: { seat: 'player2', kind: 'bot', name: 'Lookahead' },
+    rematch: { status: 409, json: { message: 'You already have five games against bots in progress.' } } });
+  await matchResult(page); await page.locator('#match-rematch').click();
+  await expect(page.locator('#match-replay-error')).toHaveText('You already have five games against bots in progress.');
+  await expect(page.locator('#match-rematch')).toBeEnabled(); await expect(page.locator('#match-dialog')).toBeVisible(); expect(h.errors).toEqual([]);
+});
+test('a friend is invited to the rematch at once; anyone else opens the lobby on them', async ({ page }) => {
+  const friend = { seat: 'player2', kind: 'person', name: 'Bastien', account: 'acct_bastienbastienba' };
+  let h = await mount(page, { opponent: friend, friends: [{ id: friend.account, username: 'Bastien' }] }); await matchResult(page);
+  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
+  await page.waitForURL(/\/battle\?player1=next$/);
+  expect(h.writes).toEqual([{ path: '/api/lobby/tables', method: 'POST', body: { opponent: 'friend', friend: friend.account, format: '3v3' }, token: undefined }]);
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  h = await mount(page, { opponent: friend }); await matchResult(page);
+  await expect(page.locator('#match-rematch')).toHaveText('Invite to rematch'); await page.locator('#match-rematch').click();
+  await page.waitForURL(/\/lobby\?rematch=acct_bastienbastienba&format=3v3$/); expect(h.writes).toEqual([]);
 });
