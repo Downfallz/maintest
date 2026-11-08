@@ -738,7 +738,9 @@
 .battle-page .home-header .brand { letter-spacing: normal; }
 .battle-page .home-header .brand h1 { margin: 0; font: 400 21px Georgia, serif; }
 .battle-page .home-header .eyebrow { display: block; text-transform: uppercase; margin: 0; }
-.battle-page .home-header .brand-mark { display: grid; place-items: center; width: 32px; height: 38px; border: 1px solid var(--brand-ember); border-radius: 10px 3px; font: 26px Georgia, serif; }
+/* The battle page does not load table.css, so the navigation header's mark draws the rune itself; the HUD's own mark
+   gets it from battle-lab.css. */
+.battle-page .home-header .brand-mark { display: block; width: 32px; height: 38px; flex: 0 0 auto; background: url('/icon.svg') center / contain no-repeat; }
 .battle-page .navigation-panels dialog { margin: auto; }
 
 /* On short landscape screens the menu and the player's button sit at the right end of the match toolbar, where the
