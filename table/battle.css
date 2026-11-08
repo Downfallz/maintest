@@ -1164,7 +1164,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   #battle[data-docked="true"] .creature-conditions .cue-icon { width: 8px; height: 8px; }
   #battle[data-docked="true"] .health-track { order: 9; flex-basis: 78%; height: 3px; margin: 2px auto 0; }
   #battle[data-docked="true"] .creature-tag { font-size: 8px; letter-spacing: .04em; }
-  #battle[data-docked="true"] .team-label { display: none; }
+  /* "Your team" crowded the lower row; the opponent's label stays, the only place its name shows on a phone. */
+  #battle[data-docked="true"] .team-label.ally { display: none; }
   /* The others step back so the one the sheet is about reads first. */
   #battle[data-docked="true"] #actor-layer:has(.creature[data-sheet-focus="true"], .creature[data-mutation-focus="true"]) .creature:not([data-sheet-focus="true"]):not([data-mutation-focus="true"]) .caption { opacity: .62; }
 }

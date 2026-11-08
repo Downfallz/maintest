@@ -46,9 +46,8 @@ async function mount(page, kind = 'Intent') {
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
 const notify = page => page.evaluate(() => window.notifyBattle());
 const scrollOf = page => page.locator('#combat-browser').evaluate(node => node.scrollTop);
-// Every viewport here fits a dozen compact cards, so the browser is scrolled for real before anything is kept.
+// Full details, the default, never fit every card in view, so the browser is scrolled for real before anything is kept.
 async function browseTo(page, id) {
-  await page.locator('#combat-details-mode').click();
   const node = spell(page, id); await node.scrollIntoViewIfNeeded(); await node.focus();
   expect(await scrollOf(page)).toBeGreaterThan(0); return node;
 }
@@ -64,13 +63,14 @@ test('the spellbook groups the served types and shows truthful compact stats and
   await expect(spell(page, 'spell-0').locator('.spell-critical')).toBeEmpty(); await expect(spell(page, 'spell-0').locator('.spell-chip-crit')).toHaveCount(0);
   await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%'); await expect(spell(page, 'spell-2').locator('.spell-critical')).toHaveText('at this tempo');
   await expect(spell(page, 'spell-1')).toBeDisabled(); await expect(spell(page, 'spell-1')).toContainText('Cannot use while stunned');
-  await expect(spell(page, 'spell-0').locator('.spell-detail')).toBeHidden();
-  await fitsViewport(page, '#combat-details-mode, #combat-declare, #combat-dialog-close');
-  await page.screenshot({ path: info.outputPath('au9-spellbook.png') });
-  await page.locator('#combat-details-mode').click();
+  // Full details by default; the toggle folds every card to its head.
   await expect(spell(page, 'spell-1').locator('.spell-detail')).toBeVisible();
-  await page.screenshot({ path: info.outputPath('au9-spellbook-full.png') });
   await expect(spell(page, 'spell-1').locator('.spell-detail')).toContainText('separate effect on the caster');
+  await fitsViewport(page, '#combat-details-mode, #combat-declare, #combat-dialog-close');
+  await page.screenshot({ path: info.outputPath('au9-spellbook-full.png') });
+  await page.locator('#combat-details-mode').click();
+  await expect(spell(page, 'spell-0').locator('.spell-detail')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('au9-spellbook.png') });
   await expect(spell(page, 'unknown-spell')).toContainText('Catalogue details unavailable');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
@@ -95,11 +95,11 @@ test('an offered energy plan and repeated taps never declare without the explici
   await expect.poll(() => h.writes).toEqual([{ kind: 'Intent', creature: 1, spell: 'spell-2', asked: 21 }]); expect(h.errors).toEqual([]);
 });
 test('a changed creature clears reference position, details mode and the previous draft', async ({ page }) => {
-  const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
+  const h = await mount(page); await (await browseTo(page, 'spell-17')).click(); await page.locator('#combat-details-mode').click();
   h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2; await notify(page);
   // The old creature's choice closes and the new one's opens by itself at once (ADR 0149), fresh.
   await openSpells(page); await expect(page.locator('#combat-heading')).toContainText('Creature 2');
-  await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'true');
   expect(await page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBe(0);
   await expect(page.locator('#combat-declare')).toBeDisabled(); expect(h.writes).toEqual([]);
 });
@@ -108,7 +108,7 @@ test('returning from targets keeps the place, the details mode and the chosen ca
   const node = spell(page, 'unknown-spell'); await node.scrollIntoViewIfNeeded();
   const scroll = await scrollOf(page); expect(scroll).toBeGreaterThan(0);
   await node.dblclick(); await expect(page.locator('#combat-targets')).toBeVisible(); expect(h.writes).toEqual([]);
-  await page.locator('#combat-back').click(); await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#combat-back').click(); await expect(page.locator('#combat-details-mode')).toHaveAttribute('aria-pressed', 'false');
   expect(await scrollOf(page)).toBe(scroll); await expect(node).toBeFocused();
   expect(h.errors).toEqual([]);
 });
@@ -130,8 +130,8 @@ test('a poll that adds an offered spell rebuilds the list without moving the foc
 });
 test('the details toggle keeps its label and says whether full details are on', async ({ page }) => {
   await mount(page); const toggle = page.locator('#combat-details-mode');
-  await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await toggle.click(); await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click(); await expect(toggle).toHaveText('Full details'); await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 });
 test('short landscape, small portrait and enlarged text keep the browser scrollable and footer reachable', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Own viewport matrix');

@@ -328,8 +328,9 @@ and availability. Current question guidance supplies current chances and unavail
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-**Full details** switches the whole reference to complete names, targeting, target/caster effects and critical
-notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+**Full details**, on by default, shows the whole reference in full: complete names, targeting, target/caster
+effects and critical notes, including unavailable cards. Turning it off folds every card to its head for a
+compact list; a new creature's choice starts in full again. Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
