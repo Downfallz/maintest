@@ -103,7 +103,11 @@ test('History opens on a summary of each round, and All events holds the full re
   await page.locator('#history-close').click(); await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#history-open')).toBeEnabled(); await page.locator('#history-open').click();
   await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'events');
+  // A filter in All events that excludes a cast does not stop the summary from opening it.
+  await page.locator('#history-filters > summary').click(); await page.selectOption('#history-filter-kind', 'RoundStarted');
   await page.locator('#history-mode-summary').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  await page.locator('.summary-cast').first().click();
+  await expect(page.locator('#history-detail')).toContainText('Applied effects'); await expect(page.locator('#history-filter-kind')).toHaveValue('');
   expect(h.state.errors).toEqual([]);
 });
 test('skip and duplicate polls keep every action without replaying it', async ({ page }) => {

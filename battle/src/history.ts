@@ -163,7 +163,12 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
         line.setAttribute('aria-label', `${cast.caster} cast ${cast.spell}${SHORT_STATUS[cast.status] ? `, ${cast.status.toLowerCase()}` : ''}. Inspect event`);
         line.append(textNode('span', cast.caster, 'summary-who'), textNode('span', cast.spell, 'summary-what'),
           ...(SHORT_STATUS[cast.status] ? [textNode('span', SHORT_STATUS[cast.status], 'summary-status')] : []));
-        line.addEventListener('click', () => { controller.select(cast.sequence); el('history-back').focus({ preventScroll: true }); });
+        line.addEventListener('click', () => {
+          // The summary lists every loaded round whatever All events filters; a filter that excludes this cast would
+          // leave its inspection with nothing to select, so the filters are cleared first.
+          for (const [name, value] of Object.entries(controller.model().filters)) if (value) controller.filter(name, '');
+          controller.select(cast.sequence); el('history-back').focus({ preventScroll: true });
+        });
         item.append(line);
         if (cast.effects.length) {
           const effects = textNode('ul', '', 'summary-effects');
