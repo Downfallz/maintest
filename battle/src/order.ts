@@ -25,6 +25,9 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   openers.forEach(button => button.addEventListener('click', () => show()));
   el('order-close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
+    // A reference opened by hand is the order read: closing it lets the seen mark pass it. Opened for its details
+    // from the field's reading, the order is still read only at Continue.
+    if (!reading) reveal.read();
     if (available && opener?.isConnected && !opener.matches(':disabled') && opener.getClientRects().length) opener.focus({ preventScroll: true });
     opener = null; onVisibility();
   });
@@ -74,7 +77,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   // never in a dialog over the field; the full order, rules and rolls stay one tap away. Everything waits for
   // Continue, an opponent's action included.
   let reading = false;
-  function finish() { if (!reading) return; reading = false; onVisibility(); }
+  function finish() { if (!reading) return; reading = false; reveal.read(); onVisibility(); }
   function render(model: Model, enabled: boolean, canAuto: boolean) {
     available = enabled; openers.forEach(button => { button.disabled = !enabled; });
     if (!enabled) { opener = null; reading = false; if (dialog.open) dialog.close(); el<HTMLDetailsElement>('order-rules').open = false; }

@@ -142,3 +142,17 @@ test('a signed-in player can read a menu panel and return to the same live match
   await fitsViewport(page, '#home-menu-toggle, #settings, #order-open');
   await page.screenshot({ path: info.outputPath('signed-in-battle-landscape.jpg'), type: 'jpeg' });
 });
+test('on a phone held upright the round\'s header is the only one: the menu and the player fold into it, History is a clock', async ({ page }, info) => {
+  test.skip(page.viewportSize().width >= 620, 'a phone held upright');
+  await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  const [site, round] = await Promise.all(['.home-header', '#battle .hud-top'].map(one => page.locator(one).boundingBox()));
+  // One row: the site's header stands inside the round's, at its left end.
+  expect(site.y).toBeGreaterThanOrEqual(round.y - 1); expect(site.y + site.height).toBeLessThanOrEqual(round.y + round.height + 1);
+  await expect(page.locator('.home-header .brand')).toBeHidden();
+  await fitsViewport(page, '#home-menu-toggle, .home-header .account-chip, #history-open, #help-open, #settings');
+  await expect(page.locator('#history-preview')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('one-header.png') });
+  await page.locator('#home-menu-toggle').click(); await expect(page.locator('#home-navigation')).toBeInViewport();
+  await page.locator('#home-menu-toggle').click();
+  await page.locator('.home-header .account-chip').click(); await expect(page.locator('.home-header .account-menu')).toBeInViewport();
+});

@@ -37,7 +37,7 @@ import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { seatLabel } from '../../table/invitation.js';
-import { phaseLabel, stepLabel } from '../../table/terms.js';
+import { phaseLabel, stepLabel, tempoLabel } from '../../table/terms.js';
 
 interface Choice { seat: string; token: string; table: { id: string; format: string; round?: number; seats?: { seat: string; name: string; kind?: string; account?: string }[] } }
 interface Creature { form: string; description: string; id: string; name: string; label: string; enemy: boolean; health: number; maxHealth: number; energy: number;
@@ -82,7 +82,7 @@ const connection = createLiveConnection({ onState: status, onView: (next: View |
   try {
     view = next; catalogue = content ?? catalogue;
     if (next) services.receive(next);
-    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next); growth.receive(next, catalogue);
+    history.receive(next, catalogue); upkeep.receive(next); orderReveal.receive(next, { since: seenGame ? seenSince(storage, seenGame) : null }); growth.receive(next, catalogue);
     combat.receive(next); planning.receive(next); match.receive(next, catalogue);
     playback.receive(next, new Map(catalogue?.cards?.map(card => [card.id, card]) ?? []),
       { effects: catalogue?.effects ?? [], packages: new Map(catalogue?.packages?.map(pack => [pack.id, pack]) ?? []), animate: visible() && !combat.model().target && !planning.model().opened && !match.model().active,
@@ -118,6 +118,9 @@ const services = createBattleServices({ onChange: () => servicesUI.render() });
 const servicesUI = serviceControls(services, storage);
 const inspectionUI = inspectionControls();
 const historyUI = historyControls(history, () => playback.skip(), () => render());
+// The mutation reveal last read: opened with See and closed, or set aside with Continue.
+let revealRead: number | null = null;
+const revealUnread = () => { const receipt = growth.receipt() as { sequence: number } | null; return Boolean(receipt) && receipt!.sequence !== revealRead; };
 const growthUI = growthControls(growth, () => playback.skip(), () => render(), atlasUI);
 const helpUI = guidanceControls(storage, () => playback.skip(), () => render(), muted => keepForGame({ help: !muted }));
 function inspectCreature(id: string) {
@@ -303,8 +306,22 @@ function render() {
   // seen what led to it (ADR 0139). Skip all remains the deliberate way out, except past an opponent's action.
   if (playbackState.active) for (const id of ['combat-open', 'planning-open', 'match-open']) $(id).hidden = true;
   const plan = planning.model();
-  const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame);
+  const mutation = mutationScene(plan, catalogue, planningUI.recipient(), visible() && !replay.active && !playbackState.active && !action.opened, frame, playback.purchases());
   frame = mutation.frame;
+  // The tempo sheet says on the field which creature it is about: the one in hand ringed in gold, the others dimmed,
+  // and each creature still to draft tagged with the tempo drafted for it.
+  const tempoSheet = plan.opened && plan.latest?.waitingFor === 'Speed' && plan.tempo ? plan.tempo : null;
+  const tempoFocus = tempoSheet?.focus != null ? String(tempoSheet.focus) : null;
+  if (tempoFocus) frame = { ...frame, mutationFocus: tempoFocus };
+  const tempoDrafts = new Map<string, string>((tempoSheet?.drafts ?? []).map(([id, speed]: [number, string]) => [String(id), speed]));
+  const tempoTag = (id: string) => {
+    if (!tempoSheet?.creatures.map(String).includes(id)) return null;
+    const drafted = tempoDrafts.get(id);
+    if (drafted) return `${drafted === 'Quick' ? '⚡' : '✦'} ${tempoLabel(drafted).toUpperCase()}`;
+    return id === tempoFocus ? 'CHOOSING TEMPO' : 'TEMPO ?';
+  };
+  // A sheet docked under a phone's field shortens it: the captions go compact so the art stays in view.
+  $('battle').dataset.docked = String($<HTMLDialogElement>('combat-dialog').open || ($<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed'].includes($('planning-dialog').dataset.kind ?? '')));
   $('battle').classList.toggle('mutation-entry', mutation.available && !plan.opened);
   $('actor-layer').setAttribute('aria-label', targeting ? 'Select targets' : mutation.available ? 'Choose a creature to mutate' : 'Inspect creatures');
   if ($('battle').dataset.connection === 'live') text('connection', playbackState.active ? 'READING RESULTS' : connectionText(replay.active, action.opened));
@@ -325,6 +342,8 @@ function render() {
     const offered = mutation.eligible.has(one.id);
     node.dataset.mutationRecipient = String(offered);
     node.dataset.mutationFocus = String(mutation.recipient === one.id);
+    node.dataset.sheetFocus = String(tempoFocus === one.id);
+    if (tempoDrafts.has(one.id)) node.dataset.tempo = tempoDrafts.get(one.id)!; else delete node.dataset.tempo;
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
     node.dataset.form = one.form;
@@ -341,7 +360,7 @@ function render() {
     if (targeting) node.setAttribute('aria-pressed', String(frame.selected?.includes(one.id) === true));
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
-    const condition = mutation.tag(one.id) ?? targetTag?.tag ?? tagOf(one);
+    const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? targetTag?.tag ?? tagOf(one);
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -408,8 +427,11 @@ function render() {
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
   // What this seat has been shown so far, kept for the next time the page opens on it.
-  if (seenGame && view && !replay.active && playbackState.watermark !== null && playbackState.watermark !== seenKept) {
-    seenKept = playbackState.watermark; saveSeen(storage, seenGame, seenKept);
+  // A turn order not yet read holds the mark below it, so a seat that leaves before Continue is shown it on return.
+  const unreadOrder = orderReveal.model().unread;
+  const watermark = playbackState.watermark === null ? null : Number.isInteger(unreadOrder) ? Math.min(playbackState.watermark, unreadOrder - 1) : playbackState.watermark;
+  if (seenGame && view && !replay.active && watermark !== null && watermark !== seenKept) {
+    seenKept = watermark; saveSeen(storage, seenGame, seenKept);
   }
   if (!view) inspected = null;
   renderInspection();
@@ -462,8 +484,10 @@ function render() {
   const asked = planning.model();
   if (asked.opened) mutationOpened = asked.question;
   // The team's tempos open the same way, docked as well (ADR 0150).
+  // The tempos wait for a fresh mutation reveal to be read first (See, then closed, or Continue): the field shows who
+  // mutated into what, which the docked sheet would crowd. The dock's Team tempos opens them at any time.
   else if (asked.available && ['Evolution', 'Speed'].includes(asked.latest?.waitingFor) && !asked.latest.waiting && mutationOpened !== asked.question
-    && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
+    && (asked.latest.waitingFor !== 'Speed' || !revealUnread()) && canAuto() && !upkeep.model().pending && !orderReveal.model().pending && !helpUI.pending()) { mutationOpened = asked.question; planning.open(); }
   // The player's spell choice opens by itself in the same way, docked beside the field (ADR 0149): once per asking,
   // after whatever the board still had to show. Closing it leaves Choose spell in the dock.
   const fight = combat.model();
@@ -716,6 +740,8 @@ $('reading-open').addEventListener('click', () => {
   else if (playback.model().summary) $<HTMLDialogElement>('result-dialog').showModal();
 });
 $('order-continue').addEventListener('click', () => orderUI.finish());
+// A mutation reveal is read once its sheet closes; Continue sets it aside, which reads it too.
+$('growth-dialog').addEventListener('close', () => { revealRead = (growth.receipt() as { sequence: number } | null)?.sequence ?? revealRead; render(); });
 // A docked choice opening or closing beside the field resizes it; that re-lays out the cast being shown rather than
 // passing over it, which a rotation or a resized window still does.
 scene.onResizeDuringPlayback = () => { if (dockMoved) { dockMoved = false; return; } playback.skip(); };

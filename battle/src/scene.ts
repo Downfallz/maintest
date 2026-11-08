@@ -116,7 +116,9 @@ export class BattleScene extends Phaser.Scene {
       const selected = creature.id === state.mutationFocus || creature.id === state.target || state.selected?.includes(creature.id) === true;
       const legal = state.stage === 'targeting' && state.targets.includes(creature.id);
       figure.ring.setStrokeStyle(selected ? 3 : 1.5, selected || acting ? GOLD : EMBER, selected || legal || acting ? .95 : .15);
-      figure.image.setAlpha(!creature.isAlive ? .20 : state.mutationFocus && !selected ? .52 : 1);
+      // While targets are chosen, whatever cannot be targeted steps back; the caster stays in full.
+      const aside = state.stage === 'targeting' && !legal && !selected && !acting;
+      figure.image.setAlpha(!creature.isAlive ? .20 : (state.mutationFocus && !selected) || aside ? .52 : 1);
       figure.alive = creature.isAlive;
       figure.shadow.setAlpha(creature.isAlive ? .55 : .2);
       this.followCues(figure);
@@ -228,8 +230,9 @@ export class BattleScene extends Phaser.Scene {
       this.mutationReveal.present(undefined, new Map(), this.reduced);
       return;
     }
-    // A bottom sheet shortens a portrait board, but the two teams still need separate rows.
-    const portraitDraft = this.state.mutationFocus && width < 620 && matchMedia('(orientation: portrait)').matches;
+    // A docked sheet (a mutation, the tempos, a spell) shortens a phone's board, but a phone held upright keeps its
+    // two rows: the opposing formations of a wide screen would stack the captions on each other.
+    const portraitDraft = width < 620 && matchMedia('(orientation: portrait)').matches;
     const positions = placements(width, height, this.state.creatures.filter(one => !one.enemy).length,
       this.state.creatures.filter(one => one.enemy).length, portraitDraft ? true : undefined);
     const inFlight = playing(this.state);

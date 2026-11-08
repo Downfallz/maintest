@@ -35,7 +35,8 @@ export function spellbookControls(controller: Controller) {
   const scroll = document.getElementById('combat-browser')!;
   let question = '', structure = '', catalogueIdentity: SpellCatalogue | null = null;
   let buttons = new Map<string, HTMLButtonElement>();
-  let full = false;
+  // Full details by default: a spell is read in full before it is chosen; compact is the player's choice.
+  let full = true;
   let resetPosition = true;
   // Going back from the field clears the draft; the card the player was on is still where they left it.
   let lastChosen: string | null = null;
@@ -46,7 +47,7 @@ export function spellbookControls(controller: Controller) {
     mode.textContent = 'Full details';
   }
   function clear() {
-    question = ''; structure = ''; catalogueIdentity = null; full = false; resetPosition = true; lastChosen = null; buttons.clear(); list.replaceChildren();
+    question = ''; structure = ''; catalogueIdentity = null; full = true; resetPosition = true; lastChosen = null; buttons.clear(); list.replaceChildren();
     scroll.scrollTop = 0; drawMode();
   }
   // The card under the player's eye: the focused one, or else the first one showing in the scroller.

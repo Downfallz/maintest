@@ -12,6 +12,7 @@ async function mount(page, ids = [1, 2, 3]) {
     state.view.board.speedChoices.push({ creature: command.creature, speed: command.speed });
     const next = ids.find(id => !state.view.board.speedChoices.some(one => one.creature === id));
     state.view.waitingAsked++; state.view.waitingCreature = next ?? null; state.view.waitingFor = next ? 'Speed' : null;
+    if (!next) state.afterLast?.();
   };
   page.on('pageerror', error => state.errors.push(error.message));
   await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' })));
@@ -120,5 +121,38 @@ test('the team\'s tempos open by themselves, docked beside a field that stays in
   // Escape closes the docked sheet and keeps the draft; the dock's button opens it again, not by itself.
   await page.keyboard.press('Escape'); await expect(dialog).toBeHidden(); await expect(page.locator('#planning-open')).toBeVisible();
   await page.locator('#planning-open').click(); await expect(page.locator('[data-tempo-tab="1"]')).toHaveAttribute('data-tempo', 'Quick');
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('confirming the last tempo leads to the turn order before the first spell choice of the creature acting first', async ({ page }) => {
+  const h = await mount(page); h.afterLast = null;
+  const slot = (id, speed) => ({ creature: id, owner: id < 4 ? 'Player1' : 'Player2', speed, initiative: 5 });
+  // Once the last tempo is accepted the host builds the order, and the first question is this seat's.
+  h.afterLast = () => Object.assign(h.view, { waitingFor: 'Action', waitingCreature: 1, waitingAsked: 20,
+    board: { ...h.view.board, phase: 'Combat', subPhase: 'Activation', activationCursor: 0, timeline: [1, 4, 2, 5, 3, 6].map(id => slot(id, 'Standard')) },
+    feed: [{ sequence: 7, event: { kind: 'TimelineBuilt', roundId: 1, timeline: { slots: [], rollOffs: [] } } }], feedNext: 8,
+    options: { action: { creature: 1, spells: [{ spell: 'strike', legalTargets: { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 } }] } } });
+  await fill(page, 3); await page.locator('#planning-confirm').click();
+  await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#combat-dialog')).toBeHidden();
+  await page.locator('#order-continue').click(); await expect(page.locator('#combat-dialog')).toBeVisible();
+  expect(h.errors).toEqual([]);
+});
+test('on a phone the field keeps its two rows beside the tempos and marks the creature they are about', async ({ page }, info) => {
+  test.skip(page.viewportSize().width >= 620, 'a phone held upright');
+  const h = await mount(page);
+  await expect(page.locator('#battle')).toHaveAttribute('data-docked', 'true');
+  // Two rows: the team on one line, the opponent on another, never the wide screen's staggered formations.
+  const tops = await page.locator('#actor-layer .creature').evaluateAll(nodes => nodes.map(node => [node.classList.contains('enemy'), Math.round(node.getBoundingClientRect().top)]));
+  expect(new Set(tops.filter(([enemy]) => !enemy).map(([, top]) => top)).size).toBe(1);
+  expect(new Set(tops.filter(([enemy]) => enemy).map(([, top]) => top)).size).toBe(1);
+  await expect(page.locator('#actor-layer [data-creature="1"]')).toHaveAttribute('data-sheet-focus', 'true');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('CHOOSING TEMPO');
+  await expect(page.locator('#actor-layer [data-creature="2"] .creature-tag')).toHaveText('TEMPO ?');
+  await page.locator('[data-speed="Quick"]').click();
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).toHaveText('⚡ INSTINCT');
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toHaveAttribute('data-sheet-focus', 'true');
+  await page.screenshot({ path: info.outputPath('tempo-field.png') });
+  // The creature in hand and its two tempos stay pinned while its spells scroll beneath them.
+  await page.locator('#planning-choices').evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(page.locator('[data-speed="Quick"]')).toBeInViewport(); await expect(page.locator('[data-speed="Standard"]')).toBeInViewport();
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

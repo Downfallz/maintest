@@ -328,8 +328,9 @@ and availability. Current question guidance supplies current chances and unavail
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-**Full details** switches the whole reference to complete names, targeting, target/caster effects and critical
-notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+**Full details**, on by default, shows the whole reference in full: complete names, targeting, target/caster
+effects and critical notes, including unavailable cards. Turning it off folds every card to its head for a
+compact list; a new creature's choice starts in full again. Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
@@ -502,7 +503,11 @@ the presented board, so recorded replay retains its own round, order, rolls and 
 reference during live action playback explicitly settles that queue, like History. Missing initiatives
 or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
 
-A newly observed public TimelineBuilt event queues one reveal. It waits for both teams' tie
+A newly observed public TimelineBuilt event queues one reveal. A seat that comes back to the page (a hidden tab
+shown again, a reload) counts as newly observed every order built after the last sequence it was shown
+(`battle-seen.js`, ADR 0148). That seat is often the one whose creature acts first: the one told it is its turn.
+An order not yet read holds that mark below it until Continue, so leaving mid-read shows it again. Its spell
+choice opens only once the order is read. It waits for both teams' tie
 ordering, action playback and open dialogs/drafts to finish, then reads on the field before the next first-use
 tip ([ADR 0144](../docs/adr/0144-read-the-turn-order-on-the-field.md)): a numbered badge on each creature, gold
 for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a d20 broke a tie, and

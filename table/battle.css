@@ -83,8 +83,6 @@
 #combat-dialog[open] { display: flex; flex-direction: column; gap: 8px; }
 #combat-dialog > .eyebrow { margin: 0; min-height: 40px; max-width: calc(100% - 220px); }
 #combat-dialog h2 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
-#combat-dialog > .history-reference { position: absolute; top: 14px; right: 72px; }
-#combat-dialog > .history-reference[data-history-open] { right: 140px; }
 #combat-dialog-close { position: absolute; right: 20px; top: 20px; margin: 0; }
 #combat-context { margin: 0; color: var(--gold); font-size: 13px; }
 /* The acting creature's place in the order, its tempo and its energy, right under its name. */
@@ -422,7 +420,7 @@
 @media (max-height: 520px) {
   #combat-dialog { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
   #combat-dialog > .eyebrow { min-height: 0; }
-  #combat-dialog h2 { padding-right: 210px; font-size: 18px; }
+  #combat-dialog h2 { padding-right: 56px; font-size: 18px; }
   #combat-context { font-size: 11px; }
   #combat-help { font-size: 10px; }
   #combat-declare { height: 44px; }
@@ -486,7 +484,7 @@
 .growth-receipt-text strong { font: 15px Georgia,serif; color: #f1d7a2; }
 #growth-receipt-summary { font-size: 12px; color: #c7d5cd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #growth-receipt [data-growth-open] { min-height: 44px; padding: 0 16px; border: 1px solid #b79868; border-radius: 8px; background: #2a3b33; color: #f1d7a2; font-weight: 600; }
-#growth-dismiss { min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: #c7d5cd; font-size: 20px; }
+#growth-dismiss { min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: #c7d5cd; font-size: 13px; font-weight: 600; }
 #growth-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #growth-reveal { display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 14px 20px 20px; }
 .reveal-group h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
@@ -546,18 +544,27 @@
 #battle[data-combat="targets"][data-connection="live"] #connection { display: none; }
 #combat-preview { flex: 1; }
 #battle[data-combat="targets"] .battle-actions { grid-column: 2; grid-row: 1; }
-#battle[data-combat="targets"] .creature[data-target-state="legal"] .caption { border: 1px dashed #e5d4a8; border-radius: 4px; }
-#battle[data-combat="targets"] .creature[data-target-state="selected"] .caption { border: 2px solid #f8df94; border-radius: 4px; }
+/* Choosing targets reads on the art, not over it: no boxes around the captions and no band across the figures.
+   A target wears one small pill over its name (an outline while it can be chosen, filled in gold once chosen, and
+   the scene rings it in gold); what cannot be targeted wears no label and its figure steps back, its stats still
+   readable. The full state stays in the spoken label. */
 #battle[data-combat="targets"] .creature:disabled { opacity: 1; }
-#battle[data-combat="targets"] .creature[data-target-state="unavailable"] .caption { background: #101d22e6; border: 1px solid #69716a; border-radius: 4px; }
-#battle[data-combat="targets"] .creature-tag { font-size: 10px; white-space: nowrap; background: #101d22e6; padding: 2px 4px; border-radius: 3px; }
-#battle[data-combat="targets"] .creature[data-target-state="unavailable"] .creature-tag { color: #c5cbc4; }
+#battle[data-combat="targets"] .creature-tag {
+  left: 50%; right: auto; width: max-content; max-width: calc(100% + 12px); transform: translateX(-50%);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 8px; border: 1px solid transparent; border-radius: 999px;
+  font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .03em; text-shadow: none;
+}
+#battle[data-combat="targets"] .creature[data-target-state="legal"] .creature-tag { border-color: #eac88ecc; background: #101d22cc; color: #f6e7c4; }
+#battle[data-combat="targets"] .creature[data-target-state="selected"] .creature-tag { border-color: #f8df94; background: #f8df94; color: #142126; }
+#battle[data-combat="targets"] .creature[data-target-state="selected"] .creature-name { color: #f8df94; }
+#battle[data-combat="targets"] .creature[aria-pressed="true"] .caption { background: none; border-bottom: 0; }
+#battle[data-combat="targets"] .creature[data-target-state="unavailable"] .creature-tag { display: none; }
 @media (max-width: 619px) {
   #battle[data-combat="targets"] { grid-template-rows: 48px 46px minmax(0,1fr) 210px; }
   #battle[data-combat="targets"] .command-dock { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) 90px; gap: 6px; padding: 8px 12px; }
   #battle[data-combat="targets"] .battle-actions { grid-column: 1; grid-row: 2; }
   #combat-selection { margin: 4px 0; }
-  #battle[data-combat="targets"] .creature-tag { font-size: 8px; }
+  #battle[data-combat="targets"] .creature-tag { font-size: 9px; padding: 0 6px; }
 }
 @media (max-height: 650px) and (max-width: 619px) {
   #battle[data-combat="targets"] { grid-template-rows: 44px 44px minmax(0,1fr) 200px; }
@@ -752,6 +759,32 @@
   .battle-page .home-header .home-navigation { left: 0; right: auto; width: min(360px, calc(100vw - 24px)); }
   .battle-page .home-header .account-menu { left: 0; right: auto; }
   .battle-page[data-home="member"] .hud-top { padding-left: 140px; }
+}
+
+/* A phone held upright has room for one header: the round's. The site's menu and the player's own button fold into
+   its left end, as on a short landscape screen, and History becomes a clock with its count of new entries. */
+@media (max-width: 619px) and (orientation: portrait) {
+  .battle-page[data-home="member"] .home-header {
+    position: absolute; z-index: 6; top: env(safe-area-inset-top); left: 4px; width: auto; height: 48px; min-height: 0;
+    gap: 2px; padding: 0; background: transparent; border: 0;
+  }
+  .battle-page[data-home="member"] .home-header .brand, .battle-page[data-home="member"] .home-menu-toggle > span:last-child,
+  .battle-page[data-home="member"] .home-header #account-name { display: none; }
+  .battle-page[data-home="member"] .home-menu-toggle { order: -1; margin: 0; min-width: 44px; min-height: 44px; padding: 0; justify-content: center; border: 0; }
+  .battle-page[data-home="member"] .home-header .account-chip { min-width: 44px; min-height: 44px; padding: 4px; border: 0; }
+  .battle-page[data-home="member"] .home-header .account-initial { width: 30px; height: 30px; font-size: 15px; }
+  .battle-page[data-home="member"] .home-header .home-navigation { top: 48px; left: 0; right: auto; width: min(360px, calc(100vw - 16px)); border-radius: 0 0 12px 12px; }
+  .battle-page[data-home="member"] .home-header .account-menu { position: fixed; top: 52px; left: 8px; right: auto; }
+  .battle-page[data-home="member"] #battle .hud-top { padding-left: 98px; }
+  #battle #history-open { position: relative; width: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
+  #battle #history-open::before {
+    content: ''; width: 22px; height: 22px; background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  #battle #history-open > span { position: absolute; top: 4px; right: 2px; font-size: 0; }
+  #battle #history-open #history-unread[data-count]:not([data-count=""])::after { content: attr(data-count); display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--gold); color: #142126; font: 800 9px/16px system-ui, sans-serif; }
+  #battle #history-open #history-preview { display: none; }
 }
 
 body:has(#upkeep-dialog[open]) #battle :is(.command-dock, #playback-pacing) { display: none; }
@@ -1142,3 +1175,51 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
 #combat-dialog #combat-browser { min-height: 120px; }
 #combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
+
+/* The creature a docked sheet is about: the tempo sheet's creature in hand wears the mutation sheet's gold underline,
+   and each creature still to draft wears its drafted tempo in its tag, gold for Instinct and blue for Precision. */
+.creature[data-sheet-focus="true"] .caption { border-bottom: 2px solid var(--gold); }
+.creature[data-sheet-focus="true"] .creature-tag { color: var(--gold); }
+#battle .creature[data-tempo="Quick"] .creature-tag { color: #eac88e; }
+#battle .creature[data-tempo="Standard"] .creature-tag { color: #8fc3ef; }
+
+/* A sheet docked under a phone's field (a mutation, the tempos, a spell) leaves it short. The captions go compact so
+   the art stays in view: the name on one line, then initiative, defense, conditions, health and energy on one row,
+   with a thin health bar under them. The numbers are unchanged; their full words stay in titles and labels. */
+@media (max-width: 619px) and (orientation: portrait) {
+  #battle[data-docked="true"] .caption { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 2px; row-gap: 1px; left: -6px; right: -6px; }
+  #battle[data-docked="true"] .creature-name { flex-basis: 100%; overflow: hidden; font-size: 12px; line-height: 1.15; white-space: nowrap; text-overflow: ellipsis; }
+  #battle[data-docked="true"] .creature-badges, #battle[data-docked="true"] .creature-stats { display: contents; }
+  #battle[data-docked="true"] :is(.creature-init, .creature-defense, .stat) { padding: 0 4px; font-size: 8px; line-height: 1.5; }
+  #battle[data-docked="true"] .stat { padding-left: 2px; gap: 1px; }
+  #battle[data-docked="true"] .stat .cue-icon, #battle[data-docked="true"] .creature-defense .cue-icon { width: 8px; height: 8px; }
+  #battle[data-docked="true"] .creature-conditions .cue { width: 13px; height: 13px; }
+  #battle[data-docked="true"] .creature-conditions .cue-icon { width: 8px; height: 8px; }
+  #battle[data-docked="true"] .health-track { order: 9; flex-basis: 78%; height: 3px; margin: 2px auto 0; }
+  #battle[data-docked="true"] .creature-tag { font-size: 8px; letter-spacing: .04em; }
+  /* "Your team" crowded the lower row; the opponent's label stays, the only place its name shows on a phone. */
+  #battle[data-docked="true"] .team-label.ally { display: none; }
+  /* The others step back so the one the sheet is about reads first. */
+  #battle[data-docked="true"] #actor-layer:has(.creature[data-sheet-focus="true"], .creature[data-mutation-focus="true"]) .creature:not([data-sheet-focus="true"]):not([data-mutation-focus="true"]) .caption { opacity: .62; }
+}
+
+/* The tempo sheet's top stays compact and pinned: the creature in hand and its two tempos never scroll away while
+   its spells are read beneath them. On a phone the rule line gives way, since each tempo card states it. */
+#planning-dialog[data-kind="Speed"] #planning-choices { padding-top: 0; }
+.tempo-pinned { position: sticky; top: 0; z-index: 3; margin: 0 -14px; padding: 6px 14px 8px; background: var(--panel); box-shadow: 0 6px 10px -8px #000c; }
+.tempo-pinned .tempo-head { margin: 0 0 6px; }
+.tempo-pinned .tempo-head h3 { font-size: 18px; }
+.tempo-pinned .actor-chip { min-height: 24px; }
+#planning-choices .tempo-pinned .tempo-option { min-height: 0; gap: 10px; padding: 8px 10px; border-radius: 12px; }
+.tempo-pinned .tempo-mark { width: 34px; height: 34px; font-size: 17px; }
+.tempo-pinned .tempo-words strong { font-size: 16px; }
+.tempo-pinned .tempo-words span { font-size: 11px; }
+@media (max-width: 619px) {
+  #planning-dialog[data-kind="Speed"] #planning-help { display: none; }
+  #planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] { min-height: 40px; padding: 2px; }
+  #planning-dialog[data-kind="Speed"] #planning-creatures [role="tab"] span { font-size: 14px; }
+  #planning-choices .tempo-pinned .tempo-option { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px; }
+  .tempo-pinned .tempo-mark { width: 30px; height: 30px; font-size: 15px; }
+  .tempo-pinned .tempo-words span { font-size: 10px; line-height: 1.25; }
+  .tempo-reference { margin-top: 8px; padding-top: 6px; }
+}

@@ -113,7 +113,8 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await keyboardActivate(page, '[data-creature="4"]');
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
   await keyboardActivate(page, '#combat-confirm');
-  expect(state.writes.at(-1)).toMatchObject({ spell: 'strike', targets: [4], asked: 20 });
+  // The cast is sent as Confirm is pressed; the host's mock records it a moment later.
+  await expect.poll(() => state.writes.at(-1)).toMatchObject({ spell: 'strike', targets: [4], asked: 20 });
   const after = roster.map(one => ({ ...one, health: one.id === 4 ? 13 : 20 }));
   state.view.feed = [{ sequence: 10, event: { kind: 'CombatActionResolved', roundId: 9,
     resolution: { action: { actor: 1, spell: 'strike', targets: [4] }, isCritical: false },
