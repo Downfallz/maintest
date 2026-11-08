@@ -334,6 +334,8 @@ test('no audio context exists before the player turns sound on', async ({ page }
   expect(await probe(page)).toEqual({ contexts: 0, starts: 0, stops: 0 }); expect(h.errors).toEqual([]);
 });
 test('one confirmed impact sounds once, however often it is polled', async ({ page }) => {
+  // Three seconds of clock on a desktop canvas rendered in software: 12s on a laptop, over twice that on a CI runner.
+  test.setTimeout(60000);
   await probeAudio(page); const h = await mount(page); await soundOn(page);
   await sounding(page, h, 12);
   await h.publish([entry(12)]); await page.clock.runFor(3000);
