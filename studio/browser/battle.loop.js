@@ -123,7 +123,11 @@ async function reviewAndReplay(page, latest, info, actions) {
   await readResults(page);
   // The result opened by itself once the last result was read (ADR 0145); the journal is read from behind it.
   await matchResult(page); await page.keyboard.press('Escape');
+  // History opens on its summary; the replay reads the full journal, one choice away.
   await page.locator('#history-open').click();
+  await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  await expect(page.locator('#history-summary .summary-round').first()).toBeVisible();
+  await page.locator('#history-mode-events').click();
   const recent = [...actions.values()].filter(entry => entry.event.roundId >= latest.board.roundNumber - 1);
   expect(recent.length).toBeGreaterThan(1);
   for (const entry of recent) await expect(page.locator(`#history-list [data-sequence="${entry.sequence}"]`)).toHaveCount(1);
