@@ -17,8 +17,8 @@ export function creatureLabel(board, id) {
 
 // The host has already filtered this board for one seat. No sample, inferred action or replay belongs here.
 // The catalogue's packages say how an acquired tier shows on a creature; without them a creature is its base.
-// `history` is the seat's purchase log and the feed sequence the board stands at (the present for the live board,
-// the recorded event's for a replayed frame): which illustration each creature shows (ADR 0151).
+// `history` holds the seat's purchase log, which orders what each creature on the board owns: which illustration
+// each creature shows (ADR 0151).
 export function livePresentation(view, packages = new Map(), history = null) {
   const board = boardPresentation(view?.board);
   const roster = [...board.allies, ...board.enemies];

@@ -38,7 +38,9 @@ export function resolveEvolution(creature, packages = new Map(), history = null,
     acquired.set(id, { stage: pack.level, family: pack.visual.family, artwork: pack.visual.artwork ?? null, effect: pack.visual.effect ?? null,
       prerequisites: [...(pack.prerequisites ?? []), ...(pack.anyOf ?? [])] });
   }
-  const known = history?.log ? history.log.order(creature?.id, history.through ?? Infinity) : [];
+  // What the creature owns is the frame's own word; the log only orders it. A purchase's place in that order never
+  // changes, so the whole log orders any frame, a replayed one or one an interlude borrowed from later in its round.
+  const known = history?.log ? history.log.order(creature?.id) : [];
   const { order, chronology } = purchaseOrder(acquired, known);
   const rank = new Map(order.map((tier, index) => [tier, index]));
   const at = stage => order.filter(tier => acquired.get(tier).stage === stage);

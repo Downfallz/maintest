@@ -1,8 +1,8 @@
 // When each creature bought each of its mutations, as the host recorded it. A board's `acquiredTiers` is a set
 // (the domain keeps a HashSet), so its order says nothing about purchase order. The authoritative record is the
 // public PurchasesRevealed event: one per Evolution sub-phase, its picks in the order they were made (ADR 0089),
-// and every feed entry carries its sequence. This log keeps those picks as the feed brings them, so any frame can
-// ask for the order known up to its own sequence: a replay never borrows a purchase from its future.
+// and every feed entry carries its sequence. This log keeps those picks as the feed brings them. What a creature
+// owns is the frame's own word; the log only orders it, and a purchase's place in that order never changes.
 export function purchaseLog() {
   const picks = [];
   const seen = new Set();

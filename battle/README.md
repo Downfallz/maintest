@@ -556,8 +556,8 @@ Each creature is drawn as the evolution its purchases resolve to
     then another family's Stage 1, the latest bought first within each.
   - Capstones never change the image.
 - **Purchase log** (`table/battle-chronology.js`). It keeps the feed's `PurchasesRevealed` picks in order, so
-  the live board and every replayed frame resolve with the purchases known at their sequence. The acquired-tier
-  set's order is never used.
+  every frame, live or replayed, orders what it says the creature owns by when each purchase was made. The
+  acquired-tier set's order is never used.
 - **Registry** (`table/battle-evolution-art.js`). Each illustration's file, canvas, silhouette bounds and ground
   anchor; the approved hybrids, none yet; the capstone effects and their composition order. Which package draws
   which illustration comes with the catalogue's packages (`visual.artwork`, `visual.effect`), authored in

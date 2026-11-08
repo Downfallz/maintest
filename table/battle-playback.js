@@ -287,9 +287,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
       : action ? presentedView(latest, replay) : latest;
-    // A recorded frame shows the purchases known when it was recorded: before an action, the one ahead of it.
-    const through = !current ? Infinity : action && stage === 'windup' ? current.sequence - 1 : current.sequence ?? Infinity;
-    const board = livePresentation(display, bought, { log: purchases, through });
+    // Every frame, live or recorded, shows the purchases it owns, ordered by when they were made (ADR 0151).
+    const board = livePresentation(display, bought, { log: purchases });
     const cue = action ? actionCue(action, catalogue, harmful) : null;
     const frame = action ? { ...board.frame, stage, actor: String(current.actor.id),
       target: cue.contact[0] ?? null, targets: [], cue } : board.frame;

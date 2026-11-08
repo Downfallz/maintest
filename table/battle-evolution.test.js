@@ -100,14 +100,24 @@ test('several capstones compose in their fixed layer order, whatever the order t
   assert.deepEqual(one.capstoneEffectIds, ['capstone-titan', 'capstone-archmage']); assert.deepEqual(other.capstoneEffectIds, one.capstoneEffectIds);
   assert.equal(one.dominantTierId, T('lich')); assert.equal(other.dominantTierId, T('ravager'));
 });
-test('a recorded frame resolves with the purchases known up to its own sequence', () => {
-  // Revenant at 30, Deathstalker at 60: a frame between them, and one before either, show what was known then.
+test('a recorded frame resolves the purchases it owned, in the order they were made', () => {
+  // Revenant at 30, Deathstalker at 60: a frame owning only the first ones shows what it owned then.
   const { creature, history } = bought(['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker']);
-  const at = (through, tiers) => resolveEvolution({ ...creature, acquiredTiers: tiers.map(T) }, packages, { ...history, through });
-  assert.equal(at(30, ['occultist', 'necromancer', 'lich']).artworkId, 'warped-stage3-revenant');
-  assert.equal(at(20, ['occultist', 'necromancer']).artworkId, 'warped-stage2-necrotic');
-  assert.equal(at(60, ['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker']).dominantTierId, T('lich'));
-  assert.deepEqual(at(60, ['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker']), at(60, ['deathstalker', 'assassin', 'prowler', 'lich', 'necromancer', 'occultist']));
+  const at = tiers => resolveEvolution({ ...creature, acquiredTiers: tiers.map(T) }, packages, history);
+  assert.equal(at(['occultist', 'necromancer', 'lich']).artworkId, 'warped-stage3-revenant');
+  assert.equal(at(['occultist', 'necromancer']).artworkId, 'warped-stage2-necrotic');
+  assert.equal(at(['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker']).dominantTierId, T('lich'));
+  assert.deepEqual(at(['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker']), at(['deathstalker', 'assassin', 'prowler', 'lich', 'necromancer', 'occultist']));
+});
+test('a frame borrowed by an earlier interlude keeps its purchases in their order, never as older than the rest', () => {
+  // An upkeep interlude at sequence 65 borrows the round's first combat frame, which already owns Deathstalker,
+  // revealed at 70: Revenant, bought first, stays the identity.
+  const log = purchaseLog();
+  log.receive([{ sequence: 30, event: { kind: 'PurchasesRevealed', choices: [T('occultist'), T('necromancer'), T('lich')].map(tier => ({ creature: 1, tier })) } },
+    { sequence: 70, event: { kind: 'PurchasesRevealed', choices: [T('prowler'), T('assassin'), T('deathstalker')].map(tier => ({ creature: 1, tier })) } }]);
+  const frame = { id: '1', acquiredTiers: ['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker'].map(T) };
+  const shown = resolveEvolution(frame, packages, { log });
+  assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.chronology, 'complete');
 });
 test('without a purchase log the order is not guessed from the set: a fixed rule decides and says so', () => {
   const creature = { id: '1', acquiredTiers: [T('deathstalker'), T('lich'), T('prowler'), T('occultist'), T('assassin'), T('necromancer')] };

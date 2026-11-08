@@ -52,9 +52,9 @@ const packagesOf = catalogue => new Map((catalogue?.packages ?? []).map(pack => 
 function replayBoard(action, actions, index, stage, latest, catalogue, purchases) {
   if (!action) return null;
   if (action.final) return livePresentation({ board: action.board }, packagesOf(catalogue), { log: purchases });
-  // Each recorded frame shows the purchases known when it was recorded (ADR 0151): before an action, the one ahead.
-  const through = stage === 'before' ? action.sequence - 1 : action.sequence;
-  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue), { log: purchases, through });
+  // Each recorded frame shows the purchases it owns, ordered by when they were made (ADR 0151); an interlude that
+  // borrows a later frame of its round is ordered the same way.
+  const board = livePresentation(action.frame ? { board: playbackBoard({ actions, index, stage, round: action.round }, latest.board) } : null, packagesOf(catalogue), { log: purchases });
   board.round = action.round;
   if (action.interlude === 'upkeep') board.phase = 'StartOfRound';
   if (action.interlude === 'aftermath') board.phase = 'EndOfRound';

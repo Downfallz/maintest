@@ -28,8 +28,10 @@ ids to illustrations.
   the page's own id. The catalogue serves both fields with each package's visual. The content hash does not
   move.
 - **Purchase order.** `table/battle-chronology.js` keeps a purchase log from the feed's `PurchasesRevealed`
-  events, ordered by sequence and then by pick. A recorded frame asks for the order known up to its own
-  sequence; before an action, that is the sequence ahead of it. Purchases the log never saw count as older than
+  events, ordered by sequence and then by pick. What a creature owns is always the frame's own word, live or
+  recorded. The log only orders those purchases, and a purchase's place in the order never changes, so every frame
+  is ordered by the whole log. This includes an interlude that borrows a later frame of its round, which a cutoff
+  at the interlude's sequence would misorder. Purchases the log never saw count as older than
   every recorded one. Among themselves they are ordered by stage, then family, then id, and the result says the
   chronology was `partial` or `none`. The order is never read off the set.
 - **Resolution.** `table/battle-evolution.js` is pure and returns the dominant tier, the illustration, the hybrid
