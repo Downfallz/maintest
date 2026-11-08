@@ -100,15 +100,14 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await keyboardActivate(page, '[data-tempo-tab="3"]');
   await page.keyboard.press('Home'); await expect(page.locator('[data-tempo-tab="1"]')).toBeFocused();
   await keyboardActivate(page, '[data-speed="Quick"]');
-  await keyboardActivate(page, '#planning-dialog [data-help-open]'); await page.keyboard.press('Escape');
-  await expect(page.locator('#planning-dialog [data-help-open]')).toBeFocused();
+  await keyboardActivate(page, '#help-open'); await page.keyboard.press('Escape');
+  await expect(page.locator('#help-open')).toBeFocused();
   await expect(page.locator('[data-tempo-tab="1"]')).toContainText('Instinct');
   expect(state.writes.length).toBe(1); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#planning-dialog')).toBeHidden();
   expect(state.writes.slice(1).map(one => one.speed)).toEqual(['Quick', 'Standard', 'Standard']);
   // The spell choice opens by itself on the player's turn (ADR 0149).
   await combat(page, state); await expect(page.locator('#combat-dialog')).toBeVisible();
-  await keyboardActivate(page, '#combat-details-mode');
   await keyboardActivate(page, '[data-spell="strike"]');
   await keyboardActivate(page, '[data-creature="4"]');
   await expect(page.locator('[data-creature="4"]')).toHaveAttribute('aria-pressed', 'true');
@@ -149,9 +148,9 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     for (let i = 0; i < 3; i++) await page.locator('[data-speed="Standard"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close'); await page.locator('#planning-confirm').click();
     await expect(page.locator('#planning-dialog')).toBeHidden();
-    await combat(page, state); await openSpells(page); await page.locator('#combat-details-mode').click();
+    await combat(page, state); await openSpells(page);
     const last = page.locator('[data-spell="spell-17"]'); await last.scrollIntoViewIfNeeded(); await expect(last).toBeInViewport();
-    await fitsViewport(page, '#combat-dialog-close, #combat-details-mode'); await page.keyboard.press('Escape');
+    await fitsViewport(page, '#combat-dialog-close'); await page.keyboard.press('Escape');
     await page.locator('#settings').click(); await page.locator('#concede-open').scrollIntoViewIfNeeded();
     await expect(page.locator('#concede-open')).toBeInViewport(); await page.keyboard.press('Escape');
     await page.locator('[data-creature="4"]').click();

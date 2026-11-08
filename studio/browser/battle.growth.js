@@ -63,6 +63,10 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await fitsViewport(page, '#atlas-close, #atlas-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });
     await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+    // The reveal read, the team's tempos open by themselves (ADR 0150) and acknowledge their asking, once; the
+    // creature references read from here acknowledge nothing.
+    await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+    await expect.poll(() => shown.length).toBe(count + 1); await page.locator('#planning-close').click();
     const revealed = await read();
     for (const creature of [revealed.board.allies.find(one => one.id === offer.creature), revealed.board.enemies[0]]) {
       await page.locator(`#actor-layer [data-creature="${creature.id}"]`).click();
@@ -77,6 +81,6 @@ test('the real catalogue tree follows public purchases without acknowledging the
       if (creature.id === offer.creature) await page.screenshot({ path: info.outputPath('creature-inspection-real-host.jpg'), type: 'jpeg', quality: 85 });
       await page.keyboard.press('Escape');
     }
-    expect(shown.length).toBe(count); expect(writes.length).toBe(written); expect(errors).toEqual([]);
+    expect(shown.length).toBe(count + 1); expect(writes.length).toBe(written); expect(errors).toEqual([]);
   } finally { await page.close(); await stopHost(host); }
 });

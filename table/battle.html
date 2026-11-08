@@ -94,7 +94,7 @@
     <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
   <dialog id="planning-dialog" aria-labelledby="planning-heading">
-    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><button id="mutation-expand" type="button" aria-expanded="false" hidden>Expand</button><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
+    <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><div id="planning-tools" class="planning-tools"></div><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
     <div id="planning-creatures" aria-label="Choose a creature"></div></div><div id="planning-choices"></div>
     <section id="mutation-preview-region" aria-label="Selected mutation preview" hidden></section>
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
@@ -109,10 +109,9 @@
   <dialog id="result-dialog" aria-labelledby="result-title"><form method="dialog"><button class="close" aria-label="Close action result">×</button></form><p class="eyebrow">CONFIRMED BY THE HOST</p><h2 id="result-title">Action result</h2><p id="result-text"></p><button type="button" data-history-open>Open match history</button></dialog>
   <dialog id="combat-dialog" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
-    <p class="eyebrow">YOUR COMBAT CHOICE</p><h2 id="combat-heading">Choose a spell</h2>
+    <h2 id="combat-heading">Choose a spell</h2>
     <div id="combat-actor" class="combat-actor"></div>
-    <p id="combat-context"></p>
-    <div class="combat-browser-toolbar"><p id="combat-help"></p><button id="combat-details-mode" type="button" aria-pressed="false" aria-controls="combat-spells">Full details</button></div>
+    <p id="combat-help" hidden></p>
     <!-- Keyboard paging remains available even when every spell button is unavailable. -->
     <section id="combat-browser" tabindex="0" aria-label="Spellbook"><div id="combat-spells"></div></section>
     <div class="combat-dialog-footer"><section id="intent-preview" class="target-preview" tabindex="0" aria-label="Hidden intent estimate" hidden></section><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>

@@ -96,7 +96,7 @@ test('keyboard tabs and short landscapes keep the footer reachable without losin
   await page.setViewportSize({ width: 844, height: 390 }); const h = await mount(page);
   await page.locator('[data-tempo-tab="1"]').focus(); await page.keyboard.press('ArrowRight');
   await expect(page.locator('[data-tempo-tab="2"]')).toHaveAttribute('aria-selected', 'true');
-  await page.locator('[data-speed="Quick"]').click(); await page.locator('#planning-dialog [data-help-open]').click();
+  await page.locator('[data-speed="Quick"]').click(); await page.locator('#help-open').click();
   await page.locator('#help-close').click(); await expect(page.locator('[data-tempo-tab="2"]')).toContainText('Instinct');
   await fitsViewport(page, '#planning-confirm, #planning-close'); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

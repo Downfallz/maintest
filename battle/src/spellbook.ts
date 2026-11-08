@@ -12,13 +12,13 @@ const text = (tag: string, className: string, value = '') => {
 };
 
 // A spell to choose is the same card as everywhere else (the mutation tree's): name, cost and crit chips, its
-// targeting, and its effect lines with their icons, which Full details shows. Under it, whether it can be cast now.
+// targeting, and its effect lines with their icons. Under it, whether it can be cast now.
 function spellButton(spell: Spell, card: Parameters<typeof spellCard>[0], effects: Parameters<typeof spellCard>[2], choose: (id: string) => void) {
   const node = document.createElement('button'); node.type = 'button'; node.className = 'combat-spell'; node.dataset.spell = spell.id;
   node.title = spell.name;
   if (spell.colour) node.style.setProperty('--spell-accent', spell.colour);
   const face = spellCard(card, spell.id, effects, { inline: true, cost: spell.cost === '' ? null : spell.cost, crit: spell.crit });
-  // The effect lines and the crit note are the card's full details; compact shows its head and targeting.
+  // The effect lines and the crit note are the card's full details, which the spellbook always shows.
   const detail = text('span', 'spell-detail');
   detail.append(...face.querySelectorAll(':scope > .spell-card-effects, :scope > .spell-card-note'));
   if (spell.missing) detail.append(text('span', 'spell-note', 'Catalogue details unavailable.'));
@@ -31,24 +31,17 @@ function spellButton(spell: Spell, card: Parameters<typeof spellCard>[0], effect
 // Keep row nodes and scroll across polls and target selection. Reference browsing never sends a decision.
 export function spellbookControls(controller: Controller) {
   const list = document.getElementById('combat-spells')!;
-  const mode = document.getElementById('combat-details-mode') as HTMLButtonElement;
   const scroll = document.getElementById('combat-browser')!;
   let question = '', structure = '', catalogueIdentity: SpellCatalogue | null = null;
   let buttons = new Map<string, HTMLButtonElement>();
-  // Full details by default: a spell is read in full before it is chosen; compact is the player's choice.
-  let full = true;
   let resetPosition = true;
   // Going back from the field clears the draft; the card the player was on is still where they left it.
   let lastChosen: string | null = null;
-  mode.addEventListener('click', () => { full = !full; drawMode(); });
-  // One label and a pressed state: a label that flipped with the state would announce the opposite mode.
-  function drawMode() {
-    list.dataset.details = full ? 'full' : 'compact'; mode.setAttribute('aria-pressed', String(full));
-    mode.textContent = 'Full details';
-  }
+  // Every spell is read in full before it is chosen: full details are the spellbook's only mode.
+  list.dataset.details = 'full';
   function clear() {
-    question = ''; structure = ''; catalogueIdentity = null; full = true; resetPosition = true; lastChosen = null; buttons.clear(); list.replaceChildren();
-    scroll.scrollTop = 0; drawMode();
+    question = ''; structure = ''; catalogueIdentity = null; resetPosition = true; lastChosen = null; buttons.clear(); list.replaceChildren();
+    scroll.scrollTop = 0;
   }
   // The card under the player's eye: the focused one, or else the first one showing in the scroller.
   function anchor() {
@@ -103,7 +96,6 @@ export function spellbookControls(controller: Controller) {
       node.classList.toggle('spell-new', newSpells.includes(spell.id));
       node.querySelector('.spell-availability')!.textContent = `${newSpells.includes(spell.id) ? 'New · ' : ''}${spell.availability}`;
     }
-    drawMode();
     settle();
   }
   // A fresh question starts at the top; returning from the field keeps the place and the card in hand.

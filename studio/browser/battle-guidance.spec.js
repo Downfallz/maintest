@@ -101,12 +101,12 @@ test('mute prevents future tips, keeps History, and Help reopens the current sub
 test('manual Help preserves a mutation draft and fences a delayed acknowledgement', async ({ page }) => {
   const h = await mount(page); let release; h.state.ack = new Promise(resolve => { release = resolve; });
   await close(page); await page.locator('[data-mutation="root"]').click();
-  await page.locator('#planning-confirm').click(); await page.locator('#planning-dialog [data-help-open]').click();
+  await page.locator('#planning-confirm').click(); await page.locator('#help-open').click();
   await expect(page.locator('#planning-confirm')).toBeDisabled(); release();
   await expect.poll(() => h.state.shown.length).toBe(1); expect(h.state.writes).toEqual([]);
   await close(page); await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Warden');
   await expect(page.locator('#planning-confirm')).toBeEnabled();
-  await expect(page.locator('#planning-dialog [data-help-open]')).toBeFocused(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect(page.locator('#help-open')).toBeFocused(); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 for (const [kind, phrase] of [['Action', 'No hidden spell declaration'], ['Intent', 'choose targets later'], ['Target', 'already declared']]) test(`${kind} teaches the actual declaration mode`, async ({ page }) => {
   const h = await mount(page, { kind, mode: kind === 'Action' ? 'AtActivation' : 'HiddenIntent' });

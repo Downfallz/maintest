@@ -81,10 +81,9 @@
 #battle .creature[aria-pressed="true"] .caption { background: #5a48297d; border-bottom: 1px solid var(--gold); }
 #combat-dialog { width: min(900px,calc(100vw - 28px)); height: min(780px,calc(100dvh - 32px)); padding: 20px; overflow: hidden; }
 #combat-dialog[open] { display: flex; flex-direction: column; gap: 8px; }
-#combat-dialog > .eyebrow { margin: 0; min-height: 40px; max-width: calc(100% - 220px); }
-#combat-dialog h2 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
+/* The creature's name shares its row with the close button: nothing sits above it. */
+#combat-dialog h2 { display: flex; align-items: center; min-height: 44px; margin: 0; padding-right: 52px; font-size: 22px; overflow-wrap: anywhere; }
 #combat-dialog-close { position: absolute; right: 20px; top: 20px; margin: 0; }
-#combat-context { margin: 0; color: var(--gold); font-size: 13px; }
 /* The acting creature's place in the order, its tempo and its energy, right under its name. */
 .combat-actor { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
 .combat-actor:empty { display: none; }
@@ -94,9 +93,8 @@
 .actor-chip[data-kind="tempo"] { padding-left: 11px; border-color: color-mix(in srgb, var(--tempo) 70%, transparent); background: color-mix(in srgb, var(--tempo) 16%, #0f1c21); color: var(--tempo); letter-spacing: .06em; text-transform: uppercase; }
 .actor-chip[data-kind="energy"] { padding-left: 8px; border-color: #8edcf066; color: #c9f0fa; }
 .actor-chip[data-kind="energy"] .cue-icon { width: 14px; height: 14px; color: #8edcf0; }
-.combat-browser-toolbar { display: flex; align-items: center; gap: 10px; }
-#combat-help { flex: 1; color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; }
-#combat-details-mode { flex: 0 0 110px; padding: 8px; font-size: 12px; }
+#combat-help { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; }
+#combat-help[hidden] { display: none; }
 #combat-browser { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 4px; }
 #combat-spells { display: grid; gap: 16px; }
 .spell-group-title { margin: 0 0 7px; color: #bdcbbf; font-size: 12px; letter-spacing: .06em; }
@@ -129,14 +127,11 @@
 @media (max-width: 619px) {
   #combat-dialog { padding: 12px; gap: 6px; }
   #combat-dialog h2 { font-size: 19px; }
-  #combat-dialog > .eyebrow { visibility: hidden; }
-  #combat-context { font-size: 11px; }
   #combat-dialog-close { right: 12px; top: 12px; }
   #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: 1fr; }
   .combat-spell > .spell-card { padding: 8px; }
   .combat-spell .spell-card-name { font-size: 15px; }
   #combat-help { font-size: 11px; }
-  #combat-details-mode { flex-basis: 90px; }
   #battle[data-combat="targets"] .actor-summary { display: none; }
   #battle[data-combat="targets"] .battle-actions { grid-column: 1/-1; grid-row: 1; }
   #battle[data-combat="targets"] .live-status { grid-row: 2; }
@@ -419,9 +414,7 @@
 
 @media (max-height: 520px) {
   #combat-dialog { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
-  #combat-dialog > .eyebrow { min-height: 0; }
-  #combat-dialog h2 { padding-right: 56px; font-size: 18px; }
-  #combat-context { font-size: 11px; }
+  #combat-dialog h2 { font-size: 18px; }
   #combat-help { font-size: 10px; }
   #combat-declare { height: 44px; }
 }
@@ -866,7 +859,9 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) {
   --mutation-height: clamp(295px,52dvh,470px); --mutation-width: clamp(310px,38vw,480px);
 }
-body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(74dvh,660px); --mutation-width: clamp(350px,48vw,650px); }
+/* The mutation pick always opens at its full height: the tree, its preview and its header tools need the room. A side
+   panel is full height already and keeps its width, so the field beside it keeps its room too. */
+body:has(#planning-dialog[data-kind="Evolution"][open]) { --mutation-height: min(74dvh,660px); }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) {
   position: fixed; z-index: 12; inset: auto 0 0; margin: 0 auto; width: 100%; max-width: none;
   height: var(--mutation-height); max-height: none; border: 0; border-top: 2px solid var(--gold);
@@ -879,13 +874,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
   grid-template-rows: minmax(48px,auto) auto; column-gap: 4px; align-items: center;
 }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .eyebrow { display: none; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header :is(.history-reference,#mutation-expand) {
-  grid-row: 1; min-height: 44px; min-width: 44px; padding: 3px; float: none; margin: 0;
-  font-size: 12px; border: 0; background: none; color: var(--muted);
+/* Help and History are in the field's header already; a docked sheet's header keeps its own tools instead. */
+#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-header .history-reference { display: none; }
+.planning-tools:empty { display: none; }
+#planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 1 / 2 / auto / -1; display: flex; gap: 6px; justify-self: end; }
+#planning-dialog[data-kind="Evolution"] .planning-tools .planning-action {
+  min-height: 44px; max-width: 108px; padding: 4px 12px; font-size: 12px; line-height: 1.15; text-wrap: balance;
 }
-#planning-dialog[data-kind="Evolution"] #mutation-expand { grid-column: 2; color: var(--gold); }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) [data-help-open] { grid-column: 3; }
-#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) [data-history-open] { grid-column: 4; }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-heading { grid-area: 1/1; align-self: start; margin: 2px 0 0; font: 21px Georgia,serif; }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-help { grid-area: 1/1; align-self: end; margin: 0 0 2px; color: var(--gold); font-size: 11px; }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) #planning-creatures { grid-area: 2/1/auto/-1; display: flex; gap: 4px; padding: 2px 0; }
@@ -925,7 +920,14 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
 .mutation-node:not([data-status="available"]) .mutation-select { padding: 3px; gap: 1px; border-style: dashed; }
 .mutation-node:not([data-status="available"]) svg { display: none; }
 #mutation-preview-region { flex: none; max-height: min(17dvh,150px); overflow: auto; overscroll-behavior: contain; }
-#planning-dialog.expanded-tree #mutation-preview-region { max-height: 28dvh; }
+#planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: 28dvh; }
+/* A short portrait keeps the confirmation in reach: the field's creatures switch the recipient there, so the tabs
+   give way, and the preview keeps a smaller share. */
+@media (orientation: portrait) and (max-height: 660px) {
+  #planning-dialog[data-kind="Evolution"] #planning-creatures { display: none; }
+  #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: minmax(48px,auto); }
+  #planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: min(17dvh,150px); }
+}
 .mutation-preview { margin: 0 12px 4px; padding: 6px 10px 0; border-left: 2px solid var(--mutation-colour); background: var(--raised); font-size: 13px; overflow-wrap: anywhere; }
 .preview-name { display: inline; font: 17px Georgia,serif; }
 .mutation-initiative { margin-left: 8px; color: var(--muted); font-size: 12px; }
@@ -938,10 +940,6 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
   body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle-zone { margin: 0 var(--mutation-width) 0 0; }
   body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open]) #battle :is(.hud-top,.timeline-wrap) { margin-right: var(--mutation-width); }
 }
-@media (orientation: portrait) and (max-height: 660px) {
-  #planning-dialog[data-kind="Evolution"]:not(.expanded-tree) #planning-creatures { display: none; }
-  #planning-dialog[data-kind="Evolution"]:not(.expanded-tree) .planning-header { grid-template-rows: minmax(48px,auto); }
-}
 @media (prefers-reduced-motion: no-preference) {
   .mutation-links path.lit { animation: mutation-ink 180ms ease-out; }
   @keyframes mutation-ink { from { opacity: .35; } to { opacity: 1; } }
@@ -951,11 +949,11 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"])[open])
   #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"]) .planning-footer { margin-top: auto; }
   #mutation-preview-region { max-height: 35dvh; }
 }
-/* Expand into the timeline row on a phone and leave enough stage height for two readable teams. */
+/* On a phone the pick reaches into the timeline row and leaves enough stage height for two readable teams. */
 @media (max-width: 759px) and (orientation: portrait) {
-  body:has(#planning-dialog.expanded-tree[open]) { --mutation-height: min(71dvh,calc(100dvh - 252px),660px); }
-  body:has(#planning-dialog.expanded-tree[open]) #battle-zone { grid-row-start: 2; }
-  body:has(#planning-dialog.expanded-tree[open]) .timeline-wrap { display: none; }
+  body:has(#planning-dialog[data-kind="Evolution"][open]) { --mutation-height: min(71dvh,calc(100dvh - 252px),660px); }
+  body:has(#planning-dialog[data-kind="Evolution"][open]) #battle-zone { grid-row-start: 2; }
+  body:has(#planning-dialog[data-kind="Evolution"][open]) .timeline-wrap { display: none; }
 }
 
 /* A new round's announcement: a short banner at the top of the field that fades by itself. */
@@ -1170,11 +1168,15 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 @media (max-height: 700px) and (orientation: portrait) {
   body:has(#combat-dialog[open]) { --spell-height: min(62dvh, 490px); }
 }
-/* Enlarged text in a narrow docked panel can outgrow it: the panel then scrolls as a whole, the spells keep a
-   readable height of their own, and the footer that declares stays pinned at its bottom edge. */
-#combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
-#combat-dialog #combat-browser { min-height: 120px; }
-#combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
+/* One scroller: the spells scroll under a header that stays put, and the panel itself never does, so a swipe
+   cannot carry the creature's name and its chips out of sight. Enlarged text shrinks the spells' room, not the
+   header's or the footer's, and the footer that declares stays at the bottom edge. */
+#combat-dialog { overflow: hidden; padding-bottom: 0; }
+#combat-dialog > :not(#combat-browser) { flex: 0 0 auto; }
+#combat-dialog #combat-browser { flex: 1 1 0; min-height: 0; }
+#combat-dialog .combat-dialog-footer { padding-bottom: 12px; background: var(--panel); }
+/* Choosing at the slot declares nothing here: an empty footer takes no room under the spells. */
+#combat-dialog .combat-dialog-footer:not(:has(> :not([hidden]))) { display: none; }
 
 /* The creature a docked sheet is about: the tempo sheet's creature in hand wears the mutation sheet's gold underline,
    and each creature still to draft wears its drafted tempo in its tag, gold for Instinct and blue for Precision. */
@@ -1222,4 +1224,40 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   .tempo-pinned .tempo-mark { width: 30px; height: 30px; font-size: 15px; }
   .tempo-pinned .tempo-words span { font-size: 10px; line-height: 1.25; }
   .tempo-reference { margin-top: 8px; padding-top: 6px; }
+}
+
+/* The command bar reads as a docked sheet at rest: the sheets' panel, gold edge and rounded top, the phase in the
+   sheets' serif with its step as a chip, a quiet dot for a live connection, and one pill for the next step. The
+   seat's name stays for assistive technology only: the header already shows whose seat this is. Its row keeps its
+   height, which the results card shares. */
+#battle .command-dock {
+  grid-template-columns: minmax(0,1fr) minmax(0,1.3fr) auto; align-items: center; gap: 6px 20px; padding: 12px 22px;
+  background: var(--panel); border-top: 2px solid var(--gold); border-radius: 12px 12px 0 0; box-shadow: 0 -6px 22px #07101455;
+}
+#battle #perspective { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#battle .actor-summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
+#battle .actor-summary h1 { margin: 0; font: 21px Georgia,serif; color: var(--ink); }
+#battle #actor-meta { margin: 0; padding: 3px 10px; border: 1px solid #c7a96b66; border-radius: 999px; color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: .4px; }
+#battle #actor-meta:empty { display: none; }
+#battle[data-connection="live"] .actor-summary > div::before {
+  content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #7fd3a0; box-shadow: 0 0 0 3px #7fd3a026;
+}
+#battle[data-connection="live"] #connection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#battle #instruction {
+  margin: 0; color: #b9c7bd; font-size: 13px; line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+#battle .battle-actions { justify-content: flex-end; }
+#battle .battle-actions :is(#planning-open, #combat-open, #match-open) { min-height: 46px; padding: 8px 22px; border-radius: 999px; font-size: 15px; font-weight: 600; }
+@media (max-width: 619px) {
+  #battle .command-dock { grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto auto; align-content: center; gap: 6px; padding: 10px 14px; }
+  #battle .live-status { grid-column: 1; grid-row: 2; }
+  #battle .battle-actions { grid-column: 1; grid-row: 3; }
+  #battle .battle-actions :is(#planning-open, #combat-open, #match-open) { flex: 1; }
+  #battle .actor-summary h1 { font-size: 19px; }
+  #battle #instruction { font-size: 12px; }
+}
+@media (max-width: 619px) and (max-height: 650px) {
+  #battle #instruction { -webkit-line-clamp: 1; line-clamp: 1; }
+  #battle .battle-actions :is(#planning-open, #combat-open, #match-open) { min-height: 44px; padding: 6px 16px; }
 }

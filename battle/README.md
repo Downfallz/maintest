@@ -269,8 +269,10 @@ The mutation phase opens its private tree by itself once the board is clear: aft
 turn order and a first-use tip ([ADR 0138](../docs/adr/0138-open-the-mutation-tree-with-the-mutation-phase.md)).
 A pick that leaves team picks keeps the tree open on the next creature with offers and its remaining picks;
 the last pick or a pass closes it. Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
-The graph docks below the scene on phones and beside it on wider screens. Expand gives it more
-space. Each selectable node corresponds to an offer from the host. Acquired paths and connections
+The graph docks below the scene on phones and beside it on wider screens, always at its full height: there is
+no Expand or Compact. Its header holds **Full mutation tree** and **Pass remaining picks**; Help and History stay in
+the field's header, which a docked sheet leaves in view. A short portrait keeps the confirmation in reach by letting
+the creature tabs give way: tapping a creature on the field switches the recipient there. Each selectable node corresponds to an offer from the host. Acquired paths and connections
 use catalogue prerequisites, including shared capstones. Unknown offers stay selectable by id.
 
 Selecting a branch previews its initiative, its spells as compact spell cards, passives and what it opens. Phaser previews
@@ -320,7 +322,10 @@ beside the field as the mutation choice does: a sheet under it on a phone, a pan
 ([ADR 0149](../docs/adr/0149-open-the-spell-choice-with-the-players-turn.md)). Closing it leaves **Choose spell** in
 the dock. Groups follow the spell types in the order the host serves them (the domain's: attacks first). Right under
 the acting creature's name, three chips say what it plays with: its place in the turn order, its tempo (Instinct or
-Precision, with the rule in its title) and the energy it has to spend; the line under them keeps the round and phase.
+Precision, with the rule in its title) and the energy it has to spend. Nothing sits above the name, and no context
+line, sentence or toggle under the chips: the round and phase are in the field's header, and choosing then targeting
+is what the panel shows. Only a hidden intent, whose targets come later, keeps a sentence. The spells are the one
+scroller: the panel itself never scrolls, so a long swipe cannot carry its header out of sight.
 
 Combat choices group the current creature's known/offered spells by the served card type, with family
 accents from the shared talent palette. Compact cards show cost (including zero), positive critical chance
@@ -328,20 +333,19 @@ and availability. Current question guidance supplies current chances and unavail
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-**Full details**, on by default, shows the whole reference in full: complete names, targeting, target/caster
-effects and critical notes, including unavailable cards. Turning it off folds every card to its head for a
-compact list; a new creature's choice starts in full again. Unknown catalogue entries keep their raw identity and remain playable
+Every card shows the whole reference in full, the spellbook's only mode: complete names, targeting, target/caster
+effects and critical notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
 
 Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button: the
 name with cost and crit-chance chips (the current tempo's chance when the host's guide gives one, the
-catalogue's with its tempo and d20 face otherwise), the targeting line, and in Full details the effect lines
+catalogue's with its tempo and d20 face otherwise), the targeting line, and the effect lines
 with the icon of the stat each moves.
 
 `table/battle-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
-update existing nodes, preserving focus, scroll, details mode and card positions. The same asking retains
+update existing nodes, preserving focus, scroll and card positions. The same asking retains
 browsing when returning from field targets. A new asking, creature, seat, hidden page or access loss clears
 the reference and its local state. Nothing is persisted. Group/type fallback never guesses from effect prose.
 
@@ -692,6 +696,9 @@ and the physical-device checks still pending.
 The live view keeps its header to the round, its phase beside it, History, Help (`?`) and one gear for every
 match setting: motion, sound, reading mode, playback speed, vibration, notifications and concede.
 The "choose viewpoint" switch, the upkeep-and-aftermath review overlay, the dock's link back to the table and the
-"provisional artwork" footer are gone; the seat is named in the dock without the word viewpoint. **Next result** and
+"provisional artwork" footer are gone; the seat is named in the dock for assistive technology only, the header
+already showing whose seat it is. At rest the dock reads as a docked sheet: the sheets' panel, gold edge and rounded
+top, the phase in their serif with its step as a chip, a quiet dot for a live connection (the word Live is kept for
+assistive technology), at most two lines of instruction and one pill for the next step. **Next result** and
 **Skip** float over the bottom of the battlefield only while results play, because a row appearing in the grid would
 resize the scene, and a resize cancels playback. On a phone the header is 48px (44px on short screens).

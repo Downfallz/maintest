@@ -2,7 +2,7 @@ import { battleTargetPreview } from '../../table/battle-targets.js';
 import { targetPreviewControls } from './target-preview';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { cardTitle, cardsById } from '../../table/card.js';
-import { phaseLabel, tempoLabel, TEMPO_RULE } from '../../table/terms.js';
+import { tempoLabel, TEMPO_RULE } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { spellbookControls } from './spellbook';
 
@@ -76,10 +76,11 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     el<HTMLButtonElement>('combat-cancel').disabled = model.sending;
     if (choosing) {
       el('combat-heading').textContent = `${name(model.actor)} · choose a spell`;
-      const context = model.reference;
-      el('combat-context').textContent = [context.round == null ? null : `Round ${context.round}`, phaseLabel(context.phase)].filter(Boolean).join(' · ');
-      drawActor(context);
-      el('combat-help').textContent = model.waitingFor === 'Action' ? 'Choose a spell, then select its targets on the field. Confirm to cast.' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
+      drawActor(model.reference);
+      // The round and phase are in the header, and choosing then targeting is what the panel shows: only a hidden
+      // intent, whose targets come later, needs a sentence of its own.
+      const help = el('combat-help'); help.hidden = model.waitingFor !== 'Intent';
+      help.textContent = help.hidden ? '' : 'Declare a hidden intent. Its targets will be chosen when it resolves.';
       spellbook.render(model, catalogue, newSpells);
       const confirm = el<HTMLButtonElement>('combat-declare');
       confirm.hidden = model.waitingFor !== 'Intent'; confirm.disabled = !model.canSubmit;
@@ -98,7 +99,7 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     }
     if (!model.opened) {
       spellbook.clear();
-      for (const id of ['combat-heading', 'combat-context', 'combat-help', 'combat-title', 'combat-selection']) el(id).textContent = '';
+      for (const id of ['combat-heading', 'combat-help', 'combat-title', 'combat-selection']) el(id).textContent = '';
       el('combat-actor').replaceChildren(); el('combat-actor').dataset.content = '';
       el('combat-declare').textContent = 'Declare spell';
     }

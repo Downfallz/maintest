@@ -87,13 +87,13 @@ test('skip and duplicate polls keep every action without replaying it', async ({
 test('reading preserves an open draft and does not acknowledge a new question', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-open').click();
   await expect.poll(() => h.state.shown).toEqual(['11']); await page.locator('[data-mutation="root"]').click();
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await expect(page.locator('#planning-confirm')).toBeDisabled();
   await h.publish([entry(10)]); await page.locator('#history-close').click();
-  await expect(page.locator('#planning-dialog [data-history-open]')).toBeFocused();
+  await expect(page.locator('#history-open')).toBeFocused();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Warden');
   await expect(page.locator('#planning-confirm')).toBeEnabled();
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await h.publish([entry(11)], { waitingAsked: 20 }); await expect(rows(page)).toHaveCount(2);
   expect(h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
@@ -299,7 +299,7 @@ test('Back returns focus to the inspected row and the kind filter speaks player 
 test('a covered question stays unacknowledged while an event is inspected and earlier rounds load', async ({ page }) => {
   const h = await mount(page); h.state.historyFeed = [{ ...entry(1), event: { ...entry(1).event, roundId: 1 } }];
   await page.locator('#planning-open').click(); await expect.poll(() => h.state.shown).toEqual(['11']);
-  await page.locator('#planning-dialog [data-history-open]').click();
+  await page.locator('#history-open').click();
   await rows(page).first().locator('summary').click(); await rows(page).first().getByRole('button', { name: 'Inspect event' }).click();
   await page.locator('#history-earlier').click(); await expect(page.locator('#history-list [data-sequence="1"]')).toHaveCount(1);
   await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);

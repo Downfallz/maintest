@@ -87,7 +87,7 @@ test('Help reference opens the full mutation tree: read-only, keyboard navigable
 });
 test('reference over a mutation draft preserves its selection and does not acknowledge again', async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#planning-dialog')).toBeVisible(); await page.locator('[data-mutation="predator"]').click();
-  await page.locator('#planning-dialog [data-help-open]').click(); await page.locator('#help-dialog [data-growth-open]').click();
+  await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
   await h.publish(); await expect(page.locator('#planning-confirm')).toBeDisabled();
   expect(h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
