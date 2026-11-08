@@ -112,7 +112,14 @@ const passOver = () => playback.skip({ dismissUpkeep: true });
 const controls = combatControls(combat, name, passOver);
 // The full mutation tree, one view for the chooser, the public reference and a revealed mutation's path.
 const atlasUI = atlasControls(() => render());
-const planningUI = planningControls(planning, name, passOver, inspectCreature, atlasUI);
+// Opening the team's tempos by hand reads the round's reveal, as Continue does: its receipt and crests leave the
+// field to the tempos.
+const beforePlanning = () => {
+  passOver();
+  const receipt = growth.receipt() as { sequence: number } | null;
+  if (receipt && planning.model().latest?.waitingFor === 'Speed') { revealRead = receipt.sequence; growth.dismiss(); }
+};
+const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 // The end card plays the same game again (ADR 0153): against this table's opponent, with the seats this browser holds
 // at it. A recording is nobody's game to play again.

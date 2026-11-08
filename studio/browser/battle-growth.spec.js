@@ -220,6 +220,17 @@ test('a future unlock waits behind a held closing cast and keeps its badge for t
   await expect(page.locator('[data-spell="devour"]')).toHaveClass(/spell-new/);
   expect(h.shown).toEqual(['10', '22']); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
+test('opening the team tempos by hand reads the reveal: its receipt and crests leave the field', async ({ page }) => {
+  const h = await mount(page); await page.locator('#planning-close').click();
+  unlock(h, { waitingFor: 'Speed', waitingAsked: 21, waitingCreature: 1, options: { speed: { missing: [1, 2] } } }); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#battle')).not.toHaveAttribute('data-reveal', '');
+  await page.locator('#planning-open').click();
+  await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed'); await expect(page.locator('#planning-dialog')).toBeVisible();
+  await expect(page.locator('#growth-receipt')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '');
+  // Read for good: closing the tempos does not bring it back.
+  await page.locator('#planning-close').click(); await page.clock.runFor(500); await expect(page.locator('#growth-receipt')).toBeHidden();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
 for (const read of ['continue', 'see']) test(`the team's tempos wait for a fresh mutation reveal to be read, here with ${read === 'see' ? 'See' : 'Continue'}`, async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-close').click();
   unlock(h, { waitingFor: 'Speed', waitingAsked: 21, waitingCreature: 1, options: { speed: { missing: [1, 2] } } }); await h.publish();
