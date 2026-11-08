@@ -81,9 +81,11 @@ test('dismissal survives polls, next creature and reload; a new subject gets its
   await h.publish([], { waitingFor: 'Speed', waitingAsked: 13, options: { speed: { missing: [1, 2, 3] } } });
   await expect(page.locator('#help-dialog')).toBeVisible(); await expect(page.locator('#help-explanation')).toContainText('only Precision can crit');
   await close(page); await h.publish([], { waitingAsked: 14, waitingCreature: 3 });
-  // Only the mutation tree acknowledged, on the Evolution askings it opened for; no tip and no tempo asking did.
+  // Only the docked sheets acknowledged, on the askings they opened for: the mutation tree on Evolution, the team's
+  // tempos on Speed once their tip was read (ADR 0150). No tip did.
   await expect(page.locator('#help-dialog')).toBeHidden(); expect(h.state.shown).toContain('12');
-  expect(h.state.shown.filter(one => !['11', '12'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
+  await expect.poll(() => h.state.shown.some(one => ['13', '14'].includes(one))).toBe(true);
+  expect(h.state.shown.filter(one => !['11', '12', '13', '14'].includes(one))).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 test('mute prevents future tips, keeps History, and Help reopens the current subject', async ({ page }) => {
   const h = await mount(page); await page.locator('#help-mute').check(); await close(page); await page.locator('#planning-close').click();
