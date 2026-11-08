@@ -82,6 +82,7 @@ internal sealed class TableFiles
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
             ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
             ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),
+            ["/notification-badge.png"] = (Path.Combine(tableDirectory, "notification-badge.png"), Png),
             ["/card.js"] = (Path.Combine(tableDirectory, "card.js"), JavaScript),
             ["/board.js"] = (Path.Combine(tableDirectory, "board.js"), JavaScript),
             ["/timeline.js"] = (Path.Combine(tableDirectory, "timeline.js"), JavaScript),

@@ -35,3 +35,10 @@ test('installed app and browser chrome use the same slate as the page', () => {
   }
   assert.ok(read('studio/index.html').includes(`name="theme-color" content="${tokens['--brand-slate']}"`));
 });
+test('the app and Android notifications use the rune instead of the placeholder letter', () => {
+  assert.match(read('table/icon.svg'), /<path d=/);
+  assert.doesNotMatch(read('table/icon.svg'), /<text/);
+  assert.match(read('table/sw.js'), /badge: BADGE/);
+  assert.match(read('table/sw.js'), /notification-badge\.png/);
+  assert.doesNotMatch(read('table/navigation.js'), /brand-mark[^<]*>D<\/span>/);
+});
