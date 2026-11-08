@@ -11,15 +11,15 @@ const authored = JSON.parse(readFileSync(new URL('../data/presentation/mutation-
 test('every stage one to three package names exactly one registered illustration, and every illustration is named', () => {
   const named = tiers.filter(tier => tier.level <= 3).map(tier => authored[tier.id]?.artwork);
   assert.ok(named.every(Boolean)); assert.equal(new Set(named).size, named.length);
-  assert.deepEqual([...named].sort(), EVOLUTION_ART.filter(asset => asset.stage > 0).map(asset => asset.id).sort());
+  assert.deepEqual([...named].sort((a, b) => a.localeCompare(b)), EVOLUTION_ART.filter(asset => asset.stage > 0).map(asset => asset.id).sort((a, b) => a.localeCompare(b)));
   for (const id of named) assert.ok(EVOLUTION_REGISTRY.art(id), id);
   assert.equal(BASE_EVOLUTION_ART.file, 'evolutions/base-creature.webp'); assert.equal(BASE_EVOLUTION_ART.stage, 0);
 });
 test('every registered illustration is a WebP file of the folder', () => {
   const paths = EVOLUTION_ART.map(asset => asset.file);
   assert.equal(new Set(paths).size, 22);
-  assert.deepEqual(readdirSync(new URL('battle-art/evolutions/', import.meta.url)).filter(name => name.endsWith('.webp')).sort(),
-    paths.map(path => path.replace('evolutions/', '')).sort());
+  assert.deepEqual(readdirSync(new URL('battle-art/evolutions/', import.meta.url)).filter(name => name.endsWith('.webp')).sort((a, b) => a.localeCompare(b)),
+    paths.map(path => path.replace('evolutions/', '')).sort((a, b) => a.localeCompare(b)));
   for (const path of paths) {
     const bytes = readFileSync(new URL(`battle-art/${path}`, import.meta.url));
     assert.equal(bytes.toString('ascii', 0, 4), 'RIFF'); assert.equal(bytes.toString('ascii', 8, 12), 'WEBP');
@@ -43,7 +43,7 @@ test('a hybrid is one registered entry, found by the two illustrations it combin
 });
 test('every capstone lends one registered effect, and effects compose in their fixed layer order', () => {
   const capstones = tiers.filter(tier => tier.level >= 4);
-  assert.deepEqual(capstones.map(tier => authored[tier.id]?.effect).sort(), CAPSTONE_EFFECTS.map(one => one.id).sort());
+  assert.deepEqual(capstones.map(tier => authored[tier.id]?.effect).sort((a, b) => a.localeCompare(b)), CAPSTONE_EFFECTS.map(one => one.id).sort((a, b) => a.localeCompare(b)));
   for (const tier of capstones) { assert.ok(capstoneEffect(authored[tier.id].effect)); assert.equal(authored[tier.id].artwork, undefined); }
   assert.deepEqual(composeCapstones(['capstone-archmage', 'capstone-titan', 'capstone-titan', 'unknown']), ['capstone-titan', 'capstone-archmage']);
 });

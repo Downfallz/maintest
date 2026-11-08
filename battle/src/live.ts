@@ -287,9 +287,10 @@ function render() {
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();
   if (targeting) frame = { ...frame, stage: 'targeting', actor: String(action.actor),
     targets: action.emptyCast ? [] : action.target.legalTargets.candidates.map(String), selected: action.picked.map(String) };
-  // The docked spell choice leaves the field in view, so a reveal stays on it while a spell is chosen; targets are
-  // chosen on the field itself, which the reveal leaves to them.
-  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !planning.model().opened;
+  // The docked spell and tempo choices leave the field in view, so a reveal stays on it while they are made; targets
+  // are chosen on the field itself, and the mutation sheet lights its own crests there, which the reveal leaves to them.
+  const sheet = planning.model();
+  const showGrowth = visible() && !playbackState.active && !replay.active && !action.target && !(sheet.opened && sheet.latest?.waitingFor !== 'Speed');
   growthUI.render(view, catalogue, showGrowth);
   // The docked spell choice steps aside, its draft kept, for whatever the field has to show first: results being read,
   // a recorded replay, an upkeep receipt still to open, and a turn order being revealed.

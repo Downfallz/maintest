@@ -12,7 +12,7 @@ const packages = readdirSync(tiersRoot).filter(name => name.endsWith('.json')).m
   .map(tier => ({ id: tier.id, name: tier.name, level: tier.level, prerequisites: tier.prerequisites ?? [], anyOf: tier.anyOf ?? [], spells: [], visual: art[tier.id] }));
 const T = name => `tier:${name}:v1`;
 const creature = (id, bought = []) => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 3, totalDefense: 1, currentInitiative: 5,
-  isAlive: true, isStunned: false, isStunImmune: false, knownSpells: [], conditions: [], acquiredTiers: bought.map(T).sort() });
+  isAlive: true, isStunned: false, isStunImmune: false, knownSpells: [], conditions: [], acquiredTiers: bought.map(T).sort((a, b) => a.localeCompare(b)) });
 // Each purchase revealed in its own Evolution sub-phase, in the order given: the chronology the page reads.
 const reveals = purchases => purchases.map(([id, name], index) => ({ sequence: index + 1, round: 1,
   event: { kind: 'PurchasesRevealed', roundId: 1, choices: [{ creature: id, tier: T(name) }] } }));
@@ -60,7 +60,7 @@ test('each creature shows the illustration its purchases resolve to, and only th
   await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('evolution-field.png') });
   // The ancestral creature is the base sprite loaded at boot: only the two evolved illustrations are fetched.
   await expect(figure(page, 2)).toHaveAttribute('data-artwork-shown', 'form:base-creature');
-  expect([...new Set(h.requests)].sort()).toEqual(['brute-stage2-frenzied.webp', 'warped-stage3-revenant.webp']);
+  expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(['brute-stage2-frenzied.webp', 'warped-stage3-revenant.webp']);
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
 

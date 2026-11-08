@@ -18,7 +18,7 @@ function bought(names, { creature = 1 } = {}) {
   const log = purchaseLog();
   log.receive(names.map((name, index) => ({ sequence: 10 * (index + 1), event: { kind: 'PurchasesRevealed', choices: [{ creature, tier: T(name) }] } })));
   // The set the board serves, in an order that is deliberately not the purchase order.
-  return { creature: { id: String(creature), acquiredTiers: names.map(T).sort() }, history: { log } };
+  return { creature: { id: String(creature), acquiredTiers: names.map(T).sort((a, b) => a.localeCompare(b)) }, history: { log } };
 }
 const resolve = (names, registry) => { const { creature, history } = bought(names); return resolveEvolution(creature, packages, history, registry); };
 // Hybrids are registered by the two illustrations they combine, as the catalogue's packages name them.
