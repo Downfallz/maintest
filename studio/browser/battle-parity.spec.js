@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { openSpells } from './battle-spells-fixture.js';
+import { teamTempos } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 
 // Cross-feature presentation acceptance. These are declared fixture responses, not a second game engine.
@@ -92,7 +93,9 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   expect(state.writes).toEqual([]); await keyboardActivate(page, '#planning-confirm');
   await expect(page.locator('#help-title')).toHaveText('Choose how your team acts');
-  await keyboardActivate(page, '#help-close'); await keyboardActivate(page, '#planning-open');
+  // Closing the tip opens the team's tempos by themselves, docked as the mutation tree is (ADR 0150).
+  await keyboardActivate(page, '#help-close'); await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');
+  await expect(page.locator('#planning-dialog')).toBeVisible();
   for (let i = 0; i < 3; i++) await keyboardActivate(page, '[data-speed="Standard"]');
   await keyboardActivate(page, '[data-tempo-tab="3"]');
   await page.keyboard.press('Home'); await expect(page.locator('[data-tempo-tab="1"]')).toBeFocused();
@@ -141,7 +144,7 @@ for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { 
     await fitsViewport(page, '#planning-confirm, #planning-close');
     await expect(page.locator('[data-mutation="Warped"]')).toBeInViewport();
     await page.locator('#planning-confirm').click(); await page.locator('#help-close').click();
-    await page.locator('#planning-open').click();
+    await teamTempos(page);
     for (let i = 0; i < 3; i++) await page.locator('[data-speed="Standard"]').click();
     await fitsViewport(page, '#planning-confirm, #planning-close'); await page.locator('#planning-confirm').click();
     await expect(page.locator('#planning-dialog')).toBeHidden();

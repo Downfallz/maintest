@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { returningBattlePlayer, matchResult } from './battle-help-fixture.js';
+import { returningBattlePlayer, matchResult, teamTempos } from './battle-help-fixture.js';
 import { fitsViewport, fitsBattlefield } from './fit.js';
 test.beforeEach(returningBattlePlayer);
 test.describe.configure({ mode: 'default' });
@@ -66,7 +66,7 @@ test('switching creatures drops a mutation picked for the previous one', async (
   await expect.poll(() => h.writes).toEqual([{ kind: 'Evolution', creature: 1, tier: 'root', asked: 11 }]); expect(h.errors).toEqual([]);
 });
 test('tempo needs explicit confirmation and a refusal stays visible', async ({ page }) => {
-  const h = await mount(page, { kind: 'Speed' }); h.status = 409; await page.locator('#planning-open').click();
+  const h = await mount(page, { kind: 'Speed' }); h.status = 409; await teamTempos(page);
   await expect(page.locator('#planning-help')).toContainText('only Precision can crit');
   for (let index = 0; index < 3; index++) await page.locator('[data-speed="Standard"]').click();
   expect(h.writes).toEqual([]);

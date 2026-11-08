@@ -292,10 +292,15 @@ Original AU4 card layout: [desktop](../docs/tabletop/images/battle-mutations/des
 
 ## AU5: team tempo drafts
 
-**Team tempos** opens a tab for every remaining eligible creature. Choose Instinct or Precision for each,
-return to edit any tab, then **Confirm tempos** once. The compact spell reference shows cost and Precision
-critical chance; current-creature guidance and catalogue-only references are explicitly distinguished.
-The footer stays reachable while the choices and references scroll.
+The team's tempos open by themselves with their phase, once per asking, and dock where the mutation sheet docks:
+a sheet under the field on a phone, a panel at its side on a wider screen
+([ADR 0150](../docs/adr/0150-open-the-team-tempos-with-their-phase.md)). Closing them leaves **Team tempos** in
+the dock. They show a tab for every remaining eligible creature, wearing the tempo drafted for it (Instinct's bolt
+in gold, Precision's star in blue, or "Not chosen"). Choose Instinct or Precision for each from two tempo cards,
+return to edit any tab, then **Confirm tempos** once. The creature in hand carries the spell choice's energy chip,
+and its known spells are the spell choice's cards, with the Precision crit chance on their crit chip. Current
+creature guidance and catalogue-only values are labelled apart. The footer stays reachable while the choices and
+cards scroll.
 
 `table/battle-tempo.js` owns the draft and frozen batch; `src/tempo.ts` owns the tabs and references. The first
 acknowledged creature's timing includes the team's draft time. Each later asking is acknowledged before its

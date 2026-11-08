@@ -17,6 +17,9 @@ function button(label: string, action: () => void) {
 }
 function line(value: string) { const node = document.createElement('p'); node.textContent = value; return node; }
 
+// The mutation pick and the team's tempos dock beside the field (ADR 0138, ADR 0150); the dice order stays a modal.
+const docked = (kind: string | undefined) => kind === 'Evolution' || kind === 'Speed';
+
 export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void, inspect: (id: string) => void,
   atlas: ReturnType<typeof atlasControls>) {
   const dialog = el<HTMLDialogElement>('planning-dialog');
@@ -46,7 +49,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     else inspect(String(id));
   }
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && dialog.open && dialog.dataset.kind === 'Evolution' && !document.querySelector('dialog:modal')) {
+    if (event.key === 'Escape' && dialog.open && docked(dialog.dataset.kind) && !document.querySelector('dialog:modal')) {
       event.preventDefault(); controller.close();
     }
   });
@@ -183,6 +186,10 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     [dialog.querySelector<HTMLElement>('#planning-creatures [aria-pressed="true"]'), ...dialog.querySelectorAll<HTMLElement>('#planning-choices button:not(:disabled)')]
       .find(node => node && node.getClientRects().length > 0)?.focus({ preventScroll: true });
   }
+  // A keyboard starts the tempo sheet on the tempo drafted for the creature in hand, else its first tempo.
+  function tempoStart() {
+    (dialog.querySelector<HTMLElement>('#planning-choices [data-speed][aria-pressed="true"]') ?? dialog.querySelector<HTMLElement>('#planning-choices [data-speed]'))?.focus({ preventScroll: true });
+  }
   function confirmLabel(model: ReturnType<Controller['model']>) {
     if (model.sending) return 'Sending…';
     if (model.choice?.tier) return 'Confirm ' + (lastCatalogue?.packages?.find(pack => pack.id === model.choice.tier)?.name ?? model.choice.tier);
@@ -224,7 +231,9 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     else el('planning-confirm').removeAttribute('aria-label');
     if (model.latest.waitingFor === 'Evolution') el('planning-help').textContent = pickBudget(model);
     if (!dialog.open) {
-      if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); } else dialog.showModal();
+      if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); }
+      else if (model.latest.waitingFor === 'Speed') { dialog.show(); tempoStart(); }
+      else dialog.showModal();
     } else if (continued && (!dialog.contains(document.activeElement) || (document.activeElement as HTMLButtonElement).disabled)) focusStart();
   }
   return { render, openCreature, recipient: () => creature };
