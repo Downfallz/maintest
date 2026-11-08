@@ -93,6 +93,23 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   expect(h.shown).toEqual([]); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 
+test('the portrait says it zooms, shows the illustration over the card and gives the card back', async ({ page }, info) => {
+  const h = await mount(page);
+  await page.locator('#actor-layer [data-creature="1"]').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  const portrait = page.locator('#inspect-portrait');
+  await expect(portrait.locator('.inspect-zoom-hint')).toBeVisible(); await expect(portrait).toHaveAttribute('aria-label', 'Show Skullbeast · 1 large');
+  await portrait.click();
+  await expect(page.locator('#inspect-zoom')).toBeVisible(); await expect(page.locator('#inspect-zoom-close')).toBeFocused();
+  expect(await page.locator('#inspect-zoom-close').evaluate(node => node.style.backgroundImage))
+    .toBe(await portrait.evaluate(node => node.style.backgroundImage));
+  await page.screenshot({ path: info.outputPath('inspect-zoom.png') });
+  // Escape gives the card back first; a second Escape closes the card.
+  await page.keyboard.press('Escape'); await expect(page.locator('#inspect-zoom')).toBeHidden();
+  await expect(page.locator('#inspect-dialog')).toBeVisible(); await expect(portrait).toBeFocused();
+  await portrait.click(); await page.locator('#inspect-zoom-close').click(); await expect(page.locator('#inspect-zoom')).toBeHidden();
+  await page.keyboard.press('Escape'); await expect(page.locator('#inspect-dialog')).toBeHidden();
+  expect(h.writes ?? []).toEqual([]); expect(h.errors).toEqual([]);
+});
 test('same-creature polls keep the spell cards, keyboard focus and reading position', async ({ page }) => {
   const h = await mount(page); await page.locator('#actor-layer [data-creature="1"]').click();
   const body = page.locator('#inspect-body'), strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');

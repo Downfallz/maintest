@@ -4,9 +4,9 @@ const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, max
 const before = [1, 2, 3, 4, 5, 6].map(id => creature(id));
 const timeline = before.map(one => ({ creature: one.id, owner: one.id < 4 ? 'Player1' : 'Player2', speed: 'Standard' }));
 const legalTargets = { candidates: [4, 5, 6], minTargets: 1, maxTargets: 1 };
-function entry(sequence, { actor = 1, spell = 'strike', targets = [4], after = before.map(one => creature(one.id, one.id === 4 ? 13 : 20)), fizzled = false, legacy = false, outcomes } = {}) {
+function entry(sequence, { actor = 1, spell = 'strike', targets = [4], after = before.map(one => creature(one.id, one.id === 4 ? 13 : 20)), fizzled = false, legacy = false, outcomes, criticalRoll } = {}) {
   return { sequence, event: { kind: 'CombatActionResolved', roundId: 2,
-    resolution: { action: { actor, spell, targets }, isCritical: !fizzled, fizzled, fizzleReason: { message: 'Not enough energy' } },
+    resolution: { action: { actor, spell, targets }, isCritical: !fizzled, fizzled, fizzleReason: { message: 'Not enough energy' }, ...(criticalRoll === undefined ? {} : { criticalRoll }) },
     appliedOutcomes: outcomes ?? (fizzled ? [] : targets.map(target => ({ kind: 'DamageOutcome', target, amount: 7, critical: true }))),
     ...(legacy ? {} : { frame: { before, after, timeline, rollOffs: [] } }) } };
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createBattleHistory, historyEntry } from './battle-history.js';
+import { createBattleHistory, historyEntry, historySummary } from './battle-history.js';
 import { createBattlePlayback } from './battle-playback.js';
 
 const creature = (id, health = 20) => ({ id, name: id === 1 ? 'First' : 'Other', health, maxHealth: 20, energy: 4, totalDefense: 2, isAlive: health > 0 });
@@ -307,4 +307,30 @@ test('a historical inspection excludes future and unrevealed casts', () => {
   assert.equal(history.lastAction(1).sequence, 5);
   history.receive(view([], { waiting: { seats: [] } }), catalogue);
   assert.equal(history.lastAction(1), null);
+});
+
+test('the summary reads a round for its main beats: mutations, each cast with its result, defeats, latest round first', () => {
+  const lethal = entry(5, 'CombatActionResolved', {
+    resolution: { action: { actor: 1, spell: 'hit', targets: [3] }, isCritical: true },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 3, amount: 20, critical: true }],
+    frame: { before, after: [creature(1), creature(2), creature(3, 0)] } }, 3);
+  const rows = [historyEntry(entry(2, 'PurchasesRevealed', { choices: [{ creature: 1, tier: 'root' }] }), board, catalogue),
+    historyEntry(cast(3), board, catalogue), historyEntry(entry(4, 'RoundEnded', {}), board, catalogue), historyEntry(lethal, board, catalogue)];
+  const [third, second] = historySummary(rows);
+  assert.equal(third.round, 3); assert.equal(second.round, 2);
+  assert.deepEqual(second.mutations, [{ creature: 'First', mutation: 'Warden', side: 'Your team' }]);
+  assert.deepEqual(second.casts.map(one => [one.caster, one.side, one.spell, one.status, one.effects.map(effect => effect.text)]),
+    [['First', 'Your team', 'Strike', 'No critical', ['Other · 2 · Damage 7']]]);
+  assert.equal(third.casts[0].status, 'Critical');
+  assert.deepEqual(third.defeated, [{ creature: 'Other · 3', side: 'Opponent' }]);
+});
+test('a round with nothing but markers is left out of the summary', () => {
+  assert.deepEqual(historySummary([historyEntry(entry(4, 'RoundEnded', {}), board, catalogue)]), []);
+});
+test('the summary names the spell apart from a caster whose label carries its id', () => {
+  // Creatures 2 and 3 share a name, so each label carries its id: 'Other · 2'.
+  const theirs = entry(3, 'CombatActionResolved', { resolution: { action: { actor: 2, spell: 'hit', targets: [1] }, isCritical: false },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 4 }], frame: { before, after: before } });
+  const [round] = historySummary([historyEntry(theirs, board, catalogue)]);
+  assert.deepEqual(round.casts.map(one => [one.caster, one.side, one.spell]), [['Other · 2', 'Opponent', 'Strike']]);
 });

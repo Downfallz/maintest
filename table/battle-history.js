@@ -55,7 +55,7 @@ function combatRow(entry, board, catalogue) {
   const status = action.status === 'Resolved' && resolution.isCritical === false ? 'No critical' : action.status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
-  return { actor: String(action.actor.id), title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
+  return { actor: String(action.actor.id), spell: action.spell, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
     summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
@@ -274,4 +274,43 @@ export function createBattleHistory({ limit = 200, load = async () => null, onCh
     finally { if (context === generation) { loading = false; onChange(); } }
   }
   return { receive, reset, model, lastAction, inspect, open, close, latest, filter, select, move, boundary, earlier, read };
+}
+
+// The journal read for its main beats (docs: battle/README.md, History): one card a round, the latest first, with
+// what a player follows -- the mutations revealed, each spell cast with who cast it, whether it crit or fizzled and
+// what it did, the turns skipped, the creatures defeated and the result. Built from the same public rows the full
+// journal lists, so it never says more than they do; names drop the side, which the card colours instead.
+const bare = text => String(text).replace(/ \((?:Your team|Opponent|Unknown team)\)/g, '');
+const sideOf = (row, id) => row.participants.find(one => one.id === String(id))?.side ?? 'Unknown team';
+export function historySummary(rows) {
+  const rounds = new Map();
+  const at = round => {
+    if (!rounds.has(round)) rounds.set(round, { round, mutations: [], casts: [], skipped: [], defeated: [], result: null });
+    return rounds.get(round);
+  };
+  for (const row of rows ?? []) {
+    const round = at(row.round);
+    if (row.kind === 'PurchasesRevealed') {
+      round.mutations.push(...row.details.map(item => {
+        // A label can hold ' · ' itself (a name shared by two creatures carries its id): the mutation is the last part.
+        const parts = bare(item.text).split(' · '), mutation = parts.length > 1 ? parts.pop() : '', name = parts.join(' · ');
+        const one = row.participants.find(person => person.label === name);
+        return { creature: name, mutation, side: one?.side ?? 'Unknown team' };
+      }));
+    } else if (row.kind === 'CombatActionResolved') {
+      const effects = (row.sections.find(section => section.title === 'Applied effects')?.items ?? [])
+        .filter(item => item.text !== 'No applied effects recorded.').map(item => ({ text: bare(item.text), tone: item.tone ?? '' }));
+      // The row keeps the caster and the spell apart: a label can hold ' · ' itself, so the title is never split.
+      const caster = row.participants.find(one => one.id === String(row.actor));
+      round.casts.push({ sequence: row.sequence, caster: caster?.label ?? bare(row.title), side: sideOf(row, row.actor),
+        spell: row.spell, status: row.status ?? 'Resolved', effects });
+      for (const item of row.sections.find(section => section.title === 'Recorded changes')?.items ?? []) {
+        const defeated = /^(.*) · Defeated$/.exec(item.text);
+        if (defeated) round.defeated.push({ creature: bare(defeated[1]), side: defeated[1].includes('(Your team)') ? 'Your team' : defeated[1].includes('(Opponent)') ? 'Opponent' : 'Unknown team' });
+      }
+    } else if (row.kind === 'SlotSkipped') round.skipped.push(bare(row.title));
+    else if (row.kind === 'MatchEnded') round.result = row.details[0]?.text ?? row.title;
+  }
+  return [...rounds.values()].filter(one => one.mutations.length || one.casts.length || one.skipped.length || one.defeated.length || one.result)
+    .sort((a, b) => b.round - a.round);
 }

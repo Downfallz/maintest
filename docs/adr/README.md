@@ -159,3 +159,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0151](0151-show-each-creature-as-its-evolution.md) | Show each creature as its evolution, from its purchase history | Accepted for the opt-in battle view |
 | [0152](0152-choose-a-stage-3-hybrid-by-influence.md) | Choose a Stage 3's hybrid by the influences of the creature's other mutations | Accepted for the opt-in battle view |
 | [0153](0153-play-the-same-game-again-from-the-end-card.md) | Play the same game again from the battle's end card, and call the lobby the Lobby | Accepted for the opt-in battle view |
+| [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted |

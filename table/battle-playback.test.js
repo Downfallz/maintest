@@ -571,3 +571,11 @@ test('a page closed on a held upkeep that took in a later part resumes from its 
   assert.equal(h.queue.model().sequence, 5, 'one receipt holds both parts');
   assert.equal(h.queue.model().watermark, 3, 'neither part is read yet');
 });
+
+test('an action that tried to crit hands the scene its d20: the face and whether it reached the threshold', () => {
+  const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [{ target: { id: 2 }, tone: 'harm', text: 'Damage 6' }] };
+  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false });
+  assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
+  assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
+});

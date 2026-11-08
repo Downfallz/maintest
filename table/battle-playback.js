@@ -150,9 +150,11 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
   if (action.status === 'Fizzled') kind = 'fizzle';
   const fizzled = action.status === 'Fizzled';
   const recipients = fizzled ? [] : [...new Set(effects.map(effect => effect.creature))];
+  // The caster's d20 when it tried to crit (ADR 0154): its face, and whether it reached the threshold.
+  const roll = !fizzled && Number.isInteger(action.criticalRoll) ? { value: action.criticalRoll, critical: action.status === 'Critical' } : null;
   return { kind, visual: spellVisual(action, cards),
     recipients, contact: recipients.filter(id => id !== String(action.actor?.id)),
-    struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes };
+    struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes, roll };
 }
 
 // One bounded queue per selected seat. Latest remains authoritative while historical frames are displayed.

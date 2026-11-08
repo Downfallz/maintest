@@ -315,6 +315,9 @@ function recapAction(entry, board, cards) {
     spell: cards?.get?.(action.spell)?.name ?? action.spell ?? 'Unknown spell',
     targets: (action.targets ?? []).map(id => recapCreature(id, board)),
     status: resolution.fizzled ? 'Fizzled' : resolution.isCritical ? 'Critical' : 'Resolved',
+    // The d20 face the critical roll showed (ADR 0154); null with no chance to crit, on a fizzle, or from a record
+    // older than the field.
+    criticalRoll: !resolution.fizzled && Number.isInteger(resolution.criticalRoll) ? resolution.criticalRoll : null,
     reason: resolution.fizzled ? errorText(resolution.fizzleReason) : '',
     effects: (event.appliedOutcomes ?? []).map(outcome => ({
       target: recapCreature(outcome.target, board),

@@ -237,6 +237,15 @@ underneath continues to update; the inspection stays on its selected event until
 or returns to Latest. Closing returns focus and preserves the command draft. This is manual journal
 inspection; AU7 still owns playback pacing.
 
+**Summary** is the view History opens on: one card a round, the latest first, with the mutations revealed,
+each spell in order with its caster's side, a Crit or Fizzled mark and its applied effects (four, then a count),
+the creatures defeated, the turns skipped and the result. `historySummary` builds it from the same public rows,
+so it never says more than the journal. A cast opens its own inspection; a round's **All events** opens the full
+journal filtered to it. The reader's choice of view is kept on the device (`downfall.battle.history-view.v1`);
+an inspected event is always read in the full journal. While the summary is open every loaded round is on
+screen, so new events are read at once. On a phone the closed launcher marks unread events with a dot, not a
+count: two rounds hold fifty events.
+
 **Load earlier rounds** explicitly calls the existing selected-seat `history()` read from zero. Its
 response only replaces the reading page: it cannot rewind the live cursor, board, options or playback.
 Requests are single-flight and generation-fenced after close, Latest, viewpoint/access loss and hiding.
@@ -718,11 +727,22 @@ site's menu and the player's button sit at its right end, where the lobby keeps 
 
 Each figure stands above its caption (`placements` lifts it by up to 34px, as the stage has room), so the name,
 badges and stats hang under its feet, not over its body. A creature's effect chips (upkeep ticks, a spell's
-outcomes, its place in the order) sit above its head. The acting creature carries a soft gold halo, an aura behind
-it and a pool of light at its feet (`src/acting-halo.ts`), breathing slowly and still under reduced motion;
+outcomes, its place in the order) sit above its head. The acting creature carries a gold halo: a saturated gold rim around
+its own silhouette (its image filled with gold just behind it) and a pool of light at its feet (`src/acting-halo.ts`), breathing
+slowly and still under reduced motion;
 `#battle[data-halo]` names it.
+
+The field shows the dice ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md), `src/dice.ts`): a small
+hexagonal d20 beside a creature's head, with each roll-off's last throw while the revealed order is read (ivory) and a
+caster's critical roll as its action lands (gold when it crit, slate when it fell short). It tumbles in and settles,
+still under reduced motion, and leaves with the reading or the result; `#battle[data-dice]` names what stands.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
 name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round
 under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
 as chips and its d20 roll in gold, and one Continue.
+
+The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
+with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting
+order, and the dice and the opponent's fixed places in small type. Keep current order and Start again are pills;
+**Inspect turn order** opens the order sheet. History and Help stay in the field's header.

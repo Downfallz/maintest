@@ -85,11 +85,12 @@
   </dialog>
   <dialog id="history-dialog" aria-labelledby="history-title">
     <header class="history-header"><div><p class="eyebrow">MATCH JOURNAL</p><h2 id="history-title">History</h2><p id="history-range"></p></div><button id="history-close" type="button" autofocus>Close</button></header>
+    <div class="history-modes" role="group" aria-label="History view"><button id="history-mode-summary" type="button" aria-pressed="true">Summary</button><button id="history-mode-events" type="button" aria-pressed="false">All events</button></div>
     <details id="history-filters"><summary>Filter events</summary><div class="history-filters">
       <label>Round<select id="history-filter-round"></select></label><label>Creature<select id="history-filter-creature"></select></label>
       <label>Team<select id="history-filter-team"><option value="">Both teams</option><option>Your team</option><option>Opponent</option><option>Unknown team</option></select></label>
       <label>Event kind<select id="history-filter-kind"></select></label></div></details>
-    <p id="history-empty"></p><div class="history-content"><div id="history-list" role="region" aria-label="Round events"></div>
+    <p id="history-empty"></p><div class="history-content"><div id="history-summary" role="region" aria-label="Main moments, latest round first" hidden></div><div id="history-list" role="region" aria-label="Round events"></div>
     <section id="history-review" aria-label="Recorded event inspection" hidden><nav class="history-review-controls"><button id="history-back" type="button">Back to events</button><button id="history-previous" type="button">Previous</button><button id="history-next" type="button">Next</button><button id="history-before" type="button">Before</button><button id="history-after" type="button">After</button></nav><div id="history-detail"></div></section></div>
     <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
@@ -117,7 +118,7 @@
     <div class="combat-dialog-footer"><section id="intent-preview" class="target-preview" tabindex="0" aria-label="Hidden intent estimate" hidden></section><button class="primary" id="combat-declare" type="button" hidden>Declare spell</button><p id="combat-dialog-error" role="alert" hidden></p></div>
   </dialog>
   <dialog id="inspect-dialog" aria-labelledby="inspect-name">
-    <header class="inspect-header"><button id="inspect-portrait" class="inspect-portrait" type="button" aria-label="Show the illustration large"></button><div class="inspect-title"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p></div></header>
+    <header class="inspect-header"><button id="inspect-portrait" class="inspect-portrait" type="button" aria-label="Show the illustration large"><span class="inspect-zoom-hint" aria-hidden="true"></span></button><div class="inspect-title"><p class="eyebrow" id="inspect-side"></p><h2 id="inspect-name"></h2><p id="inspect-context"></p></div></header>
     <div id="inspect-zoom" class="inspect-zoom" hidden><button id="inspect-zoom-close" class="inspect-zoom-picture" type="button" aria-label="Back to the creature"></button></div>
     <div id="inspect-body" tabindex="0" aria-label="Creature details">
       <p id="inspect-stats" class="unseen"></p><div id="inspect-sheet" class="inspect-sheet" aria-hidden="true"></div>

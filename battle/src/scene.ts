@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ActingHalo } from './acting-halo';
+import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
 import { DRAW_MS, STRIKE_MS, RETURN_MS, RETURN_DELAY_MS, MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
@@ -60,6 +61,10 @@ export class BattleScene extends Phaser.Scene {
   // Which creature the acting halo lights now, or null (`#battle[data-halo]` for tests and tools).
   onHalo: (id: string | null) => void = () => {};
   private halo: ActingHalo | null = null;
+  private dice: DiceLayer | null = null;
+  // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
+  onDice: (shown: string) => void = () => {};
+  private diceShown = '';
   private haloId: string | null = null;
   assetFailed = false;
   // Evolution illustrations load when a creature on the field first asks for one, never all at boot; one that
@@ -86,6 +91,7 @@ export class BattleScene extends Phaser.Scene {
     fallback.generateTexture('missing-figure', 80, 100);
     fallback.destroy();
     this.halo = new ActingHalo(this);
+    this.dice = new DiceLayer(this);
     for (let index = 0; index < MOTES; index++) this.motes.push(this.add.circle(0, 0, index % 3 === 0 ? 2 : 1, GOLD, .24).setDepth(1000));
     this.fitCamera();
     this.scale.on('resize', () => {
@@ -134,6 +140,10 @@ export class BattleScene extends Phaser.Scene {
     const lit = actor ? this.figures.get(actor.id) ?? null : null;
     this.halo?.show(lit);
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
+    const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
+    this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
+    const diceShown = standing.map(die => `${die.id}:${die.value}:${die.tone}`).join(' ');
+    if (diceShown !== this.diceShown) { this.diceShown = diceShown; this.onDice(diceShown); }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {
       this.onImpact();
@@ -379,6 +389,7 @@ export class BattleScene extends Phaser.Scene {
   update(time: number) {
     if (!this.state) return;
     this.halo?.follow(time, this.reduced);
+    this.dice?.follow(time, this.reduced);
     // Creatures stand still between actions: only a played action moves them.
     for (const figure of this.figures.values()) {
       this.followCues(figure);
