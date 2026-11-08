@@ -541,9 +541,9 @@ function readingDetail(reading: { detail: string; groups?: { target: string; chi
 }
 
 function effectChips(node: HTMLElement, chips: EffectChip[]) {
-  // Above the caption, which is centred under the figure: the hit area around it is taller than the creature.
+  // Above the creature's head, where the hit area begins: never over its body, which the caption already shares.
   let holder = node.querySelector<HTMLElement>('.creature-effect');
-  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.querySelector('.caption')!.prepend(holder); }
+  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.prepend(holder); }
   const key = JSON.stringify(chips);
   holder.hidden = chips.length === 0;
   if (holder.dataset.chips === key) return;
