@@ -718,8 +718,9 @@ site's menu and the player's button sit at its right end, where the lobby keeps 
 
 Each figure stands above its caption (`placements` lifts it by up to 34px, as the stage has room), so the name,
 badges and stats hang under its feet, not over its body. A creature's effect chips (upkeep ticks, a spell's
-outcomes, its place in the order) sit above its head. The acting creature carries a soft gold halo, an aura behind
-it and a pool of light at its feet (`src/acting-halo.ts`), breathing slowly and still under reduced motion;
+outcomes, its place in the order) sit above its head. The acting creature carries a gold halo: a rim around its own
+silhouette (its image filled with gold just behind it) and a pool of light at its feet (`src/acting-halo.ts`), breathing
+slowly and still under reduced motion;
 `#battle[data-halo]` names it.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
