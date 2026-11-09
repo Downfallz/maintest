@@ -1508,3 +1508,10 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   #battle .command-dock #instruction { font-size: 15px; -webkit-line-clamp: 3; line-clamp: 3; }
   #battle .command-dock .battle-actions :is(#planning-open, #combat-open, #match-open) { min-width: 92px; max-width: 120px; padding: 8px 12px; font-size: 13px; }
 }
+
+/* Conceding is the one lasting action in Match settings: it stands at the top, apart and red, and still asks for
+   its own confirmation. Help has its own button in the header, so the settings do not repeat it. */
+#settings-dialog .settings-concede { margin: -10px 0 8px; }
+#settings-dialog .settings-concede:has(> #concede-open[hidden]) { display: none; }
+#settings-dialog #concede-open { width: 100%; min-height: 44px; border: 1px solid #b0503f; border-radius: 8px; background: #3a1d18; color: #ffb9a8; font-weight: 700; letter-spacing: .02em; }
+#settings-dialog #concede-open:hover, #settings-dialog #concede-open:focus-visible { background: #4c231c; border-color: #e07a62; }
