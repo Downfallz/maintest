@@ -43,15 +43,18 @@ export function pickPlan(view, sent = null) {
   const offer = view?.options?.evolution, offered = offer?.remainingPicks;
   if (!Number.isInteger(offered)) return null;
   const allies = view?.board?.allies ?? [], picked = new Set((view?.board?.evolutionChoices ?? []).map(pick => pick.creature));
-  if (Number.isInteger(sent?.creature)) picked.add(sent.creature);
-  const left = sent?.pass ? 0 : Math.max(0, sent ? offered - 1 : offered);
+  const sentCreature = sent?.creature;
+  if (Number.isInteger(sentCreature)) picked.add(sentCreature);
+  let left = Math.max(0, offered - (sent ? 1 : 0));
+  if (sent?.pass) left = 0;
   const spent = allies.filter(one => picked.has(one.id)).length;
   const open = allies.filter(one => one.isAlive !== false && !picked.has(one.id) &&
     (offer?.creatures?.find(option => option.creature === one.id)?.availableTiers?.length ?? 0) > 0).length;
   const budget = `${sent ? 'Pick sent · ' : ''}${count(left, 'team pick')} remaining`;
   let rule = '';
   if (left > 0 && open > left) {
-    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${left === 1 ? 'one mutates' : `${left} mutate`} now, one pick each. ` +
+    const which = left === 1 ? 'one mutates' : `${left} mutate`;
+    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${which} now, one pick each. ` +
       'Later Mutation phases bring new picks for any of them.';
   } else if (left > 1 && open > 1) rule = 'One pick per creature.';
   return { spent, left, open, budget, rule };
