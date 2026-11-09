@@ -83,6 +83,7 @@ internal sealed class TableFiles
             ["/sw.js"] = (Path.Combine(tableDirectory, "sw.js"), JavaScript),
             ["/manifest.webmanifest"] = (Path.Combine(tableDirectory, "manifest.webmanifest"), Manifest),
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
+            ["/brand-mark.svg"] = (Path.Combine(tableDirectory, "brand-mark.svg"), Svg),
             ["/icon-192.png"] = (Path.Combine(tableDirectory, "icon-192.png"), Png),
             ["/icon-512.png"] = (Path.Combine(tableDirectory, "icon-512.png"), Png),
             ["/notification-badge.png"] = (Path.Combine(tableDirectory, "notification-badge.png"), Png),

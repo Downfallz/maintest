@@ -83,3 +83,25 @@ export function createBattleOrderReveal() {
   function read() { held = null; }
   return { receive, reset, model, presented, read };
 }
+
+// The roll-off dice the field shows while the order is read (ADR 0154), each told which tie it broke and where its
+// creature finished in it: creatures tied on the same tempo and initiative rolled against each other, and the
+// order the timeline gives them is the result. Groups are numbered in timeline order; a creature with no roll, or
+// a roll-off missing from the timeline, is left out rather than guessed.
+export function rollOffDice(board) {
+  const timeline = board?.timeline ?? [];
+  const rolls = new Map((board?.rollOffs ?? []).filter(one => Number.isInteger(one?.rolls?.at(-1)))
+    .map(one => [String(one.creature), one.rolls]));
+  const groups = new Map(), places = new Map();
+  const dice = [];
+  for (const slot of timeline) {
+    const id = String(slot.creature), rolled = rolls.get(id);
+    if (!rolled) continue;
+    const key = `${slot.speed}|${slot.initiative}`;
+    if (!groups.has(key)) groups.set(key, groups.size + 1);
+    const group = groups.get(key), place = (places.get(group) ?? 0) + 1;
+    places.set(group, place);
+    dice.push({ id, value: rolled.at(-1), rolls: [...rolled], group, place });
+  }
+  return dice.map(die => ({ ...die, rivals: places.get(die.group) - 1 }));
+}

@@ -99,7 +99,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await page.clock.runFor(500); await expect(page.locator('#order-continue')).toBeHidden();
   expect(h.state.shown).toEqual([20]); expect(h.state.errors).toEqual([]);
 });
-test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }) => {
+test('a fresh reveal waits until tie ordering ends, opens once and never acknowledges the next question', async ({ page }, info) => {
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [] }, feed: [] });
   await h.publish({ board: { ...board, subPhase: 'TurnOrderResolution' }, feed: [reveal(11)] });
   await expect(page.locator('#timeline li')).toHaveCount(6); await expect(page.locator('#order-dialog')).toBeHidden();
@@ -110,8 +110,10 @@ test('a fresh reveal waits until tie ordering ends, opens once and never acknowl
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
   await expect(page.locator('#reading-detail')).toContainText('Your team: 2 Instinct');
   await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"]')).toContainText('2');
-  // Each creature that rolled for the tie shows its last throw on a d20 beside it (ADR 0154), gone with the reading.
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:18:roll 4:8:roll 2:2:roll');
+  // Each creature that rolled for the tie shows its last throw on a d20 beside it (ADR 0154), gone with the reading:
+  // the three rolled in one tie, joined on the field, and each die says where its creature finished in it.
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:18:roll:tie1:1 4:8:roll:tie1:2 2:2:roll:tie1:3');
+  await page.clock.runFor(800); await page.screenshot({ path: info.outputPath('roll-off-dice.png') });
   expect(h.state.shown).toEqual([]); await page.locator('#order-continue').click();
   await expect(page.locator('#actor-layer .effect-chip[data-kind="order"]')).toHaveCount(0);
   await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./);

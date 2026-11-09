@@ -29,7 +29,7 @@ export interface MutationRevealMarker {
 export interface SceneFrame {
   mutationFocus?: string;
   // The d20s the field shows beside the creatures that rolled them (ADR 0154).
-  dice?: { id: string; value: number; tone: 'crit' | 'miss' | 'roll'; key: string }[];
+  dice?: { id: string; value: number; tone: 'crit' | 'miss' | 'roll'; key: string; group?: number; place?: number; rivals?: number; needed?: number | null }[];
   reveal?: { round: number; inset?: number; markers: MutationRevealMarker[] };
   upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
