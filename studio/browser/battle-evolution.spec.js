@@ -51,16 +51,17 @@ const figure = (page, id) => page.locator(`#actor-layer [data-creature="${id}"]`
 test('each creature shows the illustration its purchases resolve to, and only those illustrations are fetched', async ({ page }, info) => {
   const h = await mount(page, { purchases: [[1, 'brute'], [1, 'berserker'], [4, 'occultist'], [4, 'necromancer'], [4, 'lich'], [4, 'prowler'], [4, 'assassin'], [4, 'deathstalker']] });
   await expect(figure(page, 1)).toHaveAttribute('data-artwork', 'brute-stage2-frenzied');
-  // The first Stage 3 bought stays the identity: Revenant, not the Deathstalker bought after it.
-  await expect(figure(page, 4)).toHaveAttribute('data-artwork', 'warped-stage3-revenant');
+  // The first Stage 3 bought stays the identity: Revenant, not the Deathstalker bought after it. Its Predator line lends
+  // Revenant its Predator traits (ADR 0152), never the Deathstalker's own image.
+  await expect(figure(page, 4)).toHaveAttribute('data-artwork', 'warped-revenant-predator');
   await expect(figure(page, 2)).toHaveAttribute('data-artwork', 'base-creature');
   await page.clock.runFor(100);
   await expect(figure(page, 1)).toHaveAttribute('data-artwork-shown', 'brute-stage2-frenzied');
-  await expect(figure(page, 4)).toHaveAttribute('data-artwork-shown', 'warped-stage3-revenant');
+  await expect(figure(page, 4)).toHaveAttribute('data-artwork-shown', 'warped-revenant-predator');
   await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('evolution-field.png') });
   // The ancestral creature is the base sprite loaded at boot: only the two evolved illustrations are fetched.
   await expect(figure(page, 2)).toHaveAttribute('data-artwork-shown', 'form:base-creature');
-  expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(['brute-stage2-frenzied.webp', 'warped-stage3-revenant.webp']);
+  expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(['brute-stage2-frenzied.webp', 'warped-revenant-predator.webp']);
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
 
@@ -75,6 +76,26 @@ test('a Predator Stage 3 shows the hybrid portrait its other mutations call for,
   await expect(figure(page, 4)).toHaveAttribute('data-artwork-shown', 'predator-deathstalker-08');
   await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('predator-hybrids-field.png') });
   expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(['predator-deathstalker-08.webp', 'predator-soulreaver-03.webp']);
+  await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
+});
+test('each Warped Stage 3 shows the hybrid or Ultimate its other mutations call for, fetched only once it is needed', async ({ page }, info) => {
+  const cataclysm = ['occultist', 'elementalist', 'harbinger'], revenant = ['occultist', 'necromancer', 'lich'];
+  const transcendent = ['occultist', 'shaman', 'spiritcaller'];
+  const of = (id, names) => names.map(name => [id, name]);
+  // One single influence and one Ultimate for each line (ADR 0152, docs/art/warped-hybrid-aaa-intake.md).
+  const h = await mount(page, { purchases: [
+    ...of(1, [...cataclysm, 'necromancer']), ...of(2, [...revenant, 'prowler', 'parasite']), ...of(3, [...transcendent, 'brute', 'berserker']),
+    ...of(4, [...cataclysm, 'shaman', 'prowler', 'parasite', 'brute', 'berserker']),
+    ...of(5, [...revenant, 'elementalist', 'prowler', 'plague_doctor', 'brute', 'ironbound']),
+    ...of(6, [...transcendent, 'necromancer', 'prowler', 'assassin', 'brute', 'marauder']),
+  ] });
+  const expected = { 1: 'warped-cataclysm-sibling', 2: 'warped-revenant-predator', 3: 'warped-transcendent-brute',
+    4: 'warped-cataclysm-ultimate', 5: 'warped-revenant-ultimate', 6: 'warped-transcendent-ultimate' };
+  for (const [id, artwork] of Object.entries(expected)) await expect(figure(page, id)).toHaveAttribute('data-artwork', artwork);
+  await page.clock.runFor(100);
+  for (const [id, artwork] of Object.entries(expected)) await expect(figure(page, id)).toHaveAttribute('data-artwork-shown', artwork);
+  await page.clock.runFor(500); await page.screenshot({ path: info.outputPath('warped-hybrids-field.png') });
+  expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(Object.values(expected).map(id => `${id}.webp`).sort((a, b) => a.localeCompare(b)));
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
 test('an illustration that cannot load leaves the audited sprite of its form, and the battle carries on', async ({ page }) => {

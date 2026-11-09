@@ -23,6 +23,8 @@ function bought(names, { creature = 1 } = {}) {
 const resolve = (names, registry) => { const { creature, history } = bought(names); return resolveEvolution(creature, packages, history, registry); };
 // Hybrids are registered by the two illustrations they combine, as the catalogue's packages name them.
 const artworkOf = name => packages.get(T(name)).visual.artwork;
+// No hybrid drawn at all: what the resolver does with the Stage 3's identity alone.
+const undrawn = createEvolutionRegistry([]);
 const withHybrids = pairs => createEvolutionRegistry(pairs.map(([dominant, hybrid]) => ({ id: `${dominant}-${hybrid}`, dominant: artworkOf(dominant), hybrid: artworkOf(hybrid),
   family: 'hybrid', stage: 3, file: `evolutions/hybrids/${dominant}-${hybrid}.webp`, bounds: [0, 0, 10, 10], ground: [5, 10] })));
 
@@ -53,7 +55,7 @@ test('the first Stage 3 bought becomes the creature\'s identity', () => {
   assert.equal(shown.stage, 3); assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.artworkId, 'warped-stage3-revenant');
 });
 test('a second Stage 3 never replaces the first, whichever family has more', () => {
-  const shown = resolve(['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker', 'parasite']);
+  const shown = resolve(['occultist', 'necromancer', 'lich', 'prowler', 'assassin', 'deathstalker', 'parasite'], undrawn);
   assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.artworkId, 'warped-stage3-revenant'); assert.equal(shown.hybridTierId, null);
 });
 test('another Stage 2 of the identity\'s own family selects its drawn hybrid; the Stage 2 that led to it does not', () => {
@@ -86,7 +88,7 @@ test('of several hybrids in one rank, the latest mutation bought wins', () => {
 test('a hybrid nobody drew is skipped for the next one, and with none the Stage 3 shows, never another identity', () => {
   const names = ['occultist', 'shaman', 'spiritcaller', 'prowler', 'plague_doctor', 'necromancer'];
   assert.equal(resolve(names, withHybrids([['spiritcaller', 'prowler']])).artworkId, 'spiritcaller-prowler');
-  const none = resolve(names);
+  const none = resolve(names, undrawn);
   assert.equal(none.hybridTierId, null); assert.equal(none.artworkId, 'warped-stage3-transcendent'); assert.equal(none.dominantTierId, T('spiritcaller'));
 });
 test('a capstone adds its effect and never changes the image', () => {
@@ -137,9 +139,9 @@ test('a package with no drawn family, or a catalogue that serves none, leaves th
   assert.equal(resolveEvolution({ id: '1', acquiredTiers: [T('brute')] }, new Map(), null).artworkId, 'base-creature');
   assert.equal(resolveEvolution(null, packages, null).artworkId, 'base-creature');
 });
-test('the default registry draws hybrids for the Predator Stage 3s only: any other Stage 3 shows its own image', () => {
-  assert.equal(EVOLUTION_REGISTRY.hybrid('warped-stage3-transcendent', 'warped-stage2-necrotic', 'warped'), null);
-  assert.equal(resolve(['occultist', 'shaman', 'spiritcaller', 'prowler', 'parasite']).artworkId, 'warped-stage3-transcendent');
+test('the default registry draws hybrids for the Predator and Warped Stage 3s only: a Brute Stage 3 shows its own image', () => {
+  assert.equal(EVOLUTION_REGISTRY.hybrid('brute-stage3-ravager', 'predator-stage2-open-maw', 'predator'), null);
+  assert.equal(resolve(['brute', 'berserker', 'ravager', 'prowler', 'parasite', 'occultist', 'necromancer']).artworkId, 'brute-stage3-ravager');
 });
 
 // The approved Predator hybrids (ADR 0152, docs/art/predator-hybrid-aaa-intake.md), each reached by a real path: the
@@ -204,4 +206,92 @@ test('a package whose illustration is not registered keeps its identity and draw
   const { creature, history } = bought(['occultist', 'necromancer', 'lich']);
   const shown = resolveEvolution(creature, unknown, history);
   assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.artworkId, null);
+});
+
+// The approved Warped hybrids (ADR 0152, docs/art/warped-hybrid-aaa-intake.md), reached by real paths: the Warped
+// Stage 1 and the Stage 2 that lead to each Stage 3, then the mutations that lend their traits.
+const cataclysm = ['occultist', 'elementalist', 'harbinger'], revenant = ['occultist', 'necromancer', 'lich'];
+const transcendent = ['occultist', 'shaman', 'spiritcaller'];
+const predatorLine = ['prowler', 'parasite'];
+test('each Warped Stage 3 with one influence shows the portrait approved for it, at Stage 1 or Stage 2', () => {
+  const approved = [
+    [[...cataclysm, 'necromancer'], 'warped-cataclysm-sibling'], [[...cataclysm, 'shaman'], 'warped-cataclysm-sibling'],
+    [[...cataclysm, 'prowler'], 'warped-cataclysm-predator'], [[...cataclysm, ...predatorLine], 'warped-cataclysm-predator'],
+    [[...cataclysm, 'brute'], 'warped-cataclysm-brute'], [[...cataclysm, ...brute], 'warped-cataclysm-brute'],
+    [[...revenant, 'elementalist'], 'warped-revenant-sibling'], [[...revenant, 'shaman'], 'warped-revenant-sibling'],
+    [[...revenant, 'prowler'], 'warped-revenant-predator'], [[...revenant, ...predatorLine], 'warped-revenant-predator'],
+    [[...revenant, 'brute'], 'warped-revenant-brute'], [[...revenant, ...brute], 'warped-revenant-brute'],
+    [[...transcendent, 'elementalist'], 'warped-transcendent-sibling'], [[...transcendent, 'necromancer'], 'warped-transcendent-sibling'],
+    [[...transcendent, 'prowler'], 'warped-transcendent-predator'], [[...transcendent, ...predatorLine], 'warped-transcendent-predator'],
+    [[...transcendent, 'brute'], 'warped-transcendent-brute'], [[...transcendent, ...brute], 'warped-transcendent-brute'],
+  ];
+  for (const [names, id] of approved) {
+    const shown = resolve(names);
+    assert.equal(shown.artworkId, id, names.join(' ')); assert.equal(shown.artworkFile, `evolutions/hybrids/${id}.webp`);
+    assert.equal(shown.stage, 3); assert.equal(shown.dominantTierId, T(names[2])); assert.equal(shown.ultimate, false);
+    assert.equal(shown.hybridTierId, T(names.at(-1)), names.join(' '));
+  }
+});
+test('the Stage 2 that led to a Warped Stage 3 lends nothing: its own Stage 3 shows', () => {
+  for (const path of [cataclysm, revenant, transcendent]) {
+    const shown = resolve(path);
+    assert.equal(shown.artworkId, packages.get(T(path[2])).visual.artwork); assert.equal(shown.hybridTierId, null);
+  }
+});
+test('each Warped Ultimate shows once a Stage 2 carries every other influence drawn for its Stage 3', () => {
+  const ultimates = [
+    [[...cataclysm, 'shaman', ...brute, ...predatorLine], 'warped-cataclysm-ultimate', ['shaman', 'parasite', 'berserker']],
+    [[...revenant, ...predatorLine, 'elementalist', ...brute], 'warped-revenant-ultimate', ['elementalist', 'berserker', 'parasite']],
+    [[...transcendent, ...brute, 'necromancer', ...predatorLine], 'warped-transcendent-ultimate', ['necromancer', 'parasite', 'berserker']],
+  ];
+  // Lenders in ADR 0151's ranks: the sibling line first, then other families' Stage 2, the latest bought first.
+  for (const [names, id, lenders] of ultimates) {
+    const shown = resolve(names);
+    assert.equal(shown.artworkId, id); assert.equal(shown.ultimate, true); assert.equal(shown.dominantTierId, T(names[2]));
+    assert.deepEqual(shown.hybridTierIds, lenders.map(T));
+  }
+});
+test('a Warped Ultimate needs a Stage 2 of every influence: a Stage 1 of a family, or the leading line, never completes it', () => {
+  // Predator held at Stage 1 only: the other two influences rank first, the sibling line before all.
+  assert.equal(resolve([...revenant, 'shaman', ...brute, 'prowler']).artworkId, 'warped-revenant-sibling');
+  assert.equal(resolve([...revenant, 'shaman', ...brute, 'prowler']).ultimate, false);
+  // Brute held at Stage 1 only.
+  assert.equal(resolve([...cataclysm, 'necromancer', ...predatorLine, 'brute']).artworkId, 'warped-cataclysm-sibling');
+  // Only the line that led to Transcendent stands for the Warped influence: no sibling, so no Ultimate.
+  const shown = resolve([...transcendent, ...predatorLine, ...brute]);
+  assert.equal(shown.ultimate, false); assert.equal(shown.artworkId, 'warped-transcendent-brute');
+});
+test('two Warped influences and no Ultimate show the first by rank, the latest bought within a rank', () => {
+  // A sibling Warped line outranks another family's Stage 2, whatever was bought later.
+  assert.equal(resolve([...revenant, 'shaman', ...predatorLine]).artworkId, 'warped-revenant-sibling');
+  assert.equal(resolve([...revenant, ...predatorLine, 'elementalist']).artworkId, 'warped-revenant-sibling');
+  // Between two other families' Stage 2, the latest bought.
+  assert.equal(resolve([...cataclysm, ...predatorLine, ...brute]).artworkId, 'warped-cataclysm-brute');
+  assert.equal(resolve([...cataclysm, ...brute, ...predatorLine]).artworkId, 'warped-cataclysm-predator');
+  // Another family's Stage 2 outranks another family's Stage 1, even an older one.
+  assert.equal(resolve([...transcendent, ...brute, 'prowler']).artworkId, 'warped-transcendent-brute');
+  // Between two Stage 1s of other families, the latest bought.
+  assert.equal(resolve([...transcendent, 'brute', 'prowler']).artworkId, 'warped-transcendent-predator');
+  assert.equal(resolve([...transcendent, 'prowler', 'brute']).artworkId, 'warped-transcendent-brute');
+});
+test('a Warped hybrid with no recorded order is chosen by a fixed rule, the same every time', () => {
+  const names = [...cataclysm, 'brute', 'berserker', 'prowler', 'parasite'];
+  const creature = { id: '1', acquiredTiers: names.map(T).sort((a, b) => a.localeCompare(b)) };
+  const once = resolveEvolution(creature, packages, null);
+  const again = resolveEvolution({ ...creature, acquiredTiers: [...creature.acquiredTiers].reverse() }, packages, null);
+  // The fixed rule orders unrecorded purchases by stage, then family (brute, predator, warped): Parasite counts as the latest.
+  assert.equal(once.chronology, 'none'); assert.equal(once.artworkId, 'warped-cataclysm-predator'); assert.equal(again.artworkId, once.artworkId);
+});
+test('a recorded Warped frame shows the hybrid of the mutations it owned, not of later purchases', () => {
+  const { history } = bought([...revenant, ...predatorLine, ...brute]);
+  // The frame before the Brute line was bought: the log knows later purchases, the frame does not own them.
+  const before = resolveEvolution({ id: '1', acquiredTiers: [...revenant, ...predatorLine].map(T) }, packages, history);
+  const after = resolveEvolution({ id: '1', acquiredTiers: [...revenant, ...predatorLine, ...brute].map(T) }, packages, history);
+  assert.equal(before.artworkId, 'warped-revenant-predator'); assert.equal(after.artworkId, 'warped-revenant-brute');
+  assert.equal(before.chronology, 'complete');
+});
+test('a Warped Stage 3 bought second never takes the identity of the first, nor lends it a sibling portrait', () => {
+  // Revenant first, Cataclysm second: Revenant stays, and Stormborn (bought on the way to Cataclysm) is its sibling.
+  const shown = resolve([...revenant, 'elementalist', 'harbinger']);
+  assert.equal(shown.dominantTierId, T('lich')); assert.equal(shown.artworkId, 'warped-revenant-sibling');
 });
