@@ -53,6 +53,6 @@ export function pickPlan(view, sent = null) {
   if (left > 0 && open > left) {
     rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${left === 1 ? 'one mutates' : `${left} mutate`} now, one pick each. ` +
       'Later Mutation phases bring new picks for any of them.';
-  } else if (left > 1 && open > 1) rule = 'One pick per creature: give each one a mutation, or pass what you do not need.';
+  } else if (left > 1 && open > 1) rule = 'One pick per creature.';
   return { spent, left, open, budget, rule };
 }
