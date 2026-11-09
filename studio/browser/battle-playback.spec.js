@@ -311,6 +311,23 @@ test('three effects on one creature stack over its head instead of running off t
   expect(h.errors).toEqual([]);
 });
 
+test('a result on a whole team reads every target in the card, the last one included', async ({ page }, info) => {
+  const h = await mount(page);
+  const after = before.map(one => [1, 2, 3].includes(one.id) ? { ...one, health: 13, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }] } : one);
+  const action = entry(10, { actor: 4, targets: [1, 2, 3], after, outcomes: [1, 2, 3].flatMap(target => [
+    { kind: 'DamageOutcome', target, amount: 7 }, { kind: 'ConditionOutcome', target, effect: { kind: 'Bleed', amountPerRound: 2 } }]) });
+  action.event.resolution.isCritical = false;
+  await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
+  await page.clock.runFor(1400);
+  const detail = page.locator('#reading-detail'), groups = detail.locator('.reading-group');
+  await expect(groups).toHaveCount(3);
+  const box = await detail.evaluate(node => node.getBoundingClientRect().toJSON());
+  for (const group of await groups.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON())))
+    expect(group.bottom).toBeLessThanOrEqual(box.bottom + 1);
+  await page.screenshot({ path: info.outputPath('team-wide-reading.png') });
+  expect(h.errors).toEqual([]);
+});
+
 // ART-6: one playback rate for the queue and the renderer, and an opt-in sound that stops with the action.
 async function atSpeed(page, h, speed) {
   await page.locator('#settings').click(); await page.selectOption('#playback-speed', speed);

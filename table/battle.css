@@ -832,7 +832,9 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 .reading-text > span { display: block; }
 /* Long multi-target results stay in two lines; the card opens the full result. */
 #reading-detail { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-#reading-detail:has(.reading-group) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; max-height: 60px; }
+/* A team-wide result reads one line a target: three lines show whole (one per creature of a team); a result on every
+   creature scrolls inside the card rather than cutting its last target off. */
+#reading-detail:has(.reading-group) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; max-height: 104px; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 2px; }
 .reading-group { display: inline-flex; align-items: center; gap: 4px; }
 .reading-group .effect-chip { animation: none; font-size: 12px; padding: 2px 8px 2px 5px; box-shadow: none; }
 .reading-target { color: #c4d0c7; font-size: 12px; }
