@@ -144,7 +144,8 @@ test('a signed-in player can read a menu panel and return to the same live match
   });
   expect(before.height).toBe(withoutHeader);
   await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('button', { name: 'Your data', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Settings', exact: true }).getByRole('tab', { name: 'Privacy' }).click();
   await expect(page.getByRole('heading', { name: 'What we keep' })).toBeVisible();
   await page.keyboard.press('Escape');
   expect(await board.boundingBox()).toEqual(before);
