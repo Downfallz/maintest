@@ -324,6 +324,8 @@ test('a result on a whole team reads every target in the card, the last one incl
   const box = await detail.evaluate(node => node.getBoundingClientRect().toJSON());
   for (const group of await groups.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON())))
     expect(group.bottom).toBeLessThanOrEqual(box.bottom + 1);
+  // The card grows for them without pushing its OK off the screen.
+  await fitsViewport(page, '#playback-next');
   await page.screenshot({ path: info.outputPath('team-wide-reading.png') });
   expect(h.errors).toEqual([]);
 });

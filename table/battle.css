@@ -854,6 +854,17 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
   .reading-buttons { gap: 8px; }
   #playback-next, #order-continue { flex: 1; min-height: 46px; }
 }
+/* A result read target by target needs the card's height for its lines: on a phone its OK (and Skip) stand at
+   its side, stacked, instead of under it, so three targets fit in the dock's fixed row. */
+@media (max-width: 619px) {
+  #playback-pacing:has(.reading-group) { flex-direction: row; align-items: center; gap: 8px; }
+  #playback-pacing:has(.reading-group) .reading-buttons { flex-direction: column; align-items: stretch; gap: 6px; }
+  #playback-pacing:has(.reading-group) :is(#playback-next, #order-continue) { flex: none; min-width: 72px; padding: 6px 12px; }
+  #playback-pacing:has(.reading-group) #playback-skip { padding: 6px 8px; font-size: 11px; }
+  #reading-detail:has(.reading-group) { gap: 5px 10px; max-height: 88px; }
+  .reading-group .effect-chip { font-size: 11px; padding: 1px 7px 1px 4px; }
+  .reading-target { font-size: 11px; }
+}
 @media (max-height: 520px) and (min-width: 620px), (max-height: 650px) and (max-width: 619px) {
   #playback-pacing { flex-direction: row; align-items: center; padding: 6px 10px; gap: 10px; }
   #reading-kind { font-size: 9px; } #reading-title { font-size: 15px; margin-top: 1px; } #reading-detail { font-size: 11px; margin-top: 1px; }
