@@ -855,13 +855,15 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
   #playback-next, #order-continue { flex: 1; min-height: 46px; }
 }
 /* A result read target by target needs the card's height for its lines: on a phone its OK (and Skip) stand at
-   its side, stacked, instead of under it, so three targets fit in the dock's fixed row. */
+   its side, stacked, instead of under it, so three targets fit in the dock's fixed row. At 320 px a wide sans
+   (DejaVu, Ubuntu's default) breaks each target's name onto a second line: the cap leaves room for three of
+   those, 104 px as on a wider screen, and only a result on more creatures than a team scrolls. */
 @media (max-width: 619px) {
   #playback-pacing:has(.reading-group) { flex-direction: row; align-items: center; gap: 8px; }
   #playback-pacing:has(.reading-group) .reading-buttons { flex-direction: column; align-items: stretch; gap: 6px; }
   #playback-pacing:has(.reading-group) :is(#playback-next, #order-continue) { flex: none; min-width: 72px; padding: 6px 12px; }
   #playback-pacing:has(.reading-group) #playback-skip { padding: 6px 8px; font-size: 11px; }
-  #reading-detail:has(.reading-group) { gap: 5px 10px; max-height: 88px; }
+  #reading-detail:has(.reading-group) { gap: 5px 10px; max-height: 104px; }
   .reading-group .effect-chip { font-size: 11px; padding: 1px 7px 1px 4px; }
   .reading-target { font-size: 11px; }
 }
