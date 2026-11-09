@@ -12,17 +12,64 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# A newer push to the same pull request makes a running check of the older one moot: each push queued a whole
+# run of these jobs beside the last, and five of them at once held every runner a branch could get.
+concurrency:
+  group: studio-browser-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  browser:
+  # The mock-host journeys, one job per Playwright project, side by side. As one step they took thirty-five to
+  # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
+  # pushed them past sixty), with the real-engine journeys' eleven after them in a sixty-minute job. A project
+  # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job.
+  journeys:
+    name: journeys (${{ matrix.name }})
     runs-on: ubuntu-latest
-    # The three projects of the five battle suites and the table suites took fourteen minutes on the run that
-    # added the complete loop (#432), and its real-host journeys, two of them a whole 3v3 match driven
-    # through the battle, were cut off at the twenty-minute budget that held since playback (#431). With the
-    # growth (AU8) and order (AU11) suites the mobile and desktop journeys alone took seventeen to twenty-five
-    # minutes depending on the runner, and the real-engine journeys after them were cut off at thirty (#458).
-    # AU13 brought the whole job to thirty-eight to forty minutes, and AU14's keyboard journeys and longer
-    # complete matches add about five more: forty-five would cut them off on a slow runner (#464).
-    timeout-minutes: 60
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: small-phone
+            projects: --project=small-phone
+          - name: phone
+            projects: --project=phone
+          - name: desktop and tablet
+            projects: --project=desktop --project=tablet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install browser test dependencies
+        working-directory: studio/browser
+        run: |
+          npm ci --ignore-scripts
+          node node_modules/playwright/cli.js install --with-deps chromium
+      # These journeys answer every request from a mock host (server.js and page routes): no .NET build.
+      - name: Build the isolated battle prototype
+        run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
+      - name: Verify the journeys of this project
+        working-directory: studio/browser
+        env:
+          PROJECTS: ${{ matrix.projects }}
+        run: node node_modules/playwright/cli.js test $PROJECTS
+      - name: Keep previews and failure traces
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-browser-${{ strategy.job-index }}
+          path: studio/browser/test-results
+          retention-days: 7
+  # The practice, slot, push and complete-match journeys against the real engine, one job per project: each
+  # plays one table at a time (workers: 1), so the two projects only add up when they share a job.
+  real-engine:
+    name: real engine (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [table-phone, table-desktop]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,24 +84,34 @@ jobs:
           global-json-file: global.json
       - name: Build the isolated battle prototype
         run: npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
-
       - name: Build the practice host and catalogue
         run: |
           dotnet build src/DownfallArena.Cli
           dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
-      - name: Verify mobile and desktop journeys
-        working-directory: studio/browser
-        run: npm test
       - name: Verify practice journeys with the real engine
         working-directory: studio/browser
-        run: node node_modules/playwright/cli.js test --config table.config.js
+        run: node node_modules/playwright/cli.js test --config table.config.js --project=${{ matrix.project }}
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: studio-browser
+          name: studio-browser-${{ matrix.project }}
           path: studio/browser/test-results
           retention-days: 7
+  # The check a pull request has always waited on: green only when every journey job above is.
+  browser:
+    runs-on: ubuntu-latest
+    needs: [journeys, real-engine]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Every journey job passed
+        env:
+          JOURNEYS: ${{ needs.journeys.result }}
+          REAL_ENGINE: ${{ needs.real-engine.result }}
+        run: |
+          echo "journeys: $JOURNEYS, real engine: $REAL_ENGINE"
+          test "$JOURNEYS" = success && test "$REAL_ENGINE" = success
   battle-release:
     runs-on: ubuntu-latest
     # Two of the three profiles took nine minutes in a container on main after AU14 (complete matches are
