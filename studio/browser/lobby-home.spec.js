@@ -27,6 +27,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
     if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator });
+    // A table asked for is noted and refused: the dialog's request is what the tests read.
+    if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
@@ -404,6 +406,12 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#new-table').click(); await page.locator('#opponent').selectOption('bot');
   await expect(page.locator('#create-help')).toContainText('the most at once'); await expect(page.locator('#create-submit')).toBeDisabled();
   await page.locator('#opponent').selectOption('person'); await expect(page.locator('#create-submit')).toBeEnabled();
+  // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
+  await expect(page.getByLabel(/^Ranked/)).toBeChecked();
+  await page.locator('#opponent').selectOption('bot'); await expect(page.locator('#ranked-row')).toBeHidden();
+  await page.locator('#opponent').selectOption('person'); await page.getByLabel(/^Ranked/).uncheck();
+  await page.locator('#create-submit').click();
+  await expect.poll(() => state.created).toEqual({ opponent: 'person', format: '3v3', ranked: false });
   expect(state.errors).toEqual([]);
 });
 

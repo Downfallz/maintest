@@ -15,6 +15,7 @@ export function rematchLink(table, held) {
   else if (theirs[0].kind === 'person' && theirs[0].account) params.set('rematch', theirs[0].account);
   else return null;
   if (table.format) params.set('format', table.format);
+  if (table.casual === true) params.set('ranked', '0');
   return `/lobby?${params}`;
 }
 
@@ -35,7 +36,7 @@ export function rematchPlan(table, held, friendship = null) {
   const format = table.format || undefined;
   if (!theirs) return { label: 'Rematch', request: { opponent: 'hotseat', format } };
   if (theirs.kind === 'bot') return { label: 'Rematch', request: { opponent: 'bot', format } };
-  if (friendship === 'friend') return { label: 'Invite to rematch', request: { opponent: 'friend', friend: theirs.account, format } };
+  if (friendship === 'friend') return { label: 'Invite to rematch', request: { opponent: 'friend', friend: theirs.account, format, ...(table.casual === true ? { ranked: false } : {}) } };
   return { label: 'Invite to rematch', link };
 }
 

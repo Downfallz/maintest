@@ -228,6 +228,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             table.OpenSeats = opponent == "person" ? ["player2"] : [];
+            table.Casual = opponent is "person" or "friend" && opening?.Ranked == false;
             registry.Add(table, reservation);
 
             // The seats handed to this browser are taken by it from the start: no link names them, and only the
@@ -1098,6 +1099,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             id = table.Id,
             createdAt = table.CreatedAt,
             format = table.Session.Rules.Format.ToString(),
+            casual = table.Casual,
             waiting = !table.Session.HasBegun && !table.IsOver,
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
@@ -1209,6 +1211,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 table = result.Table,
                 finishedAt = result.FinishedAt,
                 format = result.Format,
+                casual = result.Casual,
                 rounds = result.Rounds,
                 // Both seats on one device: there is no side to have won or lost.
                 outcome = mine.Length > 1 ? "both" : result.Winner is null ? "draw" : mine.Contains(result.Winner) ? "won" : "lost",
@@ -1341,7 +1344,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     private static StudioResponse Problem(int status, string code, string message) => Json(new { error = code, message }, status);
 
-    private sealed record Opening(string? Opponent, string? Format, string? Friend);
+    /// <param name="Ranked">False opens a game between two players unranked (ADR 0155); a bot or a shared device never is.</param>
+    private sealed record Opening(string? Opponent, string? Format, string? Friend, bool? Ranked = null);
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
     private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null);

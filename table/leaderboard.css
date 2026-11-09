@@ -21,3 +21,4 @@
 .bots li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
 .bots li span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 700px) { .ladder .games { display: none; } .ladder th, .ladder td { padding: 11px 10px; } .ladder .tag { display: table; margin: 4px 0 0; } }
+.ladder-subheading { margin: 18px 0 6px; font-size: 13px; letter-spacing: .04em; color: var(--ink); }

@@ -30,13 +30,15 @@
             <tbody id="ladder-rows"></tbody>
           </table>
         </div>
-        <p id="ladder-empty" class="empty-state" hidden>No ranked games yet. Open a table for another player from the lobby: every finished game between two accounts counts here.</p>
+        <p id="ladder-empty" class="empty-state" hidden>No ranked games yet. Open a table for another player from the lobby: every finished ranked game between two accounts counts here.</p>
       </section>
       <aside class="lobby-sidebar" aria-label="Your record">
         <section class="lobby-panel" aria-labelledby="you-heading"><p class="eyebrow">Your record</p><h2 id="you-heading">Where you stand</h2><div id="you"></div></section>
         <section class="lobby-panel" aria-labelledby="how-heading"><p class="eyebrow">How it counts</p><h2 id="how-heading">Glicko-2</h2>
-          <p class="muted">Everyone starts at 1500, very uncertain. Each ranked game moves your rating by how surprising the result was, and makes it surer. A player is <strong>provisional</strong> while the ± is above <span id="provisional-above">110</span>.</p>
-          <p class="muted">Games against a bot or on a shared device are not ranked; your record against each bot is kept apart. A day without a game makes a rating a little less sure.</p>
+          <p class="muted">Everyone starts at 1500 ± 350: a guess. Each ranked game moves your rating by how surprising the result was, and shrinks the ±, how sure the ladder is of it.</p>
+          <h3 class="ladder-subheading">What provisional means</h3>
+          <p class="muted"><strong>Provisional</strong> means your rating is still being found: its ± is above <span id="provisional-above">110</span>. It usually takes 10 to 15 ranked games to settle, fewer against settled players. Until then you are listed after the settled players, whatever your rating, and cannot hold a top place. A long break makes a rating less sure again, a little each day.</p>
+          <p class="muted">Games against a bot, on a shared device, or opened as unranked do not count; your record against each bot is kept apart.</p>
         </section>
       </aside>
     </div>

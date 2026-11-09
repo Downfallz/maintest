@@ -57,6 +57,7 @@
       <label for="opponent">Who are you playing?</label><select id="opponent" name="opponent"><option value="person">Another player · open seat</option><option value="friend">A friend · seat kept for them</option><option value="bot">Solo · the strongest bot</option><option value="hotseat">Two players · shared device</option></select>
       <div id="friend-row" hidden><label for="friend">Which friend?</label><select id="friend" name="friend"></select></div>
       <label for="format">Creatures per side</label><select id="format" name="format"></select>
+      <label id="ranked-row" class="ranked-row" for="ranked"><span>Ranked<small>Counts on the leaderboard. Turn it off for a friendly or practice game.</small></span><input id="ranked" name="ranked" type="checkbox" checked></label>
       <p id="create-help" class="muted">You take the first seat. Another player can join from this lobby or with your invitation.</p>
       <p id="create-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="create-cancel" type="button" class="secondary">Cancel</button><button id="create-submit" class="primary" type="submit">Create &amp; play →</button></div>

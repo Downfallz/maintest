@@ -81,6 +81,9 @@ internal sealed record TableRecord
     /// <summary>Only explicitly offered seats are public. Older, invitation-only tables offer none.</summary>
     public IReadOnlyList<string> OpenSeats { get; init; } = [];
 
+    /// <summary>Opened as unranked (ADR 0155). False in a record written before a game could be.</summary>
+    public bool Casual { get; init; }
+
     public static TableRecord Of(PlayedTable table, TableRequest request, JoinCodes codes)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -103,6 +106,7 @@ internal sealed record TableRecord
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,
+            Casual = table.Casual,
         };
     }
 

@@ -77,7 +77,7 @@ export function ongoingGames(mine) {
 export function localFinished(mine, kind, page = 0, size = GAMES_PER_PAGE) {
   const list = mine.filter(entry => entry.table.over && gameKind(entry.table) === kind).map(entry => {
     const held = (entry.seats ?? []).map(one => one.seat), other = versus(entry.table).find(side => !held.includes(side.seat));
-    return { table: entry.table.id, format: entry.table.format, finishedAt: null, rounds: entry.table.round ?? null, outcome: null,
+    return { table: entry.table.id, format: entry.table.format, casual: entry.table.casual === true, finishedAt: null, rounds: entry.table.round ?? null, outcome: null,
       opponent: other ? { kind: other.kind, name: other.name } : { kind: 'self', name: 'Shared device' }, seats: entry.seats, session: null };
   });
   const pages = Math.max(1, Math.ceil(list.length / size)), at = Math.min(Math.max(0, page), pages - 1);
@@ -87,7 +87,7 @@ export function localFinished(mine, kind, page = 0, size = GAMES_PER_PAGE) {
 const OUTCOMES = Object.freeze({ won: 'Victory', lost: 'Defeat', draw: 'Draw', both: 'Shared device' });
 /** What a finished game's card says: the result as a tag, who it was against, and how long it ran. */
 export function finishedSummary(item) {
-  return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished',
+  return { title: `${item.format ?? ''} battle`.trim(), tag: OUTCOMES[item.outcome] ?? 'Finished', tone: item.outcome ?? 'finished', casual: item.casual === true,
     against: item.opponent?.name ?? 'Unknown', bot: item.opponent?.kind === 'bot',
     detail: Number.isInteger(item.rounds) && item.rounds > 0 ? `${item.rounds} round${item.rounds === 1 ? '' : 's'}` : '',
     action: item.seats?.length ? 'View game →' : item.session ? 'Watch the replay →' : null };
@@ -125,7 +125,9 @@ export function rematchRequest(search) {
   if (!again) return null;
   const format = params.get('format') || null;
   if (again === 'bot' || again === 'hotseat') return { opponent: again, friend: null, format };
-  return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format } : null;
+  // A rematch of an unranked game (ADR 0155) starts unranked too.
+  const ranked = params.get('ranked') !== '0';
+  return /^acct_[a-z2-7]{16}$/.test(again) ? { opponent: 'friend', friend: again, format, ranked } : null;
 }
 
 /**
@@ -218,12 +220,18 @@ export function mountLobby(doc, location, storage) {
     });
     return button;
   }
+  function title(text, casual) {
+    const heading = node('h3', text);
+    if (casual) heading.append(node('span', 'Unranked', 'casual-tag'));
+    return heading;
+  }
   function card(table, entry) {
     const root = node('article', '', `game-card${entry ? ' mine' : ''}`);
     const top = node('div', '', 'game-card-top');
     const turn = turnOf(table, (entry?.seats ?? []).map(held => held.seat));
     const invited = invitedState(entry?.invited);
-    top.append(node('h3', `${table.format} battle`), turn?.mine
+    // An unranked game (ADR 0155) says so beside its title.
+    top.append(title(`${table.format} battle`, table.casual === true), turn?.mine
       ? node('span', 'Your turn', 'status-tag your-turn')
       : node('span', invited?.tag ?? tableState(table), `status-tag${table.openSeats > 0 ? ' available' : ''}${invited ? ' invited' : ''}`));
     const line = node('div', '', 'versus');
@@ -298,7 +306,7 @@ export function mountLobby(doc, location, storage) {
     const summary = finishedSummary(item);
     const root = node('article', '', `game-card mine finished ${summary.tone}`);
     const top = node('div', '', 'game-card-top');
-    top.append(node('h3', summary.title), node('span', summary.tag, `status-tag outcome ${summary.tone}`));
+    top.append(title(summary.title, summary.casual), node('span', summary.tag, `status-tag outcome ${summary.tone}`));
     const line = node('div', '', 'versus');
     const who = node('span', '', 'side');
     who.append(node('span', `vs ${summary.against}`, `who ${item.opponent?.kind ?? 'person'}`));
@@ -458,6 +466,8 @@ export function mountLobby(doc, location, storage) {
       ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
       : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
     el('friend-row').hidden = value !== 'friend';
+    // Only a game between two players can count on the ladder: a bot or a shared device never does.
+    el('ranked-row').hidden = !['person', 'friend'].includes(value) || mode === 'off';
     // At the most games of that kind at once (ADR 0147), the host would refuse: say so before the player asks.
     const kind = value === 'bot' ? 'bots' : 'players', full = !reinviting && Number.isInteger(limit) && ongoingGames(mine)[kind].length >= limit;
     if (full) el('create-help').textContent = `You already have ${limit} games ${kind === 'bots' ? 'against bots' : 'against players'} in progress, the most at once. Finish one to start another.`;
@@ -465,7 +475,7 @@ export function mountLobby(doc, location, storage) {
     el('create-submit').disabled = full || (value === 'friend' && !el('friend').value);
   }
   el('friend').addEventListener('change', showOpponent);
-  function openCreate({ friend = null, reinvite = null, opponent = null, format = null } = {}) {
+  function openCreate({ friend = null, reinvite = null, opponent = null, format = null, ranked = true } = {}) {
     if (signInFirst()) { askSignIn(); return; }
     if (!listing) return;
     reinviting = reinvite;
@@ -478,6 +488,7 @@ export function mountLobby(doc, location, storage) {
     if (friend || reinvite) el('opponent').value = 'friend';
     else if (opponent) el('opponent').value = opponent;
     if (format && [...el('format').options].some(option => option.value === format)) el('format').value = format;
+    el('ranked').checked = ranked !== false; el('ranked').disabled = Boolean(reinvite);
     const opening = revision;
     void loadFriends(friend).then(() => {
       if (opening !== revision || signInFirst()) return;
@@ -519,7 +530,9 @@ export function mountLobby(doc, location, storage) {
         dialog.close();
         await refresh();
       } else {
-        enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined }));
+        const between = ['person', 'friend'].includes(el('opponent').value);
+        enter(await lobbyRequest('/api/lobby/tables', { opponent: el('opponent').value, format: el('format').value, friend: el('opponent').value === 'friend' ? el('friend').value : undefined,
+          ...(between && !el('ranked').checked ? { ranked: false } : {}) }));
       }
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
     finally { busy = false; showOpponent(); }

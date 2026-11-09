@@ -94,7 +94,9 @@ test('an invitation card says who asks and to what', () => {
 });
 
 test('a rematch link names the opponent to choose again, or nothing', () => {
-  assert.deepEqual(rematchRequest('?rematch=acct_abcdefghijklmnop&format=2v2'), { opponent: 'friend', friend: 'acct_abcdefghijklmnop', format: '2v2' });
+  assert.deepEqual(rematchRequest('?rematch=acct_abcdefghijklmnop&format=2v2'), { opponent: 'friend', friend: 'acct_abcdefghijklmnop', format: '2v2', ranked: true });
+  // An unranked game's rematch starts unranked (ADR 0155).
+  assert.equal(rematchRequest('?rematch=acct_abcdefghijklmnop&ranked=0').ranked, false);
   assert.deepEqual(rematchRequest('?rematch=bot'), { opponent: 'bot', friend: null, format: null });
   assert.deepEqual(rematchRequest('?rematch=hotseat&format=1v1'), { opponent: 'hotseat', friend: null, format: '1v1' });
   assert.equal(rematchRequest('?rematch=../admin'), null);
@@ -148,7 +150,8 @@ test('without kept results, a kind\'s finished games are the finished tables thi
 test('a finished card leads with the result, names who it was against, and opens the game or its replay', () => {
   const kept = { format: '3v3', rounds: 9, outcome: 'won', opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/t1' };
 
-  assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
+  assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', casual: false, against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
+  assert.equal(finishedSummary({ ...kept, casual: true }).casual, true, 'an unranked game says so');
   assert.equal(finishedSummary({ ...kept, outcome: 'lost', seats: [{ seat: 'player1', token: 't' }] }).action, 'View game →');
   assert.equal(finishedSummary({ ...kept, outcome: 'draw', session: null }).action, null, 'a result kept before tables were named opens nothing');
   assert.equal(finishedSummary({ ...kept, outcome: 'both' }).tag, 'Shared device');

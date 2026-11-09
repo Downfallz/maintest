@@ -58,6 +58,19 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_table_opened_unranked_is_kept_and_listed_as_casual_and_a_bot_table_never_is()
+    {
+        var opened = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","format":"1v1","ranked":false}"""));
+        var id = opened.GetProperty("table").GetProperty("id").GetString()!;
+
+        _registry.ById(id).ShouldNotBeNull().Casual.ShouldBeTrue();
+        opened.GetProperty("table").GetProperty("casual").GetBoolean().ShouldBeTrue();
+        (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Casual.ShouldBeTrue();
+        var bot = Read(await Lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot","format":"1v1","ranked":false}"""));
+        _registry.ById(bot.GetProperty("table").GetProperty("id").GetString()!).ShouldNotBeNull().Casual.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Two_players_racing_for_one_place_cannot_both_take_it()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
