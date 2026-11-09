@@ -4,7 +4,7 @@ import { creatureInspection, creatureCues, spokenCues } from '../../table/battle
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
-import { battleOrder, createBattleOrderReveal } from '../../table/battle-order.js';
+import { battleOrder, createBattleOrderReveal, rollOffDice } from '../../table/battle-order.js';
 import { orderControls } from './order';
 import { createBattleGrowth } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
@@ -488,12 +488,12 @@ function render() {
   // read, and a caster's critical roll as its action lands.
   type Die = NonNullable<SceneFrame['dice']>[number];
   const dice: Die[] = [];
-  if (orderReading) for (const rollOff of ((view?.board as { rollOffs?: { creature: number | string; rolls?: number[] }[] } | undefined)?.rollOffs ?? [])) {
-    const last = rollOff.rolls?.at(-1);
-    if (Number.isInteger(last)) dice.push({ id: String(rollOff.creature), value: last!, tone: 'roll', key: `order:${board.round}:${rollOff.creature}:${rollOff.rolls!.join('-')}` });
+  // A roll-off's dice say which tie they broke (its group) and where each creature finished in it.
+  if (orderReading) for (const die of rollOffDice(view?.board)) {
+    dice.push({ id: die.id, value: die.value, tone: 'roll', key: `order:${board.round}:${die.id}:${die.rolls.join('-')}`, group: die.group, place: die.place, rivals: die.rivals });
   }
-  const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean } | null } | null)?.roll : null;
-  if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}` });
+  const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean; needed?: number | null } | null } | null)?.roll : null;
+  if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}`, needed: critical.needed ?? null });
   frame = { ...frame, dice };
   scene.present(frame, reduced(), playbackState.rate);
   const reveal = growth.receipt();

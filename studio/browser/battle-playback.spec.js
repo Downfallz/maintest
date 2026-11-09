@@ -15,10 +15,21 @@ test('a cast that tried to crit shows its d20 beside the caster as it lands, and
   const h = await mount(page);
   await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
   await page.clock.runFor(860);
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit');
+  // The die says what the roll needed: Strike crits from 14 on a d20 (its card, ADR 0100).
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit:14+');
   await page.screenshot({ path: info.outputPath('critical-die.jpg'), type: 'jpeg', quality: 85 });
   await page.clock.runFor(4000);
   await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./); expect(h.errors).toEqual([]);
+});
+test('a cast that fell short of its crit says the face it needed under its die', async ({ page }, info) => {
+  test.setTimeout(60000);
+  const h = await mount(page), short = entry(10, { criticalRoll: 9 });
+  short.event.resolution.isCritical = false;
+  await h.publish([entry(12), short]);
+  await page.clock.runFor(1400);
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:9:miss:14+');
+  await page.screenshot({ path: info.outputPath('critical-miss-die.png') });
+  expect(h.errors).toEqual([]);
 });
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.
@@ -297,6 +308,25 @@ test('three effects on one creature stack over its head instead of running off t
     expect(box.left).toBeGreaterThanOrEqual(0); expect(box.right).toBeLessThanOrEqual(width);
   }
   await page.screenshot({ path: info.outputPath('stacked-effects.png') });
+  expect(h.errors).toEqual([]);
+});
+
+test('a result on a whole team reads every target in the card, the last one included', async ({ page }, info) => {
+  const h = await mount(page);
+  const after = before.map(one => [1, 2, 3].includes(one.id) ? { ...one, health: 13, conditions: [{ effect: { kind: 'Bleed', amountPerRound: 2 }, remainingRounds: 2 }] } : one);
+  const action = entry(10, { actor: 4, targets: [1, 2, 3], after, outcomes: [1, 2, 3].flatMap(target => [
+    { kind: 'DamageOutcome', target, amount: 7 }, { kind: 'ConditionOutcome', target, effect: { kind: 'Bleed', amountPerRound: 2 } }]) });
+  action.event.resolution.isCritical = false;
+  await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
+  await page.clock.runFor(1400);
+  const detail = page.locator('#reading-detail'), groups = detail.locator('.reading-group');
+  await expect(groups).toHaveCount(3);
+  const box = await detail.evaluate(node => node.getBoundingClientRect().toJSON());
+  for (const group of await groups.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON())))
+    expect(group.bottom).toBeLessThanOrEqual(box.bottom + 1);
+  // The card grows for them without pushing its OK off the screen.
+  await fitsViewport(page, '#playback-next');
+  await page.screenshot({ path: info.outputPath('team-wide-reading.png') });
   expect(h.errors).toEqual([]);
 });
 

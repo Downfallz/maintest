@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleOrder, battleTieGroups, createBattleOrderReveal } from './battle-order.js';
+import { battleOrder, battleTieGroups, createBattleOrderReveal, rollOffDice } from './battle-order.js';
 import { livePresentation } from './battle-live.js';
 
 const slot = (creature, owner = 'Player1', speed = 'Quick', initiative = 5) => ({ creature, owner, speed, initiative });
@@ -123,4 +123,13 @@ test('an order being read stays unread until Continue', () => {
   controller.presented();
   assert.equal(controller.model().pending, false); assert.equal(controller.model().unread, 5);
   controller.read(); assert.equal(controller.model().unread, null);
+});
+
+test('roll-off dice say which tie each broke and where its creature finished in it', () => {
+  const slot = (creature, speed, initiative) => ({ creature, speed, initiative, owner: creature < 4 ? 'Player1' : 'Player2' });
+  const board = { timeline: [slot(5, 'Instinct', 8), slot(1, 'Instinct', 8), slot(2, 'Instinct', 7), slot(4, 'Instinct', 7), slot(3, 'Precision', 5)],
+    rollOffs: [{ creature: 1, rolls: [2] }, { creature: 5, rolls: [13] }, { creature: 2, rolls: [9, 9, 17] }, { creature: 4, rolls: [9, 9, 4] }] };
+  assert.deepEqual(rollOffDice(board).map(die => [die.id, die.value, die.group, die.place, die.rivals]),
+    [['5', 13, 1, 1, 1], ['1', 2, 1, 2, 1], ['2', 17, 2, 1, 1], ['4', 4, 2, 2, 1]]);
+  assert.deepEqual(rollOffDice({ timeline: [slot(1, 'Instinct', 8)], rollOffs: [{ creature: 9, rolls: [3] }] }), []);
 });

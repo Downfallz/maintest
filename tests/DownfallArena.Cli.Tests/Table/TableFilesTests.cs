@@ -47,6 +47,7 @@ public sealed class TableFilesTests
         Files.Get("/sw.js").ContentType.ShouldContain("text/javascript");
         Files.Get("/manifest.webmanifest").ContentType.ShouldBe("application/manifest+json");
         Files.Get("/icon.svg").ContentType.ShouldBe("image/svg+xml");
+        Files.Get("/brand-mark.svg").ContentType.ShouldBe("image/svg+xml");
         var bitmap = Files.Get("/icon-192.png");
         bitmap.ContentType.ShouldBe("image/png");
         bitmap.Body.Take(4).ShouldBe([0x89, (byte)'P', (byte)'N', (byte)'G']);

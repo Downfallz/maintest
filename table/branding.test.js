@@ -42,6 +42,16 @@ test('the app and Android notifications use the rune instead of the placeholder 
   assert.match(read('table/sw.js'), /notification-badge\.png/);
   assert.doesNotMatch(read('table/navigation.js'), /brand-mark[^<]*>D<\/span>/);
 });
+// The app icon keeps its slate square, which a launcher needs; the pages draw the rune alone, so no darker square
+// sits on their lighter header.
+test('the pages mark their brand with the rune alone, not the app icon and its square', () => {
+  assert.match(read('table/brand-mark.svg'), /<path d=/);
+  assert.doesNotMatch(read('table/brand-mark.svg'), /<rect/);
+  for (const sheet of ['table/table.css', 'table/battle.css', 'table/battle-lab.css']) {
+    assert.match(read(sheet), /url\('\/brand-mark\.svg'\)/, sheet);
+    assert.doesNotMatch(read(sheet), /url\('\/icon\.svg'\)/, sheet);
+  }
+});
 // table.css paints the rune behind every .brand-mark, so a letter left inside one is drawn over it.
 test('no page that marks its brand puts a letter over the rune', () => {
   for (const page of ['table/index.html', 'table/admin.html', 'table/pilot.html', 'table/navigation.js']) {
@@ -51,5 +61,5 @@ test('no page that marks its brand puts a letter over the rune', () => {
 // The battle page loads no table.css: the mark in its navigation header must carry the rune itself.
 test('the battle page draws the rune in its navigation header', () => {
   assert.doesNotMatch(read('table/battle.html'), /href="table\.css"/);
-  assert.match(read('table/battle.css'), /\.home-header \.brand-mark \{[^}]*url\('\/icon\.svg'\)/);
+  assert.match(read('table/battle.css'), /\.home-header \.brand-mark \{[^}]*url\('\/brand-mark\.svg'\)/);
 });

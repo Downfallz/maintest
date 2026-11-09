@@ -574,8 +574,21 @@ test('a page closed on a held upkeep that took in a later part resumes from its 
 
 test('an action that tried to crit hands the scene its d20: the face and whether it reached the threshold', () => {
   const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [{ target: { id: 2 }, tone: 'harm', text: 'Damage 6' }] };
-  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true });
-  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false });
+  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true, needed: null });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false, needed: null });
+  // The face to reach is the card's (ADR 0100), so the die can say what the roll needed.
+  const cards = new Map([['bolt', { name: 'Bolt', criticalThreshold: 14 }]]);
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 9, action: { spell: 'bolt', targets: [2] } }, cards).roll, { value: 9, critical: false, needed: 14 });
   assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
   assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
+});
+test('an action queued under a dialog leaves the field and the order where they stood before it', () => {
+  const h = harness(); h.receive([]);
+  // The engine has already played the opponent's slot: its latest board has moved past it and counts the damage.
+  h.receive([incoming(4)], { board: { ...view().board, activationCursor: 2 } }, { animate: false });
+  const m = h.queue.model();
+  assert.equal(m.active, true); assert.equal(m.sequence, null);
+  assert.equal(m.board.cursor, 1, 'the queued action\'s slot is the one being played, not done');
+  assert.equal(m.board.creatures.find(one => one.id === '2')?.health ?? m.board.enemies.find(one => one.id === 2).health, 20);
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
 });

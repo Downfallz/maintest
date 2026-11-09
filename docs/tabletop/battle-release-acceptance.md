@@ -31,12 +31,18 @@ browser's text-only zoom or assistive technology.
 | Resource | Measured bytes on main `53af584a` | Enforced limit |
 | --- | ---: | ---: |
 | Art a visit loads (background and four creature bodies) | 1,528,370 | 2,097,152 |
-| Live JavaScript | 1,556,221 | 1,638,400 |
+| Live JavaScript | 1,556,221 | 1,703,936 (raised from 1,638,400, below) |
 | Live JavaScript, gzip estimate | 430,283 | 524,288 |
 
 The retired three-form sheet (`creatures.webp`, 487,084 bytes) is still served but no longer loaded, so the
 budget does not count it. The live bundle uses 95% of its raw budget: the next large battle feature is
 expected to cross it, and raising it is a decision to record here with the measurement that motivated it.
+
+**Raised to 1,703,936 bytes (1,664 KiB), 2026-11-09.** Main measured 1,637,158 bytes of live JavaScript after the
+d20s on the field (ADR 0154) and the History summary, 1,242 bytes under the limit. Showing which roll-off dice
+broke which tie, and the face a critical roll needed, made it 1,640,170 (458,455 gzip). Phaser remains most of
+the bundle; the game code around it keeps growing with each battle feature, so the raw limit rises by 64 KiB. The
+gzip limit (524,288) is unchanged.
 The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
 
 | Surface | Current coverage | Release limitation |
