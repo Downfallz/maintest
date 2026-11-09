@@ -277,7 +277,7 @@ Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/
 The mutation phase opens its private tree by itself once the board is clear: after the upkeep receipt, the
 turn order and a first-use tip ([ADR 0138](../docs/adr/0138-open-the-mutation-tree-with-the-mutation-phase.md)).
 A pick that leaves team picks keeps the tree open on the next creature with offers and its remaining picks;
-the last pick or a pass closes it. Under the creature tabs, a token per pick of the phase (filled while unspent)
+the last pick or a pass closes it. A note opens the tree and scrolls with it: a token per pick of the phase (filled while unspent)
 and the count left; when fewer picks remain than creatures that could take one, a line says the player chooses which
 mutate now, one pick each, and that later Mutation phases bring new picks for any of them (`pickPlan`). Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
 The graph docks below the scene on phones and beside it on wider screens, always at its full height: there is

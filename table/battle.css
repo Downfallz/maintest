@@ -901,18 +901,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
 /* After the shared docking rules, which it overrides: the tempo rule is longer than a pick count: it takes its own row under the heading, the tabs under it. */
-/* The team's picks as tokens: a filled one per pick left this phase, a hollow one per pick spent. Under the tabs,
-   the line that says the picks are the team's to share among its creatures. */
+/* The note at the top of the mutation tree: a filled token per pick left this phase, a hollow one per pick spent,
+   then, when there are fewer picks than creatures, the line that says the picks are the team's to share. */
+#planning-pick-rule { margin: 0 0 10px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
+#planning-pick-rule[hidden] { display: none; }
 .pick-pips { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: -1px; }
 .pick-pip { width: 10px; height: 10px; border: 1.5px solid var(--gold); border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px #f0c46b66; }
 .pick-pip[data-spent="true"] { background: transparent; box-shadow: none; opacity: .55; }
-#planning-pick-rule { margin: 0 0 6px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
-#planning-pick-rule[hidden], #planning-dialog:not([data-kind="Evolution"]) #planning-pick-rule { display: none; }
-/* The heading row is the tools' too, too narrow for the tokens and the count: they take the row under the tabs,
-   the rule the one under them, and the heading centres in its row as the tempo sheet's does. */
-#planning-dialog[data-kind="Evolution"] #planning-heading { align-self: center; margin: 0; }
-#planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 3 / 1 / auto / -1; align-self: start; margin: 2px 0 2px; }
-#planning-dialog[data-kind="Evolution"] #planning-pick-rule { grid-area: 4 / 1 / auto / -1; }
 #planning-dialog[data-kind="Speed"] .planning-header { grid-template-rows: minmax(44px, auto) auto auto; }
 #planning-dialog[data-kind="Speed"] #planning-heading { align-self: center; margin: 0; }
 #planning-dialog[data-kind="Speed"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 4px; color: #c9b88f; font-size: 11px; line-height: 1.4; }

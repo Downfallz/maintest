@@ -237,9 +237,10 @@ test('the mutation phase opens its tree by itself, once per asking', async ({ pa
 test('a pick that leaves team picks keeps the tree open on the next creature with its remaining picks', async ({ page }) => {
   const h = await mount(page);
   await expect(page.locator('#planning-help')).toHaveText('2 team picks remaining');
-  // The budget is the team's: a token per pick, and a line saying two of the three creatures mutate now.
-  const pips = page.locator('#planning-help .pick-pip'), rule = page.locator('#planning-pick-rule');
-  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-help .pick-pip[data-spent="true"]')).toHaveCount(0);
+  // The budget is the team's: a token per pick, and a line saying two of the three creatures mutate now. The note
+  // opens the tree and scrolls with it, so it takes none of a short sheet's fixed room.
+  const pips = page.locator('#planning-pick-rule .pick-pip'), rule = page.locator('#planning-choices > #planning-pick-rule');
+  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-pick-rule .pick-pip[data-spent="true"]')).toHaveCount(0);
   await expect(rule).toBeVisible();
   await expect(rule).toHaveText('3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Later Mutation phases bring new picks for any of them.');
   h.state.next = view => ({ ...view, waitingAsked: 12, board: { ...view.board, evolutionChoices: [{ creature: 1, tier: 'root0' }] },
@@ -249,7 +250,7 @@ test('a pick that leaves team picks keeps the tree open on the next creature wit
   await expect(page.locator('#planning-dialog')).toBeVisible();
   await h.publish();
   await expect(page.locator('#planning-help')).toHaveText('1 team pick remaining');
-  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-help .pick-pip[data-spent="true"]')).toHaveCount(1);
+  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-pick-rule .pick-pip[data-spent="true"]')).toHaveCount(1);
   await expect(rule).toContainText('2 creatures can mutate, 1 pick left: choose which one mutates now');
   await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
   await expect.poll(() => h.state.shown).toEqual(['11', '12']);

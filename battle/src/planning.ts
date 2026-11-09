@@ -48,6 +48,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       event.preventDefault(); controller.close();
     }
   });
+  const pickNote = document.createElement('p'); pickNote.id = 'planning-pick-rule'; pickNote.hidden = true;
   function mutations(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
@@ -59,7 +60,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     }));
     tree?.dispose();
     tree = mutationTree(choices, catalogue, tier => controller.choose({ creature, tier }));
-    el('planning-choices').replaceChildren(tree.graph);
+    el('planning-choices').replaceChildren(pickNote, tree.graph);
     el('mutation-preview-region').replaceChildren(tree.pane);
     // The whole tree opens full screen on the mutation in hand; an offer can be chosen from its card there.
     // The atlas covers the field and so holds the draft (canEdit is false under it); it offers the choice
@@ -191,22 +192,22 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (focused?.dataset.speed) return `[data-speed="${focused.dataset.speed}"]`;
     return focused?.dataset.tempoTab ? `[data-tempo-tab="${focused.dataset.tempoTab}"]` : null;
   }
-  // The team's picks are the budget a player spends here: one pip a pick of this phase, filled once spent, and
-  // the count left. Between a sent pick and the next asking the count is the one the host has not restated yet,
-  // so it says the pick went and what is left after it. Under the tabs, when there are fewer picks than
-  // creatures that could take one, a line says the player chooses which mutate now and that later phases
-  // bring new picks: the budget is the team's, not each creature's.
+  // The team's picks are the budget a player spends here. Between a sent pick and the next asking the count is
+  // the one the host has not restated yet, so it says the pick went and what is left after it. The note at the
+  // top of the tree spells the budget out: a token per pick of the phase, filled while unspent, and, when there
+  // are fewer picks than creatures that could take one, that the player chooses which mutate now and that later
+  // phases bring new picks. It scrolls with the tree, so it costs a short sheet none of the tree's fixed room.
   function pickBudget(model: ReturnType<Controller['model']>) {
     const sent = model.accepted && !model.available ? model.choice ?? {} : null;
     const plan = pickPlan(model.latest, sent);
-    const help = el('planning-help'), rule = el('planning-pick-rule');
-    if (!plan) { help.textContent = 'Team pick count unavailable'; rule.textContent = ''; rule.hidden = true; return; }
+    el('planning-help').textContent = plan?.budget ?? 'Team pick count unavailable';
+    pickNote.hidden = !plan?.left;
+    if (!plan) { pickNote.replaceChildren(); return; }
     const pips = document.createElement('span'); pips.className = 'pick-pips'; pips.setAttribute('aria-hidden', 'true');
     for (let index = 0; index < plan.spent + plan.left; index++) {
       const pip = document.createElement('span'); pip.className = 'pick-pip'; pip.dataset.spent = String(index < plan.spent); pips.append(pip);
     }
-    help.replaceChildren(pips, document.createTextNode(plan.budget));
-    rule.textContent = plan.rule; rule.hidden = !plan.rule;
+    pickNote.replaceChildren(pips, document.createTextNode(plan.rule));
   }
   // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
   function focusStart() {
@@ -257,7 +258,6 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `${confirmLabel(model)} · 1 pick · ${name(model.choice.creature)}`);
     else el('planning-confirm').removeAttribute('aria-label');
     if (model.latest.waitingFor === 'Evolution') pickBudget(model);
-    else { el('planning-pick-rule').textContent = ''; el('planning-pick-rule').hidden = true; }
     if (!dialog.open) {
       if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); }
       else if (model.latest.waitingFor === 'Speed') { dialog.show(); tempoStart(); }
