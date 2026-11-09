@@ -318,6 +318,9 @@ test('a result on a whole team reads every target in the card, the last one incl
   const action = entry(10, { actor: 4, targets: [1, 2, 3], after, outcomes: [1, 2, 3].flatMap(target => [
     { kind: 'DamageOutcome', target, amount: 7 }, { kind: 'ConditionOutcome', target, effect: { kind: 'Bleed', amountPerRound: 2 } }]) });
   action.event.resolution.isCritical = false;
+  // The runner's sans (DejaVu on Ubuntu) is wider than many a developer's: pinned here, a local run lays the card out
+  // as CI does, where each target's name breaks onto a second line on a small phone.
+  await page.addStyleTag({ content: '#playback-pacing, #playback-pacing * { font-family: "DejaVu Sans", sans-serif !important; }' });
   await h.publish([action], { board: { ...h.state.view.board, allies: after.slice(0, 3), enemies: after.slice(3) } });
   await page.clock.runFor(1400);
   const detail = page.locator('#reading-detail'), groups = detail.locator('.reading-group');
