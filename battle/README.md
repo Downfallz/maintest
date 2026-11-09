@@ -738,6 +738,13 @@ The field shows the dice ([ADR 0154](../docs/adr/0154-record-the-critical-roll-a
 hexagonal d20 beside a creature's head, with each roll-off's last throw while the revealed order is read (ivory) and a
 caster's critical roll as its action lands (gold when it crit, slate when it fell short). It tumbles in and settles,
 still under reduced motion, and leaves with the reading or the result; `#battle[data-dice]` names what stands.
+Each die says what it was for. The dice of one tie (`rollOffDice`: the creatures tied on tempo and initiative) are
+ringed in that tie's colour and joined by a dashed line with "vs" on it, and each reads where its creature finished in
+the tie (1st, 2nd). A critical roll reads the face it needed under it, from the spell's card (`Crit on 14+`, then
+`Crit! 14+` or `Needed 14+`). `data-dice` adds `tie<group>:<place>` or `<face>+` to each die.
+
+While an opponent's action waits unplayed (arrived under the turn order or another dialog), the field and the order
+strip show its round as it stood before that action, not the engine's latest board.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
 name, with a quiet chevron between places, read left to right. The order sheet reads like the other sheets: the round

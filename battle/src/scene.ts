@@ -142,7 +142,9 @@ export class BattleScene extends Phaser.Scene {
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
     const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
     this.dice?.show(standing, id => this.figures.get(id) ?? null, this.time.now);
-    const diceShown = standing.map(die => `${die.id}:${die.value}:${die.tone}`).join(' ');
+    // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
+    const diceShown = standing.map(die => [`${die.id}:${die.value}:${die.tone}`, die.group ? `tie${die.group}:${die.place}` : '', die.needed ? `${die.needed}+` : '']
+      .filter(Boolean).join(':')).join(' ');
     if (diceShown !== this.diceShown) { this.diceShown = diceShown; this.onDice(diceShown); }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {

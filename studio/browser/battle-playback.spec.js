@@ -15,10 +15,21 @@ test('a cast that tried to crit shows its d20 beside the caster as it lands, and
   const h = await mount(page);
   await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
   await page.clock.runFor(860);
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit');
+  // The die says what the roll needed: Strike crits from 14 on a d20 (its card, ADR 0100).
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit:14+');
   await page.screenshot({ path: info.outputPath('critical-die.jpg'), type: 'jpeg', quality: 85 });
   await page.clock.runFor(4000);
   await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./); expect(h.errors).toEqual([]);
+});
+test('a cast that fell short of its crit says the face it needed under its die', async ({ page }, info) => {
+  test.setTimeout(60000);
+  const h = await mount(page), short = entry(10, { criticalRoll: 9 });
+  short.event.resolution.isCritical = false;
+  await h.publish([entry(12), short]);
+  await page.clock.runFor(1400);
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:9:miss:14+');
+  await page.screenshot({ path: info.outputPath('critical-miss-die.png') });
+  expect(h.errors).toEqual([]);
 });
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {
   // Full-size frames rendered across several paced seconds outlast 30 s on a busy desktop runner, as in the pacing spec.

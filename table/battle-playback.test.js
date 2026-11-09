@@ -574,8 +574,11 @@ test('a page closed on a held upkeep that took in a later part resumes from its 
 
 test('an action that tried to crit hands the scene its d20: the face and whether it reached the threshold', () => {
   const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [{ target: { id: 2 }, tone: 'harm', text: 'Damage 6' }] };
-  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true });
-  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false });
+  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true, needed: null });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false, needed: null });
+  // The face to reach is the card's (ADR 0100), so the die can say what the roll needed.
+  const cards = new Map([['bolt', { name: 'Bolt', criticalThreshold: 14 }]]);
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 9, action: { spell: 'bolt', targets: [2] } }, cards).roll, { value: 9, critical: false, needed: 14 });
   assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
   assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
 });

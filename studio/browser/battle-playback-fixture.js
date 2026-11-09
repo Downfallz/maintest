@@ -29,7 +29,7 @@ async function mount(page) {
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url()); state.requests.push({ path: url.pathname, query: url.search, method: request.method() });
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2, visual: { family: 'necromantic', motif: 'spirits', delivery: 'cast' } }], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, critical: '35%', criticalThreshold: 14 }, { id: 'spell:summon_minions:v1', name: 'Infestation', cost: 2, visual: { family: 'necromantic', motif: 'spirits', delivery: 'cast' } }], effects: [{ kind: 'Bleed', glyph: '♥', harmful: true }] } });
     if (url.pathname === '/api/seat/player1') return route.fulfill({ status: state.status, json: state.view });
     return route.fulfill({ status: 500, body: 'Unexpected request' });
   });
