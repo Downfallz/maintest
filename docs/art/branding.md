@@ -73,7 +73,9 @@ The browser `theme-color` and PWA manifest mirror deep slate. These non-CSS form
 future palette change; the theme metadata is checked in `table/branding.test.js`.
 
 The brand mark is the bone-and-soot rune, not a colour of the palette. `table/icon.svg` draws it flat in bone
-(`#D8C7A7`) on deep slate, and is what every page's mark shows. `icon-192.png` and `icon-512.png` are its
+(`#D8C7A7`) on deep slate: it is the favicon and the app icon. Each page's mark shows `table/brand-mark.svg`,
+the same rune with no square, because the pages' headers are lit lighter than deep slate and the icon's square
+showed on them as a dark box. `icon-192.png` and `icon-512.png` are its
 textured artwork, cracked bone on a soot ground a few shades darker than deep slate; they are artwork, so they
 are not regenerated from the SVG. `notification-badge.svg` and `.png` are the white silhouette Android masks
 into the status bar.
