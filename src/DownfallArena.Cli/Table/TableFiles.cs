@@ -38,9 +38,9 @@ internal sealed class TableFiles
         "hybrids/predator-soulreaver-01", "hybrids/predator-soulreaver-02", "hybrids/predator-soulreaver-03", "hybrids/predator-soulreaver-04",
         "hybrids/predator-deathstalker-05", "hybrids/predator-deathstalker-06", "hybrids/predator-deathstalker-07", "hybrids/predator-deathstalker-08",
         "hybrids/predator-blightweaver-09", "hybrids/predator-blightweaver-10", "hybrids/predator-blightweaver-11", "hybrids/predator-blightweaver-12",
-        "hybrids/warped-revenant-01", "hybrids/warped-revenant-02", "hybrids/warped-revenant-03", "hybrids/warped-revenant-04",
-        "hybrids/warped-transcendent-05", "hybrids/warped-transcendent-06", "hybrids/warped-transcendent-07", "hybrids/warped-transcendent-08",
-        "hybrids/warped-cataclysm-09", "hybrids/warped-cataclysm-10", "hybrids/warped-cataclysm-11", "hybrids/warped-cataclysm-12",
+        "hybrids/warped-cataclysm-sibling", "hybrids/warped-cataclysm-predator", "hybrids/warped-cataclysm-brute", "hybrids/warped-cataclysm-ultimate",
+        "hybrids/warped-revenant-sibling", "hybrids/warped-revenant-predator", "hybrids/warped-revenant-brute", "hybrids/warped-revenant-ultimate",
+        "hybrids/warped-transcendent-sibling", "hybrids/warped-transcendent-predator", "hybrids/warped-transcendent-brute", "hybrids/warped-transcendent-ultimate",
     ];
 
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;

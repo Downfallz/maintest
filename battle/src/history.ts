@@ -133,6 +133,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     detail.append(board);
   }
 
+  const clearFilters = () => { for (const [name, value] of Object.entries(controller.model().filters)) if (value) controller.filter(name, ''); };
   type Round = ReturnType<typeof historySummary>[number];
   const SHORT_STATUS: Record<string, string> = { Critical: 'Crit', Fizzled: 'Fizzled' };
   const EFFECTS_SHOWN = 4;
@@ -143,7 +144,10 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const title = textNode('div', ''); title.append(textNode('h3', `Round ${one.round}`), ...(counts ? [textNode('span', counts, 'summary-counts')] : []));
     const more = textNode('button', 'All events', 'summary-more'); (more as HTMLButtonElement).type = 'button';
     more.setAttribute('aria-label', `All events of round ${one.round}`);
-    more.addEventListener('click', () => { choose('events'); controller.filter('round', String(one.round)); el('history-close').focus({ preventScroll: true }); });
+    more.addEventListener('click', () => {
+      // The round's whole journal: a kind, creature or team chosen earlier in All events would hide part of it.
+      clearFilters(); choose('events'); controller.filter('round', String(one.round)); el('history-close').focus({ preventScroll: true });
+    });
     head.append(title, more); card.append(head);
     if (one.result) card.append(textNode('p', one.result, 'summary-result'));
     if (one.mutations.length) {
@@ -167,8 +171,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
         line.addEventListener('click', () => {
           // The summary lists every loaded round whatever All events filters; a filter that excludes this cast would
           // leave its inspection with nothing to select, so the filters are cleared first.
-          for (const [name, value] of Object.entries(controller.model().filters)) if (value) controller.filter(name, '');
-          controller.select(cast.sequence); el('history-back').focus({ preventScroll: true });
+          clearFilters(); controller.select(cast.sequence); el('history-back').focus({ preventScroll: true });
         });
         item.append(line);
         if (cast.effects.length) {
