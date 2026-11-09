@@ -915,6 +915,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-selection { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-kind="TieOrder"]) #planning-confirm { max-width: 100%; min-width: 0; justify-self: end; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
 /* After the shared docking rules, which it overrides: the tempo rule is longer than a pick count: it takes its own row under the heading, the tabs under it. */
+/* The note at the top of the mutation tree: a filled token per pick left this phase, a hollow one per pick spent,
+   then, when there are fewer picks than creatures, the line that says the picks are the team's to share. */
+#planning-pick-rule { margin: 0 0 10px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
+#planning-pick-rule[hidden] { display: none; }
+.pick-pips { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: -1px; }
+.pick-pip { width: 10px; height: 10px; border: 1.5px solid var(--gold); border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px #f0c46b66; }
+.pick-pip[data-spent="true"] { background: transparent; box-shadow: none; opacity: .55; }
 #planning-dialog[data-kind="Speed"] .planning-header { grid-template-rows: minmax(44px, auto) auto auto; }
 #planning-dialog[data-kind="Speed"] #planning-heading { align-self: center; margin: 0; }
 #planning-dialog[data-kind="Speed"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 4px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
@@ -1027,8 +1034,8 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-empty { color: var(--muted); }
 #atlas-detail { --mutation-colour: #aabdb1; position: relative; width: 380px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border-left: 1px solid #3f554d; background: #12232a; }
 #atlas-detail[hidden] { display: none; }
-#atlas-detail-close { position: absolute; top: 8px; right: 8px; z-index: 1; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 20px; }
-#atlas-detail-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px 18px 20px; }
+#atlas-detail-close { position: absolute; top: 8px; right: 8px; z-index: 2; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 20px; }
+#atlas-detail-body { position: relative; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px 18px 20px; }
 .atlas-card-head { padding: 0 34px 10px 12px; border-left: 4px solid var(--mutation-colour); }
 .atlas-card-family { margin: 0; color: var(--mutation-colour); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 .atlas-card-name { margin: 2px 0 8px; font: 24px/1.15 Georgia, serif; color: #f2eee2; }
@@ -1042,7 +1049,10 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-card-next { display: flex; flex-wrap: wrap; gap: 6px; }
 .atlas-card-next h4 { flex-basis: 100%; }
 .atlas-next { min-height: 36px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
-.atlas-choose { width: 100%; margin-top: 18px; min-height: 48px; }
+/* Pinned to the top of the scrolling card: the bar spans the card's width under its own backdrop, and leaves
+   the corner to the card's close button, which stays above it (z-index 2) and so keeps taking taps. */
+.atlas-choose-bar { position: sticky; top: -16px; z-index: 1; margin: 0 -18px; padding: 12px 58px 10px 18px; background: linear-gradient(#12232a 82%, #12232a00); }
+.atlas-choose { width: 100%; min-height: 48px; }
 /* More families lie to that side: a slim tab at the edge with a triangle, nudging the way a swipe goes. */
 .atlas-swipe { position: absolute; top: 50%; z-index: 2; display: grid; place-items: center; width: 36px; height: 64px; padding: 0; transform: translateY(-50%); border: 1px solid #eac88e66; background: #0c181cd9; box-shadow: 0 4px 14px #0009; color: var(--gold); cursor: pointer; }
 .atlas-swipe[hidden] { display: none; }
@@ -1192,7 +1202,10 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
    height, and the footer that declares stays pinned at the bottom edge. */
 #combat-dialog { overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
 #combat-dialog > :not(#combat-browser) { flex: 0 0 auto; }
-#combat-dialog #combat-browser { flex: 1 1 0; min-height: 96px; }
+/* The browser is the containing block of what its cards hide for screen readers (.spell-card-sr, absolute):
+   without it they sit against the fixed panel, a whole spellbook below its edge, and make the panel a second
+   scroller that a swipe near the header carries away. */
+#combat-dialog #combat-browser { position: relative; flex: 1 1 0; min-height: 96px; }
 #combat-dialog .combat-dialog-footer { position: sticky; bottom: 0; z-index: 1; padding-bottom: 12px; background: var(--panel); }
 /* Choosing at the slot declares nothing here: an empty footer takes no room under the spells. */
 #combat-dialog .combat-dialog-footer:not(:has(> :not([hidden]))) { display: none; }

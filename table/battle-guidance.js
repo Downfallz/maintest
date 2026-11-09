@@ -70,7 +70,7 @@ function roundFlow(mode) {
 const tips = {
   mutation: { title: 'What is a mutation?', lines: [
     'A mutation develops your creature: new spells or a passive, plus initiative. Its branch explains what the creature gains.',
-    'Picks are shared across your team. Each creature can acquire at most one mutation this opportunity. Both teams choose privately, then reveal together.',
+    'Picks are shared across your team, and each creature takes at most one per Mutation phase. With 2 picks and 3 creatures, you choose which 2 mutate now; later Mutation phases bring new picks, so the one left out can mutate then. Both teams choose privately, then reveal together.',
     'The mutation tree opens with the phase. Choose an eligible creature on the battlefield, preview a branch, then confirm the named mutation and recipient. The tree stays open while team picks remain. Pass remaining picks gives up all your unused picks for this round.',
   ] },
   tempo: { title: 'Choose how your team acts', lines: [TEMPO_RULE,
