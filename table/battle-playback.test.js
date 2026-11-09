@@ -579,3 +579,13 @@ test('an action that tried to crit hands the scene its d20: the face and whether
   assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
   assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
 });
+test('an action queued under a dialog leaves the field and the order where they stood before it', () => {
+  const h = harness(); h.receive([]);
+  // The engine has already played the opponent's slot: its latest board has moved past it and counts the damage.
+  h.receive([incoming(4)], { board: { ...view().board, activationCursor: 2 } }, { animate: false });
+  const m = h.queue.model();
+  assert.equal(m.active, true); assert.equal(m.sequence, null);
+  assert.equal(m.board.cursor, 1, 'the queued action\'s slot is the one being played, not done');
+  assert.equal(m.board.creatures.find(one => one.id === '2')?.health ?? m.board.enemies.find(one => one.id === 2).health, 20);
+  h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+});

@@ -280,6 +280,13 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
   function model() {
     const action = current && !current.receipt ? current : null;
     const replay = action ? { actions: [current], index: 0, stage: stage === 'windup' ? 'before' : 'after', round: current.round } : null;
+    // An action queued and not yet played (it arrived under the turn order, a tip or another dialog) has not
+    // happened on screen: the field and the order strip show the round as it stood before it, never the engine's
+    // latest board, which already counts it played and its damage dealt.
+    // Only within the round on the board: an earlier round's action keeps the latest board, so a newer round's
+    // order being read is never swapped for an older one.
+    const queued = !current && framed(queue[0] ?? {}) && !queue[0].receipt && queue[0].round === latest?.board?.roundNumber ? queue[0] : null;
+    const waiting = queued ? { actions: [queued], index: 0, stage: 'before', round: queued.round } : null;
     // A turnover reads on a recorded board under its plaques: an upkeep on the board it arrived with, an aftermath
     // on its round's last action frame. Any other receipt, or one without such a board, draws none.
     const own = current?.receipt ? current.snapshot : null;
@@ -288,7 +295,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
       : current?.receipt ? { board: { roundNumber: current.round,
       phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === 'Aftermath' ? 'EndOfRound' : 'StartOfRound',
       subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === 'Aftermath' ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
-      : action ? presentedView(latest, replay) : latest;
+      : action ? presentedView(latest, replay) : waiting ? presentedView(latest, waiting) : latest;
     // Every frame, live or recorded, shows the purchases it owns, ordered by when they were made (ADR 0151).
     const board = livePresentation(display, bought, { log: purchases });
     const cue = action ? actionCue(action, catalogue, harmful) : null;
