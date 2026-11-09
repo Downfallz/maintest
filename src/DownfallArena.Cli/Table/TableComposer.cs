@@ -316,6 +316,7 @@ internal sealed class TableComposer
             {
                 EventStreamVersion = rebuilding?.Record.EventStreamVersion ?? MatchTrace.CurrentEventStreamVersion,
                 OpenSeats = rebuilding?.Record.OpenSeats ?? [],
+                Casual = rebuilding?.Record.Casual ?? false,
             };
             Push?.Watch(table);
 
@@ -527,7 +528,8 @@ internal sealed class TableComposer
             [.. table.Seats.Select((seat, index) => seat.Person is null
                 ? new ResultSeat(seat.Name, null, table.Session.Seat(seat.Slot).Seated.Name)
                 : new ResultSeat(seat.Name, accounts[index], null))],
-            table.Id);
+            table.Id,
+            table.Casual);
     }
 
     /// <summary>

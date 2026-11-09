@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { dieSpot } from '../../table/battle-layout.js';
 
 // The d20s the field shows beside the creatures that rolled them (ADR 0154): a roll-off's last throw while the turn
 // order is read, a caster's critical roll as its action lands. A die is a small hexagonal d20 with its face, gold
@@ -21,6 +22,9 @@ const TIES = [0x6fc3e8, 0xf0a46e, 0xb79cf2, 0x8fdc9c];
 const TIE_TEXT = ['#6fc3e8', '#f0a46e', '#b79cf2', '#8fdc9c'];
 const TUMBLE_MS = 520;
 const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+// Text is drawn into a texture and then sampled at a fractional position, as the die moves and settles: drawn at
+// twice its size it stays as sharp as the page's own labels around it.
+const SHARP = 2;
 
 interface Shown {
   die: Die; box: Phaser.GameObjects.Container; shape: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text;
@@ -46,12 +50,12 @@ export class DiceLayer {
       const current = this.shown.get(die.key);
       if (current) { current.spot = spot; continue; }
       const shape = this.scene.add.graphics(), label = this.scene.add.text(0, 0, '', { fontFamily: 'Georgia, serif', fontStyle: 'bold', color: TONES[die.tone].text })
-        .setOrigin(.5);
+        .setOrigin(.5).setResolution(SHARP);
       const words = this.captionOf(die, false);
       const caption = words === null ? null : this.scene.add.text(0, 0, words, {
         fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: this.captionColour(die, false),
         backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
-      }).setOrigin(.5, 0);
+      }).setOrigin(.5, 0).setResolution(SHARP);
       const box = this.scene.add.container(0, 0, caption ? [shape, label, caption] : [shape, label]).setDepth(2000);
       this.shown.set(die.key, { die, box, shape, label, caption, born: now, spot, drawn: '', at: { x: 0, y: 0, size: 0 } });
     }
@@ -78,10 +82,8 @@ export class DiceLayer {
 
   follow(time: number, reduced: boolean) {
     for (const one of this.shown.values()) {
-      const { home } = one.spot;
-      const size = Math.max(28, Math.min(46, home.size * .3));
-      // Beside the head, on the figure's open side, never off the top of the field.
-      const x = home.x + home.size * .42, y = Math.max(size * .7, home.y - home.size * .92);
+      // Beside the head, inside the field whole, its words included (dieSpot).
+      const { x, y, size } = dieSpot(one.spot.home, one.caption?.visible ? one.caption.width : 0, this.scene.scale.width);
       one.at = { x, y, size };
       const age = reduced ? TUMBLE_MS : time - one.born;
       const settled = age >= TUMBLE_MS;
@@ -135,7 +137,7 @@ export class DiceLayer {
       let label = this.versus.get(group);
       if (!label) {
         label = this.scene.add.text(0, 0, 'vs', { fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: '#0b1519', backgroundColor: TIE_TEXT[(group - 1) % TIE_TEXT.length], padding: { x: 6, y: 1 } })
-          .setOrigin(.5).setDepth(2001);
+          .setOrigin(.5).setDepth(2001).setResolution(SHARP);
         this.versus.set(group, label);
       }
       label.setVisible(true).setFontSize(Math.round(Math.max(11, first.size * .3))).setPosition((first.x + second.x) / 2, (first.y + second.y) / 2);

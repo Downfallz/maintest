@@ -23,11 +23,12 @@ test('a cast that tried to crit shows its d20 beside the caster as it lands, and
 });
 test('a cast that fell short of its crit says the face it needed under its die', async ({ page }, info) => {
   test.setTimeout(60000);
-  const h = await mount(page), short = entry(10, { criticalRoll: 9 });
+  // Cast by the creature at the field's right edge: its die and words stay on screen.
+  const h = await mount(page), short = entry(10, { actor: 3, criticalRoll: 9 });
   short.event.resolution.isCritical = false;
   await h.publish([entry(12), short]);
   await page.clock.runFor(1400);
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:9:miss:14+');
+  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '3:9:miss:14+');
   await page.screenshot({ path: info.outputPath('critical-miss-die.png') });
   expect(h.errors).toEqual([]);
 });

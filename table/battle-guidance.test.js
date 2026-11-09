@@ -146,10 +146,14 @@ test('while the opponent\'s creature takes its slot, the seat is told whom it wa
   assert.match(waitingOn(last).detail, /your team has acted this round$/);
 });
 
-test('nothing is waited on during this seat\'s own slot, its own question, before the start or after the end', () => {
+test('nothing is waited on during this seat\'s own slot, its own question or after the end; before the start, the waiting room', () => {
   assert.equal(waitingOn(combat(0)), null);
+  // Before the match the card is the waiting room's, whoever the opponent will be.
+  const room = waitingOn({ ...combat(), waiting: { seats: [] } });
+  assert.equal(room.kind, 'seats'); assert.equal(room.title, 'Waiting for your opponent');
+  assert.equal(waitingOn({ ...combat(), waiting: { seats: [] } }, { opponent: 'bastien' }).title, 'Waiting for bastien');
   assert.equal(waitingOn(combat(1, { waitingFor: 'Action', waitingAsked: 9 })), null);
-  assert.equal(waitingOn(combat(1, { waiting: true })), null);
+  assert.equal(waitingOn(combat(1, { waiting: true })).kind, 'seats');
   assert.equal(waitingOn(combat(1, { over: true })), null);
   assert.equal(waitingOn({ ...combat(), board: { ...combat().board, subPhase: 'Cleanup' } }), null, 'the host resolves cleanup by itself');
 });

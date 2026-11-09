@@ -24,4 +24,12 @@ public sealed class MatchResultTests
         Between(new("player1", Mark, null), new("player2", null, null)).Ranked.ShouldBeFalse();
         Between(new("player1", Mark, null), new("player2", Mark, null)).Ranked.ShouldBeFalse();
     }
+
+    [Fact]
+    public void A_game_opened_as_unranked_between_two_accounts_is_not_ranked()
+    {
+        var casual = Between(new("player1", Mark, null), new("player2", Bastien, null)) with { Casual = true };
+
+        casual.Ranked.ShouldBeFalse();
+    }
 }

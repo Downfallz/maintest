@@ -63,10 +63,19 @@ test('first mutation tip explains team picks, highlights Command and acknowledge
   await expect(page.locator('#planning-creatures [aria-pressed="true"]')).toBeFocused(); await expect.poll(() => h.state.shown).toEqual(['11']);
   await page.locator('#planning-close').click();
   await expect(page.locator('#instruction')).toContainText('Choose a creature on the battlefield'); expect(h.state.errors).toEqual([]);
+  // At rest the dock is one card, as when results are read: the phase as its eyebrow, what to do, one button.
+  await expect(page.locator('#planning-open')).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('dock-at-rest.png') });
 });
 test('waiting room including empty seats defers the first tip until actual arrival', async ({ page }) => {
   const h = await mount(page, { waiting: { seats: [] } });
   await expect(page.locator('#help-dialog')).toBeHidden(); await expect(page.locator('#instruction')).toContainText('Waiting for players');
+  // The dock is the waiting room's card, not a command for a game that has not begun.
+  await expect(page.locator('#battle')).toHaveAttribute('data-awaiting', 'seats');
+  await expect(page.locator('#reading-kind')).toHaveText('Waiting room'); await expect(page.locator('#reading-title')).toHaveText('Waiting for your opponent');
+  await expect(page.locator('#planning-open')).toBeHidden(); await expect(page.locator('#no-timeline')).toHaveText('Set once the match begins');
+  await expect(page.locator('#round-phase')).toHaveText('WAITING');
+  await page.screenshot({ path: test.info().outputPath('waiting-room.png') });
   await page.locator('#help-open').click(); await expect(page.locator('#help-round')).toHaveText('Match not started');
   await close(page); await h.publish([], { waiting: null });
   await expect(page.locator('#help-title')).toHaveText('What is a mutation?'); await expect(page.locator('#help-dialog')).toBeVisible();

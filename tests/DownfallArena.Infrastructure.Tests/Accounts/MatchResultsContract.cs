@@ -59,6 +59,17 @@ public abstract class MatchResultsContract
     }
 
     [Fact]
+    public async Task A_result_kept_as_unranked_reads_back_unranked()
+    {
+        var results = await ResultsAsync();
+        var casual = Finished(new DateTimeOffset(2026, 11, 9, 20, 0, 0, TimeSpan.Zero)) with { Casual = true };
+
+        await results.RecordAsync(casual, Cancel);
+
+        (await results.ListAsync(Cancel)).ShouldHaveSingleItem().Casual.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_store_nothing_was_recorded_in_lists_nothing()
     {
         (await (await ResultsAsync()).ListAsync(Cancel)).ShouldBeEmpty();

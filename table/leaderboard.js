@@ -32,7 +32,11 @@ export function drawLadder(doc, ladder) {
     const row = node(doc, 'tr');
     row.className = [player.provisional ? 'provisional' : '', player.you ? 'you' : '', player.rank <= 3 && !player.provisional ? 'top' : ''].filter(Boolean).join(' ');
     const name = node(doc, 'td', player.username, 'player');
-    if (player.provisional) name.append(node(doc, 'span', 'provisional', 'tag'));
+    if (player.provisional) {
+      const tag = node(doc, 'span', 'provisional', 'tag');
+      tag.title = 'Rating still being found: a few more ranked games settle it';
+      name.append(tag);
+    }
     const rating = node(doc, 'td', String(player.rating), 'number');
     rating.append(node(doc, 'span', `±${player.deviation}`, 'deviation'));
     row.append(node(doc, 'td', String(player.rank), 'rank'), name, rating, node(doc, 'td', recordText(player), 'number'), node(doc, 'td', String(player.games), 'number games'));

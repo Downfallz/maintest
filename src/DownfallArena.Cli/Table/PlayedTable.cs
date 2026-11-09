@@ -61,6 +61,9 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>Seats explicitly offered in the player lobby; claims are serialized and recorded by the lobby.</summary>
     public IReadOnlyList<string> OpenSeats { get; set; } = [];
 
+    /// <summary>Opened as unranked (ADR 0155): its result is kept and listed, never rated on the ladder.</summary>
+    public bool Casual { get; set; }
+
     /// <summary>The recording, or none for a table told to keep nothing.</summary>
     public PlaytestRun? Run { get; }
 

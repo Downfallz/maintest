@@ -55,6 +55,19 @@ public sealed class MatchResultRecordingTests : IDisposable
     }
 
     [Fact]
+    public async Task A_table_opened_as_unranked_records_its_result_as_casual()
+    {
+        var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);
+        table.Seats[0].Account = AccountId.New();
+        table.Casual = true;
+
+        await FinishedAsync(table);
+
+        _results.All.ShouldHaveSingleItem().Casual.ShouldBeTrue();
+        table.Dispose();
+    }
+
+    [Fact]
     public async Task A_finished_table_nobody_with_an_account_played_records_nothing()
     {
         var table = await Composer().ComposeAsync(PlayedByTheUnderstudy, Cancel);

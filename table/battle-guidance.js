@@ -165,6 +165,11 @@ const THEIR_CHOICE = Object.freeze({
 export function waitingOn(view, options = {}) {
   const { accepted = false, opponent = null, bot = false } = options;
   const board = view?.board;
+  // Before the match: the table waits for both players to reach their seats, and says so in the dock's card.
+  if (board && view.waiting && !view.over && !view.replay) {
+    return { kind: 'seats', eyebrow: 'Waiting room', title: opponent ? `Waiting for ${opponent}` : 'Waiting for your opponent',
+      detail: 'The match begins as soon as both players are seated. You can leave and come back: your seat is kept.', creature: null };
+  }
   if (!board || view.over || view.waiting || view.replay || view.playedByBot) return null;
   if (question(view) && !accepted) return null;
   const who = opponent || 'your opponent';

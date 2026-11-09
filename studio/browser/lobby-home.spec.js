@@ -27,6 +27,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
     if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator });
+    // A table asked for is noted and refused: the dialog's request is what the tests read.
+    if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
@@ -76,10 +78,13 @@ async function openPanel(page, name) {
   await openNavigation(page);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name }).click();
 }
-// A signed-in player's game settings are under their name (the account chip), not in the menu.
-async function openAccountSettings(page) {
+// Settings is one window of tabs, opened from the menu or from the player's name (the account chip).
+async function openAccountSettings(page, tab = 'Game') {
   await page.locator('#account-menu summary').click();
-  await page.locator('#account-menu').getByRole('button', { name: 'Game settings' }).click();
+  await page.locator('#account-menu').getByRole('button', { name: 'Settings' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByRole('tab', { name: tab }).click();
+  return dialog;
 }
 async function noOverflow(page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -92,7 +97,6 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await page.screenshot({ path: testInfo.outputPath('home-guest.jpg'), fullPage: true, type: 'jpeg', quality: 85, animations: 'disabled' });
   await expect(page.locator('#home-games')).toBeHidden();
   await expect(page.locator('#friends-open')).toBeHidden();
-  await expect(page.locator('#notifications-open')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText('Saved on this browser');
   await page.getByRole('link', { name: 'Play Downfall Instinct' }).click();
@@ -101,11 +105,14 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
   await openNavigation(page);
   await expect(page.locator('#join-open')).toBeHidden();
   await expect(page.getByRole('link', { name: 'Leaderboard', exact: true })).toHaveAttribute('href', '/leaderboard');
-  await page.getByRole('button', { name: 'Your data', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Your data', exact: true })).toBeVisible();
+  // A visitor's Settings holds the game and privacy tabs; notifications and the account are for a player.
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
+  await expect(settings.getByRole('tab')).toHaveText(['Game', 'Privacy']);
+  await settings.getByRole('tab', { name: 'Privacy' }).click();
   await expect(page.getByRole('heading', { name: 'What we keep' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('#data-dialog')).toBeHidden();
+  await expect(page.locator('#app-settings-dialog')).toBeHidden();
   await noOverflow(page);
   expect(state.privateReads).toEqual([]);
   expect(state.friendReads).toBe(0);
@@ -115,12 +122,14 @@ test('a guest sees an introduction and sign-in, with secondary details in the me
 test('a signed-in player keeps game settings with the account, starting from step, 1x and tips on', async ({ page }) => {
   const state = await home(page);
   await openNavigation(page);
-  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Game settings' })).toBeHidden();
+  // The menu and the account menu open the same Settings, on its Game tab.
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
 
-  await openAccountSettings(page);
-
-  const dialog = page.getByRole('dialog', { name: 'Game settings' });
+  const dialog = await openAccountSettings(page);
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('tab')).toHaveText(['Game', 'Notifications', 'Privacy', 'Account']);
+  await expect(dialog.getByRole('tab', { name: 'Game' })).toHaveAttribute('aria-selected', 'true');
   await expect(dialog.getByLabel('Read confirmed results')).toHaveValue('step');
   await expect(dialog.getByLabel('Playback speed')).toHaveValue('1');
   await expect(dialog.getByLabel('Phase tips')).toBeChecked();
@@ -155,7 +164,7 @@ test('game settings cannot be changed until the account has said what they are',
 test('a guest keeps game settings in this browser and asks the host nothing', async ({ page }) => {
   const state = await home(page, { account: null, mode: 'google' });
 
-  await openPanel(page, 'Game settings');
+  await openPanel(page, 'Settings');
   await page.getByLabel('Phase tips').uncheck();
 
   await expect(page.locator('#game-settings-where')).toContainText('Kept in this browser');
@@ -183,12 +192,13 @@ test('a player opens friends and notices without crowding the dashboard or askin
   await page.getByRole('button', { name: 'Close friends' }).click();
   const narrow = await page.locator('#home-menu-toggle').isVisible();
   await expect(page.locator(narrow ? '#home-menu-toggle' : '#friends-open')).toBeFocused();
-  await openPanel(page, 'Notifications');
-  await expect(page.getByRole('dialog', { name: 'Notifications', exact: true })).toBeVisible();
+  // Notifications are a tab of Settings; opening it asks the browser nothing.
+  await openAccountSettings(page, 'Notifications');
   await expect(page.locator('#device-unavailable')).toBeVisible();
   expect(await page.evaluate(() => window.permissionRequests)).toBe(0);
+  await page.screenshot({ path: testInfo.outputPath('home-settings-notifications.jpg'), fullPage: false, type: 'jpeg', quality: 85, animations: 'disabled' });
   await page.keyboard.press('Escape');
-  await expect(page.locator('#notifications-dialog')).toBeHidden();
+  await expect(page.locator('#app-settings-dialog')).toBeHidden();
   await noOverflow(page);
   expect(state.errors).toEqual([]);
 });
@@ -305,18 +315,22 @@ test('removing a friend requires confirming the named player, and hides an empty
   expect(state.removals).toBe(1);
 });
 
-test('account deletion can be cancelled and signing out everywhere requires its own confirmation', async ({ page }) => {
+test('the account menu holds Settings and Sign out; the account\'s lasting actions wait at the foot of Settings, Account', async ({ page }, testInfo) => {
   const state = await home(page);
   await page.locator('#account-menu summary').click();
+  await expect(page.locator('#account-menu .account-menu button')).toHaveText(['Settings', 'Sign out']);
+  await expect(page.locator('#account-menu-name')).toHaveText(player.username);
+  await page.keyboard.press('Escape');
+  await openAccountSettings(page, 'Account');
+  await expect(page.locator('#app-settings-name')).toHaveText(player.username);
+  await page.screenshot({ path: testInfo.outputPath('home-settings-account.jpg'), fullPage: false, type: 'jpeg', quality: 85, animations: 'disabled' });
   await page.locator('#delete-account').click();
   await expect(page.getByLabel('Type your player name to confirm')).toBeFocused();
   await page.locator('#delete-cancel').click();
-  await page.locator('#account-menu summary').click();
   await page.locator('#sign-out-everywhere').click();
   await expect(page.locator('#action-detail')).toContainText('every device');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(state.signouts).toBeUndefined();
-  if (!await page.locator('#sign-out-everywhere').isVisible()) await page.locator('#account-menu summary').click();
   await page.locator('#sign-out-everywhere').click();
   await page.locator('#action-confirm').click();
   await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
@@ -330,11 +344,11 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await expect(page.locator('#account-name')).toHaveText(player.username);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Notifications', 'Your data', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Join with a code', 'Settings']);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);
-      return { link: styleOf('#leaderboard-link'), button: styleOf('#notifications-open') };
+      return { link: styleOf('#leaderboard-link'), button: styleOf('#app-settings-open') };
     });
     expect(sharedStyle.link).toEqual(sharedStyle.button);
     if (file === 'leaderboard') await expect(nav.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute('aria-current', 'page');
@@ -392,6 +406,12 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#new-table').click(); await page.locator('#opponent').selectOption('bot');
   await expect(page.locator('#create-help')).toContainText('the most at once'); await expect(page.locator('#create-submit')).toBeDisabled();
   await page.locator('#opponent').selectOption('person'); await expect(page.locator('#create-submit')).toBeEnabled();
+  // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
+  await expect(page.getByLabel(/^Ranked/)).toBeChecked();
+  await page.locator('#opponent').selectOption('bot'); await expect(page.locator('#ranked-row')).toBeHidden();
+  await page.locator('#opponent').selectOption('person'); await page.getByLabel(/^Ranked/).uncheck();
+  await page.locator('#create-submit').click();
+  await expect.poll(() => state.created).toEqual({ opponent: 'person', format: '3v3', ranked: false });
   expect(state.errors).toEqual([]);
 });
 

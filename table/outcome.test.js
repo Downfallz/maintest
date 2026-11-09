@@ -23,6 +23,9 @@ test('a rematch goes to the lobby with the same opponent and format chosen, when
   const friend = { format: '2v2', seats: [{ seat: 'player1', kind: 'person', name: 'MarkF', account: 'acct_mark' }, { seat: 'player2', kind: 'person', name: 'bastien', account: 'acct_bastien' }] };
   assert.equal(rematchLink(friend, ['player1']), '/lobby?rematch=acct_bastien&format=2v2');
   assert.equal(rematchLink(friend, ['player2']), '/lobby?rematch=acct_mark&format=2v2');
+  // An unranked game (ADR 0155) is offered again unranked.
+  assert.equal(rematchLink({ ...friend, casual: true }, ['player1']), '/lobby?rematch=acct_bastien&format=2v2&ranked=0');
+  assert.equal(rematchPlan({ ...friend, casual: true }, ['player1'], 'friend').request.ranked, false);
   assert.equal(rematchLink(friend, ['player1', 'player2']), '/lobby?rematch=hotseat&format=2v2', 'both seats here: a shared device again');
   assert.equal(rematchLink({ format: '1v1', seats: [{ seat: 'player1', kind: 'person', account: 'acct_mark' }, { seat: 'player2', kind: 'bot', name: 'Greedy' }] }, ['player1']), '/lobby?rematch=bot&format=1v1');
   assert.equal(rematchLink({ seats: [{ seat: 'player1', kind: 'person' }, { seat: 'player2', kind: 'person', name: 'Player' }] }, ['player1']), null, 'an opponent without an account cannot be asked again');

@@ -36,7 +36,8 @@ internal static class ResultDocuments
             result.Winner,
             result.Ranked,
             [.. result.Seats.Select(seat => new SeatRecord(seat.Seat, seat.Account?.Value, seat.Agent))],
-            result.Table),
+            result.Table,
+            result.Casual),
         Web);
 
     public static MatchResult Read(string json)
@@ -51,10 +52,11 @@ internal static class ResultDocuments
             record.Rounds,
             record.Winner,
             [.. record.Seats.Select(seat => new ResultSeat(seat.Seat, AccountId.TryParse(seat.Account, out var id) ? id : null, seat.Agent))],
-            record.Table);
+            record.Table,
+            record.Casual);
     }
 
-    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null);
+    private sealed record Record(string Match, DateTimeOffset FinishedAt, string Format, string Declaration, string ContentHash, int Rounds, string? Winner, bool Ranked, IReadOnlyList<SeatRecord> Seats, string? Table = null, bool Casual = false);
 
     private sealed record SeatRecord(string Seat, string? Account, string? Agent);
 }

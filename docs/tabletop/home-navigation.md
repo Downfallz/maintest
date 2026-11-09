@@ -19,22 +19,27 @@ HTML/CSS/JavaScript presentation, using the existing account and seat APIs.
 ## Navigation
 
 The lobby and leaderboard share a responsive header. Signed-in players also have it at the classic table
-and in the live battle, alongside the controls for the current match. Friends, Notifications, Your data
-and Join with a code open in place. Inviting a friend from outside the lobby opens the lobby with that
+and in the live battle, alongside the controls for the current match. Friends, Settings and Join with a code open in
+place. Inviting a friend from outside the lobby opens the lobby with that
 player selected. A single verified seat opens directly on the battlefield. Shared-device players still choose
 a viewpoint before either private board is read.
 
 | Entry | Destination | Availability |
 | --- | --- | --- |
-| Play | Home/dashboard | Everyone |
+| Lobby | Home/dashboard | Everyone |
 | Friends | Dialog with requests, friend list, add/remove and Invite | Signed-in players |
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
-| Notifications | Dialog with the existing device controls or an unavailable explanation | Signed-in players |
-| Game settings | Dialog for the reading pace, speed, phase tips and less motion every new game starts from (ADR 0140) | Signed-out visitors; signed-in players find it in the account menu |
-| Your data | Dialog explaining retained account, friendship and game data | Everyone |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
+| Settings | One dialog of tabs (below) | Everyone |
 | Admin | Existing `/admin` page | Existing operator check |
-| Account avatar/name | Game settings, kept with the account; confirm sign-out on this device or everywhere, or type the player name to delete the account | Signed-in players |
+| Account avatar/name | Who is signed in, Settings, and Sign out (confirmed) on this device | Signed-in players |
+
+Settings gathers what a player sets once rather than visits: its tabs are **Game** (the reading pace, speed, phase
+tips and less motion every new game starts from, ADR 0140), **Notifications** (the device controls or an
+unavailable explanation), **Privacy** (what is kept) and **Account** (the player name, then, apart at the foot of
+the tab, Sign out everywhere and Delete account). A visitor sees Game and Privacy. Signing out everywhere and
+deleting are rare and lasting, so they are not one tap away in the account menu; each still asks its own
+confirmation (deleting asks for the player name). The tabs follow the ARIA tabs pattern (arrow keys, Home, End).
 
 At 1240 CSS pixels and below, the navigation becomes a disclosure menu. Its button exposes `aria-expanded`
 and `aria-controls`; Escape and an outside click dismiss it. It is ordinary navigation rather than an ARIA

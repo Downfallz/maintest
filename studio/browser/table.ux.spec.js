@@ -204,10 +204,10 @@ test('the classic match ignores game shortcuts while its player menu owns focus'
   await expect(page.locator('.speed-spell')).toHaveCount(6);
   const menu = page.locator('#home-menu-toggle');
   if (await menu.isVisible()) await menu.click();
-  await page.locator('#data-open').click();
+  await page.locator('#app-settings-open').click();
   await page.keyboard.press('1');
   await page.keyboard.press('Escape');
-  await expect(page.locator('#data-dialog')).toBeHidden();
+  await expect(page.locator('#app-settings-dialog')).toBeHidden();
   await expect(page.locator('.speed-spell')).toHaveCount(6);
   expect(decisions).toEqual([]);
 });

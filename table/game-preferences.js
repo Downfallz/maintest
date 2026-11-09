@@ -115,7 +115,7 @@ export function mountGameSettings(doc, storage, { request = accountRequest } = {
     account = answer.account; show(answer.settings);
     el('game-settings-fields').disabled = false;
   }
-  for (const opener of doc.querySelectorAll('[data-home-dialog="game-settings-dialog"]')) opener.addEventListener('click', () => { problem(null); void refresh(); });
+  for (const opener of doc.querySelectorAll('[data-home-dialog="app-settings-dialog"]')) opener.addEventListener('click', () => { problem(null); void refresh(); });
   el('game-settings').addEventListener('submit', event => event.preventDefault());
   el('game-settings').addEventListener('change', () => {
     const value = { pace: fields.pace.value, speed: Number(fields.speed.value), help: fields.help.checked, reducedMotion: fields.reducedMotion.checked };

@@ -52,7 +52,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       item.append(button); return item;
     }));
     el('timeline').hidden = model.rows.length === 0; el('no-timeline').hidden = model.rows.length > 0;
-    el('no-timeline').textContent = available ? 'Activation order has not been set' : 'Waiting for a board';
+    el('no-timeline').textContent = available ? 'Set once both teams have picked their tempos' : 'Set once the match begins';
     el('order-title').textContent = `Round ${model.round ?? '—'}`;
     el('order-summary').textContent = model.rows.length ? model.summary.join(' / ') : model.empty;
     el('order-context').textContent = model.provisional ? 'Team positions fixed · creature order still being chosen' : 'Exact order · recorded dice';
