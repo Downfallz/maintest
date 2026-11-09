@@ -280,6 +280,10 @@ test('the full mutation tree opens over the pick on its offer, shows each spell 
   await detail.evaluate(body => { body.append(Object.assign(document.createElement('div'), { style: 'height: 2000px' })); body.scrollTop = body.scrollHeight; });
   const [panel, pinned] = await Promise.all([detail.boundingBox(), bar.boundingBox()]);
   expect(Math.abs(pinned.y - panel.y)).toBeLessThanOrEqual(1); await expect(bar.getByRole('button', { name: 'Choose Predator' })).toBeInViewport();
+  // The pinned bar spans the card's top edge, but the card's own close button stays on top of it and takes the tap.
+  expect(await page.locator('#atlas-detail-close').evaluate(close => {
+    const box = close.getBoundingClientRect(); return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === close;
+  })).toBe(true);
   await detail.evaluate(body => { body.lastElementChild.remove(); body.scrollTop = 0; });
   await fitsViewport(page, '#atlas-close, #atlas-creature'); await page.clock.runFor(150);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

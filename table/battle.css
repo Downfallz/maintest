@@ -1025,7 +1025,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-empty { color: var(--muted); }
 #atlas-detail { --mutation-colour: #aabdb1; position: relative; width: 380px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border-left: 1px solid #3f554d; background: #12232a; }
 #atlas-detail[hidden] { display: none; }
-#atlas-detail-close { position: absolute; top: 8px; right: 8px; z-index: 1; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 20px; }
+#atlas-detail-close { position: absolute; top: 8px; right: 8px; z-index: 2; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 20px; }
 #atlas-detail-body { position: relative; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px 18px 20px; }
 .atlas-card-head { padding: 0 34px 10px 12px; border-left: 4px solid var(--mutation-colour); }
 .atlas-card-family { margin: 0; color: var(--mutation-colour); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
@@ -1041,7 +1041,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-card-next h4 { flex-basis: 100%; }
 .atlas-next { min-height: 36px; padding: 4px 12px; border-radius: 999px; font-size: 12px; }
 /* Pinned to the top of the scrolling card: the bar spans the card's width under its own backdrop, and leaves
-   the corner to the card's close button. */
+   the corner to the card's close button, which stays above it (z-index 2) and so keeps taking taps. */
 .atlas-choose-bar { position: sticky; top: -16px; z-index: 1; margin: 0 -18px; padding: 12px 58px 10px 18px; background: linear-gradient(#12232a 82%, #12232a00); }
 .atlas-choose { width: 100%; min-height: 48px; }
 /* More families lie to that side: a slim tab at the edge with a triangle, nudging the way a swipe goes. */
