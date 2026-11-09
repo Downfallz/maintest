@@ -817,9 +817,10 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #playback-pacing[data-kind="summary"], #playback-pacing[data-kind="order"] { --reading-accent: var(--gold); }
 #battle[data-order-reading="true"] .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
 /* Waiting on the other side: the dock is one card too, whom for and on what, with a quiet "thinking" pulse. */
-#battle:is([data-awaiting="action"], [data-awaiting="choice"]) .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
+#battle:is([data-awaiting="action"], [data-awaiting="choice"], [data-awaiting="seats"]) .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
 #playback-pacing[data-kind="waiting"] { --reading-accent: #d98b6f; background: linear-gradient(90deg, #2a2320, #172429 70%); }
 #battle[data-awaiting="choice"] #playback-pacing[data-kind="waiting"] { --reading-accent: var(--gold); }
+#battle[data-awaiting="seats"] #playback-pacing[data-kind="waiting"] { --reading-accent: var(--gold); background: linear-gradient(90deg, #2a2618, #172429 70%); }
 .reading-dots { flex: none; display: inline-flex; gap: 6px; align-items: center; padding: 0 4px; }
 .reading-dots[hidden] { display: none; }
 .reading-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--reading-accent, #d98b6f); opacity: .35; animation: reading-dot 1.2s ease-in-out infinite; }
@@ -1473,4 +1474,37 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   .history-modes { margin: 8px 12px 0; }
   #history-summary { padding: 10px; }
   .summary-round { padding: 10px; }
+}
+
+/* At rest the dock is one card, as when results are read (#playback-pacing): the phase and its step as the card's
+   eyebrow, what to do as its title, and the next step as one button at its side. The card is a grid item of its
+   own behind the three parts, so it hugs them whatever the width. */
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock {
+  --rest-accent: var(--gold); position: relative; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto; align-content: center; column-gap: 16px; row-gap: 3px; padding: 12px 34px 12px 38px;
+}
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock::before {
+  content: ''; grid-row: 1 / -1; grid-column: 1 / -1; align-self: stretch; justify-self: stretch; margin: -12px -16px -12px -20px; z-index: 0; pointer-events: none;
+  border: 1px solid #4f6459; border-left: 3px solid var(--rest-accent); border-radius: 10px; background: linear-gradient(90deg, #1b2b30, #142126); box-shadow: 0 6px 18px #0006;
+}
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock > * { position: relative; z-index: 1; }
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock .actor-summary { grid-column: 1; grid-row: 1; }
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock .live-status { grid-column: 1; grid-row: 2; }
+#battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock .battle-actions { grid-column: 2; grid-row: 1 / -1; }
+/* The eyebrow: the phase, then its step, in the reading card's small capitals. */
+#battle .command-dock .actor-summary > div { gap: 0 6px; }
+#battle:not([data-reading="true"]) .command-dock .actor-summary h1 { font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+#battle:not([data-reading="true"]) .command-dock #actor-meta { padding: 0; border: 0; border-radius: 0; color: var(--gold); font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+#battle:not([data-reading="true"]) .command-dock #actor-meta::before { content: '· '; }
+#battle[data-connection="live"] .command-dock .actor-summary > div::before { width: 6px; height: 6px; box-shadow: 0 0 0 2px #7fd3a026; }
+/* The title: what to do now, in the reading card's serif. */
+#battle .command-dock #instruction { margin-top: 2px; color: #f2eee2; font: 400 17px/1.3 Georgia, serif; }
+/* The button: the reading card's gold OK, compact beside the words. */
+#battle .command-dock .battle-actions :is(#planning-open, #combat-open, #match-open) {
+  flex: none; min-width: 112px; min-height: 48px; padding: 8px 18px; border: 1px solid #d8b878; border-radius: 8px;
+  background: linear-gradient(#e6c88c, #c9a463); color: #1a1d1a; font: 700 14px/1.15 system-ui, sans-serif; letter-spacing: .02em; white-space: normal; max-width: 150px;
+}
+@media (max-width: 619px) {
+  #battle:not([data-reading="true"]):not([data-order-reading="true"]):not([data-combat="targets"]):not([data-awaiting="action"]):not([data-awaiting="choice"]):not([data-awaiting="seats"]) .command-dock { column-gap: 10px; padding: 12px 24px 12px 28px; }
+  #battle .command-dock #instruction { font-size: 15px; -webkit-line-clamp: 3; line-clamp: 3; }
+  #battle .command-dock .battle-actions :is(#planning-open, #combat-open, #match-open) { min-width: 92px; max-width: 120px; padding: 8px 12px; font-size: 13px; }
 }
