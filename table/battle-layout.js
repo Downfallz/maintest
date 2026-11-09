@@ -47,3 +47,13 @@ export function strikeApproach(actor, target) {
   const gap = Math.min(target.size * .55, distance * .6);
   return { x: target.x - dx * gap, y: target.y - dy * gap, dx, dy };
 }
+
+// Where a d20 stands beside a figure (ADR 0154): beside its head on its open side, never off the top of the field
+// nor off either side, the die and the words under it (`wordsWidth`, 0 for none) staying whole on a figure at the
+// field's edge.
+export function dieSpot(home, wordsWidth, fieldWidth) {
+  const size = Math.max(28, Math.min(46, home.size * .3));
+  const half = Math.max(size / 2, wordsWidth / 2) + size * .15;
+  const x = Math.min(Math.max(home.x + home.size * .42, half), Math.max(half, fieldWidth - half));
+  return { x, y: Math.max(size * .7, home.y - home.size * .92), size };
+}
