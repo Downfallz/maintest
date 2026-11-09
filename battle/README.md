@@ -277,7 +277,9 @@ Captures: [desktop, recorded-event fixture with live rollover](../docs/tabletop/
 The mutation phase opens its private tree by itself once the board is clear: after the upkeep receipt, the
 turn order and a first-use tip ([ADR 0138](../docs/adr/0138-open-the-mutation-tree-with-the-mutation-phase.md)).
 A pick that leaves team picks keeps the tree open on the next creature with offers and its remaining picks;
-the last pick or a pass closes it. Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
+the last pick or a pass closes it. Under the creature tabs, a token per pick of the phase (filled while unspent)
+and the count left; when fewer picks remain than creatures that could take one, a line says the player chooses which
+mutate now, one pick each, and that later Mutation phases bring new picks for any of them (`pickPlan`). Tap an eligible ally, or use **Mutation tree** after closing it, to reopen.
 The graph docks below the scene on phones and beside it on wider screens, always at its full height: there is
 no Expand or Compact. Its header holds **Full mutation tree** and **Pass remaining picks**; Help and History stay in
 the field's header, which a docked sheet leaves in view. A short portrait keeps the confirmation in reach by letting
@@ -289,7 +291,8 @@ available art only for that creature in the private command. Public inspection a
 recorded forms. Confirm spends one team pick. Switching creatures clears the draft, and passing requires
 explicit confirmation for all remaining team picks. **Full mutation tree** opens the whole tree full
 screen ([ADR 0146](../docs/adr/0146-one-full-mutation-tree.md)), on the mutation in hand when one is drafted,
-with nothing selected otherwise; an offer can be chosen from its card there. AU8 also exposes a public reference outside this phase.
+with nothing selected otherwise; an offer can be chosen from its card there, by a **Choose** under its name that
+stays pinned to the top of the card while its spells scroll. AU8 also exposes a public reference outside this phase.
 
 `table/battle-mutations.js` supplies the host-filtered offers. `src/mutation-tree.ts` draws the graph
 and `src/mutation-scene.ts` projects the private preview. The existing planning controller still owns acknowledgement,

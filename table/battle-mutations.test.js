@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mutationChoices } from './battle-mutations.js';
+import { mutationChoices, pickPlan } from './battle-mutations.js';
 const catalogue = { packages: [
   { id: 'root', name: 'Brute', level: 1, spells: ['strike'], initiativeBonus: 0, tags: ['Guard', 'Pressure'] },
   { id: 'branch', name: 'Ironhide', level: 2, prerequisites: ['root'], spells: ['ward'], initiativeBonus: 2 },
@@ -56,4 +56,32 @@ test('the selected recipient survives changed offers and a new roster defaults t
   const empty = mutationChoices({ board: { allies: [] }, options: { evolution: { remainingPicks: 0 } } }, catalogue);
   assert.equal(empty.selected, null); assert.equal(empty.remaining, 0); assert.deepEqual(empty.faces, []);
   assert.equal(mutationChoices(null, null).remaining, null);
+});
+
+// Three living creatures, two team picks, nothing picked yet: the first Mutation phase of a 3v3.
+const fresh = { board: { allies: [1, 2, 3].map(id => ({ id, name: `C${id}`, isAlive: true })), evolutionChoices: [] },
+  options: { evolution: { remainingPicks: 2, creatures: [1, 2, 3].map(creature => ({ creature, availableTiers: ['root'] })) } } };
+test('fewer picks than creatures that could mutate says the player chooses which ones mutate now', () => {
+  const plan = pickPlan(fresh);
+  assert.deepEqual([plan.spent, plan.left, plan.open], [0, 2, 3]);
+  assert.equal(plan.budget, '2 team picks remaining');
+  assert.equal(plan.rule, '3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Later Mutation phases bring new picks for any of them.');
+});
+test('a sent pick counts its creature as picked and the budget as one less before the host restates it', () => {
+  const plan = pickPlan(fresh, { creature: 1, tier: 'root' });
+  assert.deepEqual([plan.spent, plan.left, plan.open], [1, 1, 2]);
+  assert.equal(plan.budget, 'Pick sent · 1 team pick remaining');
+  assert.match(plan.rule, /^2 creatures can mutate, 1 pick left: choose which one mutates now/);
+  assert.equal(pickPlan(fresh, { pass: true }).left, 0);
+});
+test('recorded picks, defeated creatures and creatures without offers are not open for a pick', () => {
+  const plan = pickPlan(view);
+  assert.deepEqual([plan.spent, plan.left, plan.open], [1, 1, 1]);
+  assert.equal(plan.rule, '');
+});
+test('as many picks as open creatures says one pick each, and no budget gives no plan', () => {
+  const two = { ...fresh, board: { ...fresh.board, allies: fresh.board.allies.slice(0, 2) } };
+  assert.match(pickPlan(two).rule, /^One pick per creature/);
+  assert.equal(pickPlan({ ...fresh, options: {} }), null);
+  assert.equal(pickPlan({ ...fresh, options: { evolution: { remainingPicks: 0, creatures: [] } } }).rule, '');
 });

@@ -192,6 +192,19 @@ export function atlasControls(onVisibility: () => void) {
     }
     head.append(chips);
     const parts: HTMLElement[] = [head];
+    // An offer's Choose sits right under its name and stays pinned to the top of the card as its spells scroll,
+    // so a long card never hides the one action it offers.
+    if (pack.status === 'available' && view.choose) {
+      const bar = node('div', '', 'atlas-choose-bar');
+      const choose = node('button', `Choose ${pack.name}`, 'primary atlas-choose') as HTMLButtonElement; choose.type = 'button';
+      // The atlas covers the field, which holds every choice: it closes first, then chooses on the uncovered page.
+      choose.addEventListener('click', () => {
+        const pick = view?.choose, back = opener?.id;
+        dialog.close(); pick?.(pack.id);
+        if (back && !document.querySelector('dialog:modal')) document.getElementById(back)?.focus({ preventScroll: true });
+      });
+      bar.append(choose); parts.push(bar);
+    }
     if (parents(pack).length) parts.push(node('p', requirementLine(pack, (one: string) => byId.get(one)?.name ?? one), 'atlas-card-requirement'));
     if (pack.passiveLines?.length) {
       const passives = node('ul', '', 'atlas-card-passives');
@@ -208,16 +221,6 @@ export function atlasControls(onVisibility: () => void) {
         link.addEventListener('click', () => show(one.id)); return link;
       }));
       parts.push(further);
-    }
-    if (pack.status === 'available' && view.choose) {
-      const choose = node('button', `Choose ${pack.name}`, 'primary atlas-choose') as HTMLButtonElement; choose.type = 'button';
-      // The atlas covers the field, which holds every choice: it closes first, then chooses on the uncovered page.
-      choose.addEventListener('click', () => {
-        const pick = view?.choose, back = opener?.id;
-        dialog.close(); pick?.(pack.id);
-        if (back && !document.querySelector('dialog:modal')) document.getElementById(back)?.focus({ preventScroll: true });
-      });
-      parts.push(choose);
     }
     body.replaceChildren(...parts); body.scrollTop = 0;
     if (scroll) anchors.get(pack.id)?.scrollIntoView({ block: 'nearest', inline: 'center' });

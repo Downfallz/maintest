@@ -1,5 +1,5 @@
 import { createBattlePlanning } from '../../table/battle-planning.js';
-import { mutationChoices } from '../../table/battle-mutations.js';
+import { mutationChoices, pickPlan } from '../../table/battle-mutations.js';
 import { mutationTree } from './mutation-tree';
 import type { atlasControls, AtlasView } from './mutation-atlas';
 import { tempoControls } from './tempo';
@@ -191,13 +191,22 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (focused?.dataset.speed) return `[data-speed="${focused.dataset.speed}"]`;
     return focused?.dataset.tempoTab ? `[data-tempo-tab="${focused.dataset.tempoTab}"]` : null;
   }
-  // The team's picks are the budget a player spends here. Between a sent pick and the next asking the count
-  // is the one the host has not restated yet, so it says the pick went and what is left after it.
+  // The team's picks are the budget a player spends here: one pip a pick of this phase, filled once spent, and
+  // the count left. Between a sent pick and the next asking the count is the one the host has not restated yet,
+  // so it says the pick went and what is left after it. Under the tabs, when there are fewer picks than
+  // creatures that could take one, a line says the player chooses which mutate now and that later phases
+  // bring new picks: the budget is the team's, not each creature's.
   function pickBudget(model: ReturnType<Controller['model']>) {
-    const offered = model.latest?.options?.evolution?.remainingPicks;
-    if (!Number.isInteger(offered)) return 'Team pick count unavailable';
-    const sent = model.accepted && !model.available, left = sent ? offered - 1 : offered;
-    return `${sent ? 'Pick sent · ' : ''}${left} team pick${left === 1 ? '' : 's'} remaining`;
+    const sent = model.accepted && !model.available ? model.choice ?? {} : null;
+    const plan = pickPlan(model.latest, sent);
+    const help = el('planning-help'), rule = el('planning-pick-rule');
+    if (!plan) { help.textContent = 'Team pick count unavailable'; rule.textContent = ''; rule.hidden = true; return; }
+    const pips = document.createElement('span'); pips.className = 'pick-pips'; pips.setAttribute('aria-hidden', 'true');
+    for (let index = 0; index < plan.spent + plan.left; index++) {
+      const pip = document.createElement('span'); pip.className = 'pick-pip'; pip.dataset.spent = String(index < plan.spent); pips.append(pip);
+    }
+    help.replaceChildren(pips, document.createTextNode(plan.budget));
+    rule.textContent = plan.rule; rule.hidden = !plan.rule;
   }
   // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
   function focusStart() {
@@ -247,7 +256,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     // The accessible name starts with the visible label (WCAG 2.5.3) and adds the recipient; while sending it is the label.
     if (model.choice?.tier && !model.sending) el('planning-confirm').setAttribute('aria-label', `${confirmLabel(model)} · 1 pick · ${name(model.choice.creature)}`);
     else el('planning-confirm').removeAttribute('aria-label');
-    if (model.latest.waitingFor === 'Evolution') el('planning-help').textContent = pickBudget(model);
+    if (model.latest.waitingFor === 'Evolution') pickBudget(model);
+    else { el('planning-pick-rule').textContent = ''; el('planning-pick-rule').hidden = true; }
     if (!dialog.open) {
       if (model.latest.waitingFor === 'Evolution') { dialog.show(); focusStart(); }
       else if (model.latest.waitingFor === 'Speed') { dialog.show(); tempoStart(); }

@@ -237,6 +237,11 @@ test('the mutation phase opens its tree by itself, once per asking', async ({ pa
 test('a pick that leaves team picks keeps the tree open on the next creature with its remaining picks', async ({ page }) => {
   const h = await mount(page);
   await expect(page.locator('#planning-help')).toHaveText('2 team picks remaining');
+  // The budget is the team's: a token per pick, and a line saying two of the three creatures mutate now.
+  const pips = page.locator('#planning-help .pick-pip'), rule = page.locator('#planning-pick-rule');
+  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-help .pick-pip[data-spent="true"]')).toHaveCount(0);
+  await expect(rule).toBeVisible();
+  await expect(rule).toHaveText('3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Later Mutation phases bring new picks for any of them.');
   h.state.next = view => ({ ...view, waitingAsked: 12, board: { ...view.board, evolutionChoices: [{ creature: 1, tier: 'root0' }] },
     options: { evolution: { remainingPicks: 1, creatures: view.options.evolution.creatures.filter(one => one.creature !== 1) } } });
   await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
@@ -244,6 +249,8 @@ test('a pick that leaves team picks keeps the tree open on the next creature wit
   await expect(page.locator('#planning-dialog')).toBeVisible();
   await h.publish();
   await expect(page.locator('#planning-help')).toHaveText('1 team pick remaining');
+  await expect(pips).toHaveCount(2); await expect(page.locator('#planning-help .pick-pip[data-spent="true"]')).toHaveCount(1);
+  await expect(rule).toContainText('2 creatures can mutate, 1 pick left: choose which one mutates now');
   await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
   await expect.poll(() => h.state.shown).toEqual(['11', '12']);
   await expect(page.locator('#planning-dialog :focus')).toHaveCount(1);
@@ -267,6 +274,13 @@ test('the full mutation tree opens over the pick on its offer, shows each spell 
   await expect(card.locator('.spell-card-effect').last()).toHaveAttribute('data-cue', 'energy-gain');
   await expect(card.locator('.spell-card-note')).toHaveText('A natural 18 or more doubles the damage.');
   await expect(detail.locator('.atlas-chip-init')).toHaveText('+1 initiative');
+  // Choose sits right under the offer's name, before its spells, and stays pinned at the top as the card scrolls.
+  const bar = detail.locator('.atlas-choose-bar');
+  expect(await detail.evaluate(body => [...body.children].findIndex(child => child.matches('.atlas-choose-bar')))).toBe(1);
+  await detail.evaluate(body => { body.append(Object.assign(document.createElement('div'), { style: 'height: 2000px' })); body.scrollTop = body.scrollHeight; });
+  const [panel, pinned] = await Promise.all([detail.boundingBox(), bar.boundingBox()]);
+  expect(Math.abs(pinned.y - panel.y)).toBeLessThanOrEqual(1); await expect(bar.getByRole('button', { name: 'Choose Predator' })).toBeInViewport();
+  await detail.evaluate(body => { body.lastElementChild.remove(); body.scrollTop = 0; });
   await fitsViewport(page, '#atlas-close, #atlas-creature'); await page.clock.runFor(150);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath('mutation-atlas.jpg'), type: 'jpeg', quality: 90 });
