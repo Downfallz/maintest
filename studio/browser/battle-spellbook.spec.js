@@ -132,6 +132,9 @@ test('only the spells scroll: the panel keeps its header in place under a long s
   await page.locator('#combat-browser').hover(); await page.mouse.wheel(0, 4000);
   await expect.poll(() => scrollOf(page)).toBeGreaterThan(0);
   expect(await page.locator('#combat-dialog').evaluate(node => node.scrollTop)).toBe(0);
+  // Nothing in the spellbook reaches past the panel: a panel with room for its header has nothing of its own to
+  // scroll, so a swipe that starts on its header cannot carry the header away (the cards' screen-reader text once did).
+  expect(await page.locator('#combat-dialog').evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1);
   expect(await page.locator('#combat-heading').boundingBox()).toEqual(heading);
   // The creature's name opens the panel: nothing above it but the panel's own padding.
   const panel = await page.locator('#combat-dialog').boundingBox();
