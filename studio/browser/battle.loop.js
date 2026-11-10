@@ -11,7 +11,8 @@ async function enter(page, join) {
   await page.goto(join); await page.locator('#invitation-take').click();
   await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0156).
   const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
-  await page.goto(`${new URL(join).origin}/battle`); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true');
+  // The page that accepted is the battle the player plays: opening it again could find a receipt it already read.
+  await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true', { timeout: 20000 });
   await expect(page.locator('#loading')).toBeHidden(); return tokens;
 }
 const decisionWritten = page => page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
