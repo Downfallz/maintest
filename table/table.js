@@ -251,6 +251,20 @@ async function verifiedSeats(held) {
   return seats;
 }
 
+// The table these seats sit at, as the host's resume says, so the battle view opens this game and not a list of
+// every game the browser holds; a notice's link names it already, and a host that cannot say leaves it unnamed.
+async function toBattle(held) {
+  const tokens = held.map(seat => seat.token);
+  let table = new URLSearchParams(globalThis.location?.search ?? '').get('table');
+  try {
+    const response = await fetch('/api/lobby/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }) });
+    if (response.ok) table = tableOf(await response.json(), tokens)?.id ?? table;
+  } catch {
+    // Unnamed, the battle view still finds the seats this browser holds and asks which to open.
+  }
+  globalThis.location.replace(battleAddress(held, table, keeps(storage)));
+}
+
 function enter(held, practice) {
   if (held.length === 0) {
     setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
@@ -261,7 +275,7 @@ function enter(held, practice) {
   // page keeps the doorway (codes, invitations) and is the archived table only for practice, an admin replay or a
   // browser that stored the archive's own value.
   if (!practice && preferredPresentation(storage) === 'battle') {
-    globalThis.location.replace(battleAddress(held, globalThis.location?.search ?? '', keeps(storage)));
+    void toBattle(held);
     return;
   }
 

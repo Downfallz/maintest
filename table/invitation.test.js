@@ -105,9 +105,9 @@ test('the address a spent code sends the browser to is told from any other', () 
   assert.equal(spentLink(''), false);
 });
 
-test('a seat /play opened goes on to the battle view, with the table a notice named and its keys only when nothing is kept', () => {
+test('a seat /play opened goes on to the battle view, naming its table, with its keys only when nothing is kept', () => {
   const seats = [{ seat: 'player2', token: 'beef' }];
-  assert.equal(battleAddress(seats, '', true), '/battle');
-  assert.equal(battleAddress(seats, '?table=t1', true), '/battle?table=t1');
-  assert.equal(battleAddress(seats, '?player2=beef', false), '/battle?player2=beef');
+  assert.equal(battleAddress(seats, null, true), '/battle');
+  assert.equal(battleAddress(seats, 't1', true), '/battle?table=t1');
+  assert.equal(battleAddress(seats, null, false), '/battle?player2=beef');
 });

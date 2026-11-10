@@ -95,12 +95,11 @@ export function addressAfter(path, seats, kept) {
 }
 
 /**
- * Where /play sends the seats it opened (ADR 0156): the battle view, naming the table a notice's link asked for so
- * a browser holding several opens that one, and carrying the seats themselves only when this browser keeps nothing.
+ * Where /play sends the seats it opened (ADR 0156): the battle view, naming their table so a browser that holds
+ * seats in other games too opens this one, and carrying the seats themselves only when this browser keeps nothing.
  */
-export function battleAddress(seats, search, kept) {
+export function battleAddress(seats, table, kept) {
   const query = new URLSearchParams(kept ? [] : seats.map(({ seat, token }) => [seat, token]));
-  const table = new URLSearchParams(search ?? '').get('table');
   if (table) query.set('table', table);
   const text = query.toString();
   return text ? `/battle?${text}` : '/battle';
