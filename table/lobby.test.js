@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { codePath, finishedSummary, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
+import { challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -156,4 +156,41 @@ test('a finished card leads with the result, names who it was against, and opens
   assert.equal(finishedSummary({ ...kept, outcome: 'draw', replay: null }).action, null, 'a result kept before tables were named opens nothing');
   assert.equal(finishedSummary({ ...kept, outcome: 'both' }).tag, 'Shared device');
   assert.equal(finishedSummary({ ...kept, outcome: null, rounds: 1 }).detail, '1 round');
+});
+
+test("a recent opponent's record names only what happened, from this player's side", () => {
+  // The card shows won–lost, and a third figure only when there was a draw; it is read as the words.
+  assert.deepEqual(opponentRecord({ won: 2, lost: 1, drawn: 0 }), { score: '2–1', text: 'Won 2 · Lost 1' });
+  assert.deepEqual(opponentRecord({ won: 0, lost: 0, drawn: 1 }), { score: '0–0–1', text: 'Drew 1' });
+  assert.deepEqual(opponentRecord({}), { score: '–', text: 'No result kept' });
+});
+
+test('a friend is challenged, anyone else is asked to be a friend first, and nothing is offered where friends are not kept', () => {
+  assert.deepEqual(opponentAction({ relation: 'friend' }), { label: 'Challenge →', act: 'challenge', primary: true });
+  assert.equal(opponentAction({ relation: 'none' }).act, 'ask');
+  // Asking one who asked first accepts their request.
+  assert.deepEqual(opponentAction({ relation: 'asking' }), { label: 'Accept friend', act: 'ask', primary: false });
+  assert.equal(opponentAction({ relation: 'asked' }).act, null);
+  assert.equal(opponentAction({ relation: null }), null);
+});
+
+test("a challenge opens on the friend in the last game's format and rating", () => {
+  assert.deepEqual(challengeRequest({ id: 'acct_abcdefghijklmnop', format: '1v1', casual: true }), { friend: 'acct_abcdefghijklmnop', format: '1v1', ranked: false });
+  assert.deepEqual(challengeRequest({ id: 'acct_abcdefghijklmnop', format: '', casual: false }), { friend: 'acct_abcdefghijklmnop', format: null, ranked: true });
+});
+
+test('a friends list read again changes how each recent opponent is offered, and leaves alone one the host gave no relation', () => {
+  const opponents = [{ id: 'a', relation: 'asked' }, { id: 'b', relation: 'none' }, { id: 'c', relation: 'asking' }, { id: 'd', relation: null }];
+  const list = { friends: [{ id: 'a' }, { id: 'c' }], incoming: [], outgoing: [{ id: 'b' }] };
+  assert.deepEqual(reconcileRelations(opponents, list).map(one => one.relation), ['friend', 'asked', 'friend', null]);
+  assert.equal(reconcileRelations(opponents, { friends: [], incoming: [], outgoing: [] })[0].relation, 'none');
+  assert.equal(reconcileRelations(opponents, null), opponents);
+  // An opponent whose relation did not change is the same object, so nothing is drawn again.
+  assert.equal(reconcileRelations(opponents, { friends: [], incoming: [{ id: 'c' }], outgoing: [{ id: 'a' }] })[0], opponents[0]);
+});
+
+test('friends come first among recent opponents, each group in the order the host listed it', () => {
+  const opponents = [{ id: 'a', relation: 'none' }, { id: 'b', relation: 'friend' }, { id: 'c', relation: 'asking' }, { id: 'd', relation: 'friend' }, { id: 'e', relation: null }];
+  assert.deepEqual(opponentOrder(opponents).map(one => one.id), ['b', 'd', 'a', 'c', 'e']);
+  assert.deepEqual(opponentOrder([]), []);
 });

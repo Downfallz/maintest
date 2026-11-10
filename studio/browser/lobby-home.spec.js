@@ -9,7 +9,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] } } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, games = null, finished = { players: [], bots: [] }, opponents = [] } = {}) {
   const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null,
     friends: { friends: [friend], incoming: [challenger], outgoing: [] } };
   const errors = [];
@@ -51,6 +51,18 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (path === `/api/friends/${friend.id}` && route.request().method() === 'DELETE') {
       state.removals = (state.removals ?? 0) + 1;
       state.friends = { ...state.friends, friends: [] }; return json({});
+    }
+    // Each opponent's relation is the friends list's, as the host reads it.
+    if (path === '/api/lobby/opponents') {
+      state.opponentReads = (state.opponentReads ?? 0) + 1;
+      const relation = id => [['friends', 'friend'], ['outgoing', 'asked'], ['incoming', 'asking']].find(([key]) => state.friends[key].some(link => link.id === id))?.[1] ?? 'none';
+      return json({ opponents: opponents.map(one => ({ ...one, relation: relation(one.id) })) });
+    }
+    if (path === '/api/friends/requests' && route.request().method() === 'POST') {
+      state.asked = route.request().postDataJSON();
+      const other = opponents.find(one => one.name === state.asked.username);
+      state.friends = { ...state.friends, outgoing: [...state.friends.outgoing, { id: other.id, username: other.name }] };
+      return json({ accepted: false });
     }
     if (path === '/api/friends') { state.friendReads++; return json(state.friends); }
     if (path === `/api/friends/requests/${challenger.id}/accept`) {
@@ -439,3 +451,62 @@ test('a finished page that failed is read again on the next poll, and the three 
   expect(state.errors).toEqual([]);
 });
 
+
+test('recent opponents are listed with the record between you: a friend is challenged again in the same format, anyone else is asked to be a friend first', async ({ page }, info) => {
+  const last = '2026-11-08T20:00:00Z';
+  // Bastien is a friend and Alex asked to be one (the mock's friends list); Julie is neither. The host lists them
+  // met most recently first: Julie, Bastien, Alex.
+  const state = await home(page, { opponents: [
+    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: '2026-11-09T20:00:00Z', games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false },
+    { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true },
+    { id: challenger.id, name: challenger.username, lastPlayedAt: '2026-11-07T20:00:00Z', games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false },
+  ] });
+  const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
+  const names = () => cards.locator('h3').allTextContents();
+  // A friend, the one a tap challenges, comes first; the others keep the order they were met in.
+  await expect.poll(names).toEqual(['Bastien', 'Julie', 'Alex']);
+  await expect(section).toBeVisible();
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0).locator('.record')).toHaveText('2–1');
+  await expect(cards.nth(0).locator('.record')).toHaveAccessibleName('Won 2 · Lost 1');
+  await expect(cards.nth(0)).toContainText('1v1 · unranked');
+  // One row that scrolls sideways: every card on the same line, the section one card high, the page never wider.
+  const tops = await cards.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (page.viewportSize().width < 600) {
+    const strip = page.locator('#opponent-cards');
+    expect(await strip.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+    await expect(cards.nth(1)).not.toBeInViewport({ ratio: 1 });
+  }
+  await expect(cards.nth(2).getByRole('button', { name: 'Accept friend' })).toBeEnabled();
+  await page.screenshot({ path: info.outputPath('recent-opponents.png'), fullPage: true });
+  // A stranger is asked to be a friend, by name: no invitation reaches them.
+  await cards.nth(1).getByRole('button', { name: 'Add friend' }).click();
+  await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  expect(state.asked).toEqual({ username: 'Julie' });
+  // Accepted from the Friends panel instead, Alex's card follows: Alex can be challenged now.
+  await openPanel(page, /^Friends/);
+  await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.getByRole('button', { name: 'Close friends' }).click();
+  // A friend now, Alex moves forward with the friends: after Bastien, met more recently.
+  await expect.poll(names).toEqual(['Bastien', 'Alex', 'Julie']);
+  await expect(cards.nth(1).getByRole('button', { name: 'Challenge →' })).toBeEnabled();
+  await expect(cards.nth(2).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  // A friend is challenged from the create dialog, on them, in the last game's format and rating.
+  await cards.nth(0).getByRole('button', { name: 'Challenge →' }).click();
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#opponent')).toHaveValue('friend');
+  await expect(page.locator('#friend')).toHaveValue(friend.id);
+  await expect(page.locator('#format')).toHaveValue('1v1');
+  await expect(page.locator('#ranked')).not.toBeChecked();
+  expect(state.created).toBeUndefined();
+  expect(state.errors).toEqual([]);
+});
+
+test('a player who has met nobody yet sees no recent opponents section', async ({ page }) => {
+  const state = await home(page);
+  await expect(page.locator('#my-tables .game-card')).toHaveCount(1);
+  await expect.poll(() => state.opponentReads ?? 0).toBeGreaterThan(0);
+  await expect(page.locator('#opponents')).toBeHidden();
+});
