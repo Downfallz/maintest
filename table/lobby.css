@@ -66,6 +66,11 @@
   .game-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "top action" "who action" "detail action"; gap: 4px 12px; padding: 12px 14px; }
   .game-row-detail:empty { display: none; }
 }
+/* On the narrowest phones the action leaves too little width beside it for "who vs who" on one line under wide system
+   fonts: what the row is takes the whole first line, and the action sits beside the players only. */
+@media (max-width: 420px) {
+  .game-row { grid-template-areas: "top top" "who action" "detail action"; }
+}
 .lobby-pages { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
 .lobby-pages[hidden] { display: none; }
 .lobby-pages button { min-height: 44px; border-radius: var(--radius-soft); font-size: 12px; padding: 8px 14px; }
