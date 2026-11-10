@@ -37,7 +37,7 @@ internal static class TableRestorer
             }
 
             var journal = await stored.JournalAsync(id, cancellationToken);
-            if (!DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
+            if (!record.Begun && !DecisionJournal.HoldsDecision(journal) && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
             {
                 // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
                 // host before this one never got to sweep is left as it is, not marked, and not rebuilt.

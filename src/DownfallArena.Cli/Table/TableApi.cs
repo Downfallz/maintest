@@ -93,6 +93,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// </summary>
     public Func<TableSeat, string?>? CodeOf { get; set; }
 
+    /// <summary>
+    /// Writes the table's record as it stands, once the registry holds the table and has minted its codes: what
+    /// a person reaching their seat, and the match beginning, are kept in. None for a table nobody records.
+    /// </summary>
+    public Func<Task>? Record { get; set; }
+
     /// <summary>The notices sent to a seat nobody is looking at (ADR 0118): told which askings a page has drawn.</summary>
     public PushNotices? Push { get; init; }
 
@@ -155,7 +161,10 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TokenHeader}'.");
         }
 
-        Arrived(holder);
+        if (Arrived(holder) && Record is { } record)
+        {
+            await RecordedAsync(record);
+        }
 
         if (path == "/api/session" && method == "GET")
         {
@@ -278,7 +287,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     /// A request on a seat is its person reaching it. The match begins when every person has (ADR 0092): a
     /// bot's seat needs nobody, and a table of bots began when it was composed.
     /// </summary>
-    private void Arrived(TableSeat holder)
+    /// <returns>Whether a person has just reached their seat, which the table's record says from then on.</returns>
+    private bool Arrived(TableSeat holder)
     {
         var arrived = holder.Person is { HasArrived: false };
         holder.Person?.Arrive();
@@ -291,6 +301,24 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         if (arrived)
         {
             Changes.Bump();
+        }
+
+        return arrived;
+    }
+
+    /// <summary>
+    /// Writes the table's record, and never fails the request for it: the person has reached their seat and the
+    /// match may have begun whether or not the store took it. A table picked up again without it waits again.
+    /// </summary>
+    private static async Task RecordedAsync(Func<Task> record)
+    {
+        try
+        {
+            await record();
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
+        {
+            Console.WriteLine($"  A seat's arrival could not be written into its table's record: {failure.Message}");
         }
     }
 

@@ -94,8 +94,13 @@ Each phase ships on the one container app there is today and leaves the game pla
      session keeps how long the trace was then beside the state it serves. A seat's feed and a checkpoint
      stop there, and the table's version moves when a step's match is kept, not when an entry is recorded:
      a turn that is never written is shown to nobody, and a rebuild tells the pages once.
-   - **4.2b.** Arrival and "has begun" in the table record, with a revision and a conditional write; the
-     version becomes journal lines plus that revision.
+   - **4.2b, done.** Arrival and "has begun" in the table record, which has a revision and is written on a
+     condition: a store document is read with a tag and written only if it still has it (the file's digest,
+     the blob's entity tag), and the record is written over the one stored, keeping an ending, a refusal and
+     a beginning another host wrote. A table picked up again that had begun begins at once, decision or not,
+     and waits only for whoever had not reached their seat. The version is still counted: it is served to
+     no page as a number, and deriving it from the journal and the revision is worth it only once a second
+     process writes a table (question 9), so it moves with that.
    - **4.2c.** `TableRestorer` becomes registration with no replay: a table's match is rebuilt at the first
      request that needs it.
    - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
@@ -258,7 +263,8 @@ which adds the compilation of the engine itself.
     writing a seat change is seen at the next step, after a rebuild it caused has named its steps. One
     process until 4.2, where the table is loaded per request and reads its seat changes with its journal.
 20. **What a table's session still keeps in memory after 4.1b.** Whether each person has arrived and whether
-    the match has begun (4.2b), the table's version counter (4.2b), the decision clock (question 3), and the
+    the match has begun (written into the record since 4.2b, and read back when the table is picked up), the
+    table's version counter (question 9), the decision clock (question 3), and the
     last round each seat decided in, which a rebuild works out again.
 
 21. **A step that fails under a store that is out.** Since 4.1b the table reads its match again from the

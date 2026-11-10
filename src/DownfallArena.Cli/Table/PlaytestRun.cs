@@ -459,12 +459,31 @@ internal sealed class PlaytestRun
     private readonly Lock _recordGate = new();
     private Task _recordWritten = Task.CompletedTask;
 
-    /// <summary>One record write after the one before it, whatever became of that one: a failed write is its own caller's.</summary>
+    /// <summary>
+    /// One record write after the one before it, whatever became of that one: a failed write is its own caller's.
+    /// Written over the record as stored and only if nobody wrote it since it was read (ADR 0159): another host
+    /// may hold the same table, and the record keeps what either of them wrote that the other must not undo.
+    /// </summary>
     private async Task WriteRecordAfterAsync(Task before, TableRecord record, CancellationToken cancellationToken)
     {
         await Task.WhenAny(before);
-        await _writer.WriteJsonAsync(TableRecord.File, record, cancellationToken);
+        for (var attempt = 1; ; attempt++)
+        {
+            var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
+            var written = record.Over(read is null ? null : StoredSessions.RecordOf(read.Text));
+            if (await _writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
+            {
+                return;
+            }
+
+            if (attempt == RecordAttempts)
+            {
+                throw new IOException($"The record of session {SessionId} was written by somebody else at every one of {RecordAttempts} attempts.");
+            }
+        }
     }
+
+    private const int RecordAttempts = 5;
 
     /// <summary>
     /// The agent the driver plays for a seat: the seat itself, wrapped so every decision it makes is a step.

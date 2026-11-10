@@ -127,10 +127,16 @@ internal sealed class StoredSessions(IArtifactStore store)
     /// <summary>The table's record, or none when the run was never a table of a host that wrote one (ADR 0091).</summary>
     public async Task<TableRecord?> RecordAsync(string id, CancellationToken cancellationToken = default)
     {
+        var text = await store.Reader(id).ReadTextAsync(TableRecord.File, cancellationToken);
+        return text is null ? null : RecordOf(text);
+    }
+
+    /// <summary>A table's record as it is written, or none for text that is not one.</summary>
+    public static TableRecord? RecordOf(string text)
+    {
         try
         {
-            var text = await store.Reader(id).ReadTextAsync(TableRecord.File, cancellationToken);
-            return text is null ? null : JsonSerializer.Deserialize<TableRecord>(text, ArtifactJson.DocumentOptions);
+            return JsonSerializer.Deserialize<TableRecord>(text, ArtifactJson.DocumentOptions);
         }
         catch (Exception failure) when (failure is JsonException or ArgumentException)
         {

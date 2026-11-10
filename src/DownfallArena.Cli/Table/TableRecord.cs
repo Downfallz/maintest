@@ -84,6 +84,18 @@ internal sealed record TableRecord
     /// <summary>Opened as unranked (ADR 0155). False in a record written before a game could be.</summary>
     public bool Casual { get; init; }
 
+    /// <summary>
+    /// How many times the record has been written, the first write being 1: what a conditional write is read
+    /// and refused on, and the record's half of the table's version once a second process writes (ADR 0159).
+    /// </summary>
+    public long Revision { get; init; }
+
+    /// <summary>
+    /// Whether the match has begun: every person reached their seat (ADR 0092), or there was nobody to wait for.
+    /// A table picked up again that had begun begins at once, whether or not a decision was taken yet.
+    /// </summary>
+    public bool Begun { get; init; }
+
     public static TableRecord Of(PlayedTable table, TableRequest request, JoinCodes codes)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -102,13 +114,27 @@ internal sealed record TableRecord
             Handover = request.Handover,
             Format = table.Session.Rules.Format.ToString(),
             Declaration = CombatDeclarationText.Of(table.Session.Rules.CombatDeclaration),
-            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value, seat.InvitedAccount?.Value, seat.InvitedAt, seat.DeclinedBy?.Value))],
+            Seats = [.. table.Seats.Select(seat => new RecordedSeat(seat.Name, seat.Token, codes.Of(seat), seat.Person is not null, seat.Invitation, seat.Person is null ? null : seat.Taken, seat.Push, seat.Account?.Value, seat.InvitedAccount?.Value, seat.InvitedAt, seat.DeclinedBy?.Value, seat.Person?.HasArrived))],
             PilotToken = table.Pilot.Token,
             Status = Open,
             OpenSeats = table.OpenSeats,
             Casual = table.Casual,
+            Begun = table.Session.HasBegun,
         };
     }
+
+    /// <summary>
+    /// This record written over the one stored, which another host may have written since this one last read
+    /// it: a table that ended stays ended, a refusal and a beginning are kept, and the revision is the next one.
+    /// </summary>
+    public TableRecord Over(TableRecord? stored) =>
+        this with
+        {
+            Revision = (stored?.Revision ?? 0) + 1,
+            Status = stored is { Status: not Open } ended && Status == Open ? ended.Status : Status,
+            RefusedUnder = RefusedUnder ?? stored?.RefusedUnder,
+            Begun = Begun || stored?.Begun == true,
+        };
 
     /// <summary>The request the table was composed from, to compose it again.</summary>
     public TableRequest Request() =>
@@ -131,4 +157,4 @@ internal sealed record TableRecord
 /// theirs. <paramref name="InvitedAccount" /> and <paramref name="InvitedAt" /> are the friend the seat is kept for
 /// and since when (ADR 0129), so a rebuilt table still waits for them; <paramref name="DeclinedBy" /> is who declined it.
 /// </summary>
-internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null, string? Account = null, string? InvitedAccount = null, DateTimeOffset? InvitedAt = null, string? DeclinedBy = null);
+internal sealed record RecordedSeat(string Slot, string Token, string? Code, bool Person, string? Invitation = null, bool? Taken = null, PushSubscription? Push = null, string? Account = null, string? InvitedAccount = null, DateTimeOffset? InvitedAt = null, string? DeclinedBy = null, bool? Arrived = null);

@@ -131,7 +131,7 @@ public sealed class LobbyApiTests : IDisposable
 
         var recorded = (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         recorded.OpenSeats.ShouldBeEmpty();
-        recorded.Seats[1].ShouldBe(new RecordedSeat("player2", token, null, true, null, true));
+        recorded.Seats[1].ShouldBe(new RecordedSeat("player2", token, null, true, null, true, Arrived: false));
     }
 
     /// <summary>A table recorded before invitations comes back the way its links were written: they carry the seat's token, and keep working.</summary>
