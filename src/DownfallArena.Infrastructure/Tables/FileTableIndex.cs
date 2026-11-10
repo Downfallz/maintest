@@ -121,7 +121,17 @@ public sealed class FileTableIndex : ITableIndex
             throw new ArgumentException($"'{key}' is not a key the table index holds.", nameof(key));
         }
 
-        return Path.Combine(directory, $"{key}.json");
+        // The check above already keeps the key a bare name. The canonical path is still checked against the very
+        // prefix it was built from, the shape the path traversal analysis (S2083) reads as a guard, as the
+        // artifact writer does.
+        var under = directory + Path.DirectorySeparatorChar;
+        var path = Path.GetFullPath(Path.Combine(under, Path.GetFileName($"{key}.json")));
+        if (!path.StartsWith(under, StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"'{key}' is not a key the table index holds.", nameof(key));
+        }
+
+        return path;
     }
 
     private static TEntry? Read<TEntry>(string path)
