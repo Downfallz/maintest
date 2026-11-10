@@ -14,9 +14,9 @@ on GitHub Pages (ADR 0023).
 | Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/`; no key, and only the app's subnet may reach it | Cents |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
-The app scales to zero a few minutes after the last request. An open page polls, so a table being played
-keeps it awake; the first request after a quiet spell waits some seconds while a replica starts. A match
-lives in memory, but the replica that starts next **rebuilds every table left open** from its seed and its
+The app scales to zero a few minutes after the last request. An open seat holds an event stream and polls
+beneath it (ADR 0119), so a table being played keeps it awake; the first request after a quiet spell waits
+some seconds while a replica starts. A match lives in memory, but the replica that starts next **rebuilds every table left open** from its seed and its
 recorded decisions, under the same links and codes (ADR 0091). A game that began does not expire during a
 pause, and a table that never began is closed after twenty hours without a request (ADR 0115); the operator
 can explicitly close unused tables. The recording is what survives either way: the admin panel lists every recorded
