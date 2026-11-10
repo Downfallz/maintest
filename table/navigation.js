@@ -6,7 +6,7 @@ import { operatorToken } from './session.js';
 import { mountGameSettings } from './game-preferences.js';
 
 const headerContent = `
-    <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><div><span class="eyebrow">Tactical creature combat</span><h1>Downfall Instinct</h1></div></a>
+    <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
     <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation"><span aria-hidden="true">☰</span><span>Menu</span></button>
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Lobby</a>

@@ -162,3 +162,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0154](0154-record-the-critical-roll-as-a-d20-face.md) | Record the critical roll as a d20 face, and show the field's dice | Accepted |
 | [0155](0155-let-a-game-between-players-be-unranked.md) | Let a game between two players be opened as unranked | Accepted |
 | [0156](0156-replay-a-finished-game-in-the-battle-view-for-its-players.md) | Replay a finished game in the battle view for the players who sat at it | Accepted |
+| [0157](0157-carve-the-interface-in-bone-and-soot.md) | Carve the interface in bone and soot: one display face, sharp cut shapes, grain on every surface, one bar in a match | Accepted |

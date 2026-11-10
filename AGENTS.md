@@ -34,6 +34,8 @@ viewer/                        Static HTML viewer for learning artifacts (traces
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
                                presentation.js is the pure seat-to-presentation boundary shared with future live battle work.
+                               identity.css, loaded last by every page, owns the shared bone-and-soot parts (buttons, cards, windows,
+                               headers; ADR 0157, docs/art/branding.md); fonts/ holds the display face the host serves.
                                `/battle-lab` is an isolated visual study using fictional sample frames, not a live seat
                                (docs/tabletop/browser-battle-plan.md, ADR 0123); `/battle` is the opt-in Phaser
                                complete game loop for one authenticated seat (ADRs 0125–0128), opt-in behind a lobby preference (ADR 0136).

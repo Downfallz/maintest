@@ -1,19 +1,19 @@
-.ladder-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.ladder-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }
 .ladder { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ladder th { text-align: left; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 650; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .ladder td { padding: 13px 16px; border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent); }
 .ladder tr:last-child td { border-bottom: 0; }
 .ladder .number { text-align: right; white-space: nowrap; }
 .ladder .rank { width: 48px; color: var(--muted); }
-.ladder td.rank { font: 18px Georgia, serif; }
+.ladder td.rank { font: 18px var(--font-display); }
 .ladder tr.top td.rank { color: var(--gold); }
 .ladder .player { font-weight: 650; overflow-wrap: anywhere; }
 .ladder .deviation { color: var(--muted); font-size: 12px; margin-left: 4px; }
 .ladder tr.provisional td { color: var(--muted); }
 .ladder tr.you td { background: color-mix(in srgb, var(--gold) 6.3%, transparent); }
 .ladder tr.you .player::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
-.ladder .tag { display: inline-block; white-space: nowrap; margin-left: 8px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; border: 1px dashed var(--line); border-radius: 4px; padding: 1px 5px; font-weight: 600; }
-.you-rating { font: 400 40px/1 Georgia, serif; color: var(--gold); margin: 6px 0; }
+.ladder .tag { display: inline-block; white-space: nowrap; margin-left: 8px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; border: 1px dashed var(--line); border-radius: var(--radius-sharp); padding: 1px 5px; font-weight: 600; }
+.you-rating { font: 400 40px/1 var(--font-display); color: var(--gold); margin: 6px 0; }
 .you-line { color: var(--muted); font-size: 13px; line-height: 1.7; }
 #you .eyebrow { margin-top: 16px; }
 .lobby-sidebar .muted + .muted { margin-top: 10px; }

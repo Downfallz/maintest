@@ -5,7 +5,7 @@
 
 .lobby-main { max-width: 1280px; margin: auto; }
 .lobby-hero { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 50px 0 28px; }
-.lobby-hero h2 { font: 400 clamp(36px, 5vw, 58px)/1.15 Georgia, serif; letter-spacing: -1.5px; margin: 12px 0; }
+.lobby-hero h2 { font: 400 clamp(36px, 5vw, 58px)/1.15 var(--font-display); margin: 12px 0; }
 .hero-detail { color: var(--muted); font-size: 15px; line-height: 1.65; }
 .lobby-page .primary { background: var(--gold); border-color: var(--gold); color: var(--accent-ink); font-weight: 700; text-align: center; padding: 14px 22px; }
 .lobby-status { display: block; min-height: 26px; margin-bottom: 24px; }
@@ -13,12 +13,12 @@
 .lobby-section { margin-bottom: 38px; }
 .lobby-section .section-heading { margin-bottom: 16px; }
 .lobby-section h2 { font-size: 19px; display: flex; align-items: center; gap: 10px; }
-.lobby-count { font: 12px ui-sans-serif, system-ui, sans-serif; color: var(--muted); border: 1px solid var(--line); padding: 3px 7px; border-radius: 20px; }
+.lobby-count { font: 12px ui-sans-serif, system-ui, sans-serif; color: var(--muted); border: 1px solid var(--line); padding: 3px 7px; border-radius: var(--radius-soft); }
 .lobby-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.game-card { background: linear-gradient(145deg, color-mix(in srgb, var(--raised) 53%, transparent), transparent), var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.game-card { background: linear-gradient(145deg, color-mix(in srgb, var(--raised) 53%, transparent), transparent), var(--panel); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .game-card.mine { border-top: 2px solid var(--gold); }
 .game-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-.game-card h3 { margin: 0; font: 400 23px Georgia, serif; }
+.game-card h3 { margin: 0; font: 400 23px var(--font-display); }
 .game-card .status-tag { font-size: 11px; padding: 4px 8px; white-space: nowrap; }
 .game-card .status-tag.available { color: var(--ally); border-color: #5e8e73; }
 .game-card .status-tag.your-turn { color: var(--accent-ink); background: var(--gold); border-color: var(--gold); font-weight: 700; }
@@ -32,10 +32,10 @@
 .versus .who { font-weight: 650; overflow-wrap: anywhere; }
 .versus .player1 .who.person { color: var(--ally); }
 .versus .player2 .who.person { color: var(--enemy); }
-.versus .who.open { color: var(--muted); font-weight: 400; border: 1px dashed var(--line); border-radius: 6px; padding: 2px 8px; }
+.versus .who.open { color: var(--muted); font-weight: 400; border: 1px dashed var(--line); border-radius: var(--radius-sharp); padding: 2px 8px; }
 .versus .side.you .who::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
-.versus .vs { font: italic 14px Georgia, serif; color: var(--muted); }
-.bot-tag { font-size: 9px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+.versus .vs { font: italic 14px var(--font-display); color: var(--muted); }
+.bot-tag { font-size: 9px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 1px 4px; }
 .game-card button { width: 100%; text-align: center; margin-top: auto; }
 .game-card .status-tag.invited { color: var(--gold); border-color: var(--gold); }
 .game-card.invitation { border-top: 2px solid var(--gold); }
@@ -44,18 +44,18 @@
 .game-card a { color: var(--gold); }
 .lobby-filters { display: flex; gap: 8px; margin: -2px 0 16px; padding: 0; border: 0; min-width: 0; }
 .lobby-filters > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.lobby-filters button { border-radius: 24px; font-size: 12px; padding: 8px 14px; }
+.lobby-filters button { border-radius: var(--radius-soft); font-size: 12px; padding: 8px 14px; }
 .lobby-filters button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
 .lobby-filters button span { color: var(--muted); }
 /* Your games page six at a time; the pager stays one line, its buttons full-size targets. */
 .lobby-pages { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
 .lobby-pages[hidden] { display: none; }
-.lobby-pages button { min-height: 44px; border-radius: 24px; font-size: 12px; padding: 8px 14px; }
+.lobby-pages button { min-height: 44px; border-radius: var(--radius-soft); font-size: 12px; padding: 8px 14px; }
 .lobby-pages button:disabled { opacity: .45; cursor: default; }
 #mine-page { font-size: 12px; color: var(--muted); }
 .mine-groups { display: grid; gap: 26px; }
 .mine-group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.mine-group-head h3 { margin: 0; font: 400 17px Georgia, serif; color: var(--ink); }
+.mine-group-head h3 { margin: 0; font: 400 17px var(--font-display); color: var(--ink); }
 .mine-group .lobby-count.full { color: var(--gold); border-color: var(--gold); }
 .mine-limit { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .game-card .status-tag.outcome.won { color: var(--ok); border-color: var(--ok); }
@@ -64,35 +64,35 @@
    between you, the last game in small, and the one way to play again. */
 .opponent-strip { display: flex; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
   scroll-padding-inline: 2px; padding: 2px 2px 8px; scrollbar-width: thin; }
-.opponent-strip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 12px; }
+.opponent-strip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
 .game-card.opponent { flex: 0 0 min(76%, 240px); scroll-snap-align: start; padding: 12px 14px; gap: 8px; }
 .game-card.opponent h3 { margin: 0; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .game-card.opponent .status-tag.record { color: var(--ink); font-variant-numeric: tabular-nums; }
 .game-card.opponent .game-turn { color: var(--muted); font-size: 12px; margin: 0; }
 .game-card.opponent button { width: 100%; min-height: 40px; margin-top: auto; }
 .game-card .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
-.game-card.finished .button-link { display: block; margin-top: auto; text-align: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; }
-.empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); line-height: 1.7; }
-.lobby-panel { padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-glass); margin-bottom: 18px; }
-.lobby-panel h2 { font: 400 22px Georgia, serif; margin: 10px 0 18px; }
+.game-card.finished .button-link { display: block; margin-top: auto; text-align: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-soft); text-decoration: none; }
+.empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: var(--radius-soft); color: var(--muted); line-height: 1.7; }
+.lobby-panel { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--paper-glass); margin-bottom: 18px; }
+.lobby-panel h2 { font: 400 22px var(--font-display); margin: 10px 0 18px; }
 .lobby-page label { display: block; color: var(--muted); font-size: 12px; margin: 18px 0 8px; }
-.lobby-page input, .lobby-page select { min-width: 0; width: 100%; min-height: 46px; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 10px; color: var(--ink); background: var(--paper); }
+.lobby-page input, .lobby-page select { min-width: 0; width: 100%; min-height: 46px; font: inherit; border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 10px; color: var(--ink); background: var(--paper); }
 .lobby-page input:focus-visible, .lobby-page select:focus-visible, .lobby-page a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .code-row { display: flex; gap: 8px; }
 .code-row input { text-transform: uppercase; letter-spacing: 1px; }
 .code-row button { white-space: nowrap; }
-.lobby-page dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+.lobby-page dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: 28px; }
 .lobby-page dialog::backdrop { background: #030a10c9; backdrop-filter: blur(5px); }
 .dialog-heading { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
-.dialog-heading h2 { font: 400 28px Georgia, serif; margin-top: 8px; }
+.dialog-heading h2 { font: 400 28px var(--font-display); margin-top: 8px; }
 #create-help { margin-top: 18px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
 .lobby-page .problem { margin: 12px 0; }
 .account { position: relative; }
-.account-chip { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: 22px; background: var(--raised); list-style: none; font-weight: 650; }
+.account-chip { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); list-style: none; font-weight: 650; }
 .account-chip::-webkit-details-marker { display: none; }
-.account-initial { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); color: var(--gold); border: 1px solid var(--brand-ember); font: 15px Georgia, serif; }
-.account-menu { position: absolute; right: 0; top: 48px; z-index: 10; display: grid; gap: 6px; padding: 8px; min-width: 210px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 15px 40px #0008; }
+.account-initial { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); color: var(--gold); border: 1px solid var(--brand-ember); font: 15px var(--font-display); }
+.account-menu { position: absolute; right: 0; top: 48px; z-index: 10; display: grid; gap: 6px; padding: 8px; min-width: 210px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-soft); box-shadow: 0 15px 40px #0008; }
 .account-menu button { width: 100%; }
 .sign-in-panel { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px 28px; }
 .sign-in-panel > div { min-width: 0; }
@@ -112,7 +112,7 @@
 .friends-panel p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
 .device-panel p:not(.eyebrow), .device-panel output { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; display: block; }
 .device-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; } .device-actions button { flex: 1; min-height: 44px; }
-.name-title { font: 400 28px Georgia, serif; margin: 8px 0 10px; }
+.name-title { font: 400 28px var(--font-display); margin: 8px 0 10px; }
 .name-check { margin: 10px 0 0; font-size: 13px; }
 .name-check.good { color: var(--ally); }
 .name-check.bad { color: var(--refused); }
@@ -147,7 +147,7 @@
 .home-header .brand .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
 .home-header h1 { font-size: 23px; white-space: nowrap; }
 .home-header .home-navigation { margin-left: auto; display: flex; align-items: center; gap: 3px; }
-.home-navigation > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 11px; font-size: 12px; font-weight: 600; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.home-navigation > :is(a, button) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 11px; font-size: 12px; font-weight: 600; border: 1px solid transparent; border-radius: var(--radius-soft); background: transparent; color: var(--muted); text-decoration: none; white-space: nowrap; }
 .home-navigation > :is(a, button):hover, .home-navigation > [aria-current="page"] { color: var(--gold); background: var(--accent-wash); }
 .home-menu-toggle { display: none; }
 .home-header .account { flex: none; }
@@ -165,14 +165,14 @@
 .inbox-list { display: grid; gap: 22px; }
 .inbox-group h3 { margin: 0 0 8px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 .inbox-items { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.inbox-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+.inbox-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); }
 .inbox-item.turn { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); }
 .inbox-text { display: grid; gap: 3px; min-width: 0; }
 .inbox-text strong { overflow-wrap: anywhere; }
 .inbox-text small { color: var(--muted); font-size: 12px; }
 .inbox-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; }
 .inbox-actions :is(button, a) { min-height: 44px; }
-.inbox-actions .button-link { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--gold); text-decoration: none; }
+.inbox-actions .button-link { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--gold); text-decoration: none; }
 .inbox-empty { margin: 0; }
 /* The narrowest phones fit the brand, the menu, the bell and the account in one row by giving up some air. */
 @media (max-width: 360px) {
@@ -189,28 +189,28 @@
 .home-page .lobby-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
 .home-page .lobby-status { min-height: 20px; margin-bottom: 30px; font-size: 11px; }
 .home-page .lobby-section { margin-bottom: 36px; }
-.home-page .game-card { background: var(--panel); }
+
 .home-page .game-id { display: none; }
 .home-page .lobby-games { padding-bottom: 10px; }
 .welcome-intro { display: grid; grid-template-columns: 1fr 1fr; column-gap: 36px; padding: 60px 0 30px; }
 .intro-copy { align-self: center; padding: 12px 0; }
 .intro-copy > .eyebrow { color: var(--brand-ember); }
-.intro-copy h2 { font: 400 clamp(36px, 4.3vw, 60px)/1.08 Georgia, serif; letter-spacing: -1.5px; margin: 18px 0 24px; }
+.intro-copy h2 { font: 400 clamp(36px, 4.3vw, 60px)/1.08 var(--font-display); margin: 18px 0 24px; }
 .intro-description { max-width: 46ch; font-size: 16px; line-height: 1.75; color: var(--muted); }
 .intro-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; margin-top: 28px; }
 .intro-actions a { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 48px; color: var(--gold); text-decoration: none; font-size: 13px; }
-.intro-actions .primary { border: 1px solid var(--gold); border-radius: 8px; }
+.intro-actions .primary { border: 1px solid var(--gold); border-radius: var(--radius-soft); }
 .intro-caption { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 20px; }
-.intro-art { position: relative; isolation: isolate; min-height: 410px; border: 1px solid var(--line); border-radius: 120px 16px 16px 16px; overflow: hidden; background: linear-gradient(0deg, var(--paper), transparent 60%), url('battle-art/eclipse-battle.webp') center/cover; }
+.intro-art { position: relative; isolation: isolate; min-height: 410px; border: 1px solid var(--line); border-radius: 0; clip-path: polygon(56px 0, 100% 0, 100% 100%, 0 100%, 0 56px); overflow: hidden; background: linear-gradient(0deg, var(--paper), transparent 60%), url('battle-art/eclipse-battle.webp') center/cover; }
 .intro-art::after { content: ''; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
 .intro-beast { position: absolute; width: 53%; height: 73%; object-fit: contain; bottom: 7%; filter: drop-shadow(0 12px 18px #0009); }
 .intro-brute { left: -4%; z-index: 1; }.intro-predator { left: 23%; bottom: 4%; z-index: 2; }.intro-warped { right: -3%; }
 .how-it-plays { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; padding: 36px 0 0; margin: 40px 0 0; border-top: 1px solid var(--line); list-style: none; scroll-margin-top: 24px; }
 .how-it-plays li { display: flex; gap: 16px; }
-.step-number { color: var(--brand-ember); font: 22px Georgia, serif; padding-top: 2px; }
-.how-it-plays h3 { font: 400 21px Georgia, serif; margin: 0 0 10px; }
+.step-number { color: var(--brand-ember); font: 22px var(--font-display); padding-top: 2px; }
+.how-it-plays h3 { font: 400 21px var(--font-display); margin: 0 0 10px; }
 .how-it-plays p { font-size: 13px; line-height: 1.75; color: var(--muted); }
-.home-page .sign-in-panel { scroll-margin-top: 24px; padding: 28px 32px; margin: 18px 0 40px; background: var(--panel); border-top: 2px solid var(--gold); }
+.home-page .sign-in-panel { scroll-margin-top: 24px; padding: 28px 32px; margin: 18px 0 40px; }
 .home-page .sign-in-panel > div { flex: 1 1 260px; }
 .home-page .sign-in-actions { min-width: 0; }
 .home-page .sign-in-panel h2 { font-size: 28px; }
@@ -246,7 +246,7 @@
   .home-header { gap: 14px; }
   .home-menu-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; background: transparent; min-height: 44px; }
   .home-menu-toggle > span:first-child { font-size: 18px; }
-  .home-header .home-navigation { display: none; position: absolute; top: calc(100% - 1px); right: 0; width: min(360px, 100%); padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 12px 12px; box-shadow: 0 20px 40px #0008; margin: 0; max-height: min(70dvh, 460px); overflow-y: auto; }
+  .home-header .home-navigation { display: none; position: absolute; top: calc(100% - 1px); right: 0; width: min(360px, 100%); padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 var(--radius-soft) var(--radius-soft); box-shadow: 0 20px 40px #0008; margin: 0; max-height: min(70dvh, 460px); overflow-y: auto; }
   .home-menu-toggle[aria-expanded="true"] + .home-navigation { display: grid; gap: 4px; }
   .home-navigation > :is(a, button) { justify-content: flex-start; padding: 12px; font-size: 14px; min-height: 48px; }
   .welcome-intro { column-gap: 24px; padding-top: 40px; }
@@ -265,11 +265,11 @@
   .home-header .account-menu { position: fixed; top: 78px; right: 18px; max-width: calc(100vw - 36px); }
   .welcome-intro { grid-template-columns: 1fr; padding-top: 24px; gap: 24px; }
   .intro-copy { padding: 0; }
-  .intro-copy h2 { font-size: clamp(34px, 8.8vw, 48px); letter-spacing: -1px; margin: 14px 0 18px; }
+  .intro-copy h2 { font-size: clamp(34px, 8.8vw, 48px); margin: 14px 0 18px; }
   .intro-description { font-size: 15px; line-height: 1.65; }
   .intro-actions { gap: 12px 20px; margin-top: 22px; }
   .intro-caption { margin-top: 16px; }
-  .intro-art { min-height: 250px; border-radius: 60px 12px 12px 12px; }
+  .intro-art { min-height: 250px; clip-path: polygon(32px 0, 100% 0, 100% 100%, 0 100%, 0 32px); }
   .how-it-plays { grid-template-columns: 1fr; gap: 24px; margin: 4px 0 0; padding-top: 28px; }
   .how-it-plays p { max-width: 42ch; }
   .home-page .sign-in-panel { margin-top: 4px; padding: 22px; }
@@ -312,7 +312,7 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .app-settings-identity .account-initial { width: 48px; height: 48px; font-size: 22px; flex: none; }
 .app-settings-identity strong { display: block; font-size: 18px; overflow-wrap: anywhere; }
 .app-settings-identity small, .app-settings-row small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 3px; }
-.app-settings-danger { margin-top: 28px; padding: 16px; border: 1px solid #6b3b32; border-radius: 12px; background: #1f1614; }
+.app-settings-danger { margin-top: 28px; padding: 16px; border: 1px solid #6b3b32; border-radius: var(--radius-soft); background: #1f1614; }
 .app-settings-danger h3 { margin: 0 0 4px; color: var(--refused); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
 .app-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; }
 .app-settings-row + .app-settings-row { border-top: 1px solid #3d2a26; }

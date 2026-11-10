@@ -30,6 +30,32 @@ The slate, panel, raised surface, gold, focus and ivory come from `table/battle-
 battle opponent detail in `table/battle.css`. Border and muted values consolidate the previous grey-green
 variants into slate. Copper is a secondary decorative accent, not a new gameplay state.
 
+## Bone and soot
+
+[ADR 0157](../adr/0157-carve-the-interface-in-bone-and-soot.md) gives the pages the rune's own material.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--bone` | `#D8C7A7` | Titles, the name, the hairline under a title |
+| `--soot` | `#070D10` | The foot of a page, the head of a bar or a window |
+| `--line-soft` | `#2A3A41` | Quiet separators; `--line` stays for controls |
+| `--font-display` | Marcellus, then a serif | Titles, the name, creature names, the round's number |
+| `--font-text` | System sans-serif | Everything else |
+| `--radius-sharp`, `--radius-soft` | 2px, 3px | Controls and tags; panels |
+| `--cut` | 12px | The cut corner of a card; a window sets 16px, a docked sheet 0px |
+| `--tex-grain`, `--tex-soot`, `--tex-rule` | SVG data URIs | Bone grain, soot smudges, the rune that opens a title's rule |
+
+- Bone is what is read first; gold is what can be done. One filled gold action a screen.
+- Marcellus has one weight. Do not ask it for bold; use size, colour or the sans-serif.
+- A pill is a counter. Buttons, tags, fields and chips are square.
+- The cut corner belongs to the filled action, a card and a centred window. A sheet docked to an edge is square.
+- A cut shape clips what is drawn outside it: keep its focus ring inside (`outline-offset` negative).
+- `table/identity.css` is the last sheet of every page of the table and owns these shared parts. Page sheets own
+  layout. Restyle a shared button, card, window or header there, not in a page sheet.
+- The font is `table/fonts/marcellus-latin-400.woff2` (SIL OFL 1.1, `table/fonts/OFL.txt`), served by the table's
+  host only. The studio and the viewer fall back to the serif named after it.
+- In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
+
 ## Usage
 
 - Let slate occupy most of the page. Use gold for the action or selection that needs attention; do not
