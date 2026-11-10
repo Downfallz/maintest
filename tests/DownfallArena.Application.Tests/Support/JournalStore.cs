@@ -12,7 +12,7 @@ namespace DownfallArena.Application.Tests.Support;
 /// </summary>
 internal sealed class JournalStore
 {
-    private readonly List<SeatDecision> _lines = [];
+    private readonly List<IJournalEntry> _lines = [];
 
     public JournalStore()
     {
@@ -28,7 +28,7 @@ internal sealed class JournalStore
 
                 return new JournalReading([.. _lines], End);
             });
-        Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<SeatDecision>>(), Arg.Any<CancellationToken>())
+        Journal.AppendAsync(Arg.Any<string>(), Arg.Any<JournalPosition>(), Arg.Any<IReadOnlyList<IJournalEntry>>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 BeforeAppend?.Invoke();
@@ -38,14 +38,17 @@ internal sealed class JournalStore
                     return (JournalPosition?)null;
                 }
 
-                _lines.AddRange(call.Arg<IReadOnlyList<SeatDecision>>());
+                _lines.AddRange(call.Arg<IReadOnlyList<IJournalEntry>>());
                 return End;
             });
     }
 
     public IDecisionJournal Journal { get; }
 
-    public IReadOnlyList<SeatDecision> Lines => _lines;
+    public IReadOnlyList<IJournalEntry> Lines => _lines;
+
+    /// <summary>The decisions among the lines, in order.</summary>
+    public IReadOnlyList<SeatDecision> Decisions => [.. _lines.OfType<DecisionEntry>().Select(entry => entry.Decision)];
 
     /// <summary>Awaited once, as the next reading arrives and before it is answered: where a step is held in its turn.</summary>
     public Func<Task>? BeforeRead { get; set; }
@@ -54,7 +57,10 @@ internal sealed class JournalStore
     public Action? BeforeAppend { get; set; }
 
     /// <summary>A line written by somebody else.</summary>
-    public void WriteElsewhere(SeatDecision line) => _lines.Add(line);
+    public void WriteElsewhere(SeatDecision line) => _lines.Add(new DecisionEntry(line));
+
+    /// <summary>A line of any kind written by somebody else.</summary>
+    public void WriteElsewhere(IJournalEntry line) => _lines.Add(line);
 
     private JournalPosition End => new(_lines.Count, _lines.Count);
 }

@@ -70,8 +70,24 @@ Each phase ships on the one container app there is today and leaves the game pla
    match in memory when it is not where the journal ends, writes what the step decided, and tells a writer
    that lost the race the match moved. `RecordedTableReplayTests` holds it to what the host records today.
    Nothing in the host uses it yet.
-4. **The host's own state out of memory.** Tokens and codes, arrival, the version, the lobby's projections and
-   caps, the decision clock. `HumanSeat`, `TableSession`'s task, `TableGate` and `TableRestorer` go here.
+4. **The host on the journaled stepper, and its own state out of memory.** In five slices, each leaving the
+   game playable:
+   - **4.1a, done.** What the stepper lacked to carry an ordinary table. A seat changes hands from the top of
+     a round, in the middle of a step that plays several (`MatchSeats.From`). A concession and a seat
+     changing hands are journal entries beside the decisions (`IJournalEntry`), and `JournaledStepper`
+     takes both (`ConcedeAsync`, `ChangeSeatAsync`). A seat's question has an identity, its asking: one
+     more than the decisions the seat has in the journal. Every decision is shown to a witness
+     (`IDecisionWitness`) as the question the driver would have asked an agent there and its answer, a
+     rebuilt match's included, which is how a match is recorded with nobody seated to record through.
+     Every step answers with what both seats read (`JournaledState`).
+   - **4.1b.** Ordinary recorded tables play through `JournaledStepper`; practice tables stay on the driver
+     behind a seam. The host's journal, its seats and its session stay in the code, unused by ordinary
+     tables, so the two ways of recording one seeded table can be held to each other.
+   - **4.2.** Arrival and "has begun" in the table record, with a revision and a conditional write; the
+     version becomes journal lines plus that revision; `TableRestorer` becomes registration with no replay.
+   - **4.3.** Tokens, codes and the lobby's projections out of the registry, which becomes a cache.
+   - **4.4.** Practice tables onto the stepper; `HumanSeat`, `SeatAgent`, `TableSession`, `TableGate`, the
+     host's `DecisionJournal` and `JournalEntry` go.
 5. **Bots behind a port.** In-process adapter first; the queue adapter and its worker command second.
 6. **Time-dependent work as a command**, then the infrastructure ADR: how many apps, which jobs.
 
@@ -142,10 +158,10 @@ which adds the compilation of the engine itself.
 
 1. **Replay cost.** Answered: the cache is enough and no memento is needed, provided the replay is the
    engine's alone. See "Replay cost, measured" below.
-2. **The recording.** `steps.jsonl` and `episodes.jsonl` are appended as the match runs, and the trace is
-   rewritten after every decision. Either they are produced from the journal when the match ends (simplest, and
-   a crash loses nothing since the journal is whole), or each line carries its journal position so a replay
-   skips what is written. The first changes when `/session/<id>` has something to show for an unfinished match.
+2. **The recording.** Answered. The premise was wrong: `steps.jsonl` and `episodes.jsonl` are not appended as
+   the match runs. `RunRecorder` keeps a match's steps in memory and writes them when the match is over;
+   only the trace is rewritten after a decision. So the steps are one more thing rebuilt by replay: a
+   witness sees a rebuilt match as it was seen being played (4.1a), and `/session/<id>` behaves as today.
 3. **Decision timings.** `elapsedMs` counts from when a question was shown to somebody looking (`?shown=`). With
    no memory between requests, the stamp is stored per seat, or the page sends it. The free-activation playtest
    reads these timings, so this is not cosmetic.
@@ -179,12 +195,13 @@ which adds the compilation of the engine itself.
    own). Whatever is watched has to cover the table record too: a person reaching their seat moves the
    table's version and is no line of the journal.
 
-10. **A concession.** It ends the match and is no line of the journal: a table that was conceded is rebuilt
-    unconceded unless its record says it is finished. It needs a line of its own, or the record's status
-    written before the match is told.
-11. **A seat changing hands.** The pilot's swaps are lines of `decisions.jsonl` the journal counts and does
-    not read. Who answers for a seat, and from which round, has to reach the stepper: a step that plays
-    several rounds of Player agents cannot change one of them at the top of a round it passes through.
+10. **A concession.** Answered in 4.1a: a line of its own (`Concession`), written in the turn that ends the
+    match, so a match rebuilt from its journal is conceded where it was. The host writes it from 4.1b.
+11. **A seat changing hands.** Half answered in 4.1a: the swap line is read as a seat change, the stepper
+    reads who sits off the round at every decision, and a change is refused from a round the match has
+    reached. Left for 4.1b: the host folding the lines into who sits where. A line written before the
+    journal was the source does not say at which round it was asked, so two swaps pending on one seat of a
+    table open across the deploy could fold differently from how they were applied.
 12. **Two shapes of one line.** `JournalLine` in Infrastructure and `JournalEntry` in the host describe the
     same file until phase 4 removes the host's; `RecordedTableReplayTests` is what holds them together.
 13. **Loading on every step.** `JournaledStepper` reads the whole journal before each step and rebuilds the
@@ -201,6 +218,13 @@ which adds the compilation of the engine itself.
     only lets the container app's subnet in, which a classic Consumption plan cannot join. So: a port either
     way, a queue and Container Apps first, Event Grid when one fact has several consumers. Not verified:
     current prices, and whether an append to an append blob raises a storage event at all.
+
+15. **A page's `waitingAsked`.** From 4.1b it is the seat's asking, which counts every decision of the seat
+    where today's counter counts the questions put to a person since the host started. Still an integer,
+    still increasing, still per seat; the values differ, in the page and in `notes.jsonl`.
+16. **A Player agent's turn inside a request.** A step that plays agents holds the match's turn, so a tap
+    waits behind a slow agent, and a failed journal write now fails the tap where the match used to go on
+    unrecorded. Running the agents' advance after the tap has answered is the in-process shape of phase 5.
 
 ## Documents this makes stale as it lands
 

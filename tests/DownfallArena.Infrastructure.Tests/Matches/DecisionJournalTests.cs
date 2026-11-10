@@ -25,18 +25,22 @@ public sealed class DecisionJournalTests : IDisposable
         }
     }
 
-    /// <summary>A decision of each kind a seat makes, with both seats and both shapes of a pick.</summary>
-    internal static IReadOnlyList<SeatDecision> EveryKind { get; } =
+    /// <summary>An entry of each kind: every decision a seat makes, with both seats and both shapes of a pick, a seat changing hands, a concession.</summary>
+    internal static IReadOnlyList<IJournalEntry> EveryKind { get; } =
     [
-        new(PlayerSlot.Player1, PlayerDecision.Buy(CreatureId.From(1), TierId.Parse("tier:guard:v1"))),
-        new(PlayerSlot.Player2, PlayerDecision.Pass),
-        new(PlayerSlot.Player1, PlayerDecision.ChooseSpeed(CreatureId.From(2), Speed.Quick)),
-        new(PlayerSlot.Player2, PlayerDecision.OrderTies([CreatureId.From(4), CreatureId.From(3)])),
-        new(PlayerSlot.Player1, PlayerDecision.DeclareIntent(CreatureId.From(1), SpellId.Parse("spell:strike:v1"))),
-        new(PlayerSlot.Player2, PlayerDecision.BindTargets([CreatureId.From(1), CreatureId.From(2)])),
-        new(PlayerSlot.Player1, PlayerDecision.BindTargets([])),
-        new(PlayerSlot.Player2, PlayerDecision.Act(CreatureId.From(3), SpellId.Parse("spell:guard:v1"), [CreatureId.From(3)])),
+        Decided(PlayerSlot.Player1, PlayerDecision.Buy(CreatureId.From(1), TierId.Parse("tier:guard:v1"))),
+        Decided(PlayerSlot.Player2, PlayerDecision.Pass),
+        Decided(PlayerSlot.Player1, PlayerDecision.ChooseSpeed(CreatureId.From(2), Speed.Quick)),
+        Decided(PlayerSlot.Player2, PlayerDecision.OrderTies([CreatureId.From(4), CreatureId.From(3)])),
+        Decided(PlayerSlot.Player1, PlayerDecision.DeclareIntent(CreatureId.From(1), SpellId.Parse("spell:strike:v1"))),
+        Decided(PlayerSlot.Player2, PlayerDecision.BindTargets([CreatureId.From(1), CreatureId.From(2)])),
+        Decided(PlayerSlot.Player1, PlayerDecision.BindTargets([])),
+        Decided(PlayerSlot.Player2, PlayerDecision.Act(CreatureId.From(3), SpellId.Parse("spell:guard:v1"), [CreatureId.From(3)])),
+        new SeatChangeEntry(PlayerSlot.Player2, "greedy", 3),
+        new ConcessionEntry(PlayerSlot.Player1),
     ];
+
+    private static DecisionEntry Decided(PlayerSlot slot, PlayerDecision decision) => new(new SeatDecision(slot, decision));
 
     [Theory]
     [InlineData("memory")]
@@ -45,21 +49,21 @@ public sealed class DecisionJournalTests : IDisposable
     {
         var reading = await Journal(kept).ReadAsync("run-1", TestContext.Current.CancellationToken);
 
-        reading.Decisions.ShouldBeEmpty();
+        reading.Entries.ShouldBeEmpty();
         reading.Position.ShouldBe(JournalPosition.Start);
     }
 
     [Theory]
     [InlineData("memory")]
     [InlineData("file")]
-    public async Task Decisions_of_every_kind_are_read_back_as_they_were_written_in_order(string kept)
+    public async Task Entries_of_every_kind_are_read_back_as_they_were_written_in_order(string kept)
     {
         var journal = Journal(kept);
 
         var end = await journal.AppendAsync("run-1", JournalPosition.Start, EveryKind, TestContext.Current.CancellationToken);
 
         var reading = await journal.ReadAsync("run-1", TestContext.Current.CancellationToken);
-        reading.Decisions.ShouldBe(EveryKind);
+        reading.Entries.ShouldBe(EveryKind);
         reading.Position.ShouldBe(end);
         reading.Position.Lines.ShouldBe(EveryKind.Count);
     }
@@ -75,7 +79,7 @@ public sealed class DecisionJournalTests : IDisposable
         var second = await journal.AppendAsync("run-1", first, [EveryKind[2]], TestContext.Current.CancellationToken);
 
         second.ShouldNotBeNull().Lines.ShouldBe(3);
-        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([EveryKind[0], EveryKind[1], EveryKind[2]]);
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0], EveryKind[1], EveryKind[2]]);
     }
 
     [Theory]
@@ -90,7 +94,7 @@ public sealed class DecisionJournalTests : IDisposable
         var late = await journal.AppendAsync("run-1", read, [EveryKind[1]], TestContext.Current.CancellationToken);
 
         late.ShouldBeNull();
-        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([EveryKind[0]]);
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0]]);
     }
 
     [Theory]
@@ -104,8 +108,8 @@ public sealed class DecisionJournalTests : IDisposable
         var other = await journal.AppendAsync("run-2", JournalPosition.Start, [EveryKind[1]], TestContext.Current.CancellationToken);
 
         other.ShouldNotBeNull();
-        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Decisions.ShouldBe([EveryKind[0]]);
-        (await journal.ReadAsync("run-2", TestContext.Current.CancellationToken)).Decisions.ShouldBe([EveryKind[1]]);
+        (await journal.ReadAsync("run-1", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[0]]);
+        (await journal.ReadAsync("run-2", TestContext.Current.CancellationToken)).Entries.ShouldBe([EveryKind[1]]);
     }
 
     [Theory]

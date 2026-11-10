@@ -1,4 +1,3 @@
-using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Matches.Ports;
 
@@ -11,24 +10,24 @@ namespace DownfallArena.Infrastructure.Matches;
 public sealed class InMemoryDecisionJournal : IDecisionJournal
 {
     private readonly Lock _gate = new();
-    private readonly Dictionary<string, List<SeatDecision>> _journals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<IJournalEntry>> _journals = new(StringComparer.Ordinal);
 
     public Task<JournalReading> ReadAsync(string run, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
         lock (_gate)
         {
-            return Task.FromResult(_journals.TryGetValue(run, out var decisions)
-                ? new JournalReading([.. decisions], new JournalPosition(decisions.Count, decisions.Count))
+            return Task.FromResult(_journals.TryGetValue(run, out var written)
+                ? new JournalReading([.. written], new JournalPosition(written.Count, written.Count))
                 : JournalReading.Empty);
         }
     }
 
-    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<SeatDecision> decisions, CancellationToken cancellationToken = default)
+    public Task<JournalPosition?> AppendAsync(string run, JournalPosition after, IReadOnlyList<IJournalEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(run);
         ArgumentNullException.ThrowIfNull(after);
-        ArgumentNullException.ThrowIfNull(decisions);
+        ArgumentNullException.ThrowIfNull(entries);
         lock (_gate)
         {
             var written = _journals.TryGetValue(run, out var journal) ? journal.Count : 0;
@@ -37,7 +36,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
                 return Task.FromResult<JournalPosition?>(null);
             }
 
-            if (decisions.Count == 0)
+            if (entries.Count == 0)
             {
                 return Task.FromResult<JournalPosition?>(after);
             }
@@ -47,7 +46,7 @@ public sealed class InMemoryDecisionJournal : IDecisionJournal
                 _journals[run] = journal = [];
             }
 
-            journal.AddRange(decisions);
+            journal.AddRange(entries);
             return Task.FromResult<JournalPosition?>(new JournalPosition(journal.Count, journal.Count));
         }
     }

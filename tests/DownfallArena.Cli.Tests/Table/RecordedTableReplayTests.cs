@@ -40,7 +40,7 @@ public sealed class RecordedTableReplayTests : IDisposable
         var journal = new FileDecisionJournal(_host.RunsDirectory, TimeProvider.System);
 
         var reading = await journal.ReadAsync(table.Id, TestContext.Current.CancellationToken);
-        var rebuilt = await Replay().RebuildAsync(Recorded(table), reading.Decisions, TestContext.Current.CancellationToken);
+        var rebuilt = await Replay().RebuildAsync(Recorded(table), reading.Entries, TestContext.Current.CancellationToken);
 
         reading.Decisions.ShouldBe(await WrittenByTheHost(table));
         reading.Decisions.Count.ShouldBeGreaterThan(10);
@@ -67,7 +67,7 @@ public sealed class RecordedTableReplayTests : IDisposable
         var journal = new FileDecisionJournal(_host.RunsDirectory, TimeProvider.System);
 
         var reading = await journal.ReadAsync(table.Id, TestContext.Current.CancellationToken);
-        var rebuilt = await Replay().RebuildAsync(Recorded(table), reading.Decisions, TestContext.Current.CancellationToken);
+        var rebuilt = await Replay().RebuildAsync(Recorded(table), reading.Entries, TestContext.Current.CancellationToken);
 
         reading.Decisions.ShouldBe(await WrittenByTheHost(table));
         reading.Decisions.ShouldNotBeEmpty();

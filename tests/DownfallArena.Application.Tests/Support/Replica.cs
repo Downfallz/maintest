@@ -12,6 +12,12 @@ namespace DownfallArena.Application.Tests.Support;
 internal sealed class Replica
 {
     public Replica(JournalStore journal, params IMatchMemory[] memories)
+        : this(journal, [], memories)
+    {
+    }
+
+    /// <param name="witnesses">What sees every decision this process's stepper takes, a rebuilt match's included.</param>
+    public Replica(JournalStore journal, IReadOnlyList<IDecisionWitness> witnesses, params IMatchMemory[] memories)
     {
         Store = new MatchStore();
         Events = EventLog.Of(Store);
@@ -25,14 +31,17 @@ internal sealed class Replica
                 new SubmitActionHandler(Store.Workflow)),
             new MatchQueryHandlers(
                 new GetBoardStateForPlayerHandler(Store.Workflow),
-                new GetPlayerOptionsHandler(Store.Workflow, TestContent.Resources)));
+                new GetPlayerOptionsHandler(Store.Workflow, TestContent.Resources)),
+            witnesses);
+        var concede = new ConcedeHandler(Store.Workflow);
         Replay = new MatchReplay(
             new CreateMatchHandler(Store.Workflow, TestContent.Resources, new TestRandomFactory()),
             new JoinMatchHandler(Store.Workflow),
+            concede,
             Stepper,
             Store.Repository,
             memories);
-        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository);
+        Journaled = new JournaledStepper(Stepper, Replay, journal.Journal, Store.Repository, concede);
     }
 
     public MatchStore Store { get; }

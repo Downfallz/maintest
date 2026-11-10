@@ -21,9 +21,11 @@ namespace DownfallArena.Application.Matches.Driving;
 /// <c>MatchStepperTests</c> holds the two to each other. What the driver keeps in a suspended call, the answers
 /// two seats give at once, is here a value handed in and handed back (<see cref="HeldAnswers" />).
 /// </remarks>
-public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandlers queries)
+public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandlers queries, IEnumerable<IDecisionWitness>? witnesses = null)
 {
     private static readonly PlayerSlot[] Slots = [PlayerSlot.Player1, PlayerSlot.Player2];
+
+    private readonly IReadOnlyList<IDecisionWitness> _witnesses = [.. witnesses ?? []];
 
     /// <summary>
     /// Takes every decision the Player agents owe, until a person is asked or the match is over.
@@ -46,11 +48,6 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
         ArgumentNullException.ThrowIfNull(held);
         ArgumentNullException.ThrowIfNull(submitted);
         var (slot, decision) = submitted;
-        if (seats.Of(slot) is not null)
-        {
-            throw new ArgumentException($"A Player agent sits at {slot} and answers for it.", nameof(submitted));
-        }
-
         var read = await ReadAsync(matchId, cancellationToken);
         if (read.IsFailure)
         {
@@ -58,18 +55,25 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
         }
 
         var table = read.Value;
+        if (seats.Of(slot, table.Of(slot).Board.RoundNumber) is not null)
+        {
+            throw new ArgumentException($"A Player agent sits at {slot} and answers for it.", nameof(submitted));
+        }
+
         if (Question(table, slot, held) is not { } question || !question.Answers(decision))
         {
             return Result.Failure<MatchStep>(DecisionErrors.NotPending);
         }
 
         var options = table.Of(slot).Options;
-        var offered = PlayerDecisionCheck.Validate(WithAnswers(options, held.Of(slot)), decision);
+        var answers = table.AsksTogether ? held.Of(slot) : [];
+        var offered = PlayerDecisionCheck.Validate(WithAnswers(options, answers), decision);
         if (offered.IsFailure)
         {
             return Result.Failure<MatchStep>(offered.Error);
         }
 
+        Witnessed(matchId, slot, decision, table.Of(slot), answers);
         if (table.AsksTogether)
         {
             held = held.With(slot, decision);
@@ -129,12 +133,12 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
             {
                 foreach (var slot in Slots)
                 {
-                    if (seats.Of(slot) is not { } agent)
+                    if (seats.Of(slot, table.Of(slot).Board.RoundNumber) is not { } agent)
                     {
                         continue;
                     }
 
-                    foreach (var answer in Answers(agent, table.Of(slot), held.Of(slot)))
+                    foreach (var answer in Answers(Seen(matchId, slot, agent), table.Of(slot), held.Of(slot)))
                     {
                         held = held.With(slot, answer);
                         decided.Add(new SeatDecision(slot, answer));
@@ -162,12 +166,12 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
                 throw new InvalidOperationException($"Match {matchId} is in progress but no player can act.");
             }
 
-            if (seats.Of(acting) is not { } bot)
+            if (seats.Of(acting, table.Of(acting).Board.RoundNumber) is not { } bot)
             {
                 return Result.Success(new MatchStep(null, held, [acting], decided));
             }
 
-            var acted = await ActAsync(matchId, acting, bot, table.Of(acting), decided, cancellationToken);
+            var acted = await ActAsync(matchId, acting, Seen(matchId, acting, bot), table.Of(acting), decided, cancellationToken);
             if (acted.IsFailure)
             {
                 return Result.Failure<MatchStep>(acted.Error);
@@ -302,6 +306,55 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
         }
 
         return answers;
+    }
+
+    /// <summary>The decider the witnesses see asked: each wraps the one before it, the first of them the decider itself.</summary>
+    private IPlayerAgent Seen(MatchId matchId, PlayerSlot slot, IPlayerAgent decider) =>
+        _witnesses.Aggregate(decider, (seen, witness) => witness.Around(matchId, slot, seen));
+
+    /// <summary>
+    /// Shows the witnesses a decision submitted from outside, as the question the driver would have asked an
+    /// agent in that seat and the answer to it: the same board, the same options, the decision as what the agent
+    /// said. Nothing is asked of anybody; the answer is already here.
+    /// </summary>
+    private void Witnessed(MatchId matchId, PlayerSlot slot, PlayerDecision decision, Seat seat, IReadOnlyList<PlayerDecision> held)
+    {
+        if (_witnesses.Count == 0)
+        {
+            return;
+        }
+
+        var (board, options) = seat;
+        var answering = Seen(matchId, slot, new Answering(decision));
+        switch (decision.Kind)
+        {
+            case PlayerOptionsKind.Evolution:
+                var (picked, _) = Picks(held);
+                answering.DecideEvolution(board with { EvolutionChoices = [.. board.EvolutionChoices, .. picked] }, Left(Section(options.Evolution), picked));
+                break;
+            case PlayerOptionsKind.Speed:
+                // The driver reads a seat's board once and asks every speed of its turn on it, so an agent is
+                // shown none of the speeds it has just chosen. Asked at once with the other seat, the match has
+                // none of them yet; asked alone, each is in the match as soon as it is given, and is taken back
+                // out of what is shown here.
+                answering.DecideSpeed(board with { SpeedChoices = [] }, Required(decision.Creature));
+                break;
+            case PlayerOptionsKind.TieOrder:
+                answering.DecideTieOrder(board, Section(options.TieOrder));
+                break;
+            case PlayerOptionsKind.Intent:
+                var option = Section(options.Intent).Creatures.First(offered => offered.Creature == decision.Creature);
+                answering.DecideIntent(board with { Intents = [.. board.Intents, .. Intents(held)] }, option);
+                break;
+            case PlayerOptionsKind.Target:
+                answering.DecideTargets(board, Section(options.Target));
+                break;
+            case PlayerOptionsKind.Action:
+                answering.DecideAction(board, Section(options.Action));
+                break;
+            default:
+                break;
+        }
     }
 
     private Task<Result> ApplyAsync(MatchId matchId, PlayerSlot slot, PlayerDecision decision, TargetOptions? target, CancellationToken cancellationToken) =>
@@ -492,6 +545,23 @@ public sealed class MatchStepper(MatchCommandHandlers commands, MatchQueryHandle
     }
 
     private sealed record Seat(PlayerBoardState Board, PlayerOptions Options);
+
+    /// <summary>An agent that has already decided: it answers every question with the decision it was given.</summary>
+    private sealed class Answering(PlayerDecision decision) : IPlayerAgent
+    {
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) =>
+            decision.IsPass ? EvolutionDecision.Pass : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Tier)));
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Required(decision.Speed);
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => decision.Order;
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Required(decision.Spell);
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => decision.Targets;
+
+        public ChosenAction DecideAction(PlayerBoardState board, ActionOptions options) => new(Required(decision.Spell), decision.Targets);
+    }
 
     private sealed record Table(Seat One, Seat Two)
     {
