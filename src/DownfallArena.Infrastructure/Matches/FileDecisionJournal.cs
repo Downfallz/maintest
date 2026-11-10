@@ -12,9 +12,10 @@ namespace DownfallArena.Infrastructure.Matches;
 /// One reader or writer at a time in this process, whichever journal over the directory it comes through:
 /// that is who a directory on this machine serves, and it is what makes the length read and the line written
 /// one step. The file is never opened for this writer alone, since the store lists and reads the same file
-/// while a table is being played. Between processes, Linux takes a lock on the file for the append, and a
-/// writer that finds it taken is told what one that lost the race is told, and reads again; Windows refuses
-/// a second writer where the file is opened, which that writer gets as the error it is.
+/// while a table is being played. Two processes over one directory are not kept apart here: a line is always
+/// added at the end of the file, so neither writes over the other's, but both can take the same length for
+/// their own. A table shared between processes is kept in a blob store, whose journal is conditional by the
+/// service's own rule.
 /// </remarks>
 public sealed class FileDecisionJournal : IDecisionJournal
 {
@@ -56,8 +57,8 @@ public sealed class FileDecisionJournal : IDecisionJournal
         lock (Gate)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-            if (!Alone(stream) || stream.Length != after.Mark)
+            using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            if (stream.Length != after.Mark)
             {
                 return Task.FromResult<JournalPosition?>(null);
             }
@@ -67,33 +68,9 @@ public sealed class FileDecisionJournal : IDecisionJournal
                 return Task.FromResult<JournalPosition?>(after);
             }
 
-            stream.Seek(0, SeekOrigin.End);
             stream.Write(JournalLines.Write(after, entries, _clock.GetUtcNow()));
             stream.Flush(flushToDisk: true);
             return Task.FromResult<JournalPosition?>(new JournalPosition(after.Lines + entries.Count, stream.Length));
-        }
-    }
-
-    /// <summary>
-    /// Whether no other process is appending to the file. Asked where opening the file does not already say:
-    /// Windows refuses a second writer at the open, and nothing is asked where the system has no such lock.
-    /// </summary>
-    private static bool Alone(FileStream stream)
-    {
-        if (!OperatingSystem.IsLinux())
-        {
-            return true;
-        }
-
-        try
-        {
-            // Held until the stream is closed, which is when the line is written.
-            stream.Lock(0, long.MaxValue);
-            return true;
-        }
-        catch (IOException)
-        {
-            return false;
         }
     }
 
