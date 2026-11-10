@@ -115,7 +115,8 @@ illustrations and gameplay colours are unchanged.
 
 ## Reference captures
 
-These use the real static pages and repository catalogue, with an explicitly fictional open-table API fixture.
+The lobby captures show the bone-and-soot pass (ADR 0157): a local host with developer sign-in, a made-up player
+name and one game against a bot. The studio captures predate that pass and use the repository catalogue.
 They demonstrate branding, not a live multiplayer match.
 
 | Surface | Desktop | Phone |
