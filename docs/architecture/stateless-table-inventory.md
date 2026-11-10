@@ -117,7 +117,11 @@ Each phase ships on the one container app there is today and leaves the game pla
      finds the seat a join code opens and lists the open tables newest first, with an adapter on Table
      Storage in the account that holds the runs and one on files beside a directory store. Not wired yet;
      CI runs the emulator's table service, and the app's identity is granted the table data role.
-   - **4.3b2 and 4.3b3, one change.** The registry becomes a cache a table is loaded into from its record
+   - **4.3b2, done.** The index follows each table's record: written right after it, in the same queue, its
+     seats' codes given to the index and those it no longer has taken back, and its summary among the open
+     tables while it is open (`TableSummary`, with no key in it). Nothing reads the index yet; an index write
+     that fails is a console line, and the record's next write puts it right.
+   - **4.3b3, one change.** The registry becomes a cache a table is loaded into from its record
      and journal when a key or a code names it (4.2c with it), and the index is what lists and finds. Codes
      cannot move alone: they are minted under the registry's lock, synchronously, and the index's writes
      are a store's. The registry is asked five kinds of thing today (about 110 calls, 52 of them the

@@ -65,8 +65,12 @@ internal static class TableHost
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token)
             : null;
+        // The index that finds the tables this host records (ADR 0161): Table Storage beside a container, files
+        // beside a directory.
+        var index = store is null ? null : await ArtifactStores.OpenIndexAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
+            Index = index,
             Agents = agents,
             Push = push,
             Results = results,

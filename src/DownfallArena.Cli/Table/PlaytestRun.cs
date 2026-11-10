@@ -7,6 +7,7 @@ using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
@@ -153,8 +154,9 @@ internal sealed class PlaytestRun
     /// session has one whether or not it is recorded: it is what a page, a join code and a pilot token all
     /// name, and a table told <c>--no-record</c> still has to be found by it (ADR 0081).
     /// </summary>
-    public static PlaytestRun Open(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock) =>
-        Build(store, id, setup, events, clock);
+    /// <param name="index">The index the table's record is summarized into (ADR 0161), or none.</param>
+    public static PlaytestRun Open(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, ITableIndex? index = null) =>
+        Build(store, id, setup, events, clock, index: index);
 
     /// <summary>
     /// The recording of a table a host picks up again, when the table is stepped over its journal (ADR 0159).
@@ -162,13 +164,13 @@ internal sealed class PlaytestRun
     /// stepper, the steps are recorded again as it is (<see cref="Witnessed" />), and the notes, the catalogue and
     /// the journal stay as the earlier host left them.
     /// </summary>
-    public static PlaytestRun Reopen(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record)
+    public static PlaytestRun Reopen(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord record, ITableIndex? index = null)
     {
         ArgumentNullException.ThrowIfNull(record);
-        return Build(store, id, setup, events, clock, record);
+        return Build(store, id, setup, events, clock, record, index);
     }
 
-    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord? reopened = null)
+    private static PlaytestRun Build(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock, TableRecord? reopened = null, ITableIndex? index = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -190,7 +192,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed) { Reopened = reopened };
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed) { Reopened = reopened, Index = index };
     }
 
     /// <summary>
@@ -361,9 +363,11 @@ internal sealed class PlaytestRun
         for (var attempt = 1; ; attempt++)
         {
             var read = await _reader.ReadTaggedAsync(TableRecord.File, cancellationToken);
-            var written = record.Over(read is null ? null : StoredSessions.RecordOf(read.Text));
+            var stored = read is null ? null : StoredSessions.RecordOf(read.Text);
+            var written = record.Over(stored);
             if (await _writer.WriteJsonIfAsync(TableRecord.File, written, read?.Tag, cancellationToken) is not null)
             {
+                await IndexedAsync(stored, written, cancellationToken);
                 return;
             }
 
@@ -375,6 +379,56 @@ internal sealed class PlaytestRun
     }
 
     private const int RecordAttempts = 5;
+
+    /// <summary>The index that finds this table (ADR 0161), or none on a host that keeps no index.</summary>
+    public ITableIndex? Index { get; init; }
+
+    /// <summary>
+    /// The index brought in line with a record just written (ADR 0161): its seats' codes given to it and those it
+    /// no longer has taken back, and its summary among the open tables while it is open. An index write that
+    /// fails is a line on the console and nothing else: the record is the table, and its next write puts the
+    /// index right.
+    /// </summary>
+    private async Task IndexedAsync(TableRecord? before, TableRecord written, CancellationToken cancellationToken)
+    {
+        if (Index is not { } index)
+        {
+            return;
+        }
+
+        try
+        {
+            var codes = written.Status == TableRecord.Open
+                ? written.Seats.Where(seat => seat.Code is not null).ToDictionary(seat => seat.Code!, seat => seat.Slot, StringComparer.Ordinal)
+                : [];
+            foreach (var (code, seat) in codes)
+            {
+                if (!await index.AddCodeAsync(new IndexedCode(code, written.Id, seat), cancellationToken)
+                    && await index.CodeAsync(code, cancellationToken) is { } held && (held.Table != written.Id || held.Seat != seat))
+                {
+                    Console.WriteLine($"  Session {SessionId}: the code of {seat} is another table's in the index, which keeps it.");
+                }
+            }
+
+            foreach (var code in (before?.Seats ?? []).Select(seat => seat.Code).OfType<string>().Where(code => !codes.ContainsKey(code)))
+            {
+                await index.RemoveCodeAsync(code, written.Id, cancellationToken);
+            }
+
+            if (written.Status == TableRecord.Open)
+            {
+                await index.PutOpenAsync(new IndexedTable(written.Id, written.CreatedAt, written.Revision, TableSummary.Of(written).ToJson()), cancellationToken);
+            }
+            else
+            {
+                await index.RemoveOpenAsync(written.Id, written.CreatedAt, cancellationToken);
+            }
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or Azure.RequestFailedException or ArgumentException)
+        {
+            Console.WriteLine($"  Session {SessionId} could not be written into the index of the tables: {failure.Message}");
+        }
+    }
 
     /// <summary>
     /// Whoever is about to decide for a seat of a stepped match, recorded as an agent seated there would be: the

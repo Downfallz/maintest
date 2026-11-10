@@ -12,6 +12,7 @@ using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Ports;
+using DownfallArena.Application.Tables.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Matches;
@@ -96,6 +97,9 @@ internal sealed class TableComposer
     /// replay refuses is marked with it, and one already marked with it is not replayed again.
     /// </summary>
     public ReplayBasis? Basis { get; init; }
+
+    /// <summary>The index that finds the tables this host records (ADR 0161), or none: a host that keeps nothing, or a test.</summary>
+    public ITableIndex? Index { get; init; }
 
     /// <summary>
     /// The rule set this host opens a table on when the request names no format: the engine default, the file
@@ -207,10 +211,10 @@ internal sealed class TableComposer
         {
             // Nothing is started over: the dataset is written when the match ends, from the steps the rebuild
             // records again, and everything else is as the earlier host left it.
-            return PlaytestRun.Reopen(store, id, setup, events, _clock, reopened);
+            return PlaytestRun.Reopen(store, id, setup, events, _clock, reopened, Index);
         }
 
-        var opened = PlaytestRun.Open(store, id, setup, events, _clock);
+        var opened = PlaytestRun.Open(store, id, setup, events, _clock, Index);
 
         // The catalogue of the rule set this table plays, so a 2v2 session is stamped with the game it
         // played rather than with the host's default.
