@@ -52,12 +52,16 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 
 Each phase ships on the one container app there is today and leaves the game playable.
 
-1. **Pin the behaviour.** A test that plays a seeded table through the blocking session and the same decisions
-   through a step-at-a-time path, and holds the two traces equal. The benchmark digest is the guard for the
-   paths that must not change.
-2. **A stepper in Application.** "Advance until a person is asked or the match is over", asking bots through
-   `IPlayerAgent` as now. Held answers become explicit. `MatchDriverTests` already holds the built boards to the
-   match's (ADR 0111, 0117); the stepper is held to the driver.
+1. **Pin the behaviour.** Done with phase 2: `MatchStepperTests` plays seeded matches through the driver as
+   a table runs it and through the stepper, and holds the two equal event for event, under both combat
+   declarations, with Player agents and with seats answered from outside. The benchmark digest is the guard
+   for the paths that must not change.
+2. **A stepper in Application.** Done: `MatchStepper` (`Application/Matches/Driving`) advances until a person
+   is asked or the match is over, and takes a submitted decision. The answers two seats give at once are a
+   value handed in and handed back (`HeldAnswers`), and a seat's board and options with its held answers are a
+   `SeatView`, which is what `TableApi.WithAnswers` computes today. Every decision a step takes comes back in
+   order (`MatchStep.Decided`); submitted again to two seats nobody answers for, they rebuild the match with
+   no agent asked anything, which is the load path of phase 3. Nothing in the host uses it yet.
 3. **The journal as the source.** A journal port in Application; file and blob adapters with an append
    condition; a repository that is a cache over replay; replay made silent (no file written, no notice sent).
 4. **The host's own state out of memory.** Tokens and codes, arrival, the version, the lobby's projections and

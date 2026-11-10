@@ -45,6 +45,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<MatchCommandHandlers>();
         services.TryAddTransient<MatchQueryHandlers>();
         services.TryAddTransient<MatchDriver>();
+        services.TryAddTransient<MatchStepper>();
         services.TryAddTransient<RandomAgent>();
         services.TryAddSingleton<IAgentFactory, AgentFactory>();
         services.TryAddTransient<BatchRunner>();
