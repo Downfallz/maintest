@@ -2,7 +2,7 @@
 
 Date: 2026-11-10
 
-Status: Proposed. Would supersede [0091](0091-a-table-survives-the-host-that-played-it.md) and amend
+Status: Accepted. Supersedes [0091](0091-a-table-survives-the-host-that-played-it.md) and amends
 [0080](0080-host-the-table-on-azure-container-apps.md), [0081](0081-a-host-of-tables-found-by-their-tokens.md)
 and [0119](0119-a-seat-page-is-told-when-its-table-changed.md)
 
@@ -86,7 +86,7 @@ is deployed, and as how many apps, is a later ADR amending 0080 once the host no
 
 - `docs/architecture/stateless-table-inventory.md`: what depends on the loop, in what order it moves, and the
   questions still open.
-- On acceptance: mark 0091 superseded; `docs/tabletop/playtest-app.md`, `infra/README.md` and `AGENTS.md`
-  (repository map, the `table` command) as each phase lands.
+- ADR 0091 is marked superseded. The host still rebuilds a table its way until phases 3 and 4 land;
+  `docs/tabletop/playtest-app.md`, `infra/README.md` and `AGENTS.md` (the `table` command) follow each phase.
 - No architecture rule changes. The new ports are Application's and their adapters Infrastructure's, which
   `DownfallArena.Architecture.Tests` already enforces.
