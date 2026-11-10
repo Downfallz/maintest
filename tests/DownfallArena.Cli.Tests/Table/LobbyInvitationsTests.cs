@@ -5,7 +5,6 @@ using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
-using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -21,7 +20,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     private const string Auth = "AAECAwQFBgcICQoLDA0ODw";
 
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"lobby-invitations-{Guid.CreateVersion7():N}");
     private readonly MovableClock _clock = new(new DateTimeOffset(2026, 11, 4, 20, 0, 0, TimeSpan.Zero));
     private readonly FileAccountStore _store;
@@ -33,6 +32,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
     public LobbyInvitationsTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_root);
         _accounts = new AccountRegistry(_store, _clock);
         _friends = new Friends(new FileFriendStore(_root), _store, _clock);
@@ -75,7 +75,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     {
         var opened = await OpenForAsync(inviter, friend);
         opened.Status.ShouldBe(201);
-        return _registry.ById(Read(opened).GetProperty("table").GetProperty("id").GetString()!)!;
+        return (await _registry.ByIdAsync(Read(opened).GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
     }
 
     private async Task<JsonElement> MineAsync(SignedIn player) => Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/mine", "", player: player));
@@ -101,7 +101,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         seat.InvitedAccount.ShouldBe(bastien.Account.Id);
         seat.Taken.ShouldBeFalse();
         seat.Key.ShouldBeNull("no code and no link name a seat kept for a friend");
-        _registry.Codes.Of(seat).ShouldBeNull();
+        seat.Code.ShouldBeNull();
         var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items")[0];
         listed.GetProperty("openSeats").GetInt32().ShouldBe(0);
         listed.GetProperty("seats")[1].GetProperty("kind").GetString().ShouldBe("invited");
@@ -162,7 +162,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         first.Status.ShouldBe(201);
         second.Status.ShouldBe(409);
         Read(second).GetProperty("error").GetString().ShouldBe("Lobby.InvitationOutstanding");
-        _registry.All().Count.ShouldBe(1, "the refused table was never opened");
+        _registry.HeldTables().Count.ShouldBe(1, "the refused table was never opened");
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         answers.Count(answer => answer.Status == 201).ShouldBe(1);
         answers.Count(answer => answer.Status == 409).ShouldBe(5);
-        _registry.All().Count.ShouldBe(1);
+        _registry.HeldTables().Count.ShouldBe(1);
     }
 
     [Fact]
@@ -254,7 +254,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         var other = await InvitedTableAsync(mark, bastien);
         (await ActAsync("DELETE", other, "", third)).Status.ShouldBe(403);
         (await ActAsync("DELETE", other, "", mark)).Status.ShouldBe(204);
-        _registry.ById(other.Id).ShouldBeNull();
+        (await _registry.ByIdAsync(other.Id, Cancel)).ShouldBeNull();
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
     }
 
@@ -263,7 +263,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     {
         var mark = await PlayerAsync("MarkF");
         var opened = Read(await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
-        var table = _registry.ById(opened.GetProperty("table").GetProperty("id").GetString()!)!;
+        var table = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
 
@@ -271,7 +271,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         closed.Status.ShouldBe(409);
         Read(closed).GetProperty("error").GetString().ShouldBe("Lobby.Begun");
-        _registry.ById(table.Id).ShouldNotBeNull();
+        (await _registry.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
     }
 
     [Fact]
@@ -316,7 +316,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         opened.Seats[1].InvitedAccount.ShouldBeNull("the friend was waiting on a player who is gone");
         opened.OpenSeats.ShouldBe(["player2", "player1"], "both places are anybody's now, as ADR 0122 offers a deleted account's seats");
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
-        _registry.ById(keptForMark.Id).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
+        (await _registry.ByIdAsync(keptForMark.Id, Cancel)).ShouldNotBeNull("Bastien's table stays, with its seat kept for nobody");
         keptForMark.Seats[1].InvitedAccount.ShouldBeNull();
         var bastiens = (await MineAsync(bastien)).GetProperty("tables").EnumerateArray().Single(entry => entry.GetProperty("table").GetProperty("id").GetString() == keptForMark.Id).GetProperty("invited");
         bastiens.GetProperty("free").GetBoolean().ShouldBeTrue("kept for nobody now, with the ways out on the card");
@@ -331,11 +331,9 @@ public sealed class LobbyInvitationsTests : IDisposable
         await BefriendAsync(mark, bastien);
         var table = await InvitedTableAsync(mark, bastien);
 
-        using var after = new HostedTables(_ => new FileArtifactStore(_hosted.RunsDirectory));
-        using var restored = new TableRegistry();
-        await TableRestorer.RestoreAsync(after.Stored!, after.Composer, restored, _clock, Cancel);
+        using var restored = await _hosted.RestartedAsync();
 
-        var rebuilt = restored.ById(table.Id).ShouldNotBeNull();
+        var rebuilt = (await restored.ByIdAsync(table.Id, Cancel)).ShouldNotBeNull();
         rebuilt.Seats[1].InvitedAccount.ShouldBe(bastien.Account.Id);
         rebuilt.Seats[1].InvitedAt.ShouldBe(table.Seats[1].InvitedAt);
         rebuilt.Seats[1].Key.ShouldBeNull();

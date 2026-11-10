@@ -13,7 +13,12 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class WaitingRoomTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
+
+    public WaitingRoomTests()
+    {
+        _registry = _hosted.Registry();
+    }
 
     public void Dispose()
     {
@@ -38,8 +43,8 @@ public sealed class WaitingRoomTests : IDisposable
         var missing = room.GetProperty("waiting").GetProperty("seats").EnumerateArray().ToList();
         missing.Count.ShouldBe(1);
         missing[0].GetProperty("slot").GetString().ShouldBe("player2");
-        missing[0].GetProperty("code").GetString().ShouldBe(_registry.Codes.Of(table.Seats[1]));
-        missing[0].GetProperty("join").GetString().ShouldBe($"/j/{_registry.Codes.Of(table.Seats[1])}");
+        missing[0].GetProperty("code").GetString().ShouldBe(table.Seats[1].Code);
+        missing[0].GetProperty("join").GetString().ShouldBe($"/j/{table.Seats[1].Code}");
 
         await Seat(table, 1);
 
@@ -79,9 +84,8 @@ public sealed class WaitingRoomTests : IDisposable
     public async Task A_person_makes_their_second_pick_while_the_other_is_still_on_their_first()
     {
         using var hosted = new HostedTables(rules: HostedTables.TwoPicks);
-        using var registry = new TableRegistry();
-        var table = await hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken);
-        registry.TryAdd(table).ShouldBeTrue();
+        using var registry = hosted.Registry();
+        var table = await Added(registry, await hosted.Composer.ComposeAsync(HostedTables.TwoPeople, TestContext.Current.CancellationToken));
         await Seat(table, 0);
         await Seat(table, 1);
         var other = await Asked(table.Seats[1].Person!);
@@ -155,7 +159,7 @@ public sealed class WaitingRoomTests : IDisposable
         var id = opened.GetProperty("id").GetString()!;
         opened.GetProperty("waiting").GetBoolean().ShouldBeTrue();
 
-        var table = _registry.ById(id).ShouldNotBeNull();
+        var table = _registry.Held(id).ShouldNotBeNull();
         await Seat(table, 0);
         await Seat(table, 1);
 
@@ -163,10 +167,14 @@ public sealed class WaitingRoomTests : IDisposable
         listed.GetProperty("tables").EnumerateArray().Single().GetProperty("waiting").GetBoolean().ShouldBeFalse();
     }
 
-    private async Task<PlayedTable> Opened(TableRequest request)
+    private async Task<PlayedTable> Opened(TableRequest request) =>
+        await Added(_registry, await _hosted.Composer.ComposeAsync(request, TestContext.Current.CancellationToken));
+
+    /// <summary>A table into a place reserved for it, as a host adds one: its seats given their codes.</summary>
+    private static async Task<PlayedTable> Added(TableRegistry registry, PlayedTable table)
     {
-        var table = await _hosted.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);
-        _registry.TryAdd(table).ShouldBeTrue();
+        using var place = (await registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, TestContext.Current.CancellationToken);
         return table;
     }
 

@@ -6,6 +6,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources.Authoring;
+using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.Hosting;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -56,11 +57,36 @@ internal sealed class HostedTables : IDisposable
 
         // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.
         var journal = opened is null or FileArtifactStore ? null : new FileDecisionJournal(RunsDirectory, TimeProvider.System);
-        Composer = new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis };
+        Composer = new TableComposer(_host.Services, rules ?? Rules, opened, journal) { Push = push, Basis = basis, Index = Index };
         Stored = opened is null ? null : new StoredSessions(opened);
     }
 
     public TableComposer Composer { get; }
+
+    /// <summary>
+    /// The index of the tables (ADR 0161) every registry of this host lists and finds by, and the composer's runs
+    /// write into: held in memory, and shared by a registry made again, as a store's index outlives its host.
+    /// </summary>
+    public InMemoryTableIndex Index { get; } = new();
+
+    /// <summary>
+    /// A registry over this host's index, picking up recorded tables it does not hold when the host records: a host
+    /// as it serves. Made again, it is a host started over the same store.
+    /// </summary>
+    public TableRegistry Registry(int mostUnderWay = TableRegistry.MostUnderWay) =>
+        new(Index, mostUnderWay) { Loader = Stored is null ? null : new TableLoader(Stored, Composer, TimeProvider.System) };
+
+    /// <summary>A registry made again over the same store, after the start-up pass a host makes (<see cref="TableRestorer" />).</summary>
+    public async Task<TableRegistry> RestartedAsync(int mostUnderWay = TableRegistry.MostUnderWay)
+    {
+        var registry = Registry(mostUnderWay);
+        if (Stored is not null)
+        {
+            await TableRestorer.RestoreAsync(Stored, registry, Composer.Basis, TestContext.Current.CancellationToken);
+        }
+
+        return registry;
+    }
 
     /// <summary>The store's sessions, or none for a host that records nothing.</summary>
     public StoredSessions? Stored { get; }

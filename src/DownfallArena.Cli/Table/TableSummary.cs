@@ -29,5 +29,28 @@ internal sealed record TableSummary(
             [.. record.Seats.Select(seat => new Seat(seat.Slot, seat.Person, seat.Taken, seat.Account, seat.InvitedAccount, seat.Arrived))]);
     }
 
+    /// <summary>A live table's summary, as its record would say it now; none for a table composed from no request.</summary>
+    public static TableSummary? Of(PlayedTable table)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return table.Request is { } request ? Of(TableRecord.Of(table, request)) : null;
+    }
+
+    /// <summary>How many seats are offered to anybody and still wait for a person to take and reach them.</summary>
+    public int OpenSeatCount => Seats.Count(seat => OpenSeats.Contains(seat.Slot) && seat.Person && seat.Arrived != true);
+
     public string ToJson() => System.Text.Json.JsonSerializer.Serialize(this, ArtifactJson.LineOptions);
+
+    /// <summary>A summary as the index keeps it, or none when the text is not one.</summary>
+    public static TableSummary? Parse(string text)
+    {
+        try
+        {
+            return string.IsNullOrWhiteSpace(text) ? null : System.Text.Json.JsonSerializer.Deserialize<TableSummary>(text, ArtifactJson.LineOptions);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
 }

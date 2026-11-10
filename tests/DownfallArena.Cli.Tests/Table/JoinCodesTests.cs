@@ -1,37 +1,18 @@
 using System.Text;
-using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
 /// The short code is the only part of the boundary a person handles: they read it off a screen across a table
-/// and type it into a phone. What these hold is that it reaches exactly one seat, that reading it slightly
-/// wrong still works, and that it is never a way to reach a seat it does not name.
+/// and type it into a phone. What these hold is what a code looks like, that reading it slightly wrong still
+/// reads it as the code that was drawn, and that its answer carries a seat's key only for a seat a link may name.
+/// Which seat a code opens is the index's and the seat's (ADR 0161): <see cref="TableRegistryTests" /> holds that.
 /// </summary>
-public sealed class JoinCodesTests : IDisposable
+public sealed class JoinCodesTests
 {
-    private readonly CancellationTokenSource _stopping = new();
-
-    public void Dispose()
-    {
-        _stopping.Cancel();
-        _stopping.Dispose();
-    }
-
-    [Fact]
-    public void A_seat_a_person_holds_gets_a_code_and_a_seat_a_bot_plays_does_not()
-    {
-        var person = Seat(PlayerSlot.Player1, "token-1", held: true);
-        var bot = Seat(PlayerSlot.Player2, "token-2", held: false);
-
-        var codes = new JoinCodes([person, bot]);
-
-        codes.Of(person).ShouldNotBeNullOrWhiteSpace();
-        codes.Of(bot).ShouldBeNull();
-    }
-
     /// <summary>
     /// Eight characters of an alphabet without I, L, O or U: short enough to read across a table, and 40 bits,
     /// which is not a thing anybody guesses at network speed.
@@ -39,9 +20,7 @@ public sealed class JoinCodesTests : IDisposable
     [Fact]
     public void A_code_is_eight_characters_a_person_can_read_aloud()
     {
-        var seat = Seat(PlayerSlot.Player1, "token-1", held: true);
-
-        var code = new JoinCodes([seat]).ShouldNotBeNull().Of(seat)!;
+        var code = JoinCodes.Draw();
 
         code.Length.ShouldBe(8);
         code.ShouldNotContain("I");
@@ -52,27 +31,9 @@ public sealed class JoinCodesTests : IDisposable
     }
 
     [Fact]
-    public void Two_seats_are_two_codes()
+    public void Two_codes_drawn_are_two_codes()
     {
-        var first = Seat(PlayerSlot.Player1, "token-1", held: true);
-        var second = Seat(PlayerSlot.Player2, "token-2", held: true);
-
-        var codes = new JoinCodes([first, second]);
-
-        codes.Of(first).ShouldNotBe(codes.Of(second));
-    }
-
-    /// <summary>The page is reached with the seat's token on it, which is what it then keeps.</summary>
-    [Fact]
-    public void A_typed_code_leads_to_the_page_carrying_that_seat_s_token()
-    {
-        var seat = Seat(PlayerSlot.Player2, "token-2", held: true);
-        var codes = new JoinCodes([seat]);
-
-        var answer = codes.Answer($"{JoinCodes.Prefix}{codes.Of(seat)}");
-
-        answer.Status.ShouldBe(303);
-        answer.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == "/?player2=token-2");
+        JoinCodes.Draw().ShouldNotBe(JoinCodes.Draw());
     }
 
     /// <summary>
@@ -80,51 +41,87 @@ public sealed class JoinCodesTests : IDisposable
     /// the alphabet leaves out are exactly the ones a reader puts in their place.
     /// </summary>
     [Fact]
-    public void A_code_read_slightly_wrong_still_reaches_its_seat()
+    public void A_code_read_slightly_wrong_is_read_back_as_the_code_that_was_drawn()
     {
-        var seat = Seat(PlayerSlot.Player1, "token-1", held: true);
-        var codes = new JoinCodes([seat]);
-        var code = codes.Of(seat)!;
+        const string code = "K7F2Q9X0";
 
-        var lower = codes.Answer($"{JoinCodes.Prefix}{code.ToLowerInvariant()}");
-        var mistaken = codes.Answer($"{JoinCodes.Prefix}{code.Replace('0', 'O').Replace('1', 'l')}");
-        var trailing = codes.Answer($"{JoinCodes.Prefix}{code}/");
-
-        lower.Status.ShouldBe(303);
-        mistaken.Status.ShouldBe(303);
-        trailing.Status.ShouldBe(303);
+        JoinCodes.In($"{JoinCodes.Prefix}{code.ToLowerInvariant()}").ShouldBe(code);
+        JoinCodes.In($"{JoinCodes.Prefix}{code.Replace('0', 'O')}").ShouldBe(code);
+        JoinCodes.In($"{JoinCodes.Prefix}{code}/").ShouldBe(code);
+        JoinCodes.In($"{JoinCodes.Prefix}1L1I0000").ShouldBe("11110000");
+        JoinCodes.In($"{JoinCodes.Prefix}VUVU0000").ShouldBe("VVVV0000");
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("ZZZZZZZZ")]
-    [InlineData("../api/seat/player1")]
-    public void A_code_this_table_never_minted_names_no_seat(string code)
+    [InlineData("/j/")]
+    [InlineData("/j/ABCD123")]
+    [InlineData("/j/ABCD12345")]
+    [InlineData("/j/../api/seat/player1")]
+    [InlineData("/j/ABCD-123")]
+    [InlineData("/api/session")]
+    public void A_path_that_cannot_carry_a_code_carries_none(string path)
     {
-        var codes = new JoinCodes([Seat(PlayerSlot.Player1, "token-1", held: true)]);
+        JoinCodes.In(path).ShouldBeNull();
+    }
 
-        var answer = codes.Answer($"{JoinCodes.Prefix}{code}");
+    /// <summary>The page is reached with the seat's key on it, which is what it then keeps.</summary>
+    [Fact]
+    public void A_code_s_answer_leads_to_the_page_carrying_its_seat_s_invitation()
+    {
+        var seat = new TableSeat(PlayerSlot.Player2, "token-2", new SteppedPerson()) { Invitation = "invitation-2" };
+
+        var answer = JoinCodes.Answer(seat);
+
+        answer.Status.ShouldBe(303);
+        answer.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == "/?player2=invitation-2");
+    }
+
+    /// <summary>A seat recorded before invitations existed is reached by its token, as links did then.</summary>
+    [Fact]
+    public void A_code_s_answer_carries_the_token_of_a_seat_recorded_before_invitations()
+    {
+        var seat = new TableSeat(PlayerSlot.Player1, "token-1", new SteppedPerson());
+
+        var answer = JoinCodes.Answer(seat);
+
+        answer.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "Location" && header.Value == "/?player1=token-1");
+    }
+
+    [Fact]
+    public void A_code_s_answer_names_no_seat_a_bot_plays()
+    {
+        var answer = JoinCodes.Answer(new TableSeat(PlayerSlot.Player2, "token-2", null));
+
+        answer.ShouldNameNoSeat();
+        Encoding.UTF8.GetString(answer.Body).ShouldNotContain("token-2");
+    }
+
+    /// <summary>A seat somebody took is theirs: its code is spent (ADR 0116), and a second browser is not handed its token.</summary>
+    [Fact]
+    public void A_code_s_answer_names_no_seat_somebody_took()
+    {
+        var answer = JoinCodes.Answer(new TableSeat(PlayerSlot.Player1, "token-1", new SteppedPerson()) { Taken = true });
 
         answer.ShouldNameNoSeat();
         Encoding.UTF8.GetString(answer.Body).ShouldNotContain("token-1");
     }
 
-    /// <summary>A host plays many tables, and a code is the host's: forgotten with its table, it names nothing.</summary>
+    /// <summary>A seat kept for a friend is accepted signed in, never by a key (ADR 0129).</summary>
     [Fact]
-    public void A_code_forgotten_with_its_table_names_no_seat_and_the_others_still_do()
+    public void A_code_s_answer_names_no_seat_kept_for_a_friend()
     {
-        var gone = Seat(PlayerSlot.Player1, "token-1", held: true);
-        var kept = Seat(PlayerSlot.Player1, "token-2", held: true);
-        var codes = new JoinCodes();
-        var forgotten = codes.Mint(gone)!;
-        var remaining = codes.Mint(kept)!;
+        var seat = new TableSeat(PlayerSlot.Player2, "token-2", new SteppedPerson()) { Invitation = "invitation-2", InvitedAccount = AccountId.New() };
 
-        codes.Forget(gone);
+        var answer = JoinCodes.Answer(seat);
 
-        codes.Of(gone).ShouldBeNull();
-        codes.Answer($"{JoinCodes.Prefix}{forgotten}").ShouldNameNoSeat();
-        codes.Answer($"{JoinCodes.Prefix}{remaining}").Status.ShouldBe(303);
-        codes.Mint(Seat(PlayerSlot.Player2, "token-3", held: false)).ShouldBeNull();
+        answer.ShouldNameNoSeat();
+        Encoding.UTF8.GetString(answer.Body).ShouldNotContain("invitation-2");
+    }
+
+    [Fact]
+    public void A_code_s_answer_names_no_seat_when_the_code_names_none()
+    {
+        JoinCodes.Answer(null).ShouldNameNoSeat();
     }
 
     [Theory]
@@ -135,7 +132,4 @@ public sealed class JoinCodesTests : IDisposable
     {
         JoinCodes.Names(path).ShouldBe(expected);
     }
-
-    private static TableSeat Seat(PlayerSlot slot, string token, bool held) =>
-        new(slot, token, held ? new SteppedPerson() : null);
 }

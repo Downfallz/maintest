@@ -34,6 +34,7 @@ public sealed class MatchNoticesTests : IDisposable
         Notices = new AccountNotices(_sender, _devices),
         NameOf = id => Task.FromResult(_names.GetValueOrDefault(id)),
         Agents = [new SeatableAgent("greedy", "Greedy — the plain one", Featured: true)],
+        Index = _hosted.Index,
     };
 
     private async Task<AccountId> PlayerAsync(string name)
@@ -128,20 +129,24 @@ public sealed class MatchNoticesTests : IDisposable
     [Fact]
     public async Task A_notice_that_cannot_be_sent_does_not_keep_the_recording_from_finishing()
     {
-        using var registry = new TableRegistry();
+        using var registry = _hosted.Registry();
         var composer = Composer();
         composer.NameOf = _ => throw new IOException("The account store went away.");
         var table = await composer.ComposeAsync(TwoPeople, Cancel);
         table.Seats[0].Account = await PlayerAsync("MarkF");
         table.Seats[1].Account = await PlayerAsync("bastien");
-        registry.TryAdd(table).ShouldBeTrue();
-        await table.RecordAsync(registry.Codes, Cancel);
+        using (var place = (await registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await registry.AddAsync(table, place, Cancel);
+        }
+
+        await table.RecordAsync(Cancel);
 
         await FinishedAsync(table);
 
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished, "the files are written before anybody is told");
         _sender.Sent.ShouldBeEmpty("the names could not be read, so no notice went out, and nothing else broke");
-        registry.Remove(table.Id);
+        await registry.RemoveAsync(table.Id, Cancel);
     }
 
     [Fact]

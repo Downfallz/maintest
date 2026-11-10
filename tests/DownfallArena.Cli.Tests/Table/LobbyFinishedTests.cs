@@ -14,7 +14,7 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class LobbyFinishedTests : IDisposable
 {
     private readonly HostedTables _hosted = new(recording: true);
-    private readonly TableRegistry _registry = new();
+    private readonly TableRegistry _registry;
     private readonly string _accountsRoot = Path.Combine(Path.GetTempPath(), $"lobby-finished-{Guid.CreateVersion7():N}");
     private readonly FileAccountStore _store;
     private readonly AccountRegistry _accounts;
@@ -23,6 +23,7 @@ public sealed class LobbyFinishedTests : IDisposable
 
     public LobbyFinishedTests()
     {
+        _registry = _hosted.Registry();
         _store = new FileAccountStore(_accountsRoot);
         _accounts = new AccountRegistry(_store, TimeProvider.System);
         _results = new FileMatchResults(_accountsRoot);
@@ -173,7 +174,7 @@ public sealed class LobbyFinishedTests : IDisposable
         opened.Status.ShouldBe(409);
         joined.Status.ShouldBe(409);
         Read(joined).GetProperty("error").GetString().ShouldBe("Lobby.TooManyGames");
-        _registry.ById(theirs!)!.Seats[1].Taken.ShouldBeFalse();
+        (await _registry.ByIdAsync(theirs!, Cancel))!.Seats[1].Taken.ShouldBeFalse();
     }
 
     public void Dispose()

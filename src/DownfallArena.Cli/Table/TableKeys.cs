@@ -27,10 +27,19 @@ internal static class TableKeys
         return $"{table}{Separator}{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16))}";
     }
 
-    /// <summary>The table a key names, or none for a key minted before keys named their table.</summary>
+    /// <summary>
+    /// The table a key names, or none for a key minted before keys named their table, and for one whose table part
+    /// could not be a table's id: what a request carries is nobody's word, and an id names a run in the store.
+    /// </summary>
     public static string? TableOf(string? key)
     {
         var end = key?.LastIndexOf(Separator) ?? -1;
-        return end > 0 && end < key!.Length - 1 ? key[..end] : null;
+        return end > 0 && end < key!.Length - 1 && IsTableId(key[..end]) ? key[..end] : null;
     }
+
+    /// <summary>Whether a text could be a table's id (<see cref="PlaytestRun.NewId" />): letters, digits and hyphens, and not too many.</summary>
+    public static bool IsTableId(string? id) =>
+        id is { Length: > 0 and <= MostIdCharacters } && id.All(character => char.IsAsciiLetterOrDigit(character) || character == '-');
+
+    private const int MostIdCharacters = 64;
 }

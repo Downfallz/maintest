@@ -113,6 +113,10 @@ internal sealed class StoredSessions(IArtifactStore store)
 
     public Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default) => store.DeleteAsync(id, cancellationToken);
 
+    /// <summary>Closes a table no host holds, through its record and the index (<see cref="PlaytestRun.CloseRecordAsync" />).</summary>
+    public Task<bool> CloseAsync(string id, Application.Tables.Ports.ITableIndex index, CancellationToken cancellationToken = default) =>
+        PlaytestRun.CloseRecordAsync(store, id, index, cancellationToken);
+
     /// <summary>
     /// The session's match trace and the catalogue its table served, as the store holds them. A table plays one
     /// match, so its run holds one trace; null for either when it was never written.

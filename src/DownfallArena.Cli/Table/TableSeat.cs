@@ -30,6 +30,13 @@ internal sealed record TableSeat(PlayerSlot Slot, string Token, ISeatPerson? Per
     public bool Taken { get; set; }
 
     /// <summary>
+    /// The short code a person types to reach this seat's invitation (<see cref="JoinCodes" />), or none: a bot's
+    /// seat, a taken one, one kept for a friend. One of the seat's keys, taken in the index of the tables before
+    /// the seat is given it (ADR 0161), and written into the table's record with the rest of them.
+    /// </summary>
+    public string? Code { get; set; }
+
+    /// <summary>
     /// Where the browser holding this seat asked its notices to be sent (ADR 0118), or none. One of the seat's
     /// keys: it goes when the token does, since it is that browser's and not the next one's.
     /// </summary>

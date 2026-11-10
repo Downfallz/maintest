@@ -87,13 +87,6 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
     public IReadOnlyList<SeatableAgent> Agents { get; init; } = [];
 
     /// <summary>
-    /// The join code of a seat, once the registry has minted them: what a seat waiting for the other player is
-    /// shown so it can be passed on (ADR 0092). Null until the table is registered, which is before any page
-    /// can reach it.
-    /// </summary>
-    public Func<TableSeat, string?>? CodeOf { get; set; }
-
-    /// <summary>
     /// Writes the table's record as it stands, once the registry holds the table and has minted its codes: what
     /// a person reaching their seat, and the match beginning, are kept in. None for a table nobody records.
     /// </summary>
@@ -335,8 +328,8 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
                 seats = seats.Where(seat => seat.Person is { HasArrived: false }).Select(seat => new
                 {
                     slot = seat.Name,
-                    code = CodeOf?.Invoke(seat),
-                    join = CodeOf?.Invoke(seat) is { } code ? $"{JoinCodes.Prefix}{code}" : null,
+                    code = seat.Code,
+                    join = seat.Code is { } code ? $"{JoinCodes.Prefix}{code}" : null,
                     // Kept for a friend (ADR 0129): no code to read out, and the room says who it waits for instead.
                     invited = seat.InvitedAccount is not null ? true : (bool?)null,
                     declined = seat.DeclinedBy is not null ? true : (bool?)null,

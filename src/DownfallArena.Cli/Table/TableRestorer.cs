@@ -1,95 +1,57 @@
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Picks up every recorded open table when a host starts, each where its journal ends (ADR 0159). A game that began does not expire during a pause.
-/// Finished and explicitly closed records are left alone, as are runs with no table record, and a table that
-/// never began and was opened longer ago than <see cref="TableRegistry.NeverBegunFor" /> (ADR 0115). A journal
-/// that no longer fits the current engine or content is reported and preserved for the operator, and marked, so a
-/// host on the same engine, content and rules does not rebuild it again.
+/// What a host does with the recorded open tables as it starts (ADR 0159, ADR 0161): nothing is replayed -- a
+/// table is picked up at the first request that names it (<see cref="TableLoader" />) -- but each one is put back
+/// into the index, as its record says, which is what lists and finds it, and the keys minted before a key named
+/// its table are told to the registry, for the life of their table.
 /// </summary>
+/// <remarks>
+/// The index is put right from the records here because it is one of them behind: a record written before the
+/// index existed, or an index write that failed. Finished and explicitly closed records are left alone, as are
+/// runs with no table record.
+/// </remarks>
 internal static class TableRestorer
 {
-    /// <summary>Rebuilds what can be rebuilt, into the registry, and says what happened to each, one line a table.</summary>
-    public static async Task<IReadOnlyList<string>> RestoreAsync(StoredSessions stored, TableComposer composer, TableRegistry registry, TimeProvider clock, CancellationToken cancellationToken = default)
+    /// <summary>Puts every open table back into the index and its legacy keys into the registry, and says how many, in one line.</summary>
+    public static async Task<IReadOnlyList<string>> RestoreAsync(StoredSessions stored, TableRegistry registry, ReplayBasis? basis, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(stored);
-        ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(registry);
-        ArgumentNullException.ThrowIfNull(clock);
 
         var said = new List<string>();
-        var now = clock.GetUtcNow();
+        var open = 0;
         foreach (var id in (await stored.ListAsync(cancellationToken)).Select(session => session.Id))
         {
-            // A table this host already holds is its own, and open: rebuilt beside itself it would be the same
-            // match twice, under the same id and the same tokens.
-            if (registry.ById(id) is not null || await stored.RecordAsync(id, cancellationToken) is not { Status: TableRecord.Open } record)
-            {
-                continue;
-            }
-
-            if (record.RefusedUnder is { } refused && refused == composer.Basis)
-            {
-                // Replayed and refused before under this very engine, content and rules: it would be refused again,
-                // and only after the time a replay takes. It stays open for the operator (ADR 0115).
-                said.Add($"Session {record.Id} left as it was: its replay was refused before, under this engine, content and rules.");
-                continue;
-            }
-
-            // Read inside what refuses one table: a line no host can read is that table's to be left over, and the
-            // tables after it are picked up all the same.
-            Application.Matches.Journaling.JournalReading? journal;
+            TableRecord? record;
             try
             {
-                journal = await composer.JournalAsync(id, cancellationToken);
+                record = await stored.RecordAsync(id, cancellationToken);
             }
-            catch (Exception failure) when (Refuses(failure))
+            catch (Exception failure) when (TableLoader.Refuses(failure))
             {
-                said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
+                said.Add($"Session {id} was not indexed: {failure.Message}");
                 continue;
             }
 
-            var lines = journal?.Entries.Count ?? 0;
-            var decided = journal?.Decisions.Count > 0;
-            if (!record.Begun && !decided && now - record.CreatedAt >= TableRegistry.NeverBegunFor)
-            {
-                // A table that never began is let go of by the sweep after the same time (ADR 0115); one the
-                // host before this one never got to sweep is left as it is, not marked, and not rebuilt.
-                said.Add($"Session {record.Id} left as it was: it never began, and was opened at {record.CreatedAt:u}.");
-                continue;
-            }
-
-            PlayedTable? table;
-            try
-            {
-                table = await composer.ResumeAsync(record, decided, cancellationToken);
-            }
-            catch (Exception failure) when (Refuses(failure))
-            {
-                said.Add($"Session {record.Id} was not rebuilt: {failure.Message}");
-                continue;
-            }
-
-            if (table is null)
+            if (record is not { Status: TableRecord.Open })
             {
                 continue;
             }
 
-            if (!registry.TryRestore(table, record.Seats.ToDictionary(seat => seat.Slot, seat => seat.Code, StringComparer.Ordinal)))
+            // Refused under another engine, content or rules than this host's: this host tries it again, so the
+            // lobby lists it again. Refused under this very basis, it stays the operator's (ADR 0115).
+            var listed = record.RefusedUnder is { } refused && refused != basis ? record with { RefusedUnder = null } : record;
+            await new TableIndexer(registry.Index, id).FollowAsync(null, listed, cancellationToken);
+            foreach (var key in record.Seats.SelectMany(seat => new[] { seat.Token, seat.Invitation }).Append(record.PilotToken).OfType<string>())
             {
-                table.Dispose();
-                said.Add($"Session {record.Id} was not rebuilt: this host has as many tables under way as it takes.");
-                continue;
+                registry.Remember(key, id);
             }
 
-            table.Touch(now);
-            said.Add($"Session {record.Id} rebuilt from {lines} recorded decisions; its seats answer to the links and codes they had.");
+            open++;
         }
 
+        said.Add($"{open} open table{(open == 1 ? string.Empty : "s")} indexed; each is picked up at the first request that names it.");
         return said;
     }
-
-    /// <summary>What refuses one table rather than the host's start: its record or journal no longer read, or no longer fit.</summary>
-    private static bool Refuses(Exception failure) =>
-        failure is ArgumentException or IOException or System.Text.Json.JsonException or InvalidDataException or InvalidOperationException;
 }
