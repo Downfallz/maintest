@@ -179,7 +179,7 @@ function mountHomeNavigation(doc, win = globalThis) {
 }
 
 // The four pages share the same controls and dialogs. Only creating a new match belongs to the lobby.
-export function mountNavigation(doc, storage, { onInvite, onChange = () => {} } = {}) {
+export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, onFriends = () => {} } = {}) {
   const header = doc.querySelector('[data-navigation]');
   const page = header.dataset.navigation;
   const game = page === 'classic' || page === 'battle';
@@ -194,6 +194,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {} } 
   const gameSettings = mountGameSettings(doc, storage);
   const friends = mountFriends(doc, {
     onRequests: navigation.requests,
+    onList: onFriends,
     onInvite: friend => {
       navigation.closePanels(false);
       if (onInvite) onInvite(friend);

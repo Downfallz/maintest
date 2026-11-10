@@ -25,7 +25,7 @@ export function askedText(answer) {
 /** The panel's refresh is cheap and the list changes rarely: once a half-minute, and whenever a notice arrives. */
 export const REFRESH_EVERY = 30000;
 
-export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null, onRequests = () => {} } = {}) {
+export function mountFriends(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, onInvite = null, onRequests = () => {}, onList = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   let account = null;
   let list = null;
@@ -89,6 +89,8 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     drawn = key;
     el('friends-panel').hidden = !account;
     onRequests(account ? (list?.incoming?.length ?? 0) : 0);
+    // The lobby's recent opponents say where each friendship stands: they follow every list read here.
+    onList(account ? list : null);
     if (!account || !list) {
       el('friend-incoming').hidden = true;
       el('friend-outgoing').hidden = true;

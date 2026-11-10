@@ -52,8 +52,18 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.removals = (state.removals ?? 0) + 1;
       state.friends = { ...state.friends, friends: [] }; return json({});
     }
-    if (path === '/api/lobby/opponents') { state.opponentReads = (state.opponentReads ?? 0) + 1; return json({ opponents }); }
-    if (path === '/api/friends/requests' && route.request().method() === 'POST') { state.asked = route.request().postDataJSON(); return json({ accepted: false }); }
+    // Each opponent's relation is the friends list's, as the host reads it.
+    if (path === '/api/lobby/opponents') {
+      state.opponentReads = (state.opponentReads ?? 0) + 1;
+      const has = (key, id) => state.friends[key].some(link => link.id === id);
+      return json({ opponents: opponents.map(one => ({ ...one, relation: has('friends', one.id) ? 'friend' : has('outgoing', one.id) ? 'asked' : has('incoming', one.id) ? 'asking' : 'none' })) });
+    }
+    if (path === '/api/friends/requests' && route.request().method() === 'POST') {
+      state.asked = route.request().postDataJSON();
+      const other = opponents.find(one => one.name === state.asked.username);
+      state.friends = { ...state.friends, outgoing: [...state.friends.outgoing, { id: other.id, username: other.name }] };
+      return json({ accepted: false });
+    }
     if (path === '/api/friends') { state.friendReads++; return json(state.friends); }
     if (path === `/api/friends/requests/${challenger.id}/accept`) {
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
@@ -444,22 +454,29 @@ test('a finished page that failed is read again on the next poll, and the three 
 
 test('recent opponents are listed with the record between you: a friend is challenged again in the same format, anyone else is asked to be a friend first', async ({ page }, info) => {
   const last = '2026-11-08T20:00:00Z';
+  // Bastien is a friend and Alex asked to be one (the mock's friends list); Julie is neither.
   const state = await home(page, { opponents: [
-    { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true, relation: 'friend' },
-    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: last, games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false, relation: 'none' },
-    { id: challenger.id, name: challenger.username, lastPlayedAt: last, games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false, relation: 'asked' },
+    { id: friend.id, name: friend.username, lastPlayedAt: last, games: 3, won: 2, lost: 1, drawn: 0, format: '1v1', casual: true },
+    { id: 'acct_dddddddddddddddd', name: 'Julie', lastPlayedAt: last, games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false },
+    { id: challenger.id, name: challenger.username, lastPlayedAt: last, games: 1, won: 1, lost: 0, drawn: 0, format: '3v3', casual: false },
   ] });
   const section = page.locator('#opponents'), cards = section.locator('.game-card.opponent');
   await expect(section).toBeVisible();
   await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toContainText('Won 2 · Lost 1');
   await expect(cards.nth(0)).toContainText('Last 1v1 battle · unranked');
-  await expect(cards.nth(2).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
+  await expect(cards.nth(2).getByRole('button', { name: 'Accept friend' })).toBeEnabled();
   await page.screenshot({ path: info.outputPath('recent-opponents.png'), fullPage: true });
   // A stranger is asked to be a friend, by name: no invitation reaches them.
   await cards.nth(1).getByRole('button', { name: 'Add friend' }).click();
   await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
   expect(state.asked).toEqual({ username: 'Julie' });
+  // Accepted from the Friends panel instead, Alex's card follows: Alex can be challenged now.
+  await openPanel(page, /^Friends/);
+  await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.getByRole('button', { name: 'Close friends' }).click();
+  await expect(cards.nth(2).getByRole('button', { name: 'Challenge →' })).toBeEnabled();
+  await expect(cards.nth(1).getByRole('button', { name: 'Friend request sent' })).toBeDisabled();
   // A friend is challenged from the create dialog, on them, in the last game's format and rating.
   await cards.nth(0).getByRole('button', { name: 'Challenge →' }).click();
   await expect(page.locator('#create-dialog')).toBeVisible();

@@ -170,6 +170,22 @@ export function opponentAction(opponent) {
   }
 }
 
+/**
+ * The recent opponents with their friendship read again from a friends list (`GET /api/friends`): a request
+ * accepted, declined or withdrawn in the Friends panel changes the way each card offers to play again. An opponent
+ * the host gave no relation (no friends kept) keeps none.
+ */
+export function reconcileRelations(opponents, list) {
+  if (!list) return opponents;
+  const ids = key => new Set((list[key] ?? []).map(link => link.id));
+  const friends = ids('friends'), outgoing = ids('outgoing'), incoming = ids('incoming');
+  return opponents.map(opponent => {
+    if (opponent.relation == null) return opponent;
+    const relation = friends.has(opponent.id) ? 'friend' : outgoing.has(opponent.id) ? 'asked' : incoming.has(opponent.id) ? 'asking' : 'none';
+    return relation === opponent.relation ? opponent : { ...opponent, relation };
+  });
+}
+
 /** What the create dialog opens on to challenge a friend again: them, in the format and rating of the last game. */
 export function challengeRequest(opponent) {
   return { friend: opponent.id, format: opponent.format || null, ranked: opponent.casual !== true };
@@ -489,6 +505,8 @@ export function mountLobby(doc, location, storage) {
       limit = Number.isInteger(saved.ongoingPerKind) ? saved.ongoingPerKind : null;
       render();
       maybeLoadFinished();
+      // A request waiting either way is answered elsewhere: read the opponents again until it is.
+      if (account && opponents.some(one => one.relation === 'asked' || one.relation === 'asking')) void loadOpponents();
       el('lobby-status').textContent = statusText(listing);
       maybeRematch();
     } catch (error) {
@@ -623,6 +641,13 @@ export function mountLobby(doc, location, storage) {
     stop: () => { globalThis.clearInterval(interval); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
     /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
     invite: friend => openCreate({ friend: friend?.id ?? null }),
+    /** Told every friends list the Friends panel reads, so each recent opponent offers the way its friendship allows. */
+    friendsChanged(list) {
+      const next = reconcileRelations(opponents, list);
+      if (next === opponents || next.every((one, index) => one === opponents[index])) return;
+      opponents = next;
+      if (listing) render();
+    },
     /** Told whenever whether an invitation of this player's is waiting changes, so the Friends panel can say so. */
     onOutstanding(tell) { onOutstanding = tell; },
     /** Told by the sign-in whenever who is signed in changes; the lists are read again for them. */
@@ -631,7 +656,7 @@ export function mountLobby(doc, location, storage) {
       account = next;
       mode = nextMode;
       if (changed) {
-        revision += 1; adopted = false; mine = []; invitations = []; limit = null; finishedSeen = null; finishedReads = 0;
+        revision += 1; adopted = false; mine = []; invitations = []; opponents = []; limit = null; finishedSeen = null; finishedReads = 0;
         for (const [kind] of KINDS) finished[kind] = { page: 0, data: null };
         if (dialog.open) dialog.close();
         problem();
@@ -649,6 +674,7 @@ if (typeof document !== 'undefined') {
   const next = nextPath(globalThis.location.search);
   const friends = mountNavigation(document, storage, {
     onInvite: lobby.invite,
+    onFriends: lobby.friendsChanged,
     onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return; }
       const playable = Boolean(account) || mode === 'off';
