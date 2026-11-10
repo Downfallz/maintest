@@ -67,10 +67,57 @@ Each phase ships on the one container app there is today and leaves the game pla
 
 Phases 2 and 3 are where the risk is. Phase 4 is where the volume is.
 
+## Replay cost, measured
+
+Measured on 2026-11-10 with a throwaway probe in `DownfallArena.Cli.Tests` (not kept), Release build, the real
+content (hash `f3e8a42d`), default rules (3v3, spells chosen at the slot), a 2.1 GHz Xeon, a local file store.
+
+**The engine alone.** A match is played once with every accepted command kept, then a fresh match with the
+same seed is fed the same commands through the same handlers, with the host's listeners attached. Median of
+24 replays, pinned to one core:
+
+| Match | Rounds | Commands | Replay |
+| --- | --- | --- | --- |
+| greedy against greedy | 7 | 78 | 6 ms |
+| greedy against random | 7 | 85 | 5 to 25 ms |
+| random against random | 13 to 15 | 151 to 195 | 20 to 28 ms |
+| random against random | 14 to 17 | 174 to 214 | 63 to 65 ms |
+
+About one replay in twenty-four took 0.2 to 0.5 s. The cause was not looked into; a collection is the likely
+one.
+
+**Today's rebuild** (`TableComposer.ResumeAsync`, ADR 0091), in a process that has just started, pinned to
+one core, each table resumed three times:
+
+| Journal | Handed over at round | Rebuild |
+| --- | --- | --- |
+| 76 lines | 6 | 0.3 to 1.0 s |
+| 94 lines | 8 | 0.35 to 0.6 s |
+| 199 lines | 18 | 1.1 to 2.1 s |
+
+Processor time equals elapsed time in every run: the rebuild computes, it does not wait. Reading the record
+and the journal off the disk is 1 to 30 ms and is not in these figures.
+
+What this says:
+
+- Replaying the engine is cheap enough to do on a cache miss, even at the end of the longest match a random
+  bot can drag out. Half a vCPU would roughly double it. No memento.
+- Today's rebuild costs thirty to sixty times the engine it drives, and more than linearly in the journal. It
+  cannot be the per-request load as it stands. The cost is in what surrounds the replay: the session and its
+  thread, the journal answering seat by seat, the recording written again, the trace compared with its
+  checkpoint. Which of these weighs most was not measured.
+- So the rule in ADR 0159 that a replay writes nothing and notifies nobody is a performance requirement as
+  much as a correctness one, and phase 3 has a number to hold: a cold load within a small multiple of the
+  engine's replay.
+
+Not measured: a blob store (one more round trip for the journal), a real half-vCPU quota (the sandbox could
+pin a core but not throttle one), and the first load of a process before any match has been played in it,
+which adds the compilation of the engine itself.
+
 ## Open questions
 
-1. **Replay cost.** How long does a cold load of a fourteen-round 3v3 take on half a vCPU? This decides whether
-   the cache is enough or a memento is needed. Measure before phase 3, on the recorded sessions there are.
+1. **Replay cost.** Answered: the cache is enough and no memento is needed, provided the replay is the
+   engine's alone. See "Replay cost, measured" below.
 2. **The recording.** `steps.jsonl` and `episodes.jsonl` are appended as the match runs, and the trace is
    rewritten after every decision. Either they are produced from the journal when the match ends (simplest, and
    a crash loses nothing since the journal is whole), or each line carries its journal position so a replay

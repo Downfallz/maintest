@@ -61,8 +61,9 @@ is deployed, and as how many apps, is a later ADR amending 0080 once the host no
 - Bad: the largest rewrite the host has had. `src/DownfallArena.Cli/Table` is about 10,900 lines and its tests
   about 11,000; thirteen test files name the blocking seat or the session directly
   ([inventory](../architecture/stateless-table-inventory.md)).
-- Bad: a cold load replays the whole journal, slower as a match grows. ADR 0091 already bounds a replay at
-  twenty seconds; if a measured late-match load is too slow, a memento is the answer and needs its own ADR.
+- Bad: a cold load replays the whole journal. Measured, the engine alone replays a 17-round match in about
+  65 ms on one core, so a cache is enough; today's rebuild path takes 1 to 2 s for the same match and cannot
+  be reused as it is ([inventory](../architecture/stateless-table-inventory.md), "Replay cost, measured").
 - Bad: the recording (trace, dataset, decision timings) is written today as the driver runs. It has to become
   a projection of the journal, or be made idempotent line by line.
 - Bad: ADR 0091's divergence becomes a live failure: a deploy that changes content under an open table refuses
