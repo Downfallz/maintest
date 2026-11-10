@@ -253,11 +253,11 @@ test('a refused discovery sends the player to sign in, and back here afterwards'
   await expect(page.locator('#access-link')).toHaveText('Sign in'); await expect(page.locator('#access-link')).toHaveAttribute('href', /next=.*battle/);
 });
 
-test('blocked storage still opens a linked seat, and the way back to the table keeps its token', async ({ page }) => {
+test('blocked storage still opens a linked seat, and an interrupted renderer offers the lobby', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } }));
   await mount(page, { saved: false, search: '?player1=first' }); await choose(page);
   await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
-  await expect(page.locator('#access-link')).toHaveAttribute('href', '/play?table=table-a&seat=player1&player1=first');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/');
 });
 test('missing art retains usable labelled figures', async ({ page }) => {
   await page.route('**/battle-art/*', route => route.abort()); await mount(page); await choose(page);
@@ -431,12 +431,12 @@ test('mixed builds keep their targets inside the viewport and say their appearan
   await page.screenshot({ path: info.outputPath('art5-landscape.png') });
 });
 
-test('a failed renderer retains a usable link to the same seat at the table', async ({ page }) => {
+test('a failed renderer offers to reload the scene, and the lobby, the classic table being archived', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await page.locator('canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
   await expect(page.locator('#load-title')).toHaveText('The renderer was interrupted');
-  await expect(page.locator('#access-link')).toHaveAttribute('href', /^\/play\?table=table-a&seat=player2/);
-  await expect(page.locator('#access-link')).toHaveText('Continue at table');
+  await expect(page.locator('#access-link')).toHaveAttribute('href', '/');
+  await expect(page.locator('#access-link')).toHaveText('Lobby'); await expect(page.locator('#retry')).toHaveText('Reload scene');
   await fitsViewport(page, '#access-link, #retry');
 });
 

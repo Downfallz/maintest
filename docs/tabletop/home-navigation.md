@@ -33,7 +33,7 @@ a viewpoint before either private board is read.
 | Friends | Dialog with requests, friend list, add/remove and Invite | Signed-in players |
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
-| Settings | One dialog of tabs (below) | Everyone |
+| Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Who is signed in, Settings, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
@@ -55,6 +55,14 @@ Incoming friend requests appear as a count in the menu. Removing a friend asks f
 the existing create dialog with the chosen friend selected. Merely opening Notifications never requests
 browser permission; the existing explicit device action owns that request. Google sign-in still uses the
 provider's rendered button, not a custom credential control.
+
+## Find an opponent
+
+The games in progress are read a page at a time: `GET /api/lobby` counts them and the open seats, and
+`GET /api/lobby/page/<open|all>/<page>` serves eight, newest first (a signed-in player's own open tables are under
+*Your games*, not offered back as open seats). The lobby's ten-second poll reads the page on show, never every game.
+Each game is one row (its format and state, who sits, whose turn, and a seat to take), the component finished games
+use too, with the same pager.
 
 ## The bell
 

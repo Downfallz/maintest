@@ -19,8 +19,8 @@
 .game-card.mine { border-top: 2px solid var(--gold); }
 .game-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .game-card h3 { margin: 0; font: 400 23px Georgia, serif; }
-.game-card .status-tag { font-size: 11px; padding: 4px 8px; white-space: nowrap; }
-.game-card .status-tag.available { color: var(--ally); border-color: #5e8e73; }
+:is(.game-card, .game-row) .status-tag { font-size: 11px; padding: 4px 8px; white-space: nowrap; }
+:is(.game-card, .game-row) .status-tag.available { color: var(--ally); border-color: #5e8e73; }
 .game-card .status-tag.your-turn { color: var(--accent-ink); background: var(--gold); border-color: var(--gold); font-weight: 700; }
 .game-turn { font-size: 13px; color: var(--ink); }
 .game-turn.mine { color: var(--gold); font-weight: 650; }
@@ -48,6 +48,24 @@
 .lobby-filters button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); background: color-mix(in srgb, var(--gold) 5.1%, transparent); }
 .lobby-filters button span { color: var(--muted); }
 /* Your games page six at a time; the pager stays one line, its buttons full-size targets. */
+/* A list's entries as rows (Find an opponent, finished games): one line on a wide screen (what and its state, who,
+   a detail, the action), three short lines on a phone, so a long list stays readable and pages instead of growing. */
+.game-rows { display: grid; gap: 8px; }
+.game-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 1.5fr) minmax(0, 1fr) auto; grid-template-areas: "top who detail action"; align-items: center; gap: 8px 16px; min-width: 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.game-row-top { grid-area: top; display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.game-row-top h3 { margin: 0; font: 400 16px/1.25 Georgia, serif; white-space: nowrap; }
+.game-row-who { grid-area: who; display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; font-size: 13px; }
+.game-row-who .who { font-weight: 650; overflow-wrap: anywhere; }
+.game-row-who .who.you::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
+.game-row-who .who.open { color: var(--muted); font-weight: 400; }
+.game-row-who .vs { font: italic 13px Georgia, serif; color: var(--muted); }
+.game-row-detail { grid-area: detail; margin: 0; color: var(--muted); font-size: 12px; min-width: 0; }
+.game-row > :is(button, a) { grid-area: action; justify-self: end; min-height: 40px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+.game-row > a.button-link { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; color: var(--gold); text-decoration: none; }
+@media (max-width: 760px) {
+  .game-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "top action" "who action" "detail action"; gap: 4px 12px; padding: 12px 14px; }
+  .game-row-detail:empty { display: none; }
+}
 .lobby-pages { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
 .lobby-pages[hidden] { display: none; }
 .lobby-pages button { min-height: 44px; border-radius: 24px; font-size: 12px; padding: 8px 14px; }
@@ -58,7 +76,7 @@
 .mine-group-head h3 { margin: 0; font: 400 17px Georgia, serif; color: var(--ink); }
 .mine-group .lobby-count.full { color: var(--gold); border-color: var(--gold); }
 .mine-limit { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
-.game-card .status-tag.outcome.won { color: var(--ok); border-color: var(--ok); }
+:is(.game-card, .game-row) .status-tag.outcome.won { color: var(--ok); border-color: var(--ok); }
 /* Recent opponents are one row that scrolls sideways, whatever their number: the section keeps one card's height,
    and on a phone the next card shows at the edge, which says there are more. Each card is the name and the score
    between you, the last game in small, and the one way to play again. */
@@ -70,7 +88,7 @@
 .game-card.opponent .status-tag.record { color: var(--ink); font-variant-numeric: tabular-nums; }
 .game-card.opponent .game-turn { color: var(--muted); font-size: 12px; margin: 0; }
 .game-card.opponent button { width: 100%; min-height: 40px; margin-top: auto; }
-.game-card .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
+:is(.game-card, .game-row) .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
 .game-card.finished .button-link { display: block; margin-top: auto; text-align: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; }
 .empty-state { grid-column: 1 / -1; padding: 28px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); line-height: 1.7; }
 .lobby-panel { padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-glass); margin-bottom: 18px; }
@@ -136,9 +154,6 @@
 
 /* Copper supports the brand; gold remains the action/selection accent. */
 .lobby-hero .eyebrow, .lobby-panel > .eyebrow { color: var(--brand-ember); }
-.presentation-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
-.presentation-choice select { min-height: 44px; }
-.presentation-choice small { color: var(--muted); }
 
 /* Home: a restrained header, a game-focused dashboard and a separate first-visit welcome. */
 .home-page { padding-top: 0; }

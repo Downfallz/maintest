@@ -33,7 +33,6 @@
     </section>
     <div id="home-games" hidden>
       <section class="lobby-hero" aria-labelledby="welcome"><div><p id="hero-eyebrow" class="eyebrow">Your games</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
-      <label class="presentation-choice" for="presentation">Game view <select id="presentation"><option value="table">Table · classic</option><option value="battle">Battle view · preview</option></select><small>Applies when opening a game here. You can return to the table from the battle view.</small></label>
       <output id="lobby-status" class="lobby-status muted" aria-live="polite">Finding games…</output>
       <p id="lobby-problem" class="problem" role="alert" hidden></p>
       <div class="lobby-games">
@@ -53,7 +52,7 @@
         <section aria-labelledby="tables-heading" class="lobby-section">
           <div class="section-heading"><h2 id="tables-heading">Find an opponent <span id="tables-count" class="lobby-count"></span></h2></div>
           <fieldset class="lobby-filters"><legend>Show tables</legend><button id="filter-open" type="button" aria-pressed="true">Open seats</button><button id="filter-all" type="button" aria-pressed="false">All ongoing</button></fieldset>
-          <div id="open-tables" class="lobby-grid"><p class="empty-state">Finding open tables…</p></div>
+          <div id="open-tables" class="lobby-list"><p class="empty-state">Finding open tables…</p></div>
         </section>
       </div>
     </div>

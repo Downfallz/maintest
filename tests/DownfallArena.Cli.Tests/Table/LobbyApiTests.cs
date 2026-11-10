@@ -31,8 +31,9 @@ public sealed class LobbyApiTests : IDisposable
         opened.GetProperty("table").GetProperty("format").GetString().ShouldBe("1v1");
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().OpenSeats.ShouldBe(["player2"]);
 
-        var listed = await Lobby.HandleAsync("GET", "/api/lobby", "");
+        var listed = await Lobby.HandleAsync("GET", "/api/lobby/page/all/1", "");
         var text = Encoding.UTF8.GetString(listed.Body);
+        text.ShouldContain(table.Id);
         text.ShouldNotContain(table.Pilot.Token);
         foreach (var seat in table.Seats)
         {
@@ -54,7 +55,7 @@ public sealed class LobbyApiTests : IDisposable
         _registry.Codes.Of(table.Seats[0]).ShouldBeNull();
         table.Seats[1].Invitation.ShouldNotBeNull();
 
-        Read(listed).GetProperty("tables")[0].GetProperty("openSeats").GetInt32().ShouldBe(1);
+        Read(listed).GetProperty("items")[0].GetProperty("openSeats").GetInt32().ShouldBe(1);
     }
 
     [Fact]

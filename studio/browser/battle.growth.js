@@ -11,7 +11,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
   page.on('pageerror', error => errors.push(error.message));
   try {
     await page.goto(join); await page.locator('#invitation-take').click();
-    await expect(page.locator('#table, #pass').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+    await page.waitForURL(/\/battle(?:\?|$)/, { timeout: 20000 }); // The accepted seat goes on to the battle view (ADR 0157).
     const tokens = await page.evaluate(() => JSON.parse(localStorage.getItem('downfall.table.seats')));
     const origin = new URL(join).origin, headers = { 'X-Seat-Token': tokens.player1 };
     const read = async () => (await context.request.get(`${origin}/api/seat/player1`, { headers })).json();

@@ -102,7 +102,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         seat.Taken.ShouldBeFalse();
         seat.Key.ShouldBeNull("no code and no link name a seat kept for a friend");
         _registry.Codes.Of(seat).ShouldBeNull();
-        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby", "")).GetProperty("tables")[0];
+        var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items")[0];
         listed.GetProperty("openSeats").GetInt32().ShouldBe(0);
         listed.GetProperty("seats")[1].GetProperty("kind").GetString().ShouldBe("invited");
         listed.GetProperty("seats")[1].GetProperty("name").GetString().ShouldBe("bastien");

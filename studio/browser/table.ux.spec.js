@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { classicTable } from './classic-table-fixture.js';
 
 // What a test expects follows the layout's own widths (table.css: 760 and 1100), not a project's name.
 const widthOf = page => page.viewportSize().width;
@@ -40,6 +41,7 @@ const catalogue = {
   effects: [{ kind: 'DefenseDebuff', glyph: '◇', harmful: true }, { kind: 'Bleed', glyph: '♥', harmful: true }, { kind: 'Regeneration', glyph: '♥', harmful: false }],
 };
 
+test.beforeEach(classicTable);
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/catalogue', route => route.fulfill({ json: catalogue }));
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: view }));
@@ -202,9 +204,9 @@ test('the classic match ignores game shortcuts while its player menu owns focus'
   await page.reload();
   await expect(page.locator('#account-name')).toHaveText('Marc');
   await expect(page.locator('.speed-spell')).toHaveCount(6);
-  const menu = page.locator('#home-menu-toggle');
-  if (await menu.isVisible()) await menu.click();
-  await page.locator('#app-settings-open').click();
+  // Signed in, Settings opens from the account menu.
+  await page.locator('#account-menu summary').click();
+  await page.locator('#account-settings').click();
   await page.keyboard.press('1');
   await page.keyboard.press('Escape');
   await expect(page.locator('#app-settings-dialog')).toBeHidden();
