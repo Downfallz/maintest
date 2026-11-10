@@ -418,6 +418,32 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>
+    /// A step asked for while another is being taken waits for its turn without holding whoever asked: a tap
+    /// made while a Player agent thinks is a request waiting, not a thread stopped for as long as the agent takes.
+    /// </summary>
+    [Fact]
+    public async Task A_step_asked_for_while_another_is_being_taken_waits_its_turn_without_holding_its_caller()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var replica = new Replica(new JournalStore());
+        var thinking = new Thinking(Agent(3, PlayerSlot.Player1));
+        var first = Task.Run(() => replica.Journaled.AdvanceAsync(table, new MatchSeats(thinking, null), TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+        await thinking.Asked.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var waiting = replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var handedBack = clock.Elapsed;
+        var answered = waiting.IsCompleted;
+        thinking.Release();
+        await first;
+        var read = await waiting;
+
+        answered.ShouldBeFalse("the agent is still thinking, and the match is its step's");
+        handedBack.ShouldBeLessThan(TimeSpan.FromSeconds(1));
+        read.IsSuccess.ShouldBeTrue();
+    }
+
+    /// <summary>
     /// What a seat change depends on is settled in the turn that writes it: the caller is shown the match as
     /// that turn finds it and says the line, or why there is none. Nothing of the seat's can land in between.
     /// </summary>

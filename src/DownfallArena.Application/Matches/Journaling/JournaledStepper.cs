@@ -471,6 +471,11 @@ public sealed class JournaledStepper(
 
             static async Task<TResult> AfterAsync(Task turn, Func<Task<TResult>> step)
             {
+                // Handed back to the caller before anything runs. A step whose turn has come would otherwise
+                // start right here, under the lock that orders the turns, and keep it for as long as a Player
+                // agent thinks: everybody asking for the match meanwhile would be a thread stopped at that
+                // lock rather than a step waiting its turn.
+                await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
                 await turn;
                 return await step();
             }
