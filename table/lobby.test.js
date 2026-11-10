@@ -148,12 +148,12 @@ test('without kept results, a kind\'s finished games are the finished tables thi
 });
 
 test('a finished card leads with the result, names who it was against, and opens the game or its replay', () => {
-  const kept = { format: '3v3', rounds: 9, outcome: 'won', opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/t1' };
+  const kept = { format: '3v3', rounds: 9, outcome: 'won', opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, replay: '/battle?replay=t1&seat=player1' };
 
   assert.deepEqual(finishedSummary(kept), { title: '3v3 battle', tag: 'Victory', tone: 'won', casual: false, against: 'Lookahead', bot: true, detail: '9 rounds', action: 'Watch the replay →' });
   assert.equal(finishedSummary({ ...kept, casual: true }).casual, true, 'an unranked game says so');
   assert.equal(finishedSummary({ ...kept, outcome: 'lost', seats: [{ seat: 'player1', token: 't' }] }).action, 'View game →');
-  assert.equal(finishedSummary({ ...kept, outcome: 'draw', session: null }).action, null, 'a result kept before tables were named opens nothing');
+  assert.equal(finishedSummary({ ...kept, outcome: 'draw', replay: null }).action, null, 'a result kept before tables were named opens nothing');
   assert.equal(finishedSummary({ ...kept, outcome: 'both' }).tag, 'Shared device');
   assert.equal(finishedSummary({ ...kept, outcome: null, rounds: 1 }).detail, '1 round');
 });

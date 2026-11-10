@@ -186,6 +186,17 @@ test('a replay decides nothing, and asks again after a refusal', async () => {
   assert.equal(decided.ok, false);
 });
 
+test('without the operator token, a replay is one of the player\'s own games, asked of the lobby', async () => {
+  const { calls, fetchImpl } = stub({ status: 200, body: replayed });
+  const transport = replayTransport('20261031 x', 'player1', null, fetchImpl);
+
+  const seat = await transport.seat(0);
+
+  assert.equal(calls[0].path, '/api/lobby/tables/20261031%20x/replay');
+  assert.deepEqual(calls[0].options.headers, {});
+  assert.deepEqual(seat.body.board.allies, [{ id: 1 }]);
+});
+
 test('server-sent events are cut at the blank line, comments dropped, and the unfinished one kept for later', () => {
   const parsed = parseEvents('event: ready\ndata: 3\n\n: keep-alive\n\nevent: changed\ndata: 4\n\nevent: chan');
 

@@ -81,18 +81,51 @@ public sealed class LobbyFinishedTests : IDisposable
     }
 
     [Fact]
-    public async Task A_finished_game_the_host_no_longer_holds_opens_its_recorded_session_and_one_kept_before_tables_were_named_opens_nothing()
+    public async Task A_finished_game_the_host_no_longer_holds_opens_its_battle_replay_from_the_player_seat_and_one_kept_before_tables_were_named_opens_nothing()
     {
         var mark = await PlayerAsync("MarkF");
-        await RecordAsync(0, new("player1", mark.Account.Id, null), new("player2", null, "greedy"), table: "swept-table");
+        await RecordAsync(0, new("player1", null, "greedy"), new("player2", mark.Account.Id, null), table: "swept-table");
         await RecordAsync(1, new("player1", mark.Account.Id, null), new("player2", null, "greedy"), winner: null);
 
         var items = Read(await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/finished/bots/1", "", player: mark)).GetProperty("items");
 
         items[0].GetProperty("outcome").GetString().ShouldBe("draw");
-        items[0].GetProperty("session").ValueKind.ShouldBe(JsonValueKind.Null);
-        items[1].GetProperty("session").GetString().ShouldBe("/session/swept-table");
+        items[0].GetProperty("replay").ValueKind.ShouldBe(JsonValueKind.Null);
+        items[1].GetProperty("replay").GetString().ShouldBe("/battle?replay=swept-table&seat=player2");
         items[1].GetProperty("seats").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// A finished game is watched again by the players who sat at it (ADR 0156): the lobby serves its replay to an
+    /// account a kept result names at that table, asks the signed-out to sign in, and refuses everybody else.
+    /// </summary>
+    [Theory]
+    [InlineData("MarkF", 200)]
+    [InlineData("bastien", 403)]
+    [InlineData(null, 401)]
+    public async Task A_finished_game_replay_is_served_to_the_players_who_sat_at_it_only(string? who, int status)
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await RecordAsync(0, new("player1", mark.Account.Id, null), new("player2", null, "greedy"), table: "swept-table");
+        var lobby = await LobbyAsync();
+        lobby.Replay = id => Task.FromResult(StudioResponse.OfPlainText(200, $"replay of {id}"));
+        var player = who switch { "MarkF" => mark, "bastien" => bastien, _ => null };
+
+        var answer = await lobby.HandleAsync("GET", "/api/lobby/tables/swept-table/replay", "", player: player);
+
+        answer.Status.ShouldBe(status);
+    }
+
+    [Fact]
+    public async Task A_host_that_records_nothing_has_no_replay_to_serve_its_players()
+    {
+        var mark = await PlayerAsync("MarkF");
+        await RecordAsync(0, new("player1", mark.Account.Id, null), new("player2", null, "greedy"), table: "swept-table");
+
+        var answer = await (await LobbyAsync()).HandleAsync("GET", "/api/lobby/tables/swept-table/replay", "", player: mark);
+
+        answer.Status.ShouldBe(404);
     }
 
     [Fact]

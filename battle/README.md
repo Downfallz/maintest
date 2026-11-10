@@ -100,7 +100,8 @@ confirmation over the host's sequential questions, with simultaneous reveal stil
 `table/battle-match.js` and `src/match.ts` provide two-round upkeep/aftermath review,
 concession, the host outcome and a manual whole-match replay. Replay steps distinguish recorded action frames,
 labelled reference frames and missing battlefield snapshots. `/battle?replay=<session>&seat=player2` opens a
-finished recording using the same operator authorization as `/play?replay=...`.
+finished recording: the operator's with the admin panel's token, or a player's own game by their account, read
+off `GET /api/lobby/tables/<table>/replay`. The lobby's finished games open it ([ADR 0156](../docs/adr/0156-replay-a-finished-game-in-the-battle-view-for-its-players.md)).
 
 `node node_modules/playwright/cli.js test --config table.config.js battle.loop.js` (from `studio/browser`)
 plays complete 3v3 games in both declarations, reads recorded sessions, and checks two independent seats'
@@ -671,7 +672,7 @@ shared device opens the same table at once. **Invite to rematch** keeps a friend
 player who is not a friend. Then come **Replay the match** and **Lobby**; History stays in the field's header.
 Match replay now reaches the host's final public snapshot after
 all recorded actions/cleanup, then returns to the scorecard. Empty feeds keep a readable error on that card;
-legacy frameless events remain text-only. Recorded-session replay still requires the operator token.
+legacy frameless events remain text-only. A recorded session replays for the operator, or for the players who sat at it (ADR 0156).
 
 Settings offers selection vibration through the existing feedback helper, independently of the battle view's
 session-only sound opt-in. Notification controls use the seat transport, `push.js` status/key helpers and

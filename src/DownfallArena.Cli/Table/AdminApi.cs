@@ -73,7 +73,7 @@ internal sealed class AdminApi
         _rules = rules;
         _stored = stored;
         _agents = agents ?? [];
-        Lobby = new LobbyApi(registry, composer, clock, push);
+        Lobby = new LobbyApi(registry, composer, clock, push) { Replay = stored is null ? null : id => ReplayAsync(stored, id) };
     }
 
     public static bool Names(string path) =>

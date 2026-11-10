@@ -592,6 +592,8 @@ test('a session opened from the admin panel goes straight to its replay, and its
       boards: { player1: view.board, player2: { ...view.board, allies: view.board.enemies, enemies: view.board.allies } }, feed } });
   });
 
+  // The panel opens a replay holding the operator's token; without it the page would ask the lobby (ADR 0156).
+  await page.addInitScript(() => localStorage.setItem('downfall.table.operator', 'operator-token'));
   await page.goto('/table/?replay=finished-one');
 
   await expect(page.locator('#phase-current')).toHaveText('Match replay');

@@ -416,6 +416,8 @@ public sealed class AdminApiTests : IDisposable
         kinds.ShouldBeSubsetOf(["RoundEnergyGranted", "OngoingEffectsApplied", "PurchasesRevealed", "CombatActionResolved", "RoundEnded"]);
         var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/sessions", "", OperatorToken, null))).RootElement.GetProperty("sessions")[0];
         listed.GetProperty("replay").GetString().ShouldBe($"/play?replay={played}");
+        // The lobby serves its players the very replay the panel reads (ADR 0156), off the same store.
+        Text(await admin.Lobby.Replay.ShouldNotBeNull()(played)).ShouldBe(Text(answer));
     }
 
     [Fact]

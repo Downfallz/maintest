@@ -374,7 +374,7 @@ test('your games are grouped against players and against bots, at most five of e
     seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
   const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
-    outcome, you: ['player1'], opponent, seats: null, session: `/session/t${index}` });
+    outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1` });
   const finished = { bots: Array.from({ length: 8 }, (_, index) => result(index, 'won', { kind: 'bot', name: 'Lookahead' })),
     players: [result(20, 'lost', { kind: 'person', name: 'bastien' })] };
   const state = await home(page, { games, finished });
@@ -392,7 +392,7 @@ test('your games are grouped against players and against bots, at most five of e
   await page.locator('#mine-finished').click();
   await expect(bots.locator('.game-card')).toHaveCount(6); await expect(bots.locator('.game-card').first()).toContainText('Victory');
   await expect(bots.locator('.game-card').first()).toContainText('vs Lookahead');
-  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/session/t0');
+  await expect(bots.locator('.game-card a').first()).toHaveAttribute('href', '/battle?replay=t0&seat=player1');
   await expect(players.locator('.game-card')).toContainText('Defeat'); await expect(players.locator('.lobby-pages')).toHaveCount(0);
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
@@ -419,7 +419,7 @@ test('a finished page that failed is read again on the next poll, and the three 
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const games = [{ table: { ...battle, id: 'live', seats: [battle.seats[0], bot] }, seats: [{ seat: 'player1', token: 'live-token' }] }];
   const won = { match: 'm1', table: 'done', finishedAt: '2026-11-07T20:00:00Z', format: '3v3', rounds: 4, outcome: 'won', you: ['player1'],
-    opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, session: '/session/done' };
+    opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, replay: '/battle?replay=done&seat=player1' };
   const finished = { bots: [], players: [] };
   const state = await home(page, { games, finished });
   state.failFinished = 0;
