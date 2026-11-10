@@ -65,7 +65,10 @@ internal interface ITableSession : IDisposable
     /// <param name="round">The round the decision is made in, read before it is handed over.</param>
     Task<DecisionTaken> DecideAsync(PlayerSlot slot, PlayerDecision decision, long asked, PlayerOptions offered, int? round);
 
-    /// <summary>The seat gives the match up (ADR 0087).</summary>
+    /// <summary>
+    /// The seat gives the match up (ADR 0087). Refused with <see cref="SeatErrors.PlayedByABot" /> by a session
+    /// that finds a bot holding the seat when the concession reaches the match.
+    /// </summary>
     Task<Result> ConcedeAsync(PlayerSlot slot);
 
     /// <summary>Completes once what a decision set off has been applied, so the trace read next holds it.</summary>

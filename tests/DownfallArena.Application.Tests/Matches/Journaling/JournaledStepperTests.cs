@@ -444,6 +444,39 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>
+    /// Whether a seat may give the match up is settled in the turn that ends it: the caller is shown the match
+    /// as that turn finds it, and a concession refused there ends nothing and writes nothing.
+    /// </summary>
+    [Fact]
+    public async Task A_concession_is_settled_against_the_match_as_its_turn_finds_it_and_one_refused_there_ends_nothing()
+    {
+        var table = Table(3, CombatDeclaration.HiddenIntent);
+        var journal = new JournalStore();
+        var replica = new Replica(journal);
+        await replica.Journaled.SubmitAsync(table, MatchSeats.People, new SeatDecision(PlayerSlot.Player1, PlayerDecision.Pass), cancellationToken: TestContext.Current.CancellationToken);
+        var notTheirs = new DomainError("Seat.NotTheirs", "Somebody else holds the seat.");
+        JournaledState? found = null;
+
+        var refused = await replica.Journaled.ConcedeAsync(
+            table,
+            PlayerSlot.Player1,
+            state =>
+            {
+                found = state;
+                return notTheirs;
+            },
+            TestContext.Current.CancellationToken);
+        var read = await replica.Journaled.ReadAsync(table, TestContext.Current.CancellationToken);
+        var taken = await replica.Journaled.ConcedeAsync(table, PlayerSlot.Player1, _ => null, TestContext.Current.CancellationToken);
+
+        refused.Error.ShouldBe(notTheirs);
+        found.ShouldNotBeNull().Player1.Asking.ShouldBe(2);
+        read.Value.Outcome.ShouldBeNull();
+        taken.Value.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player2, MatchEndReason.Concession));
+        journal.Lines.OfType<ConcessionEntry>().ShouldHaveSingleItem();
+    }
+
+    /// <summary>
     /// What a seat change depends on is settled in the turn that writes it: the caller is shown the match as
     /// that turn finds it and says the line, or why there is none. Nothing of the seat's can land in between.
     /// </summary>

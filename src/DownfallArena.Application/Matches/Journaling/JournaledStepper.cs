@@ -129,15 +129,39 @@ public sealed class JournaledStepper(
     /// A seat gives the match up (ADR 0087): the match ends, and the journal says so, in one turn. The answers
     /// the seats were holding are nobody's any more.
     /// </summary>
-    public Task<Result<JournaledState>> ConcedeAsync(JournaledMatch match, PlayerSlot slot, CancellationToken cancellationToken = default)
+    public Task<Result<JournaledState>> ConcedeAsync(JournaledMatch match, PlayerSlot slot, CancellationToken cancellationToken = default) =>
+        ConcedeAsync(match, slot, _ => null, cancellationToken);
+
+    /// <summary>
+    /// A seat gives the match up, whether it may being settled against the match as it stands when the
+    /// concession has its turn.
+    /// </summary>
+    /// <param name="refused">
+    /// Why the seat may not give the match up, given the match as it stands, or nothing when it may. Asked
+    /// inside the turn that ends the match, of a match still being played: whoever held the seat when the
+    /// concession was asked for may not hold it any more by the time the match is the concession's.
+    /// </param>
+    public Task<Result<JournaledState>> ConcedeAsync(JournaledMatch match, PlayerSlot slot, Func<JournaledState, DomainError?> refused, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(match);
+        ArgumentNullException.ThrowIfNull(refused);
         return InTurnAsync(match.MatchId, async kept =>
         {
             var loaded = await LoadAsync(match, kept, cancellationToken);
             if (loaded.IsFailure)
             {
                 return Result.Failure<JournaledState>(loaded.Error);
+            }
+
+            var standing = await StateAsync(match, kept, loaded.Value, cancellationToken);
+            if (standing.IsFailure)
+            {
+                return standing;
+            }
+
+            if (standing.Value.Outcome is null && refused(standing.Value) is { } refusal)
+            {
+                return Result.Failure<JournaledState>(refusal);
             }
 
             try

@@ -196,6 +196,30 @@ public sealed class SteppedSessionTests : IDisposable
     }
 
     /// <summary>
+    /// Only the seat's own person gives its match up, and the session asks that itself, where the match ends:
+    /// the route's own look at the seat comes before the concession has waited for the match, behind a bot's
+    /// turn that can carry the seat past a handover. Here a bot holds the person's seat until round 2, and the
+    /// concession waits behind the other bot's first turn of round 1.
+    /// </summary>
+    [Fact]
+    public async Task A_concession_for_a_seat_a_bot_holds_when_it_reaches_the_match_is_refused_and_ends_nothing()
+    {
+        var (session, _, bot) = await Opened(_host, handover: 2);
+        bot.Hold();
+        session.Begin();
+        await bot.Asked.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        var conceding = session.ConcedeAsync(PlayerSlot.Player1);
+        bot.Release();
+        var conceded = await conceding;
+
+        conceded.IsFailure.ShouldBeTrue();
+        conceded.Error.ShouldBe(SeatErrors.PlayedByABot);
+        (await session.BoardAsync(PlayerSlot.Player1)).Value.Outcome.ShouldBeNull();
+        (await _journal.ReadAsync(Run, TestContext.Current.CancellationToken)).Entries.OfType<ConcessionEntry>().ShouldBeEmpty();
+    }
+
+    /// <summary>
     /// A table let go of has no outcome, keeps nothing in the host's stores, and takes nothing more: a tap, a
     /// concession or a seat change that arrives after must not bring back the match that was just forgotten.
     /// </summary>
@@ -283,7 +307,8 @@ public sealed class SteppedSessionTests : IDisposable
     private const string Run = "table-1";
 
     /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
-    private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true)
+    /// <param name="handover">The round the person's seat is theirs from, a bot holding it until then; none for a seat theirs from the start.</param>
+    private async Task<(SteppedSession Session, SteppedPerson Person, Held Bot)> Opened(HostedTables host, MatchId? matchId = null, bool people = true, int? handover = null)
     {
         var resources = host.Services.GetRequiredService<IGameResources>();
         var person = new SteppedPerson();
@@ -292,6 +317,12 @@ public sealed class SteppedSessionTests : IDisposable
         var plan = new SeatPlan(
             people ? SeatPlan.Person(PersonName) : new Occupant(new GreedyAgent(resources, HostedTables.Rules), "greedy"),
             new Occupant(bot, "greedy"));
+        if (handover is { } round)
+        {
+            plan = new SeatPlan(new Occupant(new GreedyAgent(resources, HostedTables.Rules), "greedy"), new Occupant(bot, "greedy"))
+                .From(PlayerSlot.Player1, round, SeatPlan.Person(PersonName), reached: 0);
+        }
+
         List<CreatureDefinitionId> roster = [.. Enumerable.Repeat(resources.Creatures.First().Id, HostedTables.Rules.TeamSize)];
         var opened = await SteppedSession.OpenAsync(
             SteppedHost.Of(host.Services),

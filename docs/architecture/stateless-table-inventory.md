@@ -261,11 +261,10 @@ which adds the compilation of the engine itself.
     numbers. A rebuild also moves the table's version once for each entry it records again, where ADR 0159
     wants a replay to tell nobody; both go when the version is the journal's length (4.2).
 
-22. **Who may give a match up, read and acted on apart.** The route asks whether the seat's own person is
-    playing it, then the concession waits for the match's turn, and is not asked again there. A person who
-    concedes while a bot is thinking, with their seat due to pass to a bot at the next round, concedes a
-    match the bot is playing by the time the line is written. A seat change and a decision are settled
-    inside the turn; a concession could be, the same way.
+22. **Who may give a match up.** Answered in 4.1b. The route's look at whether the seat's own person is
+    playing it comes before the concession has waited for the match, behind a bot's turn that can carry the
+    seat past a handover. So the session asks again inside the turn that ends the match, as it does for a
+    decision and a seat change, and a concession that finds a bot holding the seat ends nothing.
 
 ## Documents this makes stale as it lands
 

@@ -459,6 +459,12 @@ internal sealed class TableApi(ITableSession session, IReadOnlyList<TableSeat> s
         using var accepting = run?.Accepting();
         var (round, subPhase) = await WhereAsync(seat.Slot);
         var conceded = await session.ConcedeAsync(seat.Slot);
+        if (conceded.IsFailure && conceded.Error == SeatErrors.PlayedByABot)
+        {
+            // The seat passed to a bot while the concession waited for the match: the answer the check above gives.
+            return StudioResponse.OfPlainText(409, $"{seat.Name} is played by a bot; it decides for itself.");
+        }
+
         if (conceded.IsFailure)
         {
             return Refused(conceded.Error);

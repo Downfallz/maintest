@@ -383,6 +383,8 @@ internal sealed class SteppedSession : ITableSession
     }
 
     /// <remarks>
+    /// Only the seat's own person gives its match up, and whether they hold the seat is asked inside the
+    /// match's turn, as it is for a decision and a seat change.
     /// A concession another writer got in the way of is taken again. When it is then refused because the match
     /// is over by this very seat's concession, the line was its own, written by the attempt whose answer was
     /// lost: the match is conceded. A concession refused outright on a match that is over stays refused.
@@ -396,7 +398,13 @@ internal sealed class SteppedSession : ITableSession
             Result<JournaledState> conceded;
             try
             {
-                conceded = await _stepper.ConcedeAsync(_match, slot, _stopping);
+                // Whether the seat is its person's to give up is settled where the match ends: a concession asked
+                // for while a bot thinks has its turn after that bot, and the seat may be a bot's by then.
+                conceded = await _stepper.ConcedeAsync(
+                    _match,
+                    slot,
+                    state => SeatPlan.IsPerson(Seated(state.SeatChanges).At(slot, RoundOf(state, slot))) ? null : SeatErrors.PlayedByABot,
+                    _stopping);
             }
             catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
             {
