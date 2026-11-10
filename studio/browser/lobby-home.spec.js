@@ -577,3 +577,20 @@ test('with nothing waiting the bell shows no count and says so; a guest has no b
   await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
   await expect(page.locator('#inbox-open')).toBeHidden();
 });
+
+test('the guest page shows three Stage 3 creatures in depth, none hiding another, and how a creature evolves', async ({ page }) => {
+  await home(page, { account: null, mode: 'google' });
+  const beasts = page.locator('.intro-art .intro-beast');
+  await expect(beasts).toHaveCount(3);
+  for (const img of await page.locator('.intro-art img').all()) await expect(img).toHaveAttribute('src', /evolutions\/.*-stage3-/);
+  const boxes = await beasts.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
+  // Back, middle, front: each lower and larger than the one behind it, and no two sharing much of their room.
+  const [back, middle, front] = boxes;
+  expect(back.bottom).toBeLessThan(middle.bottom); expect(middle.bottom).toBeLessThan(front.bottom);
+  expect(back.width).toBeLessThan(middle.width); expect(middle.width).toBeLessThan(front.width);
+  const shared = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  for (const [a, b] of [[back, middle], [middle, front], [back, front]]) expect(shared(a, b) / Math.min(a.width * a.height, b.width * b.height)).toBeLessThan(0.3);
+  await expect(page.locator('.evolution-strip li')).toHaveText([/Stage 1\s*Warped/, /Stage 2\s*Stormborn/, /Stage 3\s*Cataclysm/]);
+  await expect(page.locator('.intro-features li')).toHaveCount(4);
+  await noOverflow(page);
+});
