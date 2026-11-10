@@ -638,28 +638,5 @@ public sealed class JournaledStepperTests
     }
 
     /// <summary>What an agent answers to the question a seat's view asks, on the board and the options the view shows.</summary>
-    private static PlayerDecision Answer(RandomAgent agent, SeatView view)
-    {
-        var asked = view.Asked.ShouldNotBeNull();
-        switch (asked.Kind)
-        {
-            case PlayerOptionsKind.Evolution:
-                return agent.DecideEvolution(view.Board, view.Options.Evolution!).Choice is { } choice ? PlayerDecision.Buy(choice.Creature, choice.Tier) : PlayerDecision.Pass;
-            case PlayerOptionsKind.Speed:
-                return PlayerDecision.ChooseSpeed(asked.Creature!.Value, agent.DecideSpeed(view.Board, asked.Creature.Value));
-            case PlayerOptionsKind.TieOrder:
-                return PlayerDecision.OrderTies(agent.DecideTieOrder(view.Board, view.Options.TieOrder!));
-            case PlayerOptionsKind.Intent:
-                var option = view.Options.Intent!.Creatures.Single(offered => offered.Creature == asked.Creature);
-                return PlayerDecision.DeclareIntent(option.Creature, agent.DecideIntent(view.Board, option));
-            case PlayerOptionsKind.Target:
-                return PlayerDecision.BindTargets(agent.DecideTargets(view.Board, view.Options.Target!));
-            case PlayerOptionsKind.Action:
-                var action = view.Options.Action!;
-                var chosen = ((IPlayerAgent)agent).DecideAction(view.Board, action);
-                return PlayerDecision.Act(action.Actor, chosen.Spell, chosen.Targets);
-            default:
-                throw new InvalidOperationException($"A seat is not asked {asked.Kind}.");
-        }
-    }
+    private static PlayerDecision Answer(RandomAgent agent, SeatView view) => SeatAnswer.Of(agent, view);
 }
